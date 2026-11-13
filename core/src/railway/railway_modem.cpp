@@ -69,7 +69,7 @@ std::complex<double> Modem::Filter::run(std::complex<double> x) {
 void Modem::configure(double rate) { rate_ = rate; resampler_.configure(rate, 48000, 8); reset(); }
 void Modem::reset() {
     resampler_.reset(); audio_ = AudioDecoder(); phase_ = power_ = meanDeviation_ = 0; previous_ = {};
-    narrowAudio_ = AudioDecoder(); afcHz_ = afcPhase_ = widePow_ = wideFloor_ = 0; floorN_ = 0; r1_ = noiseR1_ = {}; narrowPrev_ = {}; recent_.clear();
+    narrowAudio_ = AudioDecoder(); afcHz_ = afcPhase_ = widePow_ = wideFloor_ = 0; floorN_ = 0; r1_ = noiseR1_ = nr1_ = nNoiseR1_ = {}; narrowPow_ = narrowFloor_ = 0; narrowPrev_ = {}; recent_.clear();
     auto butter = [](double hz, size_t i) {   // stage i of a 4th-order Butterworth low-pass at 48 kHz
         const double w = 2 * pi * hz / 48000, c = std::cos(w), a = std::sin(w) / (2 * (i ? 1.3066 : 0.5412));
         return Filter{(1 - c) / 2 / (1 + a), (1 - c) / (1 + a), (1 - c) / 2 / (1 + a), -2 * c / (1 + a), (1 - a) / (1 + a)};
@@ -113,17 +113,31 @@ void Modem::feed(const cf32* iq, size_t n, std::vector<Message>& out) {
         r1_ += (l - r1_) / 960.0;
         const bool present = floorN_ >= 9600 && widePow_ > 1.25 * wideFloor_;
         if (!present) noiseR1_ += (l - noiseR1_) / 9600.0;
-        else {
-            const std::complex<double> s = r1_ - noiseR1_;
-            if (std::norm(s) > 0) afcHz_ += (std::arg(s) * 48000 / (2 * pi) - afcHz_) / 240;
-            afcHz_ = std::clamp(afcHz_, -10000.0, 10000.0);
-        }
         afcPhase_ -= 2 * pi * afcHz_ / 48000;
         if (afcPhase_ > pi || afcPhase_ < -pi) afcPhase_ = std::remainder(afcPhase_, 2 * pi);
         std::complex<double> u = std::complex<double>{x.real(), x.imag()} * std::complex<double>(std::cos(afcPhase_), std::sin(afcPhase_));
         for (auto& f : narrow_) u = f.run(u);
         const cf32 z(float(u.real()), float(u.imag()));
-        narrowAudio.push_back(std::arg(z * std::conj(narrowPrev_))); narrowPrev_ = z;
+        const cf32 nlag = z * std::conj(narrowPrev_);
+        narrowAudio.push_back(std::arg(nlag)); narrowPrev_ = z;
+        // the same on the narrow path: once the carrier is inside it, its residual is the finer (unbiased) estimate; the wide path's is pulled
+        // towards the centre when the +-14 kHz filter clips one side of a signal far off, and only brings the carrier into the narrow path
+        const double np = std::norm(std::complex<double>{z.real(), z.imag()});
+        if (floorN_ <= 1) narrowPow_ = np;
+        narrowPow_ += (np - narrowPow_) / 960;
+        if (floorN_ < 9600) narrowFloor_ += (narrowPow_ - narrowFloor_) / floorN_;
+        else narrowFloor_ += (narrowPow_ < 2 * narrowFloor_ ? 1.0 / 9600 : 1.0 / 480000) * (narrowPow_ - narrowFloor_);
+        const std::complex<double> nl{nlag.real(), nlag.imag()};
+        nr1_ += (nl - nr1_) / 960.0;
+        const bool nPresent = floorN_ >= 9600 && narrowPow_ > 1.5 * narrowFloor_;
+        if (!present && !nPresent) nNoiseR1_ += (nl - nNoiseR1_) / 9600.0;
+        if (present || nPresent) {
+            double target = afcHz_;
+            const std::complex<double> sn = nr1_ - nNoiseR1_, sw = r1_ - noiseR1_;
+            if (nPresent && std::norm(sn) > 0) target = afcHz_ + std::arg(sn) * 48000 / (2 * pi);
+            else if (std::norm(sw) > 0) target = std::arg(sw) * 48000 / (2 * pi);
+            afcHz_ = std::clamp(afcHz_ + (target - afcHz_) / 240, -10000.0, 10000.0);
+        }
     }
     std::vector<Message> found;
     audio_.feed(audio.data(), audio.size(), found);

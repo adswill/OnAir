@@ -51,7 +51,8 @@ private:
     AudioDecoder narrowAudio_;
     double afcHz_ = 0, afcPhase_ = 0, widePow_ = 0, wideFloor_ = 0;
     int floorN_ = 0;
-    std::complex<double> r1_{}, noiseR1_{};
+    std::complex<double> r1_{}, noiseR1_{}, nr1_{}, nNoiseR1_{};
+    double narrowPow_ = 0, narrowFloor_ = 0;
     cf32 narrowPrev_{0, 0};
     std::map<std::vector<uint8_t>, double> recent_;
     double rate_ = 0, offset_ = 0, phase_ = 0, power_ = 0, meanDeviation_ = 0;

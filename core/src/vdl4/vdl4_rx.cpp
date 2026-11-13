@@ -189,8 +189,8 @@ struct Vdl4Receiver::Impl {
         } else if (c.cool++ > 2 * kOsr && n > (long)(kVdl4SyncBits + 4 + 1) * kOsr) {
             // 4 ramp ones then the 24-bit 0101 training sequence ending at the tail (lin4 at the tail is the last sync bit). The alternating pattern
             // also matches 2 or 4 bits early (the ramp ones count as only 1 or 2 errors), so after the first hit the best fit within the next
-            // 5 bits is taken as the end of the sync: 4.1 the largest correlation with the pattern (soft), which also picks the sampling phase
-            // nearest the bit centre (it was the first sample with the fewest hard errors, the early edge of the eye).
+            // 5 bits is taken as the end of the sync: the first alignment with the fewest errors, and (4.1) within that bit the sampling phase
+            // with the largest soft correlation (it was the first sample, the early edge of the eye).
             const double mean = c.sum96 / kSyncSamples;
             int err = 0;
             double corr = 0;
@@ -203,7 +203,10 @@ struct Vdl4Receiver::Impl {
             if (c.lockLeft == 0 && err <= 3 && chp > 2.5f * c.floor) {   // squelch: noise alone must not start a lock
                 c.lockLeft = 5 * kOsr; c.bestErr = 99; c.bestCorr = -1e30; }
             if (c.lockLeft > 0) {
-                if (err <= 3 && corr > c.bestCorr) { c.bestErr = err; c.bestCorr = corr; c.bestN = n - 1; c.bestThr = mean; }
+                // fewest hard errors first, the earliest alignment of those (a later one that also fits takes data bits for training bits,
+                // and their larger swing would win on correlation alone); within that bit, the sampling phase with the largest correlation
+                const bool samePhaseBit = c.bestErr == err && (n - 1) - c.bestN < kOsr;
+                if (err < c.bestErr || (samePhaseBit && corr > c.bestCorr)) { c.bestErr = err; c.bestCorr = corr; c.bestN = n - 1; c.bestThr = mean; }
                 if (--c.lockLeft == 0) {
                     c.thr = c.bestThr;
                     c.syncEnd = c.bestN;               // the lin4 sample of the last sync bit
