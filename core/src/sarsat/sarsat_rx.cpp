@@ -591,10 +591,12 @@ struct SarsatReceiver::Impl {
             }
             // The search below costs a few hundred ms of CPU per burst. A band with many carriers (radiosondes, pagers, a noisy site) makes the
             // detector fire all the time, and every such burst that does not look like a beacon would run it: a falseBank of seconds of search,
-            // paid back at 0.15 s per second of signal, stops that. A burst that looks like a beacon is always searched.
+            // paid back at 0.08 s per second of signal, stops that. A burst that looks like a beacon is always searched.
+            // (0.15 in 3.9: the 4.0 coherent search costs about twice as much per burst, and a storm then sat at the payback rate plus the detector,
+            // 0.25 s/s; at 0.08 it holds under 0.2 s/s. A beacon repeats every 50 s, so a quiet band never fills the bank.)
             {
                 const double now = (double)n32 / kDet;
-                falseBank = std::max(0.0, falseBank - 0.15 * (now - bankT)); bankT = now;
+                falseBank = std::max(0.0, falseBank - 0.08 * (now - bankT)); bankT = now;
             }
             const bool skipSearch = !plausible && falseBank > falseLimit;
             if (skipSearch) { falseSkipped++; peaks.clear(); linePow.clear(); dets = 0; peakSnr = -200; peakLevel = -200; publish(); return; }
