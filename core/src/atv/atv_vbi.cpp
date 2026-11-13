@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/atv/atv_vbi.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -83,7 +84,7 @@ bool AtvVbi::tryTeletext(const Level& v) {
     double hi = 0, lo = 0; int nh = 0, nl = 0;
     for (int i = 0; i < 24; i++) { const float x = v(t0 + (i + 0.5) * kTtxBitUs); if (pat[i] == '1') { hi += x; nh++; } else { lo += x; nl++; } }
     hi /= nh; lo /= nl;
-    if (hi - lo < 0.2) return false;
+    if (hi - lo < 0.2) { DIAG_DEBUG_EVERY(409939, 10, "A teletext line was skipped because its clock run-in was too weak (contrast %.2f of at least 0.20).", hi - lo); return false; }
     const double thr = 0.5 * (hi + lo);
     for (int i = 16; i < 24; i++) if ((v(t0 + (i + 0.5) * kTtxBitUs) > thr) != (pat[i] == '1')) return false;
     uint8_t unit[44] = {};
@@ -95,7 +96,7 @@ bool AtvVbi::tryTeletext(const Level& v) {
         unit[2 + by] = val;
         bitT += 8 * kTtxBitUs;
     }
-    if (ttxHamming84(ttxReverse8(unit[2])) < 0 && ttxHamming84(unit[2]) < 0) return false;
+    if (ttxHamming84(ttxReverse8(unit[2])) < 0 && ttxHamming84(unit[2]) < 0) { DIAG_DEBUG_EVERY(424293, 10, "A teletext line was dropped because its magazine and row address failed the Hamming 8/4 check."); return false; }
     uint8_t pes[9 + 1 + 2 + 44] = {0, 0, 1, 0xBD, 0, 0, 0x80, 0, 0};
     pes[4] = 0; pes[5] = (uint8_t)(sizeof pes - 6);
     pes[9] = 0x10; pes[10] = 0x02; pes[11] = 44;

@@ -6,6 +6,7 @@
 #include "dect2/atv/atv_std.h"
 #include "atv_dsp.h"
 #include "dect2/dsp/dsp_compat.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -239,6 +240,7 @@ struct AtvNbtvDecoder::Impl {
         for (auto& v : sm) v = -v;
         runSum = -runSum;
         unlock();
+        DIAG_DEBUG(462039, "The NBTV decoder found no sync with this polarity (%s), so it flips the signal and tries again.", why);
         doLog(std::string("NBTV: ") + why + ", trying the signal " + (polarity < 0 ? "turned over" : "the right way up"));
     }
 
@@ -278,7 +280,7 @@ struct AtvNbtvDecoder::Impl {
         q.push_back({tNext, false, false});
         tNext += P;
         syncQ += (0.f - syncQ) * 0.05f;
-        if (++miss > 2 * f.lines + 8 || syncQ < 0.2f) { doLog("NBTV: line sync lost"); unlock(); }
+        if (++miss > 2 * f.lines + 8 || syncQ < 0.2f) { DIAG_DEBUG(733779, "The NBTV line sync was lost after %d missed lines, so the decoder searches for sync pulses again.", miss); doLog("NBTV: line sync lost"); unlock(); }
     }
 
     double meanAt(double a, double b) const {

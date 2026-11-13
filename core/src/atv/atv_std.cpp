@@ -3,6 +3,7 @@
 
 // Analog TV systems: see atv_std.h. Source of the numbers: ITU-R BT.470-6 (1998), Tables 1, 1-1, 1-2, 2, 3 and Figs 1, 2, 4, 5.
 #include "dect2/atv/atv_std.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -11,14 +12,17 @@
 namespace dect2 {
 
 bool atvMakeFormat(int sys, int colour, AtvFormat& f) {
-    if (sys < 0 || sys >= kAtvSysCount || colour < kAtvMono || colour > kAtvSecam) return false;
+    if (sys < 0 || sys >= kAtvSysCount || colour < kAtvMono || colour > kAtvSecam) {
+        DIAG_DEBUG(820977, "Analog TV system number %d with colour code %d is not a known combination, so no video format is built.", sys, colour);
+        return false;
+    }
     f = AtvFormat();
     f.sys = sys; f.colour = colour;
     const bool ntscLines = sys == kAtvM;
     const bool l405 = sys == kAtvA, l819 = sys == kAtvE;
     const bool positive = atvSysPositive(sys);
-    if ((l405 || l819) && colour != kAtvMono) return false;    // the 405 and 819-line services were monochrome
-    if (colour == kAtvNtsc && positive) return false;          // NTSC was never sent with positive modulation
+    if ((l405 || l819) && colour != kAtvMono) { DIAG_DEBUG(778107, "The 405-line and 819-line analog TV systems were monochrome only, so colour code %d is refused.", colour); return false; }    // the 405 and 819-line services were monochrome
+    if (colour == kAtvNtsc && positive) { DIAG_DEBUG(532053, "NTSC colour was never sent with positive modulation, so analog TV system %d with NTSC is refused.", sys); return false; }          // NTSC was never sent with positive modulation
     switch (sys) {
     case kAtvB:  f.sysName = "B/G"; f.chanMhz = 7; f.soundSpacingMhz = 5.5; f.videoBwMhz = 5.0; f.vestigialMhz = 0.75; break;
     case kAtvG:  f.sysName = "B/G"; f.chanMhz = 8; f.soundSpacingMhz = 5.5; f.videoBwMhz = 5.0; f.vestigialMhz = 0.75; break;
