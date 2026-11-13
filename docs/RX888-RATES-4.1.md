@@ -46,7 +46,7 @@ The ADC clock setting (Advanced):
 ## Trade-offs
 
 - **CPU:** the real-to-complex conversion runs on one thread of its own. At D >= 2 it is a 16 x D tap complex FIR per output sample. At
-  D = 1 it is a single complex multiply per sample. `test_rx888` prints what each case costs on the CI machine (not a pass/fail check).
+  D = 1 it is a single complex multiply per sample. `test_rx888` prints what each case costs. On the GitHub runners (one thread, per second of signal) it was 0.19 s at 64 MHz with D = 32, 0.63 s at 128 MHz with D = 2, 0.64 s at 130 MHz with D = 2, and 0.33 s at 128 or 130 MHz with D = 1. Older or slower machines may not keep up at D = 2 and the full clock.
   The decoders and the spectrum behind it have to keep up with 128 Msps complex too, which most modes do not need.
 - **USB pipeline:** 128 KiB bulk transfers (as SDDC). The number in flight now follows the clock, so about 32 ms is always queued: 32 at
   64 MHz (as before), 63 at 128 MHz and 64 at 130 MHz. The queue to the conversion thread holds about 250 ms: 256 blocks at 64 MHz (as
