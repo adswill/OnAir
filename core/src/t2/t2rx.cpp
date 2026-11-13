@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "t2rx_impl.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -202,12 +203,14 @@ void T2Receiver::Impl::publish() {
             pi.supported = c.timeIlType == 0;
             t.plpList.push_back(pi);
             char b[160];
-            if (c.timeIlType != 0) { snprintf(b, sizeof b, "PLP %d uses inter-frame time interleaving (TIME_IL_TYPE 1), which is not implemented", c.id); t.unsupported.push_back(b); }
+            if (c.timeIlType != 0) { DIAG_EVERY(447755, 30, "DVB-T2 PLP %d uses inter-frame time interleaving, which OnAir does not implement, so that PLP cannot be decoded.", c.id); snprintf(b, sizeof b, "PLP %d uses inter-frame time interleaving (TIME_IL_TYPE 1), which is not implemented", c.id); t.unsupported.push_back(b); }
         }
     }
     if (l1preOk) {
+        if (l1pre.type != 0) DIAG_EVERY(192539, 30, "The DVB-T2 multiplex carries generic streams (type %d) instead of an MPEG transport stream, so no transport stream is produced.", (int)l1pre.type);
         if (l1pre.type != 0) t.unsupported.push_back("the multiplex carries generic streams (GSE/GS), not an MPEG transport stream");
     }
+    if (l1postOk && l1post.fefLength > 0 && !otherLayerSeen) DIAG_EVERY(716307, 30, "The DVB-T2 signal contains future extension frames of %d samples, which OnAir skips.", (int)l1post.fefLength);
     if (l1postOk && l1post.fefLength > 0 && !otherLayerSeen) t.unsupported.push_back("the signal contains FEF (future extension) frames; they are skipped");
     t.t2Layer = layerLocked; t.t2OtherLayerP1 = otherLayerP1;
     t.l1preGood = l1preGood; t.l1preBad = l1preBad; t.l1postGood = l1postGood; t.l1postBad = l1postBad;

@@ -3,6 +3,7 @@
 
 // Weather picture studio helpers: see wxstudio.h. Clean-room from the TIFF 6.0 and GeoTIFF 1.0 specifications.
 #include "dect2/dsp/wxstudio.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -102,11 +103,17 @@ void applyPaletteRgba(uint8_t* rgba, size_t n, int index) {
 }
 
 bool cropMap(const MapImage& in, double west, double north, double east, double south, MapImage& out) {
-    if (in.w <= 0 || in.h <= 0 || in.degPerPx <= 0 || in.rgba.size() < (size_t)in.w * in.h * 4) return false;
+    if (in.w <= 0 || in.h <= 0 || in.degPerPx <= 0 || in.rgba.size() < (size_t)in.w * in.h * 4) {
+        DIAG_DEBUG(787642, "The map crop was given a %d by %d picture with %.6f degrees per pixel and %zu bytes of data, which is not a usable map, so nothing is cropped.", in.w, in.h, in.degPerPx, in.rgba.size());
+        return false;
+    }
     int x0 = (int)std::floor((std::min(west, east) - in.west) / in.degPerPx), x1 = (int)std::ceil((std::max(west, east) - in.west) / in.degPerPx);
     int y0 = (int)std::floor((in.north - std::max(north, south)) / in.degPerPx), y1 = (int)std::ceil((in.north - std::min(north, south)) / in.degPerPx);
     x0 = std::clamp(x0, 0, in.w); x1 = std::clamp(x1, 0, in.w); y0 = std::clamp(y0, 0, in.h); y1 = std::clamp(y1, 0, in.h);
-    if (x1 - x0 < 1 || y1 - y0 < 1) return false;
+    if (x1 - x0 < 1 || y1 - y0 < 1) {
+        DIAG_DEBUG(917801, "The map crop area lies outside the picture, which covers %d by %d pixels, so nothing is cropped.", in.w, in.h);
+        return false;
+    }
     MapImage o;
     o.w = x1 - x0; o.h = y1 - y0; o.degPerPx = in.degPerPx;
     o.west = in.west + x0 * in.degPerPx; o.north = in.north - y0 * in.degPerPx;

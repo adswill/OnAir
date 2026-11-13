@@ -7,6 +7,7 @@
 // each loads the radio's own library at run time (native_common.h), so nothing here depends on those libraries being installed.
 // The exception is the RFNM (source_rfnm.cpp): librfnm has a C++ interface only, so it is linked, and only when CMake found it (DECT2_HAVE_RFNM).
 #include "native_common.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -55,7 +56,8 @@ std::vector<DeviceInfo> listNativeDevices(std::string& err) {
         native::listRfnm(out);       // ---- rfnm
 #endif
     } catch (const std::exception& e) {
-        err = std::string("native radios: ") + e.what();
+         DIAG_ERROR(853436, "Listing the native radios failed (%s), so the list may be incomplete.", e.what());
+         err = std::string("native radios: ") + e.what();
     }
     // An RX888 MkII is a Cypress FX3 (04b4:00f1), the USB ID LimeSuite also takes for a LimeSDR-USB, and it reports the same serial. The RX888
     // driver names that radio, so the LimeSDR entries with its serial are dropped: otherwise the first radio in the list (the Lime) is the

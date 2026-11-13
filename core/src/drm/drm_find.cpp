@@ -3,6 +3,7 @@
 
 #include "dect2/drm/drm_find.h"
 #include "dect2/dsp/fftutil.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -159,7 +160,7 @@ struct DrmFinder::Impl {
         auto c = std::make_unique<Cand>();
         c->loHz = lo; c->hiHz = hi; c->ref = ref; c->modeE = e; c->snrDb = 10.0 * std::log10(std::max(1e-9f, med / flr)); c->t0 = now;
         const double out = e ? 96000.0 : 12000.0;
-        if (!c->ch.configure(rate, out, 0.5 * (lo + hi), e ? 100000.0 : std::min(11000.0, w + 1500.0))) return;
+        if (!c->ch.configure(rate, out, 0.5 * (lo + hi), e ? 100000.0 : std::min(11000.0, w + 1500.0))) { DIAG_DEBUG_EVERY(331615, 10, "A DRM candidate at %.0f Hz offset could not get a channel filter for the test capture, so it is skipped.", 0.5 * (lo + hi)); return; }
         c->want = (size_t)(kTestSec * out);
         (void)hzPerBin;
         cands.push_back(std::move(c));

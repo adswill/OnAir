@@ -3,6 +3,7 @@
 
 // Native driver for the USRP: the radio's own library is loaded at run time when it is installed. See native_common.h.
 #include "dect2/tx/tx_control.h"
+#include "dect2/common/diag.h"
 #include "native_common.h"
 #include "dect2/source/hw_time.h"
 #include <map>
@@ -162,7 +163,7 @@ std::string usrpDeviceArgs(const std::string& args_, bool warn) {
         if (!contains(dargs, "recv_buff_size")) dargs += std::string(dargs.empty() ? "" : ",") + "recv_buff_size=50000000";
         if (warn) if (FILE* f = fopen("/proc/sys/net/core/rmem_max", "r")) {
             long v = 0;
-            if (fscanf(f, "%ld", &v) == 1 && v < 50000000) fprintf(stderr, "USRP: the socket receive buffer limit is small (%ld); to avoid dropped samples run: sudo sysctl -w net.core.rmem_max=50000000\n", v);
+            if (fscanf(f, "%ld", &v) == 1 && v < 50000000) { DIAG(517866, "The Linux socket receive buffer limit is small (%ld bytes), so a network USRP may drop samples.", v); fprintf(stderr, "USRP: the socket receive buffer limit is small (%ld); to avoid dropped samples run: sudo sysctl -w net.core.rmem_max=50000000\n", v); }
             fclose(f);
         }
 #endif
@@ -231,10 +232,10 @@ protected:
         if (!usrpAcquire(dargs, &dev_)) {
             const std::string t = uhd().text(nullptr);
             if (contains(t, "images_downloader") || contains(t, "could not find path for image") || contains(t, "UHD_IMAGES_DIR") || contains(t, "image not found")) {
-                err = "USRP firmware/FPGA images not found: run uhd_images_downloader once (or set UHD_IMAGES_DIR)";
+                DIAG_ERROR(512812, "The UHD firmware and FPGA images were not found (%s), so the USRP cannot be opened.", t.c_str()); err = "USRP firmware/FPGA images not found: run uhd_images_downloader once (or set UHD_IMAGES_DIR)";
                 openFailure_ = OpenFailure::Final;
             } else {
-                err = "USRP: cannot open the radio" + (t.empty() ? std::string(" (in use?)") : ": " + t);
+                DIAG_ERROR(834195, "Opening the USRP failed (UHD: %s), so the radio stays closed.", t.c_str()); err = "USRP: cannot open the radio" + (t.empty() ? std::string(" (in use?)") : ": " + t);
                 if (kOnWindows && (contains(t, "libusb") || contains(t, "no devices found"))) err += std::string(". ") + windowsUsbDriverHint();
             }
             return false;
@@ -245,12 +246,12 @@ protected:
         if (const std::string clk = radioOption(s, "clock", "default"); clk != "default") {
             std::string offered;
             if (!sourceOffered(true, clk, offered)) {
-                err = "USRP: this radio has no reference clock \"" + clk + "\" (it offers: " + offered + ")";
+                DIAG_ERROR(442457, "The USRP has no reference clock source named %s, so the radio is not started.", clk.c_str()); err = "USRP: this radio has no reference clock \"" + clk + "\" (it offers: " + offered + ")";
                 openFailure_ = OpenFailure::Final;
                 return false;
             }
             if (!uhd().set_clock_source || uhd().set_clock_source(dev_, clk.c_str(), 0) != 0) {
-                err = "USRP: the reference clock \"" + clk + "\" was refused" + (uhd().set_clock_source ? ": " + uhd().text(dev_) : std::string(" (this UHD cannot set it)"));
+                DIAG_ERROR(539436, "The USRP refused the reference clock source %s, so the radio is not started.", clk.c_str()); err = "USRP: the reference clock \"" + clk + "\" was refused" + (uhd().set_clock_source ? ": " + uhd().text(dev_) : std::string(" (this UHD cannot set it)"));
                 openFailure_ = OpenFailure::Final;
                 return false;
             }
@@ -261,12 +262,12 @@ protected:
         if (const std::string ts = timeSourcePicked_; ts != "default") {
             std::string offered;
             if (!sourceOffered(false, ts, offered)) {
-                err = "USRP: this radio has no time source \"" + ts + "\" (it offers: " + offered + ")";
+                DIAG_ERROR(974814, "The USRP has no time source named %s, so the radio is not started.", ts.c_str()); err = "USRP: this radio has no time source \"" + ts + "\" (it offers: " + offered + ")";
                 openFailure_ = OpenFailure::Final;
                 return false;
             }
             if (!uhd().set_time_source || uhd().set_time_source(dev_, ts.c_str(), 0) != 0) {
-                err = "USRP: the time source \"" + ts + "\" was refused" + (uhd().set_time_source ? ": " + uhd().text(dev_) : std::string(" (this UHD cannot set it)"));
+                DIAG_ERROR(346088, "The USRP refused the time source %s, so the radio is not started.", ts.c_str()); err = "USRP: the time source \"" + ts + "\" was refused" + (uhd().set_time_source ? ": " + uhd().text(dev_) : std::string(" (this UHD cannot set it)"));
                 openFailure_ = OpenFailure::Final;
                 return false;
             }
@@ -274,13 +275,13 @@ protected:
         if (radioOption(s, "clock", "default") != "default") lockNote_ = refLockNote(); else lockNote_.clear();
         rememberInputs();
         if (size_t n = 0; ch_ > 0 && uhd().get_rx_num_channels && uhd().get_rx_num_channels(dev_, &n) == 0 && ch_ >= n) {
-            err = "USRP: this radio has " + std::to_string(n) + " receive channel(s), channel " + std::to_string(ch_ + 1) + " was picked";
+            DIAG_ERROR(565007, "The USRP has %d receive channels but channel %d was picked, so the radio is not started.", (int)n, (int)ch_ + 1); err = "USRP: this radio has " + std::to_string(n) + " receive channel(s), channel " + std::to_string(ch_ + 1) + " was picked";
             openFailure_ = OpenFailure::Final;
             return false;
         }
         if (!antenna_.empty()) {   // the default entry leaves UHD's choice alone (RX2 on a B2xx)
-            if (!uhd().set_rx_antenna) { err = "USRP: this UHD cannot pick the antenna input (no uhd_usrp_set_rx_antenna)"; openFailure_ = OpenFailure::Final; return false; }
-            if (uhd().set_rx_antenna(dev_, antenna_.c_str(), ch_) != 0) { err = "USRP: the antenna input " + antenna_ + " was refused: " + uhd().text(dev_); openFailure_ = OpenFailure::Final; return false; }
+            if (!uhd().set_rx_antenna) { DIAG_ERROR(596658, "This UHD library has no function to pick the receive antenna, so the antenna choice cannot be applied."); err = "USRP: this UHD cannot pick the antenna input (no uhd_usrp_set_rx_antenna)"; openFailure_ = OpenFailure::Final; return false; }
+            if (uhd().set_rx_antenna(dev_, antenna_.c_str(), ch_) != 0) { DIAG_ERROR(229288, "The USRP refused the antenna input %s (UHD: %s), so the radio is not started.", antenna_.c_str(), uhd().text(dev_).c_str()); err = "USRP: the antenna input " + antenna_ + " was refused: " + uhd().text(dev_); openFailure_ = OpenFailure::Final; return false; }
             if (antenna_ == "TX/RX" && !onTxRx_) { onTxRx_ = true; rxTxRx(dargs, 1); dargsKept_ = dargs; }
         }
         if (UhdApi::range_t_* rg = nullptr; uhd().get_rx_freq_range && uhd().meta_range_make(&rg) == 0 && rg) {
@@ -299,7 +300,7 @@ protected:
     std::string timeSourcePicked_ = "default";
     double lastReqHz_ = -1;
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
-        if (!dev_) return false;
+        if (!dev_) { DIAG_DEBUG(420453, "The USRP was asked to configure itself while no device is open, so nothing is changed."); return false; }
         const size_t ch = ch_;
         if (!live) {
             if (streamer_) { stopReceiving(); }
@@ -313,7 +314,7 @@ protected:
             // itself for a faster rate (b200_impl::coerce_rx_samp_rate), so a rate above the range is asked for first; the range's top
             // only when the radio refuses it
             const double want = s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, lo);   // (3.4: a chosen rate goes to UHD as it is)
-            if (uhd().set_rx_rate(dev_, want, ch) != 0 && (want <= hi || uhd().set_rx_rate(dev_, hi, ch) != 0)) { err = "USRP: the sample rate was refused: " + uhd().text(dev_); return false; }
+            if (uhd().set_rx_rate(dev_, want, ch) != 0 && (want <= hi || uhd().set_rx_rate(dev_, hi, ch) != 0)) { DIAG_ERROR(858894, "The USRP refused a receive sample rate of %.0f Hz (UHD: %s), so the radio is not started.", (double)want, uhd().text(dev_).c_str()); err = "USRP: the sample rate was refused: " + uhd().text(dev_); return false; }
             double actual = std::min(want, hi);
             uhd().get_rx_rate(dev_, ch, &actual);
             rate_ = actual;
@@ -329,7 +330,7 @@ protected:
         UhdApi::tune_request_t req{ppmCorrectedHz(f, radioPpm(s)), UhdApi::kPolicyAuto, 0, UhdApi::kPolicyAuto, 0, noArgs};
         UhdApi::tune_result_t res{};
         const double reqHz = ppmCorrectedHz(f, radioPpm(s));
-        if ((!live || reqHz != lastReqHz_) && uhd().set_rx_freq(dev_, &req, ch, &res) != 0) { err = "USRP: the driver refused " + mhz(f) + " MHz" + range + ": " + uhd().text(dev_); return false; }
+        if ((!live || reqHz != lastReqHz_) && uhd().set_rx_freq(dev_, &req, ch, &res) != 0) { DIAG_ERROR(922531, "The USRP refused a receive frequency of %.0f Hz (UHD: %s), so the tune fails.", f, uhd().text(dev_).c_str()); err = "USRP: the driver refused " + mhz(f) + " MHz" + range + ": " + uhd().text(dev_); return false; }
         lastReqHz_ = reqHz;
         addNote(err, freqSpecNote("USRP", f, lo_, hi_));
         double gmin = 0, gmax = 76;
@@ -366,8 +367,8 @@ protected:
             // an overflow means samples were lost, not that the stream ended: continuous streaming goes on (rx_metadata_t::ERROR_CODE_OVERFLOW)
             else if (e == 0 && code == UhdApi::kRxOverflow) continue;
             // nothing for kStallS seconds (a network USRP whose cable was pulled only times out): treated as lost, so that it is opened again
-            else if (e == 0 && code == UhdApi::kRxTimeout) { if (run_ && ++timeouts >= kStallS) { fprintf(stderr, "USRP: no samples for %d s, stopping the source\n", kStallS); break; } }
-            else if (++failures > 20) { fprintf(stderr, "USRP: stream error %d / %d, stopping the source\n", e, code); break; }
+            else if (e == 0 && code == UhdApi::kRxTimeout) { if (run_ && ++timeouts >= kStallS) { DIAG(997092, "The USRP delivered no samples for %d seconds, so the source stops.", kStallS); fprintf(stderr, "USRP: no samples for %d s, stopping the source\n", kStallS); break; } }
+            else if (++failures > 20) { DIAG(655775, "The USRP receive stream failed more than 20 times in a row (error %d, code %d), so the source stops.", (int)e, (int)code); fprintf(stderr, "USRP: stream error %d / %d, stopping the source\n", e, code); break; }
         }
     }
 
@@ -403,10 +404,10 @@ private:
         char otw[8];
         snprintf(otw, sizeof otw, "%s", otw_.c_str());
         UhdApi::stream_args_t sa{cpu, otw, none, &chan, 1};
-        if (uhd().rx_streamer_make(&streamer_) != 0 || uhd().rx_metadata_make(&md_) != 0 || uhd().get_rx_stream(dev_, &sa, streamer_) != 0) { err = "USRP: cannot set up the sample stream: " + uhd().text(dev_); stopReceiving(); return false; }
+        if (uhd().rx_streamer_make(&streamer_) != 0 || uhd().rx_metadata_make(&md_) != 0 || uhd().get_rx_stream(dev_, &sa, streamer_) != 0) { DIAG_ERROR(403518, "The USRP receive stream could not be set up (UHD: %s), so the radio is not started.", uhd().text(dev_).c_str()); err = "USRP: cannot set up the sample stream: " + uhd().text(dev_); stopReceiving(); return false; }
         armHardwareTime(timeSourcePicked_);
         UhdApi::stream_cmd_t cmd{UhdApi::kStartContinuous, 0, true, 0, 0.0};
-        if (uhd().rx_streamer_issue_stream_cmd(streamer_, &cmd) != 0) { err = "USRP: cannot start the sample stream: " + uhd().text(dev_); stopReceiving(); return false; }
+        if (uhd().rx_streamer_issue_stream_cmd(streamer_, &cmd) != 0) { DIAG_ERROR(969802, "The USRP receive stream could not be started (UHD: %s), so the radio is not started.", uhd().text(dev_).c_str()); err = "USRP: cannot start the sample stream: " + uhd().text(dev_); stopReceiving(); return false; }
         return true;
     }
     void stopReceiving() {
@@ -491,21 +492,22 @@ public:
     ~UsrpTx() override { close(); }
     bool open(const TxTune& t, std::string& err) override {
         close();
-        if (!uhd().ok) { err = "USRP: UHD is not installed, it cannot transmit"; return false; }
-        if (!uhd().hasTx) { err = "USRP: the installed UHD has no transmit functions (uhd_usrp_set_tx_rate, uhd_tx_streamer_send, ...); install UHD 3.15 or newer"; return false; }
+        if (!uhd().ok) { DIAG_ERROR(733102, "UHD is not installed, so the USRP cannot transmit."); err = "USRP: UHD is not installed, it cannot transmit"; return false; }
+        if (!uhd().hasTx) { DIAG_ERROR(370456, "The installed UHD has no transmit functions, so the USRP cannot transmit (UHD 3.15 or newer is needed)."); err = "USRP: the installed UHD has no transmit functions (uhd_usrp_set_tx_rate, uhd_tx_streamer_send, ...); install UHD 3.15 or newer"; return false; }
         const std::string dargs = usrpDeviceArgs(args_, false);
-        if (rxHoldsTxRx(dargs)) { err = "USRP: the receiver is listening on the TX/RX connector, which the transmitter needs. Pick the RX2 input for receiving, or stop the receiver first."; return false; }
+        if (rxHoldsTxRx(dargs)) { DIAG_ERROR(993903, "The receiver is using the USRP TX/RX connector that the transmitter needs, so the transmitter does not start."); err = "USRP: the receiver is listening on the TX/RX connector, which the transmitter needs. Pick the RX2 input for receiving, or stop the receiver first."; return false; }
         if (!usrpAcquire(usrpDeviceArgs(args_, false), &dev_)) {
             const std::string x = uhd().text(nullptr);
-            err = "USRP: cannot open the radio" + (x.empty() ? std::string(" (in use by a receiver?)") : ": " + x);
+             DIAG_ERROR(129521, "Opening the USRP for transmit failed (UHD: %s), so the transmitter stays closed.", x.c_str());
+             err = "USRP: cannot open the radio" + (x.empty() ? std::string(" (in use by a receiver?)") : ": " + x);
             return false;
         }
         const size_t ch = (size_t)std::max(0, t.channel);
         if (size_t n = 0; uhd().get_tx_num_channels && uhd().get_tx_num_channels(dev_, &n) == 0 && ch >= n) {
-            err = "USRP: this radio has " + std::to_string(n) + " transmit output(s), output " + std::to_string(ch + 1) + " was picked"; shut(); return false;
+            DIAG_ERROR(775676, "The USRP has %d transmit outputs but output %d was picked, so the transmitter does not start.", (int)n, (int)ch + 1); err = "USRP: this radio has " + std::to_string(n) + " transmit output(s), output " + std::to_string(ch + 1) + " was picked"; shut(); return false;
         }
         const double rate = usrpTxPlan(t, 0, {}).rateHz;
-        if (uhd().set_tx_rate(dev_, rate, ch) != 0) { err = "USRP: the sample rate " + mhz(rate) + " Msps was refused: " + uhd().text(dev_); shut(); return false; }
+        if (uhd().set_tx_rate(dev_, rate, ch) != 0) { DIAG_ERROR(178851, "The USRP refused a transmit sample rate of %.0f Hz (UHD: %s), so the transmitter does not start.", (double)rate, uhd().text(dev_).c_str()); err = "USRP: the sample rate " + mhz(rate) + " Msps was refused: " + uhd().text(dev_); shut(); return false; }
         rate_ = rate;
         uhd().get_tx_rate(dev_, ch, &rate_);
         gmin_ = 0; gmax_ = 89.75;
@@ -517,12 +519,12 @@ public:
         // filter, connector, frequency and gain as usrpTxPlan (tx_control.h) works them out
         const TxHwPlan plan = usrpTxPlan(t, rate_, {gmin_, gmax_});
         if (uhd().set_tx_bandwidth) uhd().set_tx_bandwidth(dev_, plan.filterHz, ch);
-        if (uhd().set_tx_antenna(dev_, plan.antenna.c_str(), ch) != 0) { err = "USRP: the transmit connector TX/RX was refused: " + uhd().text(dev_); shut(); return false; }
+        if (uhd().set_tx_antenna(dev_, plan.antenna.c_str(), ch) != 0) { DIAG_ERROR(149062, "The USRP refused the TX/RX connector for transmit (UHD: %s), so the transmitter does not start.", uhd().text(dev_).c_str()); err = "USRP: the transmit connector TX/RX was refused: " + uhd().text(dev_); shut(); return false; }
         if (!tuneAndGain(plan, t, err)) { shut(); return false; }
         size_t chan = ch;
         char cpu[] = "fc32", otw[] = "sc16", none[] = "";
         UhdApi::stream_args_t sa{cpu, otw, none, &chan, 1};
-        if (uhd().tx_streamer_make(&st_) != 0 || uhd().get_tx_stream(dev_, &sa, st_) != 0) { err = "USRP: cannot set up the transmit stream: " + uhd().text(dev_); shut(); return false; }
+        if (uhd().tx_streamer_make(&st_) != 0 || uhd().get_tx_stream(dev_, &sa, st_) != 0) { DIAG_ERROR(763423, "The USRP transmit stream could not be set up (UHD: %s), so the transmitter does not start.", uhd().text(dev_).c_str()); err = "USRP: cannot set up the transmit stream: " + uhd().text(dev_); shut(); return false; }
         size_t m = 0;
         uhd().tx_streamer_max_num_samps(st_, &m);
         maxN_ = m > 0 ? m : 8192;
@@ -552,7 +554,7 @@ public:
             sob_ = false;
             const int e = uhd().tx_streamer_send(st_, b, k, &md, 1.0, &sent);
             uhd().tx_metadata_free(&md);
-            if (e != 0) { err = "USRP: the transmit stream failed: " + uhd().text(dev_); return false; }
+            if (e != 0) { DIAG_ERROR(925946, "The USRP transmit stream failed (UHD: %s), so sending stops.", uhd().text(dev_).c_str()); err = "USRP: the transmit stream failed: " + uhd().text(dev_); return false; }
             if (sent == 0) { if (++stalls_ > 5) { err = "USRP: the radio takes no transmit samples"; return false; } } else stalls_ = 0;
             done += sent;
         }
@@ -578,8 +580,8 @@ private:
         char noArgs[1] = {0};
         UhdApi::tune_request_t req{plan.loHz, UhdApi::kPolicyAuto, 0, UhdApi::kPolicyAuto, 0, noArgs};
         UhdApi::tune_result_t res{};
-        if (uhd().set_tx_freq(dev_, &req, ch_, &res) != 0) { err = "USRP: the driver refused " + mhz(txRadioHz(t)) + " MHz as a transmit frequency: " + uhd().text(dev_); return false; }
-        if (uhd().set_tx_gain(dev_, plan.gains.empty() ? gmin_ : plan.gains[0].second, ch_, "") != 0) { err = "USRP: the transmit gain was refused: " + uhd().text(dev_); return false; }
+        if (uhd().set_tx_freq(dev_, &req, ch_, &res) != 0) { DIAG_ERROR(910158, "The USRP refused a transmit frequency of %.0f Hz (UHD: %s), so the transmitter does not start.", (double)txRadioHz(t), uhd().text(dev_).c_str()); err = "USRP: the driver refused " + mhz(txRadioHz(t)) + " MHz as a transmit frequency: " + uhd().text(dev_); return false; }
+        if (uhd().set_tx_gain(dev_, plan.gains.empty() ? gmin_ : plan.gains[0].second, ch_, "") != 0) { DIAG_ERROR(145237, "The USRP refused the transmit gain (UHD: %s), so the transmitter does not start.", uhd().text(dev_).c_str()); err = "USRP: the transmit gain was refused: " + uhd().text(dev_); return false; }
         return true;
     }
     double gmin_ = 0, gmax_ = 89.75;

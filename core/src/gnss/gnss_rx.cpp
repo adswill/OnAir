@@ -5,6 +5,7 @@
 // This file: the public GnssReceiver API, the block loop and the tuning table. The state and the bigger member functions are in
 // gnss_rx_impl.h and gnss_rx_{plan,acq,nav,measure,telemetry}.cpp.
 #include "gnss_rx_impl.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -33,6 +34,7 @@ void GnssReceiver::setClockCompare(bool on) { p_->clockCompare = on; }
 void GnssReceiver::feed(const cf32* x, size_t n) {
     Impl& p = *p_;
     std::lock_guard<std::mutex> lk(p.procMu);
+    if (p.rate <= 0 && n != 0) DIAG_DEBUG_EVERY(130004, 10.0, "The GNSS receiver got %zu samples before its sample rate was set, so they are dropped.", n);
     if (p.rate <= 0 || n == 0) return;
     if (p.planGen != p.settingsGen.load()) p.replan();
     // The input is cut into blocks of a fixed size whatever the size of the chunks it arrives in: the result does not depend on the chunking

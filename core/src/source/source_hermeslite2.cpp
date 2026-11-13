@@ -28,6 +28,7 @@
 // (register 0x0a is not sent) and no N2ADR filter board; it has three receivers (NCO registers 0x02 to 0x04). The frame layout, the rate bits
 // (C1[1:0]: 48/96/192/384 ksps), the receiver count (C4[5:3]) and start/stop are the HL2's own.
 #include "native_common.h"
+#include "dect2/common/diag.h"
 #include "../net/netcompat.h"
 #include "dect2/net/netradio.h"
 #include <algorithm>
@@ -341,7 +342,7 @@ public:
 protected:
     bool openDevice(const TuneSettings& s, std::string& err) override {
         if (rx_ < 0 || rx_ >= p_.maxRx) {
-            err = std::string(p_.name) + " has at most " + std::to_string(p_.maxRx) + " receivers: RX" + std::to_string(rx_ + 1) + " is not one of them";
+            DIAG_ERROR(939752, "The %s has at most %d receivers and RX%d is not one of them, so the receiver is not opened.", p_.name, (int)p_.maxRx, rx_ + 1); err = std::string(p_.name) + " has at most " + std::to_string(p_.maxRx) + " receivers: RX" + std::to_string(rx_ + 1) + " is not one of them";
             openFailure_ = OpenFailure::Final;
             return false;
         }
@@ -451,7 +452,7 @@ bool Link::attach(HpsdrSource* s, int rx, const Rx& c, int wantSpeed, int& speed
     std::lock_guard<std::mutex> op(opMu_);
     retry = true;
     const std::string rxName = std::string(p_.name) + " RX" + std::to_string(rx + 1);
-    if (dead_) { err = std::string(p_.name) + ": the stream from " + addr_ + " was lost"; return false; }
+    if (dead_) { DIAG_ERROR(366535, "The %s stream from %s was lost, so the receiver is not used.", p_.name, addr_.c_str()); err = std::string(p_.name) + ": the stream from " + addr_ + " was lost"; return false; }
     {
         std::lock_guard<std::mutex> lk(mu_);
         if (open_ && nrRadio_ > 0 && rx >= nrRadio_) {
@@ -459,7 +460,7 @@ bool Link::attach(HpsdrSource* s, int rx, const Rx& c, int wantSpeed, int& speed
             retry = false;
             return false;
         }
-        if (src_[rx] && src_[rx] != s) { err = rxName + " is open already"; retry = false; return false; }
+        if (src_[rx] && src_[rx] != s) { DIAG_ERROR(490393, "Receiver %s of the Hermes Lite is open already, so it is not opened a second time.", rxName.c_str()); err = rxName + " is open already"; retry = false; return false; }
         if (!othersLocked(rx)) speed_ = wantSpeed;
         src_[rx] = s;
         rx_[rx] = c;
@@ -482,7 +483,8 @@ bool Link::attach(HpsdrSource* s, int rx, const Rx& c, int wantSpeed, int& speed
     if (!cv_.wait_for(lk, std::chrono::milliseconds(3000), [&] { return dead_.load() || (nr_ == need && !settling_); }) || dead_) {
         src_[rx] = nullptr;
         wantNr_ = needNrLocked();
-        err = rxName + ": the stream from " + addr_ + " did not go over to " + std::to_string(need) + " receivers";
+         DIAG_ERROR(595802, "The stream from %s did not go over to %d receivers, so the extra receiver is not opened.", addr_.c_str(), (int)need);
+         err = rxName + ": the stream from " + addr_ + " did not go over to " + std::to_string(need) + " receivers";
         return false;
     }
     return true;
@@ -514,10 +516,10 @@ void Link::shutdown() {
 bool Link::openLocked(int rx, std::string& err, bool& retry) {
     std::string host;
     int port = 0;
-    if (!splitHostPort(addr_, host, port)) { err = std::string(p_.name) + ": bad address " + addr_ + " (host:port)"; retry = false; return false; }
-    if (!resolve4(host, port, dev_)) { err = std::string(p_.name) + ": cannot find the address " + host; return false; }
+    if (!splitHostPort(addr_, host, port)) { DIAG_ERROR(593545, "The %s address %s is not in host:port form, so no connection is tried.", p_.name, addr_.c_str()); err = std::string(p_.name) + ": bad address " + addr_ + " (host:port)"; retry = false; return false; }
+    if (!resolve4(host, port, dev_)) { DIAG_ERROR(566875, "The %s address %s could not be resolved to an IPv4 address, so the radio is not opened.", p_.name, host.c_str()); err = std::string(p_.name) + ": cannot find the address " + host; return false; }
     sock_ = udpSocket(100);
-    if (sock_ == kBadSock) { err = std::string(p_.name) + ": no UDP socket"; return false; }
+    if (sock_ == kBadSock) { DIAG_ERROR(854922, "The %s could not get a UDP socket, so the radio is not opened.", p_.name); err = std::string(p_.name) + ": no UDP socket"; return false; }
     unsigned char b[1500];
     // how many receivers it has: its discovery reply says (an HL2's does; the Red Pitaya server's does not)
     {
@@ -561,7 +563,8 @@ bool Link::openLocked(int rx, std::string& err, bool& retry) {
         else if (std::chrono::steady_clock::now() - lastStart > std::chrono::milliseconds(400)) { command(true); lastStart = std::chrono::steady_clock::now(); }
     }
     if (!got) {
-        err = std::string(p_.name) + ": no samples from " + addr_ + " (is it on, and not streaming to another program?)";
+         DIAG_ERROR(239153, "The %s at %s sent no samples after the start command, so the receiver is not used (is it on, and not streaming to another program?).", p_.name, addr_.c_str());
+         err = std::string(p_.name) + ": no samples from " + addr_ + " (is it on, and not streaming to another program?)";
         return false;
     }
     sendControl();
@@ -663,7 +666,7 @@ void Link::loop() {
         sendControl();   // one back for each one received: the radio's watchdog
     }
     if (run_) {
-        fprintf(stderr, "%s: no samples from %s for %d s\n", p_.name, addr_.c_str(), kStallMs / 1000);
+        DIAG(138478, "The %s at %s sent no samples for %d seconds, so the stream is treated as lost.", p_.name, addr_.c_str(), kStallMs / 1000); fprintf(stderr, "%s: no samples from %s for %d s\n", p_.name, addr_.c_str(), kStallMs / 1000);
         fflush(stderr);
         dead_ = true;
         cv_.notify_all();
@@ -789,7 +792,7 @@ std::vector<DeviceInfo> hpsdr1Devices(const Profile& p, const std::string& host,
 
 bool hpsdr1Probe(const Profile& p, const std::string& host, int port, int timeoutMs, std::string& err) {
     sockaddr_in a{};
-    if (!resolve4(host, port, a)) { err = "cannot find the address " + host + " (a " + p.name + " needs an IPv4 address)"; return false; }
+    if (!resolve4(host, port, a)) { DIAG_ERROR(390204, "The address %s could not be resolved to an IPv4 address, so no radio is looked for there.", host.c_str()); err = "cannot find the address " + host + " (a " + p.name + " needs an IPv4 address)"; return false; }
     const auto found = discover({a}, timeoutMs, false, p.boardId);
     if (!found.empty()) {
         noteReceivers(host + ":" + std::to_string(port), found[0].receivers);   // the list shows that many

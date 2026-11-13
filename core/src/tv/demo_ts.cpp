@@ -4,6 +4,7 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/tv/demo_ts.h"
 #include "dect2/audio/videoin.h"
+#include "dect2/common/diag.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -102,10 +103,10 @@ void drawCard(AVFrame* f, int n, int svc, int picture, const char* name) {
 bool loadFileFrame(const std::string& path, AVFrame* vf, int n) {
     if (path.empty()) return false;
     AVFormatContext* ic = nullptr;
-    if (avformat_open_input(&ic, path.c_str(), nullptr, nullptr) < 0) return false;
-    if (avformat_find_stream_info(ic, nullptr) < 0) { avformat_close_input(&ic); return false; }
+    if (avformat_open_input(&ic, path.c_str(), nullptr, nullptr) < 0) { DIAG_DEBUG(729891, "FFmpeg could not open the demo video file %s, so the demo picture is used instead.", path.c_str()); return false; }
+    if (avformat_find_stream_info(ic, nullptr) < 0) { DIAG_DEBUG(611539, "FFmpeg could not read the streams of the demo video file %s, so the demo picture is used instead.", path.c_str()); avformat_close_input(&ic); return false; }
     const int si = av_find_best_stream(ic, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
-    if (si < 0) { avformat_close_input(&ic); return false; }
+    if (si < 0) { DIAG_DEBUG(714846, "The demo video file %s has no video stream, so the demo picture is used instead.", path.c_str()); avformat_close_input(&ic); return false; }
     AVStream* st = ic->streams[si];
     const AVCodec* codec = avcodec_find_decoder(st->codecpar->codec_id);
     AVCodecContext* ctx = codec ? avcodec_alloc_context3(codec) : nullptr;
@@ -166,10 +167,10 @@ bool encode(Clip& clip, const DemoTsIdentity& id) {
     const auto progs = programmesOf(id);
     const int nsvc = (int)progs.size();
     AVFormatContext* oc = nullptr;
-    if (avformat_alloc_output_context2(&oc, nullptr, "mpegts", nullptr) < 0 || !oc) return false;
-    if (avio_open_dyn_buf(&oc->pb) < 0) { avformat_free_context(oc); return false; }
+    if (avformat_alloc_output_context2(&oc, nullptr, "mpegts", nullptr) < 0 || !oc) { DIAG_ERROR(785331, "This FFmpeg build cannot write MPEG transport streams, so the demo transport stream is not made."); return false; }
+    if (avio_open_dyn_buf(&oc->pb) < 0) { DIAG_ERROR(874202, "FFmpeg could not allocate the memory buffer for the demo transport stream, so it is not made."); avformat_free_context(oc); return false; }
     const AVCodec* vc = avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
-    if (!vc) { uint8_t* b; avio_close_dyn_buf(oc->pb, &b); av_free(b); avformat_free_context(oc); return false; }
+    if (!vc) { DIAG_ERROR(847513, "This FFmpeg build has no MPEG-2 video encoder, so the demo transport stream is not made."); uint8_t* b; avio_close_dyn_buf(oc->pb, &b); av_free(b); avformat_free_context(oc); return false; }
 
     struct ProgEnc { AVCodecContext *vx = nullptr, *ax = nullptr; AVStream *vs = nullptr, *as = nullptr; AVFrame *vf = nullptr, *af = nullptr; int64_t aPts = 0; };
     std::vector<ProgEnc> pe((size_t)nsvc);

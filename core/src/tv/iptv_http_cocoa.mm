@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <deque>
 #include <mutex>
+#include "dect2/common/diag.h"
 
 @interface OnAirIptvDelegate : NSObject <NSURLSessionDataDelegate, NSURLSessionTaskDelegate>
 @property(nonatomic) std::mutex* mu;
@@ -91,7 +92,7 @@ std::unique_ptr<HttpBody> httpOpenPlatform(const std::string& url, const HttpOpt
     handled = true;
     @autoreleasepool {
         NSURL* nu = [NSURL URLWithString:[NSString stringWithUTF8String:url.c_str()]];
-        if (!nu) { r.error = "not a valid address"; return nullptr; }
+        if (!nu) { DIAG_DEBUG(864755, "The address is not a valid URL for NSURLSession, so it is not opened."); r.error = "not a valid address"; return nullptr; }
         auto b = std::make_unique<CocoaBody>();
         b->readMs = o.readTimeoutMs; b->cancel = o.cancel;
         NSMutableURLRequest* req = [NSMutableURLRequest requestWithURL:nu];
@@ -119,7 +120,7 @@ std::unique_ptr<HttpBody> httpOpenPlatform(const std::string& url, const HttpOpt
                 if (o.cancel && o.cancel->load()) { r.error = "stopped"; return nullptr; }
                 if (b->cv.wait_for(l, std::chrono::milliseconds(200)) == std::cv_status::timeout && std::chrono::steady_clock::now() >= end) { r.error = "the server did not answer in time"; return nullptr; }
             }
-            if (b->status == 0) { r.error = b->err.empty() ? "no answer from the server" : b->err; return nullptr; }
+            if (b->status == 0) { DIAG_DEBUG(967054, "NSURLSession got no answer from the server (%s), so the request fails.", b->err.empty() ? "no reason given" : b->err.c_str()); r.error = b->err.empty() ? "no answer from the server" : b->err; return nullptr; }
         }
         r.status = b->status; r.headers = b->headers; r.finalUrl = url;
         if (r.headers.count("content-type")) r.contentType = r.headers["content-type"];

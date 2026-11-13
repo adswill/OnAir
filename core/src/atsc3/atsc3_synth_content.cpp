@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "atsc3_synth_content.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -119,8 +120,15 @@ struct Track {
 // Writes the packets as a fragmented MP4 in memory, `perSlot[i]` packets in fragment i. The packets carry times in `tb`.
 bool muxFragments(const AVCodecParameters* par, AVRational tb, const std::vector<AVPacket*>& pk, const std::vector<int>& perSlot, bool hvc1, Track& out) {
     AVFormatContext* oc = nullptr;
-    if (avformat_alloc_output_context2(&oc, nullptr, "mp4", nullptr) < 0 || !oc) return false;
-    if (avio_open_dyn_buf(&oc->pb) < 0) { avformat_free_context(oc); return false; }
+    if (avformat_alloc_output_context2(&oc, nullptr, "mp4", nullptr) < 0 || !oc) {
+        DIAG_DEBUG_EVERY(697123, 10.0, "FFmpeg has no MP4 muxer, so the ATSC 3.0 test content cannot be packaged.");
+        return false;
+    }
+    if (avio_open_dyn_buf(&oc->pb) < 0) {
+        DIAG_DEBUG_EVERY(947713, 10.0, "FFmpeg could not allocate the in-memory buffer for the ATSC 3.0 test content, so it is not packaged.");
+        avformat_free_context(oc);
+        return false;
+    }
     bool ok = false;
     AVDictionary* opt = nullptr;
     AVStream* st = avformat_new_stream(oc, nullptr);
@@ -168,9 +176,15 @@ struct VideoTry { const char* encoder; int codecPref; };   // codecPref: 1 HEVC,
 
 bool encodeVideo(const VideoTry& vt, int kbps, Track& out, std::string& codecName) {
     const AVCodec* c = avcodec_find_encoder_by_name(vt.encoder);
-    if (!c) return false;
+    if (!c) {
+        DIAG_DEBUG_EVERY(930821, 10.0, "The video encoder %s is not part of this FFmpeg build, so the ATSC 3.0 test picture tries the next encoder.", vt.encoder);
+        return false;
+    }
     AVCodecContext* cx = avcodec_alloc_context3(c);
-    if (!cx) return false;
+    if (!cx) {
+        DIAG_DEBUG_EVERY(599831, 10.0, "FFmpeg could not allocate the %s encoder, so the ATSC 3.0 test picture tries the next encoder.", vt.encoder);
+        return false;
+    }
     cx->width = kW; cx->height = kH; cx->pix_fmt = AV_PIX_FMT_YUV420P;
     cx->time_base = AVRational{1, kFps}; cx->framerate = AVRational{kFps, 1};
     cx->gop_size = kGop; cx->max_b_frames = 0;
@@ -206,7 +220,11 @@ bool encodeVideo(const VideoTry& vt, int kbps, Track& out, std::string& codecNam
             drawCard(f, n);
             f->pts = n;
             if (n % kGop == 0) f->pict_type = AV_PICTURE_TYPE_I; else f->pict_type = AV_PICTURE_TYPE_NONE;
-            if (avcodec_send_frame(cx, f) < 0) { ok = false; break; }
+            if (avcodec_send_frame(cx, f) < 0) {
+                DIAG_DEBUG_EVERY(520343, 10.0, "The video encoder %s refused test picture %d, so this encoder is abandoned for the ATSC 3.0 test content.", vt.encoder, n);
+                ok = false;
+                break;
+            }
             drain();
         }
         if (ok) { avcodec_send_frame(cx, nullptr); drain(); }
@@ -243,7 +261,10 @@ bool encodeVideo(const VideoTry& vt, int kbps, Track& out, std::string& codecNam
 bool encodeAudio(int bitrate, Track& out) {
     const AVCodec* c = avcodec_find_encoder_by_name("aac");
     if (!c) c = avcodec_find_encoder(AV_CODEC_ID_AAC);
-    if (!c) return false;
+    if (!c) {
+        DIAG_DEBUG_EVERY(834221, 10.0, "FFmpeg has no AAC encoder, so the ATSC 3.0 test content has no sound.");
+        return false;
+    }
     AVCodecContext* cx = nullptr;
     bool ok = false;
     for (AVSampleFormat sf : {AV_SAMPLE_FMT_FLTP, AV_SAMPLE_FMT_S16, AV_SAMPLE_FMT_S16P, AV_SAMPLE_FMT_FLT}) {
@@ -255,9 +276,14 @@ bool encodeAudio(int bitrate, Track& out) {
         cx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
         if (avcodec_open2(cx, c, nullptr) >= 0) { ok = true; break; }
     }
-    if (!ok) { avcodec_free_context(&cx); return false; }
+    if (!ok) {
+        DIAG_DEBUG_EVERY(281123, 10.0, "The AAC encoder did not open with any sample format, so the ATSC 3.0 test content has no sound.");
+        avcodec_free_context(&cx);
+        return false;
+    }
     const int frame = cx->frame_size > 0 ? cx->frame_size : kAFrame;
     ok = frame == kAFrame;
+    if (!ok) DIAG_DEBUG_EVERY(421705, 10.0, "The AAC encoder works with frames of %d samples instead of %d, so the ATSC 3.0 test content has no sound.", frame, (int)kAFrame);
     std::vector<AVPacket*> pk;
     if (ok) {
         AVFrame* f = av_frame_alloc();
@@ -281,7 +307,11 @@ bool encodeAudio(int bitrate, Track& out) {
                 }
             }
             f->pts = (int64_t)n * frame;
-            if (avcodec_send_frame(cx, f) < 0) { ok = false; break; }
+            if (avcodec_send_frame(cx, f) < 0) {
+                DIAG_DEBUG_EVERY(168776, 10.0, "The AAC encoder refused test audio frame %d, so the ATSC 3.0 test content has no sound.", n);
+                ok = false;
+                break;
+            }
             drain();
         }
         if (ok) { avcodec_send_frame(cx, nullptr); drain(); }

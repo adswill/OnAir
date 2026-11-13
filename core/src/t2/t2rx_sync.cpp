@@ -3,6 +3,7 @@
 
 // P1 preamble detection and guard-interval detection of the DVB-T2 receiver.
 #include "t2rx_impl.h"
+#include "dect2/common/diag.h"
 #if (defined(__ARM_NEON) || defined(__aarch64__)) && !defined(DECT2_NO_SIMD)
 #include <arm_neon.h>
 #define T2P1_NEON 1
@@ -220,6 +221,7 @@ void T2Receiver::Impl::scanP1() {
             if (trackExpect <= 0) trackExpect = prevPos + frameLen;
             const int64_t wLo = (int64_t)std::floor(trackExpect) - kTrackWindow - lo, wHi = (int64_t)std::ceil(trackExpect) + kTrackWindow - lo;
             if (wHi < from) {   // this expected P1 lies behind the scan front: it was not seen
+                DIAG_DEBUG_EVERY(736772, 5, "The expected DVB-T2 P1 preamble at sample %.0f was passed before it was checked, so the receiver searches the whole range again.", trackExpect);
                 if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] tracked P1 behind the scan front (expected %.0f): searching everything again\n", trackExpect);
                 rewind();
                 return;
@@ -230,6 +232,7 @@ void T2Receiver::Impl::scanP1() {
             done.emplace_back(dA, dB);
             if (p1Detect(lo, lastD, dA, dB)) { from = dB + 1; continue; }   // (trackExpect is updated on acceptance)
             if (wHi <= cHi) {   // the whole window was searched without finding a P1
+                DIAG_DEBUG_EVERY(238756, 5, "No DVB-T2 P1 preamble was found where the previous frame predicted it (sample %.0f), so the receiver searches the whole range again.", trackExpect);
                 if (getenv("DECT2_DEBUG")) { float mx = 0; for (int64_t k = std::max<int64_t>(0, wLo); k <= std::min(lastD, wHi); k++) mx = std::max(mx, m[k]); fprintf(stderr, "  [dbg] no P1 in the window around %.0f (+-%d), best metric %.2f: searching everything again\n", trackExpect, kTrackWindow, mx); }
                 rewind();
                 return;
@@ -462,6 +465,7 @@ void T2Receiver::Impl::handleP1Candidate(int64_t d, float metric) {
             const bool lostSamples = sameSignal && r.conf >= 0.9 && metric >= 0.5 && (double)d < expect - 32 && (double)d > prevPos + kP1Len;
             if (lostSamples) confirmsRejected = true;
             if (!confirmsRejected) {
+                DIAG_DEBUG_EVERY(799386, 5, "A DVB-T2 P1 preamble %.0f samples away from its expected position was ignored until the next one agrees with it.", (double)d - prevPos - frameLen);
                 if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] ignored implausible P1 (%.0f samples from the expected position)\n", (double)d - prevPos - frameLen);
                 rejectedPos = (double)d; haveRejected = true;
                 lastP1Abs = d;
@@ -474,11 +478,13 @@ void T2Receiver::Impl::handleP1Candidate(int64_t d, float metric) {
             if (hit) {
                 hit->lost = (int64_t)std::llround(prevPos + frameLen - ((double)d - r.frac));
                 hit->lostKnown = true;
+                DIAG_DEBUG_EVERY(647075, 5, "%lld samples were lost inside a DVB-T2 frame (a USB stall or an overload), so the symbols around the gap are erased.", (long long)hit->lost);
                 if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] %lld samples lost in the frame\n", (long long)hit->lost);
             } else {
                 frames.clear(); frameCells.clear(); p2cells.clear();
             }
             prevPos = -1;
+            DIAG_DEBUG_EVERY(740023, 5, "The DVB-T2 frame timeline jumped (%s), so the receiver restarts from this P1 preamble.", lostSamples ? "samples were lost" : "confirmed by the next preamble");
             if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] timeline jump %s, resynchronising\n", lostSamples ? "(samples lost)" : "confirmed");
         }
         haveRejected = false;
@@ -507,6 +513,7 @@ void T2Receiver::Impl::handleP1Candidate(int64_t d, float metric) {
     for (auto& c : p1Const) c /= nrm;
 
     if (!fm || info.s1 >= 5 || info.s1 == 2) { // non-T2 or reserved: nothing to demodulate
+        DIAG_DEBUG_EVERY(532439, 5, "A P1 preamble with S1 value %d is not a DVB-T2 signalling type OnAir can demodulate, so it is skipped.", (int)info.s1);
         return;
     }
     // S2 field 1 has two codes for 8K and for 32K: 1 and 5 with the guard intervals 1/32 - 1/4, 6 and 7 with 1/128, 19/256 and 19/128
@@ -515,6 +522,7 @@ void T2Receiver::Impl::handleP1Candidate(int64_t d, float metric) {
     const int code = info.s2field1 == 7 ? 5 : info.s2field1 == 6 ? 1 : info.s2field1;
     bool changed = fm->n != fftN || info.s1 != curS1 || code != fftCode;
     if (changed) {
+        DIAG_DEBUG_EVERY(529455, 5, "The DVB-T2 P1 preamble now signals FFT size %d (S1 %d), so the receiver resets its frame and guard-interval state.", (int)fm->n, (int)info.s1);
         fftN = fm->n;
         fftCode = code;
         curS1 = info.s1;
@@ -536,6 +544,7 @@ void T2Receiver::Impl::handleP1Candidate(int64_t d, float metric) {
     if (getenv("DECT2_DEBUG") && prevPos >= 0 && frameLen > 0) fprintf(stderr, "  [dbg] P1 spacing error %+.1f samples (metric %.2f conf %.2f cfo %+.0f) clock correction %+.2f ppm\n", (pos - prevPos) - frameLen, info.metric, info.conf, info.cfoHz, sroCorr * 1e6);
     if (state == 0 && !changed && giIdx >= 0 && guard > 0) {
         // lost lock earlier but the parameters are unchanged: resume without re-detecting the guard interval
+        DIAG_DEBUG_EVERY(768372, 5, "The DVB-T2 signal came back with unchanged parameters, so the receiver resumes without detecting the guard interval again.");
         state = 2;
         frames.clear(); frameCells.clear(); p2cells.clear();
         prevPos = -1;

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include <functional>
+#include "dect2/common/diag.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/dsp/sample_convert.h"
 #include "dect2/engine/mode_synth.h"
@@ -97,7 +98,8 @@ bool hackrfAcquire(std::string& err) {
     if (g_hackrfRefs == 0) {
         int r = hackrf_init();
         if (r != HACKRF_SUCCESS) {
-            err = std::string("hackrf_init: ") + hackrf_error_name((hackrf_error)r);
+             DIAG_ERROR(360672, "Starting libhackrf failed (%s), so no HackRF can be opened.", hackrf_error_name((hackrf_error)r));
+             err = std::string("hackrf_init: ") + hackrf_error_name((hackrf_error)r);
             return false;
         }
     }
@@ -120,7 +122,8 @@ public:
         ring_ = &ring;
         int r = serial_.empty() ? hackrf_open(&dev_) : hackrf_open_by_serial(serial_.c_str(), &dev_);
         if (r != HACKRF_SUCCESS) {
-            err = std::string("open: ") + hackrf_error_name((hackrf_error)r);
+             DIAG_ERROR(477403, "Opening the HackRF through libhackrf failed (%s), so the radio stays closed.", hackrf_error_name((hackrf_error)r));
+             err = std::string("open: ") + hackrf_error_name((hackrf_error)r);
             hackrfRelease();
             return false;
         }
@@ -155,7 +158,8 @@ public:
         } else
         r = hackrf_start_rx(dev_, &HackrfSource::rxCb, this);
         if (r != HACKRF_SUCCESS) {
-            err = std::string("start_rx: ") + hackrf_error_name((hackrf_error)r);
+             DIAG_ERROR(745331, "Starting the HackRF receive stream through libhackrf failed (%s), so the radio is closed again.", hackrf_error_name((hackrf_error)r));
+             err = std::string("start_rx: ") + hackrf_error_name((hackrf_error)r);
             if (bias_) hackrf_set_antenna_enable(dev_, 0);   // apply() may have switched the antenna power on
             bias_ = false;
             hackrf_close(dev_);
@@ -186,7 +190,8 @@ private:
     bool apply(const TuneSettings& s, std::string& err, bool live = false) {
         auto chk = [&](int r, const char* what) {
             if (r == HACKRF_SUCCESS) return true;
-            err = std::string(what) + ": " + hackrf_error_name((hackrf_error)r);
+             DIAG_ERROR(945252, "The HackRF refused a setting for %s through libhackrf (%s), so the setting is not applied.", what, hackrf_error_name((hackrf_error)r));
+             err = std::string(what) + ": " + hackrf_error_name((hackrf_error)r);
             return false;
         };
         if (!live || s.sampleRate != rate_) {
@@ -356,8 +361,8 @@ protected:
 #else
         f_ = fopen(path_.c_str(), "rb");
 #endif
-        if (!f_) { err = "cannot open " + path_ + ": " + strerror(errno); return false; }
-        if (off_ && fseek(f_, (long)off_, SEEK_SET) != 0) { err = "cannot seek in " + path_; return false; }
+        if (!f_) { DIAG_ERROR(759483, "The IQ file %s could not be opened (%s), so the file source stays closed.", path_.c_str(), strerror(errno)); err = "cannot open " + path_ + ": " + strerror(errno); return false; }
+        if (off_ && fseek(f_, (long)off_, SEEK_SET) != 0) { DIAG_ERROR(859954, "The IQ file %s could not be positioned at its start offset, so the file source stays closed.", path_.c_str()); err = "cannot seek in " + path_; return false; }
         pos_ = off_;
         return true;
     }

@@ -553,6 +553,17 @@ struct RemoteApiServer::Impl {
             else route(s, rq);
         }
         if (gTls) { tls::close(gTls); gTls = nullptr; }
+        else if (!quit) {
+            // An early refusal (413, 431, 400) leaves part of the request unread. Closing then resets the connection on Windows and the reset
+            // throws the answer away: end our side, read what the client still sends (briefly), then shut down.
+#ifdef _WIN32
+            ::shutdown(s, SD_SEND);
+#else
+            ::shutdown(s, SHUT_WR);
+#endif
+            sockRecvTimeout(s, 200);
+            char drain[2048]; for (int n = 0; n < 8 && sockRecv(s, drain, sizeof drain) > 0; n++) {}
+        }
         sockShutdown(s);
         cn->done = true;
     }

@@ -3400,3 +3400,20 @@ foreach(t40d fm_d40 am_d40 dab_d40 sat_d40 tv_d40 scan_d40 sat_e40 hf_e40 radio_
     add_test(NAME ${t40d} COMMAND test_${t40d})
   endif()
 endforeach()
+
+# Diagnostic codes (docs/DIAGNOSTICS.md): standalone test programs that compile OnAir sources
+# directly, without linking dect2core, also get core/src/common/diag.cpp so the DIAG calls link.
+get_property(_onair_exes DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+foreach(_t IN LISTS _onair_exes)
+  get_target_property(_ty ${_t} TYPE)
+  if(_ty STREQUAL "EXECUTABLE")
+    get_target_property(_src ${_t} SOURCES)
+    get_target_property(_lib ${_t} LINK_LIBRARIES)
+    if(NOT _lib)
+      set(_lib "")
+    endif()
+    if("${_src}" MATCHES "core/src/" AND NOT "${_src}" MATCHES "common/diag\\.cpp" AND NOT "${_lib}" MATCHES "dect2core")
+      target_sources(${_t} PRIVATE core/src/common/diag.cpp)
+    endif()
+  endif()
+endforeach()

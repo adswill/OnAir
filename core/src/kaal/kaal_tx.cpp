@@ -8,6 +8,7 @@
 #include "dect2/kaal/kaal_fec.h"
 #include "dect2/kaal/kaal_phy.h"
 #include "dect2/kaal/kaal_sweepid.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <array>
@@ -311,7 +312,10 @@ size_t VoiceTx::popIq(std::complex<float>* out, size_t maxSamples) {
     return n;
 }
 bool VoiceTx::setBitrate(int kbit) {
-    if (kbit != 0 && !KaalCodec3::validBitrate(kbit)) return false;
+    if (kbit != 0 && !KaalCodec3::validBitrate(kbit)) {
+        DIAG_DEBUG(436998, "The KAAL voice bitrate %d kbit/s is not one the codec offers, so the transmitter keeps its current bitrate.", kbit);
+        return false;
+    }
     p_->bitrate = kbit;
     if (kbit) p_->codec3 = KaalCodec3(kbit);
     p_->applyRate();
@@ -325,7 +329,10 @@ bool VoiceTx::setSweepCallsign(const std::string& callsign) {
     std::string base;
     int sfx = 0;
     p_->idSyms.fill(0);
-    if (!splitCallsign(callsign, base, sfx)) return false;
+    if (!splitCallsign(callsign, base, sfx)) {
+        DIAG_DEBUG(966826, "The KAAL callsign \"%s\" does not fit the sweep ID (6 characters and a suffix class), so the sweep goes out without a station ID.", callsign.c_str());
+        return false;
+    }
     p_->idSyms = sweepIdSymbols(base, sfx);
     return true;
 }

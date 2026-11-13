@@ -8,6 +8,7 @@
 // parameter. A real RTL-SDR drops samples above 2.56 Msps, so it is held to that; another radio ("Server radio", or found from the greeting:
 // not RTL0, or a tuner type outside 1 to 6) takes any rate from 0.25 to 20 Msps and its gain in tenths of a dB as asked.
 #include "../net/tcp_client.h"
+#include "dect2/common/diag.h"
 #include "native_common.h"
 #include "dect2/net/netradio.h"
 #include "dect2/net/net_proto.h"
@@ -116,23 +117,23 @@ protected:
     bool openDevice(const TuneSettings& s, std::string& err) override {
         std::string host;
         int port = 0;
-        if (!splitHostPort(addr_, host, port)) { err = "rtl_tcp: bad address " + addr_ + " (host:port)"; openFailure_ = OpenFailure::Final; return false; }
+        if (!splitHostPort(addr_, host, port)) { DIAG_ERROR(281548, "The rtl_tcp address %s is not in host:port form, so no connection is tried.", addr_.c_str()); err = "rtl_tcp: bad address " + addr_ + " (host:port)"; openFailure_ = OpenFailure::Final; return false; }
         std::string e;
         // one retry when nothing answered in time: a local server that is still starting its radio can accept a moment later (#201)
         const int connectMs = isLoopbackHost(host) ? kLocalConnectMs : kConnectMs;
         sock_t k = tcpConnect(host, port, connectMs, e);
         if (k == kBadSock && e.find("no answer") != std::string::npos && !openCancelled()) k = tcpConnect(host, port, connectMs, e);
-        if (k == kBadSock) { err = "rtl_tcp: " + e; openFailure_ = OpenFailure::Retry; return false; }
+        if (k == kBadSock) { DIAG_ERROR(141752, "Connecting to the rtl_tcp server %s failed (%s), so the source stays closed.", addr_.c_str(), e.c_str()); err = "rtl_tcp: " + e; openFailure_ = OpenFailure::Retry; return false; }
         {
             std::lock_guard<std::mutex> lk(sendMu_);   // against abortOpen() from stop()
             sock_ = k;
-            if (openCancelled()) { err = "rtl_tcp: stopped"; return false; }
+            if (openCancelled()) { DIAG_DEBUG(658042, "The connection to the rtl_tcp server %s was cancelled while it was being made, so the open stops.", addr_.c_str()); err = "rtl_tcp: stopped"; return false; }
         }
         sockRecvTimeout(sock_, kGreetingMs);
         unsigned char hdr[12];
-        if (!sockRecvAll(sock_, hdr, sizeof hdr)) { err = "rtl_tcp: " + addr_ + " connected but sent no greeting (another client may have it)"; return false; }
+        if (!sockRecvAll(sock_, hdr, sizeof hdr)) { DIAG_ERROR(196786, "The rtl_tcp server %s accepted the connection but sent no greeting, so the source stays closed (another client may have it).", addr_.c_str()); err = "rtl_tcp: " + addr_ + " connected but sent no greeting (another client may have it)"; return false; }
         std::string magic;
-        if (!rtlTcpGreeting(hdr, magic, detected_)) { err = "rtl_tcp: " + addr_ + " is not an rtl_tcp server"; openFailure_ = OpenFailure::Final; return false; }
+        if (!rtlTcpGreeting(hdr, magic, detected_)) { DIAG_ERROR(321423, "The server at %s did not greet like rtl_tcp, so it is not used.", addr_.c_str()); err = "rtl_tcp: " + addr_ + " is not an rtl_tcp server"; openFailure_ = OpenFailure::Final; return false; }
         rtlTcpNoteServer(addr_, detected_);
         tuner_ = (int)be32(hdr + 4);
         const uint32_t nGains = be32(hdr + 8);
@@ -156,7 +157,7 @@ protected:
         sentRate_ = sentFreq_ = 0;
         sentGain_ = sentPpm_ = sentDs_ = sentBias_ = -1000;
         carry_ = -1;
-        if (!command(kCmdGainMode, 1) || !command(kCmdAgc, 0)) { err = "rtl_tcp: the connection to " + addr_ + " dropped"; return false; }   // manual gain: OnAir runs its own AGC
+        if (!command(kCmdGainMode, 1) || !command(kCmdAgc, 0)) { DIAG_ERROR(229601, "The connection to the rtl_tcp server %s dropped while the gain mode was being set, so the open fails.", addr_.c_str()); err = "rtl_tcp: the connection to " + addr_ + " dropped"; return false; }   // manual gain: OnAir runs its own AGC
         return configure(s, err, false);
     }
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
@@ -183,6 +184,7 @@ protected:
             if (other) snprintf(b, sizeof b, "an rtl_tcp server gives at most 20 Msps; this mode needs about %.0f Msps: use a faster radio", s.sampleRate / 1e6);
             else snprintf(b, sizeof b, "an RTL-SDR (rtl_tcp) gives at most 3.2 Msps; this mode needs about %.0f Msps: use a faster radio "
                                        "(another radio behind rtl_tcp: set its Server radio)", s.sampleRate / 1e6);
+            DIAG_ERROR(345742, "The rtl_tcp server cannot deliver the sample rate that was asked for, so the source is not started.");
             err = b;
             openFailure_ = OpenFailure::Final;
             return false;
@@ -222,7 +224,7 @@ protected:
         int best = other || gains_.empty() ? std::max(target, 0) : gains_[0];
         if (!other) for (int g : gains_) if (std::abs(g - target) < std::abs(best - target)) best = g;
         if (best != sentGain_) { ok = ok && command(kCmdGain, (uint32_t)best); sentGain_ = best; }
-        if (!ok) err = "rtl_tcp: the connection to " + addr_ + " dropped";
+        if (!ok) { DIAG_ERROR(687757, "The connection to the rtl_tcp server %s dropped while settings were sent, so the change is not applied.", addr_.c_str()); err = "rtl_tcp: the connection to " + addr_ + " dropped"; }
         return ok;
     }
     void closeDevice() override {
@@ -278,6 +280,7 @@ protected:
             }
         }
         if (run_) {
+            DIAG(274883, "The connection to the rtl_tcp server %s was lost, so the source tries to reconnect.", addr_.c_str());
             fprintf(stderr, "rtl_tcp: lost the connection to %s\n", addr_.c_str());
             fflush(stderr);
             lostAt_ = std::chrono::steady_clock::now();

@@ -3,6 +3,7 @@
 
 // Native driver for the PlutoSDR: the radio's own library is loaded at run time when it is installed. See native_common.h.
 #include "dect2/tx/tx_control.h"
+#include "dect2/common/diag.h"
 #include "dect2/engine/rate_choice.h"
 #include "native_common.h"
 #include <cerrno>
@@ -215,7 +216,8 @@ struct PlutoRadio {
         char mode[64] = {0};
         if (!iio().device_attr_read || iio().device_attr_read(phy, "ensm_mode", mode, sizeof mode - 1) <= 0 ||
             std::string(mode).find("fdd") != 0 || (mode[3] && !isspace((unsigned char)mode[3]))) {
-            err = "PlutoSDR: simultaneous RX/TX requires firmware in FDD mode";
+             DIAG_ERROR(608265, "The PlutoSDR is not in FDD mode, so receiving and transmitting at the same time is refused.");
+             err = "PlutoSDR: simultaneous RX/TX requires firmware in FDD mode";
             return false;
         }
         return true;
@@ -251,7 +253,8 @@ std::shared_ptr<PlutoRadio> openPluto(std::string& uri, const std::string& seria
 // The second direction may use an already faster clock, but must not change it.
 bool duplexRate(double need, double active, std::string& err) {
     if (need <= active + 1) return true;
-    err = "PlutoSDR: simultaneous RX/TX shares one sample rate; stop the other direction before raising it to " +
+     DIAG_ERROR(614746, "The PlutoSDR shares one sample rate between receive and transmit, so a rate of %.0f Hz is refused while the other direction runs at %.0f Hz.", need, active);
+     err = "PlutoSDR: simultaneous RX/TX shares one sample rate; stop the other direction before raising it to " +
           std::to_string(need / 1e6) + " Msps (running at " + std::to_string(active / 1e6) + " Msps)";
     return false;
 }
@@ -268,28 +271,30 @@ public:
 
 protected:
     bool openDevice(const TuneSettings& s, std::string& err) override {
-        if (iio().v1) { err = IioApi::kV1Msg; openFailure_ = OpenFailure::Final; return false; }
+        if (iio().v1) { DIAG_ERROR(320896, "The installed libiio is version 1.x, which OnAir does not support, so the PlutoSDR cannot be opened."); err = IioApi::kV1Msg; openFailure_ = OpenFailure::Final; return false; }
         std::lock_guard<std::recursive_mutex> lk(gPlutoMu);
         // Address-based entries can exist even when libiio is missing.
-        if (!iio().ok) { err = kNoIioMsg; openFailure_ = OpenFailure::Final; return false; }
+        if (!iio().ok) { DIAG_ERROR(132719, "The libiio library could not be loaded, so the PlutoSDR cannot be opened."); err = kNoIioMsg; openFailure_ = OpenFailure::Final; return false; }
         radio_ = openPluto(uri_, serial_);
         ctx_ = radio_ ? radio_->ctx : nullptr;
         if (!ctx_) {
             const int e = errno;
+            DIAG_ERROR(233146, "Connecting to the PlutoSDR at %s failed (errno %d), so the receiver stays closed.", uri_.c_str(), e);
+            DIAG_ERROR(641504, "Connecting to the PlutoSDR at %s for transmit failed (errno %d), so the transmitter stays closed.", uri_.c_str(), e);
             err = "PlutoSDR: cannot connect (" + uri_ + ")" + (e ? ": " + iio().text(e) : std::string());
             if (kOnWindows && uri_.rfind("usb:", 0) == 0) err += std::string(". ") + windowsUsbDriverHint();
             return false;
         }
-        if (radio_->rx) { err = "PlutoSDR: the receive stream is already open"; openFailure_ = OpenFailure::Final; return false; }
+        if (radio_->rx) { DIAG_ERROR(922067, "The PlutoSDR receive stream is already open, so it is not opened a second time."); err = "PlutoSDR: the receive stream is already open"; openFailure_ = OpenFailure::Final; return false; }
         radio_->rx = ownsRx_ = true;
         phy_ = radio_->phy;
         rx_ = iio().context_find_device(ctx_, "cf-ad9361-lpc");
-        if (!phy_ || !rx_) { err = "PlutoSDR: the AD9361 devices were not found"; return false; }
+        if (!phy_ || !rx_) { DIAG_ERROR(959587, "The AD9361 devices were not found on the PlutoSDR, so the receiver stays closed."); err = "PlutoSDR: the AD9361 devices were not found"; return false; }
         rxCh_ = iio().device_find_channel(phy_, "voltage0", false);
         lo_ = iio().device_find_channel(phy_, "altvoltage0", true);
         i_ = iio().device_find_channel(rx_, "voltage0", false);
         q_ = iio().device_find_channel(rx_, "voltage1", false);
-        if (!rxCh_ || !lo_ || !i_ || !q_) { err = "PlutoSDR: the receive channels were not found"; return false; }
+        if (!rxCh_ || !lo_ || !i_ || !q_) { DIAG_ERROR(610936, "The PlutoSDR receive channels were not found, so the receiver stays closed."); err = "PlutoSDR: the receive channels were not found"; return false; }
         gainMode_.clear();
         fw_.clear(); tezuka_ = false;
         if (iio().context_get_attr_value) {
@@ -317,11 +322,13 @@ protected:
         std::lock_guard<std::recursive_mutex> lk(gPlutoMu);
         if (!radio_ || !radio_->tx) return true;
         if (tezuka_ && radioOption(s, "iqformat", "cs16") == "cs8") {
-            err = "PlutoSDR: simultaneous RX/TX requires CS16; select CS16 in IQ format";
+             DIAG_ERROR(171549, "The PlutoSDR is also transmitting and needs 16-bit samples, so a receive format other than CS16 is refused.");
+             err = "PlutoSDR: simultaneous RX/TX requires CS16; select CS16 in IQ format";
             return false;
         }
         if (wantsFir(s.sampleRate) && radioFlag(s, "lowratefir")) {
-            err = "PlutoSDR: disable Low-rate FIR (RX only) to receive while TX is running";
+             DIAG_ERROR(630578, "The PlutoSDR is also transmitting and cannot use the low-rate FIR, so the receiver is not started.");
+             err = "PlutoSDR: disable Low-rate FIR (RX only) to receive while TX is running";
             return false;
         }
         const double want = s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, 2.1e6), 61.44e6);   // (3.4: a chosen rate goes to the AD9361 as it is)
@@ -350,7 +357,7 @@ protected:
             if (wantsFir(s.sampleRate) && radioFlag(s, "lowratefir")) {
                 // 2.048 Msps: the converter at twice that, the FIR (loaded and switched on there) halves it
                 if (setFirRate(s.sampleRate)) want = s.sampleRate;
-                else { fprintf(stderr, "PlutoSDR: the radio did not accept the decimating FIR: running at 2.1 Msps, resampled in software\n"); fflush(stderr); }
+                else { DIAG(406811, "The PlutoSDR did not accept the decimating filter, so it runs at 2.1 Msps and OnAir resamples in software."); fprintf(stderr, "PlutoSDR: the radio did not accept the decimating FIR: running at 2.1 Msps, resampled in software\n"); fflush(stderr); }
             }
             if (!firOn_ && !radio_->tx) {
                 int r = iio().channel_attr_write_longlong(rxCh_, "sampling_frequency", (long long)std::llround(want));
@@ -358,7 +365,7 @@ protected:
                     const int r2 = iio().channel_attr_write_longlong(rxCh_, "sampling_frequency", (long long)std::llround(2.1e6));
                     if (r2 == 0) { addNote(err, "PlutoSDR: the converter cannot run " + mhz(want) + " Msps by itself: running at 2.1 Msps, resampled in software"); want = 2.1e6; r = 0; }
                 }
-                if (r != 0) { err = "PlutoSDR: the sample rate was refused: " + iio().text(r); return false; }
+                if (r != 0) { DIAG_ERROR(199836, "The PlutoSDR refused the receive sample rate with libiio code %d, so the receiver is not started.", r); err = "PlutoSDR: the sample rate was refused: " + iio().text(r); return false; }
             }
             // Tezuka: with only the first channel enabled the FPGA sends 8-bit I/Q pairs (half the bytes on the cable, twice the rate); both: 16-bit
             cs8_ = tezuka_ && radioOption(s, "iqformat", "cs16") == "cs8";
@@ -382,7 +389,7 @@ protected:
             // over a network every refill is a round trip to iiod: a buffer of ~25 ms keeps 16 Msps and more flowing (#114); USB keeps 64k
             block_ = uri_.rfind("ip:", 0) == 0 ? netBlock(rate_) : kBlock;
             createBuffer();
-            if (!buf_) { err = "PlutoSDR: cannot allocate the sample buffer"; return false; }
+            if (!buf_) { DIAG_ERROR(133414, "The PlutoSDR receive buffer could not be allocated, so the receiver is not started."); err = "PlutoSDR: cannot allocate the sample buffer"; return false; }
             radio_->rxRate = rate_;
             radio_->rxFir = firOn_;
             radio_->rxCs8 = cs8_;
@@ -391,7 +398,7 @@ protected:
         const std::string gm = radioOption(s, "gainmode", "manual");
         if (!live || gm != gainMode_) {
             if (iio().channel_attr_write(rxCh_, "gain_control_mode", gm.c_str()) >= 0) gainMode_ = gm;
-            else { fprintf(stderr, "PlutoSDR: the gain mode %s was refused\n", gm.c_str()); fflush(stderr); }
+            else { DIAG(141922, "The PlutoSDR refused the gain mode %s, so the old gain mode stays.", gm.c_str()); fprintf(stderr, "PlutoSDR: the gain mode %s was refused\n", gm.c_str()); fflush(stderr); }
         }
         // Frequency correction: the reference clock the driver computes with is moved by the clock error (a clock that runs fast by ppm is
         // told so), which corrects the tuning and the sample rate; a driver without xo_correction: the frequency asked for
@@ -400,7 +407,7 @@ protected:
         if (radio_->xoBase > 0) {
             if (ppm != radio_->xoPpm && !radio_->tx) {
                 if (iio().device_attr_write_longlong(phy_, "xo_correction", std::llround(radio_->xoBase * (1.0 + ppm * 1e-6))) == 0) radio_->xoPpm = ppm;
-                else { fprintf(stderr, "PlutoSDR: the reference clock correction of %.2f ppm was refused\n", ppm); fflush(stderr); }
+                else { DIAG(892844, "The PlutoSDR refused a reference clock correction of %.2f ppm, so the old correction stays.", ppm); fprintf(stderr, "PlutoSDR: the reference clock correction of %.2f ppm was refused\n", ppm); fflush(stderr); }
             }
             if (ppm != radio_->xoPpm) tuneHz = ppmCorrectedHz(s.centerHz, ppm) * (1.0 + radio_->xoPpm * 1e-6);
         } else tuneHz = ppmCorrectedHz(s.centerHz, ppm);
@@ -408,7 +415,8 @@ protected:
         // outside what the radio is specified for it is asked all the same: the AD936x driver decides (it refuses a frequency its PLL cannot make)
         const std::string spec = freqSpecNote("PlutoSDR", f, loHz_, hiHz_);
         if ((!live || tuneHz != lastTuneHz_) && iio().channel_attr_write_longlong(lo_, "frequency", (long long)std::llround(std::max(tuneHz, 0.0))) != 0) {   // a gain-only retune leaves the LO alone
-            err = "PlutoSDR: the driver refused " + mhz(f) + " MHz (specified for " + mhz(loHz_) + "-" + mhz(hiHz_) + " MHz)";
+             DIAG_ERROR(412073, "The PlutoSDR driver refused a receive frequency of %.0f Hz, so the tune fails.", f);
+             err = "PlutoSDR: the driver refused " + mhz(f) + " MHz (specified for " + mhz(loHz_) + "-" + mhz(hiHz_) + " MHz)";
             if (hiHz_ <= 3.8e9) err += ": the stock firmware tunes 325-3800 MHz, 70-6000 MHz needs the AD9364 setting (fw_setenv attr_name compatible; fw_setenv attr_val ad9364)";
             openFailure_ = OpenFailure::Final;
             return false;
@@ -425,7 +433,8 @@ protected:
         const double g = std::min(gmax, std::max(std::max(0.0, gmin), s.gainDb));
         if (gainMode_ != "manual" && !gainMode_.empty()) return true;   // the radio's AGC sets the gain (hardwaregain is for manual mode only)
         if (const int r = iio().channel_attr_write_longlong(rxCh_, "hardwaregain", (long long)std::llround(g)); r != 0) {
-            fprintf(stderr, "PlutoSDR: the gain %.0f dB was refused at %s MHz: %s\n", g, mhz(f).c_str(), iio().text(r).c_str());
+             DIAG(587544, "The PlutoSDR refused a receive gain of %.0f dB with libiio code %d, so the old gain stays.", g, r);
+             fprintf(stderr, "PlutoSDR: the gain %.0f dB was refused at %s MHz: %s\n", g, mhz(f).c_str(), iio().text(r).c_str());
             fflush(stderr);
         }
         return true;
@@ -467,7 +476,7 @@ protected:
         int failures = 0;
         while (run_) {
             const auto got = iio().buffer_refill(buf_);
-            if (got <= 0) { if (++failures > 20) { fprintf(stderr, "PlutoSDR: stream error, stopping the source\n"); break; } continue; }
+            if (got <= 0) { if (++failures > 20) { DIAG(676478, "The PlutoSDR receive stream failed more than 20 times in a row, so the source stops."); fprintf(stderr, "PlutoSDR: stream error, stopping the source\n"); break; } continue; }
             failures = 0;
             size_t n;
             if (cs8_) {
@@ -536,7 +545,7 @@ public:
         close();
         if (iio().v1) { err = IioApi::kV1Msg; return false; }
         if (!iio().ok) { err = kNoIioMsg; return false; }
-        if (!iio().buffer_push) { err = "PlutoSDR: this libiio has no iio_buffer_push, it cannot transmit"; return false; }
+        if (!iio().buffer_push) { DIAG_ERROR(460156, "This libiio has no iio_buffer_push function, so the PlutoSDR cannot transmit."); err = "PlutoSDR: this libiio has no iio_buffer_push, it cannot transmit"; return false; }
         radio_ = openPluto(uri_, serial_);
         ctx_ = radio_ ? radio_->ctx : nullptr;
         if (!ctx_) {
@@ -545,14 +554,14 @@ public:
             if (kOnWindows && uri_.rfind("usb:", 0) == 0) err += std::string(". ") + windowsUsbDriverHint();
             return false;
         }
-        if (radio_->tx) { err = "PlutoSDR: the transmit stream is already open"; shut(); return false; }
+        if (radio_->tx) { DIAG_ERROR(995225, "The PlutoSDR transmit stream is already open, so it is not opened a second time."); err = "PlutoSDR: the transmit stream is already open"; shut(); return false; }
         radio_->tx = ownsTx_ = true;
         phy_ = radio_->phy;
         dev_ = iio().context_find_device(ctx_, "cf-ad9361-dds-core-lpc");
-        if (!phy_ || !dev_) { err = "PlutoSDR: the AD9361 transmit devices were not found"; shut(); return false; }
+        if (!phy_ || !dev_) { DIAG_ERROR(642922, "The AD9361 transmit devices were not found on the PlutoSDR, so the transmitter stays closed."); err = "PlutoSDR: the AD9361 transmit devices were not found"; shut(); return false; }
         // voltage0 is TX1. A 2T image (some Pluto+) has voltage1 as TX2; its I/Q pair on the DDS core is voltage2 and voltage3. One LO (altvoltage1) tunes both.
         const int ch = t.channel < 0 ? 0 : t.channel;
-        if (ch > 1) { err = "this Pluto has at most two transmit outputs"; shut(); return false; }
+        if (ch > 1) { DIAG_ERROR(527196, "The PlutoSDR has at most two transmit outputs, so the picked output is refused."); err = "this Pluto has at most two transmit outputs"; shut(); return false; }
         const char* phyName = ch == 0 ? "voltage0" : "voltage1";
         const char* iName = ch == 0 ? "voltage0" : "voltage2";
         const char* qName = ch == 0 ? "voltage1" : "voltage3";
@@ -560,21 +569,24 @@ public:
         lo_ = iio().device_find_channel(phy_, "altvoltage1", true);
         i_ = iio().device_find_channel(dev_, iName, true);
         q_ = iio().device_find_channel(dev_, qName, true);
-        if (ch == 1 && (!txCh_ || !i_ || !q_)) { err = "this Pluto has one transmit output (TX1)"; shut(); return false; }
-        if (!txCh_ || !lo_ || !i_ || !q_) { err = "PlutoSDR: the transmit channels were not found"; shut(); return false; }
-        if (t.sampleRate < 2.083e6) { err = "PlutoSDR: the converter runs from 2.083 Msps up; " + std::to_string(t.sampleRate / 1e6) + " Msps is below that"; shut(); return false; }
+        if (ch == 1 && (!txCh_ || !i_ || !q_)) { DIAG_ERROR(493139, "The PlutoSDR has only one transmit output (TX1), so output 2 is refused."); err = "this Pluto has one transmit output (TX1)"; shut(); return false; }
+        if (!txCh_ || !lo_ || !i_ || !q_) { DIAG_ERROR(646819, "The PlutoSDR transmit channels were not found, so the transmitter stays closed."); err = "PlutoSDR: the transmit channels were not found"; shut(); return false; }
+        if (t.sampleRate < 2.083e6) { DIAG_ERROR(735908, "The PlutoSDR converter needs at least 2.083 Msps but %.0f samples per second were asked for, so the transmitter does not start.", t.sampleRate); err = "PlutoSDR: the converter runs from 2.083 Msps up; " + std::to_string(t.sampleRate / 1e6) + " Msps is below that"; shut(); return false; }
         if (radio_->rx) {
             if (radio_->rxFir) {
+                DIAG_ERROR(203937, "The PlutoSDR receiver uses the low-rate filter, so the transmitter does not start until it is turned off.");
                 err = "PlutoSDR: RX is using the low-rate FIR; disable Low-rate FIR (RX only) and restart RX before starting TX";
                 shut(); return false;
             }
             if (radio_->rxCs8) {
+                DIAG_ERROR(718802, "The PlutoSDR receiver uses 8-bit samples, so the transmitter does not start until it uses CS16.");
                 err = "PlutoSDR: RX is using CS8; select CS16 in IQ format and restart RX before starting TX";
                 shut(); return false;
             }
             if (!duplexRate(t.sampleRate, radio_->rxRate, err) || !radio_->duplex(err)) { shut(); return false; }
         } else if (const int r = iio().channel_attr_write_longlong(txCh_, "sampling_frequency", (long long)std::llround(t.sampleRate)); r != 0) {
-            err = "PlutoSDR: the sample rate was refused: " + iio().text(r); shut(); return false;
+             DIAG_ERROR(927169, "The PlutoSDR refused the transmit sample rate with libiio code %d, so the transmitter does not start.", r);
+             err = "PlutoSDR: the sample rate was refused: " + iio().text(r); shut(); return false;
         }
         rate_ = radio_->rx ? radio_->rxRate : t.sampleRate;
         {
@@ -590,14 +602,14 @@ public:
         }
         // filter, frequency and gain as plutoTxPlan (tx_control.h) works them out; the frequency is asked for as given, the PLL refuses what it cannot make
         const TxHwPlan plan = plutoTxPlan(t, rate_, {gmin_, gmax_}, radio_->xoPpm);
-        if (!plan.err.empty()) { err = plan.err; shut(); return false; }
+        if (!plan.err.empty()) { DIAG_ERROR(560224, "The PlutoSDR transmit plan was refused (%s), so the transmitter does not start.", plan.err.c_str()); err = plan.err; shut(); return false; }
         iio().channel_attr_write_longlong(txCh_, "rf_bandwidth", (long long)plan.filterHz);
         if (!tuneAndGain(plan, t, err)) { shut(); return false; }
         iio().channel_enable(i_);
         iio().channel_enable(q_);
         if (iio().device_set_kernel_buffers_count) iio().device_set_kernel_buffers_count(dev_, 4);
         buf_ = iio().device_create_buffer(dev_, kBlock, false);
-        if (!buf_) { err = "PlutoSDR: cannot allocate the transmit buffer"; shut(); return false; }
+        if (!buf_) { DIAG_ERROR(920055, "The PlutoSDR transmit buffer could not be allocated, so the transmitter does not start."); err = "PlutoSDR: cannot allocate the transmit buffer"; shut(); return false; }
         fill_ = 0;
         radio_->txRate = rate_;
         return true;
@@ -634,13 +646,14 @@ public:
 private:
     bool tuneAndGain(const TxHwPlan& plan, const TxTune& t, std::string& err) {
         if (const int r = iio().channel_attr_write_longlong(lo_, "frequency", (long long)plan.loHz); r != 0) {
-            err = "PlutoSDR: the driver refused " + mhz(txRadioHz(t)) + " MHz as a transmit frequency (" + iio().text(r) + "): the AD9361's synthesiser tunes 70 to 6000 MHz with the AD9364 setting, 325 to 3800 MHz on the stock firmware";
+             DIAG_ERROR(297401, "The PlutoSDR driver refused a transmit frequency of %.0f Hz with libiio code %d, so the transmitter does not start.", (double)txRadioHz(t), r);
+             err = "PlutoSDR: the driver refused " + mhz(txRadioHz(t)) + " MHz as a transmit frequency (" + iio().text(r) + "): the AD9361's synthesiser tunes 70 to 6000 MHz with the AD9364 setting, 325 to 3800 MHz on the stock firmware";
             return false;
         }
         iio().channel_attr_write_longlong(lo_, "powerdown", 0);
         char s[32];
         snprintf(s, sizeof s, "%.2f", plan.gains.empty() ? gmin_ : plan.gains[0].second);
-        if (iio().channel_attr_write(txCh_, "hardwaregain", s) < 0) { err = "PlutoSDR: the transmit gain " + std::string(s) + " dB was refused"; return false; }
+        if (iio().channel_attr_write(txCh_, "hardwaregain", s) < 0) { DIAG_ERROR(481504, "The PlutoSDR refused a transmit gain of %s dB, so the old gain stays.", s); err = "PlutoSDR: the transmit gain " + std::string(s) + " dB was refused"; return false; }
         return true;
     }
     double gmin_ = -89.75, gmax_ = 0;
@@ -649,7 +662,7 @@ private:
     bool push(std::string& err) {
         const long long r = iio().buffer_push(buf_);
         fill_ = 0;
-        if (r < 0) { err = "the PlutoSDR stopped taking samples: " + iio().text((int)-r); return false; }
+        if (r < 0) { DIAG_ERROR(689903, "The PlutoSDR stopped taking transmit samples (libiio code %d), so sending stops.", (int)-r); err = "the PlutoSDR stopped taking samples: " + iio().text((int)-r); return false; }
         return true;
     }
     void shut() {

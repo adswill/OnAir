@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/marine/marine_mmsi.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -377,7 +378,7 @@ ImportPreview ShipDb::preview(const std::string& text, size_t maxRows) {
     const Parsed P = parseTable(text);
     pv.delim = P.delim;
     pv.header = P.header;
-    if (P.cols.mmsi < 0) return pv;
+    if (P.cols.mmsi < 0) { DIAG_DEBUG(443901, "The ship list preview found no MMSI column among %zu rows, so the file cannot be imported as it is.", P.rows.size()); return pv; }
     pv.ok = true;
     static const char* const names[] = {"mmsi", "name", "callsign", "type", "country", "station", "location", "lat", "lon", "position"};
     const int idx[] = {P.cols.mmsi, P.cols.name, P.cols.call, P.cols.type, P.cols.country, P.cols.station, P.cols.loc, P.cols.lat, P.cols.lon, P.cols.pos};
@@ -396,7 +397,10 @@ ImportStats ShipDb::importDetailed(const std::string& text) {
     ImportStats st;
     const Parsed P = parseTable(text);
     const Cols& k = P.cols;
-    if (k.mmsi < 0) return st;
+    if (k.mmsi < 0) {
+        DIAG(812043, "The ship list import found no MMSI column among %zu rows, so nothing was imported.", P.rows.size());
+        return st;
+    }
     std::lock_guard<std::mutex> lk(mu_);
     for (const auto& c : P.rows) {
         auto at = [&](int i) { return i >= 0 && (size_t)i < c.size() ? c[(size_t)i] : std::string(); };
@@ -426,6 +430,7 @@ ImportStats ShipDb::importDetailed(const std::string& text) {
         const MmsiKind kd = mmsiInfo(mmsi).kind;
         if (kd == MmsiKind::CoastStation) st.coast++; else if (kd == MmsiKind::Ship) st.ships++;
     }
+    if (st.skipped) DIAG_DEBUG(869481, "The ship list import skipped %d of %zu rows that had no valid MMSI or no other information, so they are not stored.", st.skipped, P.rows.size());
     if (st.read) { ver_++; dirty_ = true; }
     return st;
 }

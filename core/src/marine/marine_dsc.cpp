@@ -3,6 +3,7 @@
 
 #include "dect2/marine/marine_dsc.h"
 #include "dect2/marine/marine_mmsi.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -142,8 +143,8 @@ std::string dscMmsiLenient(const int* s) {
 }
 
 bool dscMmsiToSymbols(const std::string& m, int out[5]) {
-    if (m.size() != 9) return false;
-    for (char c : m) if (c < '0' || c > '9') return false;
+    if (m.size() != 9) { DIAG_DEBUG(506302, "The DSC address %s is not a nine digit MMSI, so no call symbols are built for it.", m.c_str()); return false; }
+    for (char c : m) if (c < '0' || c > '9') { DIAG_DEBUG(467852, "The DSC address %s has a character that is not a digit, so no call symbols are built for it.", m.c_str()); return false; }
     const std::string t = m + "0";
     for (int i = 0; i < 5; i++) out[i] = (t[2 * i] - '0') * 10 + (t[2 * i + 1] - '0');
     return true;
@@ -160,10 +161,13 @@ bool dscPositionFromSymbols(const int* s, double& lat, double& lon, std::string*
     d[10] = 0;
     if (all9) return false;
     const int q = d[0] - '0';
-    if (q > 3) return false;
+    if (q > 3) { DIAG_DEBUG(406157, "The DSC position starts with quadrant digit %d, which is not 0 to 3, so the call has no position.", q); return false; }
     const int latD = (d[1] - '0') * 10 + (d[2] - '0'), latM = (d[3] - '0') * 10 + (d[4] - '0');
     const int lonD = (d[5] - '0') * 100 + (d[6] - '0') * 10 + (d[7] - '0'), lonM = (d[8] - '0') * 10 + (d[9] - '0');
-    if (latD > 90 || latM > 59 || lonD > 180 || lonM > 59) return false;
+    if (latD > 90 || latM > 59 || lonD > 180 || lonM > 59) {
+        DIAG_DEBUG(576853, "The DSC position digits read as latitude %d degrees %d minutes and longitude %d degrees %d minutes, outside the valid range, so the call has no position.", latD, latM, lonD, lonM);
+        return false;
+    }
     lat = latD + latM / 60.0; lon = lonD + lonM / 60.0;
     const bool south = q == 2 || q == 3, west = q == 1 || q == 3;
     if (south) lat = -lat;
@@ -193,7 +197,7 @@ void dscPositionToSymbols(double lat, double lon, int out[5]) {
 bool dscTimeFromSymbols(int a, int b, int& h, int& m) {
     if (a < 0 || a > 99 || b < 0 || b > 99) return false;
     if (a == 88 && b == 88) return false;
-    if (a > 23 || b > 59) return false;
+    if (a > 23 || b > 59) { DIAG_DEBUG(618309, "The DSC time symbols read %02d:%02d, which is no time of day, so the call has no time.", a, b); return false; }
     h = a; m = b;
     return true;
 }
@@ -509,12 +513,17 @@ void DscDecoder::onSymbol(int s, float conf, unsigned raw) {
 
 void DscDecoder::tryFinish() {
     const size_t N = slots_.size();
-    if (N > 12 + 2 * 140) { abortLock(); return; }
+    if (N > 12 + 2 * 140) {
+        DIAG_DEBUG_EVERY(304086, 5.0, "A DSC call ran past %zu symbol places without an end of sequence, so it is dropped and OnAir listens for the next call.", N);
+        abortLock();
+        return;
+    }
     // carrier gone: the last 30 slots hold almost no valid symbol
     if (N >= 60) {
         int bad = 0;
         for (size_t k = N - 30; k < N; k++) if (slots_[k].s < 0) bad++;
         if (bad >= 24) {
+            DIAG_DEBUG_EVERY(740034, 5.0, "The DSC carrier vanished after %zu symbol places, so a call that arrived long enough is listed as failed and a shorter one is dropped.", N);
             // a call cut short is reported as a bad call when enough of it arrived
             const bool partial = N >= 12 + 2 * 8 + 30;
             if (partial && cb_) {
@@ -665,6 +674,7 @@ void DscDecoder::tryFinish() {
     DscCall c = dscParseCall(body, eos, eccOk, recovered ? 0 : erasures);
     c.repaired = repaired; c.recovered = recovered;
     c.vhf = vhf_;
+    if (!eccOk) DIAG_EVERY(216621, 10.0, "A DSC call of %zu information symbols failed its check character with %d unreadable symbols, so it is shown marked as check failed.", eccPos, erasures);
     if (eccOk) ok_++; else bad_++;
     abortLock();
     if (cb_) cb_(c);

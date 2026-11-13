@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/source/diversity_source.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -36,17 +37,18 @@ TuneSettings DiversitySource::childTune() const {
 bool DiversitySource::startChild(int i, std::string& err) {
     Child& c = ch_[(size_t)i];
     c.src = factory_ ? factory_(c.dev) : makeSource(c.dev);
-    if (!c.src) { c.error = "no driver for " + c.dev.name; err = c.error; return false; }
+    if (!c.src) { DIAG_ERROR(425905, "No driver was found for the radio %s of the diversity pair, so it is left out.", c.dev.name.c_str()); c.error = "no driver for " + c.dev.name; err = c.error; return false; }
     if (!c.ring) c.ring = std::make_unique<IqRing>(1u << 22);   // 4 M samples: the start-up alignment needs a second or so of both radios in hand
     c.ring->clear();
     std::string e;
-    if (!c.src->start(childTune(), *c.ring, e)) { c.error = e.empty() ? "did not start" : e; c.src.reset(); err = c.error; return false; }
+    if (!c.src->start(childTune(), *c.ring, e)) { DIAG_ERROR(805393, "A radio of the diversity pair did not start (%s), so it is left out.", e.c_str()); c.error = e.empty() ? "did not start" : e; c.src.reset(); err = c.error; return false; }
     const double r = c.src->sampleRate();
     // a driver rounds the rate a little (an RTL-SDR's divider): up to 50 ppm is carried by the drift tracking, more is a different rate
     if (std::fabs(r - rate_) > 50e-6 * rate_) {
         char b[200];
         snprintf(b, sizeof b, "runs at %.4f Msps instead of %.4f: left out", r / 1e6, rate_ / 1e6);
-        c.error = b; c.src->stop(); c.src.reset(); err = c.error; return false;
+         DIAG_ERROR(322742, "A radio of the diversity pair runs at %.4f Msps instead of %.4f Msps, so it is left out.", r / 1e6, rate_ / 1e6);
+         c.error = b; c.src->stop(); c.src.reset(); err = c.error; return false;
     }
     c.error.clear();
     c.running = true;
@@ -63,7 +65,7 @@ void DiversitySource::stopChild(int i) {
 
 bool DiversitySource::start(const TuneSettings& s, IqRing& ring, std::string& err) {
     stop();
-    if (ch_.size() != 2 || !(rate_ > 0)) { err = "diversity pair " + def_.name + ": needs two radios with a common sample rate"; return false; }
+    if (ch_.size() != 2 || !(rate_ > 0)) { DIAG_ERROR(515286, "The diversity pair %s needs two radios with a common sample rate, so it is not started.", def_.name.c_str()); err = "diversity pair " + def_.name + ": needs two radios with a common sample rate"; return false; }
     if (s.sampleRate > 0) rate_ = s.sampleRate;   // the mode asks for its own rate; both radios run it
     out_ = &ring;
     tune_ = s;
@@ -74,7 +76,7 @@ bool DiversitySource::start(const TuneSettings& s, IqRing& ring, std::string& er
         if (startChild(i, e)) ok++;
         else addNote(notes, ch_[(size_t)i].dev.name + ": " + ch_[(size_t)i].error);
     }
-    if (ok == 0) { err = "diversity pair " + def_.name + ": neither radio started" + (notes.empty() ? "" : " (" + notes + ")"); return false; }
+    if (ok == 0) { DIAG_ERROR(523739, "Neither radio of the diversity pair %s started, so the pair is not used.", def_.name.c_str()); err = "diversity pair " + def_.name + ": neither radio started" + (notes.empty() ? "" : " (" + notes + ")"); return false; }
     if (ok == 1) addNote(notes, "only one radio of the pair runs: no diversity, the other one passes through unchanged");
     err = notes;
     if (!usbWarn_.empty()) addNote(err, usbWarn_);

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "dect2/source/time_machine.h"
 #include "dect2/common/u8file.h"
 #include "dect2/source/iq_record.h"
@@ -111,8 +112,8 @@ void TimeMachine::pushOn(const cf32* x, size_t n) {
 
 bool TimeMachine::trigger(const std::string& path, double preSeconds, double postSeconds, double centerHz, bool sigmf, std::string& err) {
     auto r = get();
-    if (!on_.load() || !r) { err = "the time machine is off"; return false; }
-    if (busy_.load()) { err = "a rewind save is already running"; return false; }
+    if (!on_.load() || !r) { DIAG_ERROR(783406, "A rewind save was asked for while the time machine is off, so nothing is saved."); err = "the time machine is off"; return false; }
+    if (busy_.load()) { DIAG_ERROR(389497, "A rewind save was asked for while another one is running, so this one is refused."); err = "a rewind save is already running"; return false; }
     preSeconds = std::max(0.0, preSeconds);
     postSeconds = std::max(0.0, postSeconds);
     const uint64_t head = r->head.load(std::memory_order_acquire), base = r->base.load(std::memory_order_acquire);
@@ -121,16 +122,16 @@ bool TimeMachine::trigger(const std::string& path, double preSeconds, double pos
     const uint64_t start = std::max(oldest, head > preN ? head - preN : 0);
     const uint64_t end = head + (uint64_t)(postSeconds * r->rate);
     const uint64_t bytes = fileBytes(end - start);
-    if (end <= start) { err = "nothing to save yet"; return false; }
-    if (bytes > kMaxFileBytes) { err = "the file would be bigger than 4 GB: choose a shorter time"; return false; }
+    if (end <= start) { DIAG_ERROR(355982, "A rewind save was asked for before any samples were kept, so nothing is saved."); err = "nothing to save yet"; return false; }
+    if (bytes > kMaxFileBytes) { DIAG_ERROR(348098, "The rewind save would be bigger than 4 GB, so it is refused (choose a shorter time)."); err = "the file would be bigger than 4 GB: choose a shorter time"; return false; }
     try {
         const std::filesystem::path p = dect2::u8file(path);
         const std::filesystem::path dir = p.has_parent_path() ? p.parent_path() : std::filesystem::path(".");
         std::filesystem::create_directories(dir);
         std::error_code ec;
         const auto sp = std::filesystem::space(dir, ec);
-        if (!ec && sp.available < bytes + bytes / 8 + (64ull << 20)) { err = "not enough free disk space for this recording"; return false; }
-    } catch (const std::exception& e) { err = std::string("cannot create the folder: ") + e.what(); return false; }
+        if (!ec && sp.available < bytes + bytes / 8 + (64ull << 20)) { DIAG_ERROR(596902, "There is not enough free disk space for the rewind save, so it is refused."); err = "not enough free disk space for this recording"; return false; }
+    } catch (const std::exception& e) { DIAG_ERROR(609397, "The folder for the rewind save could not be created (%s), so nothing is saved.", e.what()); err = std::string("cannot create the folder: ") + e.what(); return false; }
     std::thread old;
     {
         std::lock_guard<std::mutex> lk(mu_);
@@ -180,7 +181,7 @@ void TimeMachine::saveLoop(std::shared_ptr<Ring> r, std::string path, uint64_t s
             if (written) { std::fill(blk.begin(), blk.end(), (int8_t)0); }   // keep the timing of what follows
             else { pos += n; continue; }                                       // nothing written yet: the file just starts later
         }
-        if (fwrite(blk.data(), 1, blk.size(), f) != blk.size()) { err = "cannot write " + path + " (disk full?)"; break; }
+        if (fwrite(blk.data(), 1, blk.size(), f) != blk.size()) { DIAG_ERROR(186589, "Writing the rewind save %s failed (the disk may be full), so the save stops.", path.c_str()); err = "cannot write " + path + " (disk full?)"; break; }
         written += n; pos += n;
         savePos_ = pos - startPos;
     }

@@ -3,6 +3,7 @@
 
 // Two-branch diversity combiner (selection and maximal-ratio), see dsp/diversity.h for the method.
 #include "dect2/dsp/diversity.h"
+#include "dect2/common/diag.h"
 #include "dect2/dsp/fftutil.h"
 #include <algorithm>
 #include <cmath>
@@ -510,10 +511,18 @@ DiversityCombiner::~DiversityCombiner() = default;
 bool DiversityCombiner::configure(const DiversityConfig& c) {
     Impl& d = *p_;
     d.cfg = c;
-    if (!(c.rateHz > 8000)) { d.ok = false; return false; }
+    if (!(c.rateHz > 8000)) {
+        DIAG_DEBUG(915647, "The diversity combiner was given a sample rate of %.1f Hz, not above 8000 Hz, so it stays off.", (double)c.rateHz);
+        d.ok = false;
+        return false;
+    }
     int n = c.fftSize;
     if (n <= 0) { n = 256; while (n < 8192 && n * 1.414 < c.rateHz / 500.0) n <<= 1; }
-    if (n < 64 || (n & (n - 1))) { d.ok = false; return false; }
+    if (n < 64 || (n & (n - 1))) {
+        DIAG_DEBUG(978265, "The diversity combiner was given an FFT size of %d, which is not a power of two of at least 64, so it stays off.", n);
+        d.ok = false;
+        return false;
+    }
     d.N = n; d.H = n / 2;
     d.maxLag = c.maxLag > 0 ? c.maxLag : n / 4;
     d.lagLimit = c.lagLimit > 0 ? c.lagLimit : (int)(0.25 * c.rateHz);

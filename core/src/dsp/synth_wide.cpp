@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/dsp/synth_wide.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <complex>
@@ -175,14 +176,29 @@ void FracResampler::process(const cf32* x, size_t n, std::vector<cf32>& out) {
 // ---------------------------------------------------------------------------------------------------------------------------------------------
 
 bool SynthWideband::configure(const SynthCfg& c) {
-    if (c.slices < 2 || c.slices > kSynthMaxSlices) return false;
-    if (c.n < 256 || (c.n & (c.n - 1))) return false;
-    if (c.stepBins <= 0 || (c.stepBins & 1)) return false;
+    if (c.slices < 2 || c.slices > kSynthMaxSlices) {
+        DIAG_DEBUG(226005, "The wideband synthesis was given %d slices, outside 2 to %d, so it is not configured.", (int)c.slices, (int)kSynthMaxSlices);
+        return false;
+    }
+    if (c.n < 256 || (c.n & (c.n - 1))) {
+        DIAG_DEBUG(860116, "The wideband synthesis was given an FFT size of %d, which is not a power of two of at least 256, so it is not configured.", (int)c.n);
+        return false;
+    }
+    if (c.stepBins <= 0 || (c.stepBins & 1)) {
+        DIAG_DEBUG(380937, "The wideband synthesis was given a slice step of %d bins, which is not a positive even number, so it is not configured.", (int)c.stepBins);
+        return false;
+    }
     int u = (int)(c.usable * c.n);
     u &= ~1;
-    if (u < 64 || u >= c.n) return false;
+    if (u < 64 || u >= c.n) {
+        DIAG_DEBUG(870695, "The wideband synthesis has %d usable bins of an FFT of %d, outside 64 up to the FFT size, so it is not configured.", u, (int)c.n);
+        return false;
+    }
     const int ov = u - c.stepBins;
-    if (ov < 64) return false;
+    if (ov < 64) {
+        DIAG_DEBUG(192442, "The wideband synthesis slices overlap by only %d bins, below the 64 needed to join them, so it is not configured.", ov);
+        return false;
+    }
     c_ = c;
     usableBins_ = u; ov_ = ov;
     const int span = (c.slices - 1) * c.stepBins + u;

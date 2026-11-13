@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/dsp/simd.h"
 #include "dect2/common/stage_prof.h"
 #include "dect2/common/thread_name.h"
@@ -29,7 +30,10 @@ void Atsc3Rx::configure(double rate) {
 }
 
 void Atsc3Rx::start() {
-    if (rate_ <= 0) return;
+    if (rate_ <= 0) {
+        DIAG_DEBUG(994974, "The ATSC 3.0 receiver was not started because no sample rate is set (%.0f), so it stays idle.", rate_);
+        return;
+    }
     rx_.reset(new Atsc3Receiver());
     rx_->remux().setRealtime(paced_);
     sync_.reset(new Atsc3Sync(rate_, rx_.get()));
@@ -71,7 +75,7 @@ void Atsc3Rx::feed(const cf32* x, size_t n) {
         while (queued_ > cap && !stop_) cvSpace_.wait_for(lk, std::chrono::milliseconds(20));
         if (stop_) return;
     } else {
-        while (queued_ > cap && !q_.empty()) { queued_ -= q_.front().size(); q_.pop_front(); dropped_++; }
+        while (queued_ > cap && !q_.empty()) { queued_ -= q_.front().size(); q_.pop_front(); dropped_++; DIAG_EVERY(294979, 10.0, "The ATSC 3.0 decoder cannot keep up with the incoming samples (%llu blocks dropped so far), so signal is lost and frames may fail.", (unsigned long long)dropped_); }
     }
     q_.emplace_back(x, x + n);
     queued_ += n;
@@ -133,6 +137,7 @@ void Atsc3Rx::worker() {
             if (ss.frames > lastFrames_) { lastFrames_ = ss.frames; lastFrameWall_ = now; }
             t.secSinceFrame = lastFrameWall_ > 0 ? now - lastFrameWall_ : 1e9;
             t.locked = t.secSinceFrame < 1.5;
+            if (tel_.locked && !t.locked) DIAG_DEBUG_EVERY(560652, 10.0, "No ATSC 3.0 frame was decoded for %.1f seconds, so the receiver reports that it lost lock and waits for the next bootstrap.", t.secSinceFrame);
             t.cfoHz = ss.cfoHz; t.bootstraps = ss.bootstraps; t.frames = ss.frames; t.framesFailed = rs.framesFailed;
             t.bbPackets = rs.bbPackets; t.bbBad = rs.bbBad; t.alpPackets = rs.alpPackets; t.udp = rs.udp; t.llsTables = rs.llsTables; t.routeObjects = rs.routeObjects;
             t.alpCompressedIp = rs.alpCompressedIp; t.alpSignaling = rs.alpSignaling; t.llsSigned = rs.llsSigned; t.slsObjects = rs.slsObjects; t.slsTables = rs.slsTables;

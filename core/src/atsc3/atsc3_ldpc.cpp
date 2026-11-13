@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "atsc3_ldpc.h"
 #include "dect2/dsp/simd.h"
 #include "dect2/dsp/minsum_corr.h"
@@ -24,7 +25,10 @@ const int kQb64[14] = {0, 0, 0, 0, 0, 0, 108, 0, 84, 72, 60, 48, 36, 24};
 }
 
 Ldpc::Ldpc(int rate15, int n) : rate_(rate15), n_(n) {
-    if (rate15 < 2 || rate15 > 13 || (n != 16200 && n != 64800)) return;
+    if (rate15 < 2 || rate15 > 13 || (n != 16200 && n != 64800)) {
+        DIAG_DEBUG_EVERY(128805, 10.0, "An ATSC 3.0 LDPC code was asked for with %d inner bits and rate %d/15, which is not defined, so it is not built.", n, rate15);
+        return;
+    }
     k_ = n / 15 * rate15;
     m_ = n - k_;
     if (n == 16200) { for (auto& t : kTypeA16) if (t.rate == rate15) { typeA_ = true; m1_ = t.m1; m2_ = t.m2; q1_ = t.q1; q2_ = t.q2; } }
@@ -213,8 +217,15 @@ void Ldpc::decodeBatch(const std::vector<const int8_t*>& llr, int maxIter, std::
     const int nb = (int)llr.size();
     hard.assign((size_t)nb, std::vector<uint8_t>());
     ok.assign((size_t)nb, 0);
-    if (nb == 0 || nb > L) return;
-    for (size_t c = 0; c + 1 < chkStart_.size(); c++) if (chkStart_[c + 1] - chkStart_[c] > kMaxCheckDegree) return;
+    if (nb == 0 || nb > L) {
+        DIAG_DEBUG_EVERY(947441, 10.0, "The 8-bit ATSC 3.0 LDPC decoder was given %d code words (1 to %d allowed), so none is decoded in that batch.", nb, (int)L);
+        return;
+    }
+    for (size_t c = 0; c + 1 < chkStart_.size(); c++)
+        if (chkStart_[c + 1] - chkStart_[c] > kMaxCheckDegree) {
+            DIAG_DEBUG_EVERY(306925, 10.0, "An ATSC 3.0 LDPC check node has more than %d connections, so the 8-bit decoder skips this code.", (int)kMaxCheckDegree);
+            return;
+        }
     const V init = {31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31};   // unused lanes: the all-zero code word, satisfied from the start
     std::vector<V> tot((size_t)n_, init), msg(chkVar_.size(), V{});
     for (int b = 0; b < nb; b++)

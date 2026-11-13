@@ -3,6 +3,7 @@
 
 // Pseudorange position solution (see gnss_solve.h).
 #include "dect2/gnss/gnss_solve.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 
@@ -69,7 +70,10 @@ Core solveSet(const std::vector<GnssObs>& obs, const GnssSolveOptions& opt, std:
     c.nUse = 0;
     for (size_t i = 0; i < N; i++) c.nUse += use[i];
     c.nUnk = 3 + nSys;
-    if (nSys == 0 || c.nUse < c.nUnk) return c;
+    if (nSys == 0 || c.nUse < c.nUnk) {
+        DIAG_DEBUG_EVERY(839727, 10.0, "The position solver has %d usable satellites for %d unknowns (a system needs two to count), so it computes no solution.", c.nUse, c.nUnk);
+        return c;
+    }
     c.res.assign(N, 0.0); c.w.assign(N, 0.0); c.el.assign(N, 90.0); c.az.assign(N, 0.0); c.iono.assign(N, 0.0); c.tropo.assign(N, 0.0);
     double x[3] = {start[0], start[1], start[2]};
     double bias[GnssSystems] = {0, 0, 0, 0};
@@ -113,12 +117,18 @@ Core solveSet(const std::vector<GnssObs>& obs, const GnssSolveOptions& opt, std:
         }
         double d[9];
         for (int r = 0; r < nUnk; r++) d[r] = b[r];
-        if (!cholSolve(A, d, nUnk, nullptr)) return c;
+        if (!cholSolve(A, d, nUnk, nullptr)) {
+            DIAG_DEBUG_EVERY(856083, 10.0, "The position solver's equations became singular at iteration %d because the satellite geometry is degenerate, so this solution is abandoned.", it + 1);
+            return c;
+        }
         for (int k = 0; k < 3; k++) x[k] += d[k];
         for (int s = 0; s < GnssSystems; s++) if (c.col[s] >= 0) bias[s] += d[3 + c.col[s]];
         if (std::fabs(d[0]) + std::fabs(d[1]) + std::fabs(d[2]) < 1e-5 && it >= 3) { conv = true; it++; break; }
     }
-    if (!conv) return c;
+    if (!conv) {
+        DIAG_DEBUG_EVERY(490496, 10.0, "The position solver did not converge within its iteration limit using %d satellites, so this solution is abandoned.", c.nUse);
+        return c;
+    }
     // residuals at the solution
     double lat, lon, hgt;
     ecefToLla(x, &lat, &lon, &hgt);
@@ -158,7 +168,10 @@ bool gnssSolve(std::vector<GnssObs>& obs, const GnssSolveOptions& opt, GnssSolut
     out.residual.assign(N, 0.0);
     out.elDeg.assign(N, 0.0);
     out.azDeg.assign(N, 0.0);
-    if (N < 4) return false;
+    if (N < 4) {
+        DIAG_DEBUG_EVERY(790421, 10.0, "The position solver was given only %zu satellite measurements and needs four, so it computes no solution.", N);
+        return false;
+    }
     double start[3] = {0, 0, 0};
     if (opt.hasPrior) for (int k = 0; k < 3; k++) start[k] = opt.prior[k];
     std::vector<char> use(N, 1);

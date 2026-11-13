@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/source/usb_fd.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -79,7 +80,8 @@ bool usbFdPick(const std::string& kind, const std::string& serialWish, UsbFdRadi
     const auto v = usbFdList(kind);
     const std::string what = kind == "hackrf" ? "HackRF" : kind == "airspy" ? "Airspy" : kind == "airspyhf" ? "Airspy HF+" : kind == "rtlsdr" ? "RTL-SDR" : "radio";
     if (v.empty()) {
-        err = "No " + what + " is connected, or Android has not given OnAir permission for it yet: plug it in (through an OTG adapter) and tap Allow";
+         DIAG_ERROR(135969, "No %s is connected or Android has not given OnAir permission for it, so it cannot be opened.", what.c_str());
+         err = "No " + what + " is connected, or Android has not given OnAir permission for it yet: plug it in (through an OTG adapter) and tap Allow";
         return false;
     }
     if (serialWish.empty()) { out = v[0]; return true; }
@@ -87,7 +89,8 @@ bool usbFdPick(const std::string& kind, const std::string& serialWish, UsbFdRadi
         const std::string& sn = r.serial;
         if (sn.size() >= serialWish.size() && sn.compare(sn.size() - serialWish.size(), serialWish.size(), serialWish) == 0) { out = r; return true; }
     }
-    err = "The " + what + " with serial number " + serialWish + " is not connected (" + std::to_string(v.size()) + " other one" + (v.size() == 1 ? "" : "s") + " are)";
+     DIAG_ERROR(361209, "The %s with serial number %s is not connected, so it cannot be opened.", what.c_str(), serialWish.c_str());
+     err = "The " + what + " with serial number " + serialWish + " is not connected (" + std::to_string(v.size()) + " other one" + (v.size() == 1 ? "" : "s") + " are)";
     return false;
 }
 

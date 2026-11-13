@@ -4,6 +4,7 @@
 // Sound-card IQ source: WebSDR, VAC, or a radio's speaker/line into the computer (not a replacement for an SDR when you need MHz of bandwidth).
 // Reuses AudioIn (CoreAudio / miniaudio). The microphone is never opened until start().
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "dect2/audio/audioin.h"
 #include "dect2/source/audio_if.h"
 #include "dect2/source/audio_push.h"
@@ -54,7 +55,7 @@ public:
         cfg_ = audioIfConfigOf(s);
         push_ = dev_.serial.rfind("push", 0) == 0;
         if (push_) {   // the platform records and pushes the frames in (audio_push.h: Android's AudioRecord); nothing is opened here
-            if (audioPushRate() <= 0) { err = "The sound-card input is not recording (no microphone permission?)"; return false; }
+            if (audioPushRate() <= 0) { DIAG_ERROR(832227, "The sound-card input is not recording (no microphone permission?), so the audio source does not start."); err = "The sound-card input is not recording (no microphone permission?)"; return false; }
             audioPushReset();
             live_ = true;
             pace_ = 1.0;

@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <map>
 #include <mutex>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -194,7 +195,7 @@ bool parseEitSection(const uint8_t* s, int len, EitSection& out) {
     if (len < 18 || s[0] < 0x4E || s[0] > 0x6F) return false;
     const int total = 3 + (((s[1] & 0x0F) << 8) | s[2]);
     if (total < 18 || total > len) return false;
-    if (tsp::crc32(s, total) != 0) return false;
+    if (tsp::crc32(s, total) != 0) { DIAG_DEBUG_EVERY(752979, 10.0, "An EIT section for service 0x%04X failed its CRC check, so its programme events are ignored.", (unsigned)((s[3] << 8) | s[4])); return false; }
     out.tableId = s[0];
     out.sid = (s[3] << 8) | s[4];
     out.version = (s[5] >> 1) & 0x1F;
@@ -254,7 +255,7 @@ bool parseTimeSection(const uint8_t* s, int len, TotInfo& out) {
     }
     if (s[0] != 0x73 || len < 14) return false;
     const int total = 3 + (((s[1] & 0x0F) << 8) | s[2]);
-    if (total < 14 || total > len || tsp::crc32(s, total) != 0) return false;
+    if (total < 14 || total > len || tsp::crc32(s, total) != 0) { DIAG_DEBUG_EVERY(196026, 10.0, "A TOT or TDT section failed its length or CRC check, so the broadcast time is not updated from it."); return false; }
     if (!dvbTime(s + 3, out.utc)) return false;
     const int dl = ((s[8] & 0x0F) << 8) | s[9];
     int p = 10;
@@ -315,7 +316,7 @@ bool EpgDb::ingest(const ServiceKey& k, const EpgItem& evIn, int64_t now) {
     }
     auto it = db_.find(k);
     if (it == db_.end()) {
-        if (db_.size() >= lim_.maxServices) return false;
+        if (db_.size() >= lim_.maxServices) { DIAG_DEBUG_EVERY(383206, 30.0, "The programme guide already holds %zu services, so events of a further service are dropped.", db_.size()); return false; }
         it = db_.emplace(k, std::vector<EpgItem>()).first;
     }
     auto& v = it->second;
@@ -494,7 +495,7 @@ std::string EpgDb::toJson() const {
 bool EpgDb::fromJson(const std::string& json) {
     using namespace tvjson;
     Value root;
-    if (!parse(json, root) || root.type != Value::Obj) return false;
+    if (!parse(json, root) || root.type != Value::Obj) { DIAG_DEBUG(643112, "The saved programme guide is not valid JSON, so it is not loaded."); return false; }
     const Value* svcs = root.get("services");
     if (!svcs || svcs->type != Value::Arr) return false;
     std::map<ServiceKey, std::vector<EpgItem>> nd;
@@ -519,19 +520,20 @@ bool EpgDb::fromJson(const std::string& json) {
 bool EpgDb::save(const std::string& path) const {
     const std::string tmp = path + ".tmp";
     FILE* f = u8fopen(tmp, "wb");
-    if (!f) return false;
+    if (!f) { DIAG_ERROR(645984, "The programme guide file %s could not be created, so the guide is not saved.", tmp.c_str()); return false; }
     const std::string j = toJson();
     const bool ok = fwrite(j.data(), 1, j.size(), f) == j.size();
     fclose(f);
     std::error_code ec;
-    if (!ok) { std::filesystem::remove(u8file(tmp), ec); return false; }
+    if (!ok) { DIAG_ERROR(792533, "Writing the programme guide file %s failed (the disk may be full), so the guide is not saved.", tmp.c_str()); std::filesystem::remove(u8file(tmp), ec); return false; }
     std::filesystem::rename(u8file(tmp), u8file(path), ec);
+    if (ec) DIAG_ERROR(319122, "The programme guide file %s could not be put in place (%s), so the guide is not saved.", path.c_str(), ec.message().c_str());
     return !ec;
 }
 
 bool EpgDb::load(const std::string& path) {
     FILE* f = u8fopen(path, "rb");
-    if (!f) return false;
+    if (!f) { DIAG_DEBUG(622671, "The saved programme guide %s could not be opened, so the guide starts empty.", path.c_str()); return false; }
     std::string j;
     char buf[65536];
     size_t n;

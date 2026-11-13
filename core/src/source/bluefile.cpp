@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/source/bluefile.h"
+#include "dect2/common/diag.h"
 #include "dect2/common/u8file.h"
 #include "dect2/dsp/sample_convert.h"
 #include <algorithm>
@@ -124,24 +125,24 @@ bool hasMagic(const std::string& path) {
 
 bool parse(const uint8_t* h, size_t hl, const uint8_t* ext, size_t extLen, uint64_t fileSize, Info& out, std::string& err) {
     Info r;
-    if (hl < 512) { err = "BLUE header is shorter than 512 bytes"; return false; }
-    if (memcmp(h, "BLUE", 4)) { err = "not an X-Midas BLUE file (no BLUE tag)"; return false; }
+    if (hl < 512) { DIAG_ERROR(281778, "The BLUE file header is shorter than 512 bytes, so the file is not opened."); err = "BLUE header is shorter than 512 bytes"; return false; }
+    if (memcmp(h, "BLUE", 4)) { DIAG_ERROR(517741, "The file has no BLUE tag, so it is not opened as an X-Midas BLUE file."); err = "not an X-Midas BLUE file (no BLUE tag)"; return false; }
     auto rep = [&](const uint8_t* p, bool& big) {
         if (!memcmp(p, "EEEI", 4)) { big = false; return true; }
         if (!memcmp(p, "IEEE", 4)) { big = true; return true; }
         return false;
     };
-    if (!rep(h + 4, r.headBig)) { err = "BLUE header byte order (head_rep) is neither EEEI nor IEEE"; return false; }
-    if (!rep(h + 8, r.dataBig)) { err = "BLUE data byte order (data_rep) is neither EEEI nor IEEE"; return false; }
+    if (!rep(h + 4, r.headBig)) { DIAG_ERROR(328287, "The BLUE header byte order is neither EEEI nor IEEE, so the file is not opened."); err = "BLUE header byte order (head_rep) is neither EEEI nor IEEE"; return false; }
+    if (!rep(h + 8, r.dataBig)) { DIAG_ERROR(591094, "The BLUE data byte order is neither EEEI nor IEEE, so the file is not opened."); err = "BLUE data byte order (data_rep) is neither EEEI nor IEEE"; return false; }
     const bool hb = r.headBig;
-    if ((int32_t)getU(h + 12, 4, hb) != 0) { err = "BLUE file with a detached header is not supported"; return false; }
+    if ((int32_t)getU(h + 12, 4, hb) != 0) { DIAG_ERROR(608718, "The BLUE file has a detached header, which is not supported, so the file is not opened."); err = "BLUE file with a detached header is not supported"; return false; }
     const uint32_t extStart = (uint32_t)getU(h + 24, 4, hb);
     const uint32_t extSize = (uint32_t)getU(h + 28, 4, hb);
     const double dStart = getF64(h + 32, hb), dSize = getF64(h + 40, hb);
     r.type = (int32_t)getU(h + 48, 4, hb);
-    if (r.type != 1000 && r.type != 2000) { err = "BLUE file type " + std::to_string(r.type) + " is not supported (1000 and 2000 are)"; return false; }
+    if (r.type != 1000 && r.type != 2000) { DIAG_ERROR(297133, "The BLUE file type %d is not supported (1000 and 2000 are), so the file is not opened.", (int)r.type); err = "BLUE file type " + std::to_string(r.type) + " is not supported (1000 and 2000 are)"; return false; }
     r.spa = (char)toupper(h[52]); r.kind = (char)toupper(h[53]);
-    if (r.spa != 'S' && r.spa != 'C') { err = std::string("BLUE data format ") + (char)h[52] + (char)h[53] + " is not scalar or complex samples"; return false; }
+    if (r.spa != 'S' && r.spa != 'C') { DIAG_ERROR(416299, "The BLUE data format is neither scalar nor complex samples, so the file is not opened."); err = std::string("BLUE data format ") + (char)h[52] + (char)h[53] + " is not scalar or complex samples"; return false; }
     switch (r.kind) {
     case 'B': case 'O': r.bytesPerScalar = 1; break;
     case 'I': r.bytesPerScalar = 2; break;
@@ -151,9 +152,9 @@ bool parse(const uint8_t* h, size_t hl, const uint8_t* ext, size_t extLen, uint6
     }
     r.complex = r.spa == 'C';
     r.timecode = getF64(h + 56, hb);
-    if (!okDouble(dStart) || dStart < 512) { err = "BLUE data_start is not valid"; return false; }
+    if (!okDouble(dStart) || dStart < 512) { DIAG_ERROR(947377, "The BLUE data_start value is not valid, so the file is not opened."); err = "BLUE data_start is not valid"; return false; }
     r.dataStart = (uint64_t)dStart;
-    if (fileSize && r.dataStart > fileSize) { err = "BLUE data_start is past the end of the file"; return false; }
+    if (fileSize && r.dataStart > fileSize) { DIAG_ERROR(179089, "The BLUE data_start lies past the end of the file, so the file is not opened."); err = "BLUE data_start is past the end of the file"; return false; }
     uint64_t avail = fileSize > r.dataStart ? fileSize - r.dataStart : 0;
     uint64_t bytes = 0;
     if (okDouble(dSize) && dSize > 0) bytes = (uint64_t)dSize;
@@ -180,10 +181,10 @@ bool parse(const uint8_t* h, size_t hl, const uint8_t* ext, size_t extLen, uint6
 
 bool probe(const std::string& path, Info& out, std::string& err) {
     FILE* f = openRb(path);
-    if (!f) { err = "cannot open " + path; return false; }
+    if (!f) { DIAG_ERROR(538085, "The BLUE file %s could not be opened to read its header, so it is not played.", path.c_str()); err = "cannot open " + path; return false; }
     uint8_t h[512];
     const size_t g = fread(h, 1, 512, f);
-    if (g < 512) { fclose(f); err = "file is too short to be a BLUE file: " + path; return false; }
+    if (g < 512) { DIAG_ERROR(817201, "The file %s is too short to be a BLUE file, so it is not opened.", path.c_str()); fclose(f); err = "file is too short to be a BLUE file: " + path; return false; }
     const uint64_t size = fileSizeOf(path);
     std::vector<uint8_t> ext;
     // the extended header is optional: read it only when it lies inside the file and is of a sane size
@@ -203,7 +204,7 @@ bool Reader::open(const std::string& path, std::string& err) {
     close();
     if (!probe(path, info_, err)) return false;
     f_ = openRb(path);
-    if (!f_) { err = "cannot open " + path; return false; }
+    if (!f_) { DIAG_ERROR(555556, "The BLUE file %s could not be opened for reading, so it is not played.", path.c_str()); err = "cannot open " + path; return false; }
     rewind();
     return true;
 }
@@ -254,14 +255,14 @@ size_t Reader::read(cf32* dst, size_t n) {
 bool Writer::open(const std::string& path, const WriteSpec& s, std::string& err) {
     std::string e;
     close(e);
-    if (!strchr("BILFD", s.kind)) { err = "BLUE writer: unsupported sample type"; return false; }
-    if (!(s.sampleRate > 0)) { err = "BLUE writer: the sample rate is not known"; return false; }
+    if (!strchr("BILFD", s.kind)) { DIAG_ERROR(984492, "The BLUE writer was asked for an unsupported sample type, so the recording does not start."); err = "BLUE writer: unsupported sample type"; return false; }
+    if (!(s.sampleRate > 0)) { DIAG_ERROR(481057, "The BLUE writer does not know the sample rate yet, so the recording does not start."); err = "BLUE writer: the sample rate is not known"; return false; }
     try {
         const std::filesystem::path p = u8file(path);
         if (p.has_parent_path()) std::filesystem::create_directories(p.parent_path());
-    } catch (const std::exception& ex) { err = std::string("cannot create the folder: ") + ex.what(); return false; }
+    } catch (const std::exception& ex) { DIAG_ERROR(911593, "The folder for the BLUE recording could not be created (%s), so the recording does not start.", ex.what()); err = std::string("cannot create the folder: ") + ex.what(); return false; }
     f_ = u8fopen(path, "wb");
-    if (!f_) { err = "cannot create " + path; return false; }
+    if (!f_) { DIAG_ERROR(260094, "The BLUE recording file %s could not be created, so the recording does not start.", path.c_str()); err = "cannot create " + path; return false; }
     s_ = s; samples_ = 0;
     uint8_t h[512] = {};
     memcpy(h, "BLUE", 4);
@@ -274,7 +275,7 @@ bool Writer::open(const std::string& path, const WriteSpec& s, std::string& err)
     putF64(h + 256, 0.0, s.bigEndian);
     putF64(h + 264, 1.0 / s.sampleRate, s.bigEndian);
     putU(h + 272, 1, 4, s.bigEndian);   // xunits 1 = time in seconds
-    if (fwrite(h, 1, 512, f_) != 512) { err = "writing failed: " + path; fclose(f_); f_ = nullptr; return false; }
+    if (fwrite(h, 1, 512, f_) != 512) { DIAG_ERROR(694782, "Writing the BLUE header to %s failed (the disk may be full), so the recording stops.", path.c_str()); err = "writing failed: " + path; fclose(f_); f_ = nullptr; return false; }
     return true;
 }
 
@@ -370,7 +371,7 @@ bool convertToCf32(const std::string& src, const std::string& dstPath, std::stri
         ok = fwrite(buf.data(), sizeof(cf32), n, o) == n;
     }
     if (fclose(o) != 0) ok = false;
-    if (!ok) { err = "writing " + dstPath + " failed (disk full?)"; std::error_code ec; std::filesystem::remove(u8file(dstPath), ec); }
+    if (!ok) { DIAG_ERROR(812921, "Writing the converted BLUE copy %s failed (the disk may be full), so the copy is removed.", dstPath.c_str()); err = "writing " + dstPath + " failed (disk full?)"; std::error_code ec; std::filesystem::remove(u8file(dstPath), ec); }
     return ok;
 }
 

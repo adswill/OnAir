@@ -3,6 +3,7 @@
 
 #include "dect2/tv/mheg.h"
 #include <cstdio>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 namespace {
@@ -185,6 +186,7 @@ MhegParse mhegParse(const uint8_t* p, size_t n) {
         nameTree(nd);
         r.roots.push_back(std::move(nd));
     }
+    if (pos < n) DIAG_DEBUG(280592, "The MHEG-5 data stops being readable at byte %zu of %zu (%s), so the rest of the application is ignored.", pos, n, r.error.c_str());
     r.consumed = pos;
     return r;
 }

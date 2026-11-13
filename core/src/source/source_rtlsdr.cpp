@@ -3,6 +3,7 @@
 
 // Native driver for the RTL-SDR: the radio's own library is loaded at run time when it is installed. See native_common.h.
 #include "native_common.h"
+#include "dect2/common/diag.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/common/platform.h"
 #include <deque>
@@ -229,12 +230,13 @@ protected:
         // librtlsdr opens by position in the USB list: with two dongles, an unplug or a new one shifts it, and the other radio (with its
         // antenna power) would be opened. The serial of the listing finds the radio again.
         const int at = indexOfSerial();
-        if (at == -2) { err = "RTL-SDR " + serial_ + " not found (unplugged?)"; return false; }
+        if (at == -2) { DIAG_ERROR(178818, "The RTL-SDR with serial %s is not in the USB list, so it cannot be opened (unplugged?).", serial_.c_str()); err = "RTL-SDR " + serial_ + " not found (unplugged?)"; return false; }
         const uint32_t index = at >= 0 ? (uint32_t)at : index_;
         const int r = rtl().open(&dev_, index);
         if (r != 0 || !dev_) {
             dev_ = nullptr;
             // librtlsdr hands back libusb's error code; a missing driver or permission does not pass by trying again
+            DIAG_ERROR(766086, "Opening the RTL-SDR at USB index %u failed with library code %d, so the radio stays closed.", (unsigned)index, r);
             err = "RTL-SDR: cannot open the radio: " + usbErrorText(r);
             if (r == -3 || r == -12 || (kOnWindows && usbDriverMissing(r))) openFailure_ = OpenFailure::Final;
             return false;
@@ -258,12 +260,13 @@ protected:
     }
     double lastTuneHz_ = -1;
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
-        if (!dev_) return false;
+        if (!dev_) { DIAG_DEBUG(669489, "The RTL-SDR was asked to configure itself while no device is open, so nothing is changed."); return false; }
         if (!live) {
             // a TV channel cannot be squeezed into what a dongle delivers: say so instead of streaming a useless rate
             if (s.sampleRate > 3.2e6 && !s.rateChosen) {   // (a rate the user chose goes to the driver as it is; the DXpatrol is sold for up to 3.2 Msps, the same ceiling)
                 char b[200];
                 snprintf(b, sizeof b, "RTL-SDR gives at most 3.2 Msps; %s needs about %.0f Msps: use a faster radio", familyOf(s), s.sampleRate / 1e6);
+                DIAG_ERROR(111715, "The RTL-SDR cannot deliver the %.1f Msps that %s needs (its limit is 3.2 Msps), so the radio is not started.", s.sampleRate / 1e6, familyOf(s));
                 err = b;
                 openFailure_ = OpenFailure::Final;
                 return false;
@@ -276,6 +279,7 @@ protected:
             // dongle in direct sampling at 0 Hz (#450). Tuned first, the retune it makes is the real frequency.
             if (s.centerHz >= kDirectBelowHz && s.centerHz <= 4.29e9) rtl().set_center_freq(dev_, (uint32_t)std::llround(s.centerHz));
             if (const int r = rtl().set_sample_rate(dev_, (uint32_t)std::lround(want)); r < 0) {
+                DIAG_ERROR(713154, "The RTL-SDR driver refused a sample rate of %.3f Msps with error %d, so the radio is not started.", (double)want / 1e6, r);
                 err = "RTL-SDR: the sample rate of " + mhz(want) + " Msps was refused (error " + std::to_string(r) + ")";
                 return false;
             }
@@ -325,7 +329,7 @@ protected:
             if (p != ppm_) {
                 const int r = rtl().set_freq_correction(dev_, p);   // -2: already set
                 if (r == 0 || r == -2) ppm_ = p;
-                else { fprintf(stderr, "RTL-SDR: the frequency correction of %d ppm was refused (%d)\n", p, r); fflush(stderr); }
+                else { DIAG(541376, "The RTL-SDR driver refused a frequency correction of %d ppm with code %d, so the old correction stays.", p, r); fprintf(stderr, "RTL-SDR: the frequency correction of %d ppm was refused (%d)\n", p, r); fflush(stderr); }
             }
         } else tuneHz = ppmCorrectedHz(f, ppm);
         // offset tuning (E4000 / FC00xx only, TuneSettings "offset")
@@ -337,6 +341,7 @@ protected:
         if (tuneHz > 4.29e9) addNote(err, "the RTL-SDR library takes at most 4.29 GHz (32-bit Hz): " + mhz(f) + " MHz was cut to that");
         // a retune that only changes the gain leaves the tuner alone (the same frequency set again glitches the stream)
         if ((!live || tuneHz != lastTuneHz_) && rtl().set_center_freq(dev_, (uint32_t)std::llround(std::min(tuneHz, 4.29e9))) < 0) {
+            DIAG_ERROR(211091, "The RTL-SDR driver refused a centre frequency of %.6f MHz, so the tune fails.", f / 1e6);
             err = "RTL-SDR: the driver refused " + mhz(f) + " MHz" + (hi_ > 0 ? " (this radio is specified for " + mhz(specLo) + " to " + mhz(hi_) + " MHz)" : std::string());
             openFailure_ = OpenFailure::Final;
             return false;
@@ -348,7 +353,7 @@ protected:
         }
         if (rtl().set_bias_tee && s.biasTee != bias_) {
             if (rtl().set_bias_tee(dev_, s.biasTee ? 1 : 0) == 0) bias_ = s.biasTee;
-            else if (s.biasTee) { fprintf(stderr, "RTL-SDR: the radio refused the bias-tee\n"); fflush(stderr); }
+            else if (s.biasTee) { DIAG(821014, "The RTL-SDR refused to switch the antenna bias-tee on, so the antenna gets no power."); fprintf(stderr, "RTL-SDR: the radio refused the bias-tee\n"); fflush(stderr); }
         }
         // the tuner offers a fixed list of gains (tenths of a dB): take the closest
         const int n = rtl().get_tuner_gains(dev_, nullptr);
@@ -542,7 +547,7 @@ struct NativeLink : RtlLink {
     ~NativeLink() override { if (d) native::rtl().close(d); }
     bool configure(double f, double r, int g) override {
         auto& a = native::rtl();
-        if (a.set_sample_rate(d, (uint32_t)r) < 0 || a.set_center_freq(d, (uint32_t)f) < 0) return false;
+        if (a.set_sample_rate(d, (uint32_t)r) < 0 || a.set_center_freq(d, (uint32_t)f) < 0) { DIAG_DEBUG(124621, "The RTL-SDR probe link could not set %.0f Hz at %.0f samples per second, so this setting is skipped.", f, r); return false; }
         if (g < 0) a.set_tuner_gain_mode(d, 0);
         else { a.set_tuner_gain_mode(d, 1); a.set_tuner_gain(d, g); }
         return a.reset_buffer(d) >= 0;

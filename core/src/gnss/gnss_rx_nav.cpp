@@ -3,13 +3,29 @@
 
 // GNSS receiver, navigation data handling per system and the tracker loop.
 #include "gnss_rx_impl.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
+
+namespace {
+// Outside the loops of runTrackers: these run once per channel that ends or drops its phase lock
+void diagTrackerEnded(const std::string& name, bool notConfirmed, const std::string& why) {
+    const char* w = why.empty() ? "no reason recorded" : why.c_str();
+    if (notConfirmed) DIAG_DEBUG(705094, "GNSS %s was not confirmed (%s), so its channel is released and the search continues.", name.c_str(), w);
+    else DIAG_DEBUG(587295, "GNSS %s tracking ended (%s), so its channel is released and the satellite is searched for again.", name.c_str(), w);
+}
+void diagPhaseDrop(const std::string& name) {
+    DIAG_DEBUG(843999, "The carrier phase lock on GNSS %s dropped because its lock indicator stayed low for 0.5 s, so the channel pulls in again.", name.c_str());
+}
+} // namespace
 
 // GLONASS strings: the ephemeris from strings 1-4 of one frame, the time corrections and the four-year interval from string 5
 void GnssReceiver::Impl::handleGlo(GnssTracker& t, const GnssSubframeEvent& ev, double signalNow) {
     const int slot = t.fcn - kGloMinK;
-    if (slot < 0 || slot >= kGloSlots || ev.towStart < 0) return;
+    if (slot < 0 || slot >= kGloSlots || ev.towStart < 0) {
+        DIAG_DEBUG_EVERY(267978, 10.0, "A GLONASS string from frequency channel %d has no usable slot or time (start %.0f s), so it is ignored.", t.fcn, (double)ev.towStart);
+        return;
+    }
     SatNav& s = gloSat[slot];
     const int m = (int)gloField(ev.bits, 84, 4);
     s.towLast = (int)ev.towStart; s.lastSfId = m; s.lastSfTime = signalNow;
@@ -180,13 +196,17 @@ void GnssReceiver::Impl::runTrackers(double signalNow) {
         t->events().clear();
     }
     for (size_t i = 0; i < trackers.size();) {
-        if (trackers[i]->takePhaseDrop()) logf(satName(trackers[i]->sys, trackers[i]->prn) + ": phase lock dropped (lock indicator low for 0.5 s), pulling in again");
+        if (trackers[i]->takePhaseDrop()) {
+            logf(satName(trackers[i]->sys, trackers[i]->prn) + ": phase lock dropped (lock indicator low for 0.5 s), pulling in again");
+            diagPhaseDrop(satName(trackers[i]->sys, trackers[i]->prn));
+        }
         if (trackers[i]->lost()) {
             okRetired += trackers[i]->framesOk(); badRetired += trackers[i]->framesBad();
             // a lost satellite is found again sooner by a short round than at the end of a long one
             if (trackers[i]->band == 0 && longRound && trackers[i]->lockSeconds() > 0.5) { gpsAcq.endRound(); longRound = false; }
             const std::string why = trackers[i]->lostReason();
             logf(satName(trackers[i]->sys, trackers[i]->prn) + (trackers[i]->wasPullInTimeout() ? " not confirmed" : " lost") + (why.empty() ? "" : ": " + why));
+            diagTrackerEnded(satName(trackers[i]->sys, trackers[i]->prn), trackers[i]->wasPullInTimeout(), why);
             trackers.erase(trackers.begin() + (long)i);
         } else i++;
     }

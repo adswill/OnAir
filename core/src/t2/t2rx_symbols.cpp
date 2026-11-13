@@ -3,6 +3,7 @@
 
 // OFDM symbol processing of the DVB-T2 receiver: FFT, timing and carrier tracking.
 #include "t2rx_impl.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -20,11 +21,12 @@ void T2Receiver::Impl::processFrames() {
             // sits earlier by that many. Hold the frame until the next P1 says exactly how many (or give up after two frames and go on as before).
             if (f.lostAt < 0 && f.next > 0 && frameLen > 0 && cpCorrAvg > 0.3 && cpRhoAt(s) < 0.3 * cpCorrAvg) {
                 f.lostAt = f.next; f.lostFrom = s;
+                DIAG_DEBUG_EVERY(194566, 5, "Symbol %d of the DVB-T2 frame lost its guard-interval match, so samples were probably dropped and the frame waits for the next P1 preamble.", f.next);
                 if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] symbol %d of the frame lost its cyclic prefix: samples lost?\n", f.next);
                 if (f.lostKnown) continue;   // the next P1 has already told how many
             }
             if (f.lostAt >= 0 && !f.lostKnown) {
-                if (end() > s + 2 * (int64_t)frameLen + 4 * (N + G)) { f.lostKnown = true; f.lost = 0; f.intactAgain = true; if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] no P1 to say how many samples were lost (end %lld)\n", (long long)end()); }
+                if (end() > s + 2 * (int64_t)frameLen + 4 * (N + G)) { f.lostKnown = true; f.lost = 0; f.intactAgain = true; DIAG_DEBUG_EVERY(822967, 5, "No P1 preamble arrived to say how many samples were lost in this DVB-T2 frame, so decoding continues without correcting for the gap."); if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] no P1 to say how many samples were lost (end %lld)\n", (long long)end()); }
                 else { stalled = true; break; }
             }
             if (f.lostAt >= 0 && f.lostKnown && !f.intactAgain && f.next >= f.lostAt) {
@@ -158,6 +160,7 @@ void T2Receiver::Impl::processSymbol(int64_t s, int k) {
         cfoEst += 0.08 * (meas - cfoEst);
         lowCount = 0;
     } else if (++lowCount > 40) {
+        DIAG_EVERY(893227, 5, "The DVB-T2 signal was lost because the guard-interval correlation stayed too low for too many symbols, so the receiver searches for a new P1 preamble.");
         state = 0; // lost the signal
         frames.clear();
         lowCount = 0;

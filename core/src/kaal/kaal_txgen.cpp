@@ -8,6 +8,7 @@
 #include "dect2/kaal/kaal_sweepid.h"
 #include "dect2/kaal/kaal_beacon.h"
 #include "dect2/kaal/kaal_v4.h"
+#include "dect2/common/diag.h"
 #include <memory>
 #include <algorithm>
 #include <cctype>
@@ -24,16 +25,16 @@ bool kaalBeaconFromRequest(const TxRequest& r, std::string& callsign, std::strin
     for (char c : r.callsign) callsign += (char)std::toupper((unsigned char)c);
     while (!callsign.empty() && callsign.back() == ' ') callsign.pop_back();
     if (callsign.empty()) callsign = "ONAIR";   // an empty field is the demo identity, like every other mode
-    if (callsign.size() > 9) { err = "KAAL: the callsign is at most 9 characters"; return false; }
+    if (callsign.size() > 9) { err = DIAG_TEXT(947333, "KAAL: the callsign \"%s\" is longer than 9 characters, so the transmission is not started.", callsign.c_str()); return false; }
     for (char c : callsign) {
-        if (!(c == ' ' || c == '/' || c == '-' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z'))) { err = "KAAL: the callsign may hold only letters, digits, space, / and -"; return false; }
+        if (!(c == ' ' || c == '/' || c == '-' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z'))) { err = DIAG_TEXT(757145, "KAAL: the callsign \"%s\" holds a character other than a letter, digit, space, / or -, so the transmission is not started.", callsign.c_str()); return false; }
     }
     grid = r.grid.empty() ? std::string("AA00aa") : r.grid;
-    if (grid.size() != 6) { err = "KAAL: the grid has 6 characters, for example KO26ab"; return false; }
+    if (grid.size() != 6) { err = DIAG_TEXT(975856, "KAAL: the grid \"%s\" is not 6 characters long (for example KO26ab), so the transmission is not started.", grid.c_str()); return false; }
     for (int i = 0; i < 6; i++) {
         const char c = grid[(size_t)i];
         const bool ok = i < 2 ? std::isalpha((unsigned char)c) : i < 4 ? std::isdigit((unsigned char)c) : std::isalpha((unsigned char)c);
-        if (!ok) { err = "KAAL: the grid has 6 characters, for example KO26ab"; return false; }
+        if (!ok) { err = DIAG_TEXT(751719, "KAAL: the grid \"%s\" does not follow the pattern of two letters, two digits and two letters (for example KO26ab), so the transmission is not started.", grid.c_str()); return false; }
         grid[(size_t)i] = (char)(i < 2 ? std::toupper((unsigned char)c) : i < 4 ? c : std::tolower((unsigned char)c));
     }
     powerDbm = std::max(-40.0, std::min(87.5, std::round(r.o("kaal.powerDbm", 10.0) * 2.0) / 2.0));
@@ -165,7 +166,7 @@ private:
 } // namespace
 
 std::unique_ptr<TxGenerator> makeKaalTxGenerator(const TxRequest& r, double rateHz, std::string& err) {
-    if (rateHz < 48000.0 - 1) { err = "KAAL needs a transmit rate of at least 48 kHz"; return nullptr; }
+    if (rateHz < 48000.0 - 1) { err = DIAG_TEXT(443108, "KAAL needs a transmit sample rate of at least 48 kHz but got %.0f Hz, so the transmission is not started.", rateHz); return nullptr; }
     if (r.o("kaal.frame", 3.0) >= 3.5) {   // frame version 4
         auto g = std::make_unique<KaalGenV4>(rateHz, r.pullAudio);
         std::string cs, gr, text;
@@ -175,11 +176,11 @@ std::unique_ptr<TxGenerator> makeKaalTxGenerator(const TxRequest& r, double rate
         f.callsign = cs; f.grid = gr; f.lat = r.lat; f.lon = r.lon; f.powerDbm = pw;
         f.linkQuality = (int)r.o("kaal.linkQuality", 0);
         f.frameType = 0;
-        if (kaal::encodeBeaconBits(f, "").empty()) { err = "KAAL: the beacon fields cannot be encoded (check the callsign, the grid and the position)"; return nullptr; }
+        if (kaal::encodeBeaconBits(f, "").empty()) { err = DIAG_TEXT(816536, "KAAL v4: the beacon fields cannot be encoded (check the callsign, the grid and the position), so the transmission is not started."); return nullptr; }
         if (r.o("kaal.beacon", 1) > 0.5) g->tx_.setBeacon(f);
         g->text_ = r.text;   // version 4 has no 100-character limit: long texts go out in the data slots
         const int pi = (int)std::lround(r.o("kaal.v4profile", 2.0));
-        if (pi < 1 || pi > 4) { err = "KAAL v4: the voice profile is 1 (8.0), 2 (6.0), 3 (4.8) or 4 (3.2 kbit/s)"; return nullptr; }
+        if (pi < 1 || pi > 4) { err = DIAG_TEXT(873482, "KAAL v4: the voice profile %d is not 1 (8.0), 2 (6.0), 3 (4.8) or 4 (3.2 kbit/s), so the transmission is not started.", pi); return nullptr; }
         g->prof_ = (kaal::v4::Profile)pi;
         const kaal::v4::SlotCodec* codec = kaal::v4::slotCodec();
         g->voiceSlots_ = codec && (!codec->supports || codec->supports(g->prof_)) ? std::max(0, std::min(4, (int)std::lround(r.o("kaal.v4voice", 1.0)))) : 0;
@@ -193,7 +194,7 @@ std::unique_ptr<TxGenerator> makeKaalTxGenerator(const TxRequest& r, double rate
     }
     auto g = std::make_unique<KaalGen>(rateHz, r.pullAudio);
     const int kb = (int)std::lround(r.o("kaal.bitrate", 16.0));
-    if (!KaalCodec3::validBitrate(kb)) { err = "KAAL: the voice bitrate is 12, 16, 24 or 32 kbit/s"; return nullptr; }
+    if (!KaalCodec3::validBitrate(kb)) { err = DIAG_TEXT(177567, "KAAL: the voice bitrate %d kbit/s is not 12, 16, 24 or 32, so the transmission is not started.", kb); return nullptr; }
     g->tx_.setBitrate(kb);
     {   // the callsign also goes into the sweep (6 characters + a suffix class); one that does not fit leaves the sweep without an ID
         std::string cs;
@@ -211,7 +212,7 @@ std::unique_ptr<TxGenerator> makeKaalTxGenerator(const TxRequest& r, double rate
         f.callsign = cs; f.grid = gr; f.lat = r.lat; f.lon = r.lon; f.powerDbm = pw;
         f.linkQuality = (int)r.o("kaal.linkQuality", 0);
         f.frameType = text.empty() ? 0 : 1;
-        if (kaal::encodeBeaconBits(f, text).empty()) { err = "KAAL: the beacon fields cannot be encoded (check the callsign, the grid and the position)"; return nullptr; }
+        if (kaal::encodeBeaconBits(f, text).empty()) { err = DIAG_TEXT(228741, "KAAL: the beacon fields cannot be encoded (check the callsign, the grid and the position), so the transmission is not started."); return nullptr; }
         g->tx_.setBeacon(f, text);
     }
     g->tx_.setBeaconMix(beacon);

@@ -4,6 +4,7 @@
 // Native driver for the Airspy HF+ and HF+ Discovery: the radio's own library (libairspyhf) is loaded at run time when it is installed. See native_common.h.
 // The radio is an HF/VHF receiver with a very narrow output (at most 912 kHz): it suits the narrow modes (DRM, AIS, marine, FM, ...), not TV.
 #include "native_common.h"
+#include "dect2/common/diag.h"
 #include "dect2/source/usb_fd.h"   // Android: radios handed over as descriptors
 #include <chrono>
 #include <map>
@@ -75,6 +76,7 @@ struct AirspyHfApi {
         lib.opt(get_bias_tee_count, "airspyhf_get_bias_tee_count");
         lib.opt(open_fd, "airspyhf_open_fd");
         if (ok && usbFdPlatform() && !open_fd) {   // Android: a bus scan is not allowed, only the descriptors the app hands over
+            DIAG(111267, "The bundled libairspyhf has no airspyhf_open_fd entry point, so Airspy HF+ radios cannot be used on this phone.");
             fprintf(stderr, "Airspy HF+: the bundled libairspyhf has no airspyhf_open_fd: HF+ radios are not available on this phone\n");
             ok = false;
         }
@@ -144,7 +146,7 @@ public:
 
 protected:
     bool openDevice(const TuneSettings& s, std::string& err) override {
-        if (!airspyhf().ok) { err = "Airspy HF+: the radio's library (libairspyhf) is missing"; return false; }
+        if (!airspyhf().ok) { DIAG_ERROR(311693, "The libairspyhf library could not be loaded, so the Airspy HF+ cannot be opened."); err = "Airspy HF+: the radio's library (libairspyhf) is missing"; return false; }
         std::lock_guard<std::mutex> g(gHfMu);
         std::lock_guard<std::mutex> lk(api_);
         if (dev_) return configureLocked(s, err, false);   // (not reached: closeDevice() comes first)
@@ -161,7 +163,7 @@ protected:
             }
         }
         if (!dev_) {
-            if (airspyhf().openSn(&dev_, serial_) != 0 || !dev_) { dev_ = nullptr; err = "Airspy HF+: cannot open the radio (in use, or the driver is missing)"; return false; }
+            if (airspyhf().openSn(&dev_, serial_) != 0 || !dev_) { dev_ = nullptr; DIAG_ERROR(995828, "Opening the Airspy HF+ failed (in use by another program, or the driver is missing), so the radio stays closed."); err = "Airspy HF+: cannot open the radio (in use, or the driver is missing)"; return false; }
             if (airspyhf().set_lib_dsp) airspyhf().set_lib_dsp(dev_, 1);   // the library's own IQ correction and fine tuning
             gHfOpen.insert(serial_);
             gHfUsed = true;
@@ -190,7 +192,7 @@ protected:
     }
     bool configureLocked(const TuneSettings& s, std::string& err, bool live) {
         refusedUnchanged_ = false;
-        if (!dev_) return false;
+        if (!dev_) { DIAG_DEBUG(946727, "The Airspy HF+ was asked to configure itself while no device is open, so nothing is changed."); return false; }
         auto& api = airspyhf();
         if (!live) {
             // 912 / 768 / 456 / 384 / 256 / 192 kHz depending on the model: the smallest one that is fast enough
@@ -199,13 +201,14 @@ protected:
             std::vector<uint32_t> rates(std::min<uint32_t>(count, 16));
             if (!rates.empty()) api.get_samplerates(dev_, rates.data(), (uint32_t)rates.size());
             std::sort(rates.begin(), rates.end());
-            if (rates.empty()) { err = "Airspy HF+: the radio reports no sample rates"; return false; }
+            if (rates.empty()) { DIAG_ERROR(563562, "The Airspy HF+ reports no supported sample rates, so it cannot be started."); err = "Airspy HF+: the radio reports no sample rates"; return false; }
             const double top = rates.back();
             double pick = top;
             for (uint32_t r : rates) if (r >= s.sampleRate * 0.999) { pick = r; break; }
             if (s.sampleRate > top * 1.001) {
                 // a channel that fits in the radio's output (DRM, AIS, a single FM station, ...) is fine at the fastest rate; a wide one (TV, DAB) cannot be received
                 if (s.bandwidthMhz * 1e6 > top * 0.8) {
+                    DIAG_ERROR(748877, "The Airspy HF+ gives at most %.0f samples per second but %.0f were requested, so the radio is not started.", (double)top, (double)s.sampleRate);
                     err = "Airspy HF+ gives at most " + rateText(top) + "; " + rateText(s.sampleRate) + " needs a faster radio";
                     refusedUnchanged_ = true;   // nothing was sent to the radio: the stream that ran goes on (retune())
                     return false;
@@ -213,7 +216,7 @@ protected:
                 err = "Airspy HF+ runs at " + rateText(top) + " (" + rateText(s.sampleRate) + " was requested; the channel fits)";
             }
             requested_ = s.sampleRate;
-            if (api.set_samplerate(dev_, (uint32_t)pick) != 0) { err = "Airspy HF+: the radio does not accept " + rateText(pick); return false; }
+            if (api.set_samplerate(dev_, (uint32_t)pick) != 0) { DIAG_ERROR(512167, "The Airspy HF+ did not accept a sample rate of %.0f samples per second, so the radio is not started.", (double)pick); err = "Airspy HF+: the radio does not accept " + rateText(pick); return false; }
             rate_ = pick;
         }
         // the HF+ is specified for 9 kHz..31 MHz and 60..260 MHz (airspy.com): outside that the library is asked all the same, with a note
@@ -231,7 +234,7 @@ protected:
         } else tuneHz = ppmCorrectedHz(s.centerHz, ppm);
         // asked as is (the library takes 32-bit Hz: only a value beyond 4.29 GHz is cut to what the call can hold)
         freq_ = (uint32_t)std::llround(std::min(std::max(tuneHz, 0.0), 4.29e9));
-        if (api.set_freq(dev_, freq_) != 0) { err = "Airspy HF+: the library refused " + rateText(s.centerHz); openFailure_ = OpenFailure::Final; return false; }
+        if (api.set_freq(dev_, freq_) != 0) { DIAG_ERROR(535092, "The Airspy HF+ library refused a centre frequency of %.0f Hz, so the tune fails.", (double)s.centerHz); err = "Airspy HF+: the library refused " + rateText(s.centerHz); openFailure_ = OpenFailure::Final; return false; }
         // the radio's own AGC (TuneSettings "agc": off, low or high threshold); off is the default, with the slider in charge
         const std::string agc = radioOption(s, "agc", "off");
         if (agc != agc_) {
@@ -268,6 +271,7 @@ protected:
             return;
         }
         if (streamingLocked()) {
+            DIAG(496029, "The Airspy HF+ stream is still running after stop, so the handle is kept open to avoid a library crash on close.");
             fprintf(stderr, "Airspy HF+: stream still running after stop, keeping the handle (avoids a libusb crash on close)\n");
             fflush(stderr);
             parkHandleLocked();

@@ -3,6 +3,7 @@
 
 // Wide multi-signal decode: see wide_session.h.
 #include "dect2/engine/wide_session.h"
+#include "dect2/common/diag.h"
 #include "dect2/autodet/autodet.h"
 #include "dect2/channels/freq_db.h"
 #include "dect2/channels/tvchan.h"
@@ -362,7 +363,7 @@ struct WideSession::Impl {
         }
         if (k != WsKind::Unknown) { n.e.kind = k; n.e.identity = std::string(autodet::voiceSysName(v.sys)) + " (" + autodet::verdictName(v.verdict) + ")"; return; }
         if (cfg.airband && center > 0 && airBand(abs)) { n.e.kind = WsKind::Am; n.e.identity = "air band (AM)"; return; }
-        if (++n.attempts >= cfg.identAttempts) { n.e.state = WsState::Unidentified; n.e.why = "could not be identified; give it a kind by hand"; }
+        if (++n.attempts >= cfg.identAttempts) { n.e.state = WsState::Unidentified; n.e.why = "could not be identified; give it a kind by hand"; DIAG_DEBUG(914591, "A carrier at the offset %.0f Hz in the wide capture could not be identified as a voice or data mode, so it is left unidentified.", n.e.offsetHz); }
         else n.nextTry = clock + 2.0;
     }
     void applyTv(T& t, const autodet::TvResult& r) {
@@ -371,7 +372,7 @@ struct WideSession::Impl {
         else if (r.signal && r.std != autodet::TvUnknown) {
             t.e.kind = WsKind::NoDecoder; t.e.identity = r.headline;
             t.e.why = std::string(autodet::tvStdName(r.std)) + " is identified; the multi-channel TV decodes DVB-T and DVB-T2 only";
-        } else if (++t.attempts >= cfg.identAttempts) { t.e.state = WsState::Unidentified; t.e.identity = r.headline; t.e.why = "the TV standard could not be identified" + (r.headline.empty() ? std::string() : ": " + r.headline); }
+        } else if (++t.attempts >= cfg.identAttempts) { DIAG_DEBUG(430819, "A TV channel at the offset %.0f Hz in the wide capture could not be identified as DVB-T or DVB-T2, so it is left unidentified.", t.e.offsetHz); t.e.state = WsState::Unidentified; t.e.identity = r.headline; t.e.why = "the TV standard could not be identified" + (r.headline.empty() ? std::string() : ": " + r.headline); }
         else t.nextTry = clock + 1.0;
     }
     void takeResults() {
@@ -642,7 +643,7 @@ struct WideSession::Impl {
             if (!a.e.active || clock < a.nextTry) continue;
             if (identifying >= kMaxIdentifying) break;
             identifying++;
-            if (!a.idOk) { a.idOk = a.idCh.configure(cfg.spanRate, kIdRate, a.e.offsetHz, 22000); if (!a.idOk) { a.e.state = WsState::Unidentified; a.e.why = "the capture rate is too low to identify"; continue; } }
+            if (!a.idOk) { a.idOk = a.idCh.configure(cfg.spanRate, kIdRate, a.e.offsetHz, 22000); if (!a.idOk) { DIAG_DEBUG_EVERY(198941, 10.0, "The capture rate %.0f Hz is too low to identify a carrier at the offset %.0f Hz, so it stays unidentified.", cfg.spanRate, a.e.offsetHz); a.e.state = WsState::Unidentified; a.e.why = "the capture rate is too low to identify"; continue; } }
             std::vector<cf32> tmp;
             a.idCh.process(x, n, tmp);
             a.idBuf.insert(a.idBuf.end(), tmp.begin(), tmp.end());

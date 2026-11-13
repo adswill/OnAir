@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/common/stage_prof.h"
 #include "dect2/dsp/simd.h"
 #if defined(DECT2_X86_DISPATCH)
@@ -604,7 +605,14 @@ bool Atsc3Sync::search() {
         pre = 0.0;
     }
     bf.cfoHz += pre;
-    if (haveHint_ && !bf.found && ++hintMisses_ > 100) { haveHint_ = false; hintMisses_ = 0; sroPpm_ = 0; sroCount_ = 0; predNext_ = -1; }   // lost: search widely again
+    if (haveHint_ && !bf.found && ++hintMisses_ > 100) {   // lost: search widely again
+        DIAG_DEBUG(418626, "No ATSC 3.0 bootstrap was found at the predicted position for 100 searches in a row, so the receiver lost frame timing and searches the whole capture again.");
+        haveHint_ = false;
+        hintMisses_ = 0;
+        sroPpm_ = 0;
+        sroCount_ = 0;
+        predNext_ = -1;
+    }
     if (!bf.found || !bf.det.valid) {
         // the bootstrap may straddle the end: keep an overlap of five symbols (a detection needs four after its start)
         searchFrom_ = from + take - (long)(rate * 5.0 * 3072 / kBootstrapRate);
@@ -633,6 +641,7 @@ bool Atsc3Sync::search() {
     haveHint_ = true;
     frameSamples_ = 0;
     st_.bootstraps++;
+    DIAG_DEBUG_EVERY(185662, 10.0, "An ATSC 3.0 bootstrap was found at a carrier offset of %.0f Hz (%d symbols, %d bootstraps so far), so the frame after it is read.", cfo_, bs_.numSymbols, (int)st_.bootstraps);
     st_.locked = true;
     st_.cfoHz = cfo_;
     st_.sroPpm = sroPpm_;
@@ -688,7 +697,12 @@ bool Atsc3Sync::cutFrame() {
     const double frameRate = postBootstrapRate(bs_);
     const double rate = rateEff();
     PreambleParams pp;
-    if (!preambleParams(bs_.preambleStructure, pp)) { locked_ = false; searchFrom_ = bsStart_ + (long)(rate * 0.01); return true; }
+    if (!preambleParams(bs_.preambleStructure, pp)) {
+        DIAG_DEBUG_EVERY(904828, 5.0, "The ATSC 3.0 bootstrap announces preamble structure %d, which is not defined, so its frame is skipped and the search goes on.", bs_.preambleStructure);
+        locked_ = false;
+        searchFrom_ = bsStart_ + (long)(rate * 0.01);
+        return true;
+    }
     const long availEnd = rawStart_ + (long)raw_.size();
     // 1. the Preamble tells the length of the frame (it can be longer than the signalled minimum time to the next frame)
     if (frameSamples_ == 0) {
@@ -709,6 +723,7 @@ bool Atsc3Sync::cutFrame() {
             frameSamples_ = (long)std::ceil(frameExact_);
         } else {
             // not a frame we can read: look for the next bootstrap
+            DIAG_DEBUG_EVERY(272126, 5.0, "The L1-Basic of the ATSC 3.0 frame after a bootstrap could not be decoded (%ld frames missed so far), so the frame is skipped and the next bootstrap is searched.", (long)missed_ + 1);
             missed_++;
             searchFrom_ = bsStart_ + (long)std::llround((minToNextSec_ - 0.002) * rate);
             locked_ = false;
