@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**390 modes.**
+**391 modes.**
 
 ## TV (17)
 
@@ -189,7 +189,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Golay paging (GSC)** - GSC pager messages (simulated only)
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (43)
+## IoT & Sensors (44)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
@@ -223,6 +223,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Reticulum (RNode)** - Reticulum / RNode: LoRa mesh network monitor. Tune the channel and pick bandwidth and spreading factor under Advanced, or leave the automatic search on
 - **ExpressLRS** - ExpressLRS: open-source RC link. Receive only. Tune the middle of the hop plan (EU868 866.4 MHz) with a wide sample rate
 - **MAVLink (SiK radio)** - MAVLink over SiK telemetry radios (ArduPilot, PX4). Receive only. A wider capture covers more hop channels
+- **SCADA radio telemetry (Modbus, DNP3)** - SCADA telemetry: Modbus RTU and DNP3 over utility data radios (receive only; check local law; simulated only)
 - **FrSky RC (D8 / D16)** - FrSky ACCST D8 / D16: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR
 - **FlySky RC (AFHDS / 2A)** - FlySky AFHDS / AFHDS 2A: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR
 - **Futaba RC (S-FHSS)** - Futaba S-FHSS: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR

@@ -495,6 +495,7 @@
         <item>Horus balloons</item>
         <item>Golay paging (GSC)</item>
         <item>STL link (studio-to-transmitter)</item>
+        <item>SCADA radio telemetry (Modbus, DNP3)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -971,6 +972,7 @@
         <item>Project Horus amateur balloon telemetry on 70 cm (434 MHz): Horus Binary v1 / v2 (100 baud 4FSK) and Horus RTTY (UKHAS sentences), every payload in the span on a map</item>
         <item>Golay Sequential Code (GSC), Motorola\'s one-way paging format: 2-FSK, the preamble, start code and Golay (23,12) address words at 300 bit/s, the comma and the BCH (15,7) data blocks at 600 bit/s. Receive only: tone-only pages, numeric and alphanumeric pages, and tone-and-voice pages (flagged: the voice is analog audio after the address, it is not decoded), with the pager code, the address function, the battery-saver preamble and single-call or batch mode. Simulated signals only so far; no GSC recording was available</item>
         <item>Analogue studio-to-transmitter links of broadcast radio (US Part 74 band 944 - 952 MHz, similar bands elsewhere): FM carrying the station\'s whole stereo composite (19 kHz pilot, stereo difference, RDS, SCA) at about +-60 kHz deviation in a 250 or 500 kHz channel, or mono programme audio. Plays the sound with a stereo decoder, 75 / 50 microsecond de-emphasis, adjustable deviation and channel width, level meters, RDS and SCA listening, and says what it hears: composite, mono, or a digital link (Moseley Starlink, Intraplex and similar: QAM or OFDM with PCM or AAC, often encrypted) which is named and measured but not decoded. Unencrypted analogue links only; receive only. Simulated signals only</item>
+        <item>Licensed utility and pipeline data radios (450 MHz, 900 MHz, the US MAS band 928 / 952 MHz): Bell 202 or V.23 audio FSK at 1200 baud on an FM channel, or direct 2-FSK / 4-FSK at 4800, 9600 and 19200 bit/s, found by itself with its baud rate and deviation; async 8N1 / 8E1 / 8O1 bytes or HDLC framing. Reads Modbus RTU (address, function, registers and values, exceptions, CRC) and DNP3 (link layer with its CRCs, transport, application: function, objects, IIN flags, class polls, unsolicited responses, time sync), pairs each request with its response and lists the masters and outstations with the registers and points seen. Unknown, proprietary or encrypted frames (DNP3 Secure Authentication, MDS or MOSCAD framing) are shown raw, never guessed. Export to CSV and JSON. Receive only: listening to non-broadcast utility traffic may be restricted in some countries; check local law. Not verified on a live signal (simulated signals only)</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1447,6 +1449,7 @@
         <item>Amateur balloons, 434 MHz</item>
         <item>Pagers, 300 / 600 bit/s</item>
         <item>Stereo and RDS</item>
+        <item>Utility telemetry</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1923,5 +1926,6 @@
         <item>horus binary 4fsk horusdemodlib horus-gui balloon hab high altitude rtty ukhas rs41ng sondehub amateur payload 434 434.650 437.6</item>
         <item>gsc golay golay sequential code motorola pager paging beeper tone voice numeric alphanumeric 300 600 baud bps fsk optrx bpr 2000 dimension 1000 cap code</item>
         <item>stl studio transmitter link composite mpx fm 950 mhz 944 952 part 74 broadcast moseley marti pcl-6000 sca rds stereo mono tsl starlink intraplex</item>
+        <item>scada modbus rtu dnp3 ieee 1815 telemetry utility pipeline rtu plc mas 928 952 450 900 bell 202 v.23 fsk 4fsk data radio mds moscad outstation master poll</item>
     </string-array>
 </resources>

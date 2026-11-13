@@ -1239,6 +1239,12 @@ static bool set_786(Engine& e, const std::string& n, double v) {
     if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
     return false;
 }
+static const char kOpt_863[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_863(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
 static const char kOpt_871[] = R"JSON([{"n":"setInvert","k":"bool","l":"Invert","h":"flip the bit polarity (the real polarity is not published)","t":"s"}])JSON";
 static bool set_871(Engine& e, const std::string& n, double v) {
     auto& r = e.fbr();
@@ -1509,6 +1515,7 @@ const OptEntry kOpt[] = {
     {782, kOpt_782, set_782},
     {783, kOpt_783, set_783},
     {786, kOpt_786, set_786},
+    {863, kOpt_863, set_863},
     {871, kOpt_871, set_871},
     {881, kOpt_881, set_881},
     {882, kOpt_882, set_882},

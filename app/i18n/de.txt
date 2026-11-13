@@ -4556,3 +4556,25 @@ Composite stereo	Composite-Stereo
 the programme	das Programm
 Automatic channel width and centre	Automatische Kanalbreite und Mittenfrequenz
 Follows the link: Carson's rule on the measured deviation and the multiplex content (RDS, SCA), or the occupied width, plus a margin; the carrier offset is removed first.	Folgt der Strecke: Carson-Regel auf den gemessenen Hub und den Multiplexinhalt (RDS, SCA) oder die belegte Breite, plus Reserve; der Trägerversatz wird vorher entfernt.
+Master > outstation	Master > Unterstation
+Function	Funktion
+Summary	Zusammenfassung
+CRC	CRC
+Raw bytes	Rohbytes
+answered by message	beantwortet durch Nachricht
+answers message	beantwortet Nachricht
+Last poll	Letzte Abfrage
+Polls / replies	Abfragen / Antworten
+Response	Antwortzeit
+exceptions	Ausnahmen
+unanswered	unbeantwortet
+unsolicited	unaufgefordert
+CRC failed	CRC fehlerhaft
+points	Punkte
+Select a device to see its registers and points.	Ein Gerät auswählen, um seine Register und Punkte zu sehen.
+Registers and points seen so far	Bisher gesehene Register und Punkte
+Point	Punkt
+Receive only. Listening to non-broadcast utility traffic may be restricted in some countries; check local law. Not verified on a live signal.	Nur Empfang. Das Abhören von nicht öffentlichem Versorgerfunk kann in manchen Ländern eingeschränkt sein; örtliches Recht prüfen. Nicht an einem echten Signal geprüft.
+filter	Filter
+Hide not recognised	Nicht erkannte ausblenden
+Utility telemetry	Versorger-Fernwirktechnik

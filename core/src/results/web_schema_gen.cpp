@@ -15455,6 +15455,7 @@ static bool put_847(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelem
 static bool put_850(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_853(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_856(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
+static bool put_863(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static bool put_871(const RxTelemetry& rx, std::string& s) { ev_dect2__FbrTelemetry(s, rx.fbr); return true; }
 static bool put_881(const RxTelemetry& rx, std::string& s) { ev_dect2__Cp16Telemetry(s, rx.cp16); return true; }
 static bool put_882(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
@@ -15796,6 +15797,7 @@ static const StdEntry kStd[] = {
     {850, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_850},
     {853, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_853},
     {856, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_856},
+    {863, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_863},
     {871, "fbr", "dect2::FbrTelemetry", kSchema_dect2__FbrTelemetry, put_871},
     {881, "cp16", "dect2::Cp16Telemetry", kSchema_dect2__Cp16Telemetry, put_881},
     {882, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_882},
@@ -16164,6 +16166,7 @@ static const WebModeRow kRows[] = {
     {360, "Reticulum (RNode)", 8, "Reticulum / RNode: LoRa mesh network monitor. Tune the channel and pick bandwidth and spreading factor under Advanced, or leave the automatic search on", "reticulum", 362, 361, "rclink"},
     {360, "ExpressLRS", 8, "ExpressLRS: open-source RC link. Receive only. Tune the middle of the hop plan (EU868 866.4 MHz) with a wide sample rate", "elrs", 362, 361, "rclink"},
     {360, "MAVLink (SiK radio)", 8, "MAVLink over SiK telemetry radios (ArduPilot, PX4). Receive only. A wider capture covers more hop channels", "mavlink", 362, 361, "rclink"},
+    {862, "SCADA radio telemetry (Modbus, DNP3)", 8, "SCADA telemetry: Modbus RTU and DNP3 over utility data radios (receive only; check local law; simulated only)", "", 864, 863, "x40"},
     {360, "FrSky RC (D8 / D16)", 8, "FrSky ACCST D8 / D16: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR", "frsky", 362, 361, "rclink"},
     {360, "FlySky RC (AFHDS / 2A)", 8, "FlySky AFHDS / AFHDS 2A: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR", "flysky", 362, 361, "rclink"},
     {360, "Futaba RC (S-FHSS)", 8, "Futaba S-FHSS: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR", "sfhss", 362, 361, "rclink"},
