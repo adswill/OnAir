@@ -33,7 +33,7 @@ Changes:
 - The entry is shown; without the DLL its window says what to copy where and looks again every 5 s. The log says
   `Hamlib: <path> loaded at run time`. docs/OPTIONAL-LIBRARIES.md and Settings > Optional libraries list it.
 - Tests: test_hamlib_rig / hamlib_dial / rig_setup / rig_control run the dummy rig through the loaded library, or check the clear
-  "not found" path when it is absent. quick.yml has a new `packages` input for the extra packages (libhamlib-dev, MSYS2 hamlib).
+  "not found" path when it is absent. quick.yml has a new `packages` input for the extra packages (libhamlib-dev on Linux; MSYS2 has no Hamlib package).
 
 ## #491: the tutorial cannot be skipped on a fresh install
 

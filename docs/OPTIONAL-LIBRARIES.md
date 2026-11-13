@@ -82,7 +82,7 @@ include Hamlib. The Windows package loads it at run time (since 4.1, #495): with
 
 | Library | File names OnAir looks for | Official source |
 |---|---|---|
-| **Hamlib 4** | Win `libhamlib-4.dll` (also `hamlib-4.dll`, `libhamlib.dll`, `hamlib.dll`); macOS `libhamlib.4.dylib`; Linux `libhamlib.so.4` | <https://github.com/Hamlib/Hamlib/releases>. Windows: take `hamlib-w64-<version>.zip` (64-bit) and copy **every DLL of its `bin` folder** (`libhamlib-4.dll` and the `libusb-1.0.dll`, `libgcc_s_seh-1.dll`, `libwinpthread-1.dll` it needs) into the codecs folder, or put Hamlib's `bin` folder on the `PATH`. MSYS2 `mingw-w64-ucrt-x86_64-hamlib`. macOS `brew install hamlib`, Linux `apt install libhamlib4` |
+| **Hamlib 4** | Win `libhamlib-4.dll` (also `hamlib-4.dll`, `libhamlib.dll`, `hamlib.dll`); macOS `libhamlib.4.dylib`; Linux `libhamlib.so.4` | <https://github.com/Hamlib/Hamlib/releases>. Windows: take `hamlib-w64-<version>.zip` (64-bit) and copy **every DLL of its `bin` folder** (`libhamlib-4.dll` and the `libusb-1.0.dll`, `libgcc_s_seh-1.dll`, `libwinpthread-1.dll` it needs) into the codecs folder, or put Hamlib's `bin` folder on the `PATH`. macOS `brew install hamlib`, Linux `apt install libhamlib4` |
 
 The log (`onair.log` on Windows) says `Hamlib: <path> loaded at run time` when it was found. The Hamlib window looks for it again every few seconds,
 so no restart is needed after copying it.
