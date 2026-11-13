@@ -4,6 +4,7 @@
 // Generic radios through SoapySDR: Airspy, SDRplay, RTL-SDR, PlutoSDR, LimeSDR, BladeRF, USRP, ... (whatever drivers are installed).
 // The HackRF keeps its own native source (source.cpp); a "hackrf" Soapy entry is hidden so a radio is listed once.
 #include "dect2/tx/tx_control.h"
+#include "dect2/common/diag.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/engine/rate_choice.h"
 #include "dect2/source/source.h"
@@ -299,7 +300,8 @@ SoapySDR::Device* makeDevice(const std::string& args, std::string& err) {
     std::unique_lock<std::mutex> lk(box->m);
     if (!box->cv.wait_for(lk, std::chrono::seconds(20), [&] { return box->done; })) {
         box->abandoned = true;
-        err = "the radio did not answer within 20 s (" + args + "). Check the address, that the server is running, and the radio's driver on it";
+         DIAG_ERROR(813108, "SoapySDR did not open the radio %s within 20 seconds, so the open is abandoned.", args.c_str());
+         err = "the radio did not answer within 20 s (" + args + "). Check the address, that the server is running, and the radio's driver on it";
         return nullptr;
     }
     if (!box->what.empty()) throw std::runtime_error(box->what);
@@ -357,7 +359,7 @@ public:
         try {
             dev_ = makeDevice(args_, err);
             if (!dev_ && !err.empty()) return false;
-            if (!dev_) { err = "cannot open " + args_; const std::string h = soapyRemoteFailureHelp(args_); if (!h.empty()) err = h; return false; }
+            if (!dev_) { DIAG_ERROR(815658, "SoapySDR could not open the radio %s, so the receiver stays closed.", args_.c_str()); err = "cannot open " + args_; const std::string h = soapyRemoteFailureHelp(args_); if (!h.empty()) err = h; return false; }
             rememberRanges(key_, dev_);   // for the next listing
             biasKey_ = biasSetting(dev_);
             bias_ = false;
@@ -373,10 +375,11 @@ public:
             if (!antenna_.empty()) dev_->setAntenna(SOAPY_SDR_RX, 0, antenna_);   // the default entry leaves the driver's choice alone
             if (!apply(s, err, false)) { close(); return false; }
             stream_ = dev_->setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32, {0});
-            if (!stream_) { err = "setupStream failed"; close(); return false; }
+            if (!stream_) { DIAG_ERROR(606855, "SoapySDR could not set up the receive stream, so the radio is closed again."); err = "setupStream failed"; close(); return false; }
             armHardwareTime();
-            if (dev_->activateStream(stream_) != 0) { err = "activateStream failed"; close(); return false; }
+            if (dev_->activateStream(stream_) != 0) { DIAG_ERROR(693579, "SoapySDR could not start the receive stream, so the radio is closed again."); err = "activateStream failed"; close(); return false; }
         } catch (const std::exception& e) {
+            DIAG_ERROR(101077, "SoapySDR threw an exception while opening the radio (%s), so the source stays closed.", e.what());
             err = std::string("SoapySDR: ") + e.what();
             const std::string h = soapyRemoteFailureHelp(args_);
             if (!h.empty()) err = h + " (" + e.what() + ")";
@@ -407,6 +410,7 @@ public:
             if (stopped) { stopped = false; dev_->activateStream(stream_); }
             return ok;
         } catch (const std::exception& e) {
+            DIAG_ERROR(901144, "The SoapySDR radio refused a setting while retuning (%s), so the setting is not applied.", e.what());
             err = std::string("SoapySDR: ") + e.what();
             // a setting the radio refused (a frequency out of its range) must not leave the stream switched off: the receiver would go silent
             if (stopped) try { dev_->activateStream(stream_); } catch (...) {}
@@ -465,7 +469,8 @@ private:
                 try {
                     if (r.key == kClockKey) dev_->setClockSource(want); else dev_->setTimeSource(want);
                 } catch (const std::exception& e) {
-                    err = std::string("SoapySDR: the ") + (r.key == kClockKey ? "reference clock" : "time source") + " \"" + want + "\" was refused: " + e.what();
+                     DIAG_ERROR(914723, "The SoapySDR radio refused the reference clock or time source %s (%s), so the radio is not started.", want.c_str(), e.what());
+                     err = std::string("SoapySDR: the ") + (r.key == kClockKey ? "reference clock" : "time source") + " \"" + want + "\" was refused: " + e.what();
                     return false;
                 }
             }
@@ -481,7 +486,7 @@ private:
                 dev_->writeSetting(key, isBool ? (soapyBool(kv.second) == "1" ? "true" : "false") : kv.second);
                 cur->second = kv.second;
             } catch (const std::exception& e) {
-                fprintf(stderr, "SoapySDR: the setting %s=%s was refused: %s\n", key.c_str(), kv.second.c_str(), e.what());
+                DIAG(594754, "The SoapySDR radio refused the setting %s with the value %s (%s), so the setting is left as it was.", key.c_str(), kv.second.c_str(), e.what()); fprintf(stderr, "SoapySDR: the setting %s=%s was refused: %s\n", key.c_str(), kv.second.c_str(), e.what());
                 fflush(stderr);
             }
         }
@@ -556,7 +561,7 @@ private:
             }
             else if (ret == SOAPY_SDR_TIMEOUT || ret == SOAPY_SDR_OVERFLOW) { if (ret == SOAPY_SDR_OVERFLOW) overflows_++; }
             else if (ret == 0) std::this_thread::sleep_for(std::chrono::milliseconds(1));   // no samples yet: a count, not an error code
-            else if (++failures > 50) { fprintf(stderr, "SoapySDR: stream error %d, stopping the source\n", ret); break; }
+            else if (++failures > 50) { DIAG(804322, "The SoapySDR receive stream failed more than 50 times in a row (last code %d), so the source stops.", ret); fprintf(stderr, "SoapySDR: stream error %d, stopping the source\n", ret); break; }
             else std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
     }
@@ -613,13 +618,14 @@ public:
         try {
             dev_ = makeDevice(args_, err);
             if (!dev_ && !err.empty()) return false;
-            if (!dev_) { err = "cannot open " + args_; const std::string h = soapyRemoteFailureHelp(args_); if (!h.empty()) err = h; return false; }
+            if (!dev_) { DIAG_ERROR(631501, "SoapySDR could not open the radio %s for transmit, so the transmitter stays closed.", args_.c_str()); err = "cannot open " + args_; const std::string h = soapyRemoteFailureHelp(args_); if (!h.empty()) err = h; return false; }
             rememberRanges(key_, dev_);
             const int nTx = (int)dev_->getNumChannels(SOAPY_SDR_TX);
-            if (nTx <= 0) { err = "this radio has no transmit channel"; shut(); return false; }
+            if (nTx <= 0) { DIAG_ERROR(738647, "The SoapySDR radio has no transmit channel, so the transmitter does not start."); err = "this radio has no transmit channel"; shut(); return false; }
             ch_ = t.channel < 0 ? 0 : t.channel;
             if (ch_ >= nTx) {
-                err = nTx == 1 ? "this radio has one transmit output (TX1)"
+                 DIAG_ERROR(133101, "The SoapySDR radio has %d transmit outputs but output %d was picked, so the transmitter does not start.", nTx, (int)ch_ + 1);
+                 err = nTx == 1 ? "this radio has one transmit output (TX1)"
                                : "this radio has " + std::to_string(nTx) + " transmit outputs (TX1 to TX" + std::to_string(nTx) + ")";
                 shut();
                 return false;
@@ -634,8 +640,8 @@ public:
             } catch (...) {}
             if (!tuneAndGain(t, err)) { shut(); return false; }
             stream_ = dev_->setupStream(SOAPY_SDR_TX, SOAPY_SDR_CF32, {(size_t)ch_});
-            if (!stream_) { err = "setupStream (transmit) failed"; shut(); return false; }
-            if (dev_->activateStream(stream_) != 0) { err = "activateStream (transmit) failed"; shut(); return false; }
+            if (!stream_) { DIAG_ERROR(222034, "SoapySDR could not set up the transmit stream, so the transmitter closes."); err = "setupStream (transmit) failed"; shut(); return false; }
+            if (dev_->activateStream(stream_) != 0) { DIAG_ERROR(127556, "SoapySDR could not start the transmit stream, so the transmitter closes."); err = "activateStream (transmit) failed"; shut(); return false; }
         } catch (const std::exception& e) {
             err = std::string("SoapySDR: ") + e.what();
             shut();
@@ -645,7 +651,7 @@ public:
     }
 
     bool write(const cf32* x, size_t n, std::string& err) override {
-        if (!dev_ || !stream_) { err = "the radio is not open for transmitting"; return false; }
+        if (!dev_ || !stream_) { DIAG_ERROR(575421, "The SoapySDR transmitter was asked to send while it is not open, so nothing is sent."); err = "the radio is not open for transmitting"; return false; }
         size_t done = 0;
         int idle = 0;
         while (done < n) {
@@ -655,10 +661,10 @@ public:
             try { ret = dev_->writeStream(stream_, b, n - done, flags, 0, 100000); }
             catch (const std::exception& e) { err = std::string("SoapySDR: ") + e.what(); return false; }
             if (ret > 0) { done += (size_t)ret; idle = 0; }
-            else if (ret == SOAPY_SDR_TIMEOUT || ret == 0) { if (++idle > 50) { err = "the radio stopped taking samples"; return false; } }
+            else if (ret == SOAPY_SDR_TIMEOUT || ret == 0) { if (++idle > 50) { DIAG_ERROR(270429, "The SoapySDR radio took no transmit samples for 50 tries in a row, so sending stops."); err = "the radio stopped taking samples"; return false; } }
             else if (ret == SOAPY_SDR_UNDERFLOW) { underflows_++; }
-            else if (ret == SOAPY_SDR_NOT_SUPPORTED || ret == SOAPY_SDR_STREAM_ERROR || ret == SOAPY_SDR_CORRUPTION) { err = std::string("the radio's driver refused the samples: ") + SoapySDR_errToStr(ret); return false; }
-            else { err = std::string("sending samples failed: ") + SoapySDR_errToStr(ret); return false; }
+            else if (ret == SOAPY_SDR_NOT_SUPPORTED || ret == SOAPY_SDR_STREAM_ERROR || ret == SOAPY_SDR_CORRUPTION) { DIAG_ERROR(372697, "The SoapySDR driver refused the transmit samples (code %d), so sending stops.", ret); err = std::string("the radio's driver refused the samples: ") + SoapySDR_errToStr(ret); return false; }
+            else { DIAG_ERROR(983465, "Sending samples to the SoapySDR radio failed (code %d), so sending stops.", ret); err = std::string("sending samples failed: ") + SoapySDR_errToStr(ret); return false; }
         }
         return true;
     }
@@ -762,7 +768,7 @@ std::vector<DeviceInfo> listSoapyDevices(std::string& err) {
                 const std::string a = soapyLocalEnumerateArgs(fn.first);
                 if (a.empty()) {
                     static std::set<std::string> told;   // once per module, not at every refresh of the list
-                    if (told.insert(fn.first).second) fprintf(stderr, "SoapySDR: module %s not asked (it searches the network; \"Search the network for radios\" is off)\n", fn.first.c_str());
+                    if (told.insert(fn.first).second) { DIAG(307439, "The SoapySDR module %s is not asked for radios because it searches the network and that search is off.", fn.first.c_str()); fprintf(stderr, "SoapySDR: module %s not asked (it searches the network; \"Search the network for radios\" is off)\n", fn.first.c_str()); }
                     continue;
                 }
                 for (auto& kw : SoapySDR::Device::enumerate(a)) found.push_back(kw);

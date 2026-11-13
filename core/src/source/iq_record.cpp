@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "dect2/common/u8file.h"
 #include "dect2/source/iq_record.h"
 #include "dect2/source/bluefile.h"
@@ -162,8 +163,8 @@ void IqRecorder::writeSigmf(bool final) {
 
 bool IqRecorder::start(const std::string& path, FileFormat fmt, double rateHz, std::string& err) {
     stop();
-    if (fmt != FileFormat::CS8 && fmt != FileFormat::CF32 && fmt != FileFormat::CI16) { err = "only 8-bit, 16-bit and float files can be recorded"; return false; }
-    if (rateHz <= 0) { err = "the radio has no sample rate yet"; return false; }
+    if (fmt != FileFormat::CS8 && fmt != FileFormat::CF32 && fmt != FileFormat::CI16) { DIAG_ERROR(198861, "The IQ recording format is not 8-bit, 16-bit or float, so the recording does not start."); err = "only 8-bit, 16-bit and float files can be recorded"; return false; }
+    if (rateHz <= 0) { DIAG_ERROR(590239, "The radio has no sample rate yet, so the IQ recording does not start."); err = "the radio has no sample rate yet"; return false; }
     const bool asBlue = blue::isBlueExtension(path);
     if (asBlue) {
         blue::WriteSpec ws;
@@ -186,8 +187,8 @@ bool IqRecorder::start(const std::string& path, FileFormat fmt, double rateHz, s
 #else
         file_ = fopen(p.c_str(), "wb");
 #endif
-    } catch (const std::exception& e) { err = std::string("cannot create the folder: ") + e.what(); return false; }
-    if (!file_) { err = "cannot create " + path + ": " + strerror(errno); return false; }
+    } catch (const std::exception& e) { DIAG_ERROR(577367, "The folder for the IQ recording could not be created (%s), so the recording does not start.", e.what()); err = std::string("cannot create the folder: ") + e.what(); return false; }
+    if (!file_) { DIAG_ERROR(728619, "The IQ recording file %s could not be created (%s), so the recording does not start.", path.c_str(), strerror(errno)); err = "cannot create " + path + ": " + strerror(errno); return false; }
     setvbuf((FILE*)file_, nullptr, _IOFBF, 1 << 20);
     fmt_ = fmt; rate_ = rateHz; path_ = path;
     {

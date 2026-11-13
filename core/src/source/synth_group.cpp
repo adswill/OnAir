@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/source/synth_group.h"
+#include "dect2/common/diag.h"
 #include "dect2/source/diversity_source.h"
 #include <algorithm>
 #include <chrono>
@@ -261,17 +262,18 @@ TuneSettings SyntheticWideSource::childTune(int i) const {
 bool SyntheticWideSource::startChild(int i, std::string& err) {
     Child& c = ch_[(size_t)i];
     c.src = factory_ ? factory_(c.dev) : makeSource(c.dev);
-    if (!c.src) { c.error = "no driver for " + c.dev.name; err = c.error; return false; }
+    if (!c.src) { DIAG_ERROR(757853, "No driver was found for the radio %s of the radio group, so it is left out.", c.dev.name.c_str()); c.error = "no driver for " + c.dev.name; err = c.error; return false; }
     if (!c.ring) c.ring = std::make_unique<IqRing>(1u << 20);
     c.ring->clear();
     std::string e;
-    if (!c.src->start(childTune(i), *c.ring, e)) { c.error = e.empty() ? "did not start" : e; c.src.reset(); err = c.error; return false; }
+    if (!c.src->start(childTune(i), *c.ring, e)) { DIAG_ERROR(502374, "A radio of the radio group did not start (%s), so it is left out.", e.c_str()); c.error = e.empty() ? "did not start" : e; c.src.reset(); err = c.error; return false; }
     const double r = c.src->sampleRate();
     // drivers round the rate a little (an RTL-SDR's divider): up to 50 ppm the drift correction takes it; more would be a different rate
     if (std::fabs(r - plan_.cfg.fs) > 50e-6 * plan_.cfg.fs) {
         char b[200];
         snprintf(b, sizeof b, "runs at %.4f Msps instead of %.4f: left out", r / 1e6, plan_.cfg.fs / 1e6);
-        c.error = b; c.src->stop(); c.src.reset(); err = c.error; return false;
+         DIAG_ERROR(889116, "A radio of the radio group runs at %.4f Msps instead of %.4f Msps, so it is left out.", r / 1e6, plan_.cfg.fs / 1e6);
+         c.error = b; c.src->stop(); c.src.reset(); err = c.error; return false;
     }
     c.error.clear();
     c.running = true;
@@ -288,8 +290,8 @@ void SyntheticWideSource::stopChild(int i) {
 
 bool SyntheticWideSource::start(const TuneSettings& s, IqRing& ring, std::string& err) {
     stop();
-    if (!plan_.ok) { err = "radio group " + def_.name + ": " + plan_.why; return false; }
-    if (!sw_.configure(plan_.cfg)) { err = "radio group " + def_.name + ": bad slice layout"; return false; }
+    if (!plan_.ok) { DIAG_ERROR(524589, "The radio group %s cannot be started (%s), so it is not used.", def_.name.c_str(), plan_.why.c_str()); err = "radio group " + def_.name + ": " + plan_.why; return false; }
+    if (!sw_.configure(plan_.cfg)) { DIAG_ERROR(184593, "The radio group %s has a slice layout the synthesiser refused, so the group is not started.", def_.name.c_str()); err = "radio group " + def_.name + ": bad slice layout"; return false; }
     out_ = &ring;
     tune_ = s;
     int ok = 0;
@@ -305,7 +307,8 @@ bool SyntheticWideSource::start(const TuneSettings& s, IqRing& ring, std::string
     }
     if (ok < 2) {
         for (int i = 0; i < (int)ch_.size(); i++) stopChild(i);
-        err = "radio group " + def_.name + ": fewer than 2 radios started" + (notes.empty() ? "" : " (" + notes + ")");
+         DIAG_ERROR(469443, "Fewer than two radios of the radio group %s started, so the group is not used.", def_.name.c_str());
+         err = "radio group " + def_.name + ": fewer than 2 radios started" + (notes.empty() ? "" : " (" + notes + ")");
         return false;
     }
     err = notes;

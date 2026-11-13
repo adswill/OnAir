@@ -13,6 +13,7 @@
 // Future work: the narrow "VFO" use (a small decimated band anywhere in the server's band, the FFT stream) is not offered; OnAir always
 // takes the IQ band at the decimation its mode needs.
 #include "../net/tcp_client.h"
+#include "dect2/common/diag.h"
 #include "native_common.h"
 #include "dect2/net/netradio.h"
 #include "dect2/net/net_proto.h"
@@ -103,18 +104,19 @@ bool readMessage(sock_t s, uint32_t& type, uint32_t& flags, std::vector<unsigned
 
 // HELLO, then DEVICE_INFO and CLIENT_SYNC within the socket's receive timeout
 bool handshake(sock_t s, SpyInfo& info, const std::string& addr, std::string& err) {
-    if (!sendHello(s)) { err = "the connection to " + addr + " dropped"; return false; }
+    if (!sendHello(s)) { DIAG_ERROR(819131, "The connection to the SpyServer %s dropped while the greeting was sent, so the open fails.", addr.c_str()); err = "the connection to " + addr + " dropped"; return false; }
     std::vector<unsigned char> body;
     for (int k = 0; k < 64 && !(info.known && info.synced); k++) {
         uint32_t t = 0, fl = 0;
         if (!readMessage(s, t, fl, body)) {
-            err = info.known ? addr + " sent no client sync" : addr + " is not a SpyServer, or it refused this client (it may be full)";
+             DIAG_ERROR(591493, "The SpyServer at %s did not finish the client handshake (it is not a SpyServer, or it is full), so the open fails.", addr.c_str());
+             err = info.known ? addr + " sent no client sync" : addr + " is not a SpyServer, or it refused this client (it may be full)";
             return false;
         }
         if (t == kMsgDeviceInfo) parseDeviceInfo(body.data(), (uint32_t)body.size(), info);
         else if (t == kMsgClientSync) parseClientSync(body.data(), (uint32_t)body.size(), info);
     }
-    if (!info.known || info.devType == kDevInvalid || info.maxRate == 0) { err = addr + " has no radio connected"; return false; }
+    if (!info.known || info.devType == kDevInvalid || info.maxRate == 0) { DIAG_ERROR(729473, "The SpyServer at %s reports no radio connected, so the source is not opened.", addr.c_str()); err = addr + " has no radio connected"; return false; }
     return true;
 }
 
@@ -183,14 +185,14 @@ protected:
     bool openDevice(const TuneSettings& s, std::string& err) override {
         std::string host;
         int port = 0;
-        if (!splitHostPort(addr_, host, port)) { err = "SpyServer: bad address " + addr_ + " (host:port)"; openFailure_ = OpenFailure::Final; return false; }
+        if (!splitHostPort(addr_, host, port)) { DIAG_ERROR(958964, "The SpyServer address %s is not in host:port form, so no connection is tried.", addr_.c_str()); err = "SpyServer: bad address " + addr_ + " (host:port)"; openFailure_ = OpenFailure::Final; return false; }
         std::string e;
         const sock_t k = tcpConnect(host, port, kConnectMs, e);
-        if (k == kBadSock) { err = "SpyServer: " + e; openFailure_ = OpenFailure::Retry; return false; }
+        if (k == kBadSock) { DIAG_ERROR(702323, "Connecting to the SpyServer %s failed (%s), so the source stays closed.", addr_.c_str(), e.c_str()); err = "SpyServer: " + e; openFailure_ = OpenFailure::Retry; return false; }
         sock_ = k;
         sockRecvTimeout(sock_, kConnectMs);
         SpyInfo info;
-        if (!handshake(sock_, info, addr_, e)) { err = "SpyServer: " + e; return false; }
+        if (!handshake(sock_, info, addr_, e)) { DIAG_ERROR(271228, "The SpyServer handshake with %s failed (%s), so the source stays closed.", addr_.c_str(), e.c_str()); err = "SpyServer: " + e; return false; }
         widenRange(info);
         noteInfo(addr_, info);
         { std::lock_guard<std::mutex> lk(infoMu_); info_ = info; }
@@ -218,7 +220,7 @@ protected:
         SpyInfo i;
         { std::lock_guard<std::mutex> lk(infoMu_); i = info_; }
         const auto rates = ratesOf(i);
-        if (rates.empty()) { err = "SpyServer: " + addr_ + " offers no sample rate"; openFailure_ = OpenFailure::Final; return false; }
+        if (rates.empty()) { DIAG_ERROR(362029, "The SpyServer at %s offers no sample rate, so the source is not started.", addr_.c_str()); err = "SpyServer: " + addr_ + " offers no sample rate"; openFailure_ = OpenFailure::Final; return false; }
         // the slowest rate at or above what is asked for (the fastest when none is)
         const double want = s.sampleRate > 0 ? s.sampleRate : rates.front();
         uint32_t dec = i.minDec;
@@ -322,7 +324,7 @@ protected:
             }
         }
         if (run_) {
-            fprintf(stderr, "SpyServer: lost the connection to %s\n", addr_.c_str());
+            DIAG(921122, "The connection to the SpyServer %s was lost, so the source tries to reconnect.", addr_.c_str()); fprintf(stderr, "SpyServer: lost the connection to %s\n", addr_.c_str());
             fflush(stderr);
             lostAt_ = std::chrono::steady_clock::now();
         }

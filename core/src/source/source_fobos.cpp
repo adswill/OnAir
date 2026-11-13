@@ -12,6 +12,7 @@
 //   signal from 0 to half the converter's rate, so this driver shifts the wanted frequency to zero, filters and decimates (RealDdc, native_realddc.h).
 // Below 50 MHz the HF input chosen in the radio settings is used (HF1 unless set otherwise).
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "native_common.h"
 #include "native_realddc.h"
 #include "dect2/dsp/dsp_compat.h"
@@ -159,7 +160,7 @@ public:
 
 protected:
     bool openDevice(const TuneSettings& s, std::string& err) override {
-        if (!fobos().ok) { err = "Fobos SDR: the radio's library (fobos_sdr) is missing"; openFailure_ = OpenFailure::Final; return false; }
+        if (!fobos().ok) { DIAG_ERROR(417803, "The Fobos SDR library (fobos_sdr) could not be loaded, so the radio cannot be opened."); err = "Fobos SDR: the radio's library (fobos_sdr) is missing"; openFailure_ = OpenFailure::Final; return false; }
         std::lock_guard<std::mutex> g(gMu);
         std::lock_guard<std::mutex> lk(api_);
         if (dev_) return apply(s, err, false);   // (not reached: closeDevice() comes first)
@@ -175,11 +176,12 @@ protected:
                 else if (now[i] == serial_ && (at < 0 || i == index_)) at = (int)i;
             }
             if (at >= 0) index = (uint32_t)at;
-            else if (!unread) { err = "Fobos SDR " + serial_ + " not found (unplugged?)"; return false; }
+            else if (!unread) { DIAG_ERROR(922526, "The Fobos SDR with serial %s is not in the device list, so it cannot be opened (unplugged?).", serial_.c_str()); err = "Fobos SDR " + serial_ + " not found (unplugged?)"; return false; }
         }
         const int r = fobos().open(&dev_, index);
         if (r != 0 || !dev_) {
             dev_ = nullptr;
+            DIAG_ERROR(802197, "Opening the Fobos SDR failed with library code %d (%s), so the radio stays closed.", r, errorText(r).c_str());
             err = "Fobos SDR: cannot open the radio (" + errorText(r) + "): it is in use by another program, unplugged, or has no WinUSB / libusb access";
             return false;
         }
@@ -191,6 +193,7 @@ protected:
             fobos().close(dev_);
             dev_ = nullptr;
             gOpen--;
+            DIAG_ERROR(387273, "The Fobos SDR with serial %s was not found because another Fobos SDR answered in its place, so it is closed.", serial_.c_str());
             err = "Fobos SDR " + serial_ + " not found (another Fobos SDR is in its place)";
             return false;
         }
@@ -211,7 +214,7 @@ protected:
             bool restart = false;
             {
                 std::lock_guard<std::mutex> lk(api_);
-                if (!dev_) return false;
+                if (!dev_) { DIAG_DEBUG(630161, "The Fobos SDR was asked to retune while no device is open, so nothing is changed."); return false; }
                 const Plan p = plan(s);
                 restart = p.direct != direct_ || p.adcHz != adcHz_ || p.decim != decim_ || p.channel != channel_;
             }
@@ -253,7 +256,7 @@ protected:
         const int r = fobos().read_async(dev, &FobosSource::callback, this, kBufCount, kBufLength);   // blocks
         reading = false;
         guard.join();
-        if (run_) { fprintf(stderr, "Fobos SDR: the stream ended (%s)\n", errorText(r).c_str()); fflush(stderr); }
+        if (run_) { DIAG(987379, "The Fobos SDR sample stream ended unexpectedly with library code %d (%s), so the source stops.", r, errorText(r).c_str()); fprintf(stderr, "Fobos SDR: the stream ended (%s)\n", errorText(r).c_str()); fflush(stderr); }
     }
     void interrupt() override { if (dev_) fobos().cancel_async(dev_); }
 
@@ -288,14 +291,14 @@ private:
     }
     // (under api_) live: the stream is running, only the frequency, the gain and the clock may change
     bool apply(const TuneSettings& s, std::string& err, bool live) {
-        if (!dev_) return false;
+        if (!dev_) { DIAG_DEBUG(885117, "The Fobos SDR was asked to configure itself while no device is open, so nothing is changed."); return false; }
         auto& api = fobos();
         const Plan p = plan(s);
         const double f = std::max(s.centerHz, 0.0);
         if (!live) {
-            if (const int r = api.set_samplerate(dev_, p.adcHz); r != 0) { err = "Fobos SDR: the sample rate of " + mhzText(p.adcHz) + " was refused (" + errorText(r) + ")"; return false; }
+            if (const int r = api.set_samplerate(dev_, p.adcHz); r != 0) { DIAG_ERROR(310057, "The Fobos SDR refused a sample rate of %.0f Hz with library code %d, so the radio is not started.", (double)p.adcHz, r); err = "Fobos SDR: the sample rate of " + mhzText(p.adcHz) + " was refused (" + errorText(r) + ")"; return false; }
             if (p.direct != direct_) {
-                if (const int r = api.set_direct_sampling(dev_, p.direct ? 1 : 0); r != 0) { err = "Fobos SDR: the HF inputs could not be switched (" + errorText(r) + ")"; return false; }
+                if (const int r = api.set_direct_sampling(dev_, p.direct ? 1 : 0); r != 0) { DIAG_ERROR(496825, "The Fobos SDR could not switch between its HF and RF inputs (library code %d), so the tune fails.", r); err = "Fobos SDR: the HF inputs could not be switched (" + errorText(r) + ")"; return false; }
                 fprintf(stderr, "Fobos SDR: %s at %s\n", p.direct ? (p.channel ? "HF2 input (direct sampling)" : "HF1 input (direct sampling)") : "RF input", mhzText(f).c_str());
                 fflush(stderr);
             }
@@ -317,7 +320,7 @@ private:
                 addNote(err, "the HF inputs of this Fobos SDR are specified for " + mhzText(kHfMinHz) + " to " + mhzText(adcHz_ / 2) + " (half the converter's rate), the RF input starts at " +
                       mhzText(kRfMinHz) + "; the driver may not reach " + mhzText(f) + " or the signal may be weak or absent");
         } else {
-            if (const int r = api.set_frequency(dev_, std::max(tuneHz, 0.0)); r != 0) { err = "Fobos SDR: the library refused " + mhzText(f) + (f < kRfMinHz || f > kRfMaxHz ? " (the RF input is specified for " + mhzText(kRfMinHz) + " to " + mhzText(kRfMaxHz) + ")" : std::string()) + " (" + errorText(r) + ")"; return false; }
+            if (const int r = api.set_frequency(dev_, std::max(tuneHz, 0.0)); r != 0) { DIAG_ERROR(233572, "The Fobos SDR library refused a centre frequency of %.0f Hz with code %d, so the tune fails.", f, r); err = "Fobos SDR: the library refused " + mhzText(f) + (f < kRfMinHz || f > kRfMaxHz ? " (the RF input is specified for " + mhzText(kRfMinHz) + " to " + mhzText(kRfMaxHz) + ")" : std::string()) + " (" + errorText(r) + ")"; return false; }
             if (f < kHfBelowHz || f > kRfMaxHz)
                 addNote(err, "the RF input of this Fobos SDR is specified for " + mhzText(kRfMinHz) + " to " + mhzText(kRfMaxHz) + "; the driver may not reach " + mhzText(f) +
                       " or the signal may be weak or absent" + (f < kHfBelowHz ? " (the HF input is switched off in the radio settings)" : ""));

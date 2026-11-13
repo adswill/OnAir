@@ -3,6 +3,7 @@
 
 // Native driver for the LimeSDR: the radio's own library is loaded at run time when it is installed. See native_common.h.
 #include "native_common.h"
+#include "dect2/common/diag.h"
 #include "lime_board.h"
 #include <map>
 
@@ -120,6 +121,7 @@ protected:
     bool openDevice(const TuneSettings& s, std::string& err) override {
         if (lime().open(&dev_, info_.c_str(), nullptr) != 0 || !dev_) {
             dev_ = nullptr;
+            DIAG_ERROR(499151, "Opening the LimeSDR failed (LimeSuite: %s), so the radio stays closed.", lime().text().c_str());
             err = "LimeSDR: cannot open the radio" + lime().text() + limeOpenHint(board_, kOnWindows);
             return false;
         }
@@ -129,21 +131,22 @@ protected:
         if (lime().get_clock_freq && lime().get_clock_freq(dev_, 0 /* LMS_CLOCK_REF */, &refHz) == 0 && refHz == 10e6) {
             lime().close(dev_);
             dev_ = nullptr;
-            if (lime().open(&dev_, info_.c_str(), nullptr) != 0 || !dev_) { dev_ = nullptr; err = "LimeSDR: cannot open the radio again after a reference clock misdetection" + lime().text(); return false; }
+            if (lime().open(&dev_, info_.c_str(), nullptr) != 0 || !dev_) { dev_ = nullptr; DIAG_ERROR(812124, "Opening the LimeSDR a second time after a reference clock misdetection failed (LimeSuite: %s), so the radio stays closed.", lime().text().c_str()); err = "LimeSDR: cannot open the radio again after a reference clock misdetection" + lime().text(); return false; }
         }
-        if (lime().init(dev_) != 0) { err = "LimeSDR: initialisation failed" + lime().text() + limeOpenHint(board_, kOnWindows); return false; }
+        if (lime().init(dev_) != 0) { DIAG_ERROR(928882, "The LimeSDR initialisation failed (LimeSuite: %s), so the radio is not started.", lime().text().c_str()); err = "LimeSDR: initialisation failed" + lime().text() + limeOpenHint(board_, kOnWindows); return false; }
         // the reference clock (TuneSettings "clock", "extref"): the board's own VCTCXO unless the user picked an external one. After LMS_Init,
         // before the sample rate: the clock generator is programmed from it. "internal" makes no call (the board starts on its own oscillator).
         if (radioOption(s, "clock", "internal") == "external") {
             const double hz = std::atof(radioOption(s, "extref", "10").c_str()) * 1e6;
             if (!limeHasExtRef(board_) || !lime().set_clock_freq || lime().set_clock_freq(dev_, kLmsClockExtRef, hz) != 0) {
+                DIAG_ERROR(525883, "The LimeSDR refused the external reference clock of %.0f Hz (LimeSuite: %s), so the radio is not started.", hz, lime().text().c_str());
                 err = "LimeSDR: the external reference clock (" + mhz(hz) + " MHz) was refused" + (lime().set_clock_freq ? lime().text() : std::string(" (this LimeSuite cannot set it)")) +
                       (limeHasExtRef(board_) ? "" : ". This board has no reference clock input");
                 openFailure_ = OpenFailure::Final;
                 return false;
             }
         }
-        if (lime().enable_channel(dev_, false, 0, true) != 0) { err = "LimeSDR: cannot enable the receiver" + lime().text(); return false; }
+        if (lime().enable_channel(dev_, false, 0, true) != 0) { DIAG_ERROR(457373, "The LimeSDR receiver channel could not be enabled (LimeSuite: %s), so the radio is not started.", lime().text().c_str()); err = "LimeSDR: cannot enable the receiver" + lime().text(); return false; }
         lo_ = hi_ = 0;
         LimeApi::range_t fr{0, 0, 0};
         if (lime().get_lo_range && lime().get_lo_range(dev_, false, &fr) == 0 && fr.max > fr.min) {
@@ -155,7 +158,7 @@ protected:
         return configure(s, err, false);
     }
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
-        if (!dev_) return false;
+        if (!dev_) { DIAG_DEBUG(583977, "The LimeSDR was asked to configure itself while no device is open, so nothing is changed."); return false; }
         if (!live) {
             if (streaming_) { lime().stop_stream(&stream_); lime().destroy_stream(dev_, &stream_); streaming_ = false; }
             LimeApi::range_t range{0.1e6, 61.44e6, 0};
@@ -164,7 +167,7 @@ protected:
             if (board_.mini && !board_.usb3 && s.sampleRate > kLimeMiniUsb2RateHz)
                 addNote(err, "LimeSDR Mini: this is a USB 2 port, samples above about 15 Msps are lost; use a USB 3 port (blue) for 20 or 30.72 Msps");
             const double want = s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, range.min), board_.mini ? std::min(range.max, 30.72e6) : range.max);   // (3.4: a chosen rate goes to LimeSuite as it is)
-            if (lime().set_sample_rate(dev_, want, 0) != 0) { err = "LimeSDR: the sample rate was refused" + lime().text(); return false; }
+            if (lime().set_sample_rate(dev_, want, 0) != 0) { DIAG_ERROR(934537, "The LimeSDR refused a sample rate of %.0f Hz (LimeSuite: %s), so the radio is not started.", (double)want, lime().text().c_str()); err = "LimeSDR: the sample rate was refused" + lime().text(); return false; }
             rate_ = want;
             // the rate the clock generator really gives ("Use LMS_GetSampleRate() to obtain actual sample rate values", LimeSuite.h)
             double host = 0, rf = 0;
@@ -176,7 +179,7 @@ protected:
         const std::string range = hi_ > 0 ? " (range " + mhz(lo_) + "-" + mhz(hi_) + " MHz)" : std::string();
         addNote(err, freqSpecNote("LimeSDR", f, lo_, hi_));   // outside what it is specified for: asked all the same
         // LimeSuite has no frequency correction in Hz (only the VCTCXO trim DAC): a correction the user set is taken out of the frequency
-        if (lime().set_lo_frequency(dev_, false, 0, ppmCorrectedHz(f, radioPpm(s))) != 0) { err = "LimeSDR: the library refused " + mhz(f) + " MHz" + range + ": " + lime().text(); openFailure_ = OpenFailure::Final; return false; }
+        if (lime().set_lo_frequency(dev_, false, 0, ppmCorrectedHz(f, radioPpm(s))) != 0) { DIAG_ERROR(220194, "The LimeSDR refused a centre frequency of %.0f Hz (LimeSuite: %s), so the tune fails.", f, lime().text().c_str()); err = "LimeSDR: the library refused " + mhz(f) + " MHz" + range + ": " + lime().text(); openFailure_ = OpenFailure::Final; return false; }
         selectAntenna(f);
         lime().set_lpf_bw(dev_, false, 0, std::max(1.5e6, s.basebandFilterHz > 0 ? s.basebandFilterHz : rate_ * 0.95));
         lime().set_gain_db(dev_, false, 0, limeGainDb(s.gainDb));
@@ -192,8 +195,8 @@ protected:
             stream_.dataFmt = 0;   // 32-bit float, full scale +-1
             // The Mini's ADC has 12 bits: the packed 12-bit USB link (LMS_LINK_FMT_I12) loses nothing and takes a quarter less of the bus
             if (board_.mini) stream_.linkFmt = 2;   // LMS_LINK_FMT_I12 (DEFAULT 0, I16 1)
-            if (lime().setup_stream(dev_, &stream_) != 0) { err = "LimeSDR: cannot set up the sample stream" + lime().text(); return false; }
-            if (lime().start_stream(&stream_) != 0) { lime().destroy_stream(dev_, &stream_); err = "LimeSDR: cannot start the sample stream" + lime().text(); return false; }
+            if (lime().setup_stream(dev_, &stream_) != 0) { DIAG_ERROR(861349, "The LimeSDR sample stream could not be set up (LimeSuite: %s), so the radio is not started.", lime().text().c_str()); err = "LimeSDR: cannot set up the sample stream" + lime().text(); return false; }
+            if (lime().start_stream(&stream_) != 0) { lime().destroy_stream(dev_, &stream_); DIAG_ERROR(844683, "The LimeSDR sample stream could not be started (LimeSuite: %s), so the radio is not started.", lime().text().c_str()); err = "LimeSDR: cannot start the sample stream" + lime().text(); return false; }
             streaming_ = true;
         } else if (calLo_ > 0 && (std::fabs(f - calLo_) > 0.1 * calLo_ || (f >= highHz()) != (calLo_ >= highHz()))) {
             // The DC offset and I/Q balance found at start hold near that frequency only (and differ between the low and the LNAH input):
@@ -203,7 +206,7 @@ protected:
             fflush(stderr);
             stopStream();
             if (streaming_) lime().stop_stream(&stream_);
-            if (lime().calibrate(dev_, false, 0, std::max(2.5e6, rate_ * 0.9), 0) != 0) fprintf(stderr, "LimeSDR: calibration failed%s\n", lime().text().c_str());
+            if (lime().calibrate(dev_, false, 0, std::max(2.5e6, rate_ * 0.9), 0) != 0) { DIAG(481116, "The LimeSDR calibration after the retune failed (LimeSuite: %s), so the old calibration stays.", lime().text().c_str()); fprintf(stderr, "LimeSDR: calibration failed%s\n", lime().text().c_str()); }
             calLo_ = f;
             if (streaming_) lime().start_stream(&stream_);
             startStream();
@@ -224,10 +227,10 @@ protected:
         while (run_) {
             const int n = lime().recv_stream(&stream_, conv_.data(), N, &meta, 1000);   // float32 I/Q pairs = std::complex<float>
             if (n > 0) { push(conv_.data(), (size_t)n); failures = empty = 0; }
-            else if (n < 0 && ++failures > 20) { fprintf(stderr, "LimeSDR: stream error %d, stopping the source\n", n); break; }
+            else if (n < 0 && ++failures > 20) { DIAG(834487, "The LimeSDR sample stream failed more than 20 times in a row (last code %d), so the source stops.", n); fprintf(stderr, "LimeSDR: stream error %d, stopping the source\n", n); break; }
             // LMS_RecvStream returns 0 (nothing in its FIFO within the timeout), never an error, when the radio is unplugged: a stream
             // that brings nothing for kStallS seconds is treated as lost, so that the radio is opened again
-            else if (n == 0 && run_ && ++empty >= kStallS) { fprintf(stderr, "LimeSDR: no samples for %d s, stopping the source\n", kStallS); break; }
+            else if (n == 0 && run_ && ++empty >= kStallS) { DIAG(505963, "The LimeSDR delivered no samples for %d seconds, so the source stops.", kStallS); fprintf(stderr, "LimeSDR: no samples for %d s, stopping the source\n", kStallS); break; }
         }
     }
 
