@@ -9,6 +9,7 @@
 // time, the software rasteriser is refused, and a self-test against the CPU decoder must give the same bits and path metric or the GPU decoder
 // stays off (the CPU decoder is used). EXPERIMENTAL: off unless DECT2_GPU_VITERBI_D3D11=1 (not yet run on a Windows GPU). DECT2_NOGPU=1 keeps it off.
 #include "dect2/dsp/gpu_viterbi.h"
+#include "dect2/common/diag.h"
 #include "dect2/dvbt/dvbt.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -205,7 +206,7 @@ struct GpuViterbi::Impl {
     }
     void lost(const char* where) {
         const HRESULT r = dev ? dev->GetDeviceRemovedReason() : S_OK;
-        if (r != S_OK && ready.exchange(false)) fprintf(stderr, "GpuViterbi: the device was lost (%s, 0x%08lx), using the CPU decoder from now on\n", where, (unsigned long)r);
+        if (r != S_OK && ready.exchange(false)) fprintf(stderr, "GpuViterbi: the device was lost (%s, 0x%08lx), using the CPU decoder from now on\n", where, (unsigned long)r); DIAG(115213, "The Direct3D 11 device was lost during %s with reason 0x%08lx, so the CPU Viterbi decoder is used from now on.", where, (unsigned long)r);
     }
 };
 
@@ -240,10 +241,10 @@ GpuViterbi::GpuViterbi() : p_(new Impl) {
         }
     }
     if (FAILED(create(best.p, best ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, levels, 2, D3D11_SDK_VERSION, d.dev.put(), &got, d.ctx.put()))) return;
-    if (got < D3D_FEATURE_LEVEL_11_0) { d.dev.reset(); d.ctx.reset(); return; }
+    if (got < D3D_FEATURE_LEVEL_11_0) { DIAG_DEBUG(895245, "The Direct3D device only supports feature level 0x%x, below 11.0, so the CPU Viterbi decoder is used.", (unsigned)got); d.dev.reset(); d.ctx.reset(); return; }
     Com<ID3DBlob> code, err;
     if (FAILED(compile(kHlsl, strlen(kHlsl), "viterbi.hlsl", nullptr, nullptr, "viterbi", "cs_5_0", D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, code.put(), err.put())) || !code) {
-        fprintf(stderr, "GpuViterbi: shader compile failed: %s\n", err ? (const char*)err->GetBufferPointer() : "?");
+        fprintf(stderr, "GpuViterbi: shader compile failed: %s\n", err ? (const char*)err->GetBufferPointer() : "?"); DIAG(643827, "The Direct3D 11 Viterbi shader did not compile (%s), so the CPU Viterbi decoder is used.", err ? (const char*)err->GetBufferPointer() : "no message");
         d.dev.reset(); d.ctx.reset();
         return;
     }
@@ -262,7 +263,7 @@ GpuViterbi::GpuViterbi() : p_(new Impl) {
     std::vector<uint8_t> ga, ca;
     long gm = 0, cm = 0;
     dvbt::Viterbi::decode(s, ca, 1, &cm, false);
-    if (!decode(s, ga, &gm) || ga != ca || gm != cm) { d.ready = false; fprintf(stderr, "GpuViterbi: self-test failed, using the CPU decoder\n"); }
+    if (!decode(s, ga, &gm) || ga != ca || gm != cm) { d.ready = false; fprintf(stderr, "GpuViterbi: self-test failed, using the CPU decoder\n"); DIAG(794526, "The Direct3D 11 Viterbi self-test gave a wrong result, so the CPU Viterbi decoder is used."); }
 }
 GpuViterbi::~GpuViterbi() = default;
 GpuViterbi& GpuViterbi::instance() { static GpuViterbi g; return g; }

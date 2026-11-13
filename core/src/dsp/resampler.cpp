@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/dsp/resampler.h"
+#include "dect2/common/diag.h"
 #include "dect2/common/window.h"
 #include "dect2/dsp/dsp_compat.h"
 #include "dect2/dsp/simd.h"
@@ -34,7 +35,10 @@ bool RationalResampler::configure(double inRate, double outRate, double* relErro
         if (err < 2e-8) break;
     }
     if (relError) *relError = bestErr;
-    if (bestErr > 1e-4) return false;
+    if (bestErr > 1e-4) {
+        DIAG_DEBUG(714685, "No rational resampler with up to 1024 phases comes within 100 ppm of the ratio %.6f (%.3f Hz in, %.3f Hz out), so the resampler stays unconfigured.", target, inRate, outRate);
+        return false;
+    }
     int g = std::gcd(bestL, bestM);
     L_ = bestL / g; M_ = bestM / g;
     // kernel: lowpass at the lower of the two Nyquist rates, normalised to the input rate
