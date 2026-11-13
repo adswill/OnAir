@@ -101,6 +101,7 @@
 #include "dect2/wmbus/wmbus_live.h"
 #include "dect2/x40/x40_rx.h"
 #include "dect2/xlink/xlink_rx.h"
+#include "dect2/zigbee/zigbee_rx.h"
 #include "dect2/zwave/zwave_rx.h"
 namespace dect2::webschema {
 namespace {
@@ -179,10 +180,11 @@ static bool set_13(Engine& e, const std::string& n, double v) {
     if (n == "setElevationMask") { call(r, &Rx<decltype(r)>::setElevationMask, v); return true; }
     return false;
 }
-static const char kOpt_14[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static const char kOpt_14[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setSoftDecisions","k":"bool","l":"Soft Decisions","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
 static bool set_14(Engine& e, const std::string& n, double v) {
     auto& r = e.sonde();
     if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setSoftDecisions") { call(r, &Rx<decltype(r)>::setSoftDecisions, v); return true; }
     if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
     if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
     return false;
@@ -220,16 +222,18 @@ static bool set_18(Engine& e, const std::string& n, double v) {
     if (n == "setSearchSpan") { call(r, &Rx<decltype(r)>::setSearchSpan, v); return true; }
     return false;
 }
-static const char kOpt_19[] = R"JSON([{"n":"setSearchLimit","k":"num","l":"Search Limit","h":"0 = whole input; else the band search only looks within +-hz of 0 (the Inmarsat window's pass-band: the rest of its input is empty)","t":"s"}])JSON";
+static const char kOpt_19[] = R"JSON([{"n":"setFastAcquisition","k":"bool","l":"Fast Acquisition","t":"s"},{"n":"setSearchLimit","k":"num","l":"Search Limit","h":"0 = whole input; else the band search only looks within +-hz of 0 (the Inmarsat window's pass-band: the rest of its input is empty)","t":"s"}])JSON";
 static bool set_19(Engine& e, const std::string& n, double v) {
     auto& r = e.aero();
+    if (n == "setFastAcquisition") { call(r, &Rx<decltype(r)>::setFastAcquisition, v); return true; }
     if (n == "setSearchLimit") { call(r, &Rx<decltype(r)>::setSearchLimit, v); return true; }
     return false;
 }
-static const char kOpt_20[] = R"JSON([{"n":"setThresholdDb","k":"num","l":"Threshold dB","h":"burst detection threshold over the noise floor per FFT bin (default 13)","u":"dB","t":"s"}])JSON";
+static const char kOpt_20[] = R"JSON([{"n":"setThresholdDb","k":"num","l":"Threshold dB","h":"burst detection threshold over the noise floor per FFT bin (default 13)","u":"dB","t":"s"},{"n":"setSoftDecisions","k":"bool","l":"Soft Decisions","t":"s"}])JSON";
 static bool set_20(Engine& e, const std::string& n, double v) {
     auto& r = e.iridium();
     if (n == "setThresholdDb") { call(r, &Rx<decltype(r)>::setThresholdDb, v); return true; }
+    if (n == "setSoftDecisions") { call(r, &Rx<decltype(r)>::setSoftDecisions, v); return true; }
     return false;
 }
 static const char kOpt_21[] = R"JSON([{"n":"setRegion","k":"int","l":"Region","h":"0 EU (default), 1 US (also LoRaWAN EU868 / US915), 2 ANZ (no LoRaWAN), 3 ANZ with MeshCore Mid","t":"s"},{"n":"setProtocols","k":"mask","c":[{"v":1,"l":"Meshtastic"},{"v":2,"l":"MeshCore"},{"v":4,"l":"LoRa APRS"},{"v":8,"l":"MeshCom"},{"v":16,"l":"LoRaWAN"}],"l":"Protocols","h":"1 Meshtastic, 2 MeshCore, 4 LoRa APRS, 8 MeshCom, 16 LoRaWAN (default 15: all but LoRaWAN)","t":"s"},{"n":"setPresetSearch","k":"bool","l":"Preset Search","h":"also the other Meshtastic presets of the region (more CPU)","t":"s"}])JSON";
@@ -434,13 +438,14 @@ static bool set_55(Engine& e, const std::string& n, double v) {
     if (n == "setReportInterval") { call(r, &Rx<decltype(r)>::setReportInterval, v); return true; }
     return false;
 }
-static const char kOpt_56[] = R"JSON([{"n":"setChannelOffsetHz","k":"num","l":"Channel Offset Hz","h":"the channel relative to the dial frequency (click-to-tune)","u":"Hz","t":"s"},{"n":"setDemod","k":"int","l":"Demod","h":"GeneralDemod","t":"s"},{"n":"setWidthHz","k":"num","l":"Width Hz","h":"filter width (clamped to the demodulator's range)","u":"Hz","t":"s"},{"n":"setDeemphUs","k":"num","l":"Deemph Us","h":"NFM / WFM: 0 off, 50, 75, 750","u":"us","t":"s"},{"n":"setCwPitchHz","k":"num","l":"Cw Pitch Hz","u":"Hz","t":"a"},{"n":"setAmDetector","k":"int","l":"Am Detector","t":"a"},{"n":"setListenHz","k":"num","l":"Listen Hz","u":"Hz","t":"a"}])JSON";
+static const char kOpt_56[] = R"JSON([{"n":"setChannelOffsetHz","k":"num","l":"Channel Offset Hz","h":"the channel relative to the dial frequency (click-to-tune)","u":"Hz","t":"s"},{"n":"setDemod","k":"int","l":"Demod","h":"GeneralDemod","t":"s"},{"n":"setWidthHz","k":"num","l":"Width Hz","h":"filter width (clamped to the demodulator's range)","u":"Hz","t":"s"},{"n":"setDeemphUs","k":"num","l":"Deemph Us","h":"NFM / WFM: 0 off, 50, 75, 750","u":"us","t":"s"},{"n":"setFmPll","k":"int","l":"Fm Pll","t":"a"},{"n":"setCwPitchHz","k":"num","l":"Cw Pitch Hz","u":"Hz","t":"a"},{"n":"setAmDetector","k":"int","l":"Am Detector","t":"a"},{"n":"setListenHz","k":"num","l":"Listen Hz","u":"Hz","t":"a"}])JSON";
 static bool set_56(Engine& e, const std::string& n, double v) {
     auto& r = e.general();
     if (n == "setChannelOffsetHz") { call(r, &Rx<decltype(r)>::setChannelOffsetHz, v); return true; }
     if (n == "setDemod") { call(r, &Rx<decltype(r)>::setDemod, v); return true; }
     if (n == "setWidthHz") { call(r, &Rx<decltype(r)>::setWidthHz, v); return true; }
     if (n == "setDeemphUs") { call(r, &Rx<decltype(r)>::setDeemphUs, v); return true; }
+    if (n == "setFmPll") { call(r, &Rx<decltype(r)>::setFmPll, v); return true; }
     if (n == "setCwPitchHz") { call(r, &Rx<decltype(r)>::setCwPitchHz, v); return true; }
     if (n == "setAmDetector") { call(r, &Rx<decltype(r)>::setAmDetector, v); return true; }
     if (n == "setListenHz") { call(r, &Rx<decltype(r)>::setListenHz, v); return true; }
@@ -474,10 +479,11 @@ static bool set_61(Engine& e, const std::string& n, double v) {
     if (n == "setQpsk") { call(r, &Rx<decltype(r)>::setQpsk, v); return true; }
     return false;
 }
-static const char kOpt_63[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the frequency tuned (0: unknown, a file: the band centre is assumed)","u":"Hz","t":"s"}])JSON";
+static const char kOpt_63[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the frequency tuned (0: unknown, a file: the band centre is assumed)","u":"Hz","t":"s"},{"n":"setLocalFloorCap","k":"bool","l":"Local Floor Cap","t":"s"}])JSON";
 static bool set_63(Engine& e, const std::string& n, double v) {
     auto& r = e.globalstar();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
+    if (n == "setLocalFloorCap") { call(r, &Rx<decltype(r)>::setLocalFloorCap, v); return true; }
     return false;
 }
 static const char kOpt_64[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the frequency tuned (0: unknown, a file: 161.9 MHz is assumed)","u":"Hz","t":"s"},{"n":"setForwardNmea","k":"bool","l":"Forward Nmea","h":"AIS-like ASM frames also go out as !AIVDM sentences on the AIS data feed (UDP), when that feed is on (default on)","t":"s"}])JSON";
@@ -491,6 +497,12 @@ static const char kOpt_65[] = R"JSON([{"n":"setVariant","k":"choice","c":[{"v":0
 static bool set_65(Engine& e, const std::string& n, double v) {
     auto& r = e.hrpt();
     if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_66[] = R"JSON([{"n":"setSoftDecisions","k":"bool","l":"Soft Decisions","t":"s"}])JSON";
+static bool set_66(Engine& e, const std::string& n, double v) {
+    auto& r = e.zigbee();
+    if (n == "setSoftDecisions") { call(r, &Rx<decltype(r)>::setSoftDecisions, v); return true; }
     return false;
 }
 static const char kOpt_67[] = R"JSON([{"n":"setExpiry","k":"num","l":"Expiry","h":"an aircraft silent this long leaves the table (default 60)","t":"s"}])JSON";
@@ -774,6 +786,12 @@ static bool set_244(Engine& e, const std::string& n, double v) {
     if (n == "setThresholdDb") { call(r, &Rx<decltype(r)>::setThresholdDb, v); return true; }
     if (n == "setMainsFilter") { call(r, &Rx<decltype(r)>::setMainsFilter, v); return true; }
     if (n == "setMergeMs") { call(r, &Rx<decltype(r)>::setMergeMs, v); return true; }
+    return false;
+}
+static const char kOpt_245[] = R"JSON([{"n":"setSoftDecisions","k":"bool","l":"Soft Decisions","t":"s"}])JSON";
+static bool set_245(Engine& e, const std::string& n, double v) {
+    auto& r = e.thread();
+    if (n == "setSoftDecisions") { call(r, &Rx<decltype(r)>::setSoftDecisions, v); return true; }
     return false;
 }
 static const char kOpt_301[] = R"JSON([{"n":"setExpiry","k":"num","l":"Expiry","h":"an aircraft silent this long leaves the table (default 60)","t":"s"}])JSON";
@@ -1366,6 +1384,7 @@ const OptEntry kOpt[] = {
     {63, kOpt_63, set_63},
     {64, kOpt_64, set_64},
     {65, kOpt_65, set_65},
+    {66, kOpt_66, set_66},
     {67, kOpt_67, set_67},
     {71, kOpt_71, set_71},
     {75, kOpt_75, set_75},
@@ -1406,6 +1425,7 @@ const OptEntry kOpt[] = {
     {241, kOpt_241, set_241},
     {242, kOpt_242, set_242},
     {244, kOpt_244, set_244},
+    {245, kOpt_245, set_245},
     {301, kOpt_301, set_301},
     {321, kOpt_321, set_321},
     {361, kOpt_361, set_361},
