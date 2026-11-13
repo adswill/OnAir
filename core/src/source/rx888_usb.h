@@ -101,6 +101,27 @@ struct Rx888Gains {
     double hfIfDb = 0, vhfRfDb = 0, vhfIfDb = 0;   // what those steps give
 };
 constexpr double kRx888GainMaxDb = 90;
+
+// The clock and the rates (4.1). The LTC2208 is rated for 130 Msps; ExtIO_sddc accepts ADC clocks of 50 to 140 MHz (MAX_ADC_FREQ), so the
+// driver sets up to 140 MHz when asked (above 130 is overclocking, with a note). The HF input sees 0 to half the clock without aliasing.
+constexpr double kRx888AdcRatedHz = 130e6, kRx888AdcMaxHz = 140e6;
+constexpr double kRx888MinOutHz = 0.25e6;
+constexpr double kRx888MaxOutHz = kRx888AdcRatedHz;   // reported to the UI: decimation 1 at the rated clock (only half of it is unique spectrum)
+struct Rx888RatePlan {
+    uint32_t adcHz = 0;   // the ADC clock sent with STARTADC
+    int decim = 2;        // output rate = adcHz / decim; 1 = no decimation (the real band and its mirror image)
+    double outHz = 0;
+};
+// wantHz: the rate asked for (0: 8 Msps); adcMode: the "adc" setting ("auto", "64", "128", "exact")
+Rx888RatePlan rx888RatePlan(double wantHz, const std::string& adcMode);
+// The bulk transfers for an ADC clock: SDDC's 128 KiB each; enough in flight for ~32 ms of samples (32 at 64 Msps, 64 at 130), and the
+// queue to the conversion thread holds ~250 ms before the oldest blocks are dropped (and counted).
+struct Rx888TransferPlan {
+    size_t bytes = 131072;
+    int queued = 32;
+    size_t maxBlocks = 256;
+};
+Rx888TransferPlan rx888TransferPlan(double adcHz);
 Rx888Gains rx888Gains(double sliderDb, double hfAttenuatorDb);
 double rx888HfIfGainDb(int index);
 

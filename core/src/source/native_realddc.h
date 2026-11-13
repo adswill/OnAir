@@ -21,6 +21,13 @@ public:
     int decim() const { return D_; }
     void design(int decim) {
         D_ = std::max(1, decim);
+        if (D_ == 1) {   // no decimation (RX888 above half its clock): a plain mixer, one tap, the whole real band with its mirror image
+            N_ = 1;
+            h_.assign(1, 1.0);
+            in_.clear();
+            ph_ = {1, 0};
+            return;
+        }
         N_ = 16 * D_;
         h_.assign((size_t)N_, 0.0);
         const double beta = 7.5, cut = 0.5 / D_, mid = (N_ - 1) / 2.0, i0b = besselI0(beta);
