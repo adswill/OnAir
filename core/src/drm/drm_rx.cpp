@@ -24,6 +24,7 @@
 #include "drm_front.h"
 #include "dect2/channels/channel_find.h"
 #include "drm_internal.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -286,8 +287,10 @@ struct DrmReceiver::Impl {
         if (eLane) swapLanes();
         inRate = rate;
         ready = front.configure(rate);
+        if (!ready) DIAG(851351, "The DRM front end could not be set up for the input sample rate %.0f Hz, so DRM decoding stays off.", rate);
         front.setChannelPass((double)chanPassApplied);
         eOk = other.front.configure(rate, kFsE, kMinRateE);
+        if (!eOk) DIAG_DEBUG(858275, "The DRM+ (mode E) front end could not be set up for the input sample rate %.0f Hz, so only the modes A to D are searched.", rate);
         other.fs = kFsE; fs = kFs;
         cc.configure(rate, 10000, 12000, 4.0);
         corr.reset(); corrPpm = 0; corr.setPpm(0);
@@ -698,7 +701,7 @@ struct DrmReceiver::Impl {
         const int64_t c0 = nS + Dacc;                 // start of the cyclic prefix as the window sees it
         const int64_t ws = c0 + G - back;
         if ((uint64_t)(ws + N + 4) > total || (uint64_t)(c0 + G + N) > total) return false;
-        if ((uint64_t)ws < base || (uint64_t)c0 < base) { restartSearch("the samples of a symbol were already discarded"); return false; }
+        if ((uint64_t)ws < base || (uint64_t)c0 < base) { DIAG_DEBUG(118335, "The DRM tracker needed the samples of a symbol that were already discarded, so it drops the lock and searches for the signal again."); restartSearch("the samples of a symbol were already discarded"); return false; }
         const cf32* x = buf.data() + (ws - (int64_t)base);
         // guard interval correlation of this symbol (how much of an OFDM signal it still is)
         {
@@ -734,7 +737,7 @@ struct DrmReceiver::Impl {
         nS += Ts;
         // Without the OFDM structure for a while: a false lock is given up at once; a lock whose FAC decoded holds through the fade (the FAC decides,
         // see frameDone(), and the acquisition looks for the signal in the background)
-        if (cpBadRun >= 6 && facOkSince == 0) { restartSearch("the signal lost its OFDM structure"); return true; }
+        if (cpBadRun >= 6 && facOkSince == 0) { DIAG_DEBUG(563856, "The DRM signal lost its OFDM guard interval structure for 6 symbols before any FAC had decoded, so the lock is judged false and the search restarts."); restartSearch("the signal lost its OFDM structure"); return true; }
         if (!frameSync) {
             frameSyncStep(t);
         } else {
@@ -788,6 +791,7 @@ struct DrmReceiver::Impl {
             log(b2);
             drainEqualize(t);
         } else if (t > 10 * ns) {
+            DIAG_DEBUG(714752, "No DRM frame start was found in the search window (%lld symbols), so the search for the signal restarts.", (long long)t);
             restartSearch("no frame start");
         }
     }
@@ -1162,9 +1166,16 @@ struct DrmReceiver::Impl {
         // The FAC fails: 12 frames (4.8 s) of it with the signal there (the frames in a fade do not count) and the lock is wrong; through a fade the
         // tracker holds on for up to 60 frames (24 s), so that the signal is decoded again the moment it comes back (the time interleaver still holds
         // what came before the fade).
-        if (facOkSince == 0 && framesSync >= 14 * k) restartSearch("the FAC cannot be decoded");
-        else if (facBadRun - fadedRun >= 12 * k) restartSearch("the FAC is lost");
-        else if (facBadRun >= 60 * k) restartSearch("no signal for 24 s");
+        if (facOkSince == 0 && framesSync >= 14 * k) {
+            DIAG_DEBUG(580657, "The DRM FAC never decoded in %d frames after the lock, so the lock is judged false and the search restarts on the mirrored spectrum.", framesSync);
+            restartSearch("the FAC cannot be decoded");
+        } else if (facBadRun - fadedRun >= 12 * k) {
+            DIAG_DEBUG(513441, "The DRM FAC failed in %d frames in a row outside fades, so the lock is dropped and the search restarts.", facBadRun - fadedRun);
+            restartSearch("the FAC is lost");
+        } else if (facBadRun >= 60 * k) {
+            DIAG_DEBUG(940012, "The DRM FAC has failed for %d frames (24 s) without recovering, so OnAir gives up the lock and searches again.", facBadRun);
+            restartSearch("no signal for 24 s");
+        }
     }
 
     // No frequency pilots, or a lock whose FAC never decodes: the next search looks at the mirrored spectrum (I and Q swapped by the radio or

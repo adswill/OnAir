@@ -4,6 +4,7 @@
 // DRM back end: FAC, SDC and MSC decoding from equalised cells.
 #include <atomic>
 #include "dect2/drm/drm_dec.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -63,20 +64,20 @@ void DrmBackend::decodeFac(const CellGrid& g) {
     double wSum = 0;
     for (int i = 0; i < nFac; i++) {
         const auto& c = L->facCells[(size_t)i];
-        if (c.second < g.kmin || c.second > g.kmax || c.first >= g.ns) { facBad++; return; }
+        if (c.second < g.kmin || c.second > g.kmax || c.first >= g.ns) { DIAG_DEBUG_EVERY(758171, 5, "A DRM FAC cell lies outside the received carriers (carrier %d, range %d to %d), so this FAC block is counted as bad.", (int)c.second, g.kmin, g.kmax); facBad++; return; }
         z[(size_t)i] = g.zAt(c.first, c.second);
         w[(size_t)i] = g.wAt(c.first, c.second);
         wSum += w[(size_t)i];
     }
     facConst = z;
     // a fade: the cells are noise, the block is lost (its 8 bit CRC would pass one block of noise in 256)
-    if (facValid_ && fadedBlock(wSum / nFac, wRefFac_)) { facBad++; return; }
+    if (facValid_ && fadedBlock(wSum / nFac, wRefFac_)) { DIAG_DEBUG_EVERY(447837, 5, "The DRM FAC cells carry no usable signal (a fade), so this FAC block is skipped and the last good FAC stays in use."); facBad++; return; }
     std::vector<uint8_t> u((size_t)facCode_->infoBits()), pr(u.size());
     facCode_->decode(z.data(), w.data(), u.data(), 1);
     prbs(pr.data(), pr.size());
     for (size_t i = 0; i < u.size(); i++) u[i] ^= pr[i];
     FacInfo f;
-    if (!facParse(u.data(), E, f) || !occupancyValid(mode_, f.occupancy)) { facBad++; return; }
+    if (!facParse(u.data(), E, f) || !occupancyValid(mode_, f.occupancy)) { DIAG_DEBUG_EVERY(857861, 5, "A DRM FAC block failed its CRC or names an invalid spectrum occupancy, so it is discarded and the last good FAC stays in use."); facBad++; return; }
     learnWeight(wRefFac_, wSum / nFac);
     const bool first = !facValid_;
     auto sameConfig = [](const FacInfo& a, const FacInfo& b) {
@@ -88,6 +89,7 @@ void DrmBackend::decodeFac(const CellGrid& g) {
     else if (announced_ == 0 && (!pendFacValid_ || !sameConfig(f, pendFac_))) {
         // A new configuration is taken when the next block confirms it (a reconfiguration lasts; a block of noise that passed the CRC does not)
         pendFac_ = f; pendFacValid_ = true;
+        DIAG_DEBUG_EVERY(130852, 5, "The DRM FAC announced a changed channel configuration without a reconfiguration notice, so it is held until the next block confirms it.");
         facRejected++;
         return;
     }
@@ -135,7 +137,10 @@ void DrmBackend::buildMscCode() {
     hist_.clear();
     nStreams_ = mx.nStreams;
     for (int i = 0; i < 4; i++) { streamA_[i] = mx.stream[i].lenA; streamB_[i] = mx.stream[i].lenB; }
-    if (mx.protB >= mscProtLevels(mode_, bits) || (X > 0 && mx.protA >= mscProtLevels(mode_, bits))) return;
+    if (mx.protB >= mscProtLevels(mode_, bits) || (X > 0 && mx.protA >= mscProtLevels(mode_, bits))) {
+        DIAG_DEBUG_EVERY(832938, 5, "The DRM SDC names the MSC protection levels %d and %d, which this constellation does not have, so the MSC cannot be decoded.", mx.protA, mx.protB);
+        return;
+    }
     MlcParams p;
     p.levels = bits / 2;
     for (int l = 0; l < p.levels; l++) {
@@ -151,9 +156,12 @@ void DrmBackend::buildMscCode() {
         p.n1 = lcm * ((8 * X + den - 1) / den);
     }
     p.n2 = layout_->nMux - p.n1;
-    if (p.n2 < 20) return;
+    if (p.n2 < 20) {
+        DIAG_DEBUG_EVERY(647768, 5, "The DRM multiplex leaves only %d cells for part B, too few to decode, so the MSC is skipped.", p.n2);
+        return;
+    }
     auto code = std::make_unique<MlcCode>(p);
-    if (code->infoBits() < 8 * (X + Y)) { if (log) log("DRM: the multiplex description does not fit the multiplex frame"); return; }
+    if (code->infoBits() < 8 * (X + Y)) { DIAG_EVERY(583554, 10, "The DRM SDC describes %d bytes of multiplex data but the frame can carry only %d, so the MSC is not decoded.", X + Y, code->infoBits() / 8); if (log) log("DRM: the multiplex description does not fit the multiplex frame"); return; }
     mscCode_ = std::move(code);
     mscQam_ = 1 << bits;
     depth_ = fac_.interleaver == 0 ? modeParams(mode_).depth : 1;
@@ -183,7 +191,7 @@ void DrmBackend::decodeSdc() {
         double ws = 0;
         for (float v : sdcW_) ws += v;
         sdcMeanW = sdcW_.empty() ? 0 : ws / (double)sdcW_.size();
-        if (fadedBlock(sdcMeanW, wRefSdc_)) { sdcBad++; return; }
+        if (fadedBlock(sdcMeanW, wRefSdc_)) { DIAG_DEBUG_EVERY(842605, 5, "The DRM SDC cells carry no usable signal (a fade), so this SDC block is skipped and the last service list stays."); sdcBad++; return; }
     }
     std::vector<uint8_t> u((size_t)sdcCode_->infoBits()), pr(u.size());
     sdcCode_->decode(sdcZ_.data(), sdcW_.data(), u.data(), 2);
@@ -219,6 +227,7 @@ void DrmBackend::decodeSdc() {
             }
             sdcPrevN_++;
         }
+        DIAG_DEBUG_EVERY(875038, 5, "A DRM SDC block failed its CRC, also after combining it with the earlier blocks, so it is discarded and the last service list stays.");
         sdcBad++; return;
     }
     sdcPrevZ_ = sdcZ_; sdcPrevW_ = sdcW_; sdcPrevN_ = 1;
@@ -255,6 +264,7 @@ void DrmBackend::decodeMux(int txPos) {
     const ModeParams& mp = modeParams(mode_);
     if (fadedBlock(wSum / M, wRefMux_)) {
         // the cells carry no signal (a fade longer than the interleaver can bridge): the frame is lost, the next one comes after a gap
+        DIAG_DEBUG_EVERY(228561, 5, "The DRM MSC cells of a multiplex frame carry no signal (a fade longer than the time interleaver bridges), so the frame is lost and the audio has a gap.");
         mscSkipped++; mscBad++;
         muxIndex_++;
         gap_ = true;
@@ -355,7 +365,7 @@ void DrmBackend::frame(const CellGrid& g) {
         }
     }
     if (q != mp.frames - 1) return;
-    if (!mscCode_) mscBad++;
+    if (!mscCode_) { DIAG_DEBUG_EVERY(754155, 10, "The DRM MSC cannot be decoded because the multiplex description from the SDC is missing or invalid, so this super frame is skipped."); mscBad++; }
     sfValid_ = false;
 }
 

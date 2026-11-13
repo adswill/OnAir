@@ -3,6 +3,7 @@
 
 #include "dect2/drm/drm_afs.h"
 #include "dect2/drm/drm_msg.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -184,13 +185,14 @@ std::vector<DrmBookEntry> DrmStationBook::newestFirst() const {
 
 bool DrmStationBook::save(const std::string& path) const {
     std::ofstream f(path);
-    if (!f) return false;
+    if (!f) { DIAG(733185, "The DRM station book %s could not be opened for writing, so the stations heard are not saved.", path.c_str()); return false; }
     f << "OnAirDrmBook1\n";
     for (const auto& kv : e_) {
         const auto& e = kv.second;
         f << e.id << '\t' << (e.audio ? 1 : 0) << '\t' << e.bestSnr << '\t' << e.lastHeard << '\t' << clean(e.label) << '\t' << clean(e.language) << '\t' << clean(e.country) << '\t'
           << clean(e.programme) << '\t' << clean(e.text) << '\t' << listText(e.heardKhz) << '\t' << listText(e.altKhz) << '\n';
     }
+    if (!f) DIAG(122458, "Writing the DRM station book %s failed (the disk may be full), so the saved list may be incomplete.", path.c_str());
     return (bool)f;
 }
 
@@ -198,7 +200,7 @@ bool DrmStationBook::load(const std::string& path) {
     std::ifstream f(path);
     if (!f) return false;
     std::string l;
-    if (!std::getline(f, l) || l != "OnAirDrmBook1") return false;
+    if (!std::getline(f, l) || l != "OnAirDrmBook1") { DIAG_DEBUG(609406, "The DRM station book %s does not start with the expected OnAirDrmBook1 header, so it is not loaded.", path.c_str()); return false; }
     e_.clear();
     while (std::getline(f, l)) {
         std::vector<std::string> c; std::stringstream t(l); std::string i;

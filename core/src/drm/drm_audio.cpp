@@ -6,6 +6,7 @@
 #include "dect2/drm/drm_aac.h"
 #include "dect2/drm/drm_fec.h"
 #include "dect2/drm/drm_usac_lib.h"
+#include "dect2/common/diag.h"
 #include "dect2/dsp/exact_resampler.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -175,12 +176,12 @@ bool XheSuperFrameParser::parse(const uint8_t* d, int len, std::vector<XheFrame>
     frames.clear();
     if (len < 2) { reset(); return false; }
     // header: frame border count (4 bits), bit reservoir level (4 bits), CRC-8 over those 8 bits
-    if (crc8Bytes(d, 1) != d[1]) { reset(); return false; }
+    if (crc8Bytes(d, 1) != d[1]) { DIAG_DEBUG_EVERY(155059, 5, "The xHE-AAC audio super frame header failed its CRC-8, so the whole super frame is dropped."); reset(); return false; }
     const int b = d[0] >> 4;
     lastBorders_ = b;
     lastReservoir_ = d[0] & 15;
     const int payload = len - 2 - 2 * b;
-    if (payload < 0) { reset(); return false; }
+    if (payload < 0) { DIAG_DEBUG_EVERY(280996, 5, "The xHE-AAC audio super frame announces %d frame borders, more than its %d bytes can hold, so the super frame is dropped.", b, len); reset(); return false; }
     // directory: the last element describes the first border
     std::vector<int> border;                                       // in the coordinates of `comb` below
     std::vector<int> rawIdx, repeats;
@@ -209,7 +210,7 @@ bool XheSuperFrameParser::parse(const uint8_t* d, int len, std::vector<XheFrame>
         else if (v == 0xFFE) pos = base - 2;
         else pos = base + v;
         if (pos < 0) continue;                                      // a delayed border into bytes we never had (the stream just started)
-        if (pos > (int)comb.size() || pos <= prev) { reset(); return false; }
+        if (pos > (int)comb.size() || pos <= prev) { DIAG_DEBUG_EVERY(545137, 5, "The xHE-AAC frame border directory is inconsistent (a border at byte %d of %d), so the super frame is dropped.", pos, (int)comb.size()); reset(); return false; }
         border.push_back(pos); prev = pos;
     }
     if (payload >= 2) tail_.assign(d + 2 + payload - 2, d + 2 + payload); else { tail_ = comb.size() >= 2 ? std::vector<uint8_t>(comb.end() - 2, comb.end()) : comb; }
@@ -282,7 +283,7 @@ struct AudioDecoder::Impl {
         closeCodec();
         fdkWhy.clear();
         const std::vector<uint8_t> asc = xheAscFromSdc(cfg);
-        if (asc.empty()) { info = "xHE-AAC: the configuration in the SDC cannot be read"; return false; }
+        if (asc.empty()) { DIAG_DEBUG(524791, "The xHE-AAC configuration in the DRM SDC could not be turned into an audio specific config, so this service stays silent."); info = "xHE-AAC: the configuration in the SDC cannot be read"; return false; }
         char nb[160];
         snprintf(nb, sizeof nb, "xHE-AAC, %.1f kHz %s", cfg.rateHz() / 1000.0, cfg.mode == 2 ? "stereo" : "mono");
         libGen = UsacLib::generation();
@@ -294,14 +295,16 @@ struct AudioDecoder::Impl {
             fdkWhy = eb;
             for (size_t i = 0; i < asc.size() && i < 24; i++) { snprintf(eb, sizeof eb, "%02x", asc[i]); fdkWhy += eb; }
             fdkWhy += ")";
+            DIAG(492185, "The libfdk-aac decoder refused the xHE-AAC stream configuration (%s returned 0x%x), so OnAir tries the FFmpeg AAC decoder instead.", fdk->lastStep(), (unsigned)fdk->lastError());
             fdk.reset();
         } else {
             const UsacLib::Report rep = UsacLib::lastReport();
+            DIAG_DEBUG(580701, "The libfdk-aac library was not found or did not load, so xHE-AAC falls back to the FFmpeg AAC decoder, which cannot play most xHE-AAC streams.");
             fdkWhy = rep.failed.empty() ? "libfdk-aac not found in the codecs folders" : "libfdk-aac did not load: " + rep.failed.front();
         }
         const std::string hint = (fdkWhy.empty() ? std::string() : "; " + fdkWhy) + std::string("; to play it install ") + UsacLib::libraryHint() + " (see docs/CODECS.md, section AAC, xHE-AAC)";
         const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_AAC);
-        if (!codec) { info = "xHE-AAC: no AAC decoder in this build"; return false; }
+        if (!codec) { DIAG(382686, "This build has no FFmpeg AAC decoder, so the xHE-AAC service stays silent."); info = "xHE-AAC: no AAC decoder in this build"; return false; }
         ctx = avcodec_alloc_context3(codec);
         ctx->log_level_offset = 24;               // the decoder's complaints about a stream it cannot read would fill the log
         ctx->extradata = (uint8_t*)av_mallocz(asc.size() + AV_INPUT_BUFFER_PADDING_SIZE);
@@ -309,6 +312,7 @@ struct AudioDecoder::Impl {
         ctx->extradata_size = (int)asc.size();
         const int r = avcodec_open2(ctx, codec, nullptr);
         if (r < 0) {
+            DIAG(612444, "The FFmpeg AAC decoder did not open for the xHE-AAC stream (error %d), so this DRM service stays silent until libfdk-aac is installed.", r);
             closeCodec();
             char b[200];
             snprintf(b, sizeof b, "xHE-AAC, %.1f kHz %s: this FFmpeg cannot decode the stream (no harmonic SBR, PVC, inter-TES or MPS212)", cfg.rateHz() / 1000.0, cfg.mode == 2 ? "stereo" : "mono");
@@ -370,7 +374,7 @@ struct AudioDecoder::Impl {
         }
         if (fdk) {
             std::vector<int16_t> pcm; int rate = 0, ch = 0;
-            if (!fdk->decode(au, pcm, rate, ch)) { decFails++; char eb[100]; snprintf(eb, sizeof eb, "libfdk-aac returned no audio (%s returned 0x%x)", fdk->lastStep(), (unsigned)fdk->lastError()); lastErr = eb; gap(out, auOut); return false; }
+            if (!fdk->decode(au, pcm, rate, ch)) { decFails++; char eb[100]; snprintf(eb, sizeof eb, "libfdk-aac returned no audio (%s returned 0x%x)", fdk->lastStep(), (unsigned)fdk->lastError()); DIAG_DEBUG_EVERY(284646, 5, "The libfdk-aac decoder returned no audio for an xHE-AAC frame (%s returned 0x%x), so the frame is replaced by a gap.", fdk->lastStep(), (unsigned)fdk->lastError()); lastErr = eb; gap(out, auOut); return false; }
             const size_t n = pcm.size() / (size_t)ch;
             rin.resize(n);
             for (size_t i = 0; i < n; i++) rin[i] = cf32(pcm[i * (size_t)ch] / 32768.f, pcm[i * (size_t)ch + (size_t)(ch > 1 ? 1 : 0)] / 32768.f);
@@ -384,7 +388,7 @@ struct AudioDecoder::Impl {
         std::memcpy(pkt->data, au.data(), au.size());
         const int r = avcodec_send_packet(ctx, pkt);
         av_packet_unref(pkt);
-        if (r < 0) { decFails++; char eb[100]; av_strerror(r, eb, sizeof eb); lastErr = eb; gap(out, auOut); return false; }
+        if (r < 0) { decFails++; char eb[100]; av_strerror(r, eb, sizeof eb); DIAG_DEBUG_EVERY(509813, 5, "The FFmpeg AAC decoder rejected an xHE-AAC frame (%s), so the frame is replaced by a gap.", eb); lastErr = eb; gap(out, auOut); return false; }
         const size_t before = out.size();
         while (avcodec_receive_frame(ctx, frame) == 0) { emitFrame(out); av_frame_unref(frame); }
         if (out.size() > before) auOut = (out.size() - before) / 2;
@@ -410,7 +414,7 @@ struct AudioDecoder::Impl {
         }
         const uint64_t before = samples;
         for (const XheFrame& f : frames) {
-            if (!f.crcOk) { bad++; lostFrame(); gap(out, auOut); continue; }
+            if (!f.crcOk) { DIAG_DEBUG_EVERY(862713, 5, "An xHE-AAC audio frame failed its CRC-16, so it is replaced by a gap and the decoder waits for the next independent frame."); bad++; lostFrame(); gap(out, auOut); continue; }
             ok++;
             decodeAu(f.au, out);
         }
@@ -429,6 +433,7 @@ struct AudioDecoder::Impl {
         char b[200];
         const char* what = cfg.sbr && cfg.mode == 1 ? "AAC + SBR + PS" : cfg.sbr ? "AAC + SBR" : "AAC";
         if (!aacOk) {
+            DIAG(733417, "The DRM AAC core decoder could not be set up for %d Hz (%s), so this service stays silent.", rate, why.c_str());
             snprintf(b, sizeof b, "%s, %.0f kHz: %s", what, rate / 1000.0, why.c_str());
             info = b;
             return false;
