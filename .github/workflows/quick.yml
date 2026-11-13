@@ -1,13 +1,14 @@
 # Quick check for one worker branch: ONE job that builds only the named tests (plus optional targets) and runs them.
 # Far cheaper than ci.yml (one runner instead of ~13), so many branches can check at once.
 #   gh workflow run quick.yml -R adswill/OnAir --ref <branch> -f tests="wide_placed drm_engine" [-f targets="dect2cli"] [-f os=macos]
+#   gh workflow run quick.yml -R adswill/OnAir --ref <branch> -f gate=true -f targets=dect2     # the gate, then a build of the app
 name: Quick
 on:
   workflow_dispatch:
     inputs:
       tests:
-        description: "space-separated ctest names; each builds target test_<name>"
-        required: true
+        description: "space-separated ctest names; each builds target test_<name> (may be empty when targets is set)"
+        default: ""
       targets:
         description: "extra CMake targets to build (optional)"
         default: ""
@@ -38,6 +39,10 @@ on:
       perf:
         description: "Linux: one of the tests to run once more under perf record, with the hottest functions printed (optional)"
         default: ""
+      gate:
+        description: "run tools/gate/run.sh (lint, generated files, licences) before the build"
+        type: boolean
+        default: false
 concurrency:
   group: quick-${{ github.ref }}-${{ inputs.os }}
   cancel-in-progress: true
@@ -55,6 +60,9 @@ jobs:
       CCACHE_SLOPPINESS: "time_macros,pch_defines,include_file_mtime,include_file_ctime"
     steps:
       - uses: actions/checkout@v7
+      - name: Gate (tools/gate/run.sh)
+        if: inputs.gate && runner.os == 'Linux'
+        run: tools/gate/run.sh
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
         uses: ./.github/actions/linux-deps
@@ -101,6 +109,7 @@ jobs:
         if: always() && steps.cc.outputs.cache-hit != 'true'
         with: { path: .ccache, key: "ccache-${{ inputs.os }}-quick-${{ github.ref_name }}" }
       - name: Test
+        if: inputs.tests != ''
         env: { TESTS: "${{ inputs.tests }}", TEST_ENV: "${{ inputs.env }}", TEST_TIMEOUT: "${{ inputs.timeout }}", VERBOSE: "${{ inputs.verbose }}", CMP: "${{ inputs.compare }}" }
         run: |
           for kv in $(echo "$TEST_ENV" | tr ';' ' '); do export "$kv"; echo "env: $kv"; done   # NAME=value pairs, separated by spaces or semicolons

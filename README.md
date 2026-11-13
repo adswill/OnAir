@@ -767,6 +767,8 @@ I'm a bit embarrassed to ask this, but here goes. OnAir is free and always will 
 
 OnAir is released under the **GNU General Public License v3.0 or later**, see [LICENSE](LICENSE).
 
+OnAir's own source files start with `SPDX-License-Identifier: GPL-3.0-or-later` and `Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors`. Code derived from OnAir must keep that notice and stay under the same licence (GPL-3.0-or-later), with its source available. Files that came from other projects keep their own licence and notice (see [THIRD_PARTY.md](THIRD_PARTY.md)).
+
 With one additional term under GPL section 7(b): works that use OnAir code must keep the line "Based on OnAir by Kristijonas Adomaitis - https://on-air.dev" in their About or licence screen. See [ADDITIONAL-TERMS.md](ADDITIONAL-TERMS.md).
 
 What to keep when you copy OnAir code is summarised in [NOTICE.md](NOTICE.md); the name and logo policy is in [TRADEMARKS.md](TRADEMARKS.md).
