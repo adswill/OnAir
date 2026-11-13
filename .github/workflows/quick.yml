@@ -178,7 +178,7 @@ jobs:
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $EXTRA_CMAKE
           ALL=$(ninja -C build -t targets all | cut -d: -f1)
           SEL=""; for t in $TESTS; do SEL="$SEL test_$t"; done; SEL="$SEL $EXTRA"
-          KEEP=""; for t in $SEL; do echo "$ALL" | grep -qx "$t" && KEEP="$KEEP $t" || echo "note: no target $t on Windows, skipped"; done
+          KEEP=""; for t in $SEL; do m=$(echo "$ALL" | grep -xE "${t%.exe}(\.exe)?" | head -n 1); if [ -n "$m" ]; then KEEP="$KEEP $m"; else echo "note: no target $t on Windows, skipped"; fi; done
           [ -n "$KEEP" ] || { echo "nothing to build"; exit 1; }
           cmake --build build -j 4 --target $KEEP
       - name: Save ccache
