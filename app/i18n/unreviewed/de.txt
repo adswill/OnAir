@@ -1263,3 +1263,25 @@ Composite stereo
 the programme
 Automatic channel width and centre
 Follows the link: Carson's rule on the measured deviation and the multiplex content (RDS, SCA), or the occupied width, plus a margin; the carrier offset is removed first.
+Master > outstation
+Function
+Summary
+CRC
+Raw bytes
+answered by message
+answers message
+Last poll
+Polls / replies
+Response
+exceptions
+unanswered
+unsolicited
+CRC failed
+points
+Select a device to see its registers and points.
+Registers and points seen so far
+Point
+Receive only. Listening to non-broadcast utility traffic may be restricted in some countries; check local law. Not verified on a live signal.
+filter
+Hide not recognised
+Utility telemetry

@@ -6,10 +6,14 @@
 #include "dect2/x40/x40_rx.h"
 #include "dect2/x40/x40_tel.h"
 #include "dect2/x40/stl_cfg.h"
+#include "dect2/x40/scada_proto.h"
 #include "../ism/ook_scatter_ui.h"
 #include <algorithm>
 #include <cstdio>
 #include <string>
+
+void scadaTab(App& a);    // scada_ui.cpp: SCADA radio telemetry, the Messages and Devices tabs
+void scadaList(App& a);
 
 namespace {
 
@@ -19,6 +23,7 @@ using dect2::X40Telemetry;
 template <int V> bool live(const App& a) { return a.rx.standard == dect2::x40::activeOfVariant(V); }
 
 template <int V> void tab(App& a) {
+    if constexpr (V == dect2::x40::Scada) { scadaTab(a); return; }   // its stored messages stay readable while stopped
     if (!live<V>(a)) { ImGui::TextDisabled("%s", tr(a.engine.running() ? "starting" : "stopped")); return; }
     const X40Telemetry& t = a.rx.x40;
     ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(t.headline.c_str()); ImGui::PopFont();
@@ -57,6 +62,7 @@ template <int V> void receiver(App& a) {
 }
 
 template <int V> void list(App& a) {
+    if constexpr (V == dect2::x40::Scada) { scadaList(a); return; }
     if (!live<V>(a)) { ImGui::TextDisabled("%s", tr(a.engine.running() ? "starting" : "stopped")); return; }
     const X40Telemetry& t = a.rx.x40;
     int shown = 0;
@@ -121,7 +127,10 @@ void stlControls() {
 }
 
 template <int V> void decoder(App& a, bool&) {
-    if (ImGui::SmallButton(trw("Clear"))) a.engine.x40().clearResults(V);
+    if (ImGui::SmallButton(trw("Clear"))) {
+        a.engine.x40().clearResults(V);
+        if constexpr (V == dect2::x40::Scada) { dect2::scada::Store& st = dect2::scada::store(); std::lock_guard<std::mutex> lk(st.mu); st.tr.clear(); st.phy.clear(); st.version++; }
+    }
     if constexpr (V == dect2::x40::Stl) stlControls();
 }
 
@@ -146,5 +155,5 @@ template <int V> constexpr ModeUi makeUi() {
 
 } // namespace
 
-extern const ModeUi kX40Ui[54];
-const ModeUi kX40Ui[54] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>(), makeUi<10>(), makeUi<11>(), makeUi<12>(), makeUi<13>(), makeUi<14>(), makeUi<15>(), makeUi<16>(), makeUi<17>(), makeUi<18>(), makeUi<19>(), makeUi<20>(), makeUi<21>(), makeUi<22>(), makeUi<23>(), makeUi<24>(), makeUi<25>(), makeUi<26>(), makeUi<27>(), makeUi<28>(), makeUi<29>(), makeUi<30>(), makeUi<31>(), makeUi<32>(), makeUi<33>(), makeUi<34>(), makeUi<35>(), makeUi<36>(), makeUi<37>(), makeUi<38>(), makeUi<39>(), makeUi<40>(), makeUi<41>(), makeUi<42>(), makeUi<43>(), makeUi<44>(), makeUi<45>(), makeUi<46>(), makeUi<47>(), makeUi<48>(), makeUi<49>(), makeUi<50>(), makeUi<51>(), makeUi<52>(), makeUi<53>()};
+extern const ModeUi kX40Ui[55];
+const ModeUi kX40Ui[55] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>(), makeUi<10>(), makeUi<11>(), makeUi<12>(), makeUi<13>(), makeUi<14>(), makeUi<15>(), makeUi<16>(), makeUi<17>(), makeUi<18>(), makeUi<19>(), makeUi<20>(), makeUi<21>(), makeUi<22>(), makeUi<23>(), makeUi<24>(), makeUi<25>(), makeUi<26>(), makeUi<27>(), makeUi<28>(), makeUi<29>(), makeUi<30>(), makeUi<31>(), makeUi<32>(), makeUi<33>(), makeUi<34>(), makeUi<35>(), makeUi<36>(), makeUi<37>(), makeUi<38>(), makeUi<39>(), makeUi<40>(), makeUi<41>(), makeUi<42>(), makeUi<43>(), makeUi<44>(), makeUi<45>(), makeUi<46>(), makeUi<47>(), makeUi<48>(), makeUi<49>(), makeUi<50>(), makeUi<51>(), makeUi<52>(), makeUi<53>(), makeUi<54>()};
