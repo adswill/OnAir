@@ -368,12 +368,18 @@ class MicRx {
 public:
     void setActive(bool a, double snrDb) { active_ = a; snr_ = snrDb; }
     void bind(int id, double mhz, std::function<void(const float*, size_t)> audio) { id_ = id; mhz_ = mhz; audio_ = std::move(audio); lp_.design(false, 15000, kChvMicRate, 0.7071); lp2_.design(false, 15000, kChvMicRate, 0.7071); }
+    // VHF channels (25 kHz): a 4th-order low-pass at 24 kHz on I and Q, about -26 dB at a carrier 50 kHz away (the next channel but one)
+    void setNarrow(bool on) {
+        narrow_ = on;
+        if (on) for (Biquad* b : {&nI1_, &nI2_, &nQ1_, &nQ2_}) b->design(false, 24000, kChvMicRate, 0.7071);
+    }
     double devKhz() const { return devKhz_.load(); }
     double meanHz() const { return meanF_; }
     bool fmLike() const { return fmLike_.load(); }
     void feed(const cf32* x, size_t n) {
         for (size_t i = 0; i < n; i++) {
-            const std::complex<double> s(x[i].real(), x[i].imag());
+            std::complex<double> s(x[i].real(), x[i].imag());
+            if (narrow_) s = std::complex<double>(nI2_.run(nI1_.run(s.real())), nQ2_.run(nQ1_.run(s.imag())));
             const double mag = std::abs(s);
             const std::complex<double> d = s * std::conj(prev_);
             prev_ = s;
@@ -400,7 +406,8 @@ private:
     int id_ = 0; double mhz_ = 0;
     bool active_ = false; double snr_ = 0;
     std::function<void(const float*, size_t)> audio_;
-    Biquad lp_, lp2_;
+    Biquad lp_, lp2_, nI1_, nI2_, nQ1_, nQ2_;
+    bool narrow_ = false;
     std::complex<double> prev_{1.0, 0.0};
     double sumM_ = 0, sumM2_ = 0, devAcc_ = 0, meanF_ = 0, maxPw_ = 0;
     int win_ = 0;
@@ -439,7 +446,7 @@ struct ChanVoiceReceiver::Impl {
     int regionOf[chv::kServiceCount] = {};
     CarrierFinder finder;
     bool cfgDone = false;
-    double gridOrigin = -1e18;
+    double gridOrigin = -1e18, gridStep = 0;
     int carrierLimit = 10;
     std::atomic<bool> silent{false};
     std::atomic<float> volume{1.f};
@@ -501,13 +508,13 @@ struct ChanVoiceReceiver::Impl {
     void regrid() {   // under mu
         if (rate <= 0) return;
         const double c = centerAbs();
-        const double step = isMic() ? 100000.0 : chv::rasterHz(svc, region());
+        const double step = isMic() ? chv::micStepHz(c / 1e6, region()) : chv::rasterHz(svc, region());   // microphones: 100 kHz cells in the UHF bands, 25 kHz channels in the VHF ones
         double origin;
         double ref = 0;   // a channel of the plan: the raster passes through it (the CB channels sit 5 kHz off the 10 kHz multiples)
         if (!isMic() && svc != Service::Mdc && !plan().empty()) ref = plan()[0].mhz * 1e6;
         if (c > 0) origin = std::fmod(ref - c, step); else origin = std::fmod(offHz, step);
         if (origin < 0) origin += step;
-        if (cfgDone && std::fabs(origin - gridOrigin) < 1.0) { priors(); return; }
+        if (cfgDone && std::fabs(origin - gridOrigin) < 1.0 && std::fabs(step - gridStep) < 1.0) { priors(); return; }
         CarrierCfg cfg;
         cfg.stepHz = step;
         cfg.gridOriginHz = origin;
@@ -516,7 +523,7 @@ struct ChanVoiceReceiver::Impl {
         cfg.holdSec = isMic() ? 8 : 5; cfg.debounceSec = 0.12; cfg.avgSec = 0.05;
         if (isMic()) { cfg.avgSec = 0.1; cfg.debounceSec = 0.3; cfg.minSnrDb = 6; cfg.mergeSplit = true; cfg.skirtDb = 20; }
         finder.configure(rate, cfg);
-        gridOrigin = origin; cfgDone = true;
+        gridOrigin = origin; gridStep = step; cfgDone = true;
         priors();
     }
     double onDbFor() const { return 5.0 + 0.08 * ctx.squelch.load(); }
@@ -669,8 +676,13 @@ struct ChanVoiceReceiver::Impl {
         double shift = c.hz;
         if (s->fixed && ctr > 0) shift = plan()[(size_t)key].mhz * 1e6 - ctr;
         if (isMic()) {
-            if (!s->ch.configure(rate, kChvMicRate, shift, 160000.0)) return nullptr;
+            // the channelizer's low-pass only stops aliasing into the 192 kHz output (occupiedHz sets where it rolls off, not a channel width), so a carrier
+            // 50 kHz away is passed whatever occupiedHz is: run 43498615424 printed the same numbers with 160, 50 and 32 kHz. A VHF channel (25 kHz cells)
+            // gets its own narrow filter inside MicRx instead.
+            const double occ = 160000.0;
+            if (!s->ch.configure(rate, kChvMicRate, shift, occ)) return nullptr;
             s->mic = std::make_unique<MicRx>();
+            s->mic->setNarrow(finder.cfg().stepHz < 50000.0);
             const int id = c.id;
             s->mic->bind(id, s->mhz, [this, id](const float* x, size_t n) { if (micListen == id && !silent.load()) { audioWrite(10000 + id, x, n); } });
         } else {
@@ -930,10 +942,10 @@ bool ChanVoiceReceiver::telemetry(ChvTelemetry& out, uint64_t lastSeq) {
                     t.rows.push_back(std::move(r));
                 }
             } else {
-                const auto& bands = chv::micBands(reg);
+                const auto& bands = chv::micBandsAll(reg);
                 for (auto& v : sv) {
                     ChvMicRow m; m.id = v.id; m.mhz = v.mhz; m.widthKhz = v.width / 1000.0; m.levelDb = v.level; m.snrDb = v.snr; m.devKhz = v.dev; m.fmLike = v.fm; m.active = v.active; m.listening = v.id == micL; m.ageSec = v.age;
-                    for (const auto& b : bands) if (v.mhz >= b.loMhz && v.mhz <= b.hiMhz) m.band = b.name;
+                    if (const chv::MicBand* b = chv::micBandAt(v.mhz, reg)) m.band = b->name;
                     t.mics.push_back(std::move(m));
                 }
                 std::sort(t.mics.begin(), t.mics.end(), [](const ChvMicRow& a, const ChvMicRow& b) { return a.mhz < b.mhz; });
@@ -970,7 +982,7 @@ ModeTuning chanVoiceTuning(chv::Service s) {
     case chv::Service::Ham:     t.minMhz = 144.0; t.maxMhz = 450.0; t.defMhz = 145.7; t.sampleRate = 2000000; t.bandwidthMhz = 1.0; t.tuneOffsetHz = 25000; break;
     case chv::Service::HfVoice: t.minMhz = 2.8; t.maxMhz = 23.4; t.defMhz = 11.175; t.sampleRate = 250000; t.bandwidthMhz = 0.1; t.minSampleRate = 48000; t.tuneOffsetHz = 12000; break;
     case chv::Service::Mdc:     t.minMhz = 30.0; t.maxMhz = 960.0; t.defMhz = 155.0; t.sampleRate = 2000000; t.bandwidthMhz = 1.0; t.tuneOffsetHz = 25000; break;
-    default:                    t.minMhz = 470.0; t.maxMhz = 960.0; t.defMhz = 590.0; t.sampleRate = 10000000; t.bandwidthMhz = 8.0; t.minSampleRate = 1000000; t.tuneOffsetHz = 0; break;
+    default:                    t.minMhz = 169.0; t.maxMhz = 960.0; t.defMhz = 590.0; t.sampleRate = 10000000; t.bandwidthMhz = 8.0; t.minSampleRate = 1000000; t.tuneOffsetHz = 0; break;
     }
     return t;
 }

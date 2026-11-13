@@ -121,6 +121,23 @@ int main() {
         CHECK(d1 > d2 * 1.4 && d2 > 5, "deviation 589.4: %.1f kHz, 591.25: %.1f kHz", d1, d2);
     }
 
+    // ---- VHF wireless microphones (issue #487): three narrow FM carriers on 25 kHz channels in 173.8 - 175.0 MHz, two of them 50 kHz apart, and an AM one; both regions
+    for (int rg = 0; rg < 2; rg++) {
+        GenScene sc; sc.rate = 4e6; sc.centreMhz = 174.4; sc.durSec = 3.0; sc.noiseSigma = 0.01;
+        auto wm = [&](double mhz, double amp, double dev) { GenTx t; t.mhz = mhz; t.mod = Demod::Nfm; t.amp = amp; t.speech = false; t.devScale = dev; t.startSec = 0.2; t.durSec = 2.6; return t; };
+        GenTx am; am.mhz = 174.95; am.mod = Demod::Am; am.amp = 0.1; am.startSec = 0.2; am.durSec = 2.6;
+        sc.tx = {wm(173.850, 0.1, 2.4), wm(174.250, 0.1, 2.4), wm(174.300, 0.1, 2.2), am};   // Nfm: devScale x 5 kHz, so about +-12 kHz peak as a real VHF mic (the finder needs a measured deviation above 3 kHz, and the VHF filter trims a little) (the Wfm generator is +-40 kHz, which is a UHF mic: it filled four 25 kHz cells and the finder rightly listed pieces)
+        Run r = run(Service::Mic, rg, sc, [](ChanVoiceReceiver& rx) { rx.setCarrierLimit(8); });
+        for (auto& m : r.tel.mics) printf("VHF region %d mic %.4f MHz width %.0f kHz snr %.1f dev %.2f kHz fm %d band %s\n", rg, m.mhz, m.widthKhz, m.snrDb, m.devKhz, (int)m.fmLike, m.band.c_str());
+        int found = 0, fm = 0;
+        for (const double want : {173.850, 174.250, 174.300}) for (auto& m : r.tel.mics) if (std::fabs(m.mhz - want) < 0.012) { found++; if (m.fmLike) fm++; CHECK(m.band == "VHF 173.8 - 175.0 MHz", "VHF mic %.3f labelled '%s'", want, m.band.c_str()); }
+        CHECK(found == 3, "VHF region %d: found %d of 3 narrow FM carriers (%zu candidates)", rg, found, r.tel.mics.size());
+        CHECK(fm == 3, "VHF narrow FM classified FM: %d of 3", fm);
+        bool amSeen = false; for (auto& m : r.tel.mics) if (std::fabs(m.mhz - 174.95) < 0.012) { amSeen = true; CHECK(!m.fmLike, "the VHF AM carrier is not FM-like"); }
+        CHECK(amSeen, "the VHF AM carrier is listed");
+        // the UHF case above must not have changed: a UHF centre still uses the 100 kHz cells (the test above)
+    }
+
     // ---- FRS: CTCSS 88.5 Hz on 3, DCS 023 on 17, no tone on 20 (and a call that comes twice on 8)
     {
         GenScene sc; sc.rate = 2e6; sc.centreMhz = 462.6375; sc.durSec = 6.0; sc.noiseSigma = 0.004;

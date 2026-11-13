@@ -288,6 +288,41 @@ const std::vector<MicBand>& micBands(int region) {
     return region == 1 ? us : eu;
 }
 
+const std::vector<MicBand>& micBandsVhf(int) {
+    // From memory of the usual equipment and regulations (UK Ofcom licence-exempt 173.8 - 175.0, ERC/REC 70-03 radio microphones, US Part 74 VHF), not checked
+    // against the national tables. Narrow FM on 25 kHz channels.
+    static const std::vector<MicBand> v = {
+        {169.0, 171.0, "VHF 169 - 171 MHz", "Older and low-cost VHF radio microphones and assistive audio; narrow FM on 25 kHz channels", 25.0, true},
+        {173.8, 175.0, "VHF 173.8 - 175.0 MHz", "Licence-exempt VHF radio microphones and in-ear monitors (UK and parts of Europe); narrow FM on 25 kHz channels", 25.0, true},
+        {174.0, 216.0, "VHF 174 - 216 MHz", "The VHF TV band (channels 5 to 13, 7 to 13 in the USA): VHF radio microphones use the free channels; narrow FM on 25 kHz channels", 25.0, true},
+    };
+    return v;
+}
+
+const std::vector<MicBand>& micBandsAll(int region) {
+    static const std::vector<MicBand> all[2] = {
+        [] { std::vector<MicBand> v = micBands(0); for (const auto& b : micBandsVhf(0)) v.push_back(b); return v; }(),
+        [] { std::vector<MicBand> v = micBands(1); for (const auto& b : micBandsVhf(1)) v.push_back(b); return v; }(),
+    };
+    return all[region == 1 ? 1 : 0];
+}
+
+const MicBand* micBandAt(double mhz, int region) {
+    // the narrowest band that holds it: 173.8 - 175.0 before the 174 - 216 band it overlaps
+    const MicBand* best = nullptr;
+    for (const auto& b : micBandsAll(region)) if (mhz >= b.loMhz && mhz <= b.hiMhz && (!best || b.hiMhz - b.loMhz < best->hiMhz - best->loMhz)) best = &b;
+    return best;
+}
+
+double micStepHz(double centreMhz, int region) {
+    const MicBand* b = micBandAt(centreMhz, region);
+    return b ? b->stepKhz * 1000.0 : 100000.0;
+}
+
+double micBandTuneMhz(const MicBand& b) {
+    return b.hiMhz - b.loMhz <= 8.0 ? (b.loMhz + b.hiMhz) / 2 : b.loMhz + 4.0;
+}
+
 bool onAirAtMinute(const Channel& c, int m) {
     if (c.minutes.empty()) return true;
     m = ((m % 60) + 60) % 60;
