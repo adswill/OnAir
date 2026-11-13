@@ -42,7 +42,7 @@ public:
         bits_.assign(kBitRing, 0.f); bi_ = -1; hi_ = 1500; lo_ = -1500;
         locked_ = false; pol_ = 1; blockEnd_ = 0; misses_ = 0; pend_ = Pending(); voiceOpen_ = false;
         preIdx_ = -1; preRawInv_ = false; preT_ = -1e9; lastPreEvent_ = -1e9; batch_ = false; group_ = -1;
-        pages_ = 0; tone_ = numeric_ = alpha_ = voice_ = 0; snrDb_ = 0; have_ = false; lastKind_.clear(); lastWhat_.clear();
+        pages_ = 0; tone_ = numeric_ = alpha_ = voice_ = 0; snrDb_ = 0; have_ = false; nPre_ = nSc_ = nAddrHunt_ = nAcHunt_ = nLost_ = 0; lastKind_.clear(); lastWhat_.clear();
     }
     void feed(const cf32* x, size_t n) override {
         dec_.process(x, n, [&](cf32 z) { sample(z); });
@@ -57,6 +57,7 @@ public:
         t.facts.push_back({"deviation", fmt("%.0f Hz", 0.5 * (hi_ - lo_))});
         t.facts.push_back({"carrier offset", fmt("%+.0f Hz", 0.5 * (hi_ + lo_))});
         t.facts.push_back({"bit clock", fmt("%+.0f ppm", -omega_ * 1e6)});
+        t.facts.push_back({"search", fmt("%d preambles, %d start codes, %d addresses, %d activation words found while searching; %d lock losses", nPre_, nSc_, nAddrHunt_, nAcHunt_, nLost_)});
         t.facts.push_back({"bit rates", "300 bit/s preamble, start code and address words; 600 bit/s comma and data"});
     }
 
@@ -216,7 +217,7 @@ private:
                 const Slow w0 = slow(bi_ - 45 - 46, pol);
                 if (pc(w0.hard ^ preTx_[i]) > 3) continue;
                 preIdx_ = i; preRawInv_ = pol < 0; preT_ = now();
-                if (now() - lastPreEvent_ > 1.0) { lastPreEvent_ = now(); out->energy(); }
+                if (now() - lastPreEvent_ > 1.0) { lastPreEvent_ = now(); out->energy(); nPre_++; }
                 return;
             }
         }
@@ -227,17 +228,17 @@ private:
         if (ct < 14) return;
         int rawPol = 1;
         if (scMatch(st, 1, 6, rawPol)) {
-            pol_ = rawPol; lock(st);
+            pol_ = rawPol; lock(st); nSc_++;
             onStart();
             return;
         }
         if (ct >= 24) {
             const Addr a = address(st, pol_, 2, 2, true);
-            if (a.ok) { lock(st); group_ = -1; batch_ = false; onAddress(a); return; }
+            if (a.ok) { lock(st); nAddrHunt_++; group_ = -1; batch_ = false; onAddress(a); return; }
         }
         if (voiceOpen_ && ct >= 20) {
             int word = 0;
-            if (activation(st, pol_, 6, word)) { lock(st); onActivation(word); }
+            if (activation(st, pol_, 6, word)) { lock(st); nAcHunt_++; onActivation(word); }
         }
     }
     void lock(int64_t st) { locked_ = true; blockEnd_ = st + (kBlockBits - 1) + kBlockBits; misses_ = 0; blockQuality(st); }
@@ -259,7 +260,7 @@ private:
         }
         finish();
         out->bad();
-        if (++misses_ >= 2) { locked_ = false; misses_ = 0; }
+        if (++misses_ >= 2) { locked_ = false; misses_ = 0; nLost_++; }
     }
 
     void onStart() {
@@ -369,6 +370,7 @@ private:
     bool locked_ = false, voiceOpen_ = false, preRawInv_ = false, batch_ = false, have_ = false;
     int pol_ = 1, misses_ = 0, preIdx_ = -1, group_ = -1, voiceWord_ = -1;
     double preT_ = -1e9, lastPreEvent_ = -1e9, voiceT_ = 0;
+    int nPre_ = 0, nSc_ = 0, nAddrHunt_ = 0, nAcHunt_ = 0, nLost_ = 0;
     int pages_ = 0, tone_ = 0, numeric_ = 0, alpha_ = 0, voice_ = 0;
     std::string lastKind_, lastWhat_;
     Pending pend_;
