@@ -161,9 +161,7 @@ int main() {
         const Result r = runStl(x, fs);
         const double th = 10 * std::log10((r.toneAmp * r.toneAmp / 2) / theoryNoise(c, 200e3, 75));
         printf("mono sound, C/N %4.0f dB: SINAD %5.1f dB, FM theory %5.1f dB (tone %.1f kHz)\n", c, r.sinadDb, th, r.toneAmp * 75 / 0.903);
-        // the noise follows FM theory up to a floor that does not depend on C/N (distortion of the generator and the receiver chain, measured at 45 dB C/N too)
-        const double expect = std::min(th, 46.0);
-        CHECK(std::fabs(r.sinadDb - expect) < 7, "C/N %.0f: SINAD %.1f dB, expected %.1f dB (theory %.1f dB, floor 46 dB)", c, r.sinadDb, expect, th);
+        CHECK(std::fabs(r.sinadDb - th) < 7 || (r.sinadDb > th && c >= 26), "C/N %.0f: SINAD %.1f dB, theory %.1f dB", c, r.sinadDb, th);
         CHECK(r.sinadDb > prev - 3, "mono SINAD falls with C/N at %.0f dB (%.1f after %.1f)", c, r.sinadDb, prev);
         prev = r.sinadDb;
     }

@@ -162,7 +162,7 @@ private:
         hasRegion_ = true;
     }
     // Channel width and centre follow the link: Carson's rule 2 (peak deviation + highest multiplex frequency) on the measured deviation and the content (RDS 60 kHz, SCA 99 kHz),
-    // or the occupied width of the capture, whichever is more, plus 10 % and 5 kHz. Wider at once, narrower only after 3 s of asking for it (the filter starts empty at every change).
+    // or the occupied width of the capture, whichever is more, plus 35 % and 10 kHz. Wider at once, narrower only after 3 s of asking for it (the filter starts empty at every change).
     void follow(const FmTelemetry& t) {
         if (!t.carrier) { devHold_ *= 0.9; return; }
         devHold_ = std::max(devHold_ * 0.9, (double)t.devKhz * 1000);
@@ -170,7 +170,7 @@ private:
         const double fmax = sca ? 99000.0 : 60000.0;
         double need = 2 * (std::max(devHold_, 20000.0) + fmax);
         if (hasRegion_) need = std::max(need, (double)occKhz_ * 1000);
-        need = need * 1.1 + 5000;
+        need = need * 1.35 + 10000;   // Carson holds about 98 % of the power: the tails beyond it, cut by the filter, were a distortion floor of -46 dB in the tests (a margin of 10 % was not enough)
         const double top = 0.9 * fs_;
         need = std::min(std::max(need, 100000.0), top);
         if (need > autoW_ * 1.05) { autoW_ = need; shrinkN_ = 0; }
