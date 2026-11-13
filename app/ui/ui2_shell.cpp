@@ -826,19 +826,23 @@ static void menuBarRight(App& a) {
     const ImVec4 dimText(0.62f, 0.68f, 0.75f, 1);
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const ImU32 rule = IM_COL32(255, 255, 255, 34);
+    // SmallButton lowers itself by the line's text-baseline offset (ImGuiButtonFlags_AlignTextBaseLine): the menu bar line carries the bar's
+    // extra frame padding there, so every text button sat that much below the centre and touched the bar's bottom line. No shift: the
+    // items are placed at y exactly, the same y as the Discord button and the rules.
+    const auto noBaseShift = []() { ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f; };
     const auto next = [&]() {   // a thin rule in the middle of the gap, then the next item on the same centred line
         const float rx = ImGui::GetItemRectMax().x + g, top = ImGui::GetWindowPos().y + y;
         dl->AddLine(ImVec2(rx + 0.5f, top + 2 * gUi), ImVec2(rx + 0.5f, top + lineH - 2 * gUi), rule);
-        ImGui::SameLine(0, 2 * g + 1); ImGui::SetCursorPosY(y);
+        ImGui::SameLine(0, 2 * g + 1); ImGui::SetCursorPosY(y); noBaseShift();
     };
     if (showBy) {
-        ImGui::SameLine(xRest - 2 * g - 1 - cw); ImGui::SetCursorPosY(y);
+        ImGui::SameLine(xRest - 2 * g - 1 - cw); ImGui::SetCursorPosY(y); noBaseShift();
         ImGui::PushStyleColor(ImGuiCol_Text, dimText);
         if (ImGui::SmallButton(credit)) { a.creditsOpen = true; a.creditsTab = 0; }
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Thank you to everyone who reported bugs, sent recordings and opened pull requests."));
         next();
-    } else { ImGui::SameLine(xRest); ImGui::SetCursorPosY(y); }
+    } else { ImGui::SameLine(xRest); ImGui::SetCursorPosY(y); noBaseShift(); }
     ImGui::PushStyleColor(ImGuiCol_Text, dimText);
     if (ImGui::SmallButton(tr("Credits"))) { a.creditsOpen = true; a.creditsTab = 0; }
     ImGui::PopStyleColor();
