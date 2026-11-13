@@ -125,12 +125,6 @@ public:
     // the next kGateSkip blocks of input go by before another look. White noise peaks at about 10, a signal at 0 dB Es/N0 at 2000 and more.
     bool lineGate = false;
     uint64_t gateSkipped = 0;             // input samples let go by (tests)
-    // Pipelined loops (BPSK / QPSK, the fast links): the carrier loop's correction from a symbol reaches the oscillator kCarDelay samples later
-    // and the timing loop's correction the clock kTimDelay symbols later, instead of at once. Done at once, every sample waits for the whole
-    // chain of the previous symbol (oscillator, matched filter, interpolator, error, division) before it can start; with the delay the
-    // processor works on the next samples meanwhile. Both loops are thousands of times slower than the delay (bandwidths under 1 % of the
-    // symbol rate), so it does not change what they follow. Set before configure().
-    bool pipelined = false;
     std::vector<std::pair<float, float>> cons;
     size_t consPos = 0;
     double acqPeak = 0;
@@ -157,10 +151,9 @@ public:
         acquired = false; acq_.clear(); acq_.reserve(kAcq); cfoCoarse = 0; updateStep();
         phase_ = 0; freq_ = 0; t_ = spsNom_ / 2; strobePh_ = 0; lastStrobe_ = 0; mid_ = 0; sps_ = spsNom_;
         agc = 0.1f; carrierLock = 0; meanAbs_ = 0; varAbs_ = 0; skip_ = 0;
-        clearPipe();
         cons.clear(); consPos = 0;
     }
-    void reacquire() { acquired = false; acq_.clear(); clearPipe(); }
+    void reacquire() { acquired = false; acq_.clear(); }
     double currentCfo() const { return cfoCoarse + freq_ * decRate / (2 * kPi); }
     float snrDb() const { return meanAbs_ == 0 && varAbs_ == 0 ? 0.f : 10.f * (float)std::log10(std::max(1e-3f, meanAbs_ * meanAbs_ / std::max(1e-6f, 2 * varAbs_))); }
 
@@ -199,14 +192,6 @@ private:
     int strobePh_ = 0;
     cfp lastStrobe_{0, 0}, mid_{0, 0};
     float meanAbs_ = 0, varAbs_ = 0;
-    static constexpr int kCarDelay = 4, kTimDelay = 2;   // samples (ring of 8), full symbols (ring of 2)
-    double pPh_[8] = {}, pFr_[8] = {}, pT_[kTimDelay] = {}, pS_[kTimDelay] = {};
-    uint32_t sIdx_ = 0, eIdx_ = 0;
-    void clearPipe() {
-        for (int k = 0; k < 8; k++) pPh_[k] = pFr_[k] = 0;
-        for (int k = 0; k < kTimDelay; k++) pT_[k] = pS_[k] = 0;
-        sIdx_ = eIdx_ = 0;
-    }
     void updateStep() {
         const double w = -2 * kPi * (offsetHz + cfoCoarse) / inRate;
         step_ = cfp((float)std::cos(w), (float)std::sin(w));
@@ -241,7 +226,6 @@ private:
         }
         updateStep();
         phase_ = 0; freq_ = 0;
-        clearPipe();
         acquired = true;
     }
 
@@ -250,11 +234,6 @@ private:
             acq_.push_back(y);
             if ((int)acq_.size() >= kAcq) { acquire(); acq_.clear(); }
             return;
-        }
-        if (pipelined) {   // the carrier corrections due at this sample
-            const uint32_t k = sIdx_++ & 7;
-            phase_ += pPh_[k]; freq_ += pFr_[k];
-            pPh_[k] = 0; pFr_[k] = 0;
         }
         // carrier
         const cfp nco = std::conj(FastSinCos::get().polar(1.f, phase_));   // a table (error 3e-7): cos and sin in double each sample were the dearest part
@@ -298,27 +277,15 @@ private:
         lastStrobe_ = a;
         e = std::clamp(e, -1.f, 1.f);
         const double wA = tA_, wB = tB_;
-        if (pipelined) {   // the correction of kTimDelay symbols ago now, this one's later
-            const uint32_t k = eIdx_++ % kTimDelay;
-            sps_ = std::clamp(sps_ + pS_[k], spsNom_ * 0.992, spsNom_ * 1.008);
-            t_ += sps_ * 0.5 + pT_[k];
-            pS_[k] = wB * e * spsNom_; pT_[k] = wA * e * spsNom_ * 0.5;
-        } else {
-            sps_ = std::clamp(sps_ + wB * e * spsNom_, spsNom_ * 0.992, spsNom_ * 1.008);
-            t_ += sps_ * 0.5 + wA * e * spsNom_ * 0.5;
-        }
+        sps_ = std::clamp(sps_ + wB * e * spsNom_, spsNom_ * 0.992, spsNom_ * 1.008);
+        t_ += sps_ * 0.5 + wA * e * spsNom_ * 0.5;
         // carrier (BPSK, QPSK)
         const float I = a.real() / agc, Q = a.imag() / agc;
         if (mod != Pm) {
             const float ec = mod == Bpsk ? std::clamp((I > 0 ? 1.f : -1.f) * Q, -1.f, 1.f)
                                          : std::clamp((I > 0 ? 1.f : -1.f) * Q - (Q > 0 ? 1.f : -1.f) * I, -1.f, 1.f);
-            if (pipelined) {   // due kCarDelay samples after this one (sIdx_ - 1)
-                const uint32_t k = (sIdx_ - 1 + kCarDelay) & 7;
-                pFr_[k] += cB_ * ec / spsNom_; pPh_[k] += cA_ * ec;
-            } else {
-                freq_ += cB_ * ec / spsNom_;
-                phase_ += cA_ * ec;
-            }
+            freq_ += cB_ * ec / spsNom_;
+            phase_ += cA_ * ec;
             carrierLock += 0.002f * ((1.f - std::fabs(ec)) - carrierLock);
         }
         const float ab = (mod == Qpsk) ? 0.5f * (std::fabs(I) + std::fabs(Q)) : std::fabs(I);
@@ -474,8 +441,6 @@ struct WxsatReceiver::Impl {
         }
         if (P == kWxArktikaGgak) { ggak.configure(rate); ggak.setSignalOffset(offset); return; }
         if (isFilecast()) { if (dvb) configureDvb(); return; }
-        // the pipelined loops (Demod::pipelined) on the fast BPSK / QPSK links, where the demodulator is most of the work
-        dem.pipelined = P == kWxElektroRdas || P == kWxArktikaRdas || P == kWxAws || P == kWxMsgRaw;
         if (rate >= info.minRate - 1) { dem.configure(rate, info.symbolRate, mod, alpha); dem.setOffset(offset); dem.lineGate = P == kWxElektroRdas || P == kWxArktikaRdas; }
         const auto frameCb = [this](const uint8_t* f) { frame(f); };
         for (int k = 0; k < 2; k++) def[k].onFrame = frameCb;

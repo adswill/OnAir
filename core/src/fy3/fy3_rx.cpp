@@ -202,13 +202,6 @@ struct Fy3Receiver::Impl {
     int64_t hN = 0;
     double tau = 0, spsEst = 4;
     double theta = 0, omega = 0;
-    // Pipelined loops: each symbol's carrier and timing corrections are applied kLoopDelay symbols later instead of at the next symbol. At once,
-    // every symbol waited for the previous one's whole chain (oscillator, interpolator, level, error) before it could start; with the delay the
-    // processor overlaps a few symbols. The loops are hundreds of symbols slow (bandwidth 0.02 at the widest), so they follow the same.
-    static constexpr int kLoopDelay = 2;
-    double pTh[kLoopDelay] = {}, pOm[kLoopDelay] = {}, pTau[kLoopDelay] = {}, pSps[kLoopDelay] = {};
-    uint32_t pIdx = 0;
-    void clearPipe() { for (int k = 0; k < kLoopDelay; k++) pTh[k] = pOm[k] = pTau[k] = pSps[k] = 0; pIdx = 0; }
     double lalpha = 0, lbeta = 0, kp = 0, ki = 0;
     float amp = 0.1f, ampSlow = 0.1f;
     float prevI = 0, prevQ = 0;
@@ -374,7 +367,7 @@ struct Fy3Receiver::Impl {
         hist.assign(kHist, cf32(0, 0));
         hN = 0;
         tau = 8; spsEst = sps;
-        theta = 0; omega = 0; clearPipe();
+        theta = 0; omega = 0;
         amp = 0; ampSlow = 0; prevI = prevQ = 0; nSym = 0; lockAvg = 0; m2 = m4 = 0; snrLin = 1;
         loopStage = 0;
         loopGains(0.02);
@@ -532,7 +525,7 @@ struct Fy3Receiver::Impl {
         coarseHz += est;
         step = std::polar(1.0, -2 * kPi * (offset + coarseHz) / rate);
         coarseDone = true;
-        theta = 0; omega = 0; clearPipe(); nSym = 0; loopStage = 0; loopGains(0.02);
+        theta = 0; omega = 0; nSym = 0; loopStage = 0; loopGains(0.02);
     }
 
     // --- wide carrier search: the raised-cosine shape fitted to the power spectrum of the whole capture ----------------------------------------
@@ -650,18 +643,14 @@ struct Fy3Receiver::Impl {
         const float k = std::clamp(2.f * snrLin, 1.f, 8.f);
         const float eC = std::clamp(fastTanh(k * In) * Qn - fastTanh(k * Qn) * In, -1.f, 1.f);
         if (kDebug2) { double ang = std::atan2((double)Qn, (double)In) - kPi / 4; ang = std::remainder(ang, kPi / 2); dbgE += ang * ang; dbgN++; }
-        const float eTn = std::clamp(eT / (amp * amp), -1.f, 1.f);
-        {   // the corrections of kLoopDelay symbols ago now, this symbol's later
-            const uint32_t k = pIdx++ % kLoopDelay;
-            theta += omega + pTh[k];
-            omega += pOm[k];
-            omega = std::clamp(omega, -0.25, 0.25);
-            tau += T + pTau[k];
-            spsEst += pSps[k];
-            spsEst = std::clamp(spsEst, sps * 0.99, sps * 1.01);
-            pTh[k] = lalpha * eC; pOm[k] = lbeta * eC; pTau[k] = kp * eTn; pSps[k] = ki * eTn;
-        }
+        theta += omega + lalpha * eC;
+        omega += lbeta * eC;
+        omega = std::clamp(omega, -0.25, 0.25);
         if (theta > kPi) theta -= 2 * kPi; else if (theta < -kPi) theta += 2 * kPi;
+        const float eTn = std::clamp(eT / (amp * amp), -1.f, 1.f);
+        tau += T + kp * eTn;
+        spsEst += ki * eTn;
+        spsEst = std::clamp(spsEst, sps * 0.99, sps * 1.01);
         nSym++; symAbs++;
         // the carrier loop narrows as it settles: 0.02 to find it, 0.004, then 0.0012 (a LEO Doppler rate is under 100 Hz/s)
         if (loopStage == 0 && nSym >= (int64_t)(rs * 0.002)) { loopStage = 1; loopGains(0.004); }
