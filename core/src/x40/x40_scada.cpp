@@ -119,7 +119,7 @@ public:
     void reset() override {
         frontN_.reset(); frontW_.reset(); audioDec_.reset();
         for (int i = 0; i < 2; i++) { lpR_[i].clear(); lpI_[i].clear(); }
-        nco_ = cf32(1, 0); prevA_ = cf32(0, 0); dcX_ = dcY_ = 0; afDc_ = 0; afPow_ = 0; afSumV_ = afSumY2_ = 0; afN_ = 0;
+        nco_ = cf32(1, 0); prevA_ = cf32(0, 0); dcX_ = dcY_ = 0; afDc_ = 0; afPow_ = 0; afSumV_ = afSumY2_ = 0; afN_ = 0; afQ_ = {}; afQn_ = 0;
         for (Chain& ch : chains_) resetChain(ch);
         recent_.clear(); cands_.clear();
         lastAccept_ = -1e9;
@@ -175,6 +175,9 @@ private:
     cf32 nco_{1, 0}, prevA_{0, 0};
     double dcX_ = 0, dcY_ = 0, afDc_ = 0, afPow_ = 0, afSumV_ = 0, afSumY2_ = 0;
     int afN_ = 0;
+    struct AfSym { double sumV = 0, sumY2 = 0; int n = 0; bool clean = false; };
+    std::array<AfSym, 4> afQ_{};
+    uint64_t afQn_ = 0;
     std::vector<Chain> chains_;
     std::deque<Recent> recent_;
     std::deque<UnknownCand> cands_;
@@ -290,7 +293,16 @@ private:
         }
         if (clean) { ch.goodC = ch.c; ch.goodH = ch.h; ch.goodEvm = ch.evm; }
         if (ch.kind == 0) {                      // the audio modem's FM deviation and carrier offset: the samples of clean symbols only
-            if (clean && afN_ > 0) { afDc_ += 0.02 * (afSumV_ / afN_ - afDc_); afPow_ += 0.02 * (afSumY2_ / afN_ - afPow_); }
+            // the discriminator runs about a symbol ahead of the tone decisions (decimator, filters, boxcar): a symbol's sums count only when
+            // it and the three after it were clean, so the tail of a burst into the noise never reaches the measurement
+            afQ_[afQn_ % 4] = AfSym{afSumV_, afSumY2_, afN_, clean};
+            afQn_++;
+            if (afQn_ >= 4) {
+                bool all = true;
+                for (const AfSym& q : afQ_) all = all && q.clean;
+                const AfSym& o = afQ_[afQn_ % 4];   // the oldest of the four
+                if (all && o.n > 0) { afDc_ += 0.02 * (o.sumV / o.n - afDc_); afPow_ += 0.02 * (o.sumY2 / o.n - afPow_); }
+            }
             afSumV_ = afSumY2_ = 0; afN_ = 0;
         }
         if (clean && s == ch.lastSym && s == top) { ch.steadyHi = ch.haveHi ? ch.steadyHi + 0.1 * (y - ch.steadyHi) : y; ch.haveHi = true; }

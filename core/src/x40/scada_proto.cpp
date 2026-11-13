@@ -389,7 +389,7 @@ uint64_t Tracker::add(const Frame& f) {
     const uint64_t pairWith = m.pair;
     Message& pm = push(std::move(m));
     if (pairWith) {
-        for (auto it = msgs_.rbegin(); it != msgs_.rend(); ++it) if (it->id == pairWith) { it->pair = pm.id; break; }
+        for (auto it = msgs_.rbegin(); it != msgs_.rend(); ++it) if (it->id == pairWith) { if (!it->pair) it->pair = pm.id; break; }   // a response keeps its request; its confirm points to it
         counts.paired++;
     }
     return pm.id;
