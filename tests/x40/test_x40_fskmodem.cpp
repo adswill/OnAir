@@ -49,8 +49,18 @@ int main() {
         printf("  %-18s %4.0f dB: %d messages, %d / %zu bytes right\n", modemStd(s).name, snr, nm, good, 3 * data.size());
         if (snr >= 14) CHECK(nm == 3 && good >= 3 * (int)data.size() - 3, "%s at %.0f dB: %d messages %d bytes right", modemStd(s).name, snr, nm, good);
         // 4.1 (docs/SENSITIVITY-4.1-ALL.md): the gates on the power over the noise; Bell 103 read at 6 dB (3.9 / 4.0: nothing under 10 dB)
-        if (s == 1 && snr >= 6) CHECK(nm == 3 && good >= 3 * (int)data.size() - 3, "%s at %.0f dB: %d messages %d bytes right", modemStd(s).name, snr, nm, good);
+        if (s == 1 && snr >= 10) CHECK(nm == 3 && good >= 3 * (int)data.size() - 3, "%s at %.0f dB: %d messages %d bytes right", modemStd(s).name, snr, nm, good);
     }
+    // Bell 103 at 6 dB is the edge of the receiver: which of the noise realisations read depends on the maths library of the platform
+    // (3 of 3 on Linux and Windows, 2 of 3 on macOS arm64), so the claim is a rate over 12 noise seeds, not one fixed draw
+    { int full = 0; const int seeds = 12;
+      for (unsigned seed = 1; seed <= (unsigned)seeds; seed++) {
+          auto x = modemBurst(1, data, fs, 1.0, 1.0, 0.4, 0, false, noiseFor(6, 3000, fs) * 0.25, seed); auto t = run(x40::FskModem, x, fs); const auto m = msgs(t);
+          int good = 0; if (m.size() == 1) { const auto b = bytesOf(m[0].text); for (size_t i = 0; i < data.size() && i < b.size(); i++) good += b[i] == data[i]; }
+          full += good >= (int)data.size() - 1;
+      }
+      printf("  Bell 103 answer 6 dB: %d of %d noise seeds read (all bytes but one at most)\n", full, seeds);
+      CHECK(full >= 8, "Bell 103 at 6 dB: only %d of %d noise seeds read", full, seeds); }
     // false reports: noise only, one tone, a tone pair that is not a standard, a 600 baud burst on the V.21 tones
     { std::vector<cf32> n((size_t)(fs * 20), cf32(0, 0)); addNoise(n, 0.01, 4); auto t = run(x40::FskModem, n, fs); CHECK(msgs(t).empty(), "noise: %zu messages", msgs(t).size()); }
     // 4.1: the lower burst gate sees more noise bursts: 4 x 120 s of noise at two levels must still give no message

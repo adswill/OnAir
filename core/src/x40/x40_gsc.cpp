@@ -6,6 +6,8 @@
 #include "dect2/voice/vocoder_fec.h"
 #include "dect2/common/bits.h"
 #include <array>
+#include <cstdio>
+#include <cstdlib>
 
 namespace dect2::x40 {
 
@@ -247,6 +249,7 @@ private:
     bool voiceEndSearch() {
         const int64_t st = bi_ - kBlockBits;
         if (st + kBlockBits - 1 == blockEnd_ - kBlockBits) return false;
+        if (std::getenv("GSC_DBG")) { const int c0 = commaTransitions(st); const int q = acScore(st, voiceWord_); if (q <= 14 && c0 >= 10) fprintf(stderr, "GSCDBG locked t=%.2f bi=%lld ct=%d sv=%d m1=%d p1=%d\n", now(), (long long)st, c0, q, acScore(st - 1, voiceWord_), acScore(st + 1, voiceWord_)); }
         if (commaTransitions(st) < 20) return false;
         const int sv = acScore(st, voiceWord_);
         if (sv > 6 || sv > acScore(st - 1, voiceWord_) || sv > acScore(st + 1, voiceWord_)) return false;
@@ -271,6 +274,7 @@ private:
                 if (sa <= addrScore(st - 1) && sa <= addrScore(st + 1)) { lock(st); nAddrHunt_++; group_ = -1; batch_ = false; onAddress(a); return; }
             }
         }
+        if (std::getenv("GSC_DBG") && voiceOpen_ && ct >= 10) { const int q = acScore(st, voiceWord_); if (q <= 14) fprintf(stderr, "GSCDBG hunt t=%.2f bi=%lld ct=%d sv=%d m1=%d p1=%d\n", now(), (long long)st, ct, q, acScore(st - 1, voiceWord_), acScore(st + 1, voiceWord_)); }
         if (voiceOpen_ && ct >= 20) {
             const int sv = acScore(st, voiceWord_);
             if (sv <= 6 && sv <= acScore(st - 1, voiceWord_) && sv <= acScore(st + 1, voiceWord_)) { lock(st); nAcHunt_++; onActivation(voiceWord_); }

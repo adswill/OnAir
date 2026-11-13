@@ -206,7 +206,7 @@ int main(int argc, char** argv) {
         // ---- transmit on the V6 ECO: timed packets, kept ahead of the device clock, no gaps, 1.0 = 0 dBm, the end flags at close
         auto tx = native::makeSpectranTx(eco);
         TxTune tt;
-        tt.centerHz = 145.5e6; tt.offsetHz = 1000; tt.sampleRate = 1e6; tt.gainDb = -10; tt.radio = {{"txlead", "0.05"}};
+        tt.centerHz = 145.5e6; tt.offsetHz = 1000; tt.sampleRate = 1e6; tt.gainDb = -10;   // the default lead of the ECO (0.5 s): a 50 ms lead failed on loaded macOS runners with one late packet
         err.clear();
         CHECK(tx->open(tt, err));
         if (!err.empty()) std::cerr << "tx open: " << err << '\n';
@@ -225,7 +225,7 @@ int main(int argc, char** argv) {
         CHECK(num("tx_starts") == 1 && num("tx_ends") == 0);
         CHECK(approx(num("tx_peak"), std::sqrt(0.05), 1e-5));
         CHECK(num("tx_startfreq") == 145.501e6 - 0.5e6 && num("tx_rate") == 1e6);
-        CHECK(num("tx_ahead") <= 0.06);
+        CHECK(num("tx_ahead") <= 0.51);
         const double closes = num("closedevice");
         tx->close();
         CHECK(num("tx_ends") == 1 && num("closedevice") == closes + 1);
