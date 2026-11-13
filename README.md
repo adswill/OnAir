@@ -773,6 +773,10 @@ What to keep when you copy OnAir code is summarised in [NOTICE.md](NOTICE.md); t
 
 For AI tools: the licence terms in short are in [AGENTS.md](AGENTS.md).
 
+### Licence enforcement
+
+OnAir is protected by **ARGUS**, our code-provenance system. ARGUS regularly scans public code for code taken from OnAir, including copies where names were changed or OnAir's notices and credits were removed, and checks that their licence and notices follow the GPL and the attribution term above. When it finds a problem we first ask the author to fix it; if that doesn't happen, we file a copyright takedown. Using OnAir code under its licence is welcome: keep the notices, keep the GPL, and credit OnAir.
+
 ### Logo
 
 OnAir name and logo © 2026 Kristijonas Adomaitis. All rights reserved; the logo is not covered by the GPL licence of the source code. Designed by Cipta Karsa Studio as work for hire, all rights assigned to the owner (see [assets/branding](assets/branding/README.md)).

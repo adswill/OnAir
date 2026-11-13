@@ -19,6 +19,10 @@ If you convey OnAir, or a work that contains part of its code, keep:
 
 The GPL also asks you to offer the corresponding source of what you convey, under the same licence.
 
+## Enforcement
+
+OnAir is protected by ARGUS, our code-provenance system: it scans public code for OnAir-derived code, including copies with renamed code or removed notices, and checks the licence and notices against the points above. If something is missing we ask the author to fix it first; if it isn't fixed, we file a copyright takedown.
+
 ## A request, not a requirement
 
 We would appreciate it if derived projects also mention in their README that they use OnAir code, with a link to https://github.com/adswill/OnAir. This is a polite request only. It is not a condition of the licence, and nothing in the licence depends on it.
