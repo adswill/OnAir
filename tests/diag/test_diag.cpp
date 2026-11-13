@@ -35,6 +35,9 @@ static int touch() { return ++evaluated; }
 // one call site each (a code belongs to exactly one place)
 static void debugSite(int v) { DIAG_DEBUG(424092, "The debug line of the diagnostics test carries value %d, so it shows only while debug is on.", v); }
 static void debugEverySite(int v) { DIAG_DEBUG_EVERY(477947, 3600.0, "The rate-limited debug line of the diagnostics test carries value %d and shows once an hour.", v); }
+// the argument is evaluated inside the diagnostic, so `evaluated` shows whether the macro evaluated it
+static void lazySite() { DIAG_DEBUG(256974, "The lazy debug line of the diagnostics test evaluates its value %d only while debug is on.", touch()); }
+static void lazyEverySite() { DIAG_DEBUG_EVERY(854251, 3600.0, "The lazy rate-limited debug line of the diagnostics test evaluates %d only while on.", touch()); }
 static void warnEverySite(int v) { DIAG_EVERY(178948, 3600.0, "The rate-limited warning of the diagnostics test carries value %d and shows once an hour.", v); }
 
 int main() {
@@ -72,8 +75,10 @@ int main() {
     CHECK(lines.size() == 2 && levels.back() == diag::Level::Error, "DIAG_ERROR is an error");
 
     // ---- debug off: nothing logged, the arguments are not evaluated
-    debugSite(touch());
-    debugEverySite(touch());
+    debugSite(1);
+    debugEverySite(1);
+    lazySite();
+    lazyEverySite();
     CHECK(lines.size() == 2 && evaluated == 0, "debug off: %zu lines, %d arguments evaluated", lines.size(), evaluated);
 
     // ---- debug on through verbose logging, then through setDebug
