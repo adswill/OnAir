@@ -9,6 +9,7 @@
 #include "dect2/marine/marine_bands.h"
 #include "dect2/marine/marine_navtex.h"
 #include "dect2/marine/marine_incident.h"
+#include "dect2/common/diag.h"
 #include "dect2/results/results_io.h"
 #include <algorithm>
 #include <atomic>
@@ -133,6 +134,7 @@ struct MarineReceiver::Impl {
             std::string st(1, m.station);
             automation::emitMessage("navtex", "NAVTEX", freqHz.load(), st, m.text, std::nan(""), std::move(ex));
         }
+        if (m.errors > 0) DIAG_DEBUG_EVERY(159185, 10.0, "NAVTEX message %s has %u unreadable characters out of %u, so they show as asterisks in the text.", m.header.c_str(), (unsigned)m.errors, (unsigned)m.chars);
         tel.navtex.push_back(m);
         if (tel.navtex.size() > 100) tel.navtex.erase(tel.navtex.begin());
         trimText();
@@ -150,7 +152,8 @@ struct MarineReceiver::Impl {
     void onDsc(const DscCall& c0, bool vhfPath, double carrierHz = -1) {
         // a call that failed its check and names no sender says nothing: noise that happened to pass for a call (a fading fax signal
         // gave one on the VHF path, "Unknown format from ? to ?", and switched the active service away from the fax)
-        if (!c0.eccOk && c0.fromMmsi.empty()) return;
+        if (!c0.eccOk && c0.fromMmsi.empty()) { DIAG_DEBUG_EVERY(441282, 10.0, "A DSC call failed its check and names no sender, so it is dropped as noise."); return; }
+        if (!c0.eccOk) DIAG_EVERY(625192, 10.0, "A DSC call from MMSI %s failed its error check, so it is listed marked as check failed.", c0.fromMmsi.c_str());
         DscCall c = c0;
         c.vhf = vhfPath;
         c.freqHz = carrierHz >= 0 ? carrierHz : (vhfPath ? 156.525e6 : freqHz.load());
@@ -421,7 +424,10 @@ bool MarineReceiver::loadResults(const std::string& blob) {
     std::vector<NavtexMessage> nav;
     std::vector<DscCall> dsc;
     uint64_t nn = 0, nd = 0;
-    if (!results::unpack(blob, t0, nav, dsc, nn, nd)) return false;
+    if (!results::unpack(blob, t0, nav, dsc, nn, nd)) {
+        DIAG(738674, "The saved marine results of %zu bytes could not be read, so the earlier NAVTEX messages and DSC calls are not restored.", blob.size());
+        return false;
+    }
     std::lock_guard<std::mutex> lk(p_->telMu);
     p_->tel.navtex = std::move(nav); p_->tel.dsc = std::move(dsc);
     p_->tel.navtexCount = nn; p_->tel.dscCount = nd;

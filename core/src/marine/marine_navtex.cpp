@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/marine/marine_navtex.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -246,6 +247,7 @@ void NavtexDecoder::onChar(const Slot& s) {
     }
     if (parity_ >= 0) process(false);
     if (recent_ >= 14) {                     // lost the signal
+        DIAG_DEBUG_EVERY(241425, 10.0, "The NAVTEX signal was lost after %llu good and %llu unreadable characters, so OnAir waits for the next phasing signal.", (unsigned long long)validChars_, (unsigned long long)badChars_);
         process(true);
         locked_ = false; sinceChar_ = 0;
         for (int i = 0; i < 7; i++) { validRun_[i] = 0; hpos_[i] = 0; for (int k = 0; k < 32; k++) hvalid_[i][k] = false; }
@@ -345,6 +347,7 @@ void NavtexDecoder::finish(bool complete) {
     for (char c : hdr_) if (c == '*') m.errors++;
     m.cer = m.chars + 4 ? (float)m.errors / (float)(m.chars + 4) : 0.f;
     m.complete = complete;
+    if (!complete) DIAG_DEBUG_EVERY(930188, 5.0, "A NAVTEX message with header %s ended without its NNNN end marker after %u characters, so it is kept marked as cut short.", hdr_.c_str(), (unsigned)m.chars);
     body_.clear(); hdr_.clear(); tail_.clear();
     if (cb_) cb_(m);
 }
