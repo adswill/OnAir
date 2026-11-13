@@ -22,6 +22,10 @@ import argparse, json, math, os, re, shutil, subprocess, sys, tempfile, threadin
 from concurrent.futures import ThreadPoolExecutor
 
 # The TV and wideband modes have their own detail sweeps (sens_sweep, sens_dvb) and need gigabytes per file here
+# Modes whose checked unit is rare: a longer trial, so a trial holds several units and the threshold is not the latency of the first one
+# (e-Czas sends its time packet every 12 s; an 8 s trial held one or none, and the 4.1 gap table showed 30 dB)
+MODE_SECS = {"eczas": 60.0}
+
 SKIP_DEFAULT = {"t2", "dvbt", "atsc", "dab", "atsc3", "isdbt", "dvbs", "dtmb", "atv", "dvbc", "dvbc2", "dvbsh", "isdbs", "fpv", "cell", "nr", "umts",
                 "cdma", "tdscdma", "xlink", "wifi", "dji", "iptv"}
 
@@ -91,7 +95,8 @@ def sweep(a, md):
     out = {}
     # the reference: the clean signal (60 dB), its silence baseline and which measure the mode has
     ref = None
-    for secs in ([a.secs, 32.0] if a.secs < 32 else [a.secs]):
+    s0 = max(a.secs, MODE_SECS.get(md.id, 0.0))
+    for secs in ([s0, 32.0] if s0 < 32 else [s0]):
         secs = min(secs, a.max_samples / max(md.rate, 1.0))
         g = md.gen(60, 0, secs)
         if g is None:
