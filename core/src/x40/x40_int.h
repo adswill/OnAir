@@ -91,6 +91,7 @@ std::unique_ptr<Decoder> makeCrowd36();
 std::unique_ptr<Decoder> makeF01();
 std::unique_ptr<Decoder> makeF06();
 std::unique_ptr<Decoder> makeGw();
+std::unique_ptr<Decoder> makeStl();
 
 // Windowed-sinc low-pass FIR with decimation by an integer factor. Complex in, complex out. Self-contained so the decoders can be tested alone.
 class Decimator {

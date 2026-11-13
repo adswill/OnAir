@@ -22,6 +22,8 @@ public:
 
     void setVolume(float v);                             // 0 .. 1
     void setMuted(bool m);
+    // The deviation that means full level for the sound device (default 75 kHz): a link that carries the programme at +-60 kHz gets 75 / 60 more gain (0.125 .. 8). Sound output only; the measurements and the audio tap are unchanged (any thread).
+    void setReferenceDeviation(double hz);
     void setMono(bool on);                               // force mono: the 19 kHz pilot and the stereo decoder are ignored (less noise on a weak station); off = stereo when the pilot is locked
     void setDeemphasis(double microseconds);             // 50 (Europe, Middle East, most of the world) or 75 (Americas, South Korea); 0: off
     // Issue #213 (any thread): 0 auto (stereo when the pilot is locked), 1 mono (as setMono(true)), 2 stereo whenever a pilot is there at all

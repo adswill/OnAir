@@ -4535,3 +4535,13 @@ HF MFSK, 40 Bd	KW-MFSK, 40 Bd
 HF FSK, 200 Bd 500 Hz	KW-FSK, 200 Bd 500 Hz
 HF FSK, 200 Bd 1000 Hz	KW-FSK, 200 Bd 1000 Hz
 HF FSK, 100 Bd 200 Hz	KW-FSK, 100 Bd 200 Hz
+Sound level	Tonpegel
+Link settings (advanced)	Streckeneinstellungen (erweitert)
+Deviation at 100 % (kHz)	Hub bei 100 % (kHz)
+Channel width (kHz)	Kanalbreite (kHz)
+75 us (US)	75 us (USA)
+50 us	50 us
+Flat (no de-emphasis)	Linear (ohne Deemphase)
+Automatic (stereo when the pilot is locked)	Automatisch (Stereo bei verriegeltem Pilotton)
+Composite stereo	Composite-Stereo
+the programme	das Programm

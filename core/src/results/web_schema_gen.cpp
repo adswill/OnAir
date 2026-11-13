@@ -15437,6 +15437,7 @@ static bool put_780(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Teleme
 static bool put_781(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static bool put_782(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static bool put_783(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_786(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static bool put_791(const RxTelemetry& rx, std::string& s) { ev_dect2__LtPosTelemetry(s, rx.ltpos); return true; }
 static bool put_801(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
 static bool put_802(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
@@ -15776,6 +15777,7 @@ static const StdEntry kStd[] = {
     {781, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_781},
     {782, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_782},
     {783, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_783},
+    {786, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_786},
     {791, "ltpos", "dect2::LtPosTelemetry", kSchema_dect2__LtPosTelemetry, put_791},
     {801, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_801},
     {802, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_802},
@@ -15960,6 +15962,7 @@ static const WebModeRow kRows[] = {
     {887, "UHF RFID reader (EPC Gen2)", 8, "UHF RFID: reader commands, Tari and tag rate", "", 889, 888, "x40"},
     {888, "Qi wireless charging", 8, "Qi: packets from the phone to the charger", "", 890, 889, "x40"},
     {889, "FM modulation monitor", 1, "FM monitor: deviation, pilot, RDS, MPX power", "", 891, 890, "x40"},
+    {785, "STL link (studio-to-transmitter)", 1, "STL link: composite or mono analogue studio-to-transmitter audio (simulated only)", "", 787, 786, "x40"},
     {890, "AM modulation monitor", 1, "AM monitor: depth, peaks, hum, bandwidth", "", 892, 891, "x40"},
     {891, "Power-line noise locator", 13, "Noise locator: impulse rate, repetition, level", "", 893, 892, "x40"},
     {892, "Radar pulse analyser", 2, "Radar pulses: PRI, width, stagger, antenna turn", "", 894, 893, "x40"},
