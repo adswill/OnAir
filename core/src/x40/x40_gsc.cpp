@@ -269,14 +269,14 @@ private:
         int rawPol = 1;
         if (ct >= 10 && scMatch(st, pol_, 8, rawPol) && rawPol == pol_) { misses_ = 0; blockQuality(st); onStart(); return; }
         std::array<int, 8> info{}; int flips = 0;
-        if (dataBlock(st, pol_, info, flips)) { misses_ = 0; blockQuality(st); onData(info); return; }
+        if (pend_.on && dataBlock(st, pol_, info, flips)) { misses_ = 0; blockQuality(st); onData(info); return; }
         if (ct >= 20) {
             const Addr a = address(st, pol_, 3, 3, true);
             if (a.ok) { misses_ = 0; blockQuality(st); onAddress(a); return; }
         }
         if (ct >= 16) {
             int word = 0;
-            if (activation(st, pol_, 6, word)) { misses_ = 0; blockQuality(st); onActivation(word); return; }
+            if (activation(st, pol_, 6, word) && ((pend_.on && pend_.blocks.empty()) || (voiceOpen_ && word == voiceWord_))) { misses_ = 0; blockQuality(st); onActivation(word); return; }
         }
         finish();
         out->bad();
