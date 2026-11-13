@@ -11,9 +11,9 @@
 using namespace dect2;
 
 int main() {
-    for (double rate : {20e6, 24e6, 25e6, 26e6, 30.72e6})
-        for (double ppm : {0.0, 1.0, 10.0, -10.0})
-            for (double cfo : {0.0, 20e3}) {
+    for (double rate : {24e6, 25e6})
+        for (double ppm : {0.0, 10.0})
+            for (double cfo : {0.0}) {
                 WifiGenConfig c; c.rate = rate; c.clockPpm = ppm; c.cfoHz = cfo; c.snrDb = 99;
                 espnow::Build b; b.body.assign(20, 0x5A);
                 WifiGenFrame f; f.mpdu = espnow::makeFrame(b); f.gapSec = 0.001;

@@ -18,6 +18,7 @@
 #include <cmath>
 #include <complex>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <mutex>
@@ -358,6 +359,7 @@ struct WifiReceiver::Impl {
         return {cr[j], ci[j]};
     }
 
+    int dbgSteps = 0;   // TEMPORARY diagnostic
     struct Demod { std::vector<uint8_t> bits; double angSum = 0, angSq = 0; int nAng = 0; int64_t end = 0; };
 
     // nBits descrambled bits after the SFD, with an early / late timing tracker. Bits from qpskFrom on come two to a symbol (DQPSK, clause
@@ -375,7 +377,8 @@ struct WifiReceiver::Impl {
             t += kSps;
             const double e = (mag(t + 1) - mag(t - 1)) / (mag(t) + 1e-12);
             acc = 0.9 * acc + e;
-            if (acc > 2.5) { t++; acc = 0; } else if (acc < -2.5) { t--; acc = 0; }
+            static const bool dbgNoTrack = std::getenv("ONAIR_WIFI_NOTRACK") != nullptr;   // TEMPORARY diagnostic
+            if (!dbgNoTrack) { if (acc > 2.5) { t++; acc = 0; dbgSteps++; } else if (acc < -2.5) { t--; acc = 0; dbgSteps--; } }
             const std::complex<float> c = cAt(t);
             const std::complex<float> d = c * std::conj(prev);
             prev = c;
@@ -420,12 +423,25 @@ struct WifiReceiver::Impl {
         const int64_t end = std::min(base + (int64_t)cr.size(), doneTo) - kSps;   // the last symbol start with its correlation in (and searched)
         while (pending && end >= pd.need) {
             if (pd.stage == 0) {
+                dbgSteps = 0;
                 Demod dm;
                 demod(pd.at, 48, pd.shortPre ? 0 : kAllOne, dm);
                 if (dm.bits.size() < 48) { tel.headersBad++; pending = false; busyUntil = 0; break; }
                 uint16_t crc = 0;
                 for (int k = 0; k < 16; k++) crc = (uint16_t)(crc << 1 | dm.bits[(size_t)(32 + k)]);
-                if (wifi::crc16(dm.bits.data(), 32) != crc) { tel.headersBad++; pending = false; busyUntil = 0; break; }
+                if (wifi::crc16(dm.bits.data(), 32) != crc) {
+                    static int dbgN = 0;   // TEMPORARY diagnostic
+                    if (std::getenv("ONAIR_WIFI_DEBUG") && dbgN++ < 3) {
+                        std::printf("WDBG hdr bad at %lld steps %d mags:", (long long)pd.at, dbgSteps);
+                        for (int o = -6; o <= 6; o++) std::printf(" %.3f", mag(pd.at + o));
+                        std::printf(" | next-symbol mags:");
+                        for (int o = -6; o <= 6; o++) std::printf(" %.3f", mag(pd.at + kSps + o));
+                        std::printf(" | bits:");
+                        for (int k = 0; k < 48; k++) std::printf("%d", dm.bits[(size_t)k]);
+                        std::printf("\n");
+                    }
+                    tel.headersBad++; pending = false; busyUntil = 0; break;
+                }
                 uint8_t h[4] = {};
                 for (int i = 0; i < 32; i++) h[i / 8] |= (uint8_t)(dm.bits[(size_t)i] << (i % 8));
                 tel.headersOk++;
