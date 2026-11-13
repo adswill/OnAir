@@ -43,26 +43,23 @@ constexpr int kIsoTransfers = 16;           // 64 ms in flight
 constexpr int kBulkBytes = 16384;           // 16 blocks; what older usbfs kernels take per request
 constexpr int kBulkTransfers = 32;
 
+// One libusb context for the life of the program, made at the first use and never closed: the radio list is read often, and a
+// libusb_exit soon after libusb_init can hang on macOS (its event thread may not have started yet).
 std::mutex gCtxMu;
 libusb_context* gCtx = nullptr;
-int gCtxRefs = 0;
 
 libusb_context* acquireContext(std::string& err) {
     std::lock_guard<std::mutex> lk(gCtxMu);
-    if (gCtxRefs == 0) {
+    if (!gCtx) {
 #ifdef DECT2_MIRICS_FD
         if (usbFdPlatform()) libusb_set_option(nullptr, LIBUSB_OPTION_NO_DEVICE_DISCOVERY);   // Android: no bus scan without root
 #endif
         const int r = libusb_init(&gCtx);
         if (r != 0) { err = DIAG_TEXT(770655, "The USB library did not start for the Mirics radio (%s), so it cannot be opened.", libusb_error_name(r)); gCtx = nullptr; return nullptr; }
     }
-    gCtxRefs++;
     return gCtx;
 }
-void releaseContext() {
-    std::lock_guard<std::mutex> lk(gCtxMu);
-    if (gCtxRefs > 0 && --gCtxRefs == 0) { libusb_exit(gCtx); gCtx = nullptr; }
-}
+void releaseContext() {}
 
 const char* kUntested = " (untested on hardware)";
 
