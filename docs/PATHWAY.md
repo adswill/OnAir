@@ -2165,3 +2165,8 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - Defaults are unchanged (8 Msps from 64 MHz). Rates up to 64 Msps are unchanged too.
 - New pure functions rx888RatePlan and rx888TransferPlan (rx888_usb.h). test_rx888 adds a rate-plan sweep over every mode, transfer sizing, the reported limits, the D = 1 tone and mirror, the 65 Msps tone with no mirror, overclock, 200 Msps (given 140, with a note), the VHF note, and USB 2 as a warning. Fake FX3 only: not tested on a real RX888. docs/RX888-RATES-4.1.md has the bandwidth table.
 - D=1 got its own float mixer (the generic path cost 1.05 s of CPU per second of signal at 128 Msps on the Windows runner; now 0.33). Conversion cost on the CI runners, one thread, per second of signal: 64 MHz clock with D=32 0.19 s; 128 MHz with D=2 0.63 s; 130 MHz with D=2 0.64 s; 128/130 MHz with D=1 0.33 s. GitHub quick runs 43383249441 (Linux) and 43383254973 (Windows): rx888 passed.
+## 2026-11-13: native driver test fixed (feat41-nativefix, docs/NATIVE-FIX-4.1.md)
+- ctest native failed 4 checks on 4.0 and, as a v3.9.0 comparison on the same runner showed, on 3.9 too: drivers, fakes and test are unchanged since 3.9.
+- Real bug (since 0.2.7): a sample rate too wide for the Airspy HF+ stopped the stream instead of keeping it running. Fixed with resumeAfterConfigureFailure.
+- Outdated test: HF+ 192 kHz tone window (0.5 s transfer collection on restart), RTL-SDR V4 note with a stock-library fake, HF+ bias-tee with a frozen listing (open now refreshes it).
+- No 4.0.1 needed for this. quick run 43377142724: native, native_nobias, dxpatrol, native_lifecycle, usb_fd pass; Windows 43374750816 pass.

@@ -389,7 +389,14 @@ static void radiosChecks(const char* dir, const char* ext) {
         t.centerHz = 7e6; t.sampleRate = 2.048e6; t.bandwidthMhz = 0.2;
         e.clear();
         CHECK(v4->start(t, ring, e), "V4 at 7 MHz: %s", e.c_str());
-        CHECK(std::max(0.0, st("rtl.dsCalls")) == calls && st("rtl.freq") == 7e6 && e.empty(), "V4: direct sampling switched (%.0f calls), note '%s'", st("rtl.dsCalls") - calls, e.c_str());
+        // the fake is a stock osmocom librtlsdr (no rtlsdr_check_dongle_model): a V4 below 24 MHz then gets the note that HF needs the Blog
+        // library (the macOS and Windows builds bundle it); with a Blog library there is no note
+        {
+            void* rh = dlopen((std::string(dir) + "/librtlsdr" + ext).c_str(), RTLD_NOW | RTLD_NOLOAD);
+            const bool blogFake = rh && dlsym(rh, "rtlsdr_check_dongle_model");
+            const bool noted = has(e, "this dongle is an RTL-SDR Blog V4: HF needs librtlsdr from rtl-sdr-blog");
+            CHECK(std::max(0.0, st("rtl.dsCalls")) == calls && st("rtl.freq") == 7e6 && noted != blogFake, "V4: direct sampling switched (%.0f calls), Blog library %d, note '%s'", st("rtl.dsCalls") - calls, blogFake, e.c_str());
+        }
         // a V4 goes down to 9 MHz (and below) and up through the same call: nothing is refused, direct sampling is never asked for
         for (double fq : {9e6, 100e3, 1e9, 2e9}) {
             t.centerHz = fq; e.clear();
@@ -844,10 +851,14 @@ static void radioSettingsChecks(const char* dir, const char* ext) {
         }
         src.reset();
         // a model with antenna power
+        // The listing no longer opens an HF+ once one was opened here (#78: list_devices races stop/close), so it shows what the radio said at
+        // its last open. In the app the first listing (before any open) reads it; here the radio was already used, so it is opened once first.
         set("airspyhf.biasCount", 1);
+        t.radio.clear(); t.biasTee = false;
+        { auto once = makeSource(d); e.clear(); if (once->start(t, ring, e)) once->stop(); }
         d = first("airspyhf");
         CHECK(d.hasBiasTee, "HF+ with a bias-tee: not offered");
-        t.radio.clear(); t.biasTee = true;
+        t.biasTee = true;
         auto b = makeSource(d);
         e.clear();
         ok = b->start(t, ring, e);
@@ -1632,7 +1643,8 @@ int main(int argc, char** argv) {
             auto toneHz = [&](IqRing& ring, double rate, double& amp) {
                 std::vector<cf32> buf(1 << 14), got;
                 while (ring.read(buf.data(), buf.size())) {}   // what the earlier rate left behind
-                const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(250);
+                // (a restart for another rate first collects the last stream's cancelled transfers, about 0.5 s: collectTransfers())
+                const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(1500);
                 while (std::chrono::steady_clock::now() < end && got.size() < 4096) {
                     const size_t n = ring.read(buf.data(), buf.size());
                     got.insert(got.end(), buf.begin(), buf.begin() + n);
