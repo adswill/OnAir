@@ -2122,3 +2122,6 @@ Mode count fix: tools/gen_modes_list.py, gen_web_schema.py, android/tools/gen_mo
 
 ## 2026-11-12 - OOK on / off-time scatter (feat41-ookxy)
 Added the scatter plot (on time against the following off time per pulse) with cluster centres, an encoding guess (PWM, PPM, Manchester, unknown), burst selection, log or linear axes and CSV copy to the OOK analyser (x40) and the ISM Unknown view. Logic in core/include/dect2/ism/ook_scatter.h, test `ook_scatter`, notes in docs/OOK-SCATTER-4.1.md. Simulated pulse trains only.
+
+## 2026-11-13: contributor credit in the 7(b) attribution term (4.1)
+- ADDITIONAL-TERMS.md item 3: works using OnAir code also credit the OnAir contributors in their legal notices, by the CONTRIBUTORS.md list or a link to it. It applies from 4.1 on; earlier releases keep the terms they came with. README, NOTICE.md and AGENTS.md say the same.
