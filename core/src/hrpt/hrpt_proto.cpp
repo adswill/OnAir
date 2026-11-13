@@ -68,7 +68,7 @@ uint64_t noaaSync60() {
 
 bool decodeNoaaFrame(const uint16_t w[kNoaaWords], Line& out) {
     int err = 0;
-    for (int i = 0; i < kNoaaSyncWords; i++) err += __builtin_popcount((unsigned)(w[i] ^ kNoaaSync[i]) & 0x3FF);
+    for (int i = 0; i < kNoaaSyncWords; i++) err += ::dect2::bits::popcount((uint32_t)((unsigned)(w[i] ^ kNoaaSync[i]) & 0x3FF));
     if (err > 12) return false;
     out.day = (uint32_t)(w[8] >> 1 & 0x1FF);
     out.ms = (uint32_t)(w[9] & 0x7F) << 20 | (uint32_t)(w[10] & 0x3FF) << 10 | (uint32_t)(w[11] & 0x3FF);

@@ -1,4 +1,5 @@
 // See xband_rx.h. Link parameters from SatDump's pipelines (GPL-3.0, Copyright Aang23 and contributors); code written for OnAir.
+#include "dect2/common/bits.h"
 #include "dect2/xband/xband_rx.h"
 #include "dect2/xband/xband_proto.h"
 #include "dect2/xband/xband_products.h"
@@ -478,8 +479,8 @@ struct XbandReceiver::Impl {
                     }
                     w = w << 2 | (uint64_t)(a > 0) << 1 | (uint64_t)(b > 0);
                     if (i >= 31) {
-                        if (__builtin_popcountll((w ^ pat0) & mask) <= 10) hits.push_back(i);
-                        else if (L.nrzm && __builtin_popcountll((w ^ pat1) & mask) <= 10) hits.push_back(i);
+                        if (::dect2::bits::popcount((uint64_t)((w ^ pat0) & mask)) <= 10) hits.push_back(i);
+                        else if (L.nrzm && ::dect2::bits::popcount((uint64_t)((w ^ pat1) & mask)) <= 10) hits.push_back(i);
                     }
                 }
                 const int wantFrameBits = L.caduBytes * 8;
@@ -498,7 +499,7 @@ struct XbandReceiver::Impl {
             const auto ob = [&](int b, int idx) {
                 if (L.nrzm) { const int d = b ^ nz; nz = b; b = d; }
                 w = w << 1 | (uint32_t)b;
-                const int d0 = __builtin_popcount(w ^ kAsmV), d1 = __builtin_popcount(~w ^ kAsmV);
+                const int d0 = ::dect2::bits::popcount((uint32_t)(w ^ kAsmV)), d1 = ::dect2::bits::popcount((uint32_t)(~w ^ kAsmV));
                 if (idx >= 31 && (d0 <= 2 || d1 <= 2)) bitHits.push_back(idx);
             };
             for (int i = 0; i < np; i++) {
@@ -593,7 +594,7 @@ struct XbandReceiver::Impl {
         if (kanSkip > 0) { kanSkip--; return; }
         static const uint8_t sy[4] = {0b00000100, 0b10110011, 0b11100011, 0b01110101};
         int diff = 0;
-        for (int f = 0; f < 2; f++) for (int s2 = 0; s2 < 4; s2++) { uint8_t v = 0; for (int k = 0; k < 8; k++) v = (uint8_t)(v << 1 | kanBit((s2 * 384 + k) * 8 + f)); diff += __builtin_popcount(v ^ sy[s2]); }
+        for (int f = 0; f < 2; f++) for (int s2 = 0; s2 < 4; s2++) { uint8_t v = 0; for (int k = 0; k < 8; k++) v = (uint8_t)(v << 1 | kanBit((s2 * 384 + k) * 8 + f)); diff += ::dect2::bits::popcount((uint32_t)(v ^ sy[s2])); }
         if (!kanLocked ? diff == 0 : diff < 10) {
             kanLocked = true; kanBad = 0;
             kanWrite();
@@ -624,7 +625,7 @@ struct XbandReceiver::Impl {
         if (pmssSkip > 0) { pmssSkip--; return; }
         static const uint8_t sw[16] = {0xf5,0x0a,0xf5,0x0a,0xf5,0x0a,0xf5,0x0a,0xf5,0x0a,0xf5,0x0a,0xf5,0x0a,0xf5,0x0a};
         int e = 0;
-        for (int i = 0; i < 16; i++) e += __builtin_popcount((unsigned)(pmssSr[i] ^ sw[i]));
+        for (int i = 0; i < 16; i++) e += ::dect2::bits::popcount((uint32_t)((unsigned)(pmssSr[i] ^ sw[i])));
         if (pmssSync ? e < 8 : e == 0) {
             pmssIn = 1960 - 16; pmssSkip = 15;
             pmssFrm.assign(pmssSr, pmssSr + 16);

@@ -1,4 +1,5 @@
 // See wxsat_proto.h. Formats from SatDump (GPL-3.0, Copyright Aang23 and contributors), code written for OnAir.
+#include "dect2/common/bits.h"
 #include "dect2/wxsat/wxsat_proto.h"
 #include "dect2/hrpt/hrpt_proto.h"
 #include "dect2/meteor/meteor_proto.h"
@@ -86,7 +87,7 @@ void Deframer::pushSlow(int bit) {
         }
         return;
     }
-    const int e = __builtin_popcountll((sr_ ^ sync_) & mask_), ei = allowInv_ ? syncBits_ - e : syncBits_ + 1;
+    const int e = ::dect2::bits::popcount((uint64_t)((sr_ ^ sync_) & mask_)), ei = allowInv_ ? syncBits_ - e : syncBits_ + 1;
     if (lock_) {
         if (++pos_ < syncBits_) return;
         const int m = std::min(e, ei);
