@@ -4,6 +4,7 @@
 // The DRM broadcast schedule page: its JSON (short wave) and its medium wave table, and what is on air at a given time. See drm_schedule.h.
 #include "dect2/drm/drm_schedule.h"
 #include "dect2/mcp/mcp.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
@@ -226,7 +227,7 @@ bool parsePage(const std::string& html, Schedule& out, std::string& err) {
     out = Schedule();
     parseJsonPart(html, out);
     parseMediumWave(html, out);
-    if (out.items.empty()) { err = "the page has no schedule OnAir can read (its layout may have changed)"; return false; }
+    if (out.items.empty()) { DIAG(497861, "The DRM Association broadcast schedule page holds no entries OnAir can read (its layout may have changed), so the schedule list stays empty."); err = "the page has no schedule OnAir can read (its layout may have changed)"; return false; }
     return true;
 }
 

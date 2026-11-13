@@ -16,6 +16,7 @@
 #include "dect2/drm/drm_aac.h"
 #include "dect2/drm/drm_fec.h"
 #include "drm_aac_internal.h"
+#include "dect2/common/diag.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/channel_layout.h>
@@ -482,7 +483,7 @@ struct AacCoreDecoder::Impl {
     bool open() {
         close();
         const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_AAC);
-        if (!codec) { lastError = "no AAC decoder in this build"; return false; }
+        if (!codec) { DIAG_DEBUG(557861, "This build has no FFmpeg AAC decoder, so the DRM AAC core decoder cannot start."); lastError = "no AAC decoder in this build"; return false; }
         ctx = avcodec_alloc_context3(codec);
         ctx->log_level_offset = 24;
         // AudioSpecificConfig: AAC-LC, core rate, mono, 960 samples per frame
@@ -494,7 +495,7 @@ struct AacCoreDecoder::Impl {
         ctx->extradata = (uint8_t*)av_mallocz(a.b.size() + AV_INPUT_BUFFER_PADDING_SIZE);
         std::memcpy(ctx->extradata, a.b.data(), a.b.size());
         ctx->extradata_size = (int)a.b.size();
-        if (avcodec_open2(ctx, codec, nullptr) < 0) { avcodec_free_context(&ctx); lastError = "the AAC decoder would not open"; return false; }
+        if (avcodec_open2(ctx, codec, nullptr) < 0) { DIAG_DEBUG(862679, "The FFmpeg AAC decoder did not open for a %d Hz DRM AAC core, so this service stays silent.", rate); avcodec_free_context(&ctx); lastError = "the AAC decoder would not open"; return false; }
         frame = av_frame_alloc();
         pkt = av_packet_alloc();
         return true;
@@ -508,8 +509,8 @@ bool AacCoreDecoder::configure(int rateHz, bool stereo, std::string* why) {
     Impl& d = *p_;
     d.rate = rateHz; d.stereo = stereo;
     d.unsupported = d.damaged = d.decoded = 0;
-    if (rateHz != 12000 && rateHz != 24000) { if (why) *why = "AAC core rate not supported"; return false; }
-    if (stereo) { if (why) *why = "AAC stereo (not verified against a real stream)"; return false; }
+    if (rateHz != 12000 && rateHz != 24000) { DIAG(645836, "The DRM AAC core rate of %d Hz is not supported (only 12000 and 24000 Hz are), so this service stays silent.", rateHz); if (why) *why = "AAC core rate not supported"; return false; }
+    if (stereo) { DIAG(602727, "A DRM AAC stereo service at %d Hz is not supported yet (it was not verified against a real stream), so this service stays silent.", rateHz); if (why) *why = "AAC stereo (not verified against a real stream)"; return false; }
     if (!d.open()) { if (why) *why = d.lastError; return false; }
     return true;
 }
@@ -537,23 +538,23 @@ AacFrameStatus AacCoreDecoder::frame(const uint8_t* data, int len, uint8_t crc, 
     if (!d.ctx || len < 4) return lost(AacFrameStatus::kDamaged);
     Ics s;
     const Result r = parseSi(data, (size_t)len * 8, d.rate, s);
-    if (r == kDamaged) { d.damaged++; return lost(AacFrameStatus::kDamaged); }
+    if (r == kDamaged) { DIAG_DEBUG_EVERY(118817, 5, "The side information of a DRM AAC frame is damaged, so the frame is replaced by a faded gap."); d.damaged++; return lost(AacFrameStatus::kDamaged); }
     // the CRC of the super frame covers the side information and the TNS data
     {
         std::vector<uint8_t> b(s.tnsEnd);
         for (size_t i = 0; i < s.tnsEnd; i++) b[i] = (uint8_t)((data[i >> 3] >> (7 - (i & 7))) & 1);
-        if (crc8(b.data(), b.size()) != crc) { d.damaged++; return lost(AacFrameStatus::kDamaged); }
+        if (crc8(b.data(), b.size()) != crc) { DIAG_DEBUG_EVERY(949144, 5, "A DRM AAC frame failed the CRC-8 of the audio super frame over its side information, so the frame is replaced by a faded gap."); d.damaged++; return lost(AacFrameStatus::kDamaged); }
     }
-    if (r == kUnsupported) { d.unsupported++; return lost(AacFrameStatus::kUnsupported); }
+    if (r == kUnsupported) { DIAG_DEBUG_EVERY(788338, 5, "A DRM AAC frame uses a coding tool OnAir does not decode, so the frame is replaced by silence."); d.unsupported++; return lost(AacFrameStatus::kUnsupported); }
     d.bits.resize((size_t)s.L);
     for (int i = 0; i < s.L; i++) { const size_t p = s.dataBegin + (size_t)i; d.bits[(size_t)i] = (uint8_t)((data[p >> 3] >> (7 - (p & 7))) & 1); }
-    if (!hcrDecode(s, d.rate, d.bits.data())) { d.damaged++; return lost(AacFrameStatus::kDamaged); }
+    if (!hcrDecode(s, d.rate, d.bits.data())) { DIAG_DEBUG_EVERY(570149, 5, "The Huffman codeword reordering of a DRM AAC frame could not be decoded, so the frame is replaced by a faded gap."); d.damaged++; return lost(AacFrameStatus::kDamaged); }
     const std::vector<uint8_t> raw = writeRaw(s, data, d.rate);
     if (av_new_packet(d.pkt, (int)raw.size()) < 0) return lost(AacFrameStatus::kDamaged);
     std::memcpy(d.pkt->data, raw.data(), raw.size());
     const int sr = avcodec_send_packet(d.ctx, d.pkt);
     av_packet_unref(d.pkt);
-    if (sr < 0) { d.damaged++; return lost(AacFrameStatus::kDamaged); }
+    if (sr < 0) { DIAG_DEBUG_EVERY(326781, 5, "The FFmpeg AAC decoder rejected a DRM AAC frame (error %d), so the frame is replaced by a faded gap.", sr); d.damaged++; return lost(AacFrameStatus::kDamaged); }
     size_t got = 0;
     while (avcodec_receive_frame(d.ctx, d.frame) == 0) {
         const int n = d.frame->nb_samples;
@@ -563,7 +564,7 @@ AacFrameStatus AacCoreDecoder::frame(const uint8_t* data, int len, uint8_t crc, 
         got += (size_t)n;
         av_frame_unref(d.frame);
     }
-    if (got != (size_t)kFrame) { out.resize(start); d.damaged++; return lost(AacFrameStatus::kDamaged); }
+    if (got != (size_t)kFrame) { DIAG_DEBUG_EVERY(133598, 5, "The FFmpeg AAC decoder returned %zu samples for a DRM AAC frame instead of %d, so the frame is replaced by a faded gap.", got, (int)kFrame); out.resize(start); d.damaged++; return lost(AacFrameStatus::kDamaged); }
     if (!d.prevOk && d.fades) for (int i = 0; i < kFrame; i++) out[start + (size_t)i] *= (float)i / kFrame;
     d.last.assign(out.begin() + (ptrdiff_t)start, out.end());
     d.prevOk = true;

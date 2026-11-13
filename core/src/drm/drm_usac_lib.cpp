@@ -4,6 +4,7 @@
 // Run-time loader for the optional libfdk-aac USAC decoder (see drm_usac_lib.h). Not shipped, not linked.
 #include "dect2/drm/drm_usac_lib.h"
 #include "../source/native_common.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <atomic>
 #include <cstdlib>
@@ -44,7 +45,7 @@ std::vector<std::string> UsacLib::codecFolderCandidates() {
             if (low.find(".dll") == std::string::npos && low.find(".dylib") == std::string::npos && low.find(".so") == std::string::npos) continue;
             if (std::find(v.begin(), v.end(), dir + f) == v.end()) extra.push_back(dir + f);
         }
-        } catch (const std::exception&) {}
+        } catch (const std::exception&) { DIAG_DEBUG(815049, "The codecs folder %s could not be listed, so libfdk-aac is only looked for by its usual names there.", dir.c_str()); }
         std::sort(extra.begin(), extra.end());
         v.insert(v.end(), extra.begin(), extra.end());
     }
@@ -101,6 +102,7 @@ UsacLib UsacLib::load(const std::string& path) {
 #endif
     UsacLib l = fromResolver(sym);   // the library handle stays open for the life of the program
     if (h && !l.ok()) rep.failed.push_back(used + ": loaded, but it has no AAC decoder functions (not libfdk-aac, or a build without the decoder)");
+    if (h && !l.ok()) DIAG(246086, "The library %s loaded but has no libfdk-aac decoder functions, so xHE-AAC cannot be decoded with it.", used.c_str());
     rep.loaded = l.ok();
     if (rep.loaded) rep.path = used;
     { std::lock_guard<std::mutex> lk(gRepMu); gRep = rep; }
@@ -129,10 +131,10 @@ bool UsacSession::open(const std::vector<uint8_t>& asc) {
     err_ = 0; step_ = "";
     if (!lib_.ok() || asc.empty()) return false;
     h_ = lib_.open(0 /* TT_MP4_RAW */, 1);
-    if (!h_) { step_ = "aacDecoder_Open"; err_ = -1; return false; }
+    if (!h_) { step_ = "aacDecoder_Open"; err_ = -1; DIAG_DEBUG(892325, "The libfdk-aac decoder could not create a decoder instance, so xHE-AAC is not decoded with it."); return false; }
     uint8_t* conf[1] = {const_cast<uint8_t*>(asc.data())};
     const unsigned len[1] = {(unsigned)asc.size()};
-    if (const int e = lib_.configRaw(h_, conf, len); e != 0) { step_ = "aacDecoder_ConfigRaw"; err_ = e; close(); return false; }
+    if (const int e = lib_.configRaw(h_, conf, len); e != 0) { step_ = "aacDecoder_ConfigRaw"; err_ = e; DIAG_DEBUG(289931, "The libfdk-aac decoder rejected the xHE-AAC stream configuration (error 0x%x), so the decoder is closed.", (unsigned)e); close(); return false; }
     return true;
 }
 
@@ -145,19 +147,22 @@ bool UsacSession::decode(const std::vector<uint8_t>& au, std::vector<int16_t>& p
     uint8_t* buf[1] = {const_cast<uint8_t*>(au.data())};
     const unsigned size[1] = {(unsigned)au.size()};
     unsigned valid = (unsigned)au.size();
-    if (const int e = lib_.fill(h_, buf, size, &valid); e != 0) { step_ = "aacDecoder_Fill"; err_ = e; return false; }
+    if (const int e = lib_.fill(h_, buf, size, &valid); e != 0) { step_ = "aacDecoder_Fill"; err_ = e; DIAG_DEBUG_EVERY(683531, 5, "The libfdk-aac decoder refused an xHE-AAC access unit of %zu bytes (error 0x%x), so the frame is lost.", au.size(), (unsigned)e); return false; }
     std::vector<int16_t> tmp(8 * 4096);
     // 0x4000 .. 0x4FFF are libfdk-aac's decode errors: it has concealed the frame and the output is valid (IS_OUTPUT_VALID in aacdecoder_lib.h).
     // Throwing that output away left a 64 ms hole for every such frame (#331, #332).
     if (const int e = lib_.decode(h_, tmp.data(), (int)tmp.size(), 0); e != 0) {
         step_ = "aacDecoder_DecodeFrame"; err_ = e;
-        if (e < 0x4000 || e > 0x4FFF) return false;
+        if (e < 0x4000 || e > 0x4FFF) { DIAG_DEBUG_EVERY(703103, 5, "The libfdk-aac decoder failed to decode an xHE-AAC frame (error 0x%x) and produced no audio, so the frame is lost.", (unsigned)e); return false; }
     }
     const int* si = lib_.info(h_);
-    if (!si) { step_ = "aacDecoder_GetStreamInfo"; err_ = -1; return false; }
+    if (!si) { step_ = "aacDecoder_GetStreamInfo"; err_ = -1; DIAG_DEBUG_EVERY(759053, 5, "The libfdk-aac decoder gave no stream information for an xHE-AAC frame, so the frame is lost."); return false; }
     rate = si[0]; channels = si[2];
     const int frame = si[1];
-    if (rate <= 0 || channels <= 0 || frame <= 0 || (size_t)frame * (size_t)channels > tmp.size()) return false;
+    if (rate <= 0 || channels <= 0 || frame <= 0 || (size_t)frame * (size_t)channels > tmp.size()) {
+        DIAG_DEBUG_EVERY(175095, 5, "The libfdk-aac decoder reported an unusable xHE-AAC output (%d Hz, %d channels, %d samples per frame), so the frame is lost.", rate, channels, frame);
+        return false;
+    }
     pcm.assign(tmp.begin(), tmp.begin() + (size_t)frame * (size_t)channels);
     return true;
 }

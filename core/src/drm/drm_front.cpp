@@ -3,6 +3,7 @@
 
 // DRM receiver front end: decimation to 48 kHz.
 #include "drm_front.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include "dect2/common/window.h"
@@ -136,7 +137,7 @@ bool DrmFront::configure(double inRate, double outRate, double minIn) {
             r = out;
         }
     }
-    if (!rs_.configure(r, outRate)) return false;
+    if (!rs_.configure(r, outRate)) { DIAG_DEBUG(667975, "The DRM front end resampler could not be set up for %.0f Hz to %.0f Hz, so this input rate is not usable.", r, (double)outRate); return false; }
     useRs_ = true;
     ready_ = true;
     reset();
@@ -175,6 +176,7 @@ void DrmFront::process(const cf32* in, size_t n, std::vector<cf32>& out) {
     // NaN or infinite samples (a broken file or driver) would stay in the filters and the DC estimate for good: they become zeros
     for (size_t i = 0; i < n; i++)
         if (!std::isfinite(in[i].real()) || !std::isfinite(in[i].imag())) {
+            DIAG_EVERY(462729, 10, "The DRM input contains NaN or infinite samples (a broken file or driver), so they are replaced by zeros.");
             clean_.assign(in, in + n);
             for (auto& v : clean_) if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) v = cf32(0, 0);
             in = clean_.data();

@@ -5,6 +5,7 @@
 #include "dect2/drm/drm_msg.h"
 #include "dect2/drm/drm_fec.h"
 #include "dect2/drm/drm_proto.h"
+#include "dect2/common/diag.h"
 #include <mutex>
 #include <set>
 #include <algorithm>
@@ -242,7 +243,7 @@ std::string cleanTextMessage(const std::string& in) {
 void TextDecoder::finishSegment() {
     const drmp::TextSeg s = drmp::textSegment(seg_.data(), seg_.size(), need_);   // the CRC-16 and the header fields
     const int n = need_ - 4;
-    if (!s.crcOk) { bad_++; return; }
+    if (!s.crcOk) { DIAG_DEBUG_EVERY(548356, 10, "A DRM text message segment failed its CRC-16, so it is dropped and the text waits for the next repeat."); bad_++; return; }
     ok_++;
     const bool toggle = s.toggle, last = s.last, command = s.command;
     if (command) {
