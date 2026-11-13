@@ -162,6 +162,7 @@ target_sources(dect2core PRIVATE core/src/tv/avsplus_dec.cpp)
 target_sources(dect2core PRIVATE core/src/tv/ip_out.cpp)   # IP output of DVB-H MPE and DVB-C2 GSE: pcap file and UDP forward
 target_sources(dect2core PRIVATE core/src/sweep/survey.cpp core/src/fastscan/floor.cpp core/src/fastscan/hits.cpp core/src/fastscan/plan.cpp core/src/fastscan/record.cpp core/src/fastscan/scanner.cpp core/src/fastscan/profile.cpp core/src/fastscan/qualify.cpp core/src/fastscan/fwsweep.cpp)
 target_sources(dect2core PRIVATE core/src/source/usb_fd.cpp core/src/source/usb_fd_io.cpp core/src/source/audio_push.cpp)   # radios opened by the platform and handed over as USB descriptors (Android): rtl_fd_shim.h
+target_sources(dect2core PRIVATE core/src/source/mirics_regs.cpp core/src/source/mirics_usb.cpp)   # SDRplay RSP1 / Mirics MSi2500 + MSi001: OnAir's own libusb driver (#503)
 # the built-in band plans: data/bandplans/builtin.json compiled in as text (bandplan.cpp parses it); a changed file configures again
 file(READ ${ONAIR_ROOT}/data/bandplans/builtin.json _bp_txt)
 file(CONFIGURE OUTPUT ${CMAKE_BINARY_DIR}/generated/bandplans_data.inc CONTENT "static const char kBuiltinBandPlans[] = R\"OnAirBP(${_bp_txt})OnAirBP\";\n" @ONLY)
@@ -1671,6 +1672,10 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_usb_fd_open tests/source/test_usb_fd_open.cpp)   # open-from-descriptor with a stub, Android sound-card push input
   target_link_libraries(test_usb_fd_open PRIVATE dect2core)
   add_test(NAME usb_fd_open COMMAND test_usb_fd_open)
+  # the Mirics MSi2500 / MSi001 (SDRplay RSP1) driver's register maths and sample unpacking, no radio
+  add_executable(test_mirics tests/source/test_mirics.cpp)
+  target_link_libraries(test_mirics PRIVATE dect2core)
+  add_test(NAME mirics COMMAND test_mirics)
 
   add_executable(test_crash_report tests/engine/test_crash_report.cpp)
   target_link_libraries(test_crash_report PRIVATE dect2core)

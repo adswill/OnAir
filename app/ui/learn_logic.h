@@ -108,6 +108,7 @@ inline const char* radioBlurb(const std::string& board, const std::string& name)
         {"rtl", N_("RTL-SDR: the cheap and popular USB stick, about 24 MHz to 1.7 GHz. Good for FM, airband, ADS-B and AIS.")},
         {"hydrasdr", N_("HydraSDR RFOne: a sensitive receive-only radio with three antenna inputs.")},
         {"airspy", N_("Airspy: a sensitive receiver with low noise, good for weak signals.")},
+        {"mirics", N_("SDRplay RSP1 or a Mirics MSi2500 stick on OnAir's own driver, 10 kHz to 2 GHz, no SDRplay API needed. Untested on hardware: please report how it works.")},
         {"sdrplay", N_("SDRplay RSP: covers long wave to 2 GHz, very good on short wave. Needs the SDRplay API.")},
         {"rsp", N_("SDRplay RSP: covers long wave to 2 GHz, very good on short wave. Needs the SDRplay API.")},
         {"pluto", N_("PlutoSDR: receives and transmits, 70 MHz to 6 GHz (more after the usual tweak).")},

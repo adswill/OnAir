@@ -115,6 +115,7 @@ KEEP long hackrf_stop_rx(void) { return -1; }
  * from the app's descriptor but cannot be opened (libusb_wrap_sys_device answers LIBUSB_ERROR_NOT_SUPPORTED). The two entry points the
  * descriptor path uses (libusb_set_option, libusb_wrap_sys_device) were added by hand. */
 KEEP long libusb_set_option(void) { return -1; }
+KEEP long libusb_set_interface_alt_setting(void) { return -1; }   /* the Mirics driver (mirics_usb.cpp) */
 KEEP long libusb_wrap_sys_device(void) { return -12; }   /* LIBUSB_ERROR_NOT_SUPPORTED */
 KEEP void* libusb_alloc_transfer(void) { return NULL; }
 KEEP long libusb_cancel_transfer(void) { return -1; }

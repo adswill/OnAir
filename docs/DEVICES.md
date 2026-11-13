@@ -29,5 +29,28 @@ list and work in every mode that takes raw samples; DVB-T and DVB-T2 are decoded
 separate demodulator chip of the DVB-T2/C models) is **not** used. On Linux the kernel DVB driver may grab the stick first: blacklist `dvb_usb_rtl28xxu`.
 Sticks with another id: report the `lsusb` line. Needs a user test on the DVB-T2/C model.
 
+## SDRplay RSP1 and Mirics MSi2500 sticks: OnAir's own driver (issue 503), untested on hardware
+
+The original SDRplay RSP1 (USB id 1df7:2500, also its clones) is a Mirics MSi2500 USB bridge with an MSi001 tuner. OnAir drives it itself
+(`core/src/source/mirics_usb.cpp`), on Android straight over USB (no RSP-TCP, no SDRplay API, which does not exist for Android) and on Linux,
+macOS and Windows through libusb. TV sticks with the same two chips are listed too: Hauppauge WinTV 133559 LF (2040:d300), AverMedia A859
+(07ca:8591), IO-DATA GV-TV100 (04bb:0537), Logitec LDT-1S310U/J (0511:0037). The RSP1A, RSP1B, RSP2, RSPduo and RSPdx are other chips and
+stay with the SDRplay API.
+
+**Untested on hardware.** The driver was written from libmirisdr's register descriptions without an RSP1 on the desk; its register maths and
+sample unpacking are unit-tested (`tests/source/test_mirics.cpp`), the radio itself is not. The radio list shows "(untested on hardware)"
+until a user confirms it works.
+
+- 10 kHz to 2 GHz, 1.3 to 12.096 Msps. The sample format follows the rate: 14-bit up to 6.048 Msps, 12-bit up to 8.064, 10-bit up to
+  9.216, 8-bit up to 12.096 (radio setting "Sample format").
+- One gain slider, 0 to 102 dB: IF 0-59 dB, then the mixer (+19 dB) from 19 dB, then the LNA (+24 dB) from 43 dB. "LNA" and "Mixer gain"
+  in the radio settings force either on or off.
+- IF filter: Auto (the widest of 0.2, 0.3, 0.6, 1.536, 5, 6, 7, 8 MHz that is not wider than the rate) or one width.
+- "Front end": SDRplay RSP1 (default for 1df7:2500) or Generic stick: the band-switch words differ. Try the other one if a band is deaf.
+- "USB transfer": isochronous (default on Linux, macOS, Android) or bulk (default on Windows; try it on a phone that drops samples).
+- Desktop: when the SDRplay API lists the RSP1, its entry is used and this driver's entry is hidden (the API's service holds the radio).
+  Linux: the kernel's msi2500 module is detached when the radio is opened. Windows: the radio needs the WinUSB driver (Zadig) for this driver.
+- Android: needs an APK built with `LIBUSB_SRC` (android/docs/USB.md), like the HackRF.
+
 ## HackRF baseband filter
 HackRF One / Pro: Advanced > Baseband filter. Auto (default) follows the sample rate (about half of it, wider for a wide channel, the mode's own narrow filter when running at the mode's rate); or pick one of 1.75, 2.5, 3.5, 5, 5.5, 6, 7, 8, 9, 10, 12, 14, 15, 20, 24, 28 MHz. The choice applies at once and is not limited by the sample rate.

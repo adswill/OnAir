@@ -25,3 +25,7 @@ libusb_fill_bulk_transfer
 libusb_get_configuration
 libusb_get_port_numbers
 libusb_set_configuration
+# static inline in libusb.h (as libusb_fill_bulk_transfer): no symbol to link, so no stand-in (mirics_usb.cpp)
+libusb_fill_iso_transfer
+libusb_get_iso_packet_buffer_simple
+libusb_set_iso_packet_lengths

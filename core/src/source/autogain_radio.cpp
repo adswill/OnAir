@@ -304,6 +304,8 @@ RadioProfile radioProfileFor(const DeviceInfo& d) {
     if (b == "rtltcp") return pick("rtltcp");
     if (b == "airspy") return withRange(pick("airspy"));
     if (b == "airspyhf") return pick("airspyhf");
+    // the RSP1 on OnAir's own Mirics driver (mirics_usb.cpp): one overall gain that the driver splits itself, not the SDRplay API's reductions
+    if (b == "mirics") return genericProfile(d.name, d.gainMinDb, d.gainMaxDb, 1);
     if (b == "sdrplay" || b == "nrspst" || has(d.name, "sdrplay") || has(d.name, "rsp")) {
         RadioProfile r = withRange(pick("sdrplay"));
         for (const auto& rs : d.settings)   // a driver that lists the LNA state as a setting (SoapySDRPlay): OnAir sets it itself

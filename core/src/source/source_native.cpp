@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// Native radios (RTL-SDR, Airspy, HydraSDR, BladeRF, LimeSDR, PlutoSDR, USRP, SDRplay, Fobos SDR, RFNM): the list of connected ones and the way to open one.
+// Native radios (RTL-SDR, Airspy, HydraSDR, BladeRF, LimeSDR, PlutoSDR, USRP, SDRplay, Fobos SDR, RFNM, Mirics MSi2500 / RSP1): the list of connected ones and the way to open one.
 // The drivers are in source_rtlsdr.cpp, source_airspy.cpp, source_hydrasdr.cpp, source_bladerf.cpp, source_limesdr.cpp, source_plutosdr.cpp, source_usrp.cpp,
 // source_sdrplay.cpp, source_airspyhf.cpp, source_fobos.cpp and source_rx888.cpp;
 // each loads the radio's own library at run time (native_common.h), so nothing here depends on those libraries being installed.
@@ -23,6 +23,9 @@ std::unique_ptr<IqSource> makeRx888(const DeviceInfo& d);
 // ---- icom (IC-R8600 I/Q, receive only)
 void listIcom(std::vector<DeviceInfo>& out);
 std::unique_ptr<IqSource> makeIcom(const DeviceInfo& d);
+// ---- mirics (SDRplay RSP1 / MSi2500 + MSi001: OnAir's own libusb driver, mirics_usb.cpp)
+void listMirics(std::vector<DeviceInfo>& out);
+std::unique_ptr<IqSource> makeMirics(const DeviceInfo& d);
 // ---- spectran (Aaronia SPECTRAN V6 / V6 ECO through the RTSA API, source_spectran.cpp)
 void listSpectran(std::vector<DeviceInfo>& out);
 std::unique_ptr<IqSource> makeSpectran(const DeviceInfo& d);
@@ -51,6 +54,7 @@ std::vector<DeviceInfo> listNativeDevices(std::string& err) {
         native::listRx888(out);      // ---- rx888
         native::listIcom(out);       // ---- icom
         native::listSpectran(out);   // ---- spectran
+        native::listMirics(out);     // ---- mirics
 #ifdef DECT2_HAVE_RFNM
         native::listRfnm(out);       // ---- rfnm
 #endif
@@ -73,6 +77,13 @@ std::vector<DeviceInfo> listNativeDevices(std::string& err) {
     if (!rx888Serials.empty())
         out.erase(std::remove_if(out.begin(), out.end(), [&](const DeviceInfo& d) {
             return d.board == "lime" && std::find(rx888Serials.begin(), rx888Serials.end(), d.serial) != rx888Serials.end();
+        }), out.end());
+    // An RSP1 that the SDRplay API lists is driven by the API (its service holds the radio, so this driver could not open it): the own
+    // driver's entry for the same radio is dropped
+    const bool apiRsp1 = std::any_of(out.begin(), out.end(), [](const DeviceInfo& d) { return d.board == "sdrplay" && d.name.rfind("SDRplay RSP1 ", 0) == 0; });
+    if (apiRsp1)
+        out.erase(std::remove_if(out.begin(), out.end(), [](const DeviceInfo& d) {
+            return d.board == "mirics" && d.nativeArgs.size() >= 9 && d.nativeArgs.compare(d.nativeArgs.size() - 9, 9, "1df7:2500") == 0;
         }), out.end());
     return out;
 }
@@ -108,6 +119,7 @@ std::unique_ptr<IqSource> makeNativeSource(const DeviceInfo& d) {
     if (d.board == "rx888") return native::makeRx888(d);         // ---- rx888
     if (d.board == "icr8600") return native::makeIcom(d);        // ---- icom
     if (d.board == "spectran") return native::makeSpectran(d);   // ---- spectran
+    if (d.board == "mirics") return native::makeMirics(d);       // ---- mirics
 #ifdef DECT2_HAVE_RFNM
     if (d.board == "rfnm") return native::makeRfnm(d);           // ---- rfnm
 #endif

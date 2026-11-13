@@ -925,7 +925,7 @@ std::string txUnavailableReason(const DeviceInfo& d) {
     const std::string& b = d.board;
     if (b == "rtlsdr" || b == "rtltcp") return "RTL-SDR dongles can only receive";
     if (b == "airspy" || b == "airspyhf") return n + " cannot transmit: Airspy radios are receive-only";
-    if (b == "sdrplay") return n + " cannot transmit: SDRplay radios are receive-only";
+    if (b == "sdrplay" || b == "mirics") return n + " cannot transmit: SDRplay radios and Mirics sticks are receive-only";
     if (b == "usrp") return n + " cannot transmit in this build: the installed UHD has no transmit functions (UHD 3.15 or newer is needed)";
     if (b == "bladerf" || b == "lime") return n + " cannot transmit through its native driver here: it is receive-only in OnAir; install its SoapySDR module to transmit";
     if (d.kind == DeviceInfo::HackRF) return n + " cannot transmit in this build: no transmit path for this driver";
