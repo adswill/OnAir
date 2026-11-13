@@ -458,9 +458,9 @@ void Engine::applyReset() {
 
 void Engine::onTsPackets(const uint8_t* pk, size_t n, double secs) {
     std::lock_guard<std::mutex> lk(tsMu_);
-    demux_.setGbDefault(stdMode_.load() == 9);   // DTMB
-    dvbsi::setGbDefaultGlobal(stdMode_.load() == 9);
-    dvbsi::setAribDefaultGlobal(stdMode_.load() == 5 || stdMode_.load() == 156);   // ISDB-T, ISDB-S: ARIB text
+    const int standard = stdMode_.load();
+    demux_.setTextEncoding(standard == 9 ? dvbsi::TextEncoding::Gb2312 :
+                          standard == 5 || standard == 156 ? dvbsi::TextEncoding::Isdb : dvbsi::TextEncoding::Dvb);
     // T2-MI: a transmitter feed in this stream. The monitor keeps looking at the outer stream; the demuxer and the player can follow a PLP inside it.
     t2miInner_.clear();
     {

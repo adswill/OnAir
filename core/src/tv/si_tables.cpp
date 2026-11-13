@@ -140,7 +140,7 @@ void SiCollector::nit(const uint8_t* s, int len) {
     if (10 + ndl + 2 > len) return;
     SiNetwork& net = networks_[nid];
     net.id = nid; net.actual = net.actual || actual;
-    descriptors(s + 10, ndl, [&](int tag, const uint8_t* p, int n) { if (tag == 0x40) net.name = dvbText(p, n); });
+    descriptors(s + 10, ndl, [&](int tag, const uint8_t* p, int n) { if (tag == 0x40) net.name = dvbText(p, n, textContext()); });
     const int tll = ((s[10 + ndl] & 0x0F) << 8) | s[11 + ndl];
     int i = 12 + ndl;
     const int end = std::min(len - 4, i + tll);
@@ -166,7 +166,7 @@ void SiCollector::bat(const uint8_t* s, int len) {
     if (10 + bdl + 2 > len) return;
     SiBouquet& b = bouquets_[id];
     b.id = id;
-    descriptors(s + 10, bdl, [&](int tag, const uint8_t* p, int n) { if (tag == 0x47) b.name = dvbText(p, n); });
+    descriptors(s + 10, bdl, [&](int tag, const uint8_t* p, int n) { if (tag == 0x47) b.name = dvbText(p, n, textContext()); });
     const int tll = ((s[10 + bdl] & 0x0F) << 8) | s[11 + bdl];
     int i = 12 + bdl;
     const int end = std::min(len - 4, i + tll);
@@ -207,10 +207,10 @@ void SiCollector::sdt(const uint8_t* s, int len) {
             v.type = p[0];
             const int pl = p[1];
             if (2 + pl + 1 > n) return;
-            v.provider = dvbText(p + 2, pl);
+            v.provider = dvbText(p + 2, pl, textContext());
             const int nl = p[2 + pl];
             if (3 + pl + nl > n) return;
-            v.name = dvbText(p + 3 + pl, nl);
+            v.name = dvbText(p + 3 + pl, nl, textContext());
         });
         i += dl;
         if (others_.size() < 16384) others_[{onid, tsid, v.sid}] = v;
@@ -238,7 +238,7 @@ void SiCollector::eit(const uint8_t* s, int len) {
             if (tag != 0x4D || n < 5) return;
             const int nl = p[3];
             if (4 + nl > n) return;
-            e.nowTitle = dvbText(p + 4, nl);
+            e.nowTitle = dvbText(p + 4, nl, textContext().withLanguage(std::string((const char*)p, 3)));
         });
         i += dl;
     }
@@ -264,7 +264,12 @@ void SiCollector::tot(const uint8_t* s, int len) {
             v.push_back(o);
         }
     });
-    if (!v.empty()) tot_ = v;
+    if (!v.empty()) {
+        tot_ = v;
+        // A multi-country descriptor loop cannot identify one default encoding for the whole input.
+        textCountry_ = v.front().country;
+        for (const auto& zone : v) if (zone.country != textCountry_) { textCountry_.clear(); break; }
+    }
 }
 
 void SiCollector::cat(const uint8_t* s, int len) {

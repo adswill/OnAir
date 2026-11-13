@@ -114,7 +114,12 @@ pub unsafe extern "C" fn onair_dvbsi_clean(p: *const u8, n: usize, out: *mut u8,
 /// A DVB text field to clean UTF-8 (needs 4 * n + 16 bytes).
 #[no_mangle]
 pub unsafe extern "C" fn onair_dvbsi_dvb_text(p: *const u8, n: usize, gb_default: u32, out: *mut u8, cap: usize) -> usize {
-    let gb_default = gb_default != 0;
+    onair_dvbsi_dvb_text_with_encoding(p, n, if gb_default != 0 { 1 } else { 0 }, out, cap)
+}
+
+/// A DVB field with a generic unprefixed fallback (see charset::Encoding).
+#[no_mangle]
+pub unsafe extern "C" fn onair_dvbsi_dvb_text_with_encoding(p: *const u8, n: usize, encoding: u32, out: *mut u8, cap: usize) -> usize {
     let conv = |name: &[u8], src: &[u8], dst: &mut [u8]| -> Option<usize> {
         let f = CONVERT.load(Ordering::SeqCst);
         if f == 0 {
@@ -132,7 +137,7 @@ pub unsafe extern "C" fn onair_dvbsi_dvb_text(p: *const u8, n: usize, gb_default
             Some(r.min(dst.len()))
         }
     };
-    charset::dvb_text(rd(p, n), gb_default, Some(&conv), wr(out, cap))
+    charset::dvb_text(rd(p, n), charset::Encoding::from_code(encoding), Some(&conv), wr(out, cap))
 }
 
 /// Hamming 8/4 decode: nibble or -1.
@@ -377,4 +382,24 @@ pub unsafe extern "C" fn onair_dvbsi_sub_blend_region(out: *mut u8, dw: i32, dh:
 #[no_mangle]
 pub extern "C" fn onair_dvbsi_sub_pts_delta(a: f64, b: f64) -> f64 {
     subpix::pts_delta(a, b)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn text_encoding_abi_compatibility() {
+        let raw = b"TV \xD6\xD0";
+        for legacy in [0, 1, 17] {
+            let (mut a, mut b) = ([0; 128], [0; 128]);
+            unsafe {
+                let n = onair_dvbsi_dvb_text(raw.as_ptr(), raw.len(), legacy, a.as_mut_ptr(), a.len());
+                let m =
+                    onair_dvbsi_dvb_text_with_encoding(raw.as_ptr(), raw.len(), if legacy != 0 { 1 } else { 0 }, b.as_mut_ptr(), b.len());
+                assert_eq!(&a[..n], &b[..m]);
+                assert_eq!(onair_dvbsi_dvb_text_with_encoding(raw.as_ptr(), raw.len(), 0, core::ptr::null_mut(), 0), usize::MAX);
+                assert_eq!(onair_dvbsi_dvb_text_with_encoding(core::ptr::null(), 10, 0, b.as_mut_ptr(), b.len()), 0);
+            }
+        }
+    }
 }
