@@ -2129,3 +2129,6 @@ Added the scatter plot (on time against the following off time per pulse) with c
 ## 2026-11-13: README restructured
 
 README cut from 801 to about 150 lines: what it is, install, quick start, mode table, radios, highlights, documentation links, community, licence, credits. The "What is new" sections were dropped (0.2.6 to 0.2.8 moved to docs/CHANGELOG-0.2.md, later ones are in docs/CHANGELOG-*.md). Long sections moved to docs/INSTALL.md, MODES-DETAIL.md, KA-FAMILY.md, TOOLS-AND-NOTES.md, FEATURES.md, RADIOS.md, UPDATES.md, GOOD-TO-KNOW.md, TROUBLESHOOTING.md, BUILD.md, CREDITS.md. Markers for gen_changelog.py kept.
+
+## 2026-11-13: licence enforcement note (ARGUS)
+- README (License) and NOTICE.md say OnAir is protected by ARGUS, the project's code-provenance system: public code is scanned for OnAir-derived code, the author is asked first, then a takedown if it isn't fixed.
