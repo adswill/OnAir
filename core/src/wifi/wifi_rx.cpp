@@ -427,6 +427,18 @@ struct WifiReceiver::Impl {
                 Demod dm;
                 demod(pd.at, 48, pd.shortPre ? 0 : kAllOne, dm);
                 if (dm.bits.size() < 48) { tel.headersBad++; pending = false; busyUntil = 0; break; }
+                {
+                    static int dbgM = 0;   // TEMPORARY diagnostic
+                    if (std::getenv("ONAIR_WIFI_DEBUG") && dbgM++ < 2) {
+                        std::printf("WDBG rate %.2f at %lld base %lld size %zu winE %.4f e-phases:", rate / 1e6, (long long)pd.at, (long long)base, cr.size(), winE);
+                        for (int q = 0; q < kSps; q++) std::printf(" %.4f", ch[q].e);
+                        std::printf(" | mags -10..10:");
+                        for (int o = -10; o <= 10; o++) std::printf(" %.3f", mag(pd.at + o));
+                        std::printf(" | 5 symbols earlier:");
+                        for (int o = -10; o <= 10; o++) std::printf(" %.3f", mag(pd.at - 5 * kSps + o));
+                        std::printf("\n");
+                    }
+                }
                 uint16_t crc = 0;
                 for (int k = 0; k < 16; k++) crc = (uint16_t)(crc << 1 | dm.bits[(size_t)(32 + k)]);
                 if (wifi::crc16(dm.bits.data(), 32) != crc) {
