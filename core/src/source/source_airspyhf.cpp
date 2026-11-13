@@ -175,6 +175,8 @@ protected:
         bias_ = false;
         int32_t nb = 0;
         hasBias_ = airspyhf().set_bias_tee && airspyhf().get_bias_tee_count && airspyhf().get_bias_tee_count(dev_, &nb) == 0 && nb > 0;
+        // the listing is frozen once an HF+ was opened here (#78): what the radio says at each open keeps that list up to date
+        { auto k = gHfKnown.find(serial_); if (k != gHfKnown.end()) k->second.hasBiasTee = hasBias_; }
         if (!reused_) streaming_ = false;
         stopping_ = true;
         return configureLocked(s, err, false);
