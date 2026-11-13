@@ -373,6 +373,16 @@ struct WifiReceiver::Impl {
     static int symbolsFor(int nBits, int qpskFrom) { return qpskFrom >= nBits ? nBits : qpskFrom + (nBits - qpskFrom + 1) / 2; }
     void demod(int64_t at, int nBits, int qpskFrom, Demod& out) {
         out.bits.clear();
+        {   // start on the correlation peak: the largest magnitude within half a symbol, summed over the last 8 preamble symbols (a phase on the
+            // Barker sidelobes can decode the preamble, and a resampled radio rate can hand the SFD to it first)
+            int best = 0; float bm = -1;
+            for (int o = -kSps / 2; o < kSps / 2; o++) {
+                float m = 0;
+                for (int sy = 0; sy < 8; sy++) m += mag(at - (int64_t)sy * kSps + o);
+                if (m > bm) { bm = m; best = o; }
+            }
+            at += best;
+        }
         int64_t t = at - (int64_t)kBack * kSps;
         std::complex<float> prev = cAt(t - 1) + cAt(t) + cAt(t + 1);
         uint8_t scr = 0;
