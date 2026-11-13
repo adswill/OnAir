@@ -53,7 +53,7 @@ public:
         samples_ = 0; skip_ = 0; kind_ = kNone; pending_ = kNone; pendN_ = 0; haveMeas_ = false; first_ = true;
         sumSq_ = 0; peakL_ = peakR_ = 0; sumN_ = 0; ratioDb_ = 0; flatDb_ = 0; widthKhz_ = 0; spectralOk_ = false; fmSeq_ = 0; tel_ = FmTelemetry{};
         rmsDb_ = peakDb_ = -120.f;
-        shift_ = 0; osc_ = cf64(1, 0); rot_ = cf64(1, 0); autoW_ = kStartWidth; devHold_ = 0; shrinkN_ = 0; hasRegion_ = false; occKhz_ = 0; centroidHz_ = 0; applied_.width = -1;
+        shift_ = 0; osc_ = cf64(1, 0); rot_ = cf64(1, 0); autoW_ = kStartWidth; devHold_ = 0; shrinkN_ = 0; settled_ = false; hasRegion_ = false; occKhz_ = 0; centroidHz_ = 0; applied_.width = -1;
     }
     void feed(const cf32* x, size_t n) override {
         apply();
@@ -174,7 +174,9 @@ private:
         const double top = 0.9 * fs_;
         need = std::min(std::max(need, 100000.0), top);
         if (need > autoW_ * 1.05) { autoW_ = need; shrinkN_ = 0; }
-        else if (need < autoW_ * 0.8) { if (++shrinkN_ >= 6) { autoW_ = need; shrinkN_ = 0; } }
+        else if (need < autoW_ * 0.8) {      // narrower: once early, when the readings have settled (1.5 s), later only after 30 s of asking (every change leaves the filter empty: a click in the sound)
+            if (++shrinkN_ >= (settled_ ? 60 : 3)) { autoW_ = need; shrinkN_ = 0; settled_ = true; }
+        }
         else shrinkN_ = 0;
         // the centre: the occupied region's centroid first, then the carrier's own offset after the shift
         // (no feedback from the receiver's own offset reading: that loop hunted and put steps into the sound; the readout adds the receiver's residual to the shift)
@@ -220,7 +222,7 @@ private:
     std::unique_ptr<FmReceiver> fm_;
     Applied applied_;
     double fs_ = 0; uint64_t samples_ = 0, fmSeq_ = 0;
-    double shift_ = 0, autoW_ = kStartWidth, devHold_ = 0, centroidHz_ = 0; cf64 osc_{1, 0}, rot_{1, 0}; int shrinkN_ = 0; bool hasRegion_ = false; float occKhz_ = 0; std::vector<cf32> mix_;
+    double shift_ = 0, autoW_ = kStartWidth, devHold_ = 0, centroidHz_ = 0; cf64 osc_{1, 0}, rot_{1, 0}; int shrinkN_ = 0; bool settled_ = false; bool hasRegion_ = false; float occKhz_ = 0; std::vector<cf32> mix_;
     std::vector<float> win_; std::vector<double> psd_ = std::vector<double>(kFft, 0.0); std::vector<cf32> blk_; int nSeg_ = 0, fill_ = 0, skip_ = 0;
     FmTelemetry tel_;
     Kind kind_ = kNone, pending_ = kNone; int pendN_ = 0; bool haveMeas_ = false, first_ = true, spectralOk_ = false;
