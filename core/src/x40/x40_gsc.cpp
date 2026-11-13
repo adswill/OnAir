@@ -278,6 +278,11 @@ private:
             int word = 0;
             if (activation(st, pol_, 6, word) && ((pend_.on && pend_.blocks.empty()) || (voiceOpen_ && word == voiceWord_))) { misses_ = 0; blockQuality(st); onActivation(word); return; }
         }
+        if (voiceOpen_) {
+            for (int d = -4; d <= 4; d++) {
+                if (acScore(st + d, voiceWord_) <= 6) { blockEnd_ += d; misses_ = 0; blockQuality(st + d); onActivation(voiceWord_); return; }
+            }
+        }
         finish();
         out->bad();
         if (++misses_ >= 2) { locked_ = false; misses_ = 0; nLost_++; }
