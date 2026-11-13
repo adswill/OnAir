@@ -2,7 +2,9 @@
 #include "app.h"
 #include "dect2/x40/x40_rx.h"
 #include "dect2/x40/x40_tel.h"
+#include "dect2/x40/stl_cfg.h"
 #include "../ism/ook_scatter_ui.h"
+#include <algorithm>
 #include <cstdio>
 #include <string>
 
@@ -59,8 +61,65 @@ template <int V> void list(App& a) {
     if (!shown) ImGui::TextDisabled("%s", tr("nothing yet"));
 }
 
+// STL link: the sound meters and the link settings (one click needs none of them: the defaults are a +-60 kHz composite link in a 250 kHz channel)
+void stlControls() {
+    dect2::StlConfig& c = dect2::stlConfig();
+    const float pk = c.peakDbfs.load(), rms = c.rmsDbfs.load();
+    ImGui::TextDisabled("%s", tr("Sound level"));
+    char b[48];
+    snprintf(b, sizeof b, "%.0f dBFS", pk); ImGui::ProgressBar(std::min(1.f, std::max(0.f, (pk + 60.f) / 60.f)), ImVec2(-1, 0), b);
+    snprintf(b, sizeof b, "%.0f dBFS", rms); ImGui::ProgressBar(std::min(1.f, std::max(0.f, (rms + 60.f) / 60.f)), ImVec2(-1, 0), b);
+    float vol = c.volume.load(); bool mute = c.muted.load();
+    ImGui::SetNextItemWidth(140 * gUi);
+    if (ImGui::SliderFloat("##stlvol", &vol, 0.f, 1.f, "%.2f")) c.volume = vol;
+    ImGui::SameLine(); if (ImGui::Checkbox(tr("Mute"), &mute)) c.muted = mute;
+    if (!ImGui::TreeNode(trw("Link settings (advanced)"))) return;
+    float dev = (float)(c.deviationHz.load() / 1000), wid = (float)(c.channelWidthHz.load() / 1000);
+    ImGui::TextDisabled("%s", tr("Deviation at 100 % (kHz)")); ImGui::SetNextItemWidth(140 * gUi);
+    if (ImGui::DragFloat("##stldev", &dev, 1.f, 10.f, 300.f, "%.0f kHz")) c.deviationHz = (double)dev * 1000;
+    bool autoW = c.autoWidth.load();
+    if (ImGui::Checkbox(tr("Automatic channel width and centre"), &autoW)) c.autoWidth = autoW;
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Follows the link: Carson's rule on the measured deviation and the multiplex content (RDS, SCA), or the occupied width, plus a margin; the carrier offset is removed first."));
+    if (autoW) ImGui::TextDisabled("%.0f kHz", c.widthNowHz.load() / 1000);
+    else {
+        ImGui::TextDisabled("%s", tr("Channel width (kHz)")); ImGui::SetNextItemWidth(140 * gUi);
+        if (ImGui::DragFloat("##stlwid", &wid, 5.f, 20.f, 1000.f, "%.0f kHz")) c.channelWidthHz = (double)wid * 1000;
+    }
+    static const int deemph[3] = {75, 50, 0};
+    static const char* const deNames[3] = {N_("75 us (US)"), N_("50 us"), N_("Flat (no de-emphasis)")};
+    int di = c.deemphasisUs.load() == 50 ? 1 : c.deemphasisUs.load() == 0 ? 2 : 0;
+    ImGui::SetNextItemWidth(200 * gUi);
+    if (ImGui::BeginCombo("##stlde", tr(deNames[di]))) {
+        for (int i = 0; i < 3; i++) if (ImGui::Selectable(tr(deNames[i]), di == i)) c.deemphasisUs = deemph[i];
+        ImGui::EndCombo();
+    }
+    static const char* const modeNames[3] = {N_("Automatic (stereo when the pilot is locked)"), N_("Composite stereo"), N_("Mono")};
+    int mi = c.mode.load(); if (mi < 0 || mi > 2) mi = 0;
+    ImGui::SetNextItemWidth(200 * gUi);
+    if (ImGui::BeginCombo("##stlmode", tr(modeNames[mi]))) {
+        for (int i = 0; i < 3; i++) if (ImGui::Selectable(tr(modeNames[i]), mi == i)) c.mode = i;
+        ImGui::EndCombo();
+    }
+    static const char* const scaNames[3] = {N_("the programme"), "SCA 67 kHz", "SCA 92 kHz"};
+    int si = c.scaListen.load(); if (si < -1 || si > 1) si = -1;
+    ImGui::SetNextItemWidth(200 * gUi);
+    if (ImGui::BeginCombo("##stlsca", tr(scaNames[si + 1]))) {
+        for (int i = -1; i < 2; i++) if (ImGui::Selectable(tr(scaNames[i + 1]), si == i)) c.scaListen = i;
+        ImGui::EndCombo();
+    }
+    static const char* const regNames[3] = {N_("Auto (RBDS on odd tenths)"), N_("RDS (Europe)"), N_("RBDS (US)")};
+    int ri = c.rdsRegion.load(); if (ri < 0 || ri > 2) ri = 2;
+    ImGui::SetNextItemWidth(200 * gUi);
+    if (ImGui::BeginCombo("##stlreg", tr(regNames[ri]))) {
+        for (int i = 0; i < 3; i++) if (ImGui::Selectable(tr(regNames[i]), ri == i)) c.rdsRegion = i;
+        ImGui::EndCombo();
+    }
+    ImGui::TreePop();
+}
+
 template <int V> void decoder(App& a, bool&) {
     if (ImGui::SmallButton(trw("Clear"))) a.engine.x40().clearResults(V);
+    if constexpr (V == dect2::x40::Stl) stlControls();
 }
 
 template <int V> void status(App& a) {
@@ -84,5 +143,5 @@ template <int V> constexpr ModeUi makeUi() {
 
 } // namespace
 
-extern const ModeUi kX40Ui[53];
-const ModeUi kX40Ui[53] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>(), makeUi<10>(), makeUi<11>(), makeUi<12>(), makeUi<13>(), makeUi<14>(), makeUi<15>(), makeUi<16>(), makeUi<17>(), makeUi<18>(), makeUi<19>(), makeUi<20>(), makeUi<21>(), makeUi<22>(), makeUi<23>(), makeUi<24>(), makeUi<25>(), makeUi<26>(), makeUi<27>(), makeUi<28>(), makeUi<29>(), makeUi<30>(), makeUi<31>(), makeUi<32>(), makeUi<33>(), makeUi<34>(), makeUi<35>(), makeUi<36>(), makeUi<37>(), makeUi<38>(), makeUi<39>(), makeUi<40>(), makeUi<41>(), makeUi<42>(), makeUi<43>(), makeUi<44>(), makeUi<45>(), makeUi<46>(), makeUi<47>(), makeUi<48>(), makeUi<49>(), makeUi<50>(), makeUi<51>(), makeUi<52>()};
+extern const ModeUi kX40Ui[54];
+const ModeUi kX40Ui[54] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>(), makeUi<10>(), makeUi<11>(), makeUi<12>(), makeUi<13>(), makeUi<14>(), makeUi<15>(), makeUi<16>(), makeUi<17>(), makeUi<18>(), makeUi<19>(), makeUi<20>(), makeUi<21>(), makeUi<22>(), makeUi<23>(), makeUi<24>(), makeUi<25>(), makeUi<26>(), makeUi<27>(), makeUi<28>(), makeUi<29>(), makeUi<30>(), makeUi<31>(), makeUi<32>(), makeUi<33>(), makeUi<34>(), makeUi<35>(), makeUi<36>(), makeUi<37>(), makeUi<38>(), makeUi<39>(), makeUi<40>(), makeUi<41>(), makeUi<42>(), makeUi<43>(), makeUi<44>(), makeUi<45>(), makeUi<46>(), makeUi<47>(), makeUi<48>(), makeUi<49>(), makeUi<50>(), makeUi<51>(), makeUi<52>(), makeUi<53>()};

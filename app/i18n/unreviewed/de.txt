@@ -1251,3 +1251,15 @@ Extra large
 Small|Compact|Default|Large|Extra large
 Height and padding of the touch interface's buttons, top bar and dock. Smaller leaves more room for the panels on small screens.
 Pagers, 300 / 600 bit/s
+Sound level
+Link settings (advanced)
+Deviation at 100 % (kHz)
+Channel width (kHz)
+75 us (US)
+50 us
+Flat (no de-emphasis)
+Automatic (stereo when the pilot is locked)
+Composite stereo
+the programme
+Automatic channel width and centre
+Follows the link: Carson's rule on the measured deviation and the multiplex content (RDS, SCA), or the occupied width, plus a margin; the carrier offset is removed first.

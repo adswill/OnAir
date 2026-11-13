@@ -58,6 +58,7 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case F06: return makeF06();
     case Gw: return makeGw();
     case Gsc: return makeGsc();
+    case Stl: return makeStl();
     default: return nullptr;
     }
 }
@@ -121,6 +122,7 @@ ModeTuning x40Tuning(int v) {
         {"f06", 1.6, 30, 6.000, 48000, 8000, 0.004, false},
         {"gwfsk", 1.6, 30, 8.400, 48000, 8000, 0.004, false},
         {"gsc", 26, 1000, 929.6125, 250000, 24000, 0.0125, false},
+        {"stl", 100, 6000, 947.500, 1000000, 500000, 0.28, false},   // US STL band 944 - 952 MHz; 500 kHz is the lowest rate FmReceiver takes
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

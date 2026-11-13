@@ -374,6 +374,7 @@ struct FmReceiver::Impl {
     std::unique_ptr<AudioOut> audio;
     bool silent = false, muted = false;
     float volume = 1.f;
+    std::atomic<float> devGain{1.f};            // setReferenceDeviation(): 75 kHz / the deviation that means full level
     std::function<void(const float*, const float*, size_t)> tap;
 
     Impl() {
@@ -434,7 +435,7 @@ struct FmReceiver::Impl {
         }
     }
 
-    void applyAudio() { if (audio) { audio->setVolume(volume); audio->setMuted(muted); } }
+    void applyAudio() { if (audio) { audio->setVolume(volume * devGain.load(std::memory_order_relaxed)); audio->setMuted(muted); } }
 
     void reset() {
         for (auto& c : chan) c.reset();
@@ -871,6 +872,7 @@ bool FmReceiver::telemetry(FmTelemetry& out, uint64_t lastSeq) {
     return true;
 }
 void FmReceiver::setVolume(float v) { p_->volume = std::max(0.f, std::min(1.f, v)); p_->applyAudio(); }
+void FmReceiver::setReferenceDeviation(double hz) { p_->devGain = hz >= 1000 ? (float)std::min(8.0, std::max(0.125, 75000.0 / hz)) : 1.f; p_->applyAudio(); }
 void FmReceiver::setMuted(bool m) { p_->muted = m; p_->applyAudio(); }
 void FmReceiver::setDeemphasis(double us) {
     p_->deemphUs = us;
