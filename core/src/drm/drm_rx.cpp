@@ -810,8 +810,10 @@ struct DrmReceiver::Impl {
     // 1 Hz linewidth moves it by 0.4 rad (rms) from one symbol to the next, so the pilots of the neighbouring symbols that the time interpolation
     // combines disagree. The common phase of symbol t is measured from its own gain references against those of t - gy (the same carriers, already
     // turned back) and from the frequency reference tones against t - 1; the raw estimates are turned back by it (Hc) before the interpolation, and
-    // the interpolated channel of the symbol is turned forward again. It holds through a fade. DECT2_DRM_NOCPE=1: the 4.0 path (no correction).
-    const bool cpeOff = getenv("DECT2_DRM_NOCPE") != nullptr;
+    // the interpolated channel of the symbol is turned forward again. It holds through a fade.
+    // OFF by default (opt-in DECT2_DRM_CPE=1): it gains 2 to 6 dB under oscillator phase noise (docs/SENSITIVITY-4.1-TV.md) but test_drm_smooth
+    // fails with it: mode E in AWGN, ITU channels 5 and 6, 2 Hz Rayleigh (run 43398851923; the same run with it off passes).
+    const bool cpeOff = getenv("DECT2_DRM_CPE") == nullptr || getenv("DECT2_DRM_NOCPE") != nullptr;
     uint64_t cpeSyms = 0;
     void commonPhase(int64_t t) {
         SymRec& R = rec(t);

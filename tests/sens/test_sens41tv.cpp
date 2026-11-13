@@ -104,7 +104,7 @@ Pt run(const Mode& m, const Prep& P, const Scen& sc, double snr, int n, int thre
 std::vector<const char*> offSwitches(const std::string& id) {
     if (id == "atsc") return {"DECT2_ATSC_NO41"};
     if (id.rfind("atsc3", 0) == 0) return {"DECT2_ATSC3_NO41"};
-    if (id.rfind("drm", 0) == 0) return {"DECT2_DRM_NOCPE"};
+    if (id.rfind("drm", 0) == 0) return {"DECT2_DRM_NOCPE"};   // (the correction itself is opt-in: main() sets DECT2_DRM_CPE=1)
     if (id == "dvbt") return {"DECT2_DVBT_NO41"};
     if (id == "dvbt2") return {"DECT2_T2_NO41"};
     if (id == "dtmb") return {"DECT2_DTMB_NO41"};
@@ -201,6 +201,7 @@ int main(int argc, char** argv) {
     (void)argc;
 #ifndef _WIN32
     setenv("DECT2_NOPACE", "1", 1);
+    setenv("DECT2_DRM_CPE", "1", 0);   // the DRM common-phase correction is opt-in in the receiver; this pass measures it
     // S41_ALTS="A=1,B=2/C=3": the same calibration once more in a child process per configuration (receivers read some switches once per
     // process), each with those variables set and only the new path
     if (getenv("ONAIR_SENS_CALIBRATE") && getenv("S41_ALTS") && !getenv("S41_CHILD")) {
@@ -221,6 +222,9 @@ int main(int argc, char** argv) {
         }
         return 0;
     }
+#endif
+#ifdef _WIN32
+    if (!getenv("DECT2_DRM_CPE")) _putenv_s("DECT2_DRM_CPE", "1");
 #endif
     const auto all = modes41();
     const int threads = std::max(1, (int)std::thread::hardware_concurrency());
