@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV: known answers from the standards (ITU-R BT.470-6, EBU colour bars). The tables in atv_std are checked against numbers
 // written down here from the specification, and against well known published values (the vectorscope angles of the colour bars).
 #include "dect2/atv/atv_std.h"

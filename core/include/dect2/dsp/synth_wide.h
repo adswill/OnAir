@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Synthetic wideband": 2-5 ordinary narrow radios (RTL-SDRs, mixed types), each tuned to an adjacent slice with overlap and all at the same nominal
 // sample rate, are stitched into ONE wide complex stream (rate = M * fs/N). Pure DSP, no hardware; the app feeds each radio's blocks to push().
 //

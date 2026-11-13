@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Why the input ring overflowed (core/include/dect2/engine/overflow_cause.h), on a simulated sample path: a radio writing transfers into a
 // ring of the engine's size, and a sample thread that runs the engine's loop (catch-up when more than half of the ring is backlog, read
 // pieces of 65536, a pass every 33 ms, a mark per pass) with a receiver of a given cost and share on the CPU, and hold-ups outside it.

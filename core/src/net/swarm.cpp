@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LAN swarm pure logic. See dect2/net/swarm.h.
 #include "dect2/net/swarm.h"
 #include "dect2/mesh/mesh_crypto.h"

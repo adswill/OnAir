@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The impulse noise blanker on synthetic signals: a tone with short strong clicks loses the clicks and keeps the tone; noise alone and
 // a strong steady carrier are left alone; the width and the threshold do what they say.
 #include "dect2/dsp/noise_blanker.h"

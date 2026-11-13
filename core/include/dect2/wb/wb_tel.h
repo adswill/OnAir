@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: the live part of the mode is only a level meter on the radio's samples (the tool itself works on files, see wb_*.h).
 #pragma once
 #include <cstdint>

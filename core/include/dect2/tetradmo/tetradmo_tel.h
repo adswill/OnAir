@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA Direct Mode telemetry. RxTelemetry::tetradmo, engine standard 323, active standard 322 (family 321). Receive only.
 #pragma once
 #include <cstdint>

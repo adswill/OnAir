@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JNI of io.github.adswill.onair.usb.RadioNative: radio access on Android. Receive only.
 //  - USB radios: the app opens each one with UsbManager (permission dialog, its own UsbDeviceConnection) and hands the descriptor over here
 //    (usbFdAttach); the core's drivers open it from that registry (dect2/source/usb_fd.h), never by scanning the bus.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radars and OFDM structure: simulated signals only.
 #include "avroad_gen.h"
 #include "dect2/avroad/avroad_proto.h"

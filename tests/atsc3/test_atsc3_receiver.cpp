@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The whole ATSC 3.0 chain in simulation, from MP4 fragments to a transport stream:
 //   fragments -> ROUTE (LCT objects) -> UDP/IP, with the service list (LLS) -> ALP -> baseband packets -> frames (Preamble, L1, subframe, BICM)
 //   -> a channel with an echo and noise -> frame decoder -> ALP -> IP -> LLS and ROUTE -> remuxer -> transport stream.

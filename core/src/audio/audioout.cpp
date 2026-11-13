@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "audioout_impl.h"
 #include "dect2/audio/audio_rec.h"
 #include "dect2/audio/clip_ring.h"

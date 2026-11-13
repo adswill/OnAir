@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! APRS weather (APRS101 chapter 12): the wind / temperature / rain / humidity / pressure fields of a position comment or of a positionless
 //! weather report, and their one-line text. `NaN` marks a value that was not measured.
 use crate::arena::Arena;

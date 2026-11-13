@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GRAVES space-surveillance radar (143.050 MHz, a continuous unmodulated carrier from France) and meteor echoes. A meteor trail reflects the carrier with a small
 // Doppler shift for a fraction of a second to a few seconds. The carrier is the strongest steady line of the averaged spectrum (it follows the radio's
 // frequency error); an echo is a second peak near it that stands well above the noise floor in at least two spectra in a row. Receive only.

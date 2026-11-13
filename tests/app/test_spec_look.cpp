@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The spectrum looks' pure maths (app/gfx/spec_look.h): the 1-2-5 frequency ticks and their labels, the peak-keeping pixel trace, the
 // smoothing, the auto range, the waterfall view's level interpolation and low-pass (app/gfx/wf_view.h), the new maps and the presets.
 #include "../../app/gfx/spec_look.h"

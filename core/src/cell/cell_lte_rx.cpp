@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, LTE receiver: cell search (PSS / SSS), the MIB on the PBCH, and the system information on SI-RNTI (PCFICH, the common
 // search space of the PDCCH, PDSCH). 3GPP TS 36.211 / 36.212 / 36.213. A DCI is accepted only when its CRC matches SI-RNTI: paging
 // (P-RNTI), random access and every UE-specific channel are never decoded.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-II / -III / -IV through the engine (setStandard(239 .. 241)): the synthetic source plays the test signal, each receiver reports through latestRx().
 #include "dect2/pactorhf/pactorhf_rx.h"
 #include "dect2/engine/engine.h"

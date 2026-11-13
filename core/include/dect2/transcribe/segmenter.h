@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice segmentation: cuts a stream of voice audio into transmissions for the speech engine. A transmission starts when the level passes the
 // gate (an absolute floor, or the noise floor the segmenter tracks plus a margin, whichever is higher), keeps a pre-roll in front of it and a
 // hang behind it, and ends when the level has been under the gate for the hang time. Airband audio reaches it already gated by the squelch

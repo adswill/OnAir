@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure protocol helpers of the aviation, rail and road modes: parsers and checks, tested on their own.
 #pragma once
 #include <cstdint>

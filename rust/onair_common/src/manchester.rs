@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Manchester coding on unpacked bits. Each data bit becomes two half-bit levels. IEEE 802.3: 0 = 10, 1 = 01
 //! (a 1 is a low-to-high transition). G.E. Thomas is the inverse: 1 = 10, 0 = 01.
 

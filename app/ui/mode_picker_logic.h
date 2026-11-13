@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Mode Browser's pure logic (no ImGui, no mode table): tags, the filter, the grid layout, keyboard moves, the recent list and the
 // "does my radio fit this mode" check. app/ui/mode_picker.cpp draws it; tests/app/test_mode_picker.cpp tests it.
 #pragma once

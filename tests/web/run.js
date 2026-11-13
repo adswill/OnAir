@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Unit tests for the OnAir Web client's pure code (web/onair-web/onair-lib.js, onair-worklet.js). Node built-ins only:
 //   node tests/web/run.js
 "use strict";

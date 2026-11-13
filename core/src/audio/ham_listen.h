@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The sound of the ham decoders (HF digital, PSK, JS8Call): the upper sideband as 8 kHz audio, and "Listen", which plays that audio on
 // the sound card. Listening is off unless switched on; when on it only copies the samples into the sound card's lock-free ring (audio
 // the device has not taken in time is dropped), so the decoders never wait for it.

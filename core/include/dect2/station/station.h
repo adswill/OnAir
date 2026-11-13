@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // My station: the user's radios and antennas, entered once. From them: can a mode be received here and what is missing (the mode list), which radio
 // and antenna a mode should use (selecting a mode), which free radio each of several modes gets (several receivers), and whether several modes fit
 // one capture (the Everything in view window). Pure logic: no ImGui, no engine, tests in tests/station/test_station.cpp, docs/STATION-3.8.md.

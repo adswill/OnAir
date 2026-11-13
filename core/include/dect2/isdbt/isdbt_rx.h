@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T receiver: blind detection of the mode (carrier spacing) and guard interval, symbol and carrier tracking, the TMCC signalling for
 // the frame and the parameters, then the demodulator core. Reports through the same telemetry as the DVB-T receiver.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Eurobalise telegram coding (UNISIG SUBSET-036 issue 4.0.0, clause 4.3 and Annex A / B2), the air gap that EBICab systems share in its
 // physical form (a 27 MHz tele-powering field from the train, a 4.5 MHz band FSK up-link). Public and normative; the EBICab 700 / 900 telegram
 // formats are not published and are not handled (docs/ebicab.md).

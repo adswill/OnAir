@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tone decoders on an HF voice channel (issue #211): SELCAL sent in USB, as on the aeronautical HF channels, through the USB front end of
 // the receiver (setDemod) at a radio's rate with the radio tuned off the channel, with a tuning error, in noise, after speech; LSB and AM
 // the same way; the wrong sideband and noise alone give no SELCAL; the auto choice is USB on HF and FM above.

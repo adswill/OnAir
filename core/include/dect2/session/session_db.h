@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The session database: the indexed cold store of the mode experience framework (docs/MODE-EXPERIENCE.md, 2.2). A SQLite file
 // (<dataDir>/sessions/sessions.db) with the same library as the message database (core/src/msgdb) but its own file and limits.
 //

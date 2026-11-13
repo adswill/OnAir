@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 time interleavers: the cell interleaver shift values printed in A/322, the Convolutional Time Interleaver (stream in, same
 // stream out after the latency, start-up with the PRBS initial state), and the twisted block interleaver (a permutation that undoes itself).
 #include "dect2/atsc3/atsc3_bicm.h"

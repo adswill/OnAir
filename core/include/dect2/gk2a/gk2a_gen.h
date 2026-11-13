@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GK-2A LRIT / HRIT test signals. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Test products (gk2aTestFiles): the full-disk infrared channel IR105 and the visible channel VI006 as a 128 x 96 picture of four

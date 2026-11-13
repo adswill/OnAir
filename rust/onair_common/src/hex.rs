@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Hex text to and from bytes, into caller-owned buffers.
 
 const LOWER: &[u8; 16] = b"0123456789abcdef";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Simplified coastlines and borders for the weather picture studio. The coordinates (lon, lat in degrees) were written by hand for this
 // project from general geographic knowledge: outlines good to about 50 - 100 km, only the large landmasses, some islands and a few long
 // borders. They are not derived from any map dataset, so no third-party data licence applies.

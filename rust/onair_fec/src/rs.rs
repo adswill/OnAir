@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Byte-wise Reed-Solomon codes over GF(256) with generator roots alpha^0 .. alpha^(R-1) (first consecutive root 0), shortened from n = 255:
 //! one generic encoder / decoder instantiated for DVB-T RS(204,188) (R = 16), ATSC RS(207,187) (R = 20) and DAB RS(120,110) (R = 10).
 //!

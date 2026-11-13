@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode A / C reply detector (see modeac_dsp.h).
 #include "dect2/modeac/modeac_dsp.h"
 #include "dect2/modeac/modeac_proto.h"

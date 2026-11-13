@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dPMR test signal (see dpmr_gen.h): whole transmissions as four-level FSK, over noise.
 #include "dect2/dpmr/dpmr_gen.h"
 #include "dect2/dpmr/dpmr_rx.h"

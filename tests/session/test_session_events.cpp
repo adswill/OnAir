@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The end-of-session summary events and their link to the message database (docs/MODE-EXPERIENCE.md, 2.2 point 4 and 2.2a): one
 // session.<kind> event per ended session with ids and counts only, rate limited, kept off the persistence path; msgdb stores them with the
 // session id, can filter by it, and has a per-family row quota; an old message database is migrated.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Decoded results that outlive mode switches, retunes, restarts and the program itself (engine.h: clearResults ... refreshIdle).
 // Every receiver keeps its lists through reset() and configure(); here they are cleared on the user's Clear, and saved to and loaded
 // from one file per receiver (results_io.h format: a file of another build fails its signature check and is discarded).

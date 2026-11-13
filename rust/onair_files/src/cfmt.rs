@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C `printf` number formats: `%.<P>g` and `%.<N>f` of a finite double through the C library (`ffi::cfn`, so the text equals what the C++ `snprintf` gave), and a byte
 //! sink that counts what did not fit.
 use crate::ffi::cfn;

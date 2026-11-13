@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW skimmer timing benchmark: the 0.2.7 timing (cw_morse.h) against the adaptive one (cw_decoder.h) on the whole receiver (CwReceiver),
 // the scenarios of docs/SENSITIVITY-3.9-E.md section 3. Not a ctest: build by hand, run
 //   cw_skim_bench rx [seeds=2] [secs=80]        the receiver itself: the 0.2.7 timing and the default (adaptive)

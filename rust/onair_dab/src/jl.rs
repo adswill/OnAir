@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Journaline framing and the packet mode layers below it (ETSI TS 102 979 clause 8, ETSI EN 300 401 clause 5.3.2 for DAB packet mode, ETSI ES 201 980 clause
 //! 6.6 for DRM packet mode): the restricted MSC data group check, the TOC management block, the user application data of FIG 0/13 and the header fields of one
 //! packet. The JML object parser (it inflates) and the data unit reassembly stay in C++.

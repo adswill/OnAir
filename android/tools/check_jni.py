@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Compares the `external fun` declarations of the Kotlin JNI objects with their C++ functions (names, parameter and return types):
 OnAirNative.kt <-> native/src/jni_onair.cpp (macro FN), usb/RadioNative.kt <-> native/src/jni_radio.cpp (macro RFN),
 tv/TvNative.kt <-> native/src/jni_tv.cpp (macro TFN)."""

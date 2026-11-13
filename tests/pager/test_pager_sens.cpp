@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pager sensitivity: one cycle of the test signal (27 POCSAG and FLEX pages at every speed) at 0 dB with three noise seeds. The soft
 // repair of code words and the check of the first batch after a sync bring 76 of 216 pages over eight seeds where the hard decoder got
 // 48, with fewer false pages. Here: right pages (address, type and text as sent, not damaged), pages that match nothing, and noise alone.

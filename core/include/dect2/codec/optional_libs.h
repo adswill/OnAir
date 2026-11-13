@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #pragma once
 // The optional libraries and plug-ins OnAir loads at run time and does not ship (docs/OPTIONAL-LIBRARIES.md): one entry per library with
 // the file names looked for on this OS, the official place to get it, and whether it was found now. The same list is shown in

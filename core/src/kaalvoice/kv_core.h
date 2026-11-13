@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4: profiles, bit layout and the 8 kHz analysis-by-synthesis core (internal).
 #pragma once
 #include "dect2/kaalvoice/kaal_voice.h"

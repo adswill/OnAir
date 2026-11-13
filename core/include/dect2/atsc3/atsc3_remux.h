@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Turns the MP4 fragments that ROUTE delivers (one stream of init + media segments per component, e.g. HEVC video and audio) into one MPEG-2
 // transport stream, the input of the HLS pipeline. Timestamps of the components keep their common timeline.
 #pragma once

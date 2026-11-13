@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROUTE (A/331 Annex A): LCT packets over UDP carry delivery objects (files); this reads the LCT header, reassembles objects, reads the service
 // layer signaling that arrives as a MIME package (USBD, S-TSID, MPD) on TSI 0, and routes the objects of each component of a service.
 #pragma once

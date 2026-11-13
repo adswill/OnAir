@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small vector kernels of the DTMB code: dot products of a real filter with a planar complex signal. NEON where it exists, else plain loops
 // with independent accumulators that the compiler can vectorise (float sums are not reassociated by default, so one accumulator would be serial).
 #pragma once

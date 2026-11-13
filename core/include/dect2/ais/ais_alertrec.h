@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One CPA or geofence alert as the telemetry carries it (the engine that raises them is in ais_alerts.h).
 #pragma once
 #include <cstdint>

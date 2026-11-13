@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TCI (Transceiver Control Interface of Expert Electronics' ExpertSDR3, spec 1.9 to 2.1; also served by SunSDR and other programs), receive only. A WebSocket
 // connection (ws://host:50001): text messages hold commands "name:arg,arg;" (several per message), binary messages hold stream blocks of a 64-byte
 // header (16 little-endian uint32: receiver, sample_rate, format, codec, crc, length, type, channels, reserv[8]) and the samples. After connecting the

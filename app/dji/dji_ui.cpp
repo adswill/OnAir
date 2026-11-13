@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DJI drones screens: the signals seen by their shape (class, confidence, frequency, width, burst period, duty cycle, level over time), the DroneID packets
 // decoded (serial number, position, home point, pilot position as sent in the clear), the burst log, and the radio notes.
 // Receive only. Nothing is transmitted and the video link (encrypted and proprietary) is not decoded. A class from the shape is a guess with a

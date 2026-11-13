@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SITOR decoder (hfdig_sitor.h): the FEC-B word table round trip, a generated FEC-B character sequence with letters and figures
 // shifts, invalid words, and the FEC-A time-diversity acceptance. Pure logic, no audio, silent.
 #include "dect2/hfdig/hfdig_sitor.h"

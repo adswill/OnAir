@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLARM screens: the aircraft table (device ID, type, altitude, speed, track, climb, level, last heard, distance and bearing from the receiver),
 // the live map through the shared slippy map of ADS-B (adsb_map.h), the receiver position, and the privacy note.
 // Receive only, as the Open Glider Network does. Positions are what the aircraft broadcast openly; aircraft that set the no-track or stealth

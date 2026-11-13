@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN test signal (see lorawan_gen.h).
 #include "dect2/lorawan/lorawan_gen.h"
 #include "dect2/common/mathconst.h"

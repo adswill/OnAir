@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT image codec: round trip of a synthetic 1080p picture, PSNR against the number of bytes (the prefix property), odd sizes, truncation safety.
 #include "kait_test_util.h"
 #include <chrono>

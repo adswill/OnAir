@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voiceband modes of the W1A batch (families 800 - 802): HF packet 300 Bd, voice inversion scrambler, ELT 121.5 MHz. Telemetry shared by the
 // receiver and the screens. The first members are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once

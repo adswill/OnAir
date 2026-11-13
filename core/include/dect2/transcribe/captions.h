@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto subtitles: speech-to-text turned into timed caption cues for the sound of a receiver (FM, DAB, TV audio, SSB, ...).
 // Pure data and rules (no radio, no UI, no speech engine): sentence segmentation of the transcriber's entries with times on the AUDIO clock
 // (samples played, not the wall clock, so the cues line up with a recording), the cue list shown over the receiver, SRT / WebVTT export, the

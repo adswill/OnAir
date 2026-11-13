@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small FM front end for the analog trunking control-channel modes (LTR, EDACS): mix the channel to 0 Hz, resample to a low working
 // rate, channel filter, FM discriminator. The output is the instantaneous frequency in Hz. Header only.
 #pragma once

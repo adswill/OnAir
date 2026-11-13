@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL over a radio chain: the 48 kHz transmitter output is resampled to the radio rate, mixed by a carrier offset (the two radios' oscillators) with a
 // sample clock error, then goes to the receiver at the radio rate (it resamples to 48 kHz itself). Every case must lock, decode frames and read the beacon.
 #include "dect2/dsp/resampler.h"

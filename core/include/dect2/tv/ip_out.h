@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IP output of the broadcast data modes: the IP datagrams of DVB-H / IP datacasting (MPE and MPE-FEC sections in a transport stream)
 // and of DVB-C2 GSE PLPs, written to a pcap file (libpcap, link type RAW: the IP packets as they are) and/or forwarded over UDP.
 // Both are off by default. The forward sends the payload of each UDP datagram (after IPv4 reassembly) to one address, so a player can

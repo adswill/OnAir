@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Soak of the session writer (docs/MODE-EXPERIENCE.md, 8.3): 1,000 session events per second for --seconds (600 = the 10 minutes of the spec) from
 // simulated decoder threads, a fake audio callback that also enqueues, and a reader asking for pages like the UI, on a real database file.
 // Checks: no enqueue longer than 1 ms (the share allowed over it is printed and bounded, because a shared CI machine can stall any thread),

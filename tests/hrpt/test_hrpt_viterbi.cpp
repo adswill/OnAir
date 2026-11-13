@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The HRPT Viterbi decoder runs its butterflies as vector lanes; its decided bits must equal the scalar butterfly loop's exactly, for random soft input
 // (so also through the metric renormalisation and the tie cases) and for a coded stream with errors.
 #include "dect2/hrpt/hrpt_proto.h"

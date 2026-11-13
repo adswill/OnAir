@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OOK / ASK pulse analyser: PT2262-style PWM (1:3 pulses, 4 T period, sync 1:31), a PPM remote, a Manchester sensor and a PCM (NRZ) frame, with 3 % timing jitter, a carrier offset, noise and repeats;
 // the modulation name, the bits and the timings are compared with what the generator sent; noise alone and a plain carrier give no frame. Simulated signals only.
 #include "x40_gen3.h"

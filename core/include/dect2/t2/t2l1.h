@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T2 L1 signalling: L1-pre / L1-post structures, bit packing, FEC chain (CRC-32, BCH, LDPC, puncturing,
 // interleaving, mapping) and P2 cell distribution. Encoder and decoder share the same tables.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // J.83 Annex B on simulated symbols: RS, interleaver modes, both QAM orders, noise, carrier quarter turns and the group phase.
 #include "dect2/dvbc/j83b.h"
 #include "dect2/common/stable_random.h"

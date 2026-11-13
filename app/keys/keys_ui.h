@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Keys window and the per-call key status line (keys_ui.cpp). See docs/KEYS.md.
 #pragma once
 #include <string>

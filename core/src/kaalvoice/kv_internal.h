@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4 (kaalvoice): internal building blocks shared by the encoder, the decoder and the evaluator.
 // Everything on the bit-stream path is deterministic: only + - * / and sqrt of IEEE doubles/floats (the files are built with
 // -ffp-contract=off), and the transcendental functions below are our own series, so every platform gives the same bits and samples.

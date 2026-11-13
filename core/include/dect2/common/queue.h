@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bounded queue between threads, and the re-order buffer that makes parallel stages deterministic (see docs/threading.md).
 //
 // BoundedQueue<T>: any number of producers and consumers (one of each is the usual case). A mutex and two condition variables, so it is

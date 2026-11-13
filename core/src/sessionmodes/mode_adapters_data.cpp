@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Group 3 adapters: LoRa mesh and LoRaWAN, Iridium, Orbcomm, Inmarsat Aero and Inmarsat-C. Same TrackBook rules as mode_adapters.cpp: only queue
 // pushes, message text is never stored here.
 #include "dect2/aero/aero_tel.h"

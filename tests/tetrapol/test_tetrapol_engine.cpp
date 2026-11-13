@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL through the engine across a retune: tuning to another frequency in the app resets the receiver (retuneReset). The reports must
 // go on reaching latestRx() (they stopped: the reset receiver numbered them from 0 and the engine ignored them until they passed the old
 // number, so the decoder looked dead until stopped and started again), and the carrier must be found again with the cell heard.

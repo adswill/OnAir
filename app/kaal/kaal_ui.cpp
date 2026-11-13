@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL screens: the receiver panel (lock, frames, SNR, CFO, sweep level, a speech level meter and the last beacon) and the transmit options
 // (callsign, grid, position, power, bio text, beacon on or off) that the TX panel draws for the KAAL signal. English texts only.
 #include "app.h"

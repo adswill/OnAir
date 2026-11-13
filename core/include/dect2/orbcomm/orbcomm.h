@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Orbcomm subscriber downlink format (137.2 - 137.8 MHz), shared by the receiver, the test transmitter and the tests.
 //
 // 4800 bit/s SDPSK (each bit turns the phase by +90 degrees for a one, -90 degrees for a zero), root raised cosine (roll-off 0.4).

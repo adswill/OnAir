@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FY-3 AHRPT / MPT test signal (see fy3_gen.h).
 #include "dect2/fy3/fy3_gen.h"
 #include "dect2/fy3/fy3_proto.h"

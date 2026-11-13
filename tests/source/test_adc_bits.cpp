@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What counts as a low ADC level follows the radio's converter (gain.h setAdcBits): an 8-bit radio at -30 dBFS rms is "low", a 12-bit
 // one is fine there, and the gain loop no longer climbs on a 12-bit radio that sits at a healthy -30 dBFS.
 #include "dect2/source/gain.h"

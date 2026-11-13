@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Rust AX.25 / APRS layer (rust/onair_ax25, dect2::ax25 and dect2::aprs): FCS, frames built by the transmitter and damaged /
 // truncated / random, address and path text, frame type names, the HDLC receiver fed with transmissions with and without noise, APRS information fields of
 // every type with mutations, latitude / longitude text, ONAIR_DIFF_ITERS (default 200000) per family. Every result goes into a digest (tests/common/golden.h;

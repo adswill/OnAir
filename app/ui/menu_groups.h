@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The drop-down menus' grouping data, in one place and without ImGui: the Tools menu (which item sits in which group) and the Mode menu's
 // split of a big category into second-level chunks. app/ui/ui2_shell.cpp draws the menus from it; tests/app/test_menu_groups.cpp checks that
 // every item still appears exactly once. Docs: docs/MENUS-4.0.md.

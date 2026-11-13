@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // lobby.js - one small Durable Object: the list of live rooms and the room-creation limits. Memory plus one storage key.
 import { LIMITS, WindowLimit } from "./lib.js";
 

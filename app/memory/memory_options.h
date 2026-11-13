@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Memory panel, the receiver side: what a Memory captures from a receiver (App) and how a recall applies it. The model, files and the recall order
 // are in core (dect2/channels/memory_bank.h); this folder holds the App-specific parts and the panel.
 #pragma once

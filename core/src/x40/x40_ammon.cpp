@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM broadcast modulation monitor (LW / MW / SW, 148 kHz - 30 MHz): the envelope of one station read like a modulation monitor does. Once a second: carrier offset from the
 // carrier's own phase, the carrier level, the modulation depth (RMS equivalent of a sine, positive and negative peaks, asymmetry), mains hum (50 / 60 Hz and 100 / 120 Hz,
 // in dB below the carrier), the audio bandwidth (the frequency below which 99 % of the audio power lies) and the share of the time the negative peaks reach zero carrier (over-modulation).

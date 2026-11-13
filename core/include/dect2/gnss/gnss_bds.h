@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BeiDou B1I navigation messages (BDS SIS ICD, CSNO): D1 for the MEO and IGSO satellites (50 bps with the 20 bit Neumann-Hoffman secondary code
 // on the 1 ms code periods; subframes of 300 bits in 6 s) and D2 for the GEO satellites (500 bps without a secondary code; subframes of 0.6 s).
 // Every subframe: 10 words of 30 bits. Word 1: the 11 bit preamble and 4 reserved bits sent as they are, then 11 bits protected by BCH(15,11,1);

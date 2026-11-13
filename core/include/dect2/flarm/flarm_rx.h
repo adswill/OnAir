@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLARM receiver: the glider / light-aircraft collision-avoidance broadcast on 868.2 and 868.4 MHz (Europe), 2-FSK 100 kchip/s Manchester coded,
 // old protocol (V6) decoded with the public XXTEA key scheme, the newer protocol only counted. Receive only, as the Open Glider Network does:
 // positions are what the aircraft broadcast openly; the no-track and stealth flags are honoured (such aircraft are counted, never kept).

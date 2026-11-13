@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL shared FFT channeliser against the per-channel path, on a 32 MHz capture: three synthetic bursts (the lowest, a middle and the highest
 // dial of the station table) mixed into white noise, the whole table as the channel list, centre 12 MHz. Both receivers get the same samples; the
 // number of ACARS frames with a good CRC must be the same (one frame less is allowed at the weakest SNR, where a burst sits at the edge).

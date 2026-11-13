@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Thread frame layers above 802.15.4 (see thread_proto.h).
 #include "dect2/thread/thread_proto.h"
 #include <cstdio>

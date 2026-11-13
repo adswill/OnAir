@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helpers shared by the session tests: a fresh temporary folder, a session factory, a wait loop.
 #pragma once
 #include "dect2/session/session.h"

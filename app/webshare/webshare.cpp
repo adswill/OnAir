@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Server > Share on web: the OnAir Web setup window. Step 1 shares the radio on the web (onair-server --web plus a free Cloudflare quick tunnel), step 2 lists
 // it on the public directory after an exact preview. The owner chooses the radio, the centre and span, the decoders, who may listen and what the listing says
 // (webshare_core.h holds those choices and the logic; this file is the window and the child programs).

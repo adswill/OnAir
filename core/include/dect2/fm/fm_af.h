@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RDS alternative frequencies: which AF is best now, and following the station to it (as a car radio does) with the PI proved after the retune.
 // A pure state machine: the app gives it the telemetry and the level of each AF from the spectrum, and tunes when it says so.
 #pragma once

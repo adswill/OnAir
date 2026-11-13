@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD / SD simulcast pairing: the name normaliser, the LCN rule, the picture size classes (service type, PMT stream type, SPS), the pairing across
 // services and multiplexes, the user table and the catalogue round trip.
 #include "dect2/tv/hd_pair.h"

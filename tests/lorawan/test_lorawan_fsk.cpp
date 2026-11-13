@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN FSK (DR7, 50 kbit/s GFSK, lorawan_fsk.h). Synthetic tests only; not checked against a real transmitter.
 //  1. Known answers: the CRC against the CRC catalogue's check value of the same CRC, and against a transcription of the SX1276 datasheet's own
 //     CRC routine (rev. 5, figure 54); the whitening against bytes an STM32WL (SX126x radio) sent with seed 0x1FF (ST community thread "STM32WL

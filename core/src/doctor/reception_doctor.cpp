@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Reception Doctor analysis (docs/RECEPTION-DOCTOR.md). One averaged spectrum (Hann, 4096 bins, 50 % overlap) plus time-domain level statistics.
 #include "dect2/doctor/reception_doctor.h"
 #include "dect2/source/gain.h"

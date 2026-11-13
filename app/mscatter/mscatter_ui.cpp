@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor scatter screens: the pings counted (start, duration, peak level, Doppler, drift, type) with the level profile of the selected one, the ping
 // rate per hour and per day with the annual showers marked, and the echo waterfall (the +-500 Hz around the beacon line against time). A forward-scatter
 // detector: a fixed beacon (GRAVES, 143.050 MHz) is heard only when a meteor trail reflects it. Pings can be appended to a CSV file for unattended runs.

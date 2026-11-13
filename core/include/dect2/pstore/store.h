@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The plugin store (client side): a static, signed registry of plugins (docs/PLUGIN-MARKETPLACE-3.9.md).
 // Nothing here runs by itself: the program calls refresh() only when the user opens the Store or presses Refresh, and install() only after the
 // user confirmed the native-code warning. The registry is plain files (index.json, index.json.sig, per-plugin manifests, packages) on any HTTPS

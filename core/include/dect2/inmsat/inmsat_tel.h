@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat all-carriers telemetry, shared by the receiver and the UI. The first members (the Snapshot's common prefix) are copied into RxTelemetry.
 #pragma once
 #include "inmsat_manager.h"

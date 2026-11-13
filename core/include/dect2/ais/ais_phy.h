@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS physical layer, the part that works on one burst: from complex samples at 48 kHz (5 per bit) of one channel to HDLC frames.
 // The receiver (ais_rx.cpp) finds the bursts with a power detector and hands each one to aisDecodeBurst; tests call it directly.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSB transmitter test meter: tune the transmitter's suppressed-carrier frequency (the dial frequency) while it sends a test tone, or two tones, and read what a transmitter test sheet asks for.
 // Windows of 2^15 samples at the 8 - 16 ksps working rate (about 2.7 s) with a four-term Blackman-Harris window. The sideband is the side with the tones (upper or lower). One tone (100 - 3500 Hz
 // from the carrier): carrier leak, opposite sideband, 2nd to 5th harmonics of the audio tone, all in dB under the tone. Two tones within 10 dB of each other: IMD3 (2 f1 - f2, 2 f2 - f1),

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helpers for the radiosonde tests and tools: run the test signal through the receiver with impairments and read the result.
 #pragma once
 #include "sonde_gen.h"

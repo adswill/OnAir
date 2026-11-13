@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The KAAL voice codec 4 (core/src/kaalvoice, docs/KAAL-CODEC.md) as the slot codec of the frame version 4 (kaal_slots.h): 16 kHz,
 // 40 ms frames, the type (speech / SID) in band, exactly payloadBits(profile) bits per payload. A silent talker (DTX) gives NoData:
 // the slot then carries data and the receiver's decoder continues with comfort noise.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A radio whose oscillator is 3 kHz off at L1 (1.9 ppm, a poor TCXO) and whose sample clock is a further 20 ppm off: every signal appears shifted by 3 kHz
 // on top of its Doppler, the code runs 20 chips a second off against the samples. The receiver must still acquire, decode and fix, and report the shift.
 #include "dect2/gnss/gnss_testkit.h"

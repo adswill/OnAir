@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells physical layer: the polar code (construction against 38.212, an independent encoder, list decoding with puncturing,
 // shortening and repetition), PSS / SSS / DMRS sequences, the PBCH payload and the whole PBCH chain, the sync raster.
 #include "dect2/nr/nr_phy.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Trunking follow logic: grant -> follow -> end -> back to the control channel. No DSP: the host executes the Actions and reports back what it hears.
 #include "dect2/p25/trunk.h"
 #include "dect2/trunkpool/coverage.h"

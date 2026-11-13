@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN channel plans and the MAC layer parser (see lorawan_plan.h).
 // Facts, all public: LoRaWAN L2 1.0.4 (TS001) chapter 4 (MHDR, FHDR, FCtrl, FPort, MIC, join-request, join-accept, rejoin-request) and
 // chapter 5 (MAC commands and their payload sizes, 1.1 additions), LoRaWAN Backend Interfaces 1.0 (TS002) 6.1 (DevAddr types: the leading ones

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Yaesu System Fusion screens (work in progress): lock, frame counts, call mode, source / destination callsigns, repeater, the slow data
 // text and the state of the speech codec plug-in. The voice needs a codec that the user installs (codec id "ysf", docs/CODECS.md).
 #include "app.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-VFO: one 2 Msps capture with two FM carriers (1000 and 1700 Hz tones), two pager carriers (POCSAG 512 and 1200, both talking at the same
 // time), one APRS carrier and an empty channel with a squelch. Every channel runs at once: both FM stations are in the mixed sound (pan left /
 // right, mute and squelch work), both pagers deliver every page with its exact text, the APRS channel decodes, and the channel list can change

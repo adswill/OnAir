@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSQ / IFKP engine side (see kbd33_station.h).
 #include "dect2/fsq/kbd33_station.h"
 #include "dect2/cw/cw_morse.h"

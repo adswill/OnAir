@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # The CI checks, run on this Mac instead of GitHub:
 #   macOS    build (app, tools, tests) and run the tests
 #   Linux    the same in the onair-linux-dev Docker image (arm64, Colima)

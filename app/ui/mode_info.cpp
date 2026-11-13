@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode Browser data derived from the mode table: tags (from the group, then a few by name), what a mode needs, its minimum radio rate, and
 // whether the selected radio fits it. Nothing is parsed from the blurbs; the rows stay as they are (mode_picker_logic.h has the rules).
 #include "../app.h"

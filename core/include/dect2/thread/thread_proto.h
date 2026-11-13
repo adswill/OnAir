@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Thread (the IPv6 mesh for smart homes) on top of IEEE 802.15.4, receive only: what a sniffer can show without the network key.
 //
 // Thread uses the 2.4 GHz O-QPSK PHY of IEEE 802.15.4 (channels 11 - 26, zigbee_proto.h) and 6LoWPAN (RFC 4944 / RFC 6282) above the MAC.

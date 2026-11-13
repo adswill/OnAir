@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS station intelligence (4.0): the polar coverage plot, the ship type mix and the ship-name cache. Pure code, no radio.
 //  - AisCoverage: for every bearing sector around the station the farthest position report heard (and how many), so the polar plot shows
 //    where the antenna reaches and where it is blind. Reports are counted over a time window, the farthest value is kept as a p95-like

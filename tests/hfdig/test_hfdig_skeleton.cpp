@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital skeleton through the engine: the synthetic source plays the mode's test signal, the receiver makes the 8 kHz sideband audio
 // and hands it to all three decoders, the engine reports telemetry through latestRx() with the mode's standard. About 2 s; quick and silent.
 #include "dect2/engine/engine.h"

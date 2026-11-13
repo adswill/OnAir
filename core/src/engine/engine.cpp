@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Engine core: sample ingest (cleaning, offset tuning), stop, recording, applyReset, and the per-receiver feed,
 // reset and auto-select switches. Other Engine members live in engine_*.cpp next to this file.
 #include "dect2/engine/engine.h"

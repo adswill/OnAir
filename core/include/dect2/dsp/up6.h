@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice audio 8 kHz -> 48 kHz: a polyphase interpolator, 96-tap Blackman-windowed low-pass at 3.8 kHz (16 taps per output phase). The straight-line
 // interpolation it replaces left the images of the speech above 4 kHz only about 13 dB down (a 3 kHz component came back at 5 kHz): the voice
 // sounded sibilant and metallic (the same was heard and fixed in XMC_SDR). Delay: 47.5 samples at 48 kHz, about 1 ms.

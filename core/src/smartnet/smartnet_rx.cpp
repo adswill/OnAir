@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Motorola Type II receiver: FM front end at 28.8 kHz (8 samples per bit). Search: at every sample phase the 84 most recent bits are checked for the sync word and the CRC; two good
 // words one frame apart give the lock. Locked: each frame is read where the clock says it is, a sample either side, so a clock difference is followed. On top: the message layer, the
 // trunk pool with one wide capture as its radio (CaptureVoice), the talkgroup, site and patch tables, and the sound of one call.

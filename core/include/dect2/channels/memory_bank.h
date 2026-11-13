@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Memories: the frequencies a user keeps, with the mode and the receiver settings they were stored with ("memory channels" of a scanner or
 // a radio). Pure model, no UI and no engine: the Memory panel (app/memory) captures and recalls them, the tests drive the bank directly.
 //

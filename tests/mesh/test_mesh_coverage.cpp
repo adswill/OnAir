@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh coverage map (mesh_coverage.h): simulated direct and relayed receptions with a log-distance path loss and fading.
 #include "dect2/mesh/mesh_coverage.h"
 #include <cmath>

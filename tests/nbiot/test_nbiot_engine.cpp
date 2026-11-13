@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT cells through the engine (setStandard(71)): the synthetic source plays the standalone test cell, the receiver reports through latestRx(),
 // the results save and load. No sound.
 #include "dect2/nbiot/nbiot_rx.h"

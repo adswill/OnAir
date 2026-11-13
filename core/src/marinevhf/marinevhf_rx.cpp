@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF receiver (see marinevhf_rx.h): the carriers of the span, one narrow-FM channel receiver each.
 #include "dect2/marinevhf/marinevhf_rx.h"
 #include "dect2/marinevhf/marinevhf_tel.h"

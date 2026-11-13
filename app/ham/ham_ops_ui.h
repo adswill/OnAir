@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Ham view's operator tools around the operating screen (ham_ui.cpp): the logbook, awards, contest, map, spots, the station setup
 // wizard and the guide. The logic is in core/include/dect2/ham/ham_log.h, ham_dxcc.h and ham_ops.h (tested); these files draw it.
 // Nothing here transmits: the only transmitter is ham_ui.cpp's HamSlotTx behind the Arm button, the licence box and the band gate.

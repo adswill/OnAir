@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small helpers shared by the SSB conversation sources.
 #pragma once
 #include "dect2/ssbconv/ssbconv.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) SIG fields: S1G_1M SIG (36 bits, 6 BPSK symbols, 2x repeated) and the S1G_SHORT / S1G_LONG SIG(-A) (52 bits, 2 symbols), with the
 // CRC-4 (IEEE 802.11-2020 clause 23.3.9 SIG fields, tables 23-? as remembered; bit positions UNVERIFIED against the standard text, they follow the
 // public comment-resolution documents of the TGah task group, 802.11-14/0371, -16/0002). The data bits of a field are sent least significant first.

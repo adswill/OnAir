@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GPS interference layer: grid cells from GET /jam -> GeoJSON squares coloured by the share of aircraft with a degraded GNSS position.
 // The share is an indicator, not proof of jamming: see docs/gps-jamming-map.md.
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IFKP against FSQ: what differs (idle, space, line feed) and that the two modes cannot be mixed up by their tone spacing.
 #include "dect2/fsq/kbd33.h"
 #include "dect2/fsq/kbd33_station.h"

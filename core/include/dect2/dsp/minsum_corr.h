@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The two-minimum correction of the min-sum check rule, shared by the LDPC decoders (DVB-S2/S2X, DTMB, ATSC 3.0) and mirrored in the GPU kernels.
 // Every edge of a check except the one holding the smallest input sees both of the two smallest inputs; the box-plus of those two,
 // min1 + log(1 + e^-(min1 + min2)) - log(1 + e^-(min2 - min1)), is closer to what belief propagation sends than min1 alone (0.1 to 0.3 dB on the

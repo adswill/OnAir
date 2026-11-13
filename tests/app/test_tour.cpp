@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The first-run tour (app/ui/tour_logic.h): the step list, the anchor registry, skipping steps whose part is not on screen, and when it starts.
 #include "../../app/ui/tour_logic.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Threshold measurement harness (spec 4.4). Heavy: run with `cargo test --release --test thresholds -- --ignored --nocapture`.
 //! Environment: KAWS_PROFILES (comma list, default all chirp), KAWS_CHANNELS (awgn,mod,poor), KAWS_BLOCKS, KAWS_OUTER, KAWS_THREADS, KAWS_STEP.
 use onair_kaws::*;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The classic interface's root: drawUI() runs one receiver's per-frame work and draws either the new interface (drawShell2)
 // or the classic layout (top rows, status bar, main tabs, list, constellations), then the floating windows.
 // Split from main.cpp.

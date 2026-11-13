@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // W1A voiceband modes (families 800 - 802): each decoder against its generator, with carrier offsets, noise, a sample clock error and the other
 // signals (each detector must stay quiet on the others). Simulated only: no real recording went through this test. Short by default; the full
 // sweep runs with ONAIR_TEST_LONG=1.

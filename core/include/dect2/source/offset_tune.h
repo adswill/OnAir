@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Offset tuning: an alternative to removing the DC spike. The radio is tuned beside the channel, so its own DC spike (the LO leaking in)
 // falls outside the channel, and the channel is shifted back to the centre digitally before any receiver sees it. The radio then needs a
 // higher sample rate to hold the channel off its centre; planOffset() works out the offset and that rate, or says why it cannot be done.

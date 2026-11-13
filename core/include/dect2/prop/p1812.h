@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ITU-R P.1812-8 (09/2025): a path-specific propagation prediction method for point-to-area terrestrial services, 30 MHz to 6 GHz
 // (used here up to 50 GHz like its sister P.452 with the same mechanisms). Basic transmission loss not exceeded for p % of the time
 // (1..50 %) and pL % of locations (1..99 %), from a terrain profile with representative clutter heights:

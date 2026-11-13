@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Audio control chain (audio_control.h, docs/AUDIO.md). Own code from textbook algorithms: RBJ "Audio EQ Cookbook" biquads, Goertzel tone
 // detection, NLMS adaptive line enhancer (B. Widrow et al.), FIR Hilbert frequency shifter, Golay(23,12) DCS words.
 #include "dect2/audio/audio_control.h"

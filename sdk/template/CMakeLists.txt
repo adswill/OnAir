@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # A starting point for your own OnAir plugin. Copy this folder, rename "my-plugin" everywhere (also in manifest.json, whose "id" must equal it),
 # put the path of OnAir's sdk/ folder in ONAIR_SDK_DIR and build:
 #   cmake -S . -B build -DONAIR_SDK_DIR=/path/to/OnAir/sdk && cmake --build build

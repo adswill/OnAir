@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The shared channel database: CSV with quotes and commas, the merge rules, the submission text and its links (length limit), and a body
 // as scripts/ingest.py in the data repo expects it. No network.
 #include "dect2/channels/channel_db.h"

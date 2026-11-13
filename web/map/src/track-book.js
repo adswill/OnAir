@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // track-book.js - the hub's live tracks, kept in memory. Pure (no Cloudflare APIs), covered by test/track-book.test.js.
 //
 // Why: every SQLite row the Durable Object writes is billed, and the old hub did a SELECT plus an UPSERT (and a second

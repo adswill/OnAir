@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 4 receiver: GFSK on VHF channels inside the sample band.
 #pragma once
 #include "dect2/common/ring.h"

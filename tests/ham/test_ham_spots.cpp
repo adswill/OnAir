@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spots from outside the station (4.0): DX cluster and RBN lines (time on the right day, the spotter's locator, the RBN SNR and speed), the
 // mode guess, POTA / SOTA JSON (escapes, nulls, nested values, bad rows), PSK Reporter XML, the split a DX asks for, and the spot book merge.
 // Real answers of the services were not fetched for this test: the samples follow their documented field names.

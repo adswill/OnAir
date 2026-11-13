@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Live transcripts in the app (core/src/transcribe): the settings, the speech model (downloaded on request or put in the models folder), the taps on
 // the airband channels and on the sound of the other modes, the Transcripts window, the live captions of the airband screen, the "Voice" section of
 // an aircraft and the transcripts shared to the map. docs/TRANSCRIBE.md.

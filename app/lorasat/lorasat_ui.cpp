@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa satellite screens: the frame table (time, satellite, SF, bandwidth, carrier offset = Doppler, Doppler rate, SNR, level, payload as hex and text),
 // the Doppler curve of the pass drawn from the frames, the preset list (public frequencies and settings with how sure we are: all of them unverified),
 // and the settings. Receive only. The pass planner (Satellites tab) names the satellite and starts this mode; it does not retune for the Doppler shift here:

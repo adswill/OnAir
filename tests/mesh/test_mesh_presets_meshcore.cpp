@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MeshCore radio presets (api.meshcore.nz): the committed sample document parses to the same table the generator wrote, a preset maps to the
 // right LoRa parameters, and the saved-file loader refuses malformed files (and falls back to the built-in table).
 #include "dect2/mesh/mesh_presets.h"

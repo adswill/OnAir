@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """List the user-visible strings that are new since a release and say which catalogs still lack a translation.
 
   python3 tools/release/gen_i18n_new.py [--since v0.2.9] [--base pub/integ-30] [--out docs/I18N-NEW-STRINGS-3.0.md]

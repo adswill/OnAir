@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM playout: queue, concealment, clock drift (see drm_playout.h).
 #include "dect2/drm/drm_playout.h"
 #include "dect2/common/mathconst.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS screens: the message list with a detail pane, the aircraft table and the channel bars.
 #include "../d40/d40_ui.h"
 #include "acars_wx_ui.h"

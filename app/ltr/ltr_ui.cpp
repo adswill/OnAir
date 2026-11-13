@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LTR trunking screens: lock, good / bad word counts, the area, the message list and the repeater table.
 // Control data only; words are listed only when the 7 check bits verify.
 #include "app.h"

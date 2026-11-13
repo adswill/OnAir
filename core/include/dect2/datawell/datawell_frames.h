@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bit stream analysis for the Datawell buoy HF link: nothing about the real frame format is public, so this only finds structure that is
 // there: a repetition period, a constant pattern at the start of each period, and which standard CRC (if any) the periods agree with.
 // Everything it reports is a measurement of the bits, never knowledge of the Datawell format.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium receiver: bursts over the whole capture (FFT detector), each burst demodulated on a worker thread (DQPSK, unique word),
 // its bits handed to the frame layer (iridium_frame.h), the results kept as telemetry.
 #pragma once

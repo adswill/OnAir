@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-L air format: the worked examples of the EASA specification (Issue 2), the CRC and XXTEA against the specification's own routines, Reed-Solomon, and
 // every field value and parameter combination through pack and parse. Loopback and spec examples: no on-air recording was available.
 #include "dect2/adsl/adsl_gen.h"

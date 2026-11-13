@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA traffic-slot selection: the pure choice of which timeslot the voice path follows (tetra_slots.h).
 #include "dect2/tetra/tetra_slots.h"
 #include "dect2/tetra/tetra_voice.h"

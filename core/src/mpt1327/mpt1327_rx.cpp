@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 control channel decoder: MSK-style differential FFSK demodulator, per-phase sync search, codeword framing.
 #include "dect2/mpt1327/mpt1327_rx.h"
 #include <cmath>

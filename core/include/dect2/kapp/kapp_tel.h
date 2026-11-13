@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP receiver telemetry. RxTelemetry::kapp, engine standard 126, active standard 125 (family 124).
 #pragma once
 #include <cstdint>

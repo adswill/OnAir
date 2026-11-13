@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Chinese UI font subsets for all desktop platforms; other UI languages keep their system fallbacks.
 #pragma once
 #include "imgui.h"

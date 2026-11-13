@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web 3.9: the browser app's server side (server/app). Part 1 is the access layer alone (Sessions): who a request is, logins, the
 // fail limiter, CSRF, cookies, password rules, permissions. Part 2 runs the real thing: ServerHost on the built-in test signal, the web
 // server with the app mounted, and talks HTTP and WebSocket to it from 127.0.0.1 (an owner by address), through a trusted "proxy" header as

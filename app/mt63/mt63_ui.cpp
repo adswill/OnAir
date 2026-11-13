@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MT63 screens: the calling-frequency presets (80 to 10 m), the bandwidth (automatic, 500 / 1000 / 2000 Hz) and the interleave
 // (automatic, short, long), the waterfall of the audio passband with the block the receiver found marked on it, the level of each of the
 // 64 carriers, and the text in big letters beside its chat log, callsigns highlighted.

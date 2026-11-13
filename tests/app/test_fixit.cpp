@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The "How to fix" table (app/panels/fixit.cpp): every pattern resolves to its own entry, ids and patterns are unique, every entry explains
 // itself and has steps on every OS, and the buttons are complete.
 #include "panels/fixit.h"

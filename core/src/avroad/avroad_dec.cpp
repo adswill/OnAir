@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Which decoder runs for each mode, and the tuning of each mode.
 #include "avroad_int.h"
 

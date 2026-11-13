@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hamlib CAT control for classic transceivers and receivers (an IC-R8600 and the like): frequency and mode follow in both directions
 // while the receiver runs; IQ or speaker audio comes through a sound card when configured.
 // Receiving never keys the transmitter: only HamlibTx (the transmit subsystem, an operator action) calls PTT.

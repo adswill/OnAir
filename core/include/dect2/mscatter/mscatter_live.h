@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor scatter detector for the engine: IQ in, pings out.
 // A fixed transmitter (the GRAVES radar at 143.050 MHz, or any CW beacon) is received far beyond the horizon only when a meteor trail reflects it.
 // The receiver filters the capture to about 12 kHz, finds the beacon line, follows it, and watches the bins around it for narrowband echoes

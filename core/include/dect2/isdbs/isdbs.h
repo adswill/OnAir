@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-S (Japanese BS satellite television, ARIB STD-B20): the frame, the TMCC control information and a test signal generator.
 //
 // Written from ITU-R BO.1408-1 (the free ITU description of ISDB-S, Annex 1 and its Appendix 1 with the BS parameters), ARIB TR-B15

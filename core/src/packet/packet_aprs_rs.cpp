@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The APRS information field parser (see packet_aprs.h) on top of the Rust crate rust/onair_ax25. Written from APRS101 (chapters 5-12) and the APRS 1.2
 // addenda; the Mic-E longitude and speed rules were cross-checked against the description in Dire Wolf's decode_aprs.c (WB2OSZ, GPL-2.0-or-later) - no code
 // was copied.

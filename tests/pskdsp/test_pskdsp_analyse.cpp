@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator analyser on generated signals: the signal, its symbol rate (within 0.5 %), the order and the pulse shape are found blind,
 // from 75 Bd at 8 kHz up to 250 kBd at 2 Msps, BPSK / QPSK / OQPSK / 8PSK, root-raised cosine and rectangular pulses, with carrier offsets,
 // off-centre signals, a Doppler ramp, a symbol clock error and noise; a carrier given by a click is used; noise alone never locks.

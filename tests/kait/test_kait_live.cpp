@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT live receiver (the engine's side): samples at 1 Msps fed in chunks, 3 s of noise first; it must find the sweep, capture the 10 s burst, decode it on its
 // worker thread, publish the picture and the layers in the telemetry, and survive a reset in the middle.
 #include "kait_test_util.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Picture enhancement and the swath projection: LUT properties, percentile range, and lat/lon <-> pixel round trips on a synthetic pass.
 #include "dect2/dsp/imgproc.h"
 #include <cmath>

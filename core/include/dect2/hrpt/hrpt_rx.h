@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HRPT / AHRPT receiver: the high-resolution weather satellite downlinks near 1.7 GHz. A dish is needed (1 m or more, or a good grid) with
 // an LNA at the feed, and a fast radio: 4 Msps at the least, 6 - 10 Msps better (HackRF, Airspy, SDRplay, Pluto; not an RTL-SDR).
 //

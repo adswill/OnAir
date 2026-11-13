@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The settings store as one receiver sees it (docs/multi-sdr.md): the keys that belong to a receiver (radio, mode, frequency, gain)
 // get the prefix "rx<N>_" for receiver N >= 2; receiver 1 and every shared key keep today's names, so nothing is lost.
 #include "../platform/platform.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN (all channels, family 200) and LoRa satellites (family 201): the tunings are registered under their engine standard numbers, the mode rows,
 // the family and poll-slot counts, the engine wiring and the panels' privacy / honesty strings are in the sources.
 #include <cstdlib>

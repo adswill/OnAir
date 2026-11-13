@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW (Morse) code table, callsign pattern and timing decoder (see cw_morse.h).
 #include "dect2/cw/cw_morse.h"
 #include <algorithm>

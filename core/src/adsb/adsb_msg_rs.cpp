@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ADS-B / Mode S message layer on top of the Rust crate rust/onair_adsb: the same functions as adsb_msg.cpp, which keeps getBits,
 // setBits and toHex (helpers that take no length).
 #include "dect2/adsb/adsb_msg.h"

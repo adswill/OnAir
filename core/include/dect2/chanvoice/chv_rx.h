@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channelised analog voice receiver: CB, FRS / GMRS, PMR446, amateur FM repeaters, HFGCS / HF aviation voice, MDC-1200 on analog FM and a UHF
 // wireless microphone finder, all in one class (one mode of the program per service, setService() picks it).
 //

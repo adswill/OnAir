@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR receiver on real bursts through a separate transmitter. The bursts are the ones captured off the air and published by the ok-dmrlib project
 // (the same hex strings as in test_dmr_burst.cpp: two base station control bursts of colour code 5, and a mobile station voice superframe of colour
 // code 1 with its embedded link control). They are modulated here by a small transmitter that shares no code with the test signal generator

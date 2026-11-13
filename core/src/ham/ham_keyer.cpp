@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham CW keyer: straight, iambic A / B, Ultimatic and bug keying, keyed audio, text to edges and edges back to text (ham_keyer.h).
 #include "dect2/ham/ham_keyer.h"
 #include "dect2/cw/cw_morse.h"

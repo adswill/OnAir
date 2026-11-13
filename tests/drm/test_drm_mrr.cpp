@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The six test cases of the DRM Minimum Receiver Requirements (DRM MRR v2, 2015): the lowest carrier to noise ratio at which the bit error rate of
 // the main service channel stays below 1e-4, on the channel models of Annex B.1:
 //   1 A, 64-QAM, rate 0.78 (protection level 3), short interleaver, channel 1 (AWGN)

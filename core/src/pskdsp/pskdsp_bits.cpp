@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator: symbols to bits (Gray demapping, differential decoding, descramblers, sync-word hunt for the phase ambiguity).
 #include "dect2/pskdsp/pskdsp.h"
 #include "dect2/signallab/signallab.h"

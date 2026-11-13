@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Graw DFM-06, DFM-09, DFM-17: frame builder, symbol builder and decoder.
 //
 // Facts from rs1729/RS demod/mod/dfm09mod.c unless said otherwise:

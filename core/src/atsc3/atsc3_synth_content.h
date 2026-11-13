@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The programme of the ATSC 3.0 test signal (atsc3_synth.h): a looping test card and a two tone sound, encoded in memory with libav and cut into
 // fragmented MP4, one fragment per second, the way a broadcaster hands them to ROUTE. Internal to the synthesizer.
 #pragma once

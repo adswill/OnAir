@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EBICab / Eurobalise screens: the Eurobalise telegrams heard (SUBSET-036 coding, the SUBSET-026 header fields), the balises, and the FSK bursts
 // that gave no telegram (length and first bits; EBICab 700 / 900 formats are not published). "Needs a user test": no real recording was available.
 #include "app.h"

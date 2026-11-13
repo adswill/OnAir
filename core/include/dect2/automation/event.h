@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The normalised event every decoder hands to the automations: a type ("adsb.aircraft"), the time, the mode, the frequency and named fields.
 #pragma once
 #include <chrono>

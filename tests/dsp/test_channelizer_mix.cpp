@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The carrier channeliser (carrierfind.h) and the rational resampler after the speed work:
 //  - RationalResampler gives the same samples however the input is cut into blocks (its buffer keeps a consumed head between calls), to the
 //    last bit with the portable kernels and within 1e-6 with Accelerate (vDSP_desamp's own rounding depends on the length of the call);

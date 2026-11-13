@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Map badges, app side: see badges_client.h and docs/MAP-BADGES-4.0.md.
 #include "dect2/badges/badges_client.h"
 #include "dect2/automation/json_mini.h"

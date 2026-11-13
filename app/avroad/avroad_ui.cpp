@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The screens of the aviation, rail and road modes of 3.8 (families 400 - 411, docs/AVIA-ROAD-3.8.md): one table of what was decoded, one Receiver page. One click: the mode tunes and needs no settings.
 #include "app.h"
 #include "dect2/avroad/avroad_rx.h"

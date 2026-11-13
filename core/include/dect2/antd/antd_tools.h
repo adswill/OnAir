@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna designer tools around the solver (antd.h): parametric templates, calculators, the optimiser, NEC deck and pattern file I/O.
 // Pure functions; docs/ANTENNA.md has the formulas and the file formats.
 #pragma once

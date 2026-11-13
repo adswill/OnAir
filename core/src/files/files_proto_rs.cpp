@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // files_proto.h on top of the Rust crate rust/onair_files: thin wrappers over the C ABI of core/include/dect2/rs/files.h. The code is what
 // used to sit in iq_file.cpp, iq_record.cpp, channel_db.cpp, passes.cpp, mbtiles.h and results_io.h, moved to Rust; the changes made on the way:
 //  * numbers read from text (SigMF meta, TLE fields) are decimal tokens only, [+-]? (digits [. digits*] | . digits) ([eE] [+-]? digits)?, converted by strtod: hex floats,

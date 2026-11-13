@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // rtl_tcp client: an RTL-SDR served over the network by rtl_tcp (librtlsdr's server, also SDR# / SDR++ / OpenWebRX servers that speak it),
 // and the rtl_tcp-compatible servers of other radios (rsp_tcp for SDRplay, airspy_tcp, hackrf_tcp, SDR++'s rtl_tcp server).
 // The protocol: on connect the server sends 12 bytes, "RTL0" (other servers: their own 4 characters), the tuner type and its number of

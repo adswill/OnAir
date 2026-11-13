@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Local display / HDMI emission: a monitor, a TV or its cable leaks the TMDS pixel clock (HDMI, DVI) and the picture data it carries.
 // What the radio then sees: a clean line at the pixel clock (25.175, 74.25, 148.5, 297, 594 MHz ...) and at its harmonics, and around them a
 // comb of lines spaced by the line rate (pixel clock / total pixels per line, 27 - 135 kHz), the "parallel lines" on a waterfall that do not

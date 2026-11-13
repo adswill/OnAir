@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto-record through the voice monitor (docs/MODE-EXPERIENCE.md, 3): a call is recorded only when a rule matches (the master switch is off by
 // default), never when encrypted, only up to the rule's longest call, and the file counts against the rule's disk cap. Also the paged sessions JSON.
 #include "dect2/results/sessions_json.h"

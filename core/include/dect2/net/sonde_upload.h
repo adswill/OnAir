@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde upload: decoded sondes (RS41, RS92, DFM, LMS6, MRZ, iMet-54, iMS-100) go to APRS-IS aggregators such as wettersonde.net and
 // radiosondy.info, in the format of dxlAPRS / radiosonde_auto_rx (an APRS object per sonde) after a receiver station beacon.
 // Every target is OFF until the user ticks it; nothing is connected or sent otherwise. Receive-only: the upload is the only direction used,

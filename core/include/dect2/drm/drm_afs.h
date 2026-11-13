@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM Alternative Frequency Signalling read from the SDC (ES 201 980 clause 6.4.3): type 3 other frequencies of this multiplex, type 4 their schedules, type 11 the same
 // programme on another system (DRM, AM, FM, DAB). And a station book: what was heard, kept between sessions.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Rust DMR frame layer (rust/onair_dmr, dect2::dmr): the short codes over their whole word space, Reed-Solomon, CRCs, BPTC, embedded LC,
 // short LC, CACH, trellis (noisy, NaN and random soft values), rate 1, sync matching, burst assembly and slicing, slot type / EMB, link control, CSBK, data headers
 // and blocks, every text format and the talker alias, over ONAIR_DIFF_ITERS (default 200000) seeded random / mutated inputs per family. Every result goes into a

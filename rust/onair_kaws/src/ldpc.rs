@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! KAWS LDPC codes: systematic quasi-cyclic IRA codes with a dual-diagonal parity part (the construction of the Kris family, rust/onair_kris), built for the
 //! short block lengths of KAWS (n = 512 .. 1728) from a fixed-seed generator, so every build produces the same matrix. Decoder: layered normalised min-sum
 //! (alpha 0.8), f32 LLRs, positive = bit 0 more likely. Matrices are a v0.1 design (spec open item 1): the FER curves are measured, not designed.

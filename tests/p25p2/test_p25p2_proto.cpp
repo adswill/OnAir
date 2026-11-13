@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 2 protocol layer: ISCH (sync word and the (40,9) I-ISCH), the (8,4) DUID, the scrambling sequence (against XMC_SDR's), the AMBE+2 frame
 // places, the ESS (RS(44,16)), and the MAC PDU codewords (Reed-Solomon + CRC) with errors and their builders. The burst layer follows the on-air layout
 // (p25p2_proto.h); the MAC PDU codewords are this program's own: for them the test proves the encoder and the decoder agree, nothing more.

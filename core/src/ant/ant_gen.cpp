@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ANT+ test signal (see ant_gen.h).
 #include "dect2/ant/ant_gen.h"
 #include "dect2/ant/ant_rx.h"

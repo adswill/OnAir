@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Reception Doctor: from a short IQ capture and the receiver state, says in plain sentences why a mode is not decoding
 // (overload, too little signal, off-centre signal, rate too narrow, adjacent interferer, drops, DC spike, I/Q imbalance, wrong mode),
 // each with a one-click fix where that is safe. Pure analysis, no ImGui, no engine: tested on synthetic IQ (docs/RECEPTION-DOCTOR.md).

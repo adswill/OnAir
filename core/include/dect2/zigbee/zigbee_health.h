@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Zigbee / Thread home network health (3.9, docs/SMART5-iot-3.9.md item 14, docs/SMART5-UI-3.9.md): feeds the frames of the one PAN the user
 // marked as theirs into dect2/zwave/homenet_health.h. An 802.15.4 acknowledgement carries only the sequence number (no addresses, no PAN), so it
 // is matched to the last frame of that PAN that asked for one with the same number within the last second. Only the MAC header is used, so

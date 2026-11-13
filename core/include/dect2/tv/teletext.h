@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EBU teletext (ETS 300 706) carried in DVB PES packets (EN 300 472): extraction, page assembly and a character-cell
 // renderer (colours, mosaics, double height) that a UI can draw directly.
 #pragma once

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Writes kaal_golden_codec.h: golden vectors from the reference kaal_codec.py (path: argv[1], default /tmp/kaal-codec).
 Signal: 1 s, 16 kHz, 6000*sin(2 pi 440 t) + 3000*sin(2 pi 1250 t), truncated to int16 (no RNG).
 Golden: the first 10 frames' bits (hex), the Python decode of them, and the Python decode of the same frames with

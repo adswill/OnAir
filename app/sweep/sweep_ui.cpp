@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The sweep scanner (View > Sweep scanner): a fast wideband sweep of a frequency range with a noise-floor measurement, a trace with the floor
 // and the detection threshold, a waterfall of the sweeps, and a log of the signals found. Click a signal to tune it. The sweep itself is in
 // core/src/sweep (docs/scanner.md); this file is the window and the worker thread.

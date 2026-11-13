@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // X-Midas BLUE files (core/src/source/bluefile.cpp): written by our writer in every type / format / byte order and read back, a hand-built
 // header (big-endian, keywords, type 2000), damaged and truncated files, and the file-source probe (probeIqFile).
 // Built standalone (no engine) with -DBLUE_ONLY for a quick check; the probe checks need the whole core.

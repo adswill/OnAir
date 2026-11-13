@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 2 (H-DQPSK TDMA voice channel, scrambled) under real-world impairments: carrier offsets (also with the channel off centre), a noise
 // sweep, a simulcast echo, Rayleigh fading, a sample drop-out and a symbol clock error. Two calls (one clear on slot 1, one encrypted on slot 2) run
 // through the receiver; measured per scenario: time to the first sync, the share of the clear call's voice frames that arrive intact, ESS success,

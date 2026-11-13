@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LTR and EDACS trunking modes (work in progress): the engine tunings are registered under their numbers, the mode rows, the family count and the
 // screen mapping agree, and the panel strings are in the screen sources.
 #include "dect2/edacs/edacs_rx.h"

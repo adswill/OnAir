@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Motorola Type II (SmartNet, SmartZone) telemetry. RxTelemetry::smartnet, engine standard 322, active standard 321 (family 320). Receive only.
 #pragma once
 #include <cstdint>

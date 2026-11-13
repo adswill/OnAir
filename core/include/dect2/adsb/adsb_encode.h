@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B / Mode S message encoders: the test signal generator and the tests build messages with them.
 // Every function returns a complete frame with its parity. The layouts are those decoded in adsb_msg.cpp.
 #pragma once

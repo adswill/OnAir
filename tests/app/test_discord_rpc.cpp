@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Discord Rich Presence: frame encoding, JSON escaping, and a fake Discord IPC server (unix only).
 #include "platform/discord_rpc.h"
 #include <cstdio>

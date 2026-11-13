@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM best-hour book (see drm_besthour.h).
 #include "dect2/smart5/drm_besthour.h"
 #include <algorithm>

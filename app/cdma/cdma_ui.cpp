@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDMA2000 / IS-95 cells: the base stations heard, by pilot PN offset, with what their Sync Channel Message says.
 #include "app.h"
 #include "i18n/i18n.h"

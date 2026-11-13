@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! XID frames (exchange identification, ICAO Doc 9776 section 6.3 / ISO 4335): the VDL parameter groups of ground station information frames (GSIF) and of link
 //! establishment, handoff and parameter negotiation: parameter set, connection management (h and r bits), sequencing, airports, aircraft / ground station
 //! locations (12 bit signed tenths of a degree), frequency and modulation lists.

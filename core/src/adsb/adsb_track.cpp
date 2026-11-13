@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B frame validation and the aircraft table.
 #include "dect2/limits.h"
 #include "dect2/adsb/adsb_track.h"

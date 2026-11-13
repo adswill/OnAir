@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wideband LoRa survey (loraraw_survey.h).
 #include "dect2/loraraw/loraraw_survey.h"
 #include "loraraw_bank.h"

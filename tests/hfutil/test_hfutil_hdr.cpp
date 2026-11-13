@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MIL-STD-188-110C Appendix C / STANAG 4539 high-rate modem (hfutil/hfu_hdr.h): the tables against the text of the standard, the coding of every
 // rate and interleaver, and generated transmissions through the receiver with frequency error, drift, a sample clock error, noise in 3 kHz,
 // an echo, AGC blocks, chunk sizes, two messages, joining an ongoing transmission and noise only. Simulated signals only.

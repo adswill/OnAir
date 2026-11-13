@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Thread through the 802.15.4 receiver in Thread mode: the O-QPSK test signal (zigbee_gen.h) carrying a Thread beacon, link-layer encrypted data,
 // MLE Discovery frames and fragments, under real-world impairments: carrier offsets of +-100 kHz (+-40 ppm at 2.4 GHz), chip clock error, noise,
 // another sample rate, the Zigbee-mode receiver on the same samples (it must not call this Thread), noise alone.

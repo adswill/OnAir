@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Loader for user-installed speech codecs (see core/include/dect2/codec/speech_codec.h and docs/CODECS.md).
 #include "dect2/codec/speech_codec.h"
 #include "dect2/codec/codec_guard.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT cells receiver: the LTE narrowband IoT carriers around you, from what every cell broadcasts in the clear to all devices (3GPP TS
 // 36.211 / 212 / 213 / 331): its physical cell id (NPSS / NSSS), operating mode (in-band, guard band, standalone), antenna ports and system frame
 // number (MIB-NB), and in SIB1-NB its operator (MCC / MNC), tracking area, cell identity, band and barring. Receive only. Nothing addressed to a

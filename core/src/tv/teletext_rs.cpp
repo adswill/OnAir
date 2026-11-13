@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The teletext layer of teletext.h on top of the Rust crate rust/onair_dvbsi: Hamming codes, the G0 national option subsets, the renderer,
 // the PES data unit walk and the data unit decoder. The decoder class with its page store stays in teletext.cpp.
 #include "dect2/tv/teletext.h"

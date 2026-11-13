@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GPS navigation message and the models of IS-GPS-200 (see gnss_nav.h).
 #include "dect2/gnss/gnss_nav.h"
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sensitivity guard for the voice and pager modes: the mode's own test signal (makeModeSynth) at a weak SNR, rounded to 8 bits like a
 // HackRF, through its receiver, in 50 ms chunks; the telemetry at the end. The tests compare what decoded with what decoded before the
 // 0.3.0 receiver changes, so a filter or decoder change that costs sensitivity fails here instead of on the air.

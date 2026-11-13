@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Crypto helpers for the user-key decoders of Zigbee, Wi-SUN, Z-Wave S0, wM-Bus and LoRaWAN: AES-128 block helpers, CMAC (RFC 4493) and AES-CCM* (IEEE 802.15.4 Annex B / Zigbee).
 // Only ever used with a key the user imported through the key store (voice_keys.h). Nothing here searches for keys.
 #pragma once

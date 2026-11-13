@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit panel notes from core/include/dect2/tx/tx_plan.h: link budget, power ramp steps and SWR back-off advice. Notes only: nothing here blocks or changes a transmission.
 #include "../panels/tx_state.h"
 #include "../ui/typography.h"

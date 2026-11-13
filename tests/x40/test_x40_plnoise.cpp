@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Power-line and impulse noise analyser: mains-related rates (100 and 120 Hz, 50 and 60 Hz), a drifting mains, missing and random extra impulses, other steady rates, random-only
 // impulses (no pattern), noise alone, a level sweep. Simulated signals only.
 #include "x40_gen2.h"

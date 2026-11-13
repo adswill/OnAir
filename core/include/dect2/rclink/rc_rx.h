@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio-control and mesh link monitor: Reticulum / RNode (LoRa), ExpressLRS 900 MHz (LoRa), MAVLink on SiK radios, FrSky and FlySky. Each of them is its own
 // entry in the mode list (a protocol mask, setProtocols). Receive only: nothing is transmitted, nothing here can command a vehicle.
 //

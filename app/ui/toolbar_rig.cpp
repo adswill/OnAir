@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radios added by address: the Network radios window (PlutoSDR by IP, rtl_tcp, SoapyRemote, SpyServer, Hermes Lite 2,
 // Red Pitaya) and the Hamlib rigs window (model search, serial port, baud rate), plus following a rig's dial.
 // Split from toolbar.cpp.

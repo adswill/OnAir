@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internet TV (IPTV) mode entry for the engine's tables: family 209, engine standard 211. See dect2/tv/iptv.h and docs/IPTV.md.
 #pragma once
 #include "dect2/engine/mode_tuning.h"

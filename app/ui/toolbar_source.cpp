@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The source side of the top bar: starting the receiver, the sample-rate control, the DVB bandwidth,
 // the ADC-bits table and the options of the selected source (test signal, IQ file, sound card, Hamlib rig).
 // Split from toolbar.cpp; shared declarations are in app.h and toolbar_internal.h.

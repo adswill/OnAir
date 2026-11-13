@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Passive mesh topology, shared by every mesh-like mode: Meshtastic / MeshCore (LoRa), Zigbee and Thread (IEEE 802.15.4), Z-Wave.
 //
 // MeshTopology keeps the nodes a receiver has heard of and the links between them, built only from what the frames say:

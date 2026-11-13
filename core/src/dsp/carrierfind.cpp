@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Carrier finder and channelizer: see carrierfind.h.
 #include "dect2/dsp/carrierfind.h"
 #include "dect2/dsp/fftutil.h"

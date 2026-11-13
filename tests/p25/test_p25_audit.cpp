@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Audit fixes of the Phase 1 trunking model (one check per defect). M11: the explicit group update follows channel (T), the downlink, not channel (R).
 #include "dect2/p25/trunk.h"
 #include <cmath>

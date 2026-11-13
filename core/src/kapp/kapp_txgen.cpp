@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP transmit generator: see kapp_txgen.h.
 #include "dect2/kapp/kapp_txgen.h"
 #include "dect2/kapp/kapp_arq.h"

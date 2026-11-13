@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS arrivals board for one port (ShipPlotter, MarineTraffic port view): vessels whose declared destination (message 5 / 24) matches the
 // port, sorted by ETA, with the distance and an ETA worked out from speed and distance beside the declared one. docs/AIS-ARRIVALS-3.9.md.
 #pragma once

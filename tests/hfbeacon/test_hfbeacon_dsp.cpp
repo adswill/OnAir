@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF beacon detection on synthetic signals (hfbeacon_gen.h): keyed carriers of known frequency, level and time in Gaussian noise.
 // What this verifies: that detection, identity (keying, schedule arithmetic of hfbeacon_list.h) and SNR measurement work on signals built from the
 // SPECIFIED rules - single-letter Morse, the 2.9 s / 3 s / 27 s Long Dashes ladder, the NCDXF 10 s slots with four 1 s dashes stepping 10 dB. It does

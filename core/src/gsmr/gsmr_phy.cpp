@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R physical layer (gsmr_phy.h): channel coding, burst formats, GMSK modulation, FCCH search, equaliser.
 #include "dect2/gsmr/gsmr_phy.h"
 #include "dect2/cell/cell_dsp.h"

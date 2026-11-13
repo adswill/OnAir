@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the network protocol layers, meant for DECT2_SANITIZE=ON: every parser must never crash or hang on any bytes
 // (WebSocket frames, request heads, flat JSON, URL text, rtl_tcp / SpyServer / SDR++ messages, the menu draw list, the radio list text). Buffers are exact-size heap
 // blocks so a sanitizer sees a read or write past the end. Also a libFuzzer target with -DONAIR_LIBFUZZER.

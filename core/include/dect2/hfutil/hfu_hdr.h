@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MIL-STD-188-110B/C Appendix C high-rate serial tone (3200 to 12800 bit/s), the waveform STANAG 4539 also uses: receiver and test generator.
 // Written from the published text of MIL-STD-188-110B Appendix C (and the same appendix in 110C with Change 1): 2400 Bd on 1800 Hz, a
 // 287-symbol preamble (184 sync symbols, then 103 symbols carrying the data rate and interleaver length in three Barker-coded QPSK symbols

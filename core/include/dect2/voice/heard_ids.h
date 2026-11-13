@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A dictionary of the IDs actually heard on this channel (DMR radio / group IDs, NXDN and P25 unit IDs, D-STAR callsigns, pager capcodes) and the
 // nearest-neighbour search the receivers use to repair a header that arrived with a few wrong bits.
 //

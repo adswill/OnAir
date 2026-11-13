@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CubeSat telemetry test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // makeCubesatSynth(): made-up satellites send one frame of each framing on one FM channel, in an endless cycle: AX.25 at 1200 baud AFSK

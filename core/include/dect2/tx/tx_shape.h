@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Burst edges for the transmit generators that key their carrier hard on and off (a burst starts at full amplitude the sample after silence).
 // A hard key-up spreads like a sinc: tens of kHz of splatter around a 12.5 kHz channel. The shaper gives every burst a raised-cosine ramp over
 // its first and last rampSec, and the start of the transmission too; inside a burst and in the silence it changes nothing. It looks rampSec

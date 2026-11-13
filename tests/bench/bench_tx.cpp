@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Per-mode cost benchmark of the TRANSMIT generators (makeTxGenerator): CPU seconds (user + system of this process) per second of signal made, and a hash
 // of the first samples so that a speed-up can be shown to leave the signal bit-identical.
 //

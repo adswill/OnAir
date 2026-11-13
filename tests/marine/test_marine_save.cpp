@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NAVTEX messages saved as text files: once per message, with the header, and not again for repeats.
 #include "../data/marine/rf_util.h"
 #include "dect2/marine/marine_navtex_save.h"

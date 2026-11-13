@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // #389: the Calls table can show only one kind of call ("Control" rows take the whole screen on a busy site).
 #pragma once
 namespace dmrfilter {

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) receive chain at one internal rate (halow_chain.h): front end, STF detector, and per candidate the long training symbols, the
 // SIG field of the S1G_1M / S1G_SHORT / S1G_LONG preambles and the data field. IEEE 802.11-2020 clause 23 (S1G PHY).
 //

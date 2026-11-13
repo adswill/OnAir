@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM receiver (ETSI ES 201 980): acquisition, OFDM tracking, channel estimation, and the hand-over to the back end (FAC, SDC, MSC) in drm_dec.cpp.
 //
 //   input -> channel filter, 48 kHz (drm_front) -> guard interval correlation (mode, symbol timing, carrier offset modulo the carrier spacing)

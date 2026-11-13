@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL codec, golden bits: the encoder on a fixed 1 s two-tone signal gives the bits of the Python reference for the first frames;
 // every frame is exactly 320 bits of 0 or 1 and the count is ceil(n / 320) + 1.
 #include "dect2/kaal/kaal_codec.h"

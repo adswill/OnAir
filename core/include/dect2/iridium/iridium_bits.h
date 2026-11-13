@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium bursts as gr-iridium's iridium-extractor writes them (".bits" files, one "RAW:" line a burst), so iridium-toolkit's
 // iridium-parser.py reads our files unchanged: `iridium-parser.py output.bits > output.parsed`. OnAir writes bits only; whatever the
 // toolkit does with them afterwards (voice included) happens outside OnAir.

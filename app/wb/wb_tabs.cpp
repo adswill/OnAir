@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: the Measure, Demodulate, Bits and Export tabs, the background jobs behind them and the listening.
 #include "dect2/common/thread_name.h"
 #include "wb_state.h"

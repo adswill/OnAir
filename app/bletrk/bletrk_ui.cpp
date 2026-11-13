@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BLE tracker detector screens: the trackers heard (kind, state, how long and how close each stays, level trend), the alerts for a tracker that
 // follows you, and the settings of the alert. Receive only: trackers are recognised from their public advertisements; nothing is sent to them.
 // Identifiers are kept in memory for a short window and shown as the last two address bytes.

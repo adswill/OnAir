@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sun drift-scan pointing calibration (3.9, docs/SMART5-science-3.9.md item 24). Point the dish just ahead of the Sun and leave
 // it: the Sun drifts through the beam and the total power traces the beam. A Gaussian on a sloping baseline is fitted to that
 // trace, giving

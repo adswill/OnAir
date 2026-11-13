@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Build OnAir.app (with its libraries inside) and a .dmg disk image for macOS.
 #   tools/package/make_dmg.sh [version]
 set -euo pipefail

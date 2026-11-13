@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sound-card IQ source: AudioIn Tone/Silence through USB analytic IQ, and listAudioInputs() does not crash.
 #include "dect2/audio/audioin.h"
 #include "dect2/source/source.h"

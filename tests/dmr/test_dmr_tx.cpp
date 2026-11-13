@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR subscriber transmit (dmr_tx.h): the bursts OnAir builds from the operator's own DMR ID and payload are looped back into the DMR receiver
 // (dmr_eval.h harness) and must decode to exactly what was sent, with impairments (carrier offset, clock error, noise, 8-bit rounding). This is the
 // "decode its own generator output" gate. Voice bits are a test pattern (no AMBE encoder), so sound is not checked; framing, IDs, alias, text,

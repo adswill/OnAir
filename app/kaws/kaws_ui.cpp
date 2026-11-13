@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS screens: the receiver panel (state, the preamble indicator for every slotted profile, the audio spectrum, the chat window with a compose box that
 // continues in the TX view, the beacon list) and the transmit options (callsign, grid, recipient, message, kind, profile, passes, slot timing) that the TX
 // panel draws for the KAWS signal. English texts only. KAWS is simulation-only: it has never been on the air.

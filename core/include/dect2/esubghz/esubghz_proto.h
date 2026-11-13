@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Flipper Zero "Enhanced Sub-GHz Chat" (github.com/twisted-pear/esubghz_chat) and the firmware's own Sub-GHz CLI chat: the radio format and the
 // message layer, written for this project from the app's and the firmware's sources (no code copied).
 //

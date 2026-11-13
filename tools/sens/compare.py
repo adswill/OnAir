@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Compares a sens_sweep result with the committed baseline (tests/sens/baseline/sens-baseline.json).
 
   compare.py BASELINE NEW [--db 0.3] [--lock 0.2]   table of per-mode, per-scenario deltas; exit 1 on a regression

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fast wideband sweep scanner (rtl_power style): hops the tuner across a range, averages FFT power in fixed-width bins, stitches the hops
 // into one trace, measures the noise floor robustly (percentile of the bin power, corrected for the bias of averaged noise) and finds
 // signals above floor + threshold. Source-agnostic: see SweepSource (the radio adapter is IqSweepSource, tests use a fake one).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UHF RFID (EPC Gen2) reader commands: every command type, Tari 6.25 to 25 us, data-1 of 1.5 to 2 Tari, TRcal ratios, reader clock 1 % off, carrier offset
 // and drift, input rates, noise sweep with the false-command count, bad CRCs and 15 minutes of carrier plus noise. Simulated signals only.
 #include "x40_gen2.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT through the engine on the synthetic source (setStandard(133)): the built-in test signal is the real transmitter's output (the built-in test picture as a 10 s burst, then 2 s of silence) with a
 // carrier offset of +500 Hz and a little noise; the receiver must lock, decode and read the carrier offset back. Also: the transmit-mode and tuning tables name it,
 // and a second start with the signal option set (modeOpt[0]) still decodes.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // makeAisSynth(): a small port area as the engine's synthetic source. 15 vessels in and around Jebel Ali (25.0 N, 55.05 E) that move along simple

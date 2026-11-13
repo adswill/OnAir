@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireless M-Bus receiver against the test signal: every mode, offsets, noise, sample rates, the 169 MHz plan, and noise alone.
 #include "dect2/wmbus/wmbus_gen.h"
 #include "dect2/wmbus/wmbus_live.h"

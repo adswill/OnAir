@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! DMR burst layout (ETSI TS 102 361-1 clauses 6 and 9): the nine frame sync patterns (table 9.2) and how a received centre field is matched to
 //! them, the data type names, assembly and slicing of the 264-bit burst (132 symbols; payload, slot type, centre field), the slot type (Golay 20,8)
 //! and EMB (QR 16,7,6) fields, and the 4FSK symbol mapping.

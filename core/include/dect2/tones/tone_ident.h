@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tone system identification (4.0): given the tones heard (frequency and length, in the order they came) on a voice channel, say which signalling
 // system it is: DTMF (two simultaneous tones, one from each group), a five-tone sequence (ZVEI1 / ZVEI2 / CCIR / EEA / EIA / DZVEI ... by the tone
 // plan), a CTCSS sub-tone (a steady tone below 300 Hz) or SELCAL (two pairs from the 16-tone plan). The user does not have to know what a channel uses

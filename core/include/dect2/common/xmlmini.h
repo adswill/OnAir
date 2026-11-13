@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A small XML reader for the signaling fragments of ATSC 3.0 (SLT, S-TSID, USBD, MPD): elements, attributes, text, comments, CDATA,
 // entities. Namespaces are kept as written; lookups compare the local name (the part after any prefix).
 #pragma once

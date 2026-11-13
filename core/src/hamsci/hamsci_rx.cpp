@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HamsciReceiver: the engine side of the ham science modes. See hamsci_rx.h. The decoders are in hamsci_dsp.h (tested on their own).
 #include "dect2/hamsci/hamsci_rx.h"
 #include "dect2/marine/marine_dsp.h"

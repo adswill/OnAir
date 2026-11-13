@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmitter from cell ID (3.9, docs/SMART5-tv-3.9.md item 14). DVB-T carries cell_id in the TPS and DVB-T2 in L1-post; the NIT
 // may describe each cell with a cell_list_descriptor (tag 0x6C, EN 300 468 clause 6.2.7: position and extent of the cell and its
 // subcells). This joins the received cell_id with that list and with the user's own book (cell ID -> site name), and gives the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // cdma2000 / IS-95 base stations receiver: a block of about one second of the 1.25 MHz channel goes through cdma::search() (pilots, then
 // the Sync Channel of each) whenever the previous block is done, and the base stations heard are kept in a table by PN offset.
 // Receive only: the pilot and the Sync Channel Message, which every base station broadcasts to all mobiles (cdma.h).

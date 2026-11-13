@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR (China Digital Radio, GY/T 268.1-2013 "Digital audio broadcasting in FM band, part 1"): the parameters and building blocks of the
 // physical layer that the transmitter (cdr_gen) and the receiver (cdr_rx) share. Clause and table numbers refer to GY/T 268.1-2013.
 //

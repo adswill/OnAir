@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi OFDM PHY: tables, coding and the transmit half used for the test signal (see wifi_ofdm.h). Clause numbers: IEEE 802.11-2020.
 #include "dect2/wifi/wifi_ofdm.h"
 #include "dect2/dsp/fftutil.h"

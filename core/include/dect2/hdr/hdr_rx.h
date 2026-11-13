@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio (NRSC-5, USA): the digital sidebands of hybrid FM (MP1, MP3) and AM (MA1) stations, and all-digital AM (MA3). Decodes everything but the sound: station
 // information (SIS), the program list, program service data (ID3), the station information guide and the large objects (pictures).
 // The audio is HDC, a patented codec that OnAir does not ship: its packets are counted, and played when the user has installed a patched

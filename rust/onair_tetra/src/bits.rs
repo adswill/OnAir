@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Bit reader over one bit per byte, as the C++ `R` helper of tetra_pdu.cpp: reads past the end give 0 and clear `ok`.
 //! A byte is OR-ed in as it is (not masked to one bit), exactly like the C++ reader, so odd input behaves identically.
 

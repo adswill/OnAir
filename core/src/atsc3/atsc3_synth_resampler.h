@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A fast streaming resampler for the ATSC 3.0 test signal (internal to atsc3_synth*.cpp): the signal fills 5.2 MHz of the 6.144 MHz it is made at, so a
 // 24 tap windowed sinc with 2048 phases is enough (images below -60 dB) and about three times cheaper than the general ExactResampler. For any
 // ratio (the position is tracked in double precision, so a clock offset of a few ppm is exact), output rates from 0.9 times the input rate up.

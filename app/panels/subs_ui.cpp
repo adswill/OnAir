@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Subtitles over the TV picture: DVB subtitles (EN 300 743, core/src/tv/dvbsub.cpp) as a bitmap texture, teletext subtitle pages (EN 300 706)
 // as boxed text, the on/off and language choice, and the character-cell drawing of a teletext page that the Teletext tab shares.
 #include "../app.h"

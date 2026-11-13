@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RF camera: angle <-> pixel mapping and the two-landmark calibration, sub-band analysis (two transmitters on different frequencies keep their
 // own bearing and frequency, the band filter drops one), the heat map blend and the marker layout.
 #include "dect2/df/rfcam.h"

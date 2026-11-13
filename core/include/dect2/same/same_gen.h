@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NOAA Weather Radio SAME test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // One NFM weather channel: AFSK at 520.83 baud (mark 2083.3 Hz, space 1562.5 Hz), each message as 16 x 0xAB then the text, three times one

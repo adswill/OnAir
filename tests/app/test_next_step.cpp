@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The "what do I do next" line (app/ui/next_step_logic.h): every state, the priority order, and the honesty rule for modes without a lock.
 #include "../../app/ui/next_step_logic.h"
 #include <cstdio>

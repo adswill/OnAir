@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers: the public warning content of SIB10/11/12. Message identifiers, serial number and CB Data pages follow 3GPP TS 23.041
 // sec 9.4.1.2.1, 9.4.1.2.2, 9.3.24 and 9.4.2.2.5; the text coding follows TS 23.038 sec 5 and 6.2.1. These are public broadcasts.
 #pragma once

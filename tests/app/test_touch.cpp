@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The pure parts of the touch interface (app/ui/touch_logic.h): keypad entry and frequency parsing, the gesture recogniser (pinch,
 // pan, long press, swipe, fling) and the kinetic scroll.
 #include "../../app/ui/touch_logic.h"

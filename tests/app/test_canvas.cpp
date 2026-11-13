@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Workspace layout's model (app/canvas/canvas_model.h): add / remove / link blocks, a block whose source was removed, tab groups,
 // snapping, receiver choice, the decoder's mode steps, the text form round trip (also with odd text and unknown kinds), several
 // workspaces in one file, unique names and the shipped templates.

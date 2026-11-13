@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web 3.9: the spectrum and waterfall with drag-to-tune (mouse, pen and touch). The capture's span is shown, or a zoomed part of it
  * (the + and - buttons, or Ctrl / Cmd with the wheel about the pointer; the server cuts the part from its FFT, so a zoomed row has its full
  * resolution); the tuned frequency is the red line. Drag anywhere: the line follows the pointer and the receiver is tuned on release (or

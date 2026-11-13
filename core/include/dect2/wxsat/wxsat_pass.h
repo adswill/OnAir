@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather-satellite pass planner helpers (pure): a quality rating for each predicted pass, and the choice among passes that overlap in time when only one receiver is
 // available (the auto-record schedule). The prediction itself (TLE, SGP4) is in core/src/track; this takes its output.
 //   rate()    1 - 5 stars from the highest elevation (a low pass has a long, lossy path and the antenna's horizon in the way), the usable length, the

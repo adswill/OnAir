@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B overhead log (planefence): every aircraft that came within a radius of the receiver, one row per pass with the closest moment (time,
 // distance, altitude, callsign, type, registration), a "now overhead" list, a CSV per day. docs/ADSB-OVERHEAD-3.9.md.
 #pragma once

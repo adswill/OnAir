@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared worker pool, thread naming and DECT2_THREADS (threadpool.h).
 #include "dect2/common/threadpool.h"
 #include "dect2/common/platform.h"

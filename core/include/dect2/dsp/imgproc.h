@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Picture enhancement (contrast stretch, gamma, equalise, invert, false colour, thermal palette) and the map projection of a satellite
 // pass: swath geometry from the sub-satellite ground track (spherical earth), equirectangular reprojection, graticule, world file.
 #pragma once

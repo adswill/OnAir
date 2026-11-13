@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLARM receiver: clean frames at two radio rates, privacy flags honoured, the newer protocol counted, bad packets rejected, noise alone gives nothing.
 #include "dect2/flarm/flarm_gen.h"
 #include "dect2/flarm/flarm_rx.h"

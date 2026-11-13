@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Stage 1 of the Inmarsat all-carriers mode: the carrier detector on synthetic wideband captures with offsets, Doppler, fading, adjacent carriers,
 // a DC spike, noise only, different chunk sizes, and the Aero test signal. Synthetic only: needs a user test with a real capture.
 #include "dect2/inmsat/inmsat_detect.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Acquisition by FFT (see gnss_acq.h).
 #include "dect2/gnss/gnss_acq.h"
 #include "dect2/dsp/dsp_compat.h"

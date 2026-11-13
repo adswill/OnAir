@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ARIB STD-B24 8-unit text (ISDB-T / ISDB-S service names and guide): see dvb_text.h. Kanji, hiragana and katakana go out through EUC-JP.
 #include "dect2/tv/dvb_text.h"
 #include <cstring>

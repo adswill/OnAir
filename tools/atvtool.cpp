@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV: write the test signal to a file (atvtool gen ...) or run the receiver on a recording (atvtool rx ...).
 #include "dect2/atv/atv_card.h"
 #include "dect2/atv/atv_gen.h"

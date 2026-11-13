@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Layout helpers of the side panels (Source, Gain, Tuner): small sub-headings, one label column for every row, a record button with its dot
 // drawn in a fixed place, and a compact warning chip. Every radio's gain rows use the same helpers, so the panels line up in the Current,
 // Clean and Compact looks and at any UI scale (all sizes follow the font and gUi).

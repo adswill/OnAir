@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The faults of tests/common/impair.h applied to the GNSS test stream chunk by chunk (gnsstest::Options::hook): the stream is far too long to hold whole.
 // - a frequency offset: impair::shift on chunks whose length holds a whole number of its cycles, so that the phase runs on across chunks
 // - a sample clock error: impair::clock on windows of exactly L input samples that give exactly M output samples (ppm = (M / L - 1) * 1e6), so the

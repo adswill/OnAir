@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers + five-tone selective calls on the same channel: CCIR, ZVEI1/2, EEA, EIA and DZVEI sequences (with repeat tones, tone length variants,
 // noise, carrier offsets), alongside POCSAG; and no false calls out of POCSAG data or noise, nor with the option off.
 #include "dect2/pager/pager_gen.h"

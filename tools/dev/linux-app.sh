@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Build the GUI in the Linux container and run it on a virtual display (software OpenGL), saving a screenshot.
 #   tools/dev/linux-app.sh [dect2 arguments...]     e.g. tools/dev/linux-app.sh --autostart
 # The screenshot lands in build-shots/linux.png (the --shot argument is added for you).

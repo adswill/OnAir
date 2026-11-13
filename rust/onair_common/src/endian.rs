@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Endian helpers on byte slices. Reads past the end give 0 in the missing bytes; writes return false instead of panicking.
 
 pub fn read_u16_be(b: &[u8], pos: usize) -> u16 {

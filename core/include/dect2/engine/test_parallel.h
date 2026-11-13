@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helper for the tests: run independent cases on a few threads and print their output in a fixed order, so that the log reads the same as a serial run.
 #pragma once
 #include <algorithm>

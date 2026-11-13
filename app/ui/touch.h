@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The touch interface (Settings > Touch interface, --touch): App::touchUi switches the existing screens to big targets and
 // gives them a thumb-friendly shell (touch_shell.cpp). It is a theme / layout mode, not a second set of panels: the widgets
 // the screens already use pick up the metrics below, and the few touch-only pieces (keypad, mode picker, sheets) live in

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: keyword alerts. A list of keywords (one per line) is matched, without regard to case, against the message text and the capcode's name
 // (pager_alias.h). A plain line is a piece of text; "re:" before it makes it a regular expression (ECMAScript, a bad one is reported and skipped).
 // Lines that start with # are comments. Pure code: the window highlights the rows, shows the live ticker and raises the optional notification.

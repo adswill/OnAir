@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Telemetry parsing for the Smart CubeSat decoder: a validated frame (AX.25, AX100 / CSP, AO-40 FEC, text beacon) turned into named fields.
 // FUNcube-1 (AO-73) / FUNcube-2 / Nayif-1 realtime telemetry follows the frame definitions of gr-satellites (python/telemetry/funcube.py,
 // Daniel Estevez EA4GPZ, GPL-3.0-or-later) and the AMSAT-UK / FUNcube data warehouse conversions it uses.

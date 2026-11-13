@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-H physical layer (EN 300 744 annex F) on the DVB-T receiver: generator against receiver.
 //   1. tables: the 4K permutation is a permutation of 3024 cells, the 4K pilot and TPS carriers of tables F.4 / F.5, every TPS combination
 //      (2K / 4K / 8K, native / in-depth, the DVB-H bits s48 s49, hierarchy) coded and decoded again

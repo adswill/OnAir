@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB packet mode forward error correction (ETSI EN 300 401 clause 5.3.5): a 188 x 12 table of packets, RS(204,188) over the rows, the parity carried in nine FEC packets (address
 // 1022) after each packet set. A receiver with this takes the set out of the stream, corrects it and hands on the packets; without FEC the address 1022 packets are simply dropped.
 #pragma once

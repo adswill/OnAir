@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 cell multiplexing of a subframe (A/322 7.2.6): the data cells of all symbols form one list indexed from 0; dummy values fill
 // everything first, then the cells of each PLP overwrite their positions (non-dispersed PLPs contiguous, dispersed PLPs in subslices).
 #pragma once

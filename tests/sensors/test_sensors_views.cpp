@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The model filter of the Sub-GHz sensors receiver (SensorsReceiver::setView): the messages of one sensor family or kind only.
 // The real pulse trains of tests/sensors/families.txt (one recording per family of rtl_433's test set) are rebuilt as IQ signals, with a carrier offset,
 // a pulse-timing error of +-4 % (a sensor's clock) and noise, and run through every view:

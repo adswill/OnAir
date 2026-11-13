@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The codes and message layers of QZSS, SBAS and Galileo against the published tables and examples:
 // - the first ten chips of every SBAS and QZSS PRN (octal, the L1 C/A PRN code assignment table of gps.gov, which lists DO-229 and IS-QZSS-PNT)
 // - the G2 delay construction gives the GPS codes too (IS-GPS-200 Table 3-I delays)

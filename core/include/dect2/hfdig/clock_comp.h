@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automatic correction of the computer clock for the slot-timed digital modes (FT8, FT4, FT2, WSPR ... and JS8), docs/EASE-3.8.md.
 // Every station's DT in a slot is the measured time of its signal against the slot clock, so a wrong computer clock shows as the same DT on every
 // station. ClockComp watches that median and asks for a correction once it is steady; if slots stay silent it asks once for a slot search, which finds slots

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) network monitor (see halow_rx.h): the mixer, the receive chains (halow_chain.h), the network table and the frame log.
 #include "dect2/halow/halow_rx.h"
 #include "dect2/wirecap/wire.h"

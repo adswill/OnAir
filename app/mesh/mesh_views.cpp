@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) screens: the map of node and station positions, the selected node's card and the chat per channel.
 // Split from mesh_ui.cpp; the shared state is declared in mesh_internal.h.
 #include "map/my_location.h"

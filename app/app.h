@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared declarations of the OnAir window: the application state, small helpers and the panels that draw the interface.
 // The panels live in widgets.cpp, app_state.cpp, toolbar*.cpp, plots.cpp, analysis_tabs.cpp, tv.cpp, scan_outputs.cpp,
 // antenna.cpp, dab_ui.cpp, wizard.cpp; main.cpp has the window loop.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL beacon: frame bits against the Python kaal_beacon_v2.py, CRC failure, the slice against kaal_beacon_slice.py, decoding at
 // Eb/N0 6 dB, two frames in one stream, and the occupied bandwidth.
 #include "dect2/kaal/kaal_beacon.h"

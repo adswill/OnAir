@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium radio layer: the constants of the burst format, the DQPSK mapping, the burst detector over the whole capture and the
 // per-burst demodulator. Facts from gr-iridium (github.com/muccc/gr-iridium: include/iridium/iridium.h, lib/burst_downmix_impl.cc,
 // lib/iridium_qpsk_demod_impl.cc, lib/fft_burst_tagger_impl.cc) and iridium-toolkit (bitsparser.py, util.py).

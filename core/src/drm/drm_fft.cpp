@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mixed radix decimation in time FFT (radix 4, 2, 3, 5 and a general odd radix for the rest).
 #include "dect2/drm/drm_fft.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR burst layout and message formats (ETSI TS 102 361-1 clauses 6, 7, 8, 9 and annex E; TS 102 361-2 clause 7 for the voice services).
 // Used by the receiver to read bursts and by the test signal to build them. Nothing here keeps state.
 #pragma once

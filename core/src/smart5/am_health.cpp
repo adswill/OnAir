@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM modulation health (see am_health.h).
 #include "dect2/smart5/am_health.h"
 #include <algorithm>

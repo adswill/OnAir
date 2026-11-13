@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The values of settings.conf on Linux and Windows (app/platform/prefs_text.h, #360): a value with line breaks comes back whole,
 // and a file from before the escapes is read as it is.
 #include "../../app/platform/prefs_text.h"

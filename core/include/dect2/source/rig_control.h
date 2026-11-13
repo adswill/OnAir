@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Rig control for transmitting with a classic transceiver: a CAT link that is watched and re-opened (RigKeeper), plain-words error hints,
 // finding the rig on a port (name hints for Icom, Yaesu, Kenwood, Elecraft, Xiegu, QRP Labs, then a short CAT probe), pairing the rig's USB sound
 // card, network rigs (rigctld, FlRig), and CatRigIo: the HamRigIo the ham transmitter keys (PTT by CAT, RTS, DTR or VOX; the frequency that passed

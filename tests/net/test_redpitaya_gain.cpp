@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Red Pitaya has no analog gain: its gain control is a digital gain 0..+40 dB with an explanatory note; the Hermes Lite 2 keeps its LNA range.
 #include "../../core/src/source/native_common.h"
 #include <cstdio>

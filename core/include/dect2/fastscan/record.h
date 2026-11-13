@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Recording of channels from one wide capture without retuning: WolaBank (a 4x oversampled FFT filterbank, so the cost does not grow with the
 // number of channels), a small per-channel tap (fine mix, low-pass, decimate, FM/AM demodulator) and RecorderBank that starts and stops
 // recordings by hit, up to 100 at once, guarded by CpuGuard. Files are named by frequency and time into one folder with a size budget.

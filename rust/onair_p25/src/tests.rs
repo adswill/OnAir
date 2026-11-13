@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests for the P25 layer that do not need the C++ reference: NID round trip with errors, Reed-Solomon correction, Golay / Hamming, trellis, TSBK and link control.
 use crate::msg::{self, Lc, Tsbk};
 use crate::{golay, nid, rs, trellis};

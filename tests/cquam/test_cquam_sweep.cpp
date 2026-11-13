@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C-QUAM under real-world impairments: tuning error and a station off the dial, sample rates, noise (the weakest stereo is printed, and
 // weak signals never give a false stereo), flat fading, a retune in the middle and no pilot on a noisy mono station.
 #include "dect2/cquam/cquam_gen.h"

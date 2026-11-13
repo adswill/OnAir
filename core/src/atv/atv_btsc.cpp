@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BTSC stereo and SAP: see atv_btsc.h. Compander values from FCC OET Bulletin 60, section B(c).
 #include "dect2/atv/atv_btsc.h"
 #include "dect2/common/stable_random.h"

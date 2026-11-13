@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Kris helpers: QAM map / soft demap (round trip, Gray property, unit power), CRC known vectors, Zadoff-Chu, root-raised-cosine taps, xorshift64.
 #include "dect2/kris/kris_common.h"
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // sens_gk2a_gap: how far the GK-2A receivers are from an ideal one, in dB of Es/N0 (the symbol energy over the noise density; the noise
 // bandwidth is the symbol rate), by the share of frames that pass Reed-Solomon. docs/GK2A.md.
 //

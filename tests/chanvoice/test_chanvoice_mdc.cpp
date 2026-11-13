@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MDC-1200 burst: encoder and decoder round trip over every op / argument / unit ID combination class, with noise, a level change, a sampling clock
 // offset, a leading silence of any length, frequency error, voice before and after, double packets, and rejection of noise and speech. The encoder
 // and decoder are both written here from the same format description, so the round trip alone cannot show agreement with a real radio: it was checked

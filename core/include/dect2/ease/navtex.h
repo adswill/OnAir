@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NAVTEX stations (letter and NAVAREA to name and place) and their four-hourly slots. Pure, no I/O.
 // The table is a community list and stations change: a name is a hint, the letter on the air is the fact.
 #pragma once

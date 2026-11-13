@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A coherent group of N independent receivers (KrakenSDR / KerberosSDR: one RTL-SDR per channel, all sharing one clock and one switchable
 // noise source) presented as one MultiChannelSource. Each device is a ChannelFeed (the RTL driver adapter lives outside the core).
 // Calibrate while the noise source is on: the integer sample offset between the devices (they start a few samples apart) is found by

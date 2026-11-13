@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF ALE test signal (see ale_gen.h).
 #include "dect2/ale/ale_gen.h"
 #include "dect2/common/stable_random.h"

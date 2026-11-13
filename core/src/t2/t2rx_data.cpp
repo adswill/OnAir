@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The data stage of the DVB-T2 receiver: channel estimation from the scattered pilots and handing cells to the error correction.
 #include "t2rx_impl.h"
 #include "dect2/dsp/simd.h"

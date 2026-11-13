@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BGAN mode: finds forward bearers in a wide capture, runs a demodulator per carrier through one channelizer, merges what they decode.
 // Carriers are classified by width, the demodulator confirms by frame sync (pilots, unique word) and CRC. A carrier 170 - 225 kHz wide that does not
 // lock and whose squared spectrum has the pair of lines of filtered OQPSK at 135.4 ksym/s is listed as a GMR-2 class forward carrier (the IsatPhone family).

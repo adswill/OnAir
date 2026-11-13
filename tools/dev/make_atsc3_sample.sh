@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Makes a synthetic ATSC 3.0 IQ recording for trying the receiver: a test picture with sound, fragmented like ROUTE sends it, then atsc3gen.
 #   tools/dev/make_atsc3_sample.sh [seconds] [output.cs8]     (needs ffmpeg with libx265; build/atsc3gen from the normal build)
 set -e

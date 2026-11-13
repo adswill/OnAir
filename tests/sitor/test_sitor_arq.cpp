@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SITOR-A / AMTOR ARQ monitor (sitor/sitor_arq.h) through the SITOR receiver (sitor/sitor_live.h): generated links with the call, repeats
 // asked by the receiving station, a change of direction and the end of communication; carrier offsets, tone polarity, a noise sweep,
 // drift, a weak or missing control signal, chunk sizes, and SITOR-B next to it (neither may disturb the other). Simulated signals only.

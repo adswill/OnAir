@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells: the polar code of the downlink control channels (38.212 5.3.1 code construction and encoding, 5.4.1 rate matching) and a
 // CRC-aided successive-cancellation list decoder.
 #include "dect2/nr/nr_phy.h"

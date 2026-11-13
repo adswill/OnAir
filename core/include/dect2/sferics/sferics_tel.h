@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sferics (lightning) telemetry, shared by the receiver and the UI. Receive only; nothing is transmitted.
 #pragma once
 #include <cstdint>

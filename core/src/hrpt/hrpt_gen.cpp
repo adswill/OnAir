@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HRPT / AHRPT test signal (see hrpt_gen.h).
 #include "dect2/hrpt/hrpt_gen.h"
 #include "dect2/common/stable_random.h"

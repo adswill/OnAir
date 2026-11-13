@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TX studio, pure measurements on a block of complex samples: power spectrum, occupied bandwidth (99 % and -26 dB), PAPR, adjacent-channel power ratio and a
 // check against a spectral mask, plus the impairments of the loopback check (noise, frequency offset, fading). No radio, no file, no global state.
 #pragma once

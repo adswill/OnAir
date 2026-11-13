@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL beacon: frame bits (port of kaal_beacon_v2.py), BPSK slice modulator and streaming receiver (port of kaal_beacon_slice.py).
 #include "dect2/kaal/kaal_beacon.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF ALE (2G, MIL-STD-188-141 appendix A / FED-STD-1045) receiver: the calls, soundings, AMD messages and LQA reports on one channel.
 //
 // The channel is mixed to 0 Hz and brought to 24 kHz complex (marine::Front), then the upper sideband becomes 8 kHz audio

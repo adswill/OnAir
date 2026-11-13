@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa (raw): the coding chain for every spreading factor and coding rate. Frames are encoded (mesh_lora.h) and decoded again symbol by symbol:
 // SF5 - SF12, 4/5 - 4/8, CRC on / off, low data rate optimisation on / off, explicit and implicit header, payloads of 1 to 255 bytes, a bin error
 // at 4/7 and 4/8 (corrected), a damaged payload (reported through the CRC), the air time against the Semtech formula and the LDRO rule.

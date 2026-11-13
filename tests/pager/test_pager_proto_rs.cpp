@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Rust POCSAG / FLEX layer (rust/onair_pager, dect2::pager): code words (valid, damaged, random), text readers, the "looks like text"
 // heuristic, POCSAG transmissions built by the generator and then damaged, the FLEX speed table, frame information words and FLEX phases (built by the generator,
 // built word by word with random vector words, damaged, random), ONAIR_DIFF_ITERS (default 200000) per family. Every result goes into a digest

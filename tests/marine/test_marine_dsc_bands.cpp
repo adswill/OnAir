@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DSC bands, the marine band table, the scanner, parallel monitoring in one capture, the ship table (AIS learning, import, export) and KML / GPX.
 #include "../data/marine/rf_util.h"
 #include "dect2/marine/marine_bands.h"

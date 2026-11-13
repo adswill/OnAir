@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS vessel log: every MMSI ever heard with its last name and type, unique vessels per day and per hour, the farthest per class, kept on
 // disk (core: dect2/common/seen_store.h; bands are the classes: 0 class A, 1 class B, 2 the others).
 #include "app.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM channel coding: CRC, energy dispersal, interleavers, constellations, multilevel coding with the punctured convolutional code.
 #include "dect2/drm/drm_fec.h"
 #include "drm_internal.h"

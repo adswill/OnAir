@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helpers shared by several screens (see ui_common.h): clock text, key / value rows, the status-line IQ lamp and State label,
 // the map's zoom buttons and the wrapped-text tooltip.
 // Only screens that had the same lines written out use them; more can move here later.

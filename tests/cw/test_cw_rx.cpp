@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW skimmer against generated keyed carriers: several speeds at once across the window, two signals 150 Hz apart, a tuning error and
 // signals near the window edges, QSB fading, weak signals in noise, hand keying with Farnsworth spacing, noise only (no false text),
 // the focus on a picked frequency and its sidetone (through the tap only: silent).

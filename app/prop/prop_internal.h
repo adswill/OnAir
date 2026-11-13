@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > Propagation, shared between prop_ui.cpp (window, worker, map, Simple mode, settings) and prop_adv.cpp (Advanced mode panels).
 #pragma once
 #include "../app.h"

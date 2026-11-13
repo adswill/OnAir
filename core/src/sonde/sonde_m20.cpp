@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteomodem M20: frame bytes <-> fields, the symbol builder and the decoder. Same line code and checksum as the M10, a different frame.
 //
 // Facts from rs1729/RS demod/mod/m10m20mod.c: frame[0] = length (0x45, sometimes 0x43), total bytes = frame[0] + 1, frame[1] = 0x20,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FY-3 AHRPT / MPT measurement tool: the sensitivity of the receiver against an ideal chain, and a sweep of real-world impairments.
 //   fy3tool theory [--frames N]                   the ideal chain: perfect carrier, timing and sync, soft Viterbi per rail, differential decoder, Reed-Solomon
 //   fy3tool rx [--rate R] [--rs S] [--product P] [--lo dB --hi dB --step dB] [--secs T] [--cfo Hz] [--threads N]

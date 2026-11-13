@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OpenSky identifier. OpenSky (M/A-COM / Harris) is a 4-slot TDMA system, 9600 baud 4-level FSK in a 25 kHz channel on 700 / 800 / 900 MHz, with no public air interface description; its traffic is encrypted. Nothing is decoded here: the mode measures the symbol rate, the levels, the width and the TDMA burst pattern and says whether the signal fits.
 #pragma once
 #include "dect2/common/ring.h"

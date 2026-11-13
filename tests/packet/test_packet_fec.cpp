@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FX.25 and IL2P receive: blocks built by this test's encoder following the tag table and spec, with byte errors up to the code's limit, inverted level for IL2P, and false-sync noise. Simulated bits only.
 #include "dect2/packet/packet_ax25.h"
 #include "dect2/packet/packet_fec.h"

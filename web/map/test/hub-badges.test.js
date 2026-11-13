@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The real MapHub ingest path (src/index.js) with sign-in: a fake Durable Object context (SQL calls are recorded and answer nothing, the
 // badge storage is swapped for the memory backend), so the code under test is the hub's own ingest, by-name and reply logic.
 import test from "node:test";

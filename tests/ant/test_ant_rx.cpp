@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ANT+ receiver on the generated signal: the strap and the bike sensors decode with their fields, with carrier offsets, noise, a clock
 // error, at 4 and 8 Msps; a damaged frame is counted and not shown; noise alone gives nothing; a foreign network's frames are found.
 #include "dect2/ant/ant_gen.h"

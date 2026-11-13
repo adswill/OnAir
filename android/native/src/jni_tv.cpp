@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TV picture and sound on the phone (docs/ANDROID-4.0.md): the transport stream of the TV modes, cut down to the packets of the service
 // the user picked, for the app's own demultiplexer (tv/TsDemux.kt) and the phone's decoders (MediaCodec). Nothing is decoded here and
 // no codec is in this library: the elementary streams go to the decoders Android itself provides.

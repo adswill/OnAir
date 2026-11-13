@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN regional channel plans (LoRa Alliance RP002-1.0.x "Regional Parameters": EU863-870, US902-928, AU915-928, AS923, EU433) as the lists of
 // 125 / 250 / 500 kHz channels the monitor searches, and the MAC layer of a received PHY payload (TS001 L2 1.0.4 chapters 4 and 5, 1.1
 // additions): MHDR, DevAddr, FCtrl, FCnt, FOpts MAC commands, FPort, MIC, join-request, join-accept and rejoin-request framing.

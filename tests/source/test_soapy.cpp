@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SoapySDR source with a fake radio: device list, tuning and gain, streaming, and a DVB-T2 lock through the whole engine.
 #ifdef _WIN32
 #include <stdlib.h>

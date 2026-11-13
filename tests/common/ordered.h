@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fixed evaluation order for the seeded tests.
 //
 // C++ leaves the order in which the arguments of a call and the operands of most operators are evaluated unspecified: Clang goes left to right, GCC on

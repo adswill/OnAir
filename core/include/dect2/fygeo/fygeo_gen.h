@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FengYun geostationary test signals. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // FY-4 LRIT (FY-4A, FY-4B: modeOpt[0]) / FY-4A HRIT-II/III (makeFy4LritSynth ...): xRIT files in FY-4's header dialect (two AGRI channels of a full disk picture in two

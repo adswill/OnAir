@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DJI drone receiver: see dji_rx.h.
 #include "dect2/dji/dji_rx.h"
 #include "dect2/dji/dji_dsp.h"

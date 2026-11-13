@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium sky plot and satellite identification from Doppler (core/include/dect2/iridium/iridium_doppler.h).
 #pragma once
 #include "app.h"

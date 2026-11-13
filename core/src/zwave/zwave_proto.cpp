@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Z-Wave frame layer, see zwave_proto.h
 #include "dect2/zwave/zwave_proto.h"
 #include <cstdio>

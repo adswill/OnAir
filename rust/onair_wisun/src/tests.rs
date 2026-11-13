@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests of the Wi-SUN layers that do not need the C++ reference: check values, the whitening sequence, a built-by-hand PAN advertisement.
 use crate::{mac, phy};
 

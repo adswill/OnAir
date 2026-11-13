@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // badges/defs.js - THE badge data file: every badge's name, description, icon and tier thresholds, in one place.
 // Shared by the hub (src/badge-stats.js awards them) and the pages (profile, leaderboard). Pure data, no DOM.
 // To tune a badge, change its numbers here; the tests in test/badge-stats.test.js read the same table.

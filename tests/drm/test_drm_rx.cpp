@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM receiver: generator -> receiver on clean and noisy signals. Checks what the receiver reports (mode, occupancy, services, label, text, time) and that
 // the logical frames of the audio stream come out bit-exact, for every robustness mode, occupancy and constellation, at many input rates and chunk sizes.
 #include "../data/drm/testkit.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shortwave wiring: the tuning is registered under its engine standard, the mode row (in the HF group), the family and poll-slot counts, the engine
 // cases, the panel hook, the General screen sharing, the doc page and the decoder buttons: every decoder in the table has a receiver behind it.
 #include <cstdio>

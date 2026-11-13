@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) PPDU builder for the test signal: STF, LTF1, SIG, further LTFs (or D-STF / D-LTF / SIG-B of the long preamble) and the data
 // field at any MCS, on the tone grid of the width (halow_phy.h). IEEE 802.11-2020 clause 23.3.8 - 23.3.11. The SERVICE field is 8 bits, the tail 6 bits
 // (per encoder), the pad bits zero; the scrambler runs over all of them and the tail is zeroed again afterwards.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir UI kit: small components on top of Dear ImGui (ImGui stays). Rules (docs/UI-KIT.md): toolbars are FlowRow, never SameLine chains;
 // no literal colours or sizes in panels (theme_tokens.h); one component per job so a fix lands everywhere.
 #pragma once

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Step 1 / step 2 of OnAir Web against a fake directory Worker (tools/fake_directory.py): the listing program (onair-server --directory-run), the preview, the
 status file, the "Test connection" lines and every way the directory or the network can misbehave. usage: test_fake_directory.py ONAIR_SERVER FAKE_DIRECTORY.py"""
 import http.server, json, os, shutil, signal, socket, subprocess, sys, tempfile, threading, time, urllib.request

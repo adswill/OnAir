@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Yaesu System Fusion (C4FM) air interface: frame layout and error coding, written from Yaesu's public "Amateur Radio Digital
 // Specs" (revision 1.01), sections 3 and 4 and appendices A and B. No speech codec is here: voice goes to a user-installed plug-in.
 //

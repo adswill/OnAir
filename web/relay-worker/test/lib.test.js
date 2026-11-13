@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Unit tests of the Worker's pure helpers, cross-checked against the Node relay (relay/relay.js) where they must agree.
 import test from 'node:test';
 import assert from 'node:assert';

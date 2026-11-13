@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS receiver: AIS 1 and 2 (161.975 / 162.025 MHz) and the long-range channels 75 and 76 (156.775 / 156.825 MHz, message 27), all that the
 // capture holds at the same time (a 6 Msps capture at 159.4 MHz holds all four). A satellite mode widens the channel filters for the Doppler shift
 // of a receiver in low earth orbit and decodes collided bursts (ais_sat.h); docs/SATELLITE_AIS.md.

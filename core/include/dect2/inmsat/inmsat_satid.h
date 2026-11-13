@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automatic satellite identification for the Inmarsat all-carriers mode. Three independent kinds of evidence, each scored 0..1 per candidate satellite
 // and then combined, so one wrong clue does not decide:
 //   content   - the Aero P channel system table (satellite id, longitude, spot / global beam: aero_su.h, JAERO's reading of the SUs) and the

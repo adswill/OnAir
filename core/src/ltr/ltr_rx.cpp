@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LTR receiver: FM front end at 9600 Hz, 150 Hz low pass, decimate to 2400 Hz (8 samples per bit), integrate-and-dump slicing at every
 // phase, and a search for the 9-bit sync in both polarities. Neighbouring phases that hit the same word are merged (the middle one is used).
 #include "dect2/ltr/ltr_rx.h"

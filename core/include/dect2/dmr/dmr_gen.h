@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR test signal: the generator the synthetic source plays and dmrtool writes to a file. Nothing is transmitted.
 //
 // What it makes: the downlink of a two slot base station (a continuous 4FSK carrier at 4800 symbols/s with CACH, idle bursts, group and private

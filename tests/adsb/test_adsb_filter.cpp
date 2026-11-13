@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B filter and search (round 4 #4): text over address, callsign, registration, type and operator; altitude band; squawks with prefixes;
 // categories; ground / airborne; military blocks; every combination of the parts on a mixed traffic set; the settings text round trip.
 #include "dect2/adsb/adsb_filter.h"

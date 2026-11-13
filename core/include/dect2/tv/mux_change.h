@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whether two views of the receiver are the same multiplex: decides when the live service list must be emptied.
 // A different transponder (frequency, symbol rate, family) or a different network / transport stream id means the services of the
 // old one are stale. An id or rate of 0 means "not known yet" and never counts as a change.

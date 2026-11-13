@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS: the station filter (class and ship-type group), the CPA and geofence alert settings and the list of alerts (ais_alerts_ui.cpp), called from ais_ui.cpp.
 #pragma once
 #include "dect2/ais/ais_alerts.h"

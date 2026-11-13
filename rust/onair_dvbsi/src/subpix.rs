@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! DVB subtitle pixels and colours (ETSI EN 300 743): the default 2-, 4- and 8-bit colour tables (section 10), YCrCbT to RGBA (ITU-R BT.601 studio swing),
 //! the run-length coded pixel data sub-blocks of an object (2-, 4- and 8-bit code strings, map tables, section 7.2.5.2), index to RGBA conversion of a region
 //! and alpha blending of regions into a display.

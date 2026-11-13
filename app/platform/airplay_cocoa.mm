@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AirPlay through AVFoundation: an AVPlayer plays the HLS address and the system hands it to the AirPlay device chosen in its device list
 // (AVRoutePickerView). The player stays silent on this Mac: when a device takes over, the device plays the stream itself.
 #include "airplay.h"

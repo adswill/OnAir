@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Share my radio": an rtl_tcp-compatible server inside OnAir. Whatever the engine reads from its radio goes out as unsigned 8-bit IQ to every
 // client that connects (a second OnAir through its rtl_tcp network radio, SDR#, SDR++, GQRX, ...). Off until the user starts it. By default only
 // this computer can connect; "LAN" opens it to the network. The clients' frequency / gain commands are only handed on when allowControl is set.

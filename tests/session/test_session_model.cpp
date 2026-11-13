@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Session model and its ids (docs/MODE-EXPERIENCE.md, 2.1): collision-safe stable ids, begin / update / end through the store, NaN positions,
 // UTF-8 keys that are never cut, and the encrypted verdict keeping metadata only.
 #include "dect2/session/session_store.h"

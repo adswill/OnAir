@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Smart insights (docs/SMART5-*-3.9.md): what the analysers of core/include/dect2/insight report, and small helpers they share.
 // Everything here works on what this receiver decoded; nothing goes to the internet.
 #pragma once

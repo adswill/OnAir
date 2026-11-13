@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by the fist benchmark and its test: a hand-sent text through the 1 kHz channel chain (the receiver's 65-tap +-50 Hz low-pass, the
 // magnitude, then cw::Chain), and the character error rate against the sent text.
 #pragma once

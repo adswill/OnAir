@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Rebuild the OFL Chinese subsets from the original Sans2.004 OTFs (fontTools required)."""
 import argparse
 import hashlib

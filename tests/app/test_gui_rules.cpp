@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Interface rules that can be checked on the sources of app/ without running the program (docs/GUI-AUDIT.md lists what was checked by hand):
 //  1. no SetCursorPos / SetCursorScreenPos right before the end of a window, child, group or function: ImGui reports "Code uses SetCursorPos()
 //     to extend window/parent boundaries" (##main2). Restore a saved spot with restoreCursor(), or submit a Dummy().

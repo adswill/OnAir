@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSK441 on simulated signals: generator round trip, tuning error, noise sweep, a short ping inside noise, noise alone, other signals.
 // Simulated only: no recording of a real meteor scatter contact was available.
 #include "dect2/hamsci/hamsci_dsp.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C2 receiver (EN 302 769). See dvbc2_rx.h for the chain. Simulated signals only.
 #include "dect2/dvbc2/dvbc2_rx.h"
 #include "dect2/t2/t2interleave.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Globalstar screens: the 13 CDMA channels (power, SNR, occupancy, Doppler), the Doppler track against time with the pass planner's satellites drawn over it
 // (predicted Doppler of the Globalstar satellites above the horizon, from the TLEs the planner loaded), and the event log. Receive only: the L-band signal (the terminal uplink) is
 // spread and encrypted and nothing of its content is decoded.

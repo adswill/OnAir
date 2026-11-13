@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // onair-app-load: the cost of OnAir Web 3.9 viewers (docs/WEB-3.9.md, "CPU"). Runs the real thing in one process without a radio or a
 // network beyond 127.0.0.1: ServerHost on the built-in test signal, the web server with the app, and N fake viewers that each open the
 // WebSocket, subscribe to the panel, the status, the spectrum (1024 bins, 10 rows a second) and audio (16 kHz PCM), and read everything.

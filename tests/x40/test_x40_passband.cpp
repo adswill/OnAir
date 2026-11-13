@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Passband signal classifier: each signal class alone, all of them at once, keyed signals that stop and start, a level sweep, noise alone. Simulated signals only.
 #include "x40_gen2.h"
 using namespace x40gen; using namespace dect2;

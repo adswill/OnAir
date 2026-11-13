@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FANET and OGN: formats against hand-built frames, then simulated air signals with impairments. No real recording of either was available: simulated only.
 #include "avroad_gen.h"
 #include "dect2/avroad/avroad_proto.h"

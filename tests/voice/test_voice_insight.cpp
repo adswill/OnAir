@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice insights (docs/SMART5-voice-3.9.md): talkgroup heatmap and busy-time prediction, trunk load with Erlang B, talkgroup change alerts.
 // Simulated call streams only (Poisson arrivals, exponential holding times, a blocked-calls-lost trunk); no real trunked recording.
 #include "dect2/insight/voice_activity.h"

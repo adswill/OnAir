@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // M17 protocol layers (M17 specification 2.0, spec.m17project.org / github.com/M17-Project/M17_spec): the 16-bit CRC, base-40
 // callsigns, the extended Golay(24,12) code of the LICH, the K=5 rate 1/2 convolutional code with the P1 / P2 / P3 puncturing, the QPP
 // interleaver, the randomizer, the frame builders (LSF, stream, packet) and their decoders from soft symbols, and the LSF META contents

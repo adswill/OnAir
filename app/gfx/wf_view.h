@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The waterfall at the size it is shown. The history is 4096 columns by 512 rows; drawn straight onto a plot of ~1000 x ~400 pixels, the GPU
 // (linear filter, no mipmaps) picked about one texel in four across and some of the rows down, and as the picture slid down by part of a row
 // each frame it picked other rows: narrow or short signals blinked. Here each pixel column is the highest level of the columns it covers, and

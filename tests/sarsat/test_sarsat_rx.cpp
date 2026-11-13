@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // COSPAS-SARSAT receiver on the generated test signal: every beacon of a cycle must arrive with its exact hex ID, clean, in noise, with carrier offsets
 // of a few kHz, a bit rate that is 0.8 % off, reversed polarity and at other sample rates. Noise alone must give nothing.
 #include "dect2/sarsat/sarsat_gen.h"

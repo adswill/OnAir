@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) physical layer: known answers of the coding chain, encode -> decode for every SF / CR / LDRO, error correction,
 // and modulation -> channelizer -> demodulator bit-exact at a clean SNR for SF 7..12 and the four bandwidths.
 #include "../data/mesh/testutil.h"

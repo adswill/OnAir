@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS time structure and ARQ: the spec's message-time table (2.1), the UTC slot grid, a lossy-link transfer with retransmission and profile adaptation
 #include "dect2/kaws/kaws_arq.h"
 #include "dect2/kaws/kaws_sched.h"

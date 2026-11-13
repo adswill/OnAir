@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireless M-Bus (EN 13757-4) receiver for the engine: IQ in, meter frames out.
 // 868 MHz plan: S1 on 868.3 MHz, T1 and C1 on 868.95 MHz, R2 on 868.03 / 868.09 / 868.15 MHz; 169 MHz plan: N1a..f from 169.40625 MHz in 12.5 kHz steps.
 // Every channel that lies inside the capture is mixed to baseband, filtered, FM-demodulated and run through a chip clock recovery and sync search per mode

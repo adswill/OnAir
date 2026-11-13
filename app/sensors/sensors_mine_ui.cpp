@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Mine" view of the Sub-GHz sensors (3.9, docs/SMART5-iot-3.9.md): the user marks their own meters and tyre sensors; only those are followed.
 // Meters: use per hour and day from the register (dect2/sensors/meter_usage.h). Tyres: pressure at 20 C, slow leak, low, one tyre off
 // (dect2/sensors/tpms_watch.h). The marks are kept in the settings (sensMine: one "key|vehicle|position" per line); the usage and pressure

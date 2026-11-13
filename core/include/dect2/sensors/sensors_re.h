@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Working out an unknown sensor from its packets: the checksum (the Protocol Lab's CRC, sum and XOR search) and which bits hold a value, by comparing with what the user reads off the
 // sensor (a thermometer's display) or, with no readings, by a slowly changing field. The result is a line to add to a flex decoder.
 #pragma once

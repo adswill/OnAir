@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The waterfall colour maps as pure functions: v in 0..1 to 0xAABBGGRR (opaque). Map numbers match Waterfall::Map and are stored in the
 // settings: new maps go at the end, never in between. Also the custom gradient (stops as text), the level transform (brightness,
 // contrast, gamma) and the trace colour presets. Tested in tests/app/test_plot_util.cpp and tests/app/test_spec_axis.cpp.

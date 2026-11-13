@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "cdr_audio.h"
 #include "dect2/cdr/cdr_dra.h"
 #include <algorithm>

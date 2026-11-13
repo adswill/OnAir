@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > EchoLink: log in with the user's callsign and password, list and search the stations, connect to a station, link, repeater or
 // conference, talk with push-to-talk or VOX and listen on the speakers. An optional RF bridge (off by default, with a licensing note) links
 // a radio on a sound card to the connection. The protocol and audio are in core/src/echolink; this file is the window and the sound cards.

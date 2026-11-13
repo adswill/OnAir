@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analogue TV: the untuned picture (snow) for hunting weak signals (#239), and a channel tuned at its vision carrier (carrier at the centre of the input).
 #include "dect2/atv/atv_testkit.h"
 #include "../common/jobs.h"

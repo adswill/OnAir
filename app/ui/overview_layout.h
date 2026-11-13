@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The adaptive layout of the main area in the new interface (sidebar layout, ui2.cpp bodyParent; docs/LAYOUT-4.0.md): the spectrum and
 // waterfall pane, the mode's list on the right ("results column") and its analysis row at the bottom (constellationsTab). Every mode used
 // to get all three at fixed sizes, so a mode with nothing in the lower row showed a large empty box, and a list of one status line kept a

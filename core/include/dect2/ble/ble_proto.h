@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth LE advertising: the link layer pieces of the advertising physical channel (Core spec vol 6 part B) and the advertising data
 // structures (Core Specification Supplement part A), as nRF Connect and other scanner apps show them. Receive side only: nothing here
 // connects, pairs or answers; a CONNECT_IND is shown as a connection request and never followed.

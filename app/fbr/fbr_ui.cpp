@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fleet Broadcast (UHF SATCOM, 250.450 / 250.550 / 250.650 MHz) screens: the carrier, the 1200 Bd clock, the 16-channel activity view, the message log.
 // Receive only. Framing and channel activity are shown; nothing is decoded and nothing is decrypted: the channels are usually random-looking
 // (encrypted) data, and the public description has no plain text on them. See docs/FBR-3.9.md for what rests on which source.

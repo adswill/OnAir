@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium receiver telemetry, shared by the receiver and the UI. Every vector is capped; a report stays well below 100 kB.
 // The first members are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once

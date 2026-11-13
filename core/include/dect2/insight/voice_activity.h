@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Two-way and trunked voice insights (docs/SMART5-voice-3.9.md), per talkgroup or per system, never per radio:
 //  TalkgroupHeatmap - weekday x hour airtime per talkgroup, decayed over weeks; next busy hour; "busier than usual now"
 //  TrunkLoad        - concurrent calls, offered traffic in Erlangs per hour, Erlang-B blocking for the voice channels seen

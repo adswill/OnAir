@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B over days and years (graphs1090, Virtual Radar Server "first seen"): the store of every airframe ever heard, daily records, the all-time
 // outline per altitude band, the adsb.first_ever event and the History view. Core: dect2/common/seen_store.h.
 #include "adsb_internal.h"

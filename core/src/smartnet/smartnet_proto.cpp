@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Motorola Type II outbound control channel word and message layer (see smartnet_proto.h).
 #include "dect2/smartnet/smartnet_proto.h"
 #include <cmath>

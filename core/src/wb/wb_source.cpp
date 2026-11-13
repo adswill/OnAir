@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/wb/wb_source.h"
 #include "dect2/source/iq_file.h"
 #include "dect2/source/bluefile.h"

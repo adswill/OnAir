@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared helpers of the W1A voiceband modes (private to core/src/w1a).
 #pragma once
 #include "dect2/w1a/w1a_dsp.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4 ("KV4"): the owner's own low-rate speech codec for the KAAL voice slots (docs/KAAL-CODEC.md).
 //
 // 8 kHz core: LPC analysis-by-synthesis coder (LSF prediction, fractional pitch, pyramid-VQ pulse codebook, closed-loop gains,

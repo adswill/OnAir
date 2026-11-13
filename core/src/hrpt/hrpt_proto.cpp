@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HRPT / AHRPT layers above the demodulator (see hrpt_proto.h).
 #include "dect2/hrpt/hrpt_proto.h"
 #include <cstring>

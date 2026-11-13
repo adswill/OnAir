@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode A / C transponder replies (the old secondary-radar replies on 1090 MHz, before Mode S): the framing, the squawk (Mode A) and the
 // Gillham altitude code (Mode C).
 //

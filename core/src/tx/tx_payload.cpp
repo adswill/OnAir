@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit payload: turn the operator's own strings (callsign, text, a file) into a ModeSynth. Empty fields keep the mode's demo signal.
 #include "dect2/tx/tx.h"
 #include "dect2/acars/acars_gen.h"

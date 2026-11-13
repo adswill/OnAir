@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fast scan v2: turns raw hits into a trustworthy channel list. A hit is only "confirmed" once it was seen in several separate sweeps; hits that
 // are the mirror image of a much stronger signal about the hop centre, sit on the hop's DC/IF spot, or never change at all (a steady spur) are
 // flagged so the list can hide them; the rough signal class comes from the bandwidth and the activity pattern. Pure code, no radio.

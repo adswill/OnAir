@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CP16 test signal and transmitter (cp16_proto.h). The test signal only exists in memory or in a file; the transmitter is the TX session's generator.
 //
 // The carriers are made at 16 kHz complex (cp16::Modulator) and interpolated to the output rate (cubic), with the sample clock error, then moved to

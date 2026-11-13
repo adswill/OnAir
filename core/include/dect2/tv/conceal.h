@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Picture concealment for live playback: when a deep fade swallows a few hundred milliseconds of the stream (or damages the pictures
 // after it), the missing pictures are synthesised from the pictures on both sides (Apple ML interpolation, Direct3D 11 compute on Windows, or a motion search on the CPU).
 // Nothing here recovers the lost data: it makes the loss less visible.

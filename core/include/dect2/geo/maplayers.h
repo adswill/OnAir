@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Map layers: the receivers' result lists turned into plain markers (position, label, age, track) for the live map, and the
 // geometry of a satellite (sub-point, footprint circle, ground track). Pure functions, no drawing.
 #pragma once

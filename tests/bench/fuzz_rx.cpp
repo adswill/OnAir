@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Robustness: feed the receiver noise, NaN/Inf samples, bursts of corruption, dropped chunks, resets and re-configurations
 // and make sure it neither crashes nor hangs (build with -fsanitize=address,undefined to make this meaningful).
 #include "dect2/dvbt/dvbt_gen.h"

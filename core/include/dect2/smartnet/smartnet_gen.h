@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Motorola Type II test signal: a control channel of OSWs and analog voice channels with a tone, in one capture. For the tests and the mode's built-in generator; no real system.
 #pragma once
 #include "dect2/common/ring.h"

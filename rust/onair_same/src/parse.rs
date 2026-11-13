@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The SAME header parser (47 CFR 11.31 (a), (c)): `ZCZC-ORG-EEE-PSSCCC[-PSSCCC...]+TTTT-JJJHHMM-LLLLLLLL-`, and the end of message `NNNN`.
 use crate::locate::{digits, event_kind, event_name, num, originator_name, valid_char};
 

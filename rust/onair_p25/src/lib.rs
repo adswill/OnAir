@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir P25: the Project 25 Phase 1 common air interface frame layer of TIA-102.BAAA: NID (BCH (63,16,23) + parity), the Reed-Solomon codes over GF(64)
 //! of the header / link control / encryption sync, Hamming (10,6,3) of the LDU hexbits, Golay (24,12,8) and (18,6,8), CRC-CCITT, the rate 1/2 trellis code
 //! with its 98-dibit interleave (soft decode), TSBK / link control / encryption sync / header field parsing, names, the IMBE voice frame interleave and the

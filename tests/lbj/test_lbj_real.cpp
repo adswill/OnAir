@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Optional: the reporter's recordings from issue #153 (not in the repository). Looks in $LBJ_SAMPLE_DIR, then ~/Downloads, for
 // onair_lbj_821.288MHz_0.96Msps_20261016-163822.cs8 (HackRF, int8 IQ, centre 821.288 MHz); skips (exit 0) when the file is absent.
 // The file holds one train (19533, 67 km/h, near km 38) that moves 0.2 km between messages 11 s apart.

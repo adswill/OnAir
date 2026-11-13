@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham awards and lookups: the DXCC / WAS / grid / CQ-zone matrix (worked and confirmed per band and mode class), statistics, the
 // worked-before marks of the decode list, the built-in prefix database and a user cty.dat file.
 #include "dect2/ham/ham_dxcc.h"

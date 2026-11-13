@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The preview block of the transmit panel. A live spectrum and waterfall of the IQ (the planned signal while idle, the IQ really going to the radio
 // while it runs), an IQ scatter, peak / RMS meters in dBFS with a clipping lamp, the occupied bandwidth and the sample rate, the Start / Stop and Carrier-tune
 // buttons, the emergency "STOP ALL" and the log.

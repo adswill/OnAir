@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The KAIT mode (family 131, engine standard 133, active standard 132, telemetry slot 132) in the group "Kris custom modes": the engine tuning, the mode row, the
 // panel strings, the engine wiring and the transmit registration are in the sources. Text checks only, so it builds without the app.
 #include "dect2/kait/kait_live.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab stage 4: line codes, LFSR descramblers, polarity. Decoders work on the slicer's symbols (for the two-chip codes,
 // Manchester / differential Manchester / Miller, one symbol is a half bit). Ranking uses how valid the code is (forbidden chip
 // pairs) and how much structure (a repeated sync word, low-entropy windows) the decoded stream shows.

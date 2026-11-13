@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/geo/maplayers.h"
 #include "dect2/tetra/tetra_tel.h"
 #include <algorithm>

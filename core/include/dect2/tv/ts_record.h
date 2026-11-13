@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Recording a service to a .ts file (a writer thread behind a bounded queue) and the live buffer (a ring of 188-byte packets) for pause.
 #pragma once
 #include <condition_variable>

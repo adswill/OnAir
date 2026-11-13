@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Validates the Metal LDPC decoder against the CPU decoder on noisy codewords (all normal-frame rates), and times both.
 #include "dect2/dsp/gpu_ldpc.h"
 #include "dect2/common/stable_random.h"

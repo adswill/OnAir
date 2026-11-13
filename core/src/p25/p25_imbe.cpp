@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IMBE through the user-installed mbelib (see p25_imbe.h); the loader is shared with the other voice decoders (source/mbe_dyn.h).
 #include "dect2/p25/p25_imbe.h"
 #include "../source/mbe_dyn.h"

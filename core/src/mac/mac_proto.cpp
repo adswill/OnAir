@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MAC/packet codes and tables (see mac_proto.h).
 #include "dect2/mac/mac_proto.h"
 #include <algorithm>

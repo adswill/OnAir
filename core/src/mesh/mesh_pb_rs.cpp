@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protobuf reader of the mesh messages on top of the Rust crate rust/onair_mesh: Reader::next and the repeated field readers of mesh_pb.h
 // (mesh_pb.cpp keeps the Writer).
 #include "dect2/mesh/mesh_pb.h"

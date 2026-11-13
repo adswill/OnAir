@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice analysis of one demodulated SSB channel (complex baseband, the suppressed carrier at 0 Hz, the signal at 0 .. +3 kHz): 10 ms frame energies
 // (voice activity with hang time, the syllabic depth and the 2.5 - 8 Hz modulation), pitch from the complex autocorrelation (a flat tone has the same
 // correlation at every lag; a voice has peaks at the pitch period), the audio spectrum (single lines, band share, tilt). See ssbconv.h.

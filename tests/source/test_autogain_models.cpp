@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto gain 3.6: per radio model (every profile of radioProfiles(), synthetic levels through the simulated front end), the SDRplay LNA / IF split by policy, and the
 // per-mode targets (which modes the refinement touches; every other mode keeps its class numbers).
 #include "../../core/src/source/sdrplay_api_min.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Position estimator: accuracy against naive and linear extrapolation on simulated flights between real city pairs, covariance calibration
 // (NEES), robustness (outliers, late fixes, date line, pole, garbage input), route/text parsing and speed. Prints the accuracy table.
 #include "dect2/track/track_hub.h"

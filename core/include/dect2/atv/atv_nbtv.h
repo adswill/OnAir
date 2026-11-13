@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Narrow Bandwidth Television (NBTV) and mechanical television: a picture of a few dozen lines whose video fits in the audio band.
 // The NBTV Association's 32-line standard (after Baird's 30-line service of the 1930s): 32 lines, 12.5 pictures a second (400 lines a second),
 // scanned vertically (each line runs from the top of the picture to the bottom, the lines follow each other from left to right), aspect

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather fax through the engine exactly as the app runs it: the "Weather fax" entry is picked (applySubModeSynth for the test signal,
 // applySubMode for the decoder, the service and the frequency the marine tab pushes), the synthetic source plays, and the picture that
 // comes out of MarineReceiver::latestImage() must be the test chart. Also with a SynthConfig left over from other modes (GNSS, mesh,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB test signal tool: writes the built-in DAB / DAB+ ensemble as a .cs8 file (signed 8 bit I/Q like a HackRF), runs a .cs8 file through the
 // DAB receiver, and lists the ensemble that the generator transmits.
 //   dabtool gen <out.cs8> <seconds> [sampleRate=2048000] [snrDb=30] [cfoHz=0] [sroPpm=0]

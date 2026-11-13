@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > Propagation: where a transmitter can be received. Two modes, chosen at the top:
 //  Simple: where the transmitter is, what it is (a preset), frequency and power; a plain answer ("up to about 40 km"), a coloured map and a
 //          good / fair / poor rating where you listen (a map click, or your location).

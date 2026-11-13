@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The spot feeds (4.0) without a network: telnet lines (IAC dropped, CR removed, split packets, a prompt without newline), the login prompt
 // test, the feed URLs (https only, the callsign only in the PSK Reporter query), and the HTTP polls with a fake getter: off sends nothing,
 // each feed at its own interval, PSK Reporter never more often than every 5 minutes, errors reported in the status.

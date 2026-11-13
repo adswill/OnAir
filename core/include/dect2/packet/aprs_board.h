@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS weather stations and messages: what the packet receiver keeps of them for the Weather and Messages views (docs/APRS-BOARD-3.9.md).
 // Weather: the values of APRS101 chapter 12 in metric units, with a 24 h history per station. Messages: chapter 14 (messages, acks and
 // rejects, bulletins, announcements, group bulletins and the National Weather Service bulletins), grouped by the two stations.

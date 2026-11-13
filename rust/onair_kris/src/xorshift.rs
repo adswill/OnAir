@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! xorshift64 (shifts 13, 7, 17): the fixed generator behind the deterministic code tables.
 
 #[derive(Clone, Copy, Debug)]

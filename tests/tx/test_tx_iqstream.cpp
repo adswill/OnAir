@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The transmit IQ on TCP (tx_iqstream.h): every format received by a loopback client and compared with the sent samples, the JSON header and the side
 // channel, a client that connects late / leaves / reconnects, a slow client that costs the sender nothing, and a dry-run TxSession (no radio) served over TCP.
 #include "dect2/tx/tx.h"

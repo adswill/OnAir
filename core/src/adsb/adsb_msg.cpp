@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode S / ADS-B message layer. See adsb_msg.h for the sources.
 #include "dect2/adsb/adsb_msg.h"
 #include <algorithm>

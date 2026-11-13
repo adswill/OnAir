@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Elevation files and terrain diffraction for the propagation tool, see core/include/dect2/prop/prop_terrain.h and docs/propagation.md.
 #include "dect2/prop/prop_terrain.h"
 #include "dect2/prop/prop.h"

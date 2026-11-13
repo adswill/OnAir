@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "ease/ease_ui.h"
 // The Ham view's station setup wizard, the in-app Ham guide and the keyboard shortcut table: see ham_ops_ui.h.
 #include "ham_ops_ui.h"

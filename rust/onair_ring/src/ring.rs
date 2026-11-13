@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The SPSC ring. Behaviour is that of `dect2::IqRing` (ring.h), operation for operation:
 //!
 //! * indexes `w` / `r` are free-running `usize` counters (wrapping), `w - r` is the fill, the slot is `index & mask`;

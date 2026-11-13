@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The sign-in flow and badge API of src/badge-service.js against a memory backend and a scripted GitHub.
 import test from "node:test";
 import assert from "node:assert/strict";

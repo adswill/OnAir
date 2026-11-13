@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Time signal test signal (see time_gen.h).
 #include "dect2/time/time_gen.h"
 #include "dect2/time/time_rx.h"

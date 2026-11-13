@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, WSPR: the generator's five stations (types 1, 2 and 3), then four stations at -26 dB (2500 Hz) with DT +-1.5 s and the
 // receiving side's faults (dial error +-100 Hz with clock +-100 ppm, upside down), and noise alone (no false decodes).
 #include "hfdig_ftx_testutil.h"

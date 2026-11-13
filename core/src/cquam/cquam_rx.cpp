@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM stereo receiver (see cquam_rx.h): the channel mixed down to 48 kHz, a carrier loop that brings the C-QUAM vector (1 + L + R) + j (L - R)
 // onto the real and imaginary axes, the 25 Hz pilot found in the quadrature part, stereo or mono audio on the sound card.
 #include "dect2/cquam/cquam_rx.h"

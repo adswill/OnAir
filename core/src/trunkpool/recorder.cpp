@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One WAV (16 bit mono) and one JSON sidecar per call (see trunkpool.h). Windows: no gmtime_r / localtime_r, no POSIX calls.
 #include "dect2/trunkpool/trunkpool.h"
 #include <algorithm>

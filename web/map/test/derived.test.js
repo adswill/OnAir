@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // derived.test.js - the additive "dv" flag: speed, heading and vertical rate derived from position reports by the app.
 import test from "node:test";
 import assert from "node:assert/strict";

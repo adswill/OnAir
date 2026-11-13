@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Receiver range plot (rangeplot.h): bearing and distance, azimuth buckets with a maximum, rejection of absurd positions, the rolling window,
 // the CSV and the RGBA picture. Pure maths, no radio.
 #include "dect2/geo/rangeplot.h"

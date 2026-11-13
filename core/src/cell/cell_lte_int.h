@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, LTE: helpers shared by the test signal and the receiver (not part of the public interface).
 #pragma once
 #include "dect2/cell/cell_lte.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Elektro-L HRIT / LRIT / GGAK receiver (elektro_rx.h).
 #include "dect2/elektro/elektro_rx.h"
 #include "dect2/elektro/elektro_tel.h"

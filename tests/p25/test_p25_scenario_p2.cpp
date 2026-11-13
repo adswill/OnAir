@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Phase 1 and Phase 2 voice channels behind one Phase 1 control channel, one retunable radio (p25_scenario.h): the grant's identifier decides (a
 // standard identifier gives a Phase 1 call, a TDMA identifier a Phase 2 call on its slot), the radio hops to each, the right receiver reports the
 // voice, and the radio comes home after each. Phase 2 is scrambled with the seed from the control channel's WACN / system / NAC. An encrypted Phase 2

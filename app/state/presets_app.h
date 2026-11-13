@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The app side of the per-mode presets (core/include/dect2/presets/preset.h): capturing the settings of the mode on screen, applying a
 // preset to them, the store file (dataDir()/presets.json), the per-mode default and the toolbar "Presets" drop-down.
 #pragma once

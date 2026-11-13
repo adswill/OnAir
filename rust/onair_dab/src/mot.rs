@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! MOT (Multimedia Object Transfer, ETSI EN 301 234) parsing shared by DAB and DRM: MOT time (clause 6.2.4) and its text, the header core and header extension
 //! parameters (clause 6.2, with the slide show parameters of ETSI TS 101 499), the MSC data group framing (ETSI EN 300 401 clause 5.3.3.1), the directory
 //! object (clause 7.1) and the content type names. Segment reassembly into objects and directories stays in C++.

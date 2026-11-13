@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL: the ground stations near you and the frequencies they use now (4.0, docs/HFDL-STATIONS-4.0.md). From the squitters this receiver hears
 // and, when turned on (Settings > Privacy, "hfdlLiveOn"; never in Offline mode), the community list of hfdl.observer, fetched in the background
 // at most every few minutes and kept in the data folder. The merge and sort are in core (dect2/hfdl/hfdl_live.h).

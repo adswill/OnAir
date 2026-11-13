@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Live RDS encoder control: the station name (PS), radio text (RT), PI, PTY, TP / TA / music flag and the clock group (CT) of the FM transmitter
 // can change while it transmits. A change is seen at the next group boundary of the encoder (FmGenerator), no restart. Four ways in, all ending at
 // RdsLive::apply(): the panel in the transmit window, the REST endpoint (/api/v1/x/rds), the MCP tool rds_set and a plain text command port

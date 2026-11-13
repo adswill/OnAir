@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Flipper Zero Sub-GHz chat through the engine (setStandard(206)): the synthetic source plays the test conversation, the key is set through
 // engine.esubghz(), and the receiver reports plain and decrypted lines through latestRx().
 #include "dect2/esubghz/esubghz_gen.h"

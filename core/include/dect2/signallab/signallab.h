@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab (Tools > Signal Lab): blind analysis of an UNKNOWN digital signal, from samples to a frame description.
 // Stages, each a pure function with its own unit test (tests/signallab):
 //   1 channel  : isolate the signal, measure its bandwidth, carrier offset, bursts and duty cycle

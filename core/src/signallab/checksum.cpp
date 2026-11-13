@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab stage 5b: checksum catalogue (Rocksoft-model CRCs, Fletcher, plain sums) and the search that locates a checksum in the
 // frames: every coverage start (bit by bit, and with the sync word in front), every checksum position, both bit orders inside the
 // bytes, both byte orders of the stored value and both polarities. A hit needs most frames to agree and the covered data to vary.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Orbcomm screens: the satellites on the map (position from their own ephemeris, with the recent track), the satellite list (ID,
 // last heard, Doppler, position), the packet log by type, and per downlink the differential constellation and the eye.
 #include "app.h"

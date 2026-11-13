@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // eLoran / Loran-C in the engine: mixes the carrier to 0 Hz, decimates to 250 kHz or more, low-pass filters to +-11 kHz,
 // keeps the last 2 s and runs the detector once a second.
 #include "dect2/eloran/eloran_engine.h"

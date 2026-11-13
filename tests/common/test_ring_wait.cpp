@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IqRingCpp::waitData(): the analysis thread sleeps until the radio has written enough (core/include/dect2/common/ring.h).
 //  - returns at once when enough is there; times out (false) on an empty ring; true with less than asked when the time ran out
 //  - the producer's write wakes it well before the timeout

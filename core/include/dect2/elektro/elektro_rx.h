@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Elektro-L N3 / N4 / N5 L-band receiver. Receive only.
 // HRIT / LRIT: the same BPSK + Viterbi + Reed-Solomon + CCSDS + xRIT path as GOES (1691 MHz).
 // GGAK: 5 ksym/s PCM/PM space-weather telemetry on 1693 MHz (224-byte CADU, no convolutional code).

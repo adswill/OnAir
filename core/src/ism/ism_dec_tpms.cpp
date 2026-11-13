@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors: device decoders for TPMS (tyre pressure) sensors, the EV1527 remote and the Bresser/LaCrosse/Fine Offset FSK stations. Written from rtl_433 src/devices/.
 #include "ism_internal.h"
 #include <algorithm>

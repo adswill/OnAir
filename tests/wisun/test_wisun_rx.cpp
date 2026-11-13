@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-SUN FAN receiver against the test signal: the whole schedule decoded at 20 Msps (frames hopping over 915.4 - 927.4 MHz), with noise,
 // carrier and clock offsets, at a slow radio's 2.4 Msps (only the channels it takes in), a frame with a damaged FCS, the tables (network,
 // border router, roles, the EAPOL authenticator, links with the RSL from the acks), Clear and the results file.

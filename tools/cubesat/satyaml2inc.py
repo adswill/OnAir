@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Converts gr-satellites satyaml files (GPL-3.0-or-later, Daniel Estevez EA4GPZ and contributors) into a C++ table (rows) for OnAir.
 import sys, os, re
 def parse(path):

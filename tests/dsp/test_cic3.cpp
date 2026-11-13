@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The exact CIC decimator core (dsp/cic3.h): it matches the plain moving sums, and integrators that have wrapped many times (hours at 30 Msps)
 // give the same output as fresh ones. The double integrators it replaced decayed: at D = 307 the output was below the error within a minute.
 #include "dect2/dsp/cic3.h"

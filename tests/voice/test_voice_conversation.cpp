@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The conversation tracker (voice/conversation.h) on made-up call lists: grouping by talkgroup, carrier and slot, the quiet gap that ends a
 // conversation, private calls in both directions as one thread, callsign modes (D-STAR), unordered input, the filters (search, length,
 // error rate, played, recording, encrypted, slot, since), the talker and error statistics, the exports (CSV formula guard, JSON escaping)

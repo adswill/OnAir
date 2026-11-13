@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Animated grey GIF and full-disk loops: see gif_loop.h. The LZW coder follows the GIF89a specification (variable code size 9..12 bits,
 // clear and end codes, a clear when the table is full).
 #include "dect2/image/gif_loop.h"

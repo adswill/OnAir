@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Phase noise meter: a carrier with white-FM phase noise (Lorentzian, linewidth dnu: L(f) = dnu / (2 pi f^2)) and a white phase floor, with a discrete phase-modulation spur, read against the theory
 // at 100 Hz to 100 kHz, at three sample rates, with a carrier offset and drift, and additive noise. Simulated signals only.
 #include "x40_gen3.h"

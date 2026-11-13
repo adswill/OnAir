@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-VFO screens (docs/MULTI-VFO.md): bands on the spectrum and waterfall, the Add channel click, the channel list window and the per-frame
 // hand-over of the rows to the engine. All the DSP is in core/src/engine/vfo.cpp; nothing here runs when there are no rows.
 #include "app.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A picture larger than the GPU takes (the 8192-wide waterfall on the Raspberry Pi 4/5's 4096-texel V3D, #284) is kept at the largest
 // size it takes: each update of the picture is shrunk onto the smaller texture. Of the pixels that fall on one texel the brightest is kept,
 // so a narrow signal in a waterfall does not vanish. Header-only, no GL: the OpenGL back end uses it and tests/test_tex_shrink.cpp checks it.

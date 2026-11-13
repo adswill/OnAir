@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NAVTEX "warnings in force" (3.9, docs/SMART5-field-3.9.md item 5): the set of warnings each station has out now, kept from the
 // messages this receiver decoded. A warning (subject A navigational, B meteorological, D search and rescue / piracy, J GNSS, K other
 // navaids, L further navigational) enters the set; it leaves it when

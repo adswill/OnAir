@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C2 reference sequences, pilots, Reed-Muller headers, the preamble cell order, the time interleaver and the data slice geometry
 // (EN 302 769 clauses 7.2.2, 8.2, 9.2 - 9.6). See dvbc2.h.
 #include "dect2/dvbc2/dvbc2.h"

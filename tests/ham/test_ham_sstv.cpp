@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham SSTV send: pictures from PNG, BMP and PPM files (written here), fitting with crop and letterbox, the picture as audio in Robot 36,
 // Martin M1, Scottie S1 and PD120 and back through the repo's SSTV decoder (HfdigSstv) with noise and a sound card clock error, the CW ID and
 // the gate. Nothing is transmitted: the rig is a recording fake.

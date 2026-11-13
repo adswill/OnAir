@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3.9 smart features, GNSS and science (docs/SMART5-gnss-3.9.md items 21 - 23, docs/SMART5-science-3.9.md items 24 - 26).
 // Simulated only: clock drift series with warm-up and outliers, Nakagami-faded intensities, C/N0 with a ground-reflection fringe,
 // Sun transits through a Gaussian beam, Poisson meteor counts; no recordings of these were on hand.

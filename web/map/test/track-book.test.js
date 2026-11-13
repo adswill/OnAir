@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // track-book.test.js - the in-memory track store: merge rules, write-behind selection, deltas, expiry.
 import test from "node:test";
 import assert from "node:assert/strict";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-SUN FAN tool: decode a recording, or write the test signal.
 //   wisuntool rx <file> [--rate Hz] [--center Hz] [--region ANZ|NA|EU863|JP|...] [--secs s]
 //       a SigMF recording (.sigmf-meta / .sigmf-data: rate and centre from the meta), or .cf32 / .cs16 / .cs8 with --rate and --center;

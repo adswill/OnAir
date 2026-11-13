@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The "Group radios" window (synthetic wideband, dect2/source/synth_group.h, docs/SYNTH-WIDEBAND.md): pick 2-5 of the radios found, in
 // frequency order, set the centre and total span; the window shows how the span is cut (each radio's centre, the overlap, the span reached,
 // the stitched rate) and USB warnings, and saves the group by the radios' serials. While a group runs it shows the alignment of every seam

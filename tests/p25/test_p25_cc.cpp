@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 control messages beyond the grants (p25_cc.h): fields are built from the OP25 layouts, since no public capture of these TSBKs ships with a test expectation.
 #include "dect2/p25/p25_cc.h"
 #include <cstdio>

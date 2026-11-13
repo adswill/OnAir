@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium ACARS, packet dump and pager screens. Nothing here is verified against a real Iridium recording (see
 // core/include/dect2/iridium/iridium_acars.h): the screens show what the decoder made of the frames, with its flags.
 #include "app.h"

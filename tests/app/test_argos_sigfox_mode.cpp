@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Argos (family 152, active 153, engine standard 154, slot 143) and Sigfox (family 153, active 154, engine standard 155, slot 144): the tunings
 // are registered under their numbers with a test signal each, the mode rows and the family count agree, the engine feeds and polls them,
 // the poll slots are not shared, and the panels carry their receive-only notes.

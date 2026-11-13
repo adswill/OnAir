@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR beyond the ETSI grants: Motorola Capacity Plus and Connect Plus CSBKs (layouts read from DSD-FME dmr_csbk.c, whose notes credit OP25 and Eric Cottrell;
 // partly reverse-engineered by those projects), and the Motorola IP services carried as data: ARS (UDP port 4005) and text messages, TMS (UDP port 4007).
 #pragma once

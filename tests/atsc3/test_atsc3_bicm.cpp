@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 BICM (FEC frame to cells and back): block interleaver against the examples of A/322, constellation power, and decoding through noise.
 #include "dect2/atsc3/atsc3_bicm.h"
 #include "dect2/common/stable_random.h"

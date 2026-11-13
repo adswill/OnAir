@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / Packet: the 12.5 / 25 kHz channel filter choice. The 1200 baud cycle at 15 dB, carrier offsets swept, alone and with a much stronger
 // neighbour on the next 12.5 kHz channel (a frame from another station). Alone both widths decode every frame; with the neighbour the narrow
 // filter must keep every frame of the wanted channel and decode none of the neighbour's, and must do better than the wide one.

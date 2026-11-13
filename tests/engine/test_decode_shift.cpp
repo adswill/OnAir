@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sticky tuning (Engine::setDecodeShiftHz, a click on the spectrum inside the captured band): only the receiver gets the clicked signal at DC.
 // The spectrum must keep showing the capture as the radio delivers it, around captureCentreHz(): the app draws its axis around the radio's centre
 // and the tuned marker at the click. When the spectrum was taken after the shift, every signal slid by the shift on the screen, the marker sat on

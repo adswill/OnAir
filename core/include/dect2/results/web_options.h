@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The option controls of every mode for OnAir Web (docs/WEB-SCHEMA-3.9.md, "Mode options"): the receivers' own public setters (a bool, a
 // number, an enum, or an int whose comment lists its values), found in the headers by tools/gen_web_options.py the same way the panel
 // schema is (web_schema.h), so the page draws one set of controls for every mode. core/src/results/web_options_gen.cpp is generated.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Who calls whom: the contact lines of the maps for QSO-style modes (FT8, FT4, FT2, JT65, JT9, Q65, FST4, MSK144, JS8Call, WSPR).
 // parseContactMessage() reads one decoded message in the standard formats ("CQ DX K1ABC FN42", "K1ABC W9XYZ -12", "W9XYZ K1ABC RR73");
 // ContactGraph keeps the stations (position from the last locator they sent, else the middle of their callsign prefix, marked estimated)

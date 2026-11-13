@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS frame layer under mutation: libFuzzer entry point (clang -fsanitize=fuzzer, -DONAIR_LIBFUZZER) or, by default, a deterministic run of seeded
 // mutations of valid frames and sentences (ONAIR_FUZZ_ITERS, default 200000). Meant to run under DECT2_SANITIZE=ON: any crash or UB report fails it.
 #include "dect2/ais/ais_proto.h"

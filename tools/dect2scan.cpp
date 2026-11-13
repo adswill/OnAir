@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Command-line channel scanner:  dect2scan [--from MHz] [--to MHz] [--step MHz] [--bw MHz] [--quick] [--lna dB] [--vga dB] [--amp]
 #include "dect2/engine/scanner.h"
 #include <chrono>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 802.11p, DSRC framing, GBAS bursts. The BSM layout is checked against a published example; signals are simulated only.
 #include "avroad_gen.h"
 #include "dect2/avroad/avroad_proto.h"

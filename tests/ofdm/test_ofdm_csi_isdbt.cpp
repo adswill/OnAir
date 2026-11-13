@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T: the same measurement as test_ofdm_csi (flat noise weights / channel-state weights / + narrowband-interferer erasure), end to end
 // with the generator and tests/common/impair.h. Threshold = lowest SNR at which 90 % of the layer's packets arrive.
 #include "dect2/isdbt/isdbt_gen.h"

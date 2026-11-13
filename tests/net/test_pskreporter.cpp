@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK Reporter: the IPFIX encoder (templates, record round trip, size limit), the batcher (dedupe, interval) and the validators.
 #include "dect2/net/pskreporter.h"
 #include <cstdio>

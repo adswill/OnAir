@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web directory heartbeat, the pure part: the signing text (byte for byte the same as web/onair-directory/src/logic.js; the vector below is
 // checked by test/logic.test.js too), the Ed25519 sign / verify round trip, field cleaning, URL and location normalisation, the record built from
 // the live info, and the confirmation code that keeps anything from being sent before the host has seen it.

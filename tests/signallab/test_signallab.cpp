@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab tests: every stage alone (dsp, channel, classify, rate, recover, line codes, scramblers, checksums, frames, fields,
 // exports) and the pipeline end to end on generated signals. "quick" is the ctest signallab; "eval N [seed]" runs the evaluation
 // harness on N random signals and prints how often each stage recovers the truth; "gate" is the ctest signallab_eval (a fixed

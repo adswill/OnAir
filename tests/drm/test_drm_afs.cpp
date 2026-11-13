@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM alternative frequencies (ES 201 980 clause 6.4.3.4, .5, .12): entities built from the clause's layouts, through the parser and through the real transmitter and receiver.
 // Simulated: no recording with AFS on hand. And the station book.
 #include "../data/drm/testkit.h"

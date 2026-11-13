@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RF fingerprint of an individual NFM / WFM / AM transmitter (Discord request "FM TX Fingerprint"). Pure DSP, no ImGui, no engine.
 //
 // What is measured from the channel of one carrier (the app mixes it to 0 Hz and decimates it with Channel):

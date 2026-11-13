@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The relay Worker under `wrangler dev --local` (workerd + local Durable Objects), on 127.0.0.1 only.
 // A fake OnAir host signs the hello like onair-server and carries each virtual connection to a small local web server
 // (HTTP + a WebSocket echo), the way server/web/web_relay.cpp does. Exits as skipped when wrangler is not installed.

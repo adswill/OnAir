@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde receiver, one channel: mixer + decimating filters, FM discriminator, symbol timing, and the decoders of every sonde type.
 // Private to the receiver (sonde_rx.cpp).
 #pragma once

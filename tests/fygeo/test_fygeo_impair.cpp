@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FengYun receivers against the faults of real radios and real paths: carrier offsets (off the centre of the capture, ppm errors), a carrier that
 // drifts, symbol clock errors, DC offset, I/Q gain and phase imbalance, phase noise, slow flat fading, and sample rates from 1 to 20 Msps (a rate
 // that is not a multiple of the symbol rate). Every case must still give frames, pictures, and the right carrier offset.

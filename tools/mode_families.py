@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Family numbers of app/ui/mode_table.cpp rows.
 
 A row's family is a number ({146, "KLW", ...}) or a constant from a core/include/dect2/*/*_modes.h header

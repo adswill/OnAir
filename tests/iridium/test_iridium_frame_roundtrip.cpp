@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Builders -> decoder: every frame type bit-exact, pager messages in parts through the assembler, bit errors injected at the bit level
 // (single errors everywhere, random double errors), random bits that must not be taken for a frame, and the cost of one decode.
 #include "dect2/iridium/iridium_frame.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB SPI (programme guide, ETSI TS 102 371 / TS 102 818): the binary decoder against the example of TS 102 371 annex C, the token table, times and
 // durations, plain XML, merging of basic and advanced objects, now / next, XMLTV, persistence, the MOT directory carousel, malformed input and an
 // optional smoke test with a real recording (skipped when the file is absent).

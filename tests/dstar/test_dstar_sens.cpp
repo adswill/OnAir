@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // D-STAR sensitivity: the test signal (carrier to noise in 6.25 kHz) at 8 dB keeps every voice frame and at 7 dB most, also 2 kHz off
 // tune; the receiver with the +-7 kHz channel filter kept 311 of 764 at 8 dB and 35 at 7 dB. Noise alone gives nothing.
 #include "dect2/dstar/dstar_rx.h"

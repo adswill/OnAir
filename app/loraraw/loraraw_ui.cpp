@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa (raw) screens: the frame list (time, spreading factor, bandwidth, coding rate, length, CRC, SNR, level, carrier offset, payload as hex and text),
 // the decoder list, the receiver details, the frequency presets (EU868, US915, 433 MHz) and the settings: spreading factor, bandwidth, header mode, coding
 // rate, CRC, length, sync word. Spreading factor and bandwidth can be left on Auto (every combination is searched).

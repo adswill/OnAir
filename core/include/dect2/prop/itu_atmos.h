@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The atmosphere along a radio path, from the ITU-R texts (written from the recommendations, no ITU code used):
 //  - ITU-R P.835-7 (08/2024)  mean annual global reference atmosphere (temperature, pressure, water vapour against height)
 //  - ITU-R P.676-13 (08/2022) Annex 1: line-by-line specific attenuation of oxygen and water vapour (44 + 35 lines, Tables 1 and 2),

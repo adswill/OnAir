@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // classifyCa: scrambled only on evidence from the packets; a CA flag on a clear stream is not "scrambled".
 #include "dect2/tv/ca_state.h"
 #include <cstdio>

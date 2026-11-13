@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-S test signal generator, see isdbs.h. Nothing is transmitted: the samples only exist in memory or in a file.
 #include "dect2/isdbs/isdbs.h"
 #include "dect2/dvbs/dvbs_gen.h"

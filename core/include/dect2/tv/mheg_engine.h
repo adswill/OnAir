@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MHEG-5 interpreter for the UK profile (ISO/IEC 13522-5, ETSI ES 202 184), see docs/MHEG-REDBUTTON.md. Written from the standard and its ASN.1 module; it uses no
 // code of any other MHEG engine. It runs an Application and one Scene at a time from files that come out of a DSM-CC object carousel (the fetch callback), reacts to
 // keys and timers through Links, and produces draw operations (MhegRender) for the TV window.

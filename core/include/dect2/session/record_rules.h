@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto-record rules (docs/MODE-EXPERIENCE.md, 3.1 and 3.2): when a call, thread or track begins and a rule matches, the mode's recorder is asked
 // to save audio and/or channel IQ. Everything is OFF by default (the master switch and the rule list are empty); the user turns it on with one
 // click or adds a rule from a row ("Record this talkgroup"). A rule never blocks anything: it only says "record this", and an encrypted or

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B display options: altitude colours, the drop time and the pref keys (dect2/adsb/adsb_display.h).
 #include "dect2/adsb/adsb_display.h"
 #include "dect2/adsb/adsb_demod.h"

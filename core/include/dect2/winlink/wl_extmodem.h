@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // External modems for Winlink and peer-to-peer links (3.9, docs/HFMODEMS-3.9.md).
 //
 // OnAir does not contain, ship or reimplement ARDOP (ardopcf), VARA or Mercury. Each is a separate program that does the radio part.

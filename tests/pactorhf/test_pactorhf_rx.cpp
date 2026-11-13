@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-II / -III / -IV receivers through the radio front end: the generator's signal as the upper sideband of a radio at 250 ksps (the 20 kHz
 // tuning offset mixed out), one receiver per mode. Each must report its own signal with the right parameters, report what it sees when the signal
 // is another PACTOR (the PACTOR-II mode in front of PACTOR-III), and nothing for noise.

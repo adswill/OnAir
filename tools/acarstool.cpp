@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS: write the test signal to a file, decode a recording, or run the generator straight into the receiver.
 //   acarstool gen <secs> <file.cs8|.cu8|.cf32> [--rate 2e6] [--snr 30] [--aircraft 6] [--seed 1] [--depth 60] [--cfo 0] [--sro 0] [--mult 1] [--chan 0] [--weak 0]
 //   acarstool rx <file> --rate <sps> [--format cs8|cu8|cf32] [--center 131.5] [--channels 131.525,131.725] [--thr 8] [--all]

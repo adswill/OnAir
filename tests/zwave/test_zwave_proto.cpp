@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Z-Wave frame layer: checksum and CRC-16, build / parse round trips (singlecast, ack, multicast, R3), names, encrypted payloads
 #include "dect2/zwave/zwave_proto.h"
 #include <cstdio>

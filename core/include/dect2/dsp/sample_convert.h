@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio sample formats to complex float, and the engine's non-finite guard: the per-sample work every mode pays before its receiver.
 #pragma once
 #include "dect2/common/ring.h"

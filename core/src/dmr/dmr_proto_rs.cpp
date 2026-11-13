@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR burst layout and message formats on top of the Rust crate rust/onair_dmr: the functions of dmr_proto.h;
 // dmr_proto.cpp keeps the sync word table, the three burst slicers (vector copies), be24 / putBe24 and the talker alias PDU builder of the test signal.
 // Bit vectors that are shorter than the format needs are zero padded.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airport weather from datalink text (acars_metar.h): METAR / SPECI / TAF found inside message text, European and US forms.
 #include "dect2/acars/acars_metar.h"
 #include <cmath>

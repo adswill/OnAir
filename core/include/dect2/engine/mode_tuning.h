@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What the app and the command line need to know to tune a mode that is not one of the original families:
 // the range, a default, and the radio settings. Each mode describes itself in its own <mode>_rx.cpp (xxxTuning()).
 #pragma once

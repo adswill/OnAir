@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The stall watchdog of a USB sample stream (stream_watchdog.h), with a made-up clock: the ladder clear / clear / reset / reopen, stray errors
 // ignored, the ladder reset after the stream has been healthy again, and the counters the verbose log prints.
 #include "dect2/source/stream_watchdog.h"

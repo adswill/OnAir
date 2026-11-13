@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sound output: the backend opens (a silent device with correct timing when the computer has no sound), takes audio and plays it in real time.
 #include "dect2/audio/audioout.h"
 #include <chrono>

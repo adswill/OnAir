@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // onair-web-load: a load test of OnAir Web without a radio or a network. Many fake listeners (each tuned to its own channel, with audio and
 // a waterfall) inside a synthetic capture (noise plus FM carriers); the hub runs on one thread so the processor time per listener can be read
 // directly. Prints, for each listener count, the processor time per second of signal (100 % = one core) and the data each listener gets.

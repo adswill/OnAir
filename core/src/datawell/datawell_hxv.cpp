@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Datawell HXV real-time format decoder (see datawell_hxv.h for the sources and what was found rather than published).
 #include "dect2/datawell/datawell_hxv.h"
 #include <algorithm>

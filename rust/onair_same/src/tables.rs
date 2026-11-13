@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The SAME / EAS lookup tables: originators, event codes, partial-county digits, US and Canadian location regions (47 CFR 11.31 (d), (e);
 //! FIPS PUB 5-2 for the state codes; Statistics Canada codes for the provinces). Names are NUL-terminated so the C ABI can hand out pointers.
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The aircraft side of the Inmarsat all-carriers mode (inmsat_planes.h, aero_pos.h): positions from ADS-C groups and text reports, bad and wrapped
 // coordinates, merging the aircraft of several windows, age and fading, search and sorting, hundreds of aircraft, the date line, the message history.
 // Synthetic messages only.

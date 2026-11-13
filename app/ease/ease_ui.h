@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small shared pieces of the first-use helpers (docs/EASE2-3.8.md).
 #pragma once
 #include "app.h"

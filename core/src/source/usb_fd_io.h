@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transfers on a usbfs descriptor (Linux, Android): control and bulk requests through ioctl, mapped to libusb's error codes. The system calls are
 // behind UsbFdSys so the chunking and error mapping can be tested with a fake. Used by the RTL-SDR driver on Android (rtl_fd_shim.cpp).
 #pragma once

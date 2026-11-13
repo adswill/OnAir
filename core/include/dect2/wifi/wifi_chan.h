@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi channel plans for 2.4, 5 and 6 GHz (IEEE 802.11-2020 Annex E, 802.11ax-2021 Annex E.4): channel number <-> centre frequency,
 // the 20 MHz channels of every band, UNII sub-bands, DFS and preferred scanning channels (PSC), regulatory domains, and the hop lists the
 // scanner steps through. Receive only: the domain only selects which channels are listened to, nothing is transmitted.

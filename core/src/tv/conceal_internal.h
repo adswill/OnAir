@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internals shared by the picture-repair implementations (conceal.cpp: motion search and the CPU synthesis; conceal_d3d11.cpp: the Windows
 // GPU synthesis). Not part of the public interface.
 #pragma once

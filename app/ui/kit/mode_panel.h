@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Per-mode Simple / Advanced view (docs/SIMPLE-ADVANCED.md). Simple: the spectrum and ONE merged "Command" view under it (a summary strip,
 // the meters, the mode's key controls and its live data side by side). Advanced: the mode's tabs as before. The choice is saved per mode.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MeshCore packets. Sources: meshcore-dev/MeshCore src/Packet.h and Packet.cpp (header byte, transport codes, path length byte
 // with hash size in the top two bits, readFrom/writeTo), src/Mesh.cpp (ADVERT signature message, GRP_TXT/GRP_DATA handling,
 // createAdvert, createGroupDatagram, TRACE layout), src/Utils.cpp (encrypt: AES-128-ECB zero padded; MAC = first 2 bytes of

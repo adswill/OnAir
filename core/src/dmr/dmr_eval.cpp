@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Compare what the DMR receiver reported with what the test signal sent (see dmr_eval.h).
 #include "dect2/dmr/dmr_eval.h"
 #include "dect2/dmr/dmr_rx.h"

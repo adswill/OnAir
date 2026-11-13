@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // T2-Lite and MISO signalling: the receiver must lock on a T2-Lite SISO signal, and and on a T2-Base MISO signal.
 #include "dect2/engine/engine.h"
 #include <chrono>

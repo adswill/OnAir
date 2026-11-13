@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LAN swarm control channel: framing under tampering and replay, command parsing and the whitelist with hostile input, pooled results, coordinated
 // scan with failing and lying nodes, memory sync, and the real TCP server/client on loopback (pairing, control, wrong token, revoke, rate limit).
 #include "dect2/net/swarm_ctl.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4, decoder-side speech enhancer (docs/KAAL-ENHANCE.md): when it is on, every stage switch, that it never worsens
 // the intelligibility proxies (STOI-like envelope correlation, bark loudness disturbance) at any profile, stability on losses,
 // concealment, DTX / SID / lost SIDs and the first frame after silence, the external post-filter slot, CPU time and a determinism

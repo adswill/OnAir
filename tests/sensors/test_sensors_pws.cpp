@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PWS upload (round 4 #19): readings from sensor values in metric and imperial, rain from the counter history (last hour, 24 h, since midnight,
 // a counter reset), merging two sensors, the Weather Underground address, and the CWOP packet against the APRS101 layout (wind, temperature
 // below 0, humidity 100 %, rain, pressure, position rounding, missing values), and the upload to a local fake APRS-IS server.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The other xRIT links through the GOES HRIT chain: the GOES-N / O / P LRIT broadcast (BPSK 293.883 ksym/s, 1691.0 MHz) and every Elektro-L HRIT / LRIT link
 // (665.4 k, 1 M, 128 k, 64 k, 294 k BPSK and 1.15 Msym/s OQPSK) through ElektroReceiver::setLink, with carrier and clock offsets and noise. Every file sent
 // must come back byte for byte. A receiver set to the wrong rate must not decode. Simulated signals only: no GOES-N LRIT or Elektro-L recording was found.

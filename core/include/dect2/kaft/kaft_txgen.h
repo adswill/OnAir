@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT as a transmit mode: the TX session's generator. The file (TxRequest::file, up to 256 MiB; empty is a short demo text file) is sent one-way: no
 // reply is waited for. Each pass is OPEN, START, the data bursts (OPEN and START again before every 8th burst, so that a receiver can join in the middle),
 // FINISH; the whole file is sent `kaft.repeat` times, so a receiver that missed blocks gets them on the next pass, and one that has the file ignores

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Peak of an azimuth scan (rotator north-offset calibration): the level at each step, with a parabolic fit around the maximum.
 #pragma once
 #include <vector>

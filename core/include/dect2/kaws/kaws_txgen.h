@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS as a transmit mode: the TX session's generator. The signal is the audio of an upper-sideband transmitter as complex IQ: audio frequency = offset
 // from the dial frequency (the 2.4 kHz of KAWS sit at 300 .. 2700 Hz). The mode is simulation-only: it has never been on the air.
 // A chat message or a beacon is cut into blocks (kaws_frame.h) and sent in the UTC slots of the profile (kaws_sched.h): the caller's (even) slots, the

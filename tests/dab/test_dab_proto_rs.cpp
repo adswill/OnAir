@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the DAB data layers (dect2::dabp, the Rust crate onair_dab): the FIB walk and the FIG 0/0, 0/1, 0/2, 0/3, 0/10, 0/13, 0/17, 0/18, 0/19, FIG 1
 // and FIG 2 parsers, MOT time, header (parameters, caption, slide show fields), data group and directory, the PAD split of access units and MP2 frames, X-PAD
 // subfields, dynamic label framing and DL Plus, the Journaline data group and TOC, the packet mode headers, built from random descriptors, mutated, truncated and with

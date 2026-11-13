@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 package io.github.adswill.onair
 
 /** The waterfall colour maps of the desktop (app/app.h Waterfall::color): the same stops, the same Turbo polynomial. */

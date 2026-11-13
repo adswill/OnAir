@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! HDLC frame layer of AIS: CRC-16 X.25, bit stuffing, NRZI, octet order and frame search. Values other than 0 and 1 in a bit stream are
 //! treated exactly as the C++ code treats them (nonzero tests, raw comparisons), so both implementations agree on any input.
 

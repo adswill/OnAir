@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // view.test.js - layer groups, age fade / filter, shortcuts, sparkline geometry (public/view.js).
 import test from "node:test";
 import assert from "node:assert/strict";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Group 2 adapters: ACARS, VDL2, HFDL (aircraft that talk), UAT (aircraft), radiosondes. Same TrackBook rules as mode_adapters.cpp.
 #include "dect2/acars/acars_tel.h"
 #include "dect2/hfdl/hfdl_tel.h"

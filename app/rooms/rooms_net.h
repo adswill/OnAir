@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Live rooms: why a request to the rooms server failed, and the cheap "is the server there" check. No UI, so tests can drive it with a fake server.
 #pragma once
 #include "../platform/platform.h"

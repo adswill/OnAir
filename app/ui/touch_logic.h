@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The pure parts of the touch interface: no ImGui, no App, so the unit tests (tests/app/test_touch.cpp) run them directly.
 //   - Keypad: the number entry behind the on-screen numeric keypad (digits, '.', backspace, a unit) and parseFrequency().
 //   - Gestures: a recogniser fed with up to two pointers per frame (pinch scale, two-finger pan, one-finger pan, long press, swipe).

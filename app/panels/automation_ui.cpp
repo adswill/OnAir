@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // View > Automations: rules ("when this happens, do that") and Lua scripts that act on what the receivers decode. The rules are built from
 // drop-down lists; an expression and a script editor are there for the rest. Recipes are single JSON files in <data folder>/automations.
 // The engine itself (events, rules, limits, the sandbox) is in core/src/automation; the actions are in automation_sink.cpp.

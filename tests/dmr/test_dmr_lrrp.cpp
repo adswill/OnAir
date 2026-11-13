@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LRRP over IP: the parser against the real packets of the 2026-10-23 capture (161.600 MHz, TG 64250).
 #include "dect2/dmr/dmr_lrrp.h"
 #include <cmath>

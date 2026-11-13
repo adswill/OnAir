@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multitone paging through the engine (setStandard(77)): the synthetic source plays the test signal (an invented one: the real format is not
 // public), the receiver reports through latestRx(). No sound.
 #include "dect2/engine/engine.h"

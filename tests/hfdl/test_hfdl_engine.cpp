@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL through the engine (setStandard(37)): the synthetic source plays the test schedule, the receiver reports through latestRx().
 #include "dect2/hfdl/hfdl_rx.h"
 #include "dect2/engine/engine.h"

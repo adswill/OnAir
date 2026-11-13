@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The optional-libraries list (docs/OPTIONAL-LIBRARIES.md): the file-name matcher and the list itself.
 #include "dect2/codec/optional_libs.h"
 #include <cstdio>

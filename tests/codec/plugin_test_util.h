@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by the voice-chain tests with the stub codec plug-in (tests/codec/stub_codec_plugin.c, no codec): copies the stub into a temporary codecs
 // folder under the plug-in file name for an id, registers it in the codec registry and counts the frames the receiver hands to it.
 #pragma once

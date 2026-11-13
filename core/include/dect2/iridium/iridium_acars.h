@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium ACARS: the ACARS blocks inside short burst data packets (iridium_sbd.h) turned into messages for the same tables, search, label
 // decoder and aircraft map as the VHF / VDL2 / HFDL ACARS modes: registration kinds, duplicate retransmissions dropped, blocks joined,
 // positions read with the shared position parsers (aero_pos.h), one aircraft list.

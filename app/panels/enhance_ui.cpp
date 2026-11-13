@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The shared Enhance control (see enhance_ui.h): settings per mode in the preferences, the enhancement on the thread pool, the
 // before/after view, the settings popup.
 #include "../app.h"

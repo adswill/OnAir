@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS vessel filter, closest point of approach (CPA / TCPA) and geofence alerts.
 //  - AisFilter: which stations a view or an alert looks at: station class (A, B, base, aid to navigation, SAR) and ship-type group.
 //  - aisCpa(): distance and time of the closest approach of two moving stations on a flat local plane (good to well under 1 % inside 50 nm).

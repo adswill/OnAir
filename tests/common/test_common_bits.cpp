@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Compares dect2/common/bits.h and linecode.h against the ORIGINAL per-protocol implementations (embedded as reference
 // code) on random inputs: popcount/parity variants, Gray, bit reversal, bit field readers/writers, byte<->bit packing, NRZI, Manchester.
 #include "dect2/common/bits.h"

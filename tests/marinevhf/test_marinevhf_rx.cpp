@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF receiver: three NFM voice channels (16, 6, 13) in one 960 ksps capture with noise. The calls are logged on the right channels with sensible
 // start and length, the audio of a channel is its tone and silent outside the call, recordings are written, the activity counts follow, and the
 // play choice follows the user's pick, the channel 16 priority watch and the scan.

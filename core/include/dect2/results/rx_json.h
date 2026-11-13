@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The receiver's telemetry as one JSON object (the remote-control API, scripts). Every mode gets the common block (standard, state, lock, the
 // SNR the mode reports, carrier offset, FEC block counts); the modes with a block of their own (DVB-T2, DVB-T, ATSC, DAB, FM, DVB-S/S2, DTMB,
 // DVB-C) add their main figures under "details". LBJ, KLW and TDCS also export their bounded message lists there, Horus its payloads.

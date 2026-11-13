@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // When the map-server start-up question is asked.
 #include "map_ask.h"
 #include <cstdio>

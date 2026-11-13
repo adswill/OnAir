@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Frequency-error (ppm) calibration helpers behind Tools > Calibrate frequency: the reference lists (FM, ATSC, DVB-T, DAB, GSM, time and
 // AM carriers), tone estimation (parabolic peak, pilot phase tracking), averaging with a confidence interval, sanity limits, the quick
 // check and the drift track. Pure functions, no radio, no threads. Sign convention as selfcal.h: positive ppm = the radio's clock runs fast.

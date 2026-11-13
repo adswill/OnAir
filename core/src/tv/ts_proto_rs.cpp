@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ts_proto.h on top of the Rust crate rust/onair_ts: record arrays sized from the section length (every record needs at least 4 bytes of
 // section; the two lists that corrupt overlapping descriptors can lengthen are parsed again with the counted size), turned into the std::string / vector forms of the header.
 #include "dect2/tv/ts_proto.h"

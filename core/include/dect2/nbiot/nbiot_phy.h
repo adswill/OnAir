@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT (LTE narrowband IoT), the physical layer of the downlink broadcast channels (3GPP TS 36.211 clause 10 / 36.212 clause 6 / 36.213 clause 16
 // / 36.331), written from the specifications. A carrier is one 180 kHz resource block (12 subcarriers of 15 kHz). Only what a cell broadcasts to
 // everyone is handled: NPSS / NSSS (the cell id), NRS (channel), NPBCH (MIB-NB) and the NPDSCH that carries SIB1-NB. Every UE-specific channel

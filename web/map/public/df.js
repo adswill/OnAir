@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // df.js - map features for direction finding: bearing lines from the stations ("doa" tracks) and the fix markers with their 95 % ellipse ("fix" tracks).
 // Pure (no DOM); covered by web/map/test/df.test.js.
 const D2R = Math.PI / 180, R = 6371008.8;

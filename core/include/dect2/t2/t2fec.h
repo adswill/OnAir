@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T2 data-path FEC and mapping: BCH, LDPC, bit interleaver, constellations (with rotation and cyclic Q delay),
 // cell / time interleaver, BB scrambler. Encoder and decoder directions share the same tables.
 #pragma once

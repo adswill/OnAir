@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Audio cleanup" (core/include/dect2/audio/audio_cleanup.h): one small button next to the volume opens a pop-up with the cleanup chain for
 // listening: noise reduction, automatic and manual notch, leveller, silence gate, voice emphasis and de-esser. Every kind of mode (AM / airband,
 // NFM, WFM, SSB, CW, digital voice, generic; data modes have none) keeps its own settings, started from the preset in audioCleanupPreset() and

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protocol lab: generators of test signals with known structure, to check the auto-detection (and for the "Demo signal" button).
 // None of these is a real protocol; they have the typical shape of the things people reverse-engineer.
 #include "dect2/protolab/protolab.h"

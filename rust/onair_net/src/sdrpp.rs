@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The SDR++ server protocol (SDR++'s `server` module and its SmGui draw list): packets are an 8 byte header (type, total size, little endian) and a body; commands carry a
 //! 32-bit command id; the server's menu comes as a draw list of typed elements (step, bool, int, float, string) that this module turns into a list of widgets.
 //! Nothing is allocated: the widgets, their combo items and the generated labels go to arrays the caller owns, text is given as ranges of the input or of the label arena.

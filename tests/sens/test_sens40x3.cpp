@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sensitivity pass X3 (docs/SENSITIVITY-4.0-X3.md): receivers in realistic channels. The mode's own test signal through the sens_sweep channel
 // chain (static echo, TU6 Rayleigh / Rician fading with Jakes Doppler, phase noise, carrier and clock error) and white noise into a fresh receiver,
 // seeded trials; a trial passes when the receiver counted at least half the valid units of a clean run (as sens_sweep). Every point is run twice

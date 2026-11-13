@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Search everything heard: one box for a call sign, ICAO address, MMSI or frequency, over the history of every mode in the unified message database
 // (core/msgdb), grouped per station with where and when it was heard. A live position from the map screens' tracks is added when one is known (track_hub.h).
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Receiver range plot: the farthest position heard in each azimuth bucket (5 degrees by default) from the station, for ADS-B and AIS.
 // Pure and header-only. add() keeps the maximum per bucket; with a window (windowSec > 0) a bucket's maximum is "rolling": it counts only
 // while it is younger than the window, and a newer, shorter report replaces an expired maximum. Also: the bearing and great-circle

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // COSPAS-SARSAT 406 MHz distress beacon message layer (first-generation beacons, specification C/S T.001, public document).
 // A burst is 24 sync bits (15 bit-sync ones, 9 frame-sync bits) and a 112 bit (short) or 144 bit (long) message. Bits are numbered from 1 as in the
 // specification; the arrays here hold bit n at index n-1. The first protected field is bits 25-85 with the 21 bit BCH(82,61) check in 86-106; a long

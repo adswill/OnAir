@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SAME message parsing and tables: fields, the Partial County Alerting digit, state names, validation, the optional county table, the bit vote.
 #include "dect2/same/same_proto.h"
 #include "dect2/same/same_rx.h"

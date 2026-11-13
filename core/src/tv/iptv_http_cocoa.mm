@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internet TV: https on macOS through the system's own TLS (NSURLSession: the system trust store, no extra library, nothing to license).
 // Plain http never comes here (iptv_http.cpp does it with sockets). The response body is handed over as it arrives.
 #import <Foundation/Foundation.h>

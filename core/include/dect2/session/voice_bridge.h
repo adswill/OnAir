@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The bridge between voice::Monitor and the SessionStore (docs/MODE-EXPERIENCE.md, 2.2a). For 3.4 the Monitor is not replaced: it keeps its
 // history and its policy lists, and its call open / update / close hooks hand the call to the session store as a Session (a queue push, nothing
 // more: no SQLite, no file and no recmgr work ever happens under the Monitor's mutex). The store's key is (mode, receiver): with two receivers

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF channel plan: every number maps to the right frequencies in each region (ITU rule), duplex pairs are 4.6 MHz apart, the A / B variants,
 // the regional plans, the lookups and the data file against the compiled table.
 #include "dect2/marinevhf/marinevhf_channels.h"

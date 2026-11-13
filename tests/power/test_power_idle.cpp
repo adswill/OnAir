@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Power policy (dect2/power/power.h) and the idle wakeups of the always-on background threads.
 //
 // Part 1: the policy: Low power mode Off / Auto / On, Save power when hidden, rate scaling, thread QoS by name, App Nap hold counting.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "What is this station" on shortwave: an estimate built from what is on the air and what the user has installed. Language comes from the user-installed speech model (the transcriber's entry language),
 // a repeating interval signal from the audio itself, and station names only from a schedule file the user imports (EiBi or HFCC style; none is shipped) or from interval signals the user has taught.
 // Every answer is labelled estimated.

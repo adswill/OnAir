@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The zoom spectrum, its plan maths and the display window functions (zoom_spectrum.h, docs/WATERFALL-4.0.md).
 #include "dect2/dsp/zoom_spectrum.h"
 #include "dect2/dsp/dsp_compat.h"

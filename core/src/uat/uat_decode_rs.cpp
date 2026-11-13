@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UAT message decoding on top of the Rust crate rust/onair_uat: uat_decode_adsb_mdb and uat_decode_uplink_mdb of dump978's uat_decode.c (which
 // keeps the display functions; the decoding half of the C code was replaced by this Rust implementation). The Rust side fills flat records; this file copies them into the C structs with
 // their bit fields and the pointers into the application data.

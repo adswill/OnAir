@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB (MPEG-1/2 Layer II) services through the whole receiver: every one of the 64 UEP profiles of EN 300 401 table 8 (32 to 384 kbit/s, protection
 // levels 1 to 5) and EEP A/B levels, mono and stereo, 48 kHz and 24 kHz (MPEG-2 half sampling rate). The logical frames the receiver decodes must be
 // the transmitter's to the bit, and the audio must be the tone: no clicks (the largest step between samples no bigger than the clean tone's) and

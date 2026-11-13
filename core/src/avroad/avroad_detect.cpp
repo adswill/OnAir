@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Detection only: pulse radars (marine and weather) by their pulses and the beam passing the receiver; OFDM systems (LDACS, AeroMACS, C-V2X) by the cyclic prefix.
 #include "avroad_int.h"
 #include <algorithm>

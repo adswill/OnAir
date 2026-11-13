@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SAME / EAS message parsing and the tables: see same_proto.h.
 #include "dect2/same/same_proto.h"
 #include <cctype>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // badges/art.js - the badge icons: original vector art in the style of the map icons (shapes.js): flat fills, a hairline outline and thin
 // detail strokes in a -32..32 box. Each badge is a notched medal in its tier's colour with a glyph on a dark disc. The aircraft, ship,
 // sonde, APRS, satellite and contact glyphs ARE the map's own shapes (shapes.js), so a badge looks like the thing it is for.

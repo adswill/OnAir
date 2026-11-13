@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What the spectrum explorer reports (RxTelemetry::specx, standard 42).
 #pragma once
 #include <cstdint>

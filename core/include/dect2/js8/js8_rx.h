@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JS8Call receiver: decodes every JS8 signal in the audio passband of an upper sideband receiver (dial + 200 Hz .. dial + 3.2 kHz),
 // normal (15 s slots), fast (10 s) and turbo (6 s) at once, and puts the frames together into messages.
 //

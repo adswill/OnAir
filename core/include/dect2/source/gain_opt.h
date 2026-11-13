@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Optimise gain": sweeps a radio's overall gain over its range, measures how good the reception is at each step and keeps the best step that
 // does not overload the ADC. The selection is plain logic (no engine, no clock of its own) so it is tested on a synthetic SNR-vs-gain curve.
 //

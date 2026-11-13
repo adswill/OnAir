@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LTE cell search threshold: one 5 MHz cell (20 frames, 200 ms) with a carrier offset, white noise at falling SNR (over the 7.68 MHz
 // sample band); each level prints whether the cell is found, its MIB and its SIB1 read. Checked: found with MIB and SIB1 down to 0 dB,
 // nothing invented. CELL_SNR_LIST="0,-3,-6" CELL_SNR_SEEDS=4: other levels for a measurement (printed only).

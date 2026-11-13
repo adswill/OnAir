@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Journaline (ETSI TS 102 979): data group, JML object, TOC and DAB packet mode parsing.
 // Checked against the specification text: the CRC check value, the header bit layout, the object type / flag / revision fields, the JML codes,
 // escape sequence lengths, general link targets, a deflate stream made by zlib (RFC 1951), the TOC layout, user application data.

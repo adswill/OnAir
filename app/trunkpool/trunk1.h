@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Single-radio trunking in the app (docs/TRUNK1-3.9.md): the "One radio" block that the trunking modes (P25, Motorola Type II, EDACS, MPT 1327)
 // and the Multi-radio trunking window show: how many calls are followed at once from the one capture, which learned voice channels are outside
 // it and the bandwidth they need, the radio's limit, and one button that retunes the centre (and the sample rate) to cover the control channel

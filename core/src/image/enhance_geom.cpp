@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Image enhancement, geometry: slant (clock error) estimation and correction, phasing, line repair, line registration, resizing.
 #include "enhance_util.h"
 #include <numeric>

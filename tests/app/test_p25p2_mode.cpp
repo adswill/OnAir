@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 2 mode: the engine tuning is registered under its number (family 180, engine standard 182), the mode row, the family count, the poll slot and the
 // screen mapping agree, and the panel strings are in the screen source.
 #include "dect2/engine/mode_tuning.h"

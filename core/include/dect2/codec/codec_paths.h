@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Where OnAir looks for the codec plug-ins and libraries the user installs (docs/CODECS.md). One list for every loader.
 // The list itself is a pure function of a few strings (codecSearchDirs), so it is unit-tested with made-up Windows, macOS and Linux paths.
 // Order, first wins: the user folder, the extra folder set in Voice codecs, ONAIR_CODEC_DIR, then the folders next to the program.

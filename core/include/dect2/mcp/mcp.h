@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MCP (Model Context Protocol) server: lets an AI assistant that speaks MCP (Claude Desktop, Claude Code, any MCP client, a local LLM behind one)
 // drive OnAir: list radios, tune, scan a band, identify signals, start a decoder, read what it decoded. A thin layer over the remote-control host
 // (core/include/dect2/net/remote_api.h) and the engine's signal identifier, so it works in the app and in onair-server alike.

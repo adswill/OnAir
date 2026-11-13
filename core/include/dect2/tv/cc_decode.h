@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CEA-608 and CEA-708 closed captions, from the cc_data triplets of the video user data (ATSC A/53, the same data FFmpeg gives as AV_FRAME_DATA_A53_CC).
 // CEA-608: channel CC1 (field 1), pop-on, roll-up and paint-on. CEA-708: service 1, as a text stream (window positions and styles are ignored). Cues are in the form the
 // subtitle export takes.

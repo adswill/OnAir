@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AFSK tone tuner: Bell 202 packet bursts (random bits, continuous-phase 1200 / 2200 Hz audio, NRZI-like random mix) on an FM carrier with known deviation, tone level difference (twist) and clock error; the mark
 // and space frequencies, twist, peak deviation, burst length and count are compared with the generator; noise sweep; false bursts on noise, speech-like audio and a steady tone. Simulated signals only.
 #include "x40_gen3.h"

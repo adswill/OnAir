@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The top bar: toolbarParts() draws its groups (source, frequency, tuner, gain, start / stop, decoder options) for the
 // classic bar and the side panels, and the tuning helpers (tuneFreq, spectrumTune, the second-mode control) live here.
 // The source, rig windows, status bar and mode selection are in toolbar_source.cpp, toolbar_rig.cpp, statusbar.cpp and mode_select.cpp.

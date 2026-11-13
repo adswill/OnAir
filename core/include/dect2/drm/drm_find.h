@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Finds DRM signals in a wide capture so that a receiver is only started where there is one. On the averaged spectrum a DRM signal is a block of a few kHz with no
 // carrier line and steep skirts; what proves it is OFDM with the right numerology: the guard interval correlation at the useful symbol time Tu of a robustness mode,
 // accumulated over the symbol period (ES 201 980 clause 8.2). AM, SSB and noise have no such peak at any symbol phase.

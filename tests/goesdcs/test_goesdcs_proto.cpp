@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES DCS message format: the BCH (31,21) address code against the JMA annex example, error correction, frame bits and report parsing (ASCII and pseudo-binary B).
 #include "dect2/goesdcs/goesdcs_proto.h"
 #include <cstdio>

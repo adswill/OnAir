@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES HRIT test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Test products (goesTestFiles): a full disk image in two segments, Rice compressed (one scan line a packet, 100 x 64 pixels so the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat all-carriers mode, stage 1: finds the carriers of the L-band satellite segment in ONE wide capture and tells the narrow
 // ones (P 600 / 1200 bit/s, bare carriers) from the medium ones (Inmarsat-C, about 2 kHz) and the wide ones (P 10500 bit/s, C channels).
 // Design: docs/INMARSAT-REVAMP.md. Width alone cannot tell a 10500 bit/s P channel from a C channel: the class only picks which decoder

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CubeSat telemetry receiver: see cubesat_rx.h. The radio side is the packet receiver's (packet_demod.h), the frame layers are
 // packet_ax25.h and cubesat_proto.h.
 #include "dect2/cubesat/cubesat_rx.h"

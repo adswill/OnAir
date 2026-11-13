@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode Builder bit stages: bytes and bits, line codes (NRZ, NRZI, Manchester, differential Manchester, Miller, 4b5b, 8b10b), the
 // scramblers, the block interleaver, HDLC bit stuffing and the generic CRC.
 #include "dect2/modebuilder/modebuilder.h"

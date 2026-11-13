@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Smooth sensitivity curve of one mode: mean fraction of the clean-signal valid units decoded at each SNR (several seeded trials), with
 // optional carrier error and clock error, plus a noise-only false-decode count. A finer view than the 90 % threshold of sens_sweep: use it to
 // see a gain of a fraction of a dB. Usage: sens_curve <mode> <snrFrom> <snrTo> <step> <trials> [cfoHz] [sroPpm] [offFrac]

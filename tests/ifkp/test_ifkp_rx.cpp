@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IFKP receiver against generated signals: the three speeds, noise, tuning error, off-centre, symbol clock error, drift, fading, echo,
 // a signal that starts late, a forced speed, noise only and an FSQ signal (other tone spacing: not IFKP).
 #include "dect2/fsq/kbd33_gen.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir POCSAG/FLEX: the pager protocol layer. BCH(31,21) code words (`bch`), POCSAG word classification (`pocsag`), message text and the
 //! "looks like text" heuristic (`text`), FLEX sync table, FIW and phase decoding (`flex`). Generators (`pocsagBits`, `flexPhaseBits`), the
 //! POCSAG message assembler state and the demodulator stay in C++.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV picture decoder: turning a line into pixels (extractPicture), publishing fields and capturing lines.
 #include "atv_video_impl.h"
 #include "dect2/atv/atv_blend.h"

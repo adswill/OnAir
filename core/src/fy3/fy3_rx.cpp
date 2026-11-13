@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FY-3 AHRPT and MPT receivers (see fy3_rx.h). The demodulator follows hrpt_rx.cpp (itself the Meteor LRPT one) with the changes for this signal:
 // a symbol rate search, a soft-decision carrier detector with a narrowing loop, soft symbols scaled by a slow level, and the two-rail code.
 // The channel coding and the instrument frame layouts follow the open FY-3 decoders (SatDump's fengyun3 plug-in, GPL-3.0-or-later); see THIRD_PARTY.md.

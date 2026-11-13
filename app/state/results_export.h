@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared "Save results..." export: columns + rows -> CSV or JSON. No GUI includes here, so tests can link it.
 #pragma once
 #include <string>

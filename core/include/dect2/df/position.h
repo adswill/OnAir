@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Position fixing from bearing lines (several stations, or one moving station over time): Stansfield and maximum-likelihood estimators,
 // error ellipse, RANSAC outlier rejection, WGS-84 geodesics, and a single-station fix with a range prior.
 #pragma once

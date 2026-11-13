@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DSC symbol code, number fields and call layout against ITU-R M.493 (Table 1 in full, the packing rules and the call tables).
 #include "dect2/marine/marine_dsc.h"
 #include <cmath>

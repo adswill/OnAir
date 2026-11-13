@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Workspaces: a named set of the current source, mode, frequency, sample rate, gains and open windows, saved in the settings
 // (prefs key "workspaces") and restored from the File menu. Also the last-session file (dataDir()/last-session.txt): written every
 // few seconds while OnAir runs and marked clean at a normal exit, so the next start can offer to restore a session that did not end.

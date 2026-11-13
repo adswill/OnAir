@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Phase noise meter: the spectrum of a carrier (within the +-100 kHz channel) next to the carrier, read as single-sideband phase noise L(f) in dBc/Hz at 10 Hz to 100 kHz offsets, plus the
 // spurs (mains and supply lines, reference spurs) and the integrated phase jitter from 100 Hz to 100 kHz. Blocks of 2^18 samples (about one second at 250 ksps) are shifted so the carrier sits at 0 Hz
 // (it is followed from block to block), windowed with a four-term Blackman-Harris window (-92 dB sidelobes), their power spectra averaged (up to 16 blocks), the carrier power C taken as all the power in the channel (carrier plus skirts),

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi network monitor: the access points around, from the beacons they broadcast openly on 2.4, 5 and 6 GHz, as a phone's Wi-Fi list shows
 // them (SSID, BSSID and vendor, band, channel, width, standard, security, capabilities, beacon interval, level). Passive: it never transmits,
 // probes, associates or joins, and parses only beacons, probe responses and FILS discovery frames; every other frame (data included) is only

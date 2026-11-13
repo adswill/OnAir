@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // W1A voiceband modes receiver and engine test signal (see w1a_rx.h).
 #include "dect2/w1a/w1a_rx.h"
 #include "dect2/w1a/w1a_dsp.h"

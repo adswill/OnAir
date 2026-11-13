@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 2 voice through a user-installed codec plug-in "ambe2" (stub library, tests/codec/stub_codec_plugin.c, no codec): every clear voice frame of the
 // listened slot reaches the plug-in as 12 bytes and comes out as 160 samples; the other slot is not decoded; an encrypted call (or one whose encryption
 // is not known yet) never reaches the plug-in. NOT covered: a real AMBE+2 codec, a real P25 Phase 2 recording.

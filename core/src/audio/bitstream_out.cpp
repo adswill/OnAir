@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bitstream passthrough devices for Windows (WASAPI exclusive) and Linux (ALSA); macOS is in bitstream_out_coreaudio.mm. See bitstream_out.h.
 // EXPERIMENTAL: not tested on real hardware.
 #include "bitstream_out.h"

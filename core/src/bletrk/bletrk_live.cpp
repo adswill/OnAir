@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BLE tracker detector for the engine (see bletrk_live.h).
 #include "dect2/bletrk/bletrk_live.h"
 #include "dect2/automation/engine.h"

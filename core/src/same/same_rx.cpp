@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NOAA Weather Radio SAME receiver: see same_rx.h.
 #include "dect2/same/same_rx.h"
 #include "dect2/results/results_io.h"

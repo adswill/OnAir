@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite identification from a Doppler curve (see sat_id.h).
 #include "dect2/satmisc/sat_id.h"
 #include <algorithm>

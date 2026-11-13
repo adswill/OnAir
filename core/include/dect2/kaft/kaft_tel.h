@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT receiver telemetry. RxTelemetry::kaft, engine standard 127, active standard 126 (family 125).
 #pragma once
 #include <cstdint>

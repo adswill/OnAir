@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Receiver strip helpers: label, UTF-8 safe ellipsis, chip width, Ctrl+digit, scroll-into-view.
 #include "../../app/state/rxbar.h"
 #include <cstdio>

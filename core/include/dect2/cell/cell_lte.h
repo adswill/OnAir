@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, LTE: the physical layer of the downlink broadcast channels (3GPP TS 36.211 / 36.212 / 36.213), written from the
 // specifications. Only what a cell broadcasts to everyone is handled: synchronisation signals, reference signals, the MIB on the PBCH,
 // PCFICH, and PDCCH / PDSCH for SI-RNTI (system information). Paging (P-RNTI) and every UE-specific channel are never decoded: a DCI is

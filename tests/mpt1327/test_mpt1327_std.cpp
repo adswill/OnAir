@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 against the 1997 issue of the standard (section 5 figures): every address codeword of the control channel is assembled here field by field from the bit
 // widths printed in the figures, independently of the generator in mpt1327_gen.cpp, then decoded; and the engine receiver is swept over carrier offset, radio
 // centre offset, sample rate, deviation, bit clock error, tone polarity and level.

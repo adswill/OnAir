@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The zoom spectrum (docs/WATERFALL-4.0.md): the plan maths (a bin per pixel or finer at every zoom, room to pan, the automatic choice), the
 // decimator (unit gain, alias rejection over the usable band, every D from 2 to 65536 split right), the analyser (two tones 12 Hz apart
 // that the full-band FFT merges come out as two peaks, at the right frequency with an off-centre view and off-bin tones, the level and the

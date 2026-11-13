@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi network screens: the network table (SSID, hidden ones as hidden, BSSID and vendor, band, channel, width, standard, security, level with a
 // short history, first and last seen, beacons, interval, capabilities) with name, level, band and security filters, the beacon log (beacons,
 // probe responses, FILS discovery), and the channels view. The band selector, channel list and hop scan are in wifi_ui_scan.cpp, the channel

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Local display / HDMI emission: the timing table is self-consistent; wide spectra with the harmonics of each common pixel clock (with clock
 // offsets) find the right clock; narrow captures of one harmonic tell the timings that share a clock apart by the line-rate comb, over offsets
 // and a noise sweep; a lone carrier, a switching-supply comb and noise are not called a display; the signal identifier lists it.

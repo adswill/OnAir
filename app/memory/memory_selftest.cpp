@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // --memory-selftest: applies memories to the receiver of a hidden run and checks the state (mode, sub-mode, frequency, options, gains), so the
 // recall is tested through the real App without drawing anything or touching a radio. tests/app/run_memory_recall.cmake runs it from a
 // renamed copy of the program with its own data and settings folders. Prints one line per check; the exit code is the number of failures.

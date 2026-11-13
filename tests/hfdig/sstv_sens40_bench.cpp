@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSTV picture quality against SNR (docs/SENSITIVITY-4.0-X2.md). Not a ctest: a bench.
 //   sstv_sens40_bench <mode name> <snrFrom> <snrTo> <step> <trials> [picture 0 test / 1 textured] [offHz] [ppm]
 // Per SNR point: pictures complete, mean absolute error (levels) and PSNR against the sent picture, and the share of trials that pass the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by the SSTV 4.0 sensitivity bench and guard test: a textured test picture, a frequency shifter and a clock error that work on
 // any picture's audio, white noise in 3 kHz (as test_hfdig_sens39d.cpp), and the picture's error against the sent one. Simulated only.
 #pragma once

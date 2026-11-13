@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Crash report tests: the log rotation (everywhere) and, where there is fork(), a child that crashes and leaves a report.
 #include "dect2/engine/crash_report.h"
 #include <cstdio>

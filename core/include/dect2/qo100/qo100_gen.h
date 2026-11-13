@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signal of the QO-100 tools (makeQo100Synth): what a Ku LNB with a 9750 MHz oscillator hands the radio. The LNB's oscillator is
 // off by kQo100SynthErrHz and drifts slowly (actual LO = 9750 MHz + error), so everything arrives that much low. On the narrowband
 // transponder: the CW beacons at 10489.500 and 10490.000 MHz, the 400 bit/s BPSK beacon at 10489.750, a steady test carrier at

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protocol lab: a workbench for working out an unknown digital signal. Pipeline: bursts -> demodulator -> baud rate -> bit slicer
 // (clock recovery) -> line coding -> preamble / sync -> bytes -> CRC search -> field analysis -> export. Every stage is a plain
 // function so it can be tested alone. Nothing here decrypts anything: an encrypted payload simply shows up as high-entropy bytes.

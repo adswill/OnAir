@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meshtastic channel URLs: see mesh_channel_url.h. Own protobuf reader and writer for the few messages involved.
 #include "dect2/mesh/mesh_channel_url.h"
 #include "dect2/mesh/mesh_crypto.h"

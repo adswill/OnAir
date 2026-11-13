@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NMEA 0183 over DMR short data: the parser against the sentence seen in the 2026-10-24 log
 // (144.625 MHz, TG 100, Src 22001) and the public Trimble RMC / GGA examples, plus malformed input.
 #include "dect2/dmr/dmr_nmea.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DECT telemetry, shared by the receiver and the UI. The first members are copied into RxTelemetry: keep them and their meaning.
 #pragma once
 #include "dect_proto.h"

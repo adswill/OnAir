@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 4 test signal: GFSK bursts on VHF channels (synthetic STDMA traffic).
 #pragma once
 #include "dect2/engine/mode_synth.h"

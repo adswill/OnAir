@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Window-design helpers shared by the filter builders: the modified Bessel function I0 used by Kaiser
 // windows and the normalised sinc. Different modes truncated the I0 power series at different term counts
 // (and some stop early at a relative tolerance); those choices change the last digits, so they stay explicit

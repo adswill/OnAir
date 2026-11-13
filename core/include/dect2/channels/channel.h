@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multipath / fading detector: looks at the channel estimate (power-delay profile, |H(f)|) and at how the decoder
 // quality moves from frame to frame, and says whether the signal is probably suffering from multipath or fading.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSDV from an audio recording (a WAV file). The SSDV receiver (ssdv_rx.h) takes the samples of an FM / FSK channel; a recording of the radio's
 // speaker output is that channel after the FM discriminator: the FSK bits as an audio waveform (a 9600 baud G3RUH-style baseband, or the
 // 1200 - 19200 baud baseband an FM receiver gives). This reads such a WAV and turns it back into a frequency-modulated carrier at a rate the

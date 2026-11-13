@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM saved-stations library: the list the user builds by hand, separate from the band-scan results.
 // The preferences store mhz <US> name per record, records joined by <RS>. Those separators survive
 // Prefs::setS(), which turns '|', newlines and carriage returns into spaces.

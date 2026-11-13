@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium test signal through the receiver and the frame layer: the satellites of the model, their ring alerts (positions as the
 // model has them), the broadcast time, the pager messages assembled from their parts, the Doppler shift of every satellite;
 // at 10 Msps (the default), 4, 8 and 20 Msps, and 2.4 Msps on the simplex channels only.

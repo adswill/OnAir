@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Played list of FM (RadioText+) and DAB (DL Plus), and the broadcast.* events for alerts: played_ui.cpp. docs/PLAYED-3.9.md.
 #pragma once
 #include <string>

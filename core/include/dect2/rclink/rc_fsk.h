@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared front end of the frequency-hopping FSK links (SiK, FrSky, FlySky): bursts are found in a short-time spectrum of the whole capture, so every hop
 // channel inside the band is covered without a channel filter bank, and each burst is demodulated afterwards from the stored samples.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3G-ALE traffic bursts (MIL-STD-188-141B Appendix C, the STANAG 4538 waveforms after link setup): BW1, BW2, BW3 and BW4 receivers,
 // the TM, HDL and LDL PDU readers and test generators. BW0 (link setup) is in hfu_ale3g.h.
 // Written from the published text of MIL-STD-188-141B Appendix C: C.5.1.2 (interleaver), C.5.1.4 (BW1: TM and HDL_ACK / HDL_EOM PDUs,

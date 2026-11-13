@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The science receivers: SuperSID (VLF station levels and sudden changes), the riometer (cosmic noise absorption against a sidereal quiet-day curve) and the
 // pulsar folder (filter bank, incoherent dedispersion, folding, S/N against the folded noise).
 // Reuses the conventions of core/src/astro (a power-in-band measurement, sidereal bookkeeping in the hydrogen line code) but is self-contained so it can be tested alone.

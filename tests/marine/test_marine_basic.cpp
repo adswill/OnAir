@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine: the tuning entry exists, and the receiver reports at a steady rate whatever the chunk size.
 #include "dect2/engine/modes.h"
 #include "dect2/marine/marine_rx.h"

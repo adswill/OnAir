@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CIS HF test generators and test impairments (cishf_dsp.h). The test signals follow the published parameters; where a detail is not published
 // (the BEE start word, the CIS-14 parity rule, the CIS-12 pulse shape, the CIS-128 carrier spacing and guard) the generator picks a value that fits
 // the published figures, and docs/CIS-HF-3.9.md says which.

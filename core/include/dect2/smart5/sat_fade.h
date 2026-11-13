@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-S/S2 rain-fade and margin log (3.9, docs/SMART5-tv-3.9.md item 13). Every second the demodulator's Es/N0 and MODCOD go in;
 // out come the margin above the quasi-error-free threshold of that MODCOD, the clear-sky level (learned), each fade event (start,
 // length, depth) and every ACM / VCM MODCOD change.

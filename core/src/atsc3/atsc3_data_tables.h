@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Generated tables of A/322 for the data path (see atsc3_data_tables.cpp).
 #pragma once
 namespace dect2 {

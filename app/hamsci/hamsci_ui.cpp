@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Screens of the ham science modes (families 460 - 465, 500 - 502, 750 JT6M and the 3.9 event monitors 820 - 835, one receiver class, docs/HAM-SCIENCE-3.8.md and docs/W1B-3.9.md): QRSS and DFCW (a spectrogram of the
 // keyed tone and the text), FSK441, ISCAT and PI4 (a list of decodes), Throb (running text), SuperSID (VLF station levels and the sudden changes of a solar
 // flare), the riometer (absorption against a sidereal quiet-day curve) and pulsar folding (profile, S/N, and what antenna it takes).

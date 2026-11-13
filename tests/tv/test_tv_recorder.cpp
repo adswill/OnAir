@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The recorder: conflict detection, the schedule (series expansion, JSON), file names, sidecars and the recordings index, SRT / WebVTT writers,
 // the teletext subtitle collector, and a full run: two services of one multiplex recorded at the same time from a synthetic stream.
 #include "dect2/tv/recorder.h"

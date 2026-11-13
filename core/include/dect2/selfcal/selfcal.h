@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Receiver frequency self-calibration: measure the radio's oscillator error (ppm) against references of known frequency and give the
 // number to put into the radio's "ppm" setting (docs/self-calibration.md).
 //

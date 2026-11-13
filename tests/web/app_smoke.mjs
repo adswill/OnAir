@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web 3.9: a headless browser smoke test of the page (opt-in: it needs Playwright's Chromium, which CI does not download).
 //   ONAIR_PLAYWRIGHT=1 node tests/web/app_smoke.mjs <path to onair-server>
 // Starts onair-server on the test signal with a temporary settings file and an isolated browser profile (never the owner's browser),

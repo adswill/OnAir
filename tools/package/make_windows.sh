@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Build OnAir for Windows (x86-64) in an MSYS2 UCRT64 shell and produce a portable .zip (and a setup .exe if NSIS is installed).
 #   tools/package/make_windows.sh [version]
 # Needs (pacman -S): mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,pkgconf,ffmpeg,glfw,hackrf,soapysdr,libiconv} zip, and nsis for the installer.

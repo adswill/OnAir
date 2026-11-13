@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LBJ receiver on the generated test signal (clean, then 15 dB and a carrier offset): every message of a cycle must arrive with its
 // exact train number, speed, kilometre post and direction. Noise alone must give nothing. The generator makes the signal from the
 // decoded frames of the real recordings (a basic message), so this is a round trip through the whole chain.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Deeper error correction of ADS-B frames for known aircraft: 4 and 5 wrong bits among the least certain ones are repaired, and random garbage does not become frames. Simulated bits.
 #include <algorithm>
 #include <vector>

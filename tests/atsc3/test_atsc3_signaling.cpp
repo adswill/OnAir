@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DEFLATE and gzip decoding, the XML reader, and (further down) IP/UDP, LLS and the service list. gzip test vectors were made with Python.
 #include "dect2/common/inflate.h"
 #include "dect2/common/xmlmini.h"

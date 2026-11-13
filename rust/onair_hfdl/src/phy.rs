@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The bit layers of an HFDL burst (ARINC 635 / ICAO Doc 9741 as dumphfdl implements them, read for reference): the eight rates, the known symbols, the
 //! 15-bit m-sequence scrambler, the 40-row block interleaver, the rate 1/2 K = 7 convolutional code (generators 0x6D first, then 0x4F: checked on air, PR #175)
 //! and its soft Viterbi decoder, and the FCS (CRC-16/X.25, sent low octet first).

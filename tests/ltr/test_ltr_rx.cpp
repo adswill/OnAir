@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LTR: word round trip, check bits (table cross-checked from an independent bit-matrix construction), bit errors, and the full chain
 // (generated FM signal with voice and noise -> receiver), with impairment sweeps. Generated signal only: no real LTR recording was available.
 #include "dect2/ltr/ltr_proto.h"

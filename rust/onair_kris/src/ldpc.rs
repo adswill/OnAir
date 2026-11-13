@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The Kris LDPC family: systematic quasi-cyclic IRA codes with a dual-diagonal parity part.
 //!
 //! n = 1920, 2304 or 7680; rates 1/4, 1/3, 1/2, 2/3, 3/4, 5/6, 9/10 (index 0..6). The parity-check matrix is H = [A | P] on a base graph of

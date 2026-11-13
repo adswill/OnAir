@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T2 MISO: both transmitter groups through their own channel (delay and gain), the receiver must read the L1 and the PLP. Simulated signals.
 #include "dect2/t2/t2gen.h"
 #include "dect2/t2/t2rx.h"

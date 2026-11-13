@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Counters for the feel of tuning: how long the UI thread spends in the retune and in the settings save that used to follow every tuning
 // event, and how many saves the debounce saved. Printed after a --shot run (shotReport) and by the tune_stat test. No ImGui.
 #pragma once

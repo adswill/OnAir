@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure functions of the OnAir directory: the signing text, record validation, URL / address checks, expiry, rate-limit windows, band and
 // distance filters. No I/O, so node tests cover all of it (test/logic.test.js). The C++ side (server/web/web_directory_proto.cpp) builds the
 // same signing text; test vectors in both test suites keep the two in step.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/backup/backup.h"
 #include "dect2/common/u8file.h"
 #include "dect2/mesh/mesh_crypto.h"

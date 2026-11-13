@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The recordings manager core: finding and describing recordings in the known folders, the user's tags and notes (a small index file),
 // search / sort, the automatic cleanup rule, exact-sample trimming of IQ and WAV, SigMF export, format conversion and the trash with undo.
 // All on files and numbers, no window: tests/sched/test_recmgr.cpp. The window is app/panels/recmgr_ui.cpp.

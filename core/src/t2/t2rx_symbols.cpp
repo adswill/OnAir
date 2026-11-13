@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OFDM symbol processing of the DVB-T2 receiver: FFT, timing and carrier tracking.
 #include "t2rx_impl.h"
 

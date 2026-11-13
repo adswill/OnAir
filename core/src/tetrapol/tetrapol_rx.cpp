@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL receiver (tetrapol_rx.h): GMSK 8 kbit/s discriminator, symbol timing, frame sync with automatic polarity, scrambling
 // constant and band detection, data blocks and signalling, and clear voice frames to the user's codec plug-in.
 #include "dect2/tetrapol/tetrapol_rx.h"

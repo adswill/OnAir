@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! DVB subtitle stream parsing (ETSI EN 300 743 section 7): the PES header of a subtitle PES packet (private stream 1, data_identifier 0x20, PTS), the
 //! segment walk, and the parsers of the page composition, region composition, CLUT definition, object data and display definition segments. They return
 //! plain records; which page a segment belongs to and what it changes (regions, CLUTs, objects, display queue) stays in C++.

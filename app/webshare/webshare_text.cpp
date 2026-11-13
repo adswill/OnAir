@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Text helpers of the OnAir Web easy setup (no UI), tested in tests/webshare/test_webshare.cpp
 #include "webshare.h"
 #include <cctype>

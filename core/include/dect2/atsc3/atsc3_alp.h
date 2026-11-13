@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 link layer, ALP (A/330 section 5): packet headers (single, segmented, concatenated), signaling and MPEG-2 TS encapsulation, and
 // the reassembly of ALP packets from the payloads of baseband packets (a packet can start in one baseband packet and end in the next).
 #pragma once

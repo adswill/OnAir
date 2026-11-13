@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The pure rules of the remote-control API: token check, rate limit, request size limits, the route table (with the refusal list), the
 // decoded-message line format (WebSocket, polling and UDP), the ring that holds the recent messages and the rigctl (Hamlib rigctld subset) line
 // parser. No sockets here: remote_api.cpp, rigctl_server.cpp and api_udp.cpp use these, tests/net/test_api_policy.cpp tests them.

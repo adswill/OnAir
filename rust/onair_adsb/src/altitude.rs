@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Altitude, identity and character codes (ICAO Annex 10 Vol. IV 3.1.2.6.5 altitude, 3.1.2.6.7 identity; DO-260B 2.2.3.2.5 identification).
 
 /// Gillham code C1 C2 C4 as a 3 bit number, lowest 100 ft level first: each 500 ft step is split into five levels in this order for even steps and

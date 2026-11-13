@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB as it is on the air (issue #58): two single carrier transmitters, PN595 with a fixed phase, 4QAM rate 0.8, interleaver mode 2, recorded at
 // 10 Msps, were tracked with a clean header fit (C/N 18 dB) but their system information never decoded. The PN595 header of this receiver started
 // one chip late: on the air the header is a 1 and then the nine zeros of the register, and the system information follows chip 594 of the old

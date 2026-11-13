@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde ascent sounding and the landing prediction before burst (3.9, docs/SMART5-avia-3.9.md). Pure functions of the track.
 //
 // Sounding: the ascent part of the track (up to the highest point) is cut into layers (500 m); each layer's wind is the least squares

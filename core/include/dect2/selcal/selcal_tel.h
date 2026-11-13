@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SELCAL telemetry. RxTelemetry::selcal, engine standard 242, active standard 241 (family 240).
 #pragma once
 #include <cstdint>

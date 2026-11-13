@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Receive beamforming on a simulated 5-element circular array: white-noise gain, beamwidth, null depth (LCMV / MVDR), auto-steering to the
 // MUSIC peak, calibration error recovery and the bank. Synthetic plane waves with noise only: no mutual coupling, ideal omni elements.
 #include "dect2/df/beam.h"

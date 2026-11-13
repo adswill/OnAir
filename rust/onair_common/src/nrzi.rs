@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! NRZI on unpacked bit streams (one bit per byte). `*_hdlc`: a 0 toggles the line level, a 1 keeps it (NRZI-S, HDLC/AX.25/AIS/USB).
 //! `*_mark`: a 1 toggles the level. Decoding compares raw values exactly as written (no masking), so odd inputs behave the same
 //! as the C++ code did.

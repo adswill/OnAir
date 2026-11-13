@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R receiver on the test signal: carriers found in the spectrum, synchronised, System Information decoded; frequency error, noise,
 // the band edge, three cells of different levels, a radio with a lower sample rate.
 #include "dect2/gsmr/gsmr_gen.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The custom capture bandwidth control and its saved value (rx_width.h): under Advanced in every mode.
 #include "rx_width.h"
 #include "../app.h"

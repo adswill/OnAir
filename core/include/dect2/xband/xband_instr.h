@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Packet builders of the test signals (xband_gen.cpp), next to the decoders in xband_instr.cpp.
 #pragma once
 #include <cstdint>

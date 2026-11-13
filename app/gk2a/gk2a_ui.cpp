@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GK-2A LRIT (family 230) and HRIT (family 231) screens: the xRIT product list (full-disk pictures per channel put together from their
 // segments, schedule and additional-data text), the receiver details, a "why not decoding" line, and the KMA decryption keys.
 #include "ui/kit/mode_panel.h"

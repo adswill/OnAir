@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_tetra` (core/include/dect2/rs/tetra.h). Every export is `onair_tetra_*`; pointers come as (pointer, length) pairs and the caller owns all
 //! buffers. Bits are one per byte. A null pointer where a buffer is needed makes the function fail (nothing is written). Text goes into a caller buffer and
 //! the length written is returned; names are static NUL-terminated strings.

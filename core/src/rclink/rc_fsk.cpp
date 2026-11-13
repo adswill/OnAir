@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Burst finder and FSK slicer of the hopping links; see rc_fsk.h.
 #include "dect2/rclink/rc_fsk.h"
 #include <algorithm>

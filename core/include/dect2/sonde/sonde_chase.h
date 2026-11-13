@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Chase GPS for the radiosonde screens (4.0): the live position of a moving receiver, so a chase car and the sonde show on the same map,
 // and SondeHub gets the chase-car position. Sources: an NMEA 0183 stream (a serial GPS: 9600 baud raw on macOS/Linux, or a log file;
 // GGA and RMC through the RFI mapper's parser, rfi.h) or gpsd (TCP, default port 2947: ?WATCH JSON, TPV reports). Off until chosen.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // sens_sweep registry entries added for the 3.9 sensitivity pass D (docs/SENSITIVITY-3.9-D.md), used by tests/sens/test_sens39d.cpp.
 // Same conventions as sens_modes.h: the mode's own test signal (noise free), the receiver set up as the engine sets it up, "valid
 // output" = the receiver's own count of units whose check passed. SNR = active signal power against the noise in bwHz.

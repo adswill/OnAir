@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Writes core/src/kaal/kaal_codec3_tables.h: the trained initial probabilities of the KAAL codec v3 (INITS of kaal_codec_v3.py,
 path argv[1], default /tmp/kaal-codec) as dense arrays per profile id (0 = 16, 1 = 24, 2 = 32, 3 = 12 kbit/s); 0 means 'no entry'."""
 import sys

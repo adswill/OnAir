@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tile keys and paths, the area plan with its hard limit, LRU eviction by modification time under a cap
 #include "dect2/geo/tilecache.h"
 #include <chrono>

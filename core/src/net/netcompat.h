@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sockets for POSIX and Windows (Winsock) behind one small set of names.
 #pragma once
 #ifdef _WIN32

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > Propagation, Advanced mode: every input of the model (transmitter, receiver chain and SDR, path, ionosphere, atmosphere, terrain),
 // the link budget term by term with an explanation on each, sweeps (signal vs distance, range vs power and frequency, the HF MUF over the
 // day), CSV export and a second scenario to compare. See prop_ui.cpp for the window, the worker and the map.

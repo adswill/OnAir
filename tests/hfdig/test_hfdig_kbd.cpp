@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital keyboard modes (hfdig_kbd.h): Olivia, Contestia, MFSK, THOR, DominoEX and Hell. The transmitter here is written from the
 // same fldigi tables as the decoder, so a loopback only shows the two agree; what is checked against the specification: the tables
 // themselves (varicodes, scrambling codes, the Hadamard code, the convolutional code's free distance and the interleaver permutation

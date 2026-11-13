@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Session record of the mode experience framework (docs/MODE-EXPERIENCE.md, 2.1): one call, thread or track that a mode heard, as the
 // user will see it in the Items tab (Calls, Threads, Tracks). The decoders fill it, the SessionStore (session_store.h) keeps it.
 // Variable text is std::string so long callsigns, DevEUI + DevAddr pairs and UTF-8 names are never cut.

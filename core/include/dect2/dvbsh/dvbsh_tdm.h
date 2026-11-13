@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH TDM (SH-B, the satellite waveform of ETSI EN 302 583 V1.2.1 clause 5.6) over the same channel coding as SH-A (dvbsh.h):
 //  - the TDM SH frame (clause 5.5.2.4): a HEADER of 3 capacity units (the 288-bit SOF and the 5 760-bit signalling field: table 5.9 coded
 //    with the 3GPP2 turbo code at rate 1/5 and the bit-wise interleaver H(w) = 73 w mod 5 760 of table 5.6), the DATA part (whole turbo

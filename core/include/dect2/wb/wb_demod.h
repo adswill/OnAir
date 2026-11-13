@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: demodulation of a chosen band of a recording and recovery of its bit stream.
 //
 // Chain: band extraction (wb_dsp.h) to a baseband of at least 8 samples per symbol -> demodulator:

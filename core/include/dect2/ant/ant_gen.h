@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ANT+ test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Sensors broadcasting on one channel, each with its own period (the heart rate profile every 8070/32768 s), 1 Mbit/s GFSK with 160 kHz

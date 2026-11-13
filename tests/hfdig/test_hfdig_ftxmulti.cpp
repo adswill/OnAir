@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FT8 multi-signal slot benchmark: K stations at SNRs spread over -25 .. 0 dB (2500 Hz), DT -0.5 .. +1.5 s, random frequencies (some
 // overlapping), several slots. Prints the share decoded per SNR bin, false decodes and the CPU seconds per slot (user+sys of the process).
 // FTXMULTI_SLOTS (default 2), FTXMULTI_K (default 40), FTXMULTI_MODE (0 FT8, 1 FT4, 2 FT2) set the size; FTXMULTI_LO / _HI the SNR range.

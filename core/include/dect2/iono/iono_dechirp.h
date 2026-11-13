@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The dechirp inner loop of the ionospheric sounder: accumulate x[k] * z[k] where z is a chirp phasor advanced by a chirp-rate-modulated step
 // (z <- z w, w <- w dw). Run as four chains that start at exactly computed phases a quarter of the run apart, so the four recurrences overlap in the CPU
 // instead of each waiting on the previous multiply; every chain starts from a fresh sin / cos, which also keeps the phase error lower than one long

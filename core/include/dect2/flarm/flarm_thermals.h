@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Thermals map from glider traffic (3.9, docs/SMART5-field-3.9.md item 2) for FLARM, OGN and ADS-L: a glider that circles (its track turns
 // through 360 deg or more) inside a small circle while it climbs is in a thermal. The circle is taken after the wind drift is removed (a
 // straight-line fit of the positions against time), so a thermal that drifts downwind still counts. Each thermal goes on the map with its

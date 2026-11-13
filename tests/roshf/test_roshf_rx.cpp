@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROS (HF) detector on the generator's signals (the publicly reported physical layer: one of 144 tones on a 15.625 Hz grid per symbol): 4, 8 and 16 baud,
 // then tuning errors of +-150 Hz, a drift, a symbol clock off by 300 ppm, lower sideband, noise at a few SNRs; and the signals that are not ROS (noise, a 2-tone
 // FSK, a single carrier) must not be reported. Text is never decoded.

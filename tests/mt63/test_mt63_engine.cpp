@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MT63 through the engine (setStandard(97)): the synthetic source plays the test signal, the receiver reports through latestRx().
 #include "dect2/mt63/mt63_rx.h"
 #include "dect2/engine/engine.h"

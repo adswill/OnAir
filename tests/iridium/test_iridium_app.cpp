@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium as the interface runs it: the synthetic source with the settings applyBandwidth() gives the mode (10 Msps, 10.5 MHz,
 // 9 MHz baseband filter, 1622 MHz, the test signal's defaults), and the interface's tick pushing the tuned frequency and the
 // threshold to the receiver once it runs. A threshold pushed while samples flow used to restart the detector's sample count but

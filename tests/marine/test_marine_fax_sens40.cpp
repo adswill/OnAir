@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 sensitivity (docs/SENSITIVITY-4.0-X2.md): the weather fax row filter (weak signals: a local Wiener filter along the row with the noise
 // measured on the row) against the same decoder with it off (3.9), same noise. Conditions of test_marine_fax_sens39.cpp: the test chart,
 // 100 lines at 120 lpm, white noise over 0 .. 6 kHz, +-30 Hz tuning error, +-20 ppm clock. Prints the mean row correlation and the sens39

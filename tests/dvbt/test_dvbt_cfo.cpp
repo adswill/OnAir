@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T with the radio off by whole carriers, for every guard interval. The receiver takes the whole-carrier part of the offset out by moving
 // the carrier index, which leaves the phase of every carrier advancing by 2 pi m (N + G) / N from one symbol to the next: a quarter turn per
 // carrier of offset with guard 1/4, an eighth with 1/8. The TPS bits are differential from symbol to symbol, so that turn has to come out of

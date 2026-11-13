@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The FM front end of the packet receivers: see packet_demod.h.
 #include "dect2/packet/packet_demod.h"
 #include "dect2/dsp/baseband_filter.h"

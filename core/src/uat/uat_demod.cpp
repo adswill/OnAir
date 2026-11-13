@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UAT demodulator: phase-difference slicing at 2 samples per bit (dump978's algorithm, GPL: Oliver Jowett), with since 3.9:
 //   - the input resampled to exactly twice the bit rate (2.083333 Msps; ExactResampler, which also low-passes a wider capture). Up to 3.8 the
 //     demodulator took 2 samples of the input as one bit whatever its rate, so a real 1.041667 Mbit/s signal at the default 2 Msps slipped 4 %

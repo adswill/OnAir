@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: multi-copy combining (#20). Synthetic repeated transmissions damaged in different places: the vote must recover the message,
 // must never merge different messages, and must leave single copies alone. Covers code words, POCSAG messages and FLEX phases.
 #include "dect2/pager/pager_combine.h"

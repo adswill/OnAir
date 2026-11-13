@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto for the WSJT sub-modes and periods (JT65, JT4, Q65, FST4, MSK144): the trial bank must decode a station it was not told the setting of. Simulated signals only.
 #include "../hfdig/hfdig_wsjt_testutil.h"
 #include <chrono>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio astronomy tool (hydrogen line): no decoder, a long integration of the power spectrum (Hann FFT of 1024 .. 16384 bins, averaged
 // over 1 s .. 1 h of samples, then again), with optional frequency switching (the radio alternates between its frequency and one shifted
 // by a set amount, each phase integrated on its own). The processing (on - off, baseline, velocity, peak) is in astro_dsp.h.

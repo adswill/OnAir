@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PI4 on simulated signals: packing, the code and the interleaver through a clean round trip, tuning range, start times, a noise sweep, noise alone,
 // other sample rates, and the streaming decoder. Simulated only: the layout comes from MSHV's decoder source, no transmission of a real PI4 beacon was available.
 #include "dect2/hamsci/hamsci_dsp.h"

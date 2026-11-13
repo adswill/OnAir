@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LBJ analysis tool: runs the LBJ modem + POCSAG layer on an IQ recording and prints every burst and page.
 //   lbjtool file.{cs8,cu8,cf32} sampleRateHz signalOffsetHz [-v]
 // cs8 = interleaved signed 8-bit I/Q (HackRF), cu8 = unsigned 8-bit (RTL-SDR), cf32 = float32 I/Q. The offset is where the

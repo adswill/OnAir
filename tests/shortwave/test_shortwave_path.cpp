@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shortwave through the real path: the synthetic HF slice (AM + RTTY + CW + BPSK31, shortwave_gen.h) goes into ShortwaveReceiver exactly as the
 // engine feeds it, the buttons are pressed, and the real decoders (HF digital RTTY, CW skimmer, PSK) produce the text.
 // Checked: each decoder alone at an offset with a carrier offset and noise, three decoders in parallel on one channel, a lower sideband

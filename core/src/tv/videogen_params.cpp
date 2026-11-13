@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital video generator: encoder list, capabilities, bitrate estimate and the saved settings (videogen_params.h).
 #include "dect2/tv/videogen_params.h"
 extern "C" {

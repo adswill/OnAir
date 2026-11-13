@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB test transmitter: the channel coding primitives, written from EN 300 401 (clauses 10, 11) and TS 102 563 without looking at the receiver's
 // dab_fec.cpp, so that the two can be compared by a test.
 #include "dect2/dab/dab_gen.h"

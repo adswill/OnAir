@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The community marketplace client (core/src/pstore/market.cpp) against an in-process fake of the Worker API (tools/marketplace/server):
 // signed answers and every way they can be wrong (tampered, wrong key, another request, replayed, from the future, another kind), browse,
 // likes with the install id, install with the unreviewed confirmation, a wrong sha256 or size, a download that does not match its signed

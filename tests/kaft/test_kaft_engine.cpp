@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT in the engine's wrapper and the transmit session's generator: the transmit generator (the TX path) makes the one-way signal from a file,
 // KaftLiveReceiver (what the engine feeds) finds the frames, follows the session, checks the hash and saves the file to a folder. All three widths,
 // a carrier offset, noise, blocks lost in the middle of the first pass and made up by the second, a resume across two sessions, the repeat that is

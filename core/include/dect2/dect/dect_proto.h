@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DECT (cordless telephones, 1880 - 1900 MHz in Europe): the parts every base station broadcasts in the clear. Receive only.
 // Ten carriers 1.728 MHz apart (carrier n at 1897.344 - 1.728 n MHz), 1.152 Mbit/s GFSK, a frame of 10 ms with 24 slots. A full slot starts
 // with the S-field (16 preamble bits then a 16-bit sync word: 0xE98A from a base station (RFP), 0x1675 from a handset (PP)), then the

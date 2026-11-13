@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The setup and the lessons (app/ui/learn_logic.h): the tables are complete, every lesson points at a part the interface reports, the
 // step checks, the saved progress and resuming, the checkup rules and the glossary search.
 #include "../../app/ui/learn_logic.h"

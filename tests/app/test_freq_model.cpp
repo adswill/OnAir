@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // app/state/freq_model.h: listening frequency, radio centre and hardware frequency, the readout's small line, and the SDR++ rule for a new
 // listening frequency (the VFO inside the captured band, the radio only past its edge). The user report behind it: an Airspy HF+ at
 // 0.384 Msps centred on 11.520 MHz listening to 11.710 MHz showed 11.520.000 in the big readout.

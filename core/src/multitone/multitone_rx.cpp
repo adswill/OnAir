@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multitone paging detector (see multitone_rx.h): the front end of the pager receiver, an FM discriminator, then a per-transmission analysis.
 #include "dect2/multitone/multitone_rx.h"
 #include "dect2/multitone/multitone_tel.h"

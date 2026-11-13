@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // onair-plugin-host: the helper process of out-of-process plugins. Started by the app as: onair-plugin-host --plugin-host <library>
 // (pipe from the app on fd 0, results to the app on fd 3). Not meant to be run by hand. See docs/plugins.md.
 #include "dect2/plugin/host.h"

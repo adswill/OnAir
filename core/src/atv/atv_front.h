@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV receiver, radio side: carrier search, the vision channel (mixer, vestigial-sideband filter, detectors) and the FM sound channel.
 #pragma once
 #include "dect2/atv/atv_std.h"

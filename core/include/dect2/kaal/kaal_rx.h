@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice-layer receiver (streaming C++ port of the Python prototype kaal_rx.py): IQ in, 16 kHz mono speech out.
 // Pipeline: DC removal, sweep (signature) removal per period of 24240 samples with the variant decided per period (and the station ID
 // read from the variants), matched filter, symbol timing, preamble frame sync on frames of 160 symbols, per-frame complex gain fit on

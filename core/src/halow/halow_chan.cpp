@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) channel plans of the regions (halow_chan.h): the band edges and allowed widths per country, the S1G channel numbers
 // (centre = start + 0.5 MHz x number) and the operating classes. See the note in halow_chan.h on what is certain and what is the author's assignment.
 #include "dect2/halow/halow_chan.h"

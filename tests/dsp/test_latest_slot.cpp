@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LatestSlot (core/include/dect2/common/latest_slot.h): the tuning mailbox. A burst of requests from the UI while the worker is busy with a
 // slow radio call: the worker ends on the newest request, never runs the overtaken ones, and the counters add up.
 #include "dect2/common/latest_slot.h"

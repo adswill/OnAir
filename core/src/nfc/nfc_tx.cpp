@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Phase 2: the active NFC reader transmitter (see nfc_tx.h). Nothing transmits here; the TX gate and a real radio do that.
 #include "dect2/nfc/nfc_tx.h"
 #include "dect2/nfc/nfc_rx.h"

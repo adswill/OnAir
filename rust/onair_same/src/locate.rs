@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Table lookups and the words for one location code `PSSCCC` (47 CFR 11.31 (c)): partial-county digit, state / province, county.
 use crate::tables::{Named, Region, CANADA, EVENTS, ORIGINATORS, PCA, US};
 use crate::text::{strip_nul, Buf};

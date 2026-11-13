@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa satellite test signal: LoRa beacon frames of a satellite pass over complex white noise. The carrier moves with the satellite's Doppler shift
 // (a straight-line pass model: shift = f v / c * (tca - t) / sqrt((t - tca)^2 + (d / v)^2)), tilts through each frame with the Doppler rate, and the
 // symbol clock is stretched with it. Nothing is transmitted: the samples only exist in memory or in a file. Uses the LoRa modulator of mesh_lora.h.

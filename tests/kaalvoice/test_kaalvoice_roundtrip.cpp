@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4: building blocks (pyramid VQ enumeration, LSF conversion, bit layout, packing) and the round trip of every
 // profile, frame length and sample rate on synthetic speech, vowels and fricatives, plus the wrappers of the old KAAL codecs.
 #include "../../core/src/kaalvoice/kv_core.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Skywave help for AM. FadeTracker predicts the next fade of a carrier from its own history; AmDiversity plays the better of two frequencies that carry the same programme
 // (the user pairs them, from one wide capture), with the sound aligned by cross-correlation and a short crossfade at each change.
 #pragma once

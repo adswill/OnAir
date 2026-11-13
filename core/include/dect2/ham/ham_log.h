@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Ham logbook: every QSO with all its ADIF fields, edit and delete with undo, dupe check, ADIF import and export (unknown fields kept
 // for the round trip), award tracking (DXCC, WAS, grids, CQ zones: worked / confirmed per band and per mode class), statistics, and the
 // worked-before index the decode list colours with. Pure logic: no files are touched except by load() / save(), nothing is sent anywhere.

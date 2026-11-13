@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Native Pluto RX/TX against fake libiio, including the shared clock and handle.
 // This test never opens a real radio. It also runs on Windows without SoapySDR.
 #include "../../core/src/source/native_common.h"

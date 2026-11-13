@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B pulse demodulator: complex baseband at any rate of 2 Msps or more -> sliced Mode S frames.
 //
 // The signal is on-off keyed, so only the power of the samples matters. Power is integrated over fractional windows (a running sum with linear

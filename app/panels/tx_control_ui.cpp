@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Full control over transmitting (docs/TX-CONTROL-3.8.md), the parts of the Advanced block that belong to the radio and the clock rather than to the
 // signal: the analogue filter and the gain stages, the per-radio TX calibration (frequency correction, IQ balance, carrier leak, power vs gain table), the
 // predicted output power, and the schedule (start at a time, repeat). The owner's TX rules hold throughout: every value is sent as typed (clamped only to the

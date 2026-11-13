@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Audio cleanup chain (audio_cleanup.h): off = the input itself, SNR gain of the noise reduction, transparency on clean sound, the notch
 // following a drifting whistle without hurting speech, leveller targets and limiter, silence gate, click-free switching, thread safety, CPU.
 #include "dect2/audio/audio_cleanup.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / packet channel use: who occupies the channel and how often each station beacons. From the frames heard in a time window: per station the
 // frame count, the median and shortest gap between its frames, the estimated airtime and its share of the window, how many frames repeated the
 // previous one unchanged, and flags a sysop acts on: "fast" (beacons faster than the usual 60 s minimum), "hog" (a big share of the airtime),

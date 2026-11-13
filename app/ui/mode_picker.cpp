@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Mode Browser: a large window with every receiver mode as a button, grouped by family (docs/MODE-PICKER.md). The lists (combo, segmented
 // bar, Mode menu) stay; this is the visual way to pick. The logic (filter, layout, keys, radio fit) is in mode_picker_logic.h and is unit-tested.
 #include "dect2/ease/ease.h"

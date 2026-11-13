@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pilot-aided channel estimation helpers for the T2 receiver.
 #pragma once
 #include "dect2/common/ring.h"

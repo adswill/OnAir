@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir Kris modes (KAVB, KAPP, KAFT, KAAL): the shared channel codes. A family of systematic quasi-cyclic IRA LDPC codes (n = 1920, 2304, 7680; rates 1/4 .. 9/10,
 //! dual-diagonal parity, linear-time encoder, layered normalised min-sum decoder) and the K = 7 convolutional code (rate 1/2 and 1/4) with a soft Viterbi decoder.
 //! `no_std` with `alloc` (the static library carries no Rust `std`); the allocator is libc malloc. Only `ffi` and `heap` may use `unsafe`.

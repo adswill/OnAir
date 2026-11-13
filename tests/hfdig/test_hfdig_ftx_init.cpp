@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The FT8 / WSJT decoder's report before any Auto search has run: the found flags, sub-modes and periods start cleared. They were left
 // uninitialised, and telemetry() copied them, so the first report carried garbage bools (UB; found by fuzz_engine_modes on a switch to HF
 // digital). Every heap block of this program is filled with 0xBE first, as ASan does, so an uninitialised member shows in any build.

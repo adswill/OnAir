@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Operating-system services for the UI: file dialogs, saved settings, fonts.
 #pragma once
 #include "dect2/backup/backup.h"

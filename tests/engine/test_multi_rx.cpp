@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Several receivers in one process (docs/multi-sdr.md): RX 1 decodes ADS-B while RX 2 decodes ACARS, a radio opens once only, each
 // receiver keeps its own results, stopping RX 2 leaves RX 1 running.
 #include "dect2/adsb/adsb_gen.h"

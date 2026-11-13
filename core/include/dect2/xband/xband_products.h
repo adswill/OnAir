@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Products made from the channels of an X-band pass (xband_tel.h): colour composites and, where the instrument carries its own calibration, brightness temperature, sea surface and fire maps.
 // RGBA 8 bit, top to bottom. AVHRR is calibrated from its on-board black body and space views (NOAA KLM method, coefficients from SatDump's resources). MODIS, VIIRS, METimage etc. are
 // not calibrated here, so their band differences are relative contrast only ("uncalibrated").

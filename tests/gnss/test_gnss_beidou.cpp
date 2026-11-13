@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BeiDou B1I: the ranging codes, the BCH(15,11,1) code and its interleaving checked against the ICD; then the simulated sky on its own tune
 // (1561.098 MHz): the MEO and IGSO satellites with the D1 message under the NH code, the GEO satellites with D2, the ephemeris compared with what
 // was sent, the position fixed with BeiDou alone; and GPS and BeiDou together in one 20 Msps tune at 1568.26 MHz, BeiDou in the combined fix with

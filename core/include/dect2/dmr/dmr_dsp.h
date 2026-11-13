@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Filters shared by the DMR receiver and the DMR test signal.
 #pragma once
 #include "dect2/dsp/dsp_compat.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode Builder: a decoder built from a description instead of code. A mode definition (JSON, docs/MODE-BUILDER.md, the same format the
 // Signal Lab writes) gives the modulation, line code, sync word, frame length, scrambler, FEC, interleaver, CRC, fields and a display
 // template; Receiver builds its pipeline from it and turns IQ into decoded frames, and generate() makes a test signal from the same

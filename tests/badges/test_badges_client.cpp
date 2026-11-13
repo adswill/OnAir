@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Map badges, app side (core/src/badges/badges_client.cpp): the shared marketplace session file and every way it can be wrong, the Bearer
 // header, the home locator, the /ingest answer (awards, refused tokens, odd or hostile fields), the toast queue (once per badge and tier,
 // across restarts, from two threads), the Badges panel model from /api/me (order, progress, tiers) and the panel's next step.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab stage 2: modulation family from envelope statistics, power-law spectral lines (x^n), the instantaneous-frequency
 // histogram, a cyclic-prefix autocorrelation (OFDM) and the spectral flatness. Each family gets a score; the scores become confidences.
 #include "dect2/signallab/signallab.h"

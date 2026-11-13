@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MHEG-5 interpreter on the synthetic application of tests/tv/mheg_gen.h: start-up, scene change, keys, variables, timers, Quit, and bad input (missing files,
 // event loops, damaged BER). Synthetic only: no real UK application was available.
 #include "dect2/common/png.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ITU-R P.1812-8 (09/2025), written from the recommendation text; see p1812.h. Equation numbers refer to P.1812-8.
 #include "dect2/prop/p1812.h"
 #include <algorithm>

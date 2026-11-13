@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EchoLink wire formats: the directory (station list) server protocol over TCP and the RTP / RTCP packets peers exchange over UDP.
 // Layouts follow SvxLink's echolib (EchoLinkDirectory.cpp, EchoLinkQso.cpp, rtpacket.cpp; GPL-2.0-or-later, Tobias Blomberg SM0SVX),
 // which interoperates with the EchoLink network; see THIRD_PARTY.md. No byte here comes from a captured EchoLink session: the tests check

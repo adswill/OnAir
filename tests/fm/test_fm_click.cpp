@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM click suppression (r2-broadcast #18): near the FM threshold the repaired discriminator output must give at least as many RDS groups and a
 // better audio SNR than the raw one, and a clean station must not be touched at all.
 #include "dect2/fm/fm_gen.h"

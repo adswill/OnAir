@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A small QR code encoder for the share link (byte mode, error correction M, versions 1 to 10: links up to 213 bytes). No dependencies; tested in
 // tests/webshare/test_webshare_core.cpp (format bits, Reed-Solomon) and checked against a real decoder when the OnAir release is made.
 #pragma once

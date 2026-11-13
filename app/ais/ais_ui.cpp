@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS screens: the map of vessels (the ADS-B map underneath), the vessel table, the detail panel, the message counters
 // with the rates of the channels (AIS 1, AIS 2, and the long-range channels 75 and 76 when the capture holds them), the raw NMEA log, and the
 // Satellite AIS panel (ais_sat_ui.cpp).

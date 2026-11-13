@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A spoken phrase carried through the CDR test signal and recovered.
 // The bytes in the audio units are a small test codec (4-bit ADPCM at 8 kHz), not DRA+.
 // A real CDR station still will not play. Pass a 16-bit WAV to use that recording; otherwise a tone is used.

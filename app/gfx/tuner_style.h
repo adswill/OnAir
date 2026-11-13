@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The tuner look "Simple" (Settings > Display > Tuner style; 0 is the classic band drawn by plots.cpp): a red centre line and two grey lines at
 // the passband edges, over the spectrum and the waterfall, clipped to the plot. Only drawing: plots.cpp passes the plot's rectangle and the pixel columns.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The LimeSDR Mini against the fake LimeSuite library (native_fakes.cpp, FAKE_LIME_MODEL picks the board): discovery by name, the rate list,
 // the receive input chosen by frequency, the gain mapping, the calibration calls and the error texts. No radio is involved.
 #include "dect2/source/source.h"

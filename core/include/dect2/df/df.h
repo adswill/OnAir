@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Direction finding with a coherent multi-channel receiver (KrakenSDR style): array geometry, snapshot covariance, bearing estimators
 // (Bartlett, Capon, MUSIC, root-MUSIC, correlative interferometer), element calibration, beamforming, confidence and circular statistics.
 // Pure deterministic C++; the algorithms are the textbook ones (Bartlett 1948, Capon 1969, Schmidt 1986 MUSIC, Barabell 1983 root-MUSIC,

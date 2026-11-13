@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF beacons screens: a propagation monitor. A table of the beacon list (NCDXF/IARU, Long Dashes, single letters, your own): lamp, name,
 // frequency, last heard (UTC), SNR now, best in the last hour and 24 hours, distance and bearing from the receiver, a trend; a "bands open"
 // summary (10 / 12 / 15 / 17 / 20 m and the others: the beacons of the band heard now and the farthest); a great-circle map from the receiver to

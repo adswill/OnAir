@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // eLoran / Loran-C screens: the GRI, the stations with their arrival times relative to the master,
 // level and phase code, and the averaged pulse envelope. Loran-C only; the eLoran data channel is not decoded.
 #include "app.h"

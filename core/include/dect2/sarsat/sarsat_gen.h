@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // COSPAS-SARSAT 406 MHz test signal. Nothing is transmitted: the samples only exist in memory or in a file. The messages are made-up beacons
 // (a test protocol identification, never a registered one).
 //

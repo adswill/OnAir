@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B atmosphere sounding and altimetry cross-check (3.9, docs/SMART5-avia-3.9.md). Pure logic, no clock: every call gets the time.
 //
 // Sounding: every aircraft that reports or lets the tracker derive the wind (Comm-B 4,4 / 5,0 + 6,0) and the static air temperature adds one

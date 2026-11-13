@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The 802.11 Viterbi decoder fed NaN, infinite and huge soft bits (an OFDM symbol equalised by a channel estimate of zero gives 0 / 0):
 // every branch lost to the NaN, all metrics stayed at -1e30 and the int cast of the result was undefined (UBSan, fuzz_engine_modes on
 // zeros into Wi-Fi and ITS-G5). Such bits count as erasures now: a clean block with some of them still decodes, and the metric is finite.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Trunk pool: synthetic multi-channel harness. A fake control channel emits grants, fake voice radios retune with a latency and can fail or be unplugged,
 // and a simulated clock drives the pool. Covers allocation, retune latency, hang and terminator, priority preemption, access lists, encrypted calls,
 // device loss and control promotion, the single-radio wide / narrow cases, the channel plan CSV and the recorder.

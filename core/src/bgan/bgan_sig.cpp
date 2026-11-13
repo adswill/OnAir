@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BGAN forward-bearer signalling parser and test builder (bgan_sig.h). ETSI TS 102 744-3-1.
 #include "dect2/bgan/bgan_sig.h"
 #include <algorithm>

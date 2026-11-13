@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS Weather and Messages views: the weather stations with their last values and a 24 h graph, the messages as conversations, the bulletins
 // and weather service bulletins in their own list, and the user's callsign for "to me" (docs/APRS-BOARD-3.9.md).
 #include "packet_board_ui.h"

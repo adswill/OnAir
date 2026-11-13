@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The main window: choosing the GLFW platform on Linux, creating and sizing the window, and loading the fonts.
 // Split from main.cpp; main() calls createMainWindow() and loadFonts().
 // Linux picks X11 or Wayland here; on macOS and Windows the window is created as is.

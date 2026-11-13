@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital SSTV: test audio -> decoder, every mode, at 20 dB (signal to noise in 3 kHz) with a +-100 Hz tuning error and +-100 ppm of sample
 // clock error; the mode picked from the line period when the VIS header is left out; and a Robot 36 picture through the engine.
 // The long modes are fed straight from the generator, faster than real time.

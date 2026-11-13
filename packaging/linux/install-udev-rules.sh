@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Lets a normal user open the USB radios (HackRF, RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR, USRP, SDRplay) and keeps the kernel's
 # TV driver off RTL-SDR dongles and its Mirics driver off SDRplay RSPs. Run it once with sudo; then replug the radio (or reboot).   sudo ./install-udev-rules.sh
 set -e

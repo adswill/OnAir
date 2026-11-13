@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airband ATIS / VOLMET watcher (4.0). Works on the words of a transcribed (or typed) broadcast, no radio.
 //  - atisInformation(): the ATIS letter in "information Kilo" / "ATIS India" / "information K" (phonetic alphabet, any case), 0 when none.
 //  - AtisTracker: per channel the current letter; reports "new ATIS" when the letter changes (the weather or runway changed) and the age

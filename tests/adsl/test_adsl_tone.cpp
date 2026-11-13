@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-L M-band tone-energy chips (3.9, docs/SENSITIVITY-3.9-C.md): near the threshold the receiver with the tone detector decodes more Traffic packets
 // than with the FM discriminator, with a carrier offset as well, and noise gives nothing. Simulated signals only (adsl_gen.h).
 // ONAIR_TEST_LONG=1 prints the whole curve.

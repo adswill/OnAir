@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-band monitor (hfdig_multiband.h) on synthetic wideband IQ:
 //  1. an RTL-SDR-like capture (960 ksps) centred on 14.085 MHz: FT8 on 14.074, FT4 on 14.080, FT2 on 14.084 and WSPR on 14.0956 MHz at
 //     the same time; every mode is decoded on its own dial frequency, from one shared slot clock (one combined list, dialHz per decode)

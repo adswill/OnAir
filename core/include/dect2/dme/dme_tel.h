@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DME telemetry. RxTelemetry::dme, engine standard 123 (family 121).
 //
 // The DME receiver reports the X or Y channel of the beacon, the pulse-pair rate, the envelope level and the Morse ident.

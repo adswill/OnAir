@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HRPT / AHRPT receiver (see hrpt_rx.h). The demodulator follows the Meteor LRPT one; the code layers are meteor_proto.h's.
 #include "dect2/hrpt/hrpt_rx.h"
 #include "dect2/results/results_io.h"

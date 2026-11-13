@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R tool: search an IQ recording for GSM base stations and print what they broadcast.
 //   gsmrtool <file> <rate Hz> <centre Hz> [cs8|cf32]     the whole receiver (spectrum, every carrier, synchronisation, BCCH)
 //   gsmrtool --gen <file.cf32> [scene] [seconds]          write the test signal (gsmr_gen.h) at 5 Msps, centred on 922.8 MHz

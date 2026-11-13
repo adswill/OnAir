@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Lightning position (network) screens: this station's timing (which source stamps the detections and its estimated error, every source ranked),
 // the server's table of stations, the strikes on the map with age colours and error ellipses, the list of strikes. One click starts a role
 // with sensible settings; the propagation model, the clock figures and the reference are under Advanced in the decoder options.

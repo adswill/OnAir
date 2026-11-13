@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The analyser's fast dB conversion against std::log10 over the whole range it is used in: it must stay within 0.0001 dB.
 #include "dect2/dsp/spectrum.h"
 #include "dect2/common/stable_random.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The TCI source (source_tci.cpp) against a fake TCI server on localhost that follows the public spec 1.9: WebSocket upgrade, initialization
 // commands up to ready, then iq_samplerate / dds / vfo / iq_start / iq_stop from the client, and binary IQ blocks (64-byte header, float32 / int16 /
 // int24 samples). Checks the handshake and probe, the commands sent (and that no transmit command ever is), the IQ delivered in each sample

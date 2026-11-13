@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests that need no C++ reference: CRC check, a FAC round trip built by hand, SDC entities, the super frame split, MJD conversion, names.
 use crate::bits::{crc16, crc8};
 use crate::fac::fac_parse;

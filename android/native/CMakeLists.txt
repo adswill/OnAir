@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # libonair.so for Android = the desktop receiver library (dect2core, from this repository) + a JNI bridge.
 # The OnAir source tree is only read from here. By default it is this checkout itself (android/native/../..); ONAIR_SRC can point at
 # another checkout or worktree. Built by android/tools/build_native.sh (see android/README.md and android/docs/USB.md).

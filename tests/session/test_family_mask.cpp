@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The automation family masks are 64 bits wide (Wave 0a, first task of docs/MODE-EXPERIENCE.md): a family index above 31 must not wrap or
 // truncate. Covers familyBit / kAllFamilies / maskOfTrigger, the "*" and "<family>.*" triggers, the tap, observer, watcher and streamer
 // masks reaching the engine, and wants() for the new families voice and session.

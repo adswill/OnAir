@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B test signal generator (see adsb_gen.h).
 #include "dect2/adsb/adsb_gen.h"
 #include <algorithm>

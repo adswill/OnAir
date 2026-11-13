@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Lightning position (network), timing: the ranked sources, the sample clock discipline, the sferic leading-edge timer, the MSK common-view
 // timer and the server's common-view alignment (ltpos.h).
 #include "dect2/sferics/ltpos.h"

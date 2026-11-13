@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The frequency error of real radios at 1575.42 MHz: an Airspy or a dongle with a TCXO is within 1-2 ppm (1.6-3 kHz), a HackRF within 20 ppm (31 kHz),
 // an RTL-SDR without a TCXO 50-100 ppm (80-160 kHz). The sample clock comes from the same crystal (the simulator makes it follow the oscillator), so the
 // code runs up to 100 chips a second off as well. On top of that the satellites' own Doppler of up to +-5 kHz. The receiver must find the radio's offset by

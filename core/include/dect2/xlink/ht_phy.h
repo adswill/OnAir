@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IEEE 802.11-2020 clause 19 (HT, "802.11n") mixed-format PHY, one spatial stream, 20 MHz, BCC: what wfb-ng and OpenHD transmit. The existing Wi-Fi
 // receiver (core/src/wifi) decodes non-HT frames only; this one reads the L-SIG and HT-SIG fields and decodes MCS 0 - 7, long or short guard interval.
 //

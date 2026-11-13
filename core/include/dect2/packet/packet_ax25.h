@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AX.25 link layer for packet radio: the frame check sequence, HDLC bit handling (flags, bit stuffing, NRZI), frame parsing and building.
 // Plain data in, plain data out; the radio side is in packet_rx.cpp and the test signal in packet_gen.cpp.
 #pragma once

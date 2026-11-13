@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator from samples to bits: channeliser, demodulator and the streaming bit decoder give back every payload of the test signal,
 // for each order with no coding, differential coding (DPSK, NRZ-M, NRZ-S), the G3RUH and CCSDS scramblers, a random carrier phase (the
 // sync word resolves the rotation and the spectral sense), a conjugated (spectrally inverted) input, carrier offsets and clock errors.

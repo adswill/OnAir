@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CODAR / HF ocean radar screens: the radars heard (centre, width, rate, direction, repetition, level, first / last heard, SNR history, ID),
 // the chirp waterfall with the sweeps marked, the "heard on band X at time Y" history, band presets and a scan over the radar bands.
 // Receive only: broadcast radar signals; nothing is decrypted or transmitted. The ID text is always labelled unverified.

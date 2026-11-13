@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Verbose logging" (View > Verbose logging on the desktop, Settings > Verbose logging on Android): when on, drivers and the engine write extra
 // diagnostic lines (USB transfer counts, bytes per second, stall detections and restarts, frame times, thread states) into the log the app
 // keeps. Off by default: the lines cost a little CPU and fill the log. One switch for the whole process.

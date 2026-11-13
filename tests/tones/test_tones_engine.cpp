@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tone decoders through the engine (setStandard(91)): the synthetic source plays the 40 s demonstration (CTCSS 123.0 Hz, DCS D023N, DTMF 159#, ...);
 // the receiver reports through latestRx(). No sound.
 #include "dect2/engine/engine.h"

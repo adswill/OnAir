@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab: synthetic "unknown" signals with a known truth, and the evaluation harness that runs the pipeline on many of them and
 // counts how often each stage gets the truth back. None of the generated signals is a real protocol.
 #include "dect2/signallab/signallab.h"

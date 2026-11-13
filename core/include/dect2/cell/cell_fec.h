@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers: the channel coding of the broadcast channels (3GPP TS 36.212), written from the specification.
 //
 // Bits are uint8_t 0/1. Soft values are log-likelihood ratios, positive = bit 0 more likely. NULL (dummy or filler) bits in the rate

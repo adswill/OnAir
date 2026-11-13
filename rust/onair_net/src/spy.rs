@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The SpyServer protocol 2.0.1700 (Airspy's spyserver, as SDR++'s spyserver_source speaks it): little endian; commands are a 32-bit type, a 32-bit body size and the
 //! body; messages have a 20 byte header (protocol id, message type with the gain in dB in its top 16 bits, stream type, sequence number, body size).
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, Q65: the code (encoder, belief propagation over GF(64)), then the whole receiver on synthetic audio (every period and sub-mode, the
 // threshold, frequency / time / clock offsets, two stations, noise alone) and the real recordings of the WSJT-X samples when HFDIG_WSJT_SAMPLES is set.
 #include "hfdig_wsjt_testutil.h"

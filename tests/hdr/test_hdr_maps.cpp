@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio map tiles: names, the 3 x 3 composite from out-of-order tiles, newer sets replacing older ones, radar names and position.
 #include "dect2/hdr/hdr_maps.h"
 #include <cstdio>

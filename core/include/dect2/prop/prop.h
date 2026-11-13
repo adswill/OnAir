@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Propagation prediction (pure functions, nothing downloaded). Clean-room from public formulas, see docs/propagation.md:
 //  - free space: ITU-R P.525; noise: kTB plus man-made, galactic and atmospheric noise (ITU-R P.372, simplified) and the receive chain (Friis)
 //  - 30 MHz and up: smooth-earth diffraction of ITU-R P.526 (with its line-of-sight interpolation, so there is no step at the horizon),

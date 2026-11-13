@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL physical frames, written from PAS 0001-2 v3.0.0 (TETRAPOL Forum, public): the 160-bit / 20 ms frame of the GMSK BT 0.25,
 // 8 kbit/s channel (7.1, 7.2), voice frames (6.1) and data frames (6.2). Every table and constant below is from that text (section cited
 // at each). Receive only: nothing here decrypts anything.

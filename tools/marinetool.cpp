@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine command line tool: write a test signal to a file, or decode a recording.
 //   marinetool gen <secs> <file.cs8|.cf32> [--service 1|2|3|4] [--rate sps] [--snr dB] [--cfo Hz] [--sro ppm] [--fade 1] [--mist Hz]
 //                                          [--offset Hz] [--lpm n] [--ioc 576|288] [--lines n] [--idle secs] [--phasing secs]

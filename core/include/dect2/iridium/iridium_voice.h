@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium voice: the traffic-channel frames of voice calls, grouped into calls, handed to the user-installed AMBE-family plug-in "iridium"
 // (codec_registry.h) and played / recorded. OnAir ships no vocoder; without the plug-in the calls are listed and stay silent.
 //

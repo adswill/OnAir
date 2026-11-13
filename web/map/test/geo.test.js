@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // geo.test.js - tests for the pure helpers in public/geo.js and public/airports.js (node --test, no deps).
 import test from "node:test";
 import assert from "node:assert/strict";

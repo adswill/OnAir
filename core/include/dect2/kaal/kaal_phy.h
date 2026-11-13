@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL physical layer constants and helpers (port of the Python prototype kaal_phy.py): 16-QAM, interleaver, sweep, RRC.
 #pragma once
 #include <complex>

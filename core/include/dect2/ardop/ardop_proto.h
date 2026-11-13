@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ARDOP (Amateur Radio Digital Open Protocol, Rick Muething KN6KB) frame layer: the frame type table, the type parity, the CRC-16, the
 // Reed-Solomon code, the six-bit character packing of call signs, and the frame bodies of the 4FSK frames (ID, connect request, ping,
 // connect acknowledge, ping acknowledge, ACK / NAK, 4FSK data). Clean-room from the ARDOP specification (frame type table, appendix B)

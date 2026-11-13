@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) receive chain at one internal sample rate: front end (brought to the rate the widths of the chain need), STF detector, and
 // for every candidate the long training symbols (timing, residual carrier offset, channel), the SIG field of each preamble type and the data field
 // (BCC, MCS 0 - 10, one spatial stream). The monitor runs one chain for the 1 / 2 / 4 MHz channels (4 Msps grid), one for 8 MHz (8 Msps) and one for

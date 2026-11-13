@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The spot feeds of the Ham screen (4.0): the network side of ham_spots.h. Every feed is off by default and runs only while the user has it
 // switched on:
 //  - a DX cluster and the Reverse Beacon Network over telnet: OnAir logs in with the user's callsign (what these servers ask for) and reads spots;

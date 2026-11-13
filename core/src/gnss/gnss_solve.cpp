@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pseudorange position solution (see gnss_solve.h).
 #include "dect2/gnss/gnss_solve.h"
 #include <algorithm>

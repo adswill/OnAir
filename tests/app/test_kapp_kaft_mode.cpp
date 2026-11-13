@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The KAPP (family 124, engine standard 126, telemetry 125) and KAFT (family 125, engine standard 127, telemetry 126) modes in the group "Kris custom
 // modes": the mode-table rows (no longer work in progress), the unique family numbers, the modeui cases, the receive panels, the transmit options, the
 // engine wiring and the transmit registration are in the sources. Text checks only, so it builds without the app.

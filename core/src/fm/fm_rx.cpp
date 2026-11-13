@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM broadcast radio receiver: channel filter, discriminator, stereo decoder (19 kHz pilot PLL) and RDS (57 kHz BPSK).
 //
 //   input -> channel filter (decimate to ~500 kHz) -> discriminator -> multiplex (MPX) at ~250 kHz

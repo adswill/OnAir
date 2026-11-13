@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Keyboard and mouse (Settings > Keyboard and mouse, and View > Controls): every action's keys, the mouse buttons and the wheel of the
 // spectrum and waterfall, rebindable, with conflict warnings, search, import and export. The tables and rules are in input_map.h.
 #include "input_map.h"

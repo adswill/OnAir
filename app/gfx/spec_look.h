@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The spectrum and waterfall look and the pure maths behind it, no ImGui: OnAir's one look (measured against reference screenshots,
 // docs/SPECTRUM-RESEARCH.md), the noise floor's place in each palette, the frequency ticks (1-2-5 steps, minor ticks, labels that never
 // touch or leave the panel, kHz / MHz, or offsets from the tuned frequency), the trace at one point per pixel column (the highest bin of

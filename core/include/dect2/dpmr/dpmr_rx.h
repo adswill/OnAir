@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dPMR receiver: ETSI TS 102 490 mode 1 (peer to peer), four-level FSK at 2400 symbols/s in 6.25 kHz, PMR446 and the licensed bands.
 //
 // The channel is mixed to 0 Hz, decimated (CIC, windowed-sinc) to 48 kHz and FM-demodulated, then symbol filtered. FS1 / FS3 / FS4 are

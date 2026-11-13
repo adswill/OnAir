@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL through the engine on the synthetic source (setStandard(124)): the built-in test signal is the real transmitter's output (voice, sweep ID, beacon) with a
 // carrier offset of +1200 Hz and a little noise; the receiver must lock, decode frames and read the beacon. Run at 12 / 16 and at 24 kbit/s (16 ksym/s).
 #include "dect2/engine/engine.h"

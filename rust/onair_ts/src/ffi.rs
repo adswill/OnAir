@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_ts` (core/include/dect2/rs/ts.h). Every export is `onair_ts_*`; pointers come as (pointer, length) pairs and the caller owns all buffers.
 //! Record arrays are passed as (pointer, capacity); parsers return the count written, `usize::MAX` (or false) when the section is too short or a pointer is
 //! null. Sizes of the record structs are reported by `onair_ts_struct_sizes` so the C++ side can check its copies at start-up.

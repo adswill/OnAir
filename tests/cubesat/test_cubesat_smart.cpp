@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Smart CubeSat controller end to end on a synthetic wide capture (960 kHz): three unrelated carriers (FSK 9600 G3RUH AX.25, BPSK 1200 with the
 // AO-40 FEC, a CW beacon) with different offsets, one with a Doppler ramp, noise on the sum. Blind mode (no table): the scan finds them, the classifier
 // names the modulation and baud rate, the chains decode; each carrier must give frames that match what was sent. Then a table-guided case: a satellite

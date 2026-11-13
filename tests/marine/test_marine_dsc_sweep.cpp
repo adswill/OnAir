@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DSC robustness sweep through the radio layer: frequency offset, mistuning, off-centre channel, noise, fading, odd sample rates, clipping,
 // spectrum inversion (the other sideband), level steps, clock error, chunking. Both variants (MF/HF 100 bd, VHF ch 70). Prints a table of
 // every case that does not decode and fails when any case on the must-pass list fails.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web session manager on synthetic IQ (no sockets): admission limits and the busy refusal, per-session tuning and audio (the tone of
 // each user's own channel comes out of that user's audio only), spectrum rows, the policy defaults (voice / pager decoders off until the host
 // accepts the legal notice), shared decoders (identical subscriptions share one instance), the host decoder is muted when the host's mode is

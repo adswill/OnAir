@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Rust NXDN frame layer (rust/onair_nxdn, dect2::nxdn): scrambler, LICH (all 256 bytes), CRCs, the three coded channels (clean,
 // with bit errors and random soft values), layer 3 build / parse and the names, over ONAIR_DIFF_ITERS (default 200000) seeded inputs per family. Every result
 // goes into a digest (tests/common/golden.h) compared with the one recorded from the C++ layer the Rust code replaced.

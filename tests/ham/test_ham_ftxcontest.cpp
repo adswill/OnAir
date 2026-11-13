@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FT8 / FT4 contest exchanges (4.0): the 77-bit ARRL Field Day (i3 0, n3 3 / 4) and RTTY Roundup (i3 3) messages pack and unpack to the same
 // text (the decoder could read them before; now OnAir can send them), what is not such a message still packs as before, the Ham parser
 // reads the exchange, and the sequencer runs the WSJT-X contest sequence both ways and logs the exchange for Cabrillo.

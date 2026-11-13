@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // p2Gather (dect2/t2/t2l1.h) with the L1-post size of a decoded L1-pre: a valid one gives back what p2Distribute spread over the P2 symbols, an
 // impossible one (more cells than the P2 symbols hold, negative, the symbols missing) must stay inside the buffers. Before the fix such a size,
 // from a pre that passed its CRC under the wrong carrier-mode hypothesis, wrote past the end of the stream (iq_modes, DVB-T2 with a DC spike: heap

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-GHz sensors receiver on synthetic OOK / FSK signals: decoding at several sample rates, off-centre and with noise, the device table,
 // the unknown signal analyser and a flex decoder made from its suggestion, FSK through a custom decoder, exports, "Remove after", negatives.
 #include "dect2/sensors/sensors_rx.h"

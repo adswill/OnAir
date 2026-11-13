@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sync test: generator -> impairments -> T2Receiver. Verifies P1/S1/S2, GI, CFO and frame length detection.
 #include "dect2/t2/t2gen.h"
 #include "dect2/common/stable_random.h"

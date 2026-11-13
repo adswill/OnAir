@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small complex FFT helper on interleaved samples (power-of-two sizes), built on the portable kernels in dsp_compat.h.
 #pragma once
 #include "dsp_compat.h"

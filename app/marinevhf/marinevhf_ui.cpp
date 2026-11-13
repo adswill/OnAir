@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF screens: pick a channel by number (with its name and use), up / down, the channel plan of a region (international, Europe, Baltic,
 // USA, Canada), a squelch, de-emphasis or flat audio, the whole-span activity list with a click to listen, a scan of chosen channels with a
 // priority watch on 16, the call log of every channel, recording of every transmission, and links to the DSC (channel 70) and AIS modes.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Large-log performance of the session database (docs/MODE-EXPERIENCE.md, 8.3): 100,000 synthetic sessions in one mode (plus 20,000 in others),
 // then the times of an indexed page, a deep page, a full-text search and a filtered sort, measured on the reader connection, against the limits
 // of the spec: page under 20 ms, FTS under 200 ms, filtered sort under 300 ms. Also the write speed (rows per second) directly and through the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Several modes at once: see wide_placed.h.
 #include "dect2/engine/wide_placed.h"
 #include <cmath>

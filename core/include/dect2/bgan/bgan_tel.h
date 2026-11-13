@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BGAN mode telemetry, shared by the receiver and the UI. Receive only. Holds signalling and carrier structure only: no subscriber identity, no user data.
 #pragma once
 #include <cstdint>

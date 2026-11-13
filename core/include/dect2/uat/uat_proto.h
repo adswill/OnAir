@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UAT message decode: ADS-B reports, FIS-B text, TIS-B relay (C decode from dump978).
 #pragma once
 #include "dect2/uat/uat_nexrad.h"

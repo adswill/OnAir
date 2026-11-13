@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // COSPAS-SARSAT second-generation beacons (SGB), message layer and spreading codes. Clean-room from the public specification C/S T.018 (Issue 1 Rev 4):
 // 250 bit message = 202 information bits + 48 bit BCH(250,202) (corrects up to 6 bits), bits numbered from 1 as in the specification (bit n at index n-1).
 // Odd bits go through the I channel, even bits through the Q channel; each channel bit is 256 chips of a PRN sequence (inverted for a 1), 38 400 chips/s.

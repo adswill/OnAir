@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Plugins in the program: the plugin manager (View > Plugins, and the "Plugins" mode), the generic screen every plugin mode gets (status lamps, tables,
 // plots, images, map points, log and the settings the plugin declared), and the glue to the host (core/src/plugin): discovery at start, a numbered row in
 // the mode list for every plugin mode, the IQ from the engine to the running plugin, and the automation events. docs/plugins.md explains the model.

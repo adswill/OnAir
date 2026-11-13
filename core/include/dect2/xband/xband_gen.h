@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals of the X-band links (xband_tel.h): a test picture per instrument, framed and coded as the link has it. Nothing is transmitted: the samples only exist in memory or in a file.
 #pragma once
 #include "dect2/engine/mode_synth.h"

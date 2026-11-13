@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JT6M (WSJT, K1JT): 44-tone FSK for 6 m meteor and ionospheric scatter. One symbol = 512 samples at 11025 Hz (46.44 ms, 21.533 baud),
 // tone n = (n + 51) x 11025 / 512 Hz: the sync tone (n = -1) at 1076.66 Hz, the 43 data tones 1098.2 .. 2002.6 Hz. Every third symbol is
 // the sync tone, the two after it carry one character each (14.4 characters a second). The character set, in tone order, is

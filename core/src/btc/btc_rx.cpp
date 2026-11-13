@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth Classic discovery receiver: see btc_rx.h.
 #include "dect2/btc/btc_rx.h"
 #include "dect2/btc/btc_proto.h"

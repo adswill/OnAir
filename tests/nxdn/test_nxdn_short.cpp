@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NXDN: short voice calls (0.3 to 1 s) from a cold start, with a carrier offset, a clock error and noise (tests/common/short_burst.h). Each call must decode
 // from its first frame: the voice frames counted are compared with a clean run of the same schedule. 3.2 quality pass; any argument: print only.
 #include "dect2/nxdn/nxdn_rx.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio AM: the hybrid (MA1) and all-digital (MA3) waveforms through the receiver at the rates the HF radios give (200 ksps, an Airspy
 // HF+ at 912 and 768 ksps, 1 Msps, 2 Msps), with the faults of medium wave: small tuning errors (+-10 to +-100 Hz), +-100 ppm sample
 // clocks, and the slow deep fading of the sky wave at night (the amplitude swinging by 12 dB a few times a minute, and dips of 20 dB).

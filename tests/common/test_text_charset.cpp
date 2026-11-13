@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Broadcast character sets to UTF-8, and the clean-up of names before they go into a channel-list submission (a submission with control or
 // invisible characters is refused): examples from real scans (Polish and Austrian DAB labels shown as "Tr?jka", "xsterrei").
 #include "dect2/common/text_charset.h"

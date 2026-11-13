@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 AM broadcast / short wave helpers (pure, no GUI). Tests: tests/d40/test_am_d40.cpp
 //  1. carrierOffset      measures the carrier of a broadcast against the nearest 9 or 10 kHz raster channel (the raster that fits better wins): the offset in Hz is what
 //                        a synchronous detector has to pull in, and a constant 50-200 Hz offset is how pirates / off-raster transmitters are told from normal stations.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OpenSky identifier: mix to 0 Hz, resample to 96 kHz, channel filter, then one-second blocks of the discriminator. The symbol rate is a line in the spectrum of the squared transitions of the discriminator; the levels are read from a histogram at the symbol centres; the burst pattern from the autocorrelation of the envelope.
 #include "dect2/opensky/opensky_rx.h"
 #include "dect2/dsp/exact_resampler.h"

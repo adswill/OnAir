@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor-M LRPT test signal (see meteor_gen.h).
 #include "dect2/meteor/meteor_gen.h"
 #include "dect2/common/stable_random.h"

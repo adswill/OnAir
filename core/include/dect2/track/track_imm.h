@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Aircraft position estimator shared by ADS-B, UAT, ACARS, VDL2 and HFDL: an interacting-multiple-model (IMM) filter (Bar-Shalom) over
 // three horizontal motion models (constant velocity, coordinated turn with a decaying turn rate, manoeuvre = high acceleration noise) and a
 // two-model vertical channel (level / climbing or descending), extended Kalman filters in a local ENU frame, Joseph-form covariance updates.

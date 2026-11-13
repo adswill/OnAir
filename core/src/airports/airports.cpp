@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airport table (see airports.h): the built-in text, search, near, and the channels of an airport for the airband mode.
 #include "dect2/airports/airports.h"
 #include "dect2/packs/datasets.h"

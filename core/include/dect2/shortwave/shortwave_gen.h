@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shortwave test signal (makeShortwaveSynth): a slice of an HF band, so the whole mode can be tried and tested without a radio.
 // Nothing is transmitted; the samples only exist in memory or in a file. Positions are from the dial frequency D (the radio sits
 // tuneOffsetHz above it, so D is at -tuneOffsetHz in the samples):

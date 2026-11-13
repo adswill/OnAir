@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CP16 receiver (see cp16_rx.h).
 #include "dect2/cp16/cp16_rx.h"
 #include "dect2/cp16/cp16_proto.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Connects the TETRA unencrypted voice path (tetra_voice.h) to a user-installed speech codec (codec/speech_codec.h).
 // OnAir bundles no speech codec: the codec is a plug-in the user installs, loaded only after the legal notice is accepted
 // (that gate runs in the app before setCodec() is ever called). Encrypted or unknown-state calls never reach this class,

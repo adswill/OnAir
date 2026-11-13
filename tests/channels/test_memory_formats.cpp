@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Frequency list formats (core/src/channels/memory_formats.cpp): round trips of every importer / exporter, format detection, the import preview and
 // the merge rules, "My lists" (enable / order / quick-tune) and the built-in lists of common services.
 #include "dect2/channels/memory_bank.h"

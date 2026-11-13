@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EDACS control channel (outbound) frame:
 //  - 9600 baud GFSK; a 30 ms "bucket" of 288 bits = 48 sync bits (16 dotting 0x5555, a 16-bit field 0x5712 = five dotting bits + the 11-bit Barker word
 //    11100010010, 16 dotting 0x5555: the pattern 0x555557125555) + two 28-bit messages, each with 12 BCH bits (40 bits), each sent three times with the

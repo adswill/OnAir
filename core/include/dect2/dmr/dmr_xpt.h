@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hytera XPT (eXtended Pseudo Trunk, DMR Tier II with a trunking layer): the manufacturer-specific control blocks FID 0x68 that list the site's repeaters. Read only; the fields follow
 // DSD-FME's findings (no document from the maker is public; DSD-FME calls this work experimental). Detected inside the DMR receiver, shown in its panel.
 #pragma once

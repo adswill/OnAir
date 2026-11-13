@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital video generator: the overlay laid on the picture before it is encoded (a logo, parameter blocks, free text, rolling
 // text), the magnetic snapping the editor uses, and the renderer. The same renderer draws the editor's preview and the encoded
 // picture, so what is placed is what is sent.

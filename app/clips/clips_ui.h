@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio clips: the app half (dialog, button, hotkey, settings). The pure half is clips.h.
 #pragma once
 #include <vector>

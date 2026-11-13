@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES HRIT receiver under real-world impairments the clean loopback test does not cover: roll-off 0.3 and 0.5 (the generator and the
 // receiver may disagree), I/Q swapped (spectrum inverted) and negated signals, +-100 kHz carrier offsets, +-30 ppm clock, low Es/N0,
 // every sample rate an SDR gives, a deep fade in the middle and a burst of strong interference. Every case must rebuild every file.

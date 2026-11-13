@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // nRF24L01(+) Enhanced ShockBurst sniffer. The radio is tuned to one channel (2400 + N MHz, N = 0..125); a 2.4 GHz SDR is needed (HackRF, PlutoSDR
 // with the extended range, bladeRF, LimeSDR, USRP B2xx): an RTL-SDR, Airspy R2/Mini, SDRplay RSP1A/RSPduo/RSPdx and sound cards do not reach 2.4 GHz.
 //

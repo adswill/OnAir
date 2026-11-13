@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham APRS / AX.25 packet: frame and information field builders, the AFSK and G3RUH audio, the message session and the beacon (ham_aprs.h).
 #include "dect2/limits.h"
 #include "dect2/ham/ham_aprs.h"

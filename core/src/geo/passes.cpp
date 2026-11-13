@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SGP4 (near-earth), look angles, pass search and Doppler: see passes.h
 #include "dect2/geo/passes.h"
 #include "dect2/files/files_proto.h"

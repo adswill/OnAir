@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 ALP (A/330): header formats, and a stream of mixed IPv4, signaling and TS packets (single, segmented, concatenated) cut into
 // baseband packets and reassembled.
 #include "dect2/atsc3/atsc3_alp.h"

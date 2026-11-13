@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Rust ADS-B / Mode S message layer (rust/onair_adsb, dect2::adsb): every code of the altitude / identity / character tables, CRC and
 // single-bit correction on frames and damaged frames, CPR with real and absurd values (NaN references too), geometry, Comm-B registers built to pass each BDS
 // inference plus damaged ones, and decoded messages of every DF and type code. ONAIR_DIFF_ITERS (default 200000) seeded random inputs per family. Every result

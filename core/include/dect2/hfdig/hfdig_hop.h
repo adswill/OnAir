@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band hopping for one narrow radio (WSJT-X Band Hopping): a band per 2-minute slot, chosen from the bands switched on for each UTC hour,
 // optionally following the coordinated hopping table (the same band at every station in the same slot). docs/HFDIG-HOP-3.9.md.
 #pragma once

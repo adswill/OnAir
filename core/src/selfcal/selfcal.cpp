@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Receiver frequency self-calibration (selfcal.h, docs/self-calibration.md).
 #include "dect2/selfcal/selfcal.h"
 #include <algorithm>

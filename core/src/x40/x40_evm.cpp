@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Modulation quality (MER / EVM) meter for a blind M-PSK carrier (BPSK, QPSK, 8-PSK; 300 baud up to about a third of the working rate, i.e. 40 kBd at the default 250 ksps).
 // Every 2 seconds of the channel: the symbol rate from the cyclic line of the squared envelope, the order M and the carrier from the M-th power line (smallest of 2, 4, 8 with a
 // clear line; the alias of a wrapped line is resolved with the spectral centroid), a root-raised-cosine matched filter (roll-off 0.2, 0.35 or 0.5: the best reading is kept),

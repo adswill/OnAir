@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wenet (Project Horus) non-picture packets: GPS and system telemetry, orientation, and text messages on the same link as the SSDV picture. Field layouts as in the
 // Wenet receiver (WenetPackets.py), which is licensed GPLv3 or later; these parsers are written from that layout.
 #pragma once

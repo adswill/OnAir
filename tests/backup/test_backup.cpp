@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Backup and restore: manifest, selection, safe extraction (malicious archives), encryption wrapper, automatic backup naming.
 #include "dect2/backup/backup.h"
 #include "dect2/mesh/mesh_crypto.h"

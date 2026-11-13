@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // New Packet Radio (NPR-70, F4HDK) sync detection on 70 cm. Si4463 4(G)FSK at 50, 100, 180, 300 or 500 ksym/s (modem configurations 20 .. 24; the 2(G)FSK configurations 11 .. 14 use the same layout)
 // with a standard preamble and a 3-byte sync word in 4FSK. The sync word carries the radio network ID. Structure only: the length byte and the payload are whitened by the chip's PN generator, whose
 // exact bit arrangement is not in the published documentation, so frames are detected and counted but not read. See docs/LEFTOVERS-3.8.md.

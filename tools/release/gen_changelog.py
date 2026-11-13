@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Regenerate docs/CHANGELOG-3.0.md, the README mode table/count and docs/I18N-NEW-STRINGS-3.0.md.
 
   python3 tools/release/gen_changelog.py [--base pub/integ-30] [--since v0.2.9] [--issues-json FILE] [--check]

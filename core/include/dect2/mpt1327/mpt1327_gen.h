@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 control channel test signal: codewords from the standard's field layouts, a control channel bit stream
 // (start-up preamble, SYNC, then slots of a control channel system codeword and an address codeword) and its FFSK audio / FM signal.
 #pragma once

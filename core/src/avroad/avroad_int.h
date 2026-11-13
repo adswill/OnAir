@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inside the aviation / rail / road receivers: the decoder interface and the small DSP pieces they share.
 #pragma once
 #include "dect2/avroad/avroad_rx.h"

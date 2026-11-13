@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Rust UAT message decoder (rust/onair_uat through uat_decode_rs.cpp, the decode functions of dump978's uat_decode.c): the real DO-282
 // vectors, then ONAIR_DIFF_ITERS (default 200000) random / structured / mutated downlink payloads of every message type and the same number of uplink frames
 // (random application data, valid information frame chains with FIS-B headers of all four time formats, truncated / overrun chains), uplink decodes also into a

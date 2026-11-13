@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireless M-Bus screens (EN 13757-4 utility meters): the meters heard (manufacturer, ID, device type, readings, level), the frame log with the decoded
 // fields, the channels with their level and the demodulated signal of the last frame. Encrypted payloads are listed as encrypted.
 #include "app.h"

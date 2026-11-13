@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channelised voice receiver: CB (AM, FM and SSB on adjacent channels at once, the demodulator chosen from the signal), FRS / PMR446 with CTCSS and DCS,
 // amateur repeater outputs, MDC-1200 bursts on FM, HF voice (USB), the scan and the busy-channel list, with noise, offsets and a weak neighbour.
 // Simulated signals only: no real recording of any of these services was available.

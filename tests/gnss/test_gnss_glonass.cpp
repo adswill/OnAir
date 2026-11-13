@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GLONASS L1OF: the ranging code, the Hamming check of the strings and the orbit integration checked against the ICD; then the simulated sky on
 // its own tune (1602 MHz, 10 Msps): the fourteen frequency channels cut out of the band, the strings found by their time mark, the ephemeris compared
 // with what was sent, the orbit integrated from tb, the position fixed with GLONASS alone; the outermost channels k = -7 and +6 among those in view;

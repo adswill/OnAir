@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3G-ALE BW0 (hfutil/hfu_ale3g.h): the tables and worked examples of MIL-STD-188-141B Appendix C, the coding, and generated bursts through the
 // receiver with frequency error, drift, a sample clock error, an echo, noise down to below 0 dB in 3 kHz, bursts back to back and noise only.
 // Simulated signals only.

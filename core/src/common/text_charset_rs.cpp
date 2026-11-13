@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // text_charset.h on top of the Rust crate rust/onair_dvbsi: the functions of text_charset.h (text_charset.cpp keeps appendUtf8). Output buffers
 // are sized for the worst case of each converter (3 bytes per input byte for the table based ones).
 #include "dect2/common/text_charset.h"

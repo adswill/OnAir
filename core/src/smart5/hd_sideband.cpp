@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio digital sideband level (see hd_sideband.h).
 #include "dect2/smart5/hd_sideband.h"
 #include <algorithm>

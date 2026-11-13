@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Reliable byte streams for Winlink on top of OnAir's radio modems:
 //
 //  Ax25Link   AX.25 version 2.0 connected mode (modulo 8): SABM / UA to connect, I frames with N(S) / N(R) in a window of k frames,

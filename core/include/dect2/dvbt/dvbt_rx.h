@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T receiver: blind FFT-size / guard-interval detection, tracking, TPS decoding, channel estimation from the scattered
 // pilots, equalisation and the channel decoder (Viterbi, Reed-Solomon). Reports through the same telemetry as the T2 receiver.
 #pragma once

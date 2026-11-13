@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde screens: the map with every sonde's track and a balloon marker, the table of sondes heard, the detail of the selected one
 // (all fields, altitude and temperature plots, calibration progress), the carriers the search found in the band, and the test signal options.
 #include "dect2/sonde/sonde_profile.h"

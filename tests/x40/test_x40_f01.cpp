@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSK200/500 (F01: 200 Bd, 500 Hz shift, asynchronous ITA2 with 1.5 stop bits). What is checked:
 //  1. messages built from the format as Rivet reads it (reversals, figure shift, five-figure groups, CR LF) through the receiver with
 //     impairments: dial error, off-centre tuning (tones centred at 650 or 2600 Hz instead of 1500), sender clock error (up to 1 %), drift,

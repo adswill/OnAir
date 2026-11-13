@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator through the engine (setStandard(204)): the synthetic source plays the test signal at 2 Msps with the dial 250 kHz from
 // the radio's centre, the receiver finds and locks it on its own and reports through latestRx(); the mode row, panel hook and poll slot
 // are wired and the help says experimental.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL receiver loopback: known squitters and ACARS / performance data bursts at every rate, through the receiver, with a tuning error of
 // +-100 / +-200 Hz, a sample clock off by +-100 ppm, timing offsets, noise, a two-path HF channel with delay and Doppler spread, several channels at once, and noise alone.
 #include "dect2/hfdl/hfdl_gen.h"

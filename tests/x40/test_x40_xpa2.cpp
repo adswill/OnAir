@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // XPA2 (16-tone MFSK, 7.8125 Bd). What is checked:
 //  1. messages built from the format as Rivet reads it (start tones, sync, five-figure groups with the repeat tone, the end) through the
 //     receiver with impairments: dial error, off-centre tuning (+700 Hz), sender clock error, drift, lower sideband (Rivet: "inverted"), 48 ksps;

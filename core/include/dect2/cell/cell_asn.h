@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers: ASN.1 unaligned PER of the broadcast system information (3GPP TS 36.331 for LTE, 38.331 for NR, 44.018 for GSM is
 // in cell_gsm.h). Only the cell's public broadcast is read: SIB1 (operator, area, cell identity, scheduling), SIB2 (common radio
 // configuration), SIB3/4/5 (reselection and neighbours), SIB9 (home eNB name), SIB10/11/12 (public warnings), SIB16 (time). Nothing subscriber-related exists in these messages.

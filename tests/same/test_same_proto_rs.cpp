@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Rust SAME layer (rust/onair_same, dect2::same): built and known messages, the tables over every code, the time helpers over their
 // whole range, county tables, and ONAIR_DIFF_ITERS (default 200000) seeded random / mutated / truncated inputs per family. Every result goes into a digest
 // (tests/common/golden.h) compared with the one recorded from the C++ SAME layer the Rust code replaced.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JS8 (JS8Call) protocol: the 87-bit frame (72 message bits, 3 transmission flags, CRC-12), the (174,87) LDPC code, the 79 8-FSK tones
 // with three 7x7 Costas arrays, the submodes, and the message layer (heartbeats / CQ, directed messages and commands, compound calls,
 // Huffman coded free text).

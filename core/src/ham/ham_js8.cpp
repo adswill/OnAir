@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham JS8: messages to frames, frames to slot audio, the sender queue and the gated send (ham_js8.h).
 #include "dect2/ham/ham_js8.h"
 #include <algorithm>

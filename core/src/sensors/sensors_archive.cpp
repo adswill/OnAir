@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Long sensor history: see sensors_archive.h.
 #include "dect2/sensors/sensors_archive.h"
 #include <cmath>

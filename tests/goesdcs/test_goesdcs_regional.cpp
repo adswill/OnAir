@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The DCS receiver with the Meteosat and Himawari channel plans: EUMETSAT TD 16 table 11 numbers, the EUMETSAT reference platform address, standard-rate
 // (100 bps) Meteosat platforms on regional and international channels, Himawari 300 bps platforms without the GOES flag word, the 5 s carrier, frequency
 // errors up to the 1.5 ppm stability limit, clock errors, a noise sweep and two platforms 1.5 kHz apart. Simulated signals only.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa demodulator of the Signal Lab (loraraw_lab.h): fixed settings (SF, bandwidth, coding rate, sync word, header mode, CRC, LDRO, inverted IQ,
 // offset) on frames made by the LoRa (raw) test generator, and the automatic search for SF, bandwidth, coding rate and sync word.
 #include "dect2/loraraw/loraraw_gen.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The mode registry of sens_sweep: for every mode with a built-in test signal, the clean signal generator, the receiver (set up as the engine sets it
 // up) and the measure of "valid output": the receiver's own count of units whose check passed (CRC, Reed-Solomon, LDPC/BCH, FIB CRC ...).
 // Pattern and receiver set-up are those of tests/engine/test_iq_modes.cpp.

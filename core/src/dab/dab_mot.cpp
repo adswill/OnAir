@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MOT object reassembly (ETSI EN 301 234), see dab_mot.h. Shared by the DAB PAD / packet mode decoders and the DRM data services.
 #include "dect2/dab/dab_mot.h"
 #include "dect2/dab/dab.h"

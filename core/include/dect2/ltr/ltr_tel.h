@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LTR (Logic Trunked Radio) telemetry. RxTelemetry::ltr, engine standard 131, active standard 130 (family 129).
 // Control data only: the 300 bit/s subaudible words. No voice is decoded. Receive only.
 #pragma once

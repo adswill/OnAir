@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The hover preview of the appearance choices (docs/UI-PREVIEW-4.0.md). Call uiprev::item() right after a menu item, combo row, radio
 // button or checkbox that picks a look: while that item is hovered, or has the keyboard focus, a tooltip shows a live miniature of the
 // interface with that choice (a window with its title bar, side panel, tabs, spectrum, waterfall, a button and text lines) drawn with

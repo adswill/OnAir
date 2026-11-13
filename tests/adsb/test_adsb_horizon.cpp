@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Theoretical range outline (round 4 #16): flat sea gives the 4/3-earth radio horizon for antenna plus aircraft height at every bearing and
 // altitude; a 600 m ridge 30 km north cuts the low rings there only; no elevation data counts as sea level; the upintheair.json reader.
 #include "dect2/adsb/adsb_horizon.h"

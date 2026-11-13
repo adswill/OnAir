@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 bit-interleaved coding and modulation for one PLP (A/322 section 6): outer code (BCH, CRC or none), LDPC, parity, group-wise and
 // block bit interleavers, and the constellation mapper (QPSK, 16 to 256 point 2D non-uniform, 1024 and 4096 point 1D non-uniform).
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite AIS (ais_sat.h): Doppler sweep over the +-4 kHz of a low earth orbit, Doppler tracking with a changing rate, long-delay bursts that run
 // into the next slot, collisions (successive cancellation, frequency candidates), the receiver's satellite mode, and the pass statistics.
 #include "dect2/ais/ais_gen.h"

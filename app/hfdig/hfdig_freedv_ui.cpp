@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, the FreeDV view of the main tab (called by hfdig_ui.cpp): the codec2 library lamp, one sync lamp per FreeDV mode, the mode
 // choice, the SNR, the text channel (callsign) and the speech frames. Without the codec2 library one sentence says so and how to get it.
 #include "app.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RF fingerprint of an NFM / WFM / AM transmitter: see core/include/dect2/fingerprint/rf_fingerprint.h and docs/RF-FINGERPRINT.md.
 #include "dect2/fingerprint/rf_fingerprint.h"
 #include <algorithm>

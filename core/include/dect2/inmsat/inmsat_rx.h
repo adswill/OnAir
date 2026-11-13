@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat all-carriers receiver in the engine's contract (configure / setSignalOffset / ready / reset / feed / telemetry): the carrier
 // detector, the parallel Aero and Inmarsat-C decoders and the voice mixer (docs/INMARSAT-REVAMP.md). feed() runs on the analysis thread,
 // the setters and telemetry() on the interface thread.

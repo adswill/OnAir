@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DECT A-field: the CRC, the header fields, the RFPI split, the carrier raster.
 #include "dect2/dect/dect_proto.h"
 #include <cmath>

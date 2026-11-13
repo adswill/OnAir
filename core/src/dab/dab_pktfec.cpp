@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/dab/dab_pktfec.h"
 #include "dect2/dvbt/dvbt.h"
 #include <cstring>

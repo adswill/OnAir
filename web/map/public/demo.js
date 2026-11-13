@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // demo.js - ?demo=1 preview data: ~60 synthetic aircraft, ships, sondes, APRS stations and satellites.
 // Everything here is invented for previewing the page offline; the page shows a DEMO banner while it is active.
 

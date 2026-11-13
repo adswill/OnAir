@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL receiver telemetry (PAS 0001-2 / 0001-3-2), shared by the receiver and the UI.
 // The cells (D_SYSTEM_INFO) and the event log are saved with the results. The call table, the message list and the neighbour list are for the
 // screen only. Signalling is shown as it is sent in the clear (groups, channels, addresses); encrypted voice is never decoded.

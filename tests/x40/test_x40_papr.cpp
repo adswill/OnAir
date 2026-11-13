@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Crest factor meter: Gaussian noise (theory: 3.6, 6.6, 8.4, 9.6 dB at 10, 1, 0.1, 0.01 %), a constant-envelope signal (FM), a QPSK signal with root-raised-cosine pulses (about 5 dB at 1 %), clipped
 // noise, noise plus impulses; the readings compared with theory or the generator's own statistics; a steady carrier. Simulated signals only.
 #include "x40_gen3.h"

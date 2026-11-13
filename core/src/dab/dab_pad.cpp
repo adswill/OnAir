@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB+ PAD: data stream element -> F-PAD / X-PAD -> MSC data groups -> MOT objects -> slide show picture.
 #include "dect2/dab/dab_pad.h"
 #include "dect2/dab/dab.h"

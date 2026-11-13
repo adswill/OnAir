@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) through the engine as the app and dect2cli use it: the synthetic source plays the test signal (8-bit samples, paced
 // faster than a radio when it can), the engine keeps every sample and reports the mesh tables through latestRx().
 #include "dect2/engine/engine.h"

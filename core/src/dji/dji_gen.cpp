@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DJI drone test signal: see dji_gen.h.
 #include "dect2/dji/dji_gen.h"
 #include "dect2/dji/dji_dsp.h"

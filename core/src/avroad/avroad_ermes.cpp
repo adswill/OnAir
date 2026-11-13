@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ERMES paging, ETS 300 133-4: 4-level FM, 3125 baud, one batch of 154 (or, for the last batch of a subsequence, 190) codewords of 30 bits at a time. Written from the published
 // specification. No public ERMES recording was found and no networks are known to be on the air: simulated signals only.
 #include "avroad_int.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT test signal: one NB-IoT carrier (NPSS, NSSS, NRS, NPBCH with the MIB-NB, and the NPDSCH carrying SIB1-NB, random QPSK in the other
 // downlink subframes), built from the same specification tables the receiver reads. It uses the test network code 001-01, not a real
 // operator. Nothing is transmitted: the samples only exist in memory.

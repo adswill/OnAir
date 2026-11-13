@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES / Meteosat DCS screens: the reports received (time, platform address, channel, rate, level, data) with the sensor values of the selected one,
 // the table of platforms heard, and the band view (waterfall of the 401.7 - 402.1 MHz uplink with the carriers being followed).
 // A data collection platform (river gauge, weather station, tide gauge, buoy) sends a short report on its own 1.5 kHz channel; the 8-hex-digit address

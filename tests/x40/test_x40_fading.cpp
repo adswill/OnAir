@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fading analyser: a carrier through a Rician / Rayleigh channel (sum of 48 Doppler-shifted paths, Jakes style) with the maximum Doppler of 5 and 50 Hz; the K-factor, the fade rate and length
 // at -10 dB and the Doppler spread are compared with theory, with a carrier offset and drift, a noise sweep, the loss and return of the carrier and noise alone. Simulated signals only.
 #include "x40_gen3.h"

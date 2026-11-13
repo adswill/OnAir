@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather fax as it comes off the air: the fax audio as an upper sideband signal 1.9 kHz (the carrier) above the dial of a real
 // station (DWD 7880 kHz, 4583 kHz, Northwood 8040 kHz), tuned 50 Hz off, 15 dB SNR in 3 kHz, a 50 ppm clock error between the
 // station and the receiver, and joined late: no start tone (part way into the phasing), or no start tone and no phasing at all

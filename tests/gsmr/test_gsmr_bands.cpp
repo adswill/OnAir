@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM (shared with GSM-R): the GSM 850 and PCS 1900 rasters, the SI2bis neighbour list, the CCCH message kinds (counted, never parsed),
 // and the receiver counting the CCCH load of the test signal at two offsets and two noise levels. Simulated signals only.
 #include "dect2/gsmr/gsmr_rx.h"

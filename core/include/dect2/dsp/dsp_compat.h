@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small DSP kernels the receivers need, with portable implementations (plain C++, written so that compilers vectorise them) and, on
 // macOS, Accelerate versions that are used by default. Define DECT2_PORTABLE to force the portable code everywhere.
 #pragma once

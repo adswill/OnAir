@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CODAR / HF ocean radar test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Complex white noise plus linear FM sweeps (sawtooth, 10% blanking at the end of each sweep) of several radars at once; one radar

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // View > Wireshark: one switch per mode. The work is in core (core/src/wirecap, docs/WIRESHARK-3.8.md); every switch is off until the user turns it on.
 #include "../app.h"
 #include "../ui/typography.h"

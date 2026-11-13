@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde upload (sonde_upload.h): golden APRS lines for every sonde type OnAir decodes, the login and the beacon, units and rounding,
 // the 9 character object name, and the sockets against a MOCK APRS-IS server on localhost (never a real server): login, beacon, objects,
 // two targets at once, the packet counter, the per-sonde rate limit, reconnect, an unverified login, and "nothing while off".

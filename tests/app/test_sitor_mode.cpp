@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SITOR mode is registered: a row in the mode table, a UI case in modeui.cpp, the family count covers it, and the
 // panel carries the unverified-table warning. Reads the sources (DECT2_SOURCE_DIR), as test_credits does.
 #include <cstdlib>

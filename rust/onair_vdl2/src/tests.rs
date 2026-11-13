@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests of the VDL2 layers that do not need the C++ reference: FCS residue, header code round trip with a corrected bit, Reed-Solomon with errors and
 //! erasures, HDLC deframing, address round trip, an AVLC XID frame.
 use crate::avlc::{self, Addr};

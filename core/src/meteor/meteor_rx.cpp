@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor-M LRPT receiver (see meteor_rx.h).
 #include "dect2/meteor/meteor_rx.h"
 #include "dect2/results/results_io.h"

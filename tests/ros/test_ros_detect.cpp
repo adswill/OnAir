@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROS identifier (dect2/ros/ros_detect.h): test signals with the publicly reported physical layer (random tones on a 15.625 Hz grid of 144,
 // 4 / 8 / 16 baud; NOT ROS encoding, which is not public) must be found with the right sub-mode under noise and offsets, in USB audio and in
 // complex samples with a neighbour; noise, a steady carrier and other MFSK modes (Olivia, MFSK16, JT65-like) must not be called ROS; the

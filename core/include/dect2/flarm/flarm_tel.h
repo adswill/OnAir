@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLARM receiver telemetry, shared by the receiver and the UI.
 // Privacy: only aircraft that broadcast openly are in the table. An aircraft that sets the no-track or stealth flag (or an anonymous address) is
 // never stored, shown, saved or forwarded; the receiver only counts them (privacyFlagged).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "keys_logic.h"
 #include "dect2/voicekeys/key_guard.h"
 #include <cctype>

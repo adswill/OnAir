@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AFSK (TNC) tone tuner for 1200 baud packet (Bell 202: mark 1200 Hz, space 2200 Hz; APRS, AX.25) and similar audio FSK on FM: what a transmitter's audio level and tones look like, for setting the deviation of a
 // TNC or a radio's data input. The FM-demodulated audio (24 ksps, in Hz, flat) is searched for bursts of tone energy (1000 - 2500 Hz at 6 times the noise, 21 ms frames); each burst of 0.1 s or more is analysed:
 // the mark and space tones (the top of the spectral hump, 120 Hz boxcar, in 900 - 1600 and 1800 - 2600 Hz), their error against 1200 and 2200 Hz, the twist (space level over mark level, in dB: a TNC aimed at an

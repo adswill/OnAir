@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The watch list of the digital voice modes (DMR, P25, NXDN, TETRA, dPMR, D-STAR, Yaesu, M17): follow a talkgroup, a radio ID or a callsign across
 // every mode at once. Each entry can alert when a call of it starts (desktop notification, optional sound) and can ask the auto-record rules to
 // save its calls. Everything is OFF by default: a new entry only lists, the alert and record boxes start unticked.

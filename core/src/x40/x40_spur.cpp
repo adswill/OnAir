@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spur and image finder for the user's own SDR: from one wide capture it sorts what is not a real signal. The DC spike of the radio (the bins around 0 Hz); for each strong signal its
 // mirror image at -f (the signature of an IQ gain and phase mismatch: the image rejection in dB, and the mismatch that would cause it), and its second and third harmonics folded back
 // into the span; and constant spurs at simple fractions of the sample rate (fs / 16 steps), common converter spurs. A peak counts as an image or harmonic only if its level follows

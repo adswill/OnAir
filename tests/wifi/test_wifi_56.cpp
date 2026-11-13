@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi 5 and 6 GHz beacons (wifi_gen.h wifiTestSchedule56 through wifi_rx.h): every channel of both plans, then sweeps over carrier offset, noise,
 // sample clock, sample rate, off-centre signal, a start in the middle of a frame, and a wide capture hearing two 20 MHz channels at once with the
 // non-HT duplicate of a wider network on both.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CPU time for the speed limits in the tests. std::clock() is not CPU time everywhere: on Windows it is the wall clock since the program
 // started (a busy runner then fails a limit that the code itself meets), on Linux and macOS the CPU time of the whole process (every thread).
 // threadCpuSecs() is the time of the calling thread only: use it when the work timed runs on that thread (a receiver's feed(), a generator's

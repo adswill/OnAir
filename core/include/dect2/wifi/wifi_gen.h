@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi beacon test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A schedule of 802.11 frames (wifi_proto.h builds them), each sent either as a long-preamble 1 Mbit/s DSSS PPDU (DBPSK, Barker-11 at

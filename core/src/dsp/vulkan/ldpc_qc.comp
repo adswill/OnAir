@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #version 450
 // Table-driven quasi-cyclic layered normalised min-sum (DTMB, GpuLdpc::decodeQc). One workgroup of z invocations per word, invocation m owns
 // check m of every block row. A line-by-line port of the Metal kernel in gpu_ldpc.mm, which does the operations of the CPU decoder

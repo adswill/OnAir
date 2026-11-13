@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C ABI of the Rust crate rust/onair_dstar (D-STAR DV frame layer). Written by hand; the Rust test rust/onair/tests/headers.rs checks it against ffi.rs.
 // Bits are one per byte, bytes go on the air least significant bit first.
 #pragma once

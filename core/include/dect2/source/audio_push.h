@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sound-card samples that the platform records and pushes in (Android: AudioRecord on a thread of the app), for the sound-card source
 // (source_audio.cpp, device serial "push"). One input for the whole process; thread-safe; frames are interleaved stereo float, -1..1.
 // A mono recording is pushed with both channels equal. Nothing here opens a microphone: the app does, only while a session uses it.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor-M LRPT receiver: the MSU-MR pictures Meteor-M N2-3 and N2-4 send on 137.1 / 137.9 MHz while they pass over.
 //
 // Demodulator: mixed to 0 Hz and decimated to 3 - 5 samples a symbol, a coarse carrier search (the raised-cosine shape fitted to the

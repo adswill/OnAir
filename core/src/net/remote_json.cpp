@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared telemetry JSON formatting has no dependency on the HTTP server.
 #include "dect2/net/remote_api.h"
 #include "dect2/common/str.h"

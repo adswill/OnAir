@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio sound: HDC through the user's own patched FAAD2 ("libfaad_hdc"), loaded at run time. HDC is a patented codec of Xperi and OnAir
 // ships none of it, no codec source either (docs/CODECS.md, "HD Radio sound"); without the library the station, program data and pictures
 // still work and the audio packets are only counted.

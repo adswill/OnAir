@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web settings: the web_* keys of the server's settings file (docs/ONAIR-WEB.md lists them) to the hub's limits, the policy and the
 // network server's config, and back (the admin API's policy and invite changes).
 #pragma once

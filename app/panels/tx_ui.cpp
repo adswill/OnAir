@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The transmitter: the RX / TX switch at the top left of the interface and the Transmit panel that fills the main area in TX view. What can be sent is the
 // table in core/include/dect2/tx/tx.h; the session, the radios' sinks and the rules are in core/src/tx/tx.cpp and the radios' sources.
 //

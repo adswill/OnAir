@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice clip history: the list of WAV clips a voice mode saved (one per call), with automatic retention so the folder does not grow
 // for ever. Shared by every voice mode that saves calls as WAV (Iridium, and the digital voice monitor: DMR, P25, NXDN, dPMR, D-STAR,
 // YSF, TETRA, M17). No GUI here: app/voice/voice_clips_ui.cpp draws it. docs/VOICE-CLIPS.md.

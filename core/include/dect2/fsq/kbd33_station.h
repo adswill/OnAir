@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The engine side of FSQ and IFKP: the front end (the radio's samples to 8 kHz upper sideband audio), the text, the chat log, the messages
 // of FSQ (sender, addressee, trigger), Listen, and the telemetry the app shows. FsqReceiver and IfkpReceiver are this with the right modem.
 // Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never blocks),

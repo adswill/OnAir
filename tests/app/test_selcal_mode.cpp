@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SELCAL wiring: tuning registered, mode row, family and poll-slot counts, engine cases, panel hook, the doc page.
 #include <cstdio>
 #include <cstdlib>

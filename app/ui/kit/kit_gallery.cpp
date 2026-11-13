@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A page with every kit component, for a hidden screenshot per look: `dect2 --kitgallery --hidden --shot x.png --theme 1|3|4` (docs/UI-KIT.md).
 #include "kit.h"
 #include "../../app.h"

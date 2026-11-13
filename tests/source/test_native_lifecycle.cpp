@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared native-source lifecycle: a rejected rate must never restart partially configured hardware.
 #include "../../core/src/source/native_common.h"
 #include <iostream>

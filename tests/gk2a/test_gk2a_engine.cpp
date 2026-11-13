@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GK-2A through the engine (setStandard(232) LRIT, 233 HRIT): the synthetic source plays the test signal, the receiver reports through latestRx().
 #include "dect2/engine/engine.h"
 #include "dect2/gk2a/gk2a_rx.h"

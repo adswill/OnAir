@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 against real-world faults (REAL_WORLD_CHECKLIST.md): the clean test signal (atsc3_synth.h), impaired with tests/common/impair.h (written
 // independently of the receiver), through the real Atsc3Rx. Every case must find and decode nearly every frame.
 //   test_atsc3_realworld          all cases

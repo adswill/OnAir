@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The spot feeds of the Ham screen (4.0): see ham_net.h.
 #include "dect2/ham/ham_net.h"
 #include "../net/tcp_client.h"

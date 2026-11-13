@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // consent.js - the visitor's choice about optional third-party content (aircraft photos from Planespotters).
 // Nothing optional is requested before a choice is made. "Accept" lasts for this page view, "Always yes" is kept in
 // localStorage, "Decline" is this page view only. The footer link "Privacy choices" reopens the popup and can reset it.

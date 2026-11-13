@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The theoretical range outline (tar1090 + heywhatsthat): rings per altitude where an aircraft is just above the terrain horizon of the
 // antenna. From the heywhatsthat upintheair.json the user downloads, or worked out from the user's own elevation files (SRTM .hgt, GeoTIFF:
 // dect2/prop/prop_terrain.h). Drawn next to the actual outline. docs/ADSB-HORIZON-3.9.md.

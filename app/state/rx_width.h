@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The custom capture bandwidth and sample rate of every mode (3.4; #274 started it for VDL2, TETRA and TETRAPOL).
 // The default is each mode's own standard bandwidth and rate; a Custom tick under Advanced lets the user set any bandwidth (and any sample
 // rate) by hand. Nothing is clamped: a width gives the analysis passband, the radio's sample rate that carries it and the radio's analogue

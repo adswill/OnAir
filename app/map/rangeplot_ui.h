@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The receiver-range view shared by ADS-B and AIS: a polar plot (north up) of the furthest position heard in each 5 degree sector, rings in
 // the display unit, a rolling-window choice, Reset, and export to PNG or CSV. The maths is dect2/geo/rangeplot.h; this is only drawing.
 #pragma once

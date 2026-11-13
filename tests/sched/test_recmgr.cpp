@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The recordings manager core: classify, scan with SigMF side-cars and the index, search, sort, the cleanup rule, exact trimming of IQ, SigMF
 // and WAV, conversion, rename, trash and undo.
 #include "dect2/sched/recmgr.h"

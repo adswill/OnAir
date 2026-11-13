@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airband clips (round 4 #10): one WAV per transmission from the real receiver on generated channels (two channels with their own keying, a
 // tuning error and noise), file names, short openings dropped, the close time, a stuck carrier cut at 10 minutes, the 30 s replay, switched off.
 #include "dect2/airband/airband_clips.h"

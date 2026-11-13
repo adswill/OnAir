@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit: the list of modes, the TX session (underruns, stopping, failures, no frequency or power limit) and the round trip: the samples a TX session
 // sends to a recording sink are fed to OnAir's own receiver (through the engine) and must decode. The radios' own paths are tried against fakes:
 // with --soapy <module dir> the SoapySDR TX sink against the fake "onairtest" radio, with --fake <fake library> the PlutoSDR (libiio) TX sink against

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital front end demodulators: a Robot 36 SSTV picture sent in narrow FM (as the ISS sends on 145.800 MHz: 3 kHz deviation, a
 // Doppler offset of +1.5 kHz, no pre-emphasis) decodes with NFM; the same picture in upper sideband still decodes with USB (the default);
 // Auto gives USB below 30 MHz and NFM at and above it.

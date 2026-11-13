@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM census: every station of the band from one wide capture, no tuning.
 //
 //   wide capture -> one FFT (overlap-save) -> stations found from the averaged spectrum on the 100 kHz raster -> per station the bins around it are

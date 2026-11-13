@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 cmake_minimum_required(VERSION 3.20)
 set(ONAIR_ROOT ${CMAKE_CURRENT_SOURCE_DIR})   # the repository root (CMAKE_SOURCE_DIR is the bridge's folder when this is built as a subproject, as the Android app does)
 if(APPLE AND NOT DEFINED ANDROID_ABI)

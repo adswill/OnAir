@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The docking layout tree (app/ui/dock_tree.h): dock / tab / split / undock, layout and splitters, drop targets, text form, named layouts.
 #include "ui/dock_tree.h"
 #include <cmath>

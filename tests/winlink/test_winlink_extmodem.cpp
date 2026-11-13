@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // External modems for Winlink (3.9, docs/HFMODEMS-3.9.md): a mock ARDOP TNC, a mock VARA modem (HF and FM) and a mock Mercury, each a local TCP
 // listener on 127.0.0.1 that speaks the command set as published (ardopcf Host_Interface_Commands.md, VARA "Native TNC Commands", Mercury
 // docs/TNC.md). They are written from those descriptions: NO real ARDOP, VARA or Mercury program was used, and nothing here touches a real

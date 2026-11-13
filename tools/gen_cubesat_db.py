@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Builds core/src/cubesat/cubesat_db_data.inc: the transmitter table and a TLE snapshot of the Smart CubeSat decoder.
 Data: SatNOGS DB (https://db.satnogs.org, CC-BY-SA 4.0, credit SatNOGS DB contributors) and CelesTrak TLEs (T.S. Kelso).
 Usage: tools/gen_cubesat_db.py [dir with tx.json sats.json active.txt amateur.txt cubesat.txt]   (fetches them when the dir is missing)

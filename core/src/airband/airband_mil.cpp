@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The military UHF air band: the published common channels (sources in airband_mil.h).
 #include "dect2/airband/airband_mil.h"
 #include <cmath>

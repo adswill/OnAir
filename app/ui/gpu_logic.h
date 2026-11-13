@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Use GPU where available": the global tick, the per-mode overrides and why a mode has no GPU tick. No ImGui, no App (the test checks it).
 // Stored as two settings: gpuGlobal (flag, default on) and gpuModes (text "DVB=0;DTMB=1": the mode-list name = 1 forced on, 0 forced off;
 // a mode that is not there follows the global tick). The default changes nothing: every decoder keeps its CPU / GPU / Auto choice and the

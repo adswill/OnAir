@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors receiver. See ism_rx.h.
 #include "dect2/ism/ism_rx.h"
 #include "dect2/results/results_io.h"

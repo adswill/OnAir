@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dPMR receiver against the test signal with real-world faults: +-1 kHz offset, off centre with clock errors, noise, symbol errors, a call
 // joined late, a call without its end frame, all at once, scanning the 16 PMR446 channels; and noise only.
 // Silent.

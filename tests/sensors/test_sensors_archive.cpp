@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Long sensor history (round 4 #26): daily min/max/mean over three days of readings every 60 s (a sine over the day), rain per day from the
 // counter across a reset and midnight, month and year totals, the local day, save and load in the middle, two sensors.
 #include "dect2/sensors/sensors_archive.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal strength sweep: the same sky with the zenith C/N0 lowered. Lower satellites are weaker still (down to 9 dB under the zenith one), so each run shows
 // how many satellites each level yields. The numbers are printed: where acquisition stops, where bits stop decoding, where the fix is lost.
 #include "dect2/gnss/gnss_testkit.h"

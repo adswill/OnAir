@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The analog TV picture decoder's private state (Impl), shared by atv_video.cpp and the atv_video_*.cpp files that hold its bigger
 // member functions (line sync, colour, picture output). Not part of the API.
 #pragma once

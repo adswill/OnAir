@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR LDPC codes (see cdr_ldpc.h). The encoder inverts the parity part of H in the ring of 256 x 256 circulants (polynomials modulo
 // x^256 + 1): that ring is local, so the matrix is invertible exactly when every pivot can be chosen with an odd number of terms.
 #include "dect2/cdr/cdr_ldpc.h"

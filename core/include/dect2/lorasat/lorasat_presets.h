@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa satellite presets: public frequencies and LoRa settings of satellites and space-gateway services that use LoRa (issue #229). Public knowledge only,
 // written from what is published by the operators and by the community ground-station networks (TinyGS, SatNOGS DB, the satellites' own documentation).
 // NOTHING HERE WAS CHECKED AGAINST A REAL SIGNAL by the authors. Satellites change frequency, retire and re-launch; every entry carries how sure we are

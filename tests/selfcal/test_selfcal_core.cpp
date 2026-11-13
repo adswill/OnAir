@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Self-calibration: synthetic references at known clock errors (+-50 ppm) must come back within 0.2 ppm; the stores, the combiner, the wizard.
 #include "../common/tmp_path.h"
 #include "dect2/common/stable_random.h"

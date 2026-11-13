@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 1 control messages beyond the voice grants: Motorola and Harris patches, affiliation and registration, deny / queue / acknowledge responses,
 // data channel grants, system services, time, and the multi-block (MBT) forms. Layouts: OP25 tk_p25.py and p25p1_fdma.cc, reason codes: SDRTrunk DenyReason /
 // QueuedResponseReason (both GPL-3 projects; layouts only).

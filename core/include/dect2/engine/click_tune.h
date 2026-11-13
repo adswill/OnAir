@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Where a click on the spectrum puts the dial. The spectrum axis is the radio's real RF (centre = dial + the mode's tune offset), so a
 // signal at the clicked frequency is the dial itself: the radio then sits tuneOffsetHz above it (Engine::radioTune adds the offset).
 // Subtracting the offset here put the dial 250 kHz (ISM) below the signal that was clicked (issue #219).

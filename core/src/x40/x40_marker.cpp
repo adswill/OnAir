@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ILS marker beacon receiver (75 MHz, ICAO Annex 10 Vol. I, 3.1.7 and 3.1.7.6): the carrier is amplitude modulated with a keyed tone, one tone and one keying per marker:
 //   outer marker   400 Hz, dashes, 2 per second (continuously)
 //   middle marker 1300 Hz, alternate dots and dashes, 95 dot-dash pairs per minute

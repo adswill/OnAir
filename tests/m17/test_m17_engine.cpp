@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // M17 through the engine (setStandard(33)): the synthetic source plays the test schedule, the receiver reports through latestRx().
 #include "dect2/m17/m17_rx.h"
 #include "dect2/engine/engine.h"

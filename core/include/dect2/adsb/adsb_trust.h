@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Per-aircraft trust score: does this track look like a real aircraft? It compares what an aircraft claims with what the receiver can check by
 // itself: the received level against a level-versus-range curve learned from this station's own confirmed aircraft, the radio horizon, jumps of the
 // claimed position, the claimed ground speed against the speed of the positions, a registration callsign against the address, one callsign on two

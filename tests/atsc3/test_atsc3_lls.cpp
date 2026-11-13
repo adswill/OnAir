@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IPv4/UDP reception (with fragments) and the low level signaling: an SLT compressed by Python's gzip is read, and one made by makeLls() too.
 #include "dect2/atsc3/atsc3_ip.h"
 #include <cstdio>

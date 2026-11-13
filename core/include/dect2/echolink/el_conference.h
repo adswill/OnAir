@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hosting an EchoLink conference: several stations connected to this one at once. Each station is its own Session (el_client.h: SDES
 // connect and keep-alive, BYE, time-out), routed by its address and ports. Every 80 ms the audio of everyone talking is decoded, mixed and
 // sent to each station without its own voice (so two people talking at once both reach the rest), and the host hears the mix of all.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NFC / RFID: protocol-layer checks and a physical-layer loopback (the synthetic generator into the matched demodulator), clean
 // and with noise and a carrier offset. Receive only; the exchange is fabricated, nothing is cloned.
 #include "dect2/nfc/nfc_proto.h"

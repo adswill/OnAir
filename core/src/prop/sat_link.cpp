@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Earth-space link geometry and budget (see sat_link.h).
 #include "dect2/prop/sat_link.h"
 #include "dect2/prop/itu_atmos.h"

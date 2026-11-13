@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // atsc3gen: makes a synthetic ATSC 3.0 broadcast as an IQ recording, from a fragmented MP4 video and audio file. Nothing here is a real
 // transmission: it is the transmitter chain of this project (ROUTE, ALP, baseband packets, BICM, OFDM frames with bootstrap and Preamble) followed
 // by a channel model (carrier offset, echo, noise), written as 8-bit I/Q like a HackRF would record it. Use it to try the ATSC 3.0 receiver.

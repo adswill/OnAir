@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Image enhancement shared by every picture mode (WEFAX, SSTV, NOAA APT, Meteor LRPT, GOES/Elektro/METEOSAT, DRM/DAB slide shows, RF camera,
 // TV frame grabs, KAIT, Wenet/SSDV). Pure functions on float pictures, classical algorithms only, deterministic for any thread count
 // (row bands on ThreadPool::shared(), each band writes only its own rows). See docs/IMAGE-ENHANCE.md.

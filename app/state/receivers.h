@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Several receivers at once (docs/multi-sdr.md): RX 1 is the App main() makes, RX 2, 3 ... are Apps made on demand, each with its own engine,
 // radio, mode, frequency, gains and results. One receiver's tab is drawn; all of them keep receiving and ticking.
 #pragma once

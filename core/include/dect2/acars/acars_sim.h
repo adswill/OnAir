@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ACARS generator straight into the receiver, with the list of what was sent checked off against what came out. Used by the
 // tests and by acarstool sim.
 #pragma once

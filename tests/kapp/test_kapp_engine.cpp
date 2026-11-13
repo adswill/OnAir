@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP in the engine's wrapper and the transmit session's generator: the transmit generator (the TX path) makes the one-way signal from a message,
 // KappLiveReceiver (what the engine feeds) finds the bursts, assembles the message and lists it in the telemetry. Rates other than the internal one,
 // a carrier offset, noise, a message of several bursts, the repeat that is ignored, and a TxSession writing an IQ file that the receiver decodes.

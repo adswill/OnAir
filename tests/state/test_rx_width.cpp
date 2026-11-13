@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The custom-bandwidth plan (#274, 3.4): the standard changes nothing, any width gives a rate that carries it, every mode takes it, nothing is clamped.
 #include "../../app/state/rx_width.h"
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drone Remote ID receiver end to end (rid_gen.h, rid_rx.h): Open Drone ID in BLE advertising and in Wi-Fi beacons through the BLE and
 // Wi-Fi demodulators, each alone and both in one 20 MHz band at 2432 MHz, a carrier offset with noise, a file (no centre), and noise alone.
 #include "dect2/rid/rid_gen.h"

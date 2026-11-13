@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/specx/specx_gen.h"
 #include "dect2/dsp/gen_util.h"
 #include "dect2/source/source.h"

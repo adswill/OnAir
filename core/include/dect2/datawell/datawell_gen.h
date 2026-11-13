@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Datawell buoy HF link test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // 2FSK (format 0, the HXV format): continuous-phase 2FSK, tones 129 Hz apart, 81.92 baud, carrying 64-bit vectors built from the documented

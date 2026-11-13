@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM audio: AAC tables and the frame model shared by drm_aac.cpp (decoder side) and drm_aacenc.cpp (the test signal's encoder). Private.
 #pragma once
 #include <cstdint>

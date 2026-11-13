@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NAVTEX warnings in force (marine_navtex_force.h): message texts in the forms the coast stations use (UK "WZ" numbers, NAVAREA and
 // coastal series "123/26", NAVTEX headers), cancellations, self-expiry, an in-force list, repeats with damaged characters, a damaged
 // header, other stations, assumed lifetimes, and the save / load round trip. The texts are written for the test (no real station log).

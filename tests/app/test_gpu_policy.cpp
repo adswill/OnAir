@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Use GPU where available": override storage, the global tick, the reasons, and that the policy only ever forces the CPU path (same compute mode otherwise).
 #include "../../app/ui/gpu_logic.h"
 #include "dect2/dsp/gpu_policy.h"

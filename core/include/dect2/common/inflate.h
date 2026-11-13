@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DEFLATE (RFC 1951) and gzip (RFC 1952) decompression, without any library: the low level signaling tables of ATSC 3.0 are gzip compressed.
 #pragma once
 #include <cstdint>

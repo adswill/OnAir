@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR error control codes on top of the Rust crate rust/onair_dmr: the functions of dmr_fec.h;
 // dmr_fec.cpp keeps the plain bit helpers (putBits, getBits, bytesToBits, bitsToBytes, popcount32). Bit vectors that are shorter than the code needs are zero padded.
 #include "dect2/dmr/dmr_fec.h"

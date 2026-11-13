@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/voice/codec_setup.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/codec/speech_codec.h"

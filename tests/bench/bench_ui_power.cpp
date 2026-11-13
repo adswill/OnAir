@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The interface's idle and active power, without a window: the numbers docs/PERFORMANCE.md quotes.
 //   frames   redraws per second the frame pacing asks for in each window state (app/ui/frame_pace.h)
 //   ring     the analysis thread's wake-ups and CPU while it waits for samples: the old 2 ms sleep loop against IqRing::waitData()

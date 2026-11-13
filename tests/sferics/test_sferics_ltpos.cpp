@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Lightning position (network), simulated signals only: geodesy, the sample clock discipline, the sferic leading-edge timer and the MSK
 // common-view timer against known truths, the TDOA solver over timing errors and station geometries (position error, ellipse coverage),
 // outliers, clock groups, ambiguity folding, ionosphere hops, false matches, the packet format (authentication, replays), and the whole chain:

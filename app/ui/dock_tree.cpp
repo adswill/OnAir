@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The docking layout tree. See dock_tree.h.
 #include "dock_tree.h"
 #include <algorithm>

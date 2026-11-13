@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN monitor (wide capture): every channel of a regional plan (EU868, US915, AU915, AS923-1..4, EU433) that fits the radio's captured band is
 // demodulated at once, at all the spreading factors the plan's data rates use (SF7 - SF12 at 125 kHz, SF7 at 250 kHz, SF8 at 500 kHz uplink,
 // SF7 - SF12 at 500 kHz downlink), including the gateways' inverted-IQ frames, and the plan's FSK channel (DR7, 50 kbit/s GFSK: lorawan_fsk.h; synthetic

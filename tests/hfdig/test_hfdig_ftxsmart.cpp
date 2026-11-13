@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FT8 smart decoding (docs/SMART-FT8-3.7.md): soft bits of a repeated signal added across slots, a-priori calls from the conversations
 // heard on the band, the early decode a few seconds before the slot ends. Synthetic signals at known SNRs (2500 Hz), noise seeds, DT and
 // frequency offsets; the gains are measured against the same decoder with the feature off (HFDIG_FTX_XSLOT=0, HFDIG_FTX_APQSO=0,

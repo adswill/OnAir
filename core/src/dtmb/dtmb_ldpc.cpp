@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB LDPC codes, BCH, 4QAM-NR decoding (see dtmb_ldpc.h).
 #include "dect2/dtmb/dtmb_ldpc.h"
 #include "dect2/dsp/minsum_corr.h"

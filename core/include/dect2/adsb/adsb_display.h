@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #pragma once
 // ADS-B display options: the altitude colour scale, the track width and when a silent aircraft leaves the table and the map.
 // Pure functions, so they are tested without the GUI (tests/adsb/test_adsb_display.cpp). The app keeps the values in prefs under the keys below.

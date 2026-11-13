@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 48 real DRA+ units (160 bytes each: a frame of 128-140 bytes, then extension bytes) from a 89.3 MHz CDR recording (issue #138, 2026-10-17).
 // The extension bytes hold 0x7FFF now and then; the audio path must not let the decoder take that for a frame start. Used by test_cdr_audio.
 #pragma once

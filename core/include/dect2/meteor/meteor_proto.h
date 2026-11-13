@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor-M LRPT, the layers above the demodulator (both directions, so the test signal is built with the same code it is checked by).
 //
 // Downlink: CCSDS-like. Soft bits -> (N2-x 80k: marker removal and convolutional deinterleaver, 36 branches x 2048) -> Viterbi K=7

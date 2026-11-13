@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FIS-B NEXRAD weather radar (products 63 regional, 64 CONUS): the block layout of RTCA DO-358B as read by Oliver Jowett's dump978 (extract_nexrad.c, GPL-2+).
 // A block covers 48' of longitude (96' above 60 degrees) by 4' of latitude and holds 32 x 4 bins. Pure parsing, tested on simulated blocks.
 #pragma once

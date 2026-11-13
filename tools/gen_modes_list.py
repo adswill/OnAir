@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Writes MODES.md: every mode in the mode list (app/ui/mode_table.cpp), grouped as the app groups them, with its one-line summary.
 # One place to answer "do we support X?" without searching the code. The quick gate runs it with --check, so the file can't go stale.
 #   python3 tools/gen_modes_list.py           rewrite MODES.md

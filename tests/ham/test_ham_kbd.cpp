@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham keyboard modes: every preset's text goes to audio (kbdRender) and back through the repo's own decoder (HfdigKbd for Olivia, Contestia, MFSK, THOR,
 // DominoEX, Hell; HfdigRtty; the full PskReceiver for BPSK31 .. 250 and QPSK31 .. 125; Mt63Receiver; FsqReceiver / IfkpReceiver; the CW timing decoder), plus the transmit limits, the macros, the callsign pick and the ADIF record.
 // Nothing is transmitted: the rig is a recording fake.

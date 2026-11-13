@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells: SSB sequences, the PBCH chain, the MIB, bands and the sync raster, and the test signal (nr_phy.h).
 #include "dect2/nr/nr_phy.h"
 #include "dect2/dsp/fftutil.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC channel coding: Reed-Solomon, randomiser, interleaver pair and the full field encoder/decoder round trip, with noise.
 #include "dect2/atsc/atsc.h"
 #include "dect2/common/stable_random.h"

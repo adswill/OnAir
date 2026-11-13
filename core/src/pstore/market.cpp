@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The community plugin marketplace client (see core/include/dect2/pstore/market.h and docs/PLUGIN-MARKETPLACE-4.0.md).
 #include "dect2/pstore/market.h"
 #include "dect2/automation/json_mini.h"

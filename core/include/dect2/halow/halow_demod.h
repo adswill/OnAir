@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) OFDM demodulation pieces shared by the receive chain: the FFT of one symbol window, pilot phase and slope tracking,
 // equalised tones with their noise variance, soft bits of a data symbol (any of BPSK ... 256-QAM, deinterleaved) and the decoding of a whole data
 // field (depuncturing, Viterbi per BCC encoder, descrambler) down to the PSDU bytes. IEEE 802.11-2020 clause 23.3.11.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shortwave station identification: schedule parser, language scoring, the interval signal detector (a repeating melody yes, noise and speech-like audio no), and matching a taught melody.
 #include "dect2/general/sw_ident.h"
 #include <cmath>

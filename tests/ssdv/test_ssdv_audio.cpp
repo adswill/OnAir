@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSDV from a WAV recording: FSK packets are generated, turned into the audio an FM receiver's discriminator gives (a baseband waveform), written
 // as WAV files of several layouts (mono 16-bit 48 kHz, stereo 24-bit, 32-bit float, 8-bit, 44.1 kHz) and decoded through the audio path.
 #include "dect2/ssdv/ssdv_audio.h"

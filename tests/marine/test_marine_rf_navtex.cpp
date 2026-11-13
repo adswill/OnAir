@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NAVTEX through the radio layer: sample rates, chunk sizes, 8 bit samples, DC, a gap, a reset, carrier offsets, mistuning, fading.
 #include "../data/marine/rf_util.h"
 using namespace mt;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Finds a channel that is not in the middle of the sample band (a recording made with gqrx or SDR# at an offset, a radio tuned beside the
 // channel) and moves it to the middle, before a receiver whose own search only covers a small range around the centre.
 //

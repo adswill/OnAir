@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sample-rate conversion for the DJI mode: a windowed-sinc polyphase table (256 phases, linearly interpolated), used by the receiver to bring a burst from the
 // radio's rate to 15.36 Msps (centred on the burst) and by the test signal to go the other way.
 #pragma once

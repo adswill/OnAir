@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Bit helpers of the DMR layer: bits are one per byte (0 or 1) in on-air order; integers hold their first bit in the top position.
 
 /// Appends bits to a fixed buffer; writes past the end are dropped (callers size their buffers exactly).

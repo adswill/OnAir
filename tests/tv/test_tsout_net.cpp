@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Live transport-stream output over the network (tv/tsout.h): a synthetic TS goes into the OutputManager at a real-time 4 Mbit/s and a loopback
 // UDP socket, an RTP socket and an HTTP viewer check what arrives: 7x188 byte datagrams, sync bytes, continuity counters, the paced arrival,
 // the RTP header, the HTTP header, the service filter and a restart (reconfigure) in the middle.

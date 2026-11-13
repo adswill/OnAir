@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EBICab / Eurobalise up-link receiver ("needs a user test": no real recording was available). The up-link is a magnetic field around 4.234 MHz
 // that a passive balise sends while the train's tele-powering field (27.095 MHz) is over it: FSK with 3.951 MHz for 0 and 4.516 MHz for 1,
 // 564.48 kbit/s (UNISIG SUBSET-036). The radio is tuned about 1 MHz above 4.234 MHz (the signal stays clear of the DC spike), the channel is mixed down,

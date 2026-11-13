@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/session/session_db.h"
 #include "dect2/msgdb/msgdb.h"
 #include "dect2/session/privacy.h"

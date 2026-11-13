@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL test signal for the engine's synthetic source (see kaal_gen.h).
 #include "dect2/kaal/kaal_gen.h"
 #include "dect2/kaal/kaal_beacon.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR must recover by itself from what a real radio link does (issue #138: the sound stopped for good after a "fluctuation" and only a
 // restart brought it back). Each case damages the generator's clean hybrid signal (digital sidebands beside an analogue FM programme) and
 // checks that the multiplex and the audio units keep arriving afterwards:

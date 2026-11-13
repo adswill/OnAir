@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Synthetic P25 trunked-system scenarios (test harness, not shipped). Nothing is transmitted: all samples exist in memory only.
 //
 //   World   a set of transmitters (Source) at absolute frequencies, each on the air from startSec to endSec: Phase 1 C4FM (P25Generator, the

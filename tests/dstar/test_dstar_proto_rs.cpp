@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Rust D-STAR frame layer (rust/onair_dstar, dect2::dstar): CRC, header pack / unpack, flag texts, the header FEC (interleaver,
 // scrambler, convolutional code, soft Viterbi with noisy / NaN input), the AMBE order, NMEA and D-PRS lines built, mutated and corrupted (the fix of a rejected
 // line too), over ONAIR_DIFF_ITERS (default 200000) seeded inputs per family. Every result goes into a digest (tests/common/golden.h; doubles rounded to 1e-6,

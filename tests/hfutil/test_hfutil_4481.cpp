@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // STANAG 4481 FSK (hfutil/hfu_4481.h): the tone plan of Annex C, single-channel and multi-channel broadcasts with plain ITA2 text and with
 // synchronous (encrypted-like) channels, at every speed, with a tuning error, noise in 3 kHz, a full band of 16 channels and noise only.
 // Simulated signals only.

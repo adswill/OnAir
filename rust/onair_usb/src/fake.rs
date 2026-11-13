@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! A fake RTL2832U dongle for tests and fuzzing: models the register file, the I2C repeater, an R820T / R828D / E4000 (or no) tuner and the EEPROM,
 //! without hardware. Chips are modelled just far enough for the driver: the R82xx status bytes (chip id, PLL lock, VCO fine tune, filter calibration
 //! code, bit reversed like the real chip), the E4000 chip id and PLL lock bit, plain register files for everything else. A seeded corruption

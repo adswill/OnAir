@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The `repr(C)` structs of the DMR C ABI (mirrored by core/include/dect2/rs/dmr.h) and their conversions to and from the safe types of the crate.
 use crate::data::DataHeader;
 use crate::lc::FullLc;

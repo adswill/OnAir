@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The video pop-out as an OS window of its own (issues #20, #29): it can sit on another monitor, above other windows, and stays when the
 // main window is minimised. It is drawn with the main window's graphics back end (the same Metal device, or an OpenGL context sharing the
 // main one), from the main loop, with one ImGui context: its picture is a separate draw list handed to the renderer, so no ImGui window

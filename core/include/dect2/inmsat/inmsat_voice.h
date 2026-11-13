@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat all-carriers mode: voice of the Aero C channels (circuit-mode voice, an AMBE-family vocoder).
 // What is here: the C-channel receiver feeds pushCFrame() with the coded voice frames of every 500 ms C-channel frame (aero_cchan.h: 25 frames of
 // 12 bytes, found and decoded after JAERO); a mixer with one channel per active C carrier (mute / solo per channel), a call recorder (a WAV per call,

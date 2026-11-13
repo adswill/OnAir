@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The "Photo / info" menu: opens the browser at a public aircraft or ship database. Never fetches anything itself.
 #pragma once
 #include <cstdint>

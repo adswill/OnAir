@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM census: stations at several offsets, levels and tuning errors in one capture, noise over all of it; every one must come out with its own PI and name.
 #include "dect2/fm/fm_census.h"
 #include "dect2/fm/fm_gen.h"

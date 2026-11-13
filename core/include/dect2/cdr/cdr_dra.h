@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR sound: the DRA+ decoder as an add-on the user installs ("libonair_dra"), loaded at run time. OnAir ships no DRA+ decoder and no decoder
 // source (the codec's patent and licence status is not verified, docs/CODECS.md "DRA+ (CDR sound)"); without the library the CDR services, signal
 // information and data still work and the audio units are only counted.

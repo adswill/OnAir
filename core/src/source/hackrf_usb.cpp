@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HackRF driver of our own: talks to the radio over USB (libusb) without libhackrf.
 //
 // The protocol is small. Everything except the samples goes through vendor control requests on endpoint 0 (tuning, gains, sample rate,

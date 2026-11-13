@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Server > OnAir Web: the two-button setup. "Share my radio" starts onair-server --web and a Cloudflare quick tunnel (no account) and shows the
 // public https address; "List on the public directory" shows exactly what the directory will receive, and after one confirm turns the listing on.
 // Everything runs as child programs with logs under <data>/webshare/, so closing OnAir ends the sharing. Docs: docs/ONAIR-WEB.md.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Crypto for the Meshtastic and MeshCore packet layers, written for this project: AES-128/256 (ECB, CTR), SHA-256,
 // HMAC-SHA256, SHA-512 and Ed25519 (MeshCore adverts are signed). Checked against FIPS 197, SP 800-38A, RFC 3686,
 // FIPS 180-4, RFC 4231 and RFC 8032 vectors in tests/mesh/test_mesh_crypto_kat.cpp. Not hardened against timing attacks except the

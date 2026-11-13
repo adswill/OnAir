@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The fast scan's profile preset (band list, step, dwell, threshold above the floor, minimum duration ...) as the Scanner view edits and saves it,
 // the range text it is typed in ("118-137, 156.8, 462.5625-467.7125" in MHz) and the built-in presets. Pure code.
 #pragma once

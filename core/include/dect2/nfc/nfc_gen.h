@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Synthetic NFC / RFID test signal for the tests and the "synthetic" source. NOTHING IS TRANSMITTED: the samples only exist in
 // memory or in a file. It renders a scripted reader <-> tag exchange on 13.56 MHz baseband (carrier at carrierHz), so the receiver
 // and its loopback tests have a signal without any real tag or reader present.

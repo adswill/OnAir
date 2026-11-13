@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Synthetic wideband radio groups (docs/SYNTH-WIDEBAND.md): 2-5 ordinary radios (RTL-SDRs or any mix running at one sample rate) tuned to
 // adjacent, overlapping slices and stitched (dect2/dsp/synth_wide.h) into ONE wide stream. To the engine a group is one more radio in the list
 // (DeviceInfo::Group): SyntheticWideSource opens the members, feeds the stitcher on its own thread and writes the wide stream into the engine's

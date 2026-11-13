@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Yaesu Fusion receiver sweep: sample rate, tuning error, deviation error, symbol clock error, noise, every data type, header and terminator. Generated signal
 // only (no real transmission was available); the frame layout itself is checked against MMDVMHost in test_fusion_interop.
 #include "fusion_test_util.h"

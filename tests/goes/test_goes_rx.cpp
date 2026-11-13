@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES HRIT end to end: the synthetic signal (goes_gen.h: files -> packets -> VCDUs -> Reed-Solomon -> randomiser -> convolutional code
 // -> BPSK with a root raised cosine, carrier offset, symbol clock offset and noise) into the receiver, at the RTL-SDR rate and at a
 // HackRF rate; every product must come back byte for byte (Rice and plain images, the JPEG, the admin and EMWIN texts) and every LRIT

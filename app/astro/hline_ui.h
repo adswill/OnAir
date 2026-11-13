@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The hydrogen line toolkit tabs of the Radio astronomy screen (Velocity, Map, Pointing, Calibration / RFI, Log); the maths is core/include/dect2/astro/hline.h.
 #pragma once
 #include <string>

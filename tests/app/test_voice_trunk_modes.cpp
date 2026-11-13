@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The voice trunking modes of 3.8 (Motorola Type II, TETRA DMO, OpenSky identifier): the engine tunings are registered under their numbers, and the mode rows, the family count and the screen mapping agree.
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/opensky/opensky_rx.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! DRM data service helpers (ES 201 980 clause 6.4.3.6 and 6.6): MJD calendar conversions (clause 6.4.3.9), the payload of an MSC data group, and the text
 //! of a received object for display (control characters out, ISO 8859-1 turned into UTF-8 when the bytes are not UTF-8) with the heuristic that decides
 //! whether an object is text.

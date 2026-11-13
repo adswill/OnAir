@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Soft combining of repeated RDS blocks: a noisy, fading bit stream through the block decoder with the plain vote and with the extended one; count the
 // groups that come out and the wrong ones (the safeguard against a chance hit of the checkword must stay).
 #include "dect2/fm/fm_rds.h"

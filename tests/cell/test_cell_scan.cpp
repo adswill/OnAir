@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, the band scan's search of one 20 Msps step: several 5 MHz carriers side by side (no gap in the spectrum between them),
 // each with two or three cells 3-10 dB apart, synchronised (one site's sectors, and two cells of the same NID2) or not (other sites).
 // Every cell must be listed, the ones 6 dB or less under the strongest with their MIB; noise alone must list nothing.

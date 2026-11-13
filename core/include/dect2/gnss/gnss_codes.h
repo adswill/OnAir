@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spreading codes of the satellite navigation signals.
 // GPS L1 C/A: IS-GPS-200 section 3.3.2.3 (two 10 stage registers, the G2 output taken from two stages per satellite, Table 3-I).
 // SBAS L1 (PRN 120-158, RTCA DO-229 Appendix A) and QZSS L1 C/A (PRN 193-202, IS-QZSS-PNT): the same Gold code family, each PRN given by its G2 delay

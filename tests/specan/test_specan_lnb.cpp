@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LNB calibration from a beacon (synthetic offsets) and the drift tracker (synthetic linear drift).
 #include "dect2/specan/lnb_cal.h"
 #include <cmath>

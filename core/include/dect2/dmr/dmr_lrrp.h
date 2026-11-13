@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Motorola LRRP (Location Request/Response Protocol): the GPS position reports a DMR radio sends in
 // "unconfirmed data, IP" packets. The payload OnAir assembles is a plain IPv4 + UDP packet; the UDP
 // payload is an LRRP (MBXML) document. See dmr_lrrp.cpp for the token layout.

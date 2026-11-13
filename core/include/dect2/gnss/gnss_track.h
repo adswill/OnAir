@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One tracking channel: carrier and code loops, C/N0, bit synchronisation and the framing of the navigation message.
 // A channel reads whole code periods from its band's buffer; every epoch it updates the loops. The message layer is the LNAV of GPS and QZSS (50 bps,
 // 20 code periods a bit), the SBAS messages (500 symbols a second, two code periods a symbol, Viterbi decoding) or the Galileo I/NAV of E1-B

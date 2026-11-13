@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS filter, CPA / TCPA and geofence alerts (ais_alerts.h), and the receiver raising them from decoded messages.
 #include "dect2/ais/ais_alerts.h"
 #include "dect2/ais/ais_gen.h"

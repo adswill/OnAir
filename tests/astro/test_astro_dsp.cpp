@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio astronomy: the receiver integrates the synthetic sky (noise with a sloped band and a weak hydrogen line at kAstroLineKms) fed as
 // fast as it can be made; the line is found at its velocity within 2 km/s with a baseline fit, and with an off-source reference instead
 // (which takes out the slope by itself); frequency-switch folding on made-up spectra; the CSV export read back.

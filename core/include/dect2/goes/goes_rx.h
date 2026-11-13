@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES-R series HRIT receiver (GOES-16 / 18 / 19 on 1694.1 MHz: BPSK, 927 ksym/s). Needs a dish (about 1 m or more, or a grid) with
 // an LNA / filter at the feed; the carrier is far below the noise of a plain antenna.
 //

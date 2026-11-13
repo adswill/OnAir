@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Loudness of the sound output: the volume slider's taper (0 = mute, 1 = 0 dB, one step above zero about -50 dB) and a leveller that only
 // turns loud audio down towards a common nominal level (it never boosts, so the noise between transmissions stays quiet), plus a soft limiter.
 #pragma once

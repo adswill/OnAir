@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The planning logic of the satellite tracker (View > Passes, docs/SATTRACK-3.8.md), without any UI so it can be tested: which pass a user can
 // hear (filters on the kind of satellite, peak elevation, the radio and the antenna), how old an orbit is, how an armed pass is found again after
 // new elements arrive, and the run of one pass from the warm-up before AOS to the restore after LOS.

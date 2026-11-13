@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cost of the shared sample path around a receiver (what every mode pays before its own decoder): sample conversion, the IQ ring, the
 // engine's per-block clean-up, the spectrum analyser and the resamplers. CPU seconds per second of signal (getrusage, all threads), and a
 // digest of every row's output so that a change can be checked to give the same bits. Not part of ctest; tools/bench/bench_core.sh builds it.

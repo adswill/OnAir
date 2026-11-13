@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Zigbee / IEEE 802.15.4 test signal (2.4 GHz O-QPSK). Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A schedule of frames (zigbee_proto.h builds them): preamble (8 symbols of 0), SFD 0xA7, PHR, PSDU; every 4-bit symbol is spread to its

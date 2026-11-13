@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Leak check for the user's own water meter (wmbus_leak.h): ten simulated days of a household meter (1 L register steps, a reading
 // every 2 minutes with lost frames, showers, toilets and a dishwasher by day, nothing at night), then a 3 L/h leak from day 6; a meter
 // with long reception gaps; a replaced meter; the time-zone offset; save / load. Simulated only: no real meter log was used.

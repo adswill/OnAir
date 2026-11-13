@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DotBatch (app/gfx/plot_batch.h) must produce exactly the geometry of one AddCircleFilled(p, r, col, 8) per dot, in every chunk size,
 // for several radii and colours: the constellations must look the same as before the batching.
 #include "../../app/gfx/plot_batch.h"

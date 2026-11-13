@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A TCP client connection with timeouts, for POSIX and Windows (Winsock): the network radios (source_rtltcp.cpp, netradio.cpp).
 #pragma once
 #include "netcompat.h"

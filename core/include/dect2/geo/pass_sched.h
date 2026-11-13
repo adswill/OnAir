@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Unattended satellite observation planning: given the passes of the satellites the user wants, the time the SDR is already
 // promised to other jobs and a priority per satellite, choose which passes to take. One SDR serves one pass at a time:
 // overlapping passes are settled by priority (then by the higher maximum elevation, then the earlier rise); a lower priority pass

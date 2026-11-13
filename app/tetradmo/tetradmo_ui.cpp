@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA Direct Mode screens: the calls heard, the DSB / DNB counts, the messages. Clear speech goes through the same user-installed TETRA codec as the TETRA mode; encrypted calls are listed and left alone.
 #include "app.h"
 #include "i18n/i18n.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The gr-satellites satellite table (cubesat_grsat.h) and the pass auto-setup of the CubeSat receiver:
 //  - the table: size, known satellites (GOMX-1 U482C AFSK, FUNcube AO-40, BEESAT-9, LilacSat-2 CCSDS concatenated parameters), every row sane
 //  - the receiver following a satellite whose baud rate the fixed 9600 / 4800 demodulators do not cover (a USP satellite at 2400 baud, the NGHam

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RF Fingerprint window (View > RF fingerprint): recognises an individual NFM / WFM / AM transmitter by its RF fingerprint (carrier offset, keying
 // transient, pilot, spurs ...), also when it sends only a carrier. Watches the tuned channel through Engine::setIqTap(), logs every transmission,
 // saves named fingerprints locally and matches new ones against them. The DSP is core/src/fingerprint (docs/RF-FINGERPRINT.md).

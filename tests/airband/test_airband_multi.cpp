@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airband, wide capture with many channels (an airport's frequencies in one capture): eight AM channels on the 25 kHz and the 8.33 kHz
 // raster (two neighbouring pairs), spread over +-750 kHz around the dial, voice-like modulation, noise, the radio's tuning error up to
 // +-10 kHz. Every channel must open for its own transmissions only (start and length), nothing may leak to a channel that is quiet, and

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The frequencies and protocols of the marine bands (ITU Radio Regulations Appendices 15, 17, 18; ITU-R M.493, M.625, M.1371; IMO NAVTEX manual),
 // and the scanner that steps a single radio through the DSC channels.
 #pragma once

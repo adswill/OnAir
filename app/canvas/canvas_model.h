@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Workspace layout (View > Layout > Workspace, docs/WORKSPACE-4.0.md): a blank canvas the user fills with blocks. This is the
 // pure model, no ImGui and no App: the blocks, their links to a radio source, tab groups, snapping, the text form for the file,
 // named workspaces and the shipped templates. canvas_ui.cpp draws it with the existing panels. Unit tested (tests/app/test_canvas.cpp).

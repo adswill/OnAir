@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // search.js - pure track search and filter used by the page: callsign, registration, ICAO hex, MMSI, ident.
 
 /** Ranked matches (exact 3, prefix 2, substring 1, sub-type 0.5), at most `limit`. Needs at least 2 characters. */

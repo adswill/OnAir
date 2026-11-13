@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Stage 3 of the Inmarsat all-carriers mode: the voice mixer and recorder WITHOUT the codec (silence and the install message, the coded frames
 // are still saved) and with a fake test decoder (mute / solo, mixing, WAV recording). The real AMBE codec is never part of the tests; the C-channel
 // demodulator that would feed the mixer does not exist yet: needs a user test with a real capture.

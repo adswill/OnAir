@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 2 receiver: every VDL2 channel of the list that lies inside the sample band, decoded at once.
 //
 // Per channel: mixed to 0 Hz (the radio's tuning error, measured from the bursts, taken out), a three-stage moving sum and a FIR filter

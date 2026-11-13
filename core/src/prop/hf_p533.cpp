@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF sky-wave prediction after ITU-R P.533-14 with the ITU-R P.1239-4 ionosphere; see hf_p533.h. Written from the recommendation texts;
 // equation numbers refer to P.533-14 unless another recommendation is named.
 #include "dect2/prop/hf_p533.h"

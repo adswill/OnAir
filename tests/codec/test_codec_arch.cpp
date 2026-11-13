@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The architecture of a plug-in file and OnAir's, and the plain-words text when they differ (core/include/dect2/codec/codec_arch.h).
 #include "dect2/codec/codec_arch.h"
 #include <cstdio>

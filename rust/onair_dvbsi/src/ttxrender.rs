@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Teletext page renderer (ETSI EN 300 706 section 12 and 15): lays a page of 25 rows of 40 characters out as character cells with the spacing attributes
 //! applied (colours, alpha and separated mosaics, flash, conceal, hold mosaic, double height, start / end box), and turns a row of cells into UTF-8.
 use crate::teletext::g0;

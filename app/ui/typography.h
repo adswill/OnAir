@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The typography system in one place: the font set (Inter for text, JetBrains Mono for numbers), the size scale, the spacing
 // and the text colours. Three looks, chosen in View > Font look and saved as a preference (default Current):
 //   0 = Current (system monospace font, current spacing)   1 = Clean   2 = Compact

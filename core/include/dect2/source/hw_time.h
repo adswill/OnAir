@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hardware timestamps of a radio that is disciplined by GPS (a PPS input or a GPSDO): a source publishes "sample srcIndex of this stream was taken
 // at utcNs", the engine counts how many source samples it has passed on, and a receiver turns the two into time marks on its own sample clock
 // (Lightning position, ltpos_rx.h). Nothing is published unless the radio has a PPS-type time source selected, so other modes never notice.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protocol lab: the whole analysis. Several demodulators, both polarities and every line coding are tried; the result that explains the
 // packets best (a CRC that holds, a sync word shared by the packets, a clean baud rate) comes first.
 #include "dect2/protolab/protolab.h"

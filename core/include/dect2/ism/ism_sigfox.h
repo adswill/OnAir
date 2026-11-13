@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sigfox uplink receiver (passive). Used by the ISM sensors mode (ism_rx.h) and by the Sigfox mode of its own (sigfox/sigfox_rx.h).
 //
 // A Sigfox uplink is an ultra-narrowband DBPSK signal (100 bit/s, 600 bit/s in RC2 / RC4), about 100 Hz wide, anywhere in 192 kHz around the

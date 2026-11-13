@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CubeSat beacon interval learner (3.9, docs/SMART5-sat-3.9.md item 20). Most CubeSats beacon on a fixed period (10 s to a few
 // minutes). From the beacons decoded, over passes and with missed beacons in between, this learns each satellite's period and
 // jitter, announces when the next beacon is due, and flags a beacon that did not come while the satellite was up (a satellite

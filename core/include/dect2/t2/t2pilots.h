@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T2 pilot structure: which carrier of which OFDM symbol is a pilot / reserved / data, and the pilot values.
 // (ETSI EN 302 755 clause 9.) MISO: PilotConfig::miso, the group 2 pilots are made in the generator and read in the receiver.
 #pragma once

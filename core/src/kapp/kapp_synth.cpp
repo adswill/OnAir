@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP test signal for the engine's synthetic source (see kapp_gen.h).
 #include "dect2/kapp/kapp_gen.h"
 #include "dect2/kapp/kapp_txgen.h"

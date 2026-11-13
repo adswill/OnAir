@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS command line tool.
 //   aistool gen <secs> <file.cs8|.cf32> [--rate sps] [--snr dB] [--cfo Hz] [--sro ppm] [--vessels n] [--seed n] [--speed x] [--equal] [--only-vessels]
 //   aistool rx <file> --rate <sps> [--format cs8|cu8|cf32] [--offset Hz] [--quiet]

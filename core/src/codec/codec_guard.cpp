@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The guard around user-installed voice codecs (see codec_guard.h).
 #include "dect2/codec/codec_guard.h"
 

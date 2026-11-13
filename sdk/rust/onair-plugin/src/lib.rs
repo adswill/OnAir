@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: CC0-1.0
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Write OnAir plugins in Rust. No dependencies: this file mirrors `sdk/include/onair_plugin.h` (ABI version 1) by hand and wraps the
 //! host callbacks in a small safe API. A plugin implements [`Plugin`] and calls [`export_plugin!`]; build the crate as a `cdylib`.
 //!

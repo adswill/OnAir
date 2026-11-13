@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers receiver: the LTE cells around you, from what every cell broadcasts in the clear to all phones (3GPP TS 36.211 / 212 /
 // 213 / 331): its physical cell id, bandwidth and antenna ports (MIB), and on SI-RNTI its operator (MCC / MNC), tracking area, cell
 // identity, band, power and neighbour lists (SIB1 to SIB5). Receive only. Nothing addressed to a phone is decoded: paging, random access,

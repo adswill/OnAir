@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R (GSM 900 downlink): the physical layer of the broadcast control channel, written from 3GPP TS 45.001 / 45.002 / 45.003 / 45.004.
 //
 // Only the downlink broadcast is handled: the frequency correction burst (FCCH), the synchronisation burst (SCH, BSIC and frame number)

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna direction finder: a guided sweep. The user points the antenna in a direction and confirms, the receiver measures the
 // signal quality for a while, and the finder picks the next direction (N, E, S, W first, then the directions in between, then
 // finer steps around the best) until it can say where to point. For omnidirectional antennas it compares places instead.

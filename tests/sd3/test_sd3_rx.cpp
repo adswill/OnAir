@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SatDump tier 3 links: each generator through its receiver, with the impairments that matter. Everything here is simulated signals (docs/SATDUMP-TIER3-3.8.md).
 #include "dect2/sd3/sd3_gen.h"
 #include "dect2/sd3/sd3_proto.h"

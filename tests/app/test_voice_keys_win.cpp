@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Keys window's pure logic (app/keys/keys_logic.*) and the guards that keep key files out of bug-report zips and key code out of the
 // web server and the remote API (core/include/dect2/voicekeys/key_guard.h). Synthetic keys only: nothing here is a real key.
 #include "keys/keys_logic.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3G-ALE (MIL-STD-188-141B Appendix C, the link setup of STANAG 4538): BW0 burst receiver, 3G-ALE PDU reader and test generator.
 // Written from the published text of MIL-STD-188-141B Appendix C: C.5.1.2 (interleaver), C.5.1.3 (BW0: 256-symbol TLC/AGC guard, 384-symbol
 // acquisition preamble, 26 payload bits, tail-biting K = 7 rate 1/2 code, 4 x 13 interleaver, 16-ary Walsh symbols repeated 4 times, PN

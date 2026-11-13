@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A mixed DVB-T2 signal: T2-Base frames with T2-Lite frames in the FEF parts. Each layer has its own P1; the receiver must follow the one asked
 // for (or the first one seen, automatically), step over the other, and decode its baseband frames exactly. Simulated signals only.
 #include "dect2/t2/t2gen.h"

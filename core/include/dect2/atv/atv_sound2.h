@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analogue TV: the second sound systems of terrestrial television.
 //   A2 / Zweikanalton (IRT, ITU-R BS.707): two FM sound carriers. The first carries L+R (mono) or sound A, the second carrier, 242.1875 kHz (15.5 line
 //   rates) above it, carries R (stereo) or sound B (dual). A pilot of 54.6875 kHz (3.5 line rates) rides on the second carrier, amplitude modulated with

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T2 frequency interleaver (ETSI EN 302 755 clause 8.3.?): per-symbol permutation of the data cells.
 #pragma once
 #include <vector>

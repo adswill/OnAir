@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The unified decoded-message database: every decoder's messages (ADS-B, ACARS, VDL2, HFDL, pagers, AIS, APRS, sondes, LoRa, BLE, drone ID, DSC ...) in one
 // SQLite file with full-text search. Voice audio and encrypted payloads are never stored (add() refuses them). Thread safe.
 #pragma once

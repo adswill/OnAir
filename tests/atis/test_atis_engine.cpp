@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATIS through the engine (setStandard(213)): the synthetic source plays voice and ATIS bursts, the receiver reports through latestRx().
 #include "dect2/atis/atis_rx.h"
 #include "dect2/engine/engine.h"

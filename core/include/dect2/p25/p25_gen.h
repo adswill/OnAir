@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 1 test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A schedule of transmissions: a trunked site's control channel (TSBKs: network, RFSS and adjacent site status, identifier updates,

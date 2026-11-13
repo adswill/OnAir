@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Product cadence watchdog (3.9, docs/SMART5-sat-3.9.md item 18). Geostationary weather satellites send each product on a fixed
 // schedule (GOES full disk every 10 min, GK-2A every 10 min, Elektro every 15 or 30 min, text and admin files hourly). This learns
 // each product's period from its arrivals and, when one is overdue, tells the two causes apart:

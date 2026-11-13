@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB SPI: the data group -> store decoder with the acquisition progress, the XMLTV exporter and the per-ensemble cache. See dab_spi.h.
 #include "dect2/dab/dab_spi.h"
 #include <algorithm>

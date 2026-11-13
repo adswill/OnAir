@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM station watchdog (3.9, docs/SMART5-broadcast-3.9.md item 1): flags a broken station before the listener notices.
 // Fed once per receiver report (a few times a second) with what the FM receiver already measures; no audio is needed.
 //  - dead air: the carrier is clean but the peak deviation stays at the level of the pilot and RDS alone for deadAirSec

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde ascent sounding and landing before burst (sonde_profile.h): a simulated flight through a model wind and temperature field,
 // with GNSS noise, lost frames and the app's track thinning (one point per 6 s). Simulated only.
 #include "dect2/sonde/sonde_profile.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DGPS beacons in the engine: the receiver of dgps_rx.h behind the engine's interface (configure, offset, feed, telemetry).
 // Engine standard 122 (family 120, "DGPS beacon"). Receive only; nothing is transmitted. Three receivers run side by side (200, 100 and 50 bit/s) and the one that
 // finds messages is shown.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth Classic test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Devices send GFSK at 1 Msym/s (Gaussian filter BT 0.5, modulation index 0.32, so +-160 kHz) on channels 2402 + k MHz: inquiry ID packets (the

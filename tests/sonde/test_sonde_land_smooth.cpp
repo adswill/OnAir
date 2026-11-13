@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Smoothed landing prediction: a synthetic parachute descent that spirals (radius 40 m, 8 s period: 31 m/s of swing on top of a 10 to 20 m/s
 // wind) in a sheared wind field. The old instantaneous prediction jumps by kilometres; the windowed fit and the ascent-layer wind must cut the
 // scatter strongly. Also: GPS noise, a spiral that is not a whole number of samples, a window of 0 equal to the old method, no track.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SpyServer client (issue #68): an Airspy, Airspy HF+ or RTL-SDR served over the network by Airspy's spyserver (protocol 2.0.1700, as
 // SDR++'s spyserver_source speaks it). TCP, little endian. The client sends commands (a 32-bit type and body size, then the body): HELLO
 // (the protocol version and a client name), then SET_SETTING (a setting id and a value) for the streaming mode, the IQ format, frequency and

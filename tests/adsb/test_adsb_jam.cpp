@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GPS interference grid: synthetic fleets with degraded NACp near a jammer, aggregation, windows, jumps, privacy of the wire body.
 #include "dect2/adsb/adsb_jam.h"
 #include <cmath>

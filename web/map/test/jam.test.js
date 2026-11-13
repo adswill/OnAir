@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { sanitizeJam, JamBook, JAM_MIN_GAP_MS, JAM_TTL_MS, MAX_CELLS_PER_POST } from "../src/jam.js";

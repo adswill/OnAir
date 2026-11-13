@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C TDM packets: parsing of a decoded 640 byte frame into system information and EGC messages, and the matching builders
 // that the test signal generator uses.
 //

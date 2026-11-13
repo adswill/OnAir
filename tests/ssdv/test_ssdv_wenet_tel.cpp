@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wenet telemetry packets built by hand to the published layouts (simulated): GPS, system and power blocks, orientation, text, wrong types and padding.
 #include "dect2/ssdv/wenet_tel.h"
 #include <cmath>

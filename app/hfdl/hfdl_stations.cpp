@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL nearby ground stations (hfdl_stations.h): the opt-in background fetch of the hfdl.observer list with its cache, the position, the Nearby
 // view (nearest first: distance, bearing, the active frequencies as tune buttons, when each list was updated, live or squitter) and the tune.
 #include "hfdl_stations.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Persistent carrier finder ("birdies": the narrow, steady carriers of a wide capture that are not a signal you tuned for: radio spurs, switching supplies, a neighbour's equipment, beacons).
 // Same snapshots and tracks as the intermodulation finder (16384-point Hann spectra, 0.5 s snapshots, peaks 10 dB over the noise). A track is listed when it was present in at least 90 % of the
 // last minute (and at least 10 s in all). For each: frequency (to a few Hz), level over the noise and how steady it is, the drift in Hz per minute (straight-line fit) and the frequency scatter,

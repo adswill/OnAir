@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Tests of the RTL-SDR protocol layer.
 //!
 //! * Differential: `tests/golden/scenarios.txt` lists command scripts; `tests/golden/<name>.log` is the transfer log the ORIGINAL librtlsdr (RTL-SDR Blog

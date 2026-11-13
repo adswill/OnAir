@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Learned horizon and next good pass (3.9, docs/SMART5-sat-3.9.md item 16). A pass predictor assumes a flat 0 deg (or a fixed
 // 10 deg) horizon, but trees, buildings and local noise decide where your station really decodes. Every decoded pass teaches,
 // per 30 deg azimuth sector, the elevation at which frames start to arrive; the next passes are then scored by the minutes they

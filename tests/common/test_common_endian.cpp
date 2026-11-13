@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Checks dect2/common/endian.h against independent byte-by-byte reference code (the shapes of the original per-file
 // put16/put32/be32/le32 copies) on random values, including all-zero, all-one and sign-extended inputs.
 #include "dect2/common/endian.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Time signal receiver (see time_rx.h).
 #include "dect2/time/dcf77_phase.h"
 #include "dect2/time/wwvb_phase.h"

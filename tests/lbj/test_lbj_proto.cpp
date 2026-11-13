@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LBJ link and message layer: codeword coding and correction, page extraction, field parsing, plausibility checks.
 #include "dect2/lbj/lbj_gen.h"
 #include "dect2/lbj/lbj_pocsag.h"

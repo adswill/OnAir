@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV: helpers shared by the tests and the tool: run the generator through the receiver with impairments, measure the pictures and the sound.
 // Header only; nothing here is used by the receiver.
 #pragma once

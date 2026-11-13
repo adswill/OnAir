@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T2 (ETSI EN 302 755) constants shared by receiver, generator and UI.
 #pragma once
 #include <cstdint>

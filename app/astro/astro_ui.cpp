@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio astronomy screens: the line preset (H I, the OH lines, custom), FFT size and integration time with a progress bar, the reference
 // (none, a captured off-source spectrum, or frequency switching), the baseline polynomial and the line window, the chart in frequency or
 // radial velocity and in dB or relative temperature with the peak marker, the drift-scan waterfall of finished integrations, CSV export,

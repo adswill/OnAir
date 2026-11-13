@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LBJ receiver under real-world impairments, every combination that matters for a locomotive transmitter: a carrier offset (crystal error of the
 // transmitter or of the radio, a wrongly set channel offset), a different frequency deviation, low signal to noise ratio, reversed polarity and
 // other input rates. The receiver must decode all messages of the cycle and never invent one.

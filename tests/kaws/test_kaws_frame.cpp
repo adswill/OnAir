@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS framing: callsign / grid / text coding, CRC cross-check with the Rust crate, blocks, beacons, chat, ack, data, voice superframe, classification
 #include "dect2/kaws/kaws_frame.h"
 #include "dect2/rs/kaws.h"

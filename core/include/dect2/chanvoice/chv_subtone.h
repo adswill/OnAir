@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-audible tone reader for one channel: the CTCSS tone (50 tones, 67.0 - 254.1 Hz) or the DCS code (134.4 bit/s Golay word) under the voice.
 // Input: the discriminator audio at 1 kHz (the receiver low-passes and decimates it; full scale = 1.0 is +-5 kHz). Written from the public tone
 // tables in tones/tones_proto.h; the squelch of the receiver never depends on it (a signal without a tone is heard as usual).

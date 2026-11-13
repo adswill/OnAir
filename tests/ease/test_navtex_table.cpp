@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The NAVTEX table: every row sane, slots and the distance order
 #include "dect2/ease/navtex.h"
 #include <cstdio>

@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Builds tools/bench/bench_hf.cpp with this tree's core/src/hfdig (and psk js8 cw hfdl ale) sources at -O3, linked ahead of an existing build's libdect2core.a, and runs it.
 #   CORE_BUILD=<cmake build dir with libdect2core.a> tools/bench/bench_hf.sh [out dir] -- <bench_hf arguments>
 set -e

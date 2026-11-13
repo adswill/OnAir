@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C TDM frame coding: unique word, scrambler, rate 1/2 K=7 convolutional code, interleaver, packet check bytes.
 // The frame is 640 bytes (639 of data and a flush byte), 8.64 s at 1200 symbols/s: 10240 coded symbols plus 128 unique word symbols.
 //

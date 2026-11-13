@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal identifier (sig_ident.h): measures a carrier from its samples and ranks the modes it could be.
 #include "dect2/common/thread_name.h"
 #include "dect2/engine/sig_ident.h"

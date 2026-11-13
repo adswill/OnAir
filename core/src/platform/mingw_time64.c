@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* Windows (MinGW-w64) cross build only: the static FFmpeg of the Windows prefix was built against a newer MinGW runtime that names two calls
  * with a 64 suffix; the CI laptop's older runtime lacks them. Compiled straight into every executable (see the end of CMakeLists.txt), weak so
  * that a runtime that has them wins. Written against the Win32 API only, so it compiles with old and new MinGW headers alike. */

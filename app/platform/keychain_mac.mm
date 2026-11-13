@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // macOS Keychain provider for the voice key store (keychain.h). Generic-password items, service "OnAir voice keys".
 // Compiled only on Apple systems (CMake). Only the 32-byte master key is stored here, never a voice key.
 #import <Foundation/Foundation.h>

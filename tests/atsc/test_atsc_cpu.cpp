@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CPU budget of the two ATSC receivers: ATSC 1.0 (8-VSB, radio at 8 and 10 Msps) and ATSC 3.0 (radio at 10 Msps), each alone and both at once,
 // from the app's own test signals (the synthetic source), fed as fast as the receivers take them. The figure is CPU seconds of the whole process
 // (all threads) per second of signal: together the two must stay under one core on a developer machine (the shared CI runners have wider

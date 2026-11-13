@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PNG decoding without any library, for the map tiles on systems where OnAir has no picture decoder of the system to call (Windows, Linux).
 #pragma once
 #include <cstdint>

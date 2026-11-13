@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // nRF24L01 Enhanced ShockBurst test signal (GFSK, Gaussian filter BT 0.5, deviation 160 kHz at 250 kbit/s and 1 Mbit/s, 320 kHz at 2 Mbit/s).
 // Nothing is transmitted: the samples only exist in memory or in a file. Frames separated by quiet gaps, in white noise, with a carrier offset
 // (the crystals of the real chips are 40 ppm off, 100 kHz at 2.4 GHz).

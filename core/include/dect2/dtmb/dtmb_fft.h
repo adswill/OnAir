@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mixed-radix complex FFT for lengths whose prime factors are 2, 3, 5 and 7 (DTMB: 3780 = 2^2 3^3 5 7). Stockham self-sorting passes on split
 // (planar) arrays, so that the inner loops run over contiguous floats and vectorise.
 #pragma once

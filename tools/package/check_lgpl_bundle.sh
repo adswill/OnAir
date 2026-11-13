@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Licence guard for the packages: fails if FFmpeg inside is a GPL build, or a GPL-only library is bundled next to the program.
 #   tools/package/check_lgpl_bundle.sh <program> [library folder ...]
 # Looks at the FFmpeg configuration string that libavcodec embeds in the program (it says --enable-gpl / --enable-nonfree when so),

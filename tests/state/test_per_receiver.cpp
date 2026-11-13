@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto gain state per receiver (#450): two receivers never see each other's object.
 #include "../../app/state/per_receiver.h"
 #include <cstdio>

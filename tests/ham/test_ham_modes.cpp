@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham operation beyond FT8 / FT4 / FT2: JT65 (A B C), JT9 and JT4 QSOs and the WSPR beacon. Two engines talk to each other through the real
 // transmitter (HamSlotTx into a recording fake rig, nothing is sent anywhere), the audio goes through the real decoder, the decoded text
 // goes to the other engine. Also timing, the mode bandwidth in the TX gate, the beacon schedule and its limits.

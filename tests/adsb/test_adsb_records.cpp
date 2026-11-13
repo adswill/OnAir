@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Records board (round 4 #18): new records per category and band, a nearer one does not count, a tie within 0.1 km neither, nonsense distances,
 // clearing one category, the saved text with tabs in the fields.
 #include "dect2/common/records.h"

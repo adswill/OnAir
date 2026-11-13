@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Regenerates core/src/dsp/vulkan/ldpc_spirv.h (the SPIR-V of the Vulkan LDPC kernels) from the GLSL next to it.
 # The build never needs a shader compiler: the generated header is committed. Run this after changing a .comp file, on any machine with
 # glslangValidator (Debian/Ubuntu: apt install glslang-tools spirv-tools; macOS: brew install glslang spirv-tools), then commit both.

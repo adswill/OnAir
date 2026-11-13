@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Orbcomm through the engine, as the GUI uses it: the synthetic source plays the test signal (SynthConfig::mode = 46) in real time with
 // two downlinks and the +/-4 kHz Doppler ramp, the receiver runs on the engine's thread, and both satellites must be decoded with
 // their positions, absolute frequencies on the 137 MHz raster and the Doppler.

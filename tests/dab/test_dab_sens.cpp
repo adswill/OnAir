@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB / DAB+ decoding sensitivity: the threshold SNR (the lowest SNR, in 0.5 dB steps, at which at least 90 % of the FIB CRCs pass and at least
 // 90 % of the DAB+ access units decode) under white noise, TU6- and RA4-like multipath with Doppler, carrier offsets of +-5 kHz and sample clock
 // errors of +-50 ppm; and the time to lock from a cold start (sync found, first FIB decoded, the service list known, first access unit decoded),

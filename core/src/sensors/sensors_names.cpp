@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-GHz sensor names, move hints and the sensor.reading event: see sensors_names.h.
 #include "dect2/sensors/sensors_names.h"
 #include <algorithm>

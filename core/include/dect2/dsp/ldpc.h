@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T2 / DVB-S2 style IRA LDPC codes defined by 360-bit-group address tables.
 #pragma once
 #include <cstdint>

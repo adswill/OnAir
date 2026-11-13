@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "web_directory_proto.h"
 #include "dect2/mesh/mesh_crypto.h"
 #include "web_json.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One wide capture as the trunk pool's radio: every call inside it is a slice decoded from the same samples, no retune (single-radio trunking,
 // docs/TRUNK1-3.9.md). Each slice cuts its channel out of the capture (SliceDdc: mix, filter, decimate to about 50 kHz) and runs the voice
 // decoder of the call's protocol at that narrow rate:

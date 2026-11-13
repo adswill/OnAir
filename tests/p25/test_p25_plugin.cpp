@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 phase 1 voice through a user-installed codec plug-in "imbe" (stub library, tests/codec/stub_codec_plugin.c, no codec): the test schedule
 // has clear voice calls and an encrypted one. Every clear IMBE frame reaches the plug-in as 23 bytes and comes out as 160 samples of audio;
 // the encrypted call is reported but none of its frames reaches the plug-in. Also checks the AMBE (D-STAR) and AMBE+2 (NXDN, dPMR) vocoder

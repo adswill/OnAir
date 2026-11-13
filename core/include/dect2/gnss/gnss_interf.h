@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS interference and spoofing monitor: receive-only, in the spirit of the interference panels of u-blox receivers.
 // It looks at the raw input of the GNSS receiver (before the excision of narrowband lines) and at the receiver's own solution:
 //  - the noise floor (median of the averaged spectrum) and the total power in the band, a second at a time, against a baseline learned at the start;

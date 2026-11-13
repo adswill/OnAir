@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drone Remote ID messages (rid_proto.h): messages written byte by byte from the ASTM F3411-22a field tables, decoded; encode / decode
 // round trips of every type; a message pack; the BLE service data and the Wi-Fi vendor element; unknown values and malformed input.
 #include "dect2/rid/rid_proto.h"

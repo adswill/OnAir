@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > Mode Builder: a decoder built without code. The user describes a protocol (form or JSON, docs/MODE-BUILDER.md) and the
 // receiver in core/src/modebuilder runs it on a recording, on a test signal made from the same description, or live as a mode of the
 // mode list (group CUSTOM MODES, receiver 1). This file is the window, the custom modes' main tab and the live plumbing; the

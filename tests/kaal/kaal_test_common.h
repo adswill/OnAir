@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by the KAAL codec tests: the fixed test signal (same as gen_golden_codec.py) and golden helpers.
 #pragma once
 #include "kaal_golden_codec.h"

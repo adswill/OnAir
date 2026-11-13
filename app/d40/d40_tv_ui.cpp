@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C: the QAM order the symbol cloud looks like, next to the one the decoder uses. HD Radio: level of each digital sideband and the imbalance. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../ui/typography.h"

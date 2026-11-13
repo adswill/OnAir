@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather-satellite pictures on the live map (View > Map): the Meteor-M LRPT picture of the pass is placed on the ground from the
 // orbit as it grows, a GOES full disk from the satellite longitude. Receivers feed it (meteor_ui.cpp, goes_ui.cpp), the map draws it.
 #pragma once

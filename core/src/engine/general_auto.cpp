@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General / Auto state machine (dect2/engine/general_auto.h).
 #include "dect2/engine/general_auto.h"
 #include <algorithm>

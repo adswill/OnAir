@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fax decoder under impairments: noise down to its failure point, mistuning of +-50 Hz, DC offset, 8-bit audio, low level,
 // slow fading, dropouts of 20 ms in the tone, the phasing and the picture, and reset() in the middle of a transmission.
 // Noise is white over 0 .. rate/2 (6 kHz), SNR relative to the 0.5 amplitude carrier: the fax occupies about 3.6 kHz of it.

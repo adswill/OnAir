@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS with the faults of real radios: carrier offset, clock offset, 8-bit samples, DC offset, a gap, a reset, a weak channel next to a strong one.
 #include "dect2/acars/acars_sim.h"
 #include "../common/impair.h"

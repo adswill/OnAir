@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Soft-decision vocoder frame protection (core/src/voice/vocoder_fec.cpp): code books, whitening, soft ML against the bounded-distance decoding a
 // codec does, concealment of frames that stay unreliable, and the measured gain over a noise sweep.
 #include "dect2/voice/vocoder_fec.h"

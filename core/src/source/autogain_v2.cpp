@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto gain v2 (docs/AUTOGAIN.md, "Auto v2"): a hill climb on the MEASURED objective (the decoder's MER / SNR while it locks, else the channel SNR from
 // the flanks) under constraints (no clipping, a headroom floor from the 99.99 % point or the 2 s peak-hold, no intermodulation or compression seen by
 // the gain-slope test on every step), instead of servoing the wideband headroom to a per-class constant. Plain logic, no clock of its own.

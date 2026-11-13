@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-I test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A script of events (a packet or a control signal at a given time, in the cycle grid of 1.25 s) rendered as continuous-phase FSK

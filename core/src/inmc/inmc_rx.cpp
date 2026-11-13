@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C NCS channel receiver: 1200 symbol/s BPSK, 8.64 s frames.
 //
 // Chain: mix the channel to 0 Hz, 3-stage CIC decimator to 96 to 190 ksps (r1), carrier search by squaring and an FFT (the squared BPSK signal has

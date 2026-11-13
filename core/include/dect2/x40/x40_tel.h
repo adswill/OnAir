@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Telemetry of the 4.0 signal modes (family block 881 - 896, docs/X40-4.0.md) and their screens.
 #pragma once
 #include <cstdint>

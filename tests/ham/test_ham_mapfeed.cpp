@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham contacts for the map: rounding, payload, dedupe, rate limit, offline queue and the switches, against a mock sink (no network).
 #include "dect2/ham/ham_mapfeed.h"
 #include <cmath>

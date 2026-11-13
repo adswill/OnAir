@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3.9 sensitivity pass D (docs/SENSITIVITY-3.9-D.md): the 90 % threshold of the weather fax decoder on its test chart (tests/data/marine/fax
 // fax_util.h): a whole transmission of 100 lines at 120 lpm, white noise over 0 .. 6 kHz (the SNR definition of test_marine_fax_weak.cpp;
 // the fax occupies about a quarter of it), a +-30 Hz tuning error and a 20 ppm audio clock error, a new noise each trial. A trial passes when

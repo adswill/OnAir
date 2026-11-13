@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The setup wizard (v3, six screens, every one skippable): 1 the radio (found and explained with a help link each, or no radio / the test
 // signal), 2 the location (a city search, a locator or coordinates, or skipped) which sets the country, ITU region, band plans, FM step,
 // DAB band III, TV channels, the ADS-B position and the time zone, 3 the interests (which modes come first, the starting mode and a

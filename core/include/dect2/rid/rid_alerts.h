@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drone airspace alerts (3.9, docs/SMART5-avia-3.9.md) for Remote ID and DJI DroneID: a drone flying higher than the open-category
 // limit (120 m above the take-off point or the ground, EU 2019/947 and FAA part 107 both use 120 m / 400 ft), a drone inside a radius of
 // a known airport, and a drone near a manned aircraft that this receiver hears on ADS-B at the same time. It is the drone that is

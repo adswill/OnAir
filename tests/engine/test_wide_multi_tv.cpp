@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wide session, three TV channels in one capture (the "two or three DVB channels per radio" case), off the 8 MHz grid:
 // one 28 Msps capture at 522 MHz holds DVB-T2 (-8.4 MHz), DVB-T (+0.3 MHz) and DVB-T2 (+8.2 MHz). Each is found, identified and decoded at once.
 // (the file the test is derived from, test_wide_session_tv.cpp: Wide multi-signal decode with TV in the capture (core/include/dect2/engine/wide_session.h): one 20 Msps capture at 522 MHz holds a DVB-T2 channel

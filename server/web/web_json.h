@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web: a small strict JSON reader for the messages browsers send, and the escaping the server's replies need. Self-contained (no other
 // OnAir code) so the parser can be fuzzed on its own (tests/server/test_web_proto.cpp).
 //

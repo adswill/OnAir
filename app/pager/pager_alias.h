@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: capcode names (#5). A CSV maps capcodes (POCSAG RICs and FLEX capcodes, single or a range) to a name and a category, so the message list
 // says "Fire Station 3" instead of 1234567. Entries are per protocol (POCSAG, FLEX or both). Pure code: the UI imports, edits and exports the table.
 //

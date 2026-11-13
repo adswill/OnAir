@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EchoLink client: directory log-in and station list (TCP), one connection (QSO) to a station, link, repeater or conference (UDP RTP/RTCP),
 // GSM 06.10 audio both ways and text chat. The protocol is described in el_proto.h.
 // The password is the user's: it is kept in the settings (a credential key, see backup.h isSecretPrefKey: never in a plain backup), given to

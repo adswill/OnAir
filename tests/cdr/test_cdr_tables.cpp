@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR tables and building blocks against values printed in GY/T 268.1-2013 / GY/T 268.2-2013 (as published by the NRTA) and against
 // independent implementations, so that the generator and the receiver are not only checked against each other. Quick.
 #include "dect2/cdr/cdr_defs.h"

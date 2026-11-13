@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internals shared by the Signal Lab auto search and the wideband survey (loraraw_lab.cpp, loraraw_survey.cpp): one channel filter and chip stream
 // per bandwidth with a demodulator for every parameter set on it.
 #pragma once

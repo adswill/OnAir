@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi network monitor (see wifi_rx.h).
 #include "dect2/wifi/wifi_rx.h"
 #include "dect2/wirecap/wire.h"

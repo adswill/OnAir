@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web setup (Server > Share on web): the part with no window and no processes, so it is tested alone (tests/webshare/test_webshare_core.cpp).
 // What it holds: the choices the owner makes (radio, centre and span, decoders, who may listen, the listing), how they are saved, how they become
 // the settings file of onair-server, which decoders are possible in the chosen range, and the small state machine of step 2 (the directory listing)

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C at the sample rates of the radios: 0.25 (RTL-SDR minimum), 0.96, 2, 2.4, 3.2, 8, 10, 20 Msps, with a non-integer ratio among them.
 // Slow: the generator has to make up to 20 million samples a second.
 #include "dect2/inmc/inmc_testutil.h"

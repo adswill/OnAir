@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // QRSS / DFCW grabber. The audio is mixed to the chosen centre (found automatically from the strongest steady narrow tone, or set by hand) and brought to
 // 100 Hz complex. A spectrogram with a window of about half a dot (frequency resolution 2 / dot) is cut from it; the strongest bin inside the window is
 // followed as the key-down level (and, for DFCW, as the frequency that tells a dot from a dash). The element length comes from the data: every length

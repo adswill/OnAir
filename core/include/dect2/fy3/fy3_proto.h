@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FY-3 (Fengyun-3 polar orbit) AHRPT and MPT, the layers above the demodulator (both directions: the test signal is built with the
 // same code it is checked by).
 //

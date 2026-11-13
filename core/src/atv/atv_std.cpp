@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV systems: see atv_std.h. Source of the numbers: ITU-R BT.470-6 (1998), Tables 1, 1-1, 1-2, 2, 3 and Figs 1, 2, 4, 5.
 #include "dect2/atv/atv_std.h"
 #include <algorithm>

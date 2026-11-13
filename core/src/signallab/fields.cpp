@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab stage 6: which bits change. Per-column statistics of the aligned frames, suggested field boundaries (constant runs,
 // counters, ASCII text, few-valued enums, the checksum found in stage 5) and the interpretations shown in the bit viewer.
 #include "dect2/signallab/signallab.h"

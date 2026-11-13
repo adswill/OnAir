@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VOR and ILS screens (one receiver, two mode-list entries).
 // VOR: the radial with a compass card, FROM / TO, the signal quality and the identification; a position from two stations (the receiver
 // hops between them, or between the frequencies of a scan list) drawn on the map with both radials, the crossing and its error ellipse;

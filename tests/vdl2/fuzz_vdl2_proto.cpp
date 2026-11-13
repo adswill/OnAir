@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the VDL Mode 2 layers, meant for DECT2_SANITIZE=ON: the frame decoder, the HDLC deframer, the burst
 // body gatherer with Reed-Solomon, the header code and the address functions must never crash or hang on any bytes. Also a libFuzzer target with -DONAIR_LIBFUZZER.
 #include "dect2/vdl2/vdl2_proto.h"

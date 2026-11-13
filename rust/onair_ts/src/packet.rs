@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Transport packet header (ISO/IEC 13818-1 section 2.4.3.2) and the single-program PAT packet the service filter sends.
 use crate::crc::mpeg_crc32;
 

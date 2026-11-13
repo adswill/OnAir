@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MOT (ETSI EN 301 234, TS 101 499) parameter parsing and reassembly with hand made byte vectors, and the DRM packet layer (ES 201 980 clause 6.6.1):
 // first / last flags, padded packets, continuity index, lost packets, CRC-16, other Packet Ids, orphans, and the application names of the SDC.
 #include "dect2/dab/dab.h"

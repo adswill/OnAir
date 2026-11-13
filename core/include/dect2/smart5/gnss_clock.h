@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio clock from GNSS (3.9, docs/SMART5-gnss-3.9.md item 21). A GNSS position fix also solves the receiver's clock drift
 // (s/s). When the samples come from the SDR, that drift is the SDR's reference-oscillator error: a 2 ppm crystal shows as a drift
 // of 2e-6 s/s. This smooths the drift from every fix into a ppm figure with its uncertainty and its trend (warm-up), and gives

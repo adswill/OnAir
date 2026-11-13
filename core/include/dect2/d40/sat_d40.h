@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 satellite TV (DVB-S / S2 / S2X) helpers (pure, no GUI). Tests: tests/d40/test_sat_d40.cpp
 //  1. blindScan     a power spectrum of an LNB IF span becomes a transponder list: centre, -3 dB width, symbol rate (width / 1.35 for the 0.35 roll-off, snapped to a standard rate within 3 %,
 //                   else the raw value) and the C/N in the occupied band. Neighbouring carriers that touch are split at the dip between them.

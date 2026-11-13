@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS receiver, building the GnssTelemetry published to the UI (trackers, fix, satellites, sky, search, interference).
 #include "gnss_rx_impl.h"
 

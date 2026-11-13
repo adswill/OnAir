@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // M17 screens: the current transmission (callsigns, CAN, stream type, encryption, duration, META text and position), the activity log,
 // the text messages, the positions on a map (the ADS-B map underneath, as for APRS), the European calling-frequency presets, and a "?"
 // about the Codec 2 library the voice needs.

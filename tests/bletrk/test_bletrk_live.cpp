@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The BLE tracker detector on the test signal: each kind of tracker is found, the phone is not, an alert is raised for the ones that stay,
 // reaches the automation engine as "ble.tracker" and matches a watchlist of the Words kind.
 #include "dect2/automation/engine.h"

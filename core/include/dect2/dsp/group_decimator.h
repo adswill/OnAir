@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared first stage for receivers that watch several channels inside one capture: the capture is mixed to the middle of the channel group and
 // low-passed / decimated ONCE (a polyphase FIR, the SIMD desamp kernel), and every channel then runs at the low rate. Before this each channel
 // mixed and filtered every input sample on its own, which cost (channels x input rate); now it costs (input rate) plus (channels x output rate).

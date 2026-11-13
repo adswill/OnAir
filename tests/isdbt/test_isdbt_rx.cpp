@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T receiver end to end: generator -> radio impairments (carrier offset, noise, echo, sample rate) -> receiver -> transport stream.
 #include "dect2/dsp/exact_resampler.h"
 #include "dect2/common/stable_random.h"

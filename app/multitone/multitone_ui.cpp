@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multitone paging screens: the transmissions heard (carrier, deviation, tones and spectral lines of the audio), the FSK data found in them
 // (baud rate, bit stream, 32-bit words against the POCSAG BCH check) and the steady tones heard so far.
 // Receive only. Multitone's own format is not public, so this is a detector: everything is labelled unverified and no message text is shown.

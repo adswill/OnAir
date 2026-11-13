@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Rust ACARS block layer (rust/onair_acars): frames built by the transmitter, damaged frames (flipped bits, truncation,
 // random bytes), every label, texts of the Q labels and the media advisory, and ONAIR_DIFF_ITERS (default 200000) seeded random inputs per function
 // family. Every result goes into a digest (tests/common/golden.h) that is compared with the one recorded from the C++ block layer the Rust code replaced.

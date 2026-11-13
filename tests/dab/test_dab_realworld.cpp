@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB against the faults of REAL_WORLD_CHECKLIST.md: the generator's clean signal goes through tests/common/impair.h (written independently of
 // the receiver) and then through the real DabReceiver. Band III radios are up to 12 kHz off, L-band ones up to 75 kHz; sample clocks up to
 // 100 ppm; swapped I/Q; lost samples; NaN samples; and one combined case (L-band offset, +80 ppm, an echo, 8-bit clipping).

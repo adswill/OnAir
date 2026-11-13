@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Narrowband-interferer erasure for the OFDM TV receivers (DVB-T, DVB-T2, ISDB-T).
 //
 // The receivers already weight every cell by its channel state (n0 = noise / |H|^2, so a faded carrier gives soft values of low reliability).

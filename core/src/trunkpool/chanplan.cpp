@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channel plan and access rules of the trunk pool: parsing, lookup and CSV (see trunkpool.h).
 #include "dect2/trunkpool/trunkpool.h"
 #include <algorithm>

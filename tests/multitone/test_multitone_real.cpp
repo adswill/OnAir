@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multitone on the real recording (Multitone_2015-12-31T01-37-17Z_27599.8kHz, the FM audio, first 8.2 s at 8 kHz, 8 bit): an FFSK burst with the tones
 // f and 2f (about 293 and 586 Hz), then a tone sequence. What is checked is what is measured: the FFSK is found, the stream is sliced at 586 baud, a 24-bit marker
 // comes back every 48 bits and the 24-bit words after it differ from one another (a first byte, then a value sent twice in the first ten). No meaning is claimed for the words (the format is not public).

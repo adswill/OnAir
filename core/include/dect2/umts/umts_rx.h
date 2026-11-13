@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UMTS (3G) cells receiver: every second a block of the channel goes through umtsCellSearch() (primary sync, secondary sync, CPICH) and the cells found are kept in a table.
 // Receive only: just the synchronisation channels and the pilot, which carry no identities of subscribers. Operator and cell identity from the BCH (umts_bch.h).
 #pragma once

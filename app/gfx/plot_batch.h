@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Many equal filled dots in one draw-list reservation (constellations and scatter plots draw thousands per frame).
 // ImGui's AddCircleFilled(p, r, col, 8) builds the same 16 vertices (the anti-aliased octagon: inner ring and a faded outer ring) and 66
 // indices for every dot, through its own path walk and one PrimReserve each. The shape only depends on r and col, never on where the dot

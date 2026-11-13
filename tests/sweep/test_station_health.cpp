@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Station health report on a fake radio: broadcast-like blocks and tones in white noise, an ADC that clips, a clock that is off by a known ppm.
 #include "dect2/sweep/station_health.h"
 #include "dect2/common/stable_random.h"

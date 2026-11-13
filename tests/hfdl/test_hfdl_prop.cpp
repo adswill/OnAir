@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL propagation map (hfdl_prop.h): three simulated days of squitters (one per 32 s frame per frequency) from ground stations whose
 // frequencies open and close by the hour with given probabilities, plus listening gaps; checks the measured rates, the best frequency
 // per station and hour, the best frequency overall, the hours heard, the "station up" openings and the save / load round trip.

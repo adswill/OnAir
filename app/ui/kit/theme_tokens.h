@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The one place the look of the interface is defined: spacing scale, row heights, radii, border widths, font sizes and the colour roles.
 // The theme presets (Classic, Dev A, Dev B in ui2_theme.cpp) fill the colour roles in syncTokens(); every kit component (kit.h) reads only
 // these, scaled for HiDPI in one place (kit::px). Panels use the kit or these tokens, never a literal colour or pixel size.

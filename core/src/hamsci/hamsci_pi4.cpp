@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PI4 (PA0NHC, 4-FSK, a JT4 / WSPR relative for 10 GHz and microwave beacons): 8 characters of "0-9 A-Z space /" packed as a base 38 number into 42 bits, 31
 // zero tail bits, the WSPR rate 1/2 K = 32 convolutional code (146 bits), the 8 bit bit-reversal interleaver, and 146 symbols of 2048 samples at 11025 Hz
 // (185.76 ms). The tone number of a symbol is the sync bit (a fixed 146 bit vector) plus 2 times the coded bit; tones are 5.383 Hz apart.

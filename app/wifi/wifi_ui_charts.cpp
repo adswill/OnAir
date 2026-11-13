@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi channels screen: a per-band summary (networks, standards, security) and the channel occupancy chart of the chosen band: networks per
 // channel as bars, the strongest level on top, so the quietest channel of a band is easy to pick (see wifi_ui_int.h).
 #include "wifi_ui_int.h"

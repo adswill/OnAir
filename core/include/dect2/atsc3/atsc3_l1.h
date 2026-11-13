@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 L1-Basic signalling (A/322 sections 6.5 and 9.2): the 200-bit structure with its CRC, and the protection chain of
 // scrambling, BCH, LDPC, parity permutation, repetition, puncturing and constellation mapping that turns it into cells of the
 // first Preamble symbol. Modes 1 to 5 (the modes the defined preamble_structure values use).

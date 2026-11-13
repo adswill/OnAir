@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DOCSIS management messages through a transport stream on PID 0x1FFE: split over packets, stuffing, lost packets, other PIDs and subscriber frames (simulated).
 #include "dect2/dvbc/docsis_down.h"
 #include <cstdio>

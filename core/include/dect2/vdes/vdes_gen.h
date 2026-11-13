@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDES test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // The signal sits around the mode's default dial frequency (161.9 MHz): the two ASM channels (161.950 and 162.000 MHz, GMSK 9.6 kbit/s with the AIS

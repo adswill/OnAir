@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // cdma2000 / IS-95: the pilot PN sequences (period, balance, the 15 zero run, autocorrelation), the K = 9 code through the Viterbi decoder
 // with noise, CRC-30, the bit reversal interleaver, the Sync Channel Message and its capsule, and then the whole chain: the test transmitter
 // into the search for one to three base stations at different PN offsets, carrier offsets, sample clock errors, noise levels and capture

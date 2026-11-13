@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab stage 5a: preamble, sync word and frame length. Bursty input: the bursts are aligned at the end of their preamble and
 // the leading bits they all agree on are the sync word. Continuous input: the commonest non-trivial 24-bit window, grown to the
 // pattern its occurrences share, and the bit-stream autocorrelation for the frame period.

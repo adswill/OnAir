@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa satellite receiver: the pass test signal (lorasat_gen.h: Doppler shift, Doppler rate through each frame, stretched symbol clock) through the receiver
 // (lorasat_rx.h): frames at several points of a pass (approach, closest approach, recession) at 436.8 and 868.1 MHz and at SF7 - SF12, noise, a radio
 // frequency error on top, the Doppler curve and rate measured from the frames, the difference tracking makes, the presets, the pass planner's name,

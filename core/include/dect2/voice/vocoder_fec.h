@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Soft-decision protection of the AMBE / AMBE+2 3600 bit/s vocoder frames (DMR, D-STAR, NXDN, dPMR, P25 phase 2) with concealment.
 //
 // The vocoder frame is four code words C0..C3 of 24 / 23 / 11 / 14 bits (the mbelib layout): C0 is an extended Golay (24,12), C1 a Golay (23,12)

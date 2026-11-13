@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Noise floor logger: noise whose floor rises in one sub-band (a broadband interferer: 5 dB for 60 s), a narrow signal that must not count, a whole-band gain change, slow drift, and a steady noise;
 // the rise is found in the right sub-band with its size and time, and ended. Simulated signals only.
 #include "x40_gen3.h"

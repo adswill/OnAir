@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The headless server: the settings file, and the real engine on the built-in test signal behind the remote-control API with the server's host
 // (page, modes, start / stop, tuning, the saved state, the binary spectrum, audio for the browser). No radio is needed.
 #include "../../core/src/net/tcp_client.h"

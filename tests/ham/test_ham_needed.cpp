@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Worked-before and needed (4.0): WPX prefixes (portable forms), the needed levels over a small log (new DXCC, new band, new mode class, new
 // zone, new state, new grid, new prefix, new call, B4, unconfirmed entity), the alert rules with their quiet time and the watch list.
 #include "dect2/ham/ham_needed.h"

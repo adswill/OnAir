@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RBDS: the US programme type table, call letters from the PI code (round trips over the whole K / W range and the known edges), the
 // Auto choice from the tuned frequency, and the receiver end to end: one station sending PI of WXYZ and PTY 10, read as RDS (Pop music) and as RBDS (Country).
 #include "dect2/fm/fm_gen.h"

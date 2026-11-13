@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, the FT8 / FT4 / FT2 / WSPR view of the main tab (called by hfdig_ui.cpp): which modes decode, the slot clock and its
 // error, and the decodes: a list per slot (UTC, dB, DT, Hz, mode, message; CQ calls highlighted), the stations on the map (the ADS-B
 // map, by their locators) and the WSPR spots.

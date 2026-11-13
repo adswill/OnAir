@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JS8Call test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Stations in white noise, each sending one message (a heartbeat, a CQ, a directed command, free text over several frames, a relay)

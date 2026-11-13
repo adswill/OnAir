@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Save..." and "Auto-save to file" for a message tab: writes the rows as a .txt / .log text (dect2/common/msg_log.h), time in the
 // Time display setting. Auto-save appends each new message to a file chosen by the user (default in the data folder, "messages/<id>.log"),
 // with a new file each day (name-YYYY-MM-DD.log).

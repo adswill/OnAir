@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Learned horizon and next good pass (see horizon_learn.h).
 #include "dect2/smart5/horizon_learn.h"
 #include <algorithm>

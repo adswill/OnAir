@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Conversion between the 2400 samples/s complex baseband and 12 kHz real audio (the sound card / WAV rate): audio frequency = 1500 Hz + baseband
 //! frequency, so the 2.4 kHz signal sits at 300 .. 2700 Hz. Interpolation / decimation by 5 with a 127-tap windowed-sinc low-pass (cut-off 1250 Hz).
 use crate::cplx::C;

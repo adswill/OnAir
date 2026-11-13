@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One signal indicator for every mode, and the CPU meter's "too slow" warning with its one-click fix.
 // The adapter below maps each receiver's existing telemetry (lock lamp, SNR / MER, meter bank, ADC level) into meterlogic::Signal;
 // the rules are in meter_logic.h (tested). No DSP is touched.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The waterfall's history (levels per row and column), its colour table and its intensity range: no ImGui calls, no App, so the offscreen
 // render harness (tools/spec_render.cpp) runs the very same code as the app. Moved out of app.h.
 #pragma once

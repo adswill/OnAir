@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // USB radios handed over as descriptors (core/include/dect2/source/usb_fd.h, core/src/source/usb_fd_io.h): the registry, the transfers on a FAKE usbfs
 // (chunking of bulk reads, errno -> libusb codes, string descriptors) and, when the Rust USB layer is built, the RTL-SDR driver's table filled from
 // the registry. No radio is involved: whether a real dongle answers through a real Android descriptor is not tested here.

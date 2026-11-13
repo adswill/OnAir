@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir relay on Cloudflare Workers (docs/ONAIR-WEB-RELAY.md protocol v1, docs/CF-RELAY-3.8.md).
 //   relay.on-air.dev/relay/v1/host     the desktop app's host link (WebSocket) -> a new Room Durable Object
 //   relay.on-air.dev/relay/v1/status   {"v":1,"ok":true}

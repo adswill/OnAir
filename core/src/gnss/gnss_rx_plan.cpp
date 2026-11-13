@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS receiver, planning the channels and the search: replan for the tuning and rate, reset, and the acquisition plans.
 #include "gnss_rx_impl.h"
 

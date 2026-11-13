@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna rotator control (GS-232 / Yaesu-compatible ASCII). One rotator at a time: serial or TCP (e.g. PstRotator).
 // Off until connected. A worker thread sends commands and polls position; the UI reads mutex-protected status.
 #pragma once

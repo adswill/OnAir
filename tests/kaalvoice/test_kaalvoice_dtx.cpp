@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4: voice activity detection and DTX (silence sends a SID now and then, otherwise nothing, so the slot can carry
 // data), comfort noise at the right level, the in-band type bit of fixed-size slots, and the input noise suppressor.
 #include "kv_test_common.h"

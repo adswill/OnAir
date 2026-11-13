@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FengYun geostationary modes: FY-4 LRIT (family 232, FY-4A / FY-4B choice), FY-4A HRIT-II/III (233), FY-2 S-VISSR (234). Active standard = family + 1,
 // engine standard = family + 2, poll slot = family - 41 (191 - 193). The tunings are registered with a test signal each, the mode rows and the family count agree,
 // the engine resets / configures / polls them, the poll slots are not shared, the screens carry their receive-only notes and the dish hint.

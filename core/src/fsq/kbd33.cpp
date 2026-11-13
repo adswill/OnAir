@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSQ / IFKP signal layer (see kbd33.h): the varicode, the CRC, the tone sequence and the receiver.
 //
 // Receiver: the 8 kHz audio goes into a 4096-point spectrum (averaged over a couple of seconds); a box as wide as the 33 tones that holds

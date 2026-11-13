@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meshtastic and MeshCore packet layer (no radio): decoding of LoRa payloads with the published default keys and
 // user-added keys, the LoRa settings of both protocols, and packet builders for the test signal.
 #pragma once

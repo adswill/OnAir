@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather fax (HF radiofax) on USB audio (no radio): the decoder and an endless test-signal audio source.
 // Audio convention: real USB audio, black 1500 Hz, white 2300 Hz, any audio rate from 8 kHz (12 kHz recommended).
 #pragma once

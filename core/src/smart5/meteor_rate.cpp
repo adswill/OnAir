@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor scatter hourly rate against the shower calendar (see meteor_rate.h).
 #include "dect2/smart5/meteor_rate.h"
 #include "dect2/smart5/sun.h"

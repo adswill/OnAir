@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Packet layers of the RC and mesh links: known answers (values from the upstream sources), self-consistency, damage.
 #include "dect2/rclink/rc_proto.h"
 #include <cmath>

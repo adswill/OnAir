@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 channel number to frequency: same channel, steps up and down, spacings, offsets, junk inputs.
 #include "dect2/mpt1327/mpt1327_chan.h"
 #include <cstdio>

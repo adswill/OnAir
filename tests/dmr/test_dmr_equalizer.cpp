@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR through an echo (simulcast / urban repeater): voice bursts found with the symbol equaliser off and on, over echo delays of 1-3 symbols and
 // strengths from -12 to -3 dB, base station and direct mode, through the real receiver. The equaliser is off by default; this records what it does through the real receiver and fails only on a clear loss.
 #include "dect2/dmr/dmr_eval.h"

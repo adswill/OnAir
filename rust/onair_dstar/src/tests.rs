@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests for the D-STAR layer that do not need the C++ reference: CRC check value, header round trip through the FEC, GPS text.
 use crate::gps::{self, Fix, Outcome};
 use crate::{fec, header};

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The tinted mode list (app/ui/row_tint.h): on every theme, light and dark and high contrast, the text on a tinted heading, mode row, hovered
 // row and selected row keeps at least 4.5:1 once liftText has moved it (text that already held it is left as the theme has it), for the real
 // category colours and a grid of others; and the real colours stay visibly tinted, with the selected row clearly stronger than the others.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The TV recorder: a schedule of recordings (from the programme guide or by hand), conflict detection, file naming, the recordings index (a JSON
 // sidecar next to every .ts file) and the engine that records several services of one multiplex at the same time (each service is a PID filter
 // over the same packet stream, one file per service).

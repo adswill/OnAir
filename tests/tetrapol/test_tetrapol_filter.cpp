@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL channel filter control (#408): the Baseband filter setting "tetrapol" reaches the receiver at its next start or retune. The
 // control channel test signal must decode with the mode's own filter and with a custom one at several widths, shapes, carrier offsets and
 // noise levels; a filter far too narrow for 8 kbit/s GMSK must stop it (the setting is really used); a neighbouring carrier 12.5 kHz away,

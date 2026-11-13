@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The keyboard-mode half of the Ham view (PSK31 / PSK63, RTTY, CW, Olivia, Contestia, MFSK, THOR, DominoEX, Hellschreiber): received text, the type-ahead
 // transmit buffer, macros, callsign pick, QSO log. The logic is in core/include/dect2/ham/ham_kbd.h (tested); the station, the licence box, Arm and the
 // transmitter belong to ham_ui.cpp and are handed in here, so there is one gate and one Arm for every Ham mode.

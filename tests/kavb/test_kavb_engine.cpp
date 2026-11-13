@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB in the engine's wrapper and the transmit session's generator: the transmit generator (the TX path) makes the signal from a file of bytes or the synthetic
 // test stream at the radio's rate, KavbLiveReceiver (what the engine feeds) mixes, resamples, finds the frames, rebuilds the FEC groups and lists the packets in
 // the telemetry. Through the radio-rate path with a carrier offset of +-2% of the symbol rate, a sample-rate error, 8-bit samples and noise; a lost frame that the FEC

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA network information receiver: the TETRA base stations around you, from what every base station broadcasts in the clear to all
 // terminals on its downlink (ETSI EN 300 392-2): the synchronisation channel (BSCH: colour code, MCC, MNC, frame numbers, sharing mode),
 // the broadcast network channel (BNCH SYSINFO: main carrier, band, duplex spacing, location area, cell services and security

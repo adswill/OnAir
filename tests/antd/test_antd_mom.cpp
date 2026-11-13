@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna designer solver against the analytic cases: the half-wave dipole (about 73 ohm at resonance, 2.15 dBi), the quarter-wave monopole
 // over a perfect ground (half the dipole, 5.16 dBi), the short dipole's radiation resistance, the one-wavelength loop, a 2-element Yagi,
 // a lossless pattern integrating to the input power, the LU against a direct product, sweeps and segment refinement.

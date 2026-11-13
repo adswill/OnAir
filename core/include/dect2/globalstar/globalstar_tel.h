@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Globalstar activity monitor telemetry, shared by the receiver and the UI.
 // The first members are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 // Receive only: the CDMA signal (the L-band terminal uplink) is encrypted and its content is neither decoded nor decodable here; this is power, occupancy and Doppler.

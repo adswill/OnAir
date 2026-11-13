@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL voice: the encryption gate and the hand-over of clear voice frames to the user-installed speech codec (docs/CODECS.md).
 // OnAir ships no TETRAPOL codec (RP-CELP, PAS 0001-7, patented): the plug-in onair-codec-tetrapol is installed by the user and loaded
 // through the speech-codec plug-in interface (codec/speech_codec.h) after the user accepted the notice.

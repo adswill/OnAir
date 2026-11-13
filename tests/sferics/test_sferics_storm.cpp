@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Storm trend from strike rate and strength. Simulated strike series with noise.
 #include "dect2/sferics/sferics_storm.h"
 #include <cstdio>

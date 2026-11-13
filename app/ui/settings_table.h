@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Every row of the Settings window: category, label, help, default, limits. No ImGui, no App (settings_logic.h), so the test can check it.
 // The key is the stored name: for a field of App it is the key of app/state/prefs.cpp, so Settings and the old menus read and write the same value.
 #pragma once

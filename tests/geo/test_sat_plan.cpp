@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite tracker logic: SGP4 against a published reference, pass search against brute force at mid, high and polar latitudes, peak filter vs horizon-to-horizon
 // passes, conflicts by priority, AOS/LOS over a day boundary, stale TLEs, armed passes that survive new elements, and the run of a simulated pass.
 #include "dect2/geo/sat_plan.h"

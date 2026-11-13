@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Worker handlers against an in-memory stand-in for D1. The fake understands exactly the statements src/index.js issues (matched by their
 // text), so a changed query shows up here as an unknown statement instead of silently passing.
 import test from "node:test";

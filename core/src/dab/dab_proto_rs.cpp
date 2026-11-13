@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dab_proto.h on top of the Rust crate rust/onair_dab: record arrays sized from the input length (every record needs a few bytes of input;
 // the lists that overlapping descriptors of corrupt data could lengthen are not among them), turned into the vector / string forms of the header.
 // Negative or zero lengths are 0 bytes.

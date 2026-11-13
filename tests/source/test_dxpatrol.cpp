@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The DXpatrol SDR (an RTL2832U dongle) against the fake librtlsdr (native_fakes.cpp, "rtl.dxp" = its USB strings): naming, the HF input
 // (direct sampling) chosen by frequency, the range limits, the 3.2 Msps ceiling and the manual "Treat as DXpatrol" option. No radio is involved.
 #include "dect2/source/source.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SDR++ server client: a radio served by SDR++'s headless mode (`sdrpp --server`, TCP port 5259). Written from the SDR++ sources
 // (core/src/server_protocol.h, core/src/server.cpp, core/src/gui/smgui.cpp) and tried against a real server with an Airspy R2.
 //

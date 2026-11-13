@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Generates core/src/mesh/mesh_presets_data.cpp (the built-in MeshCore radio presets) from the meshcore.nz API.
 
   python3 tools/gen_meshcore_presets.py                 fetch https://api.meshcore.nz/api/v1/config and write the table

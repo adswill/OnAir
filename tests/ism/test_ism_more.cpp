@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors, the protocols added from the rtl_433 audit: every frame is built here from the protocol description (field layout, check
 // algorithm, line timing), turned into a pulse train and decoded; the values must come back, a flipped bit must give nothing.
 #include "dect2/ism/ism_proto.h"

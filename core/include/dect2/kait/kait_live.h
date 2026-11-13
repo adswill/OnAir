@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT for the engine: IQ in (any rate of 300 ksps or more), the last picture burst in the telemetry, decoded layer by layer.
 // The receiver keeps the last 16 s at 632 ksps, looks for an up sweep once a second, and when one is found waits for the rest of the 10 s burst, then
 // decodes it on a worker thread (kait_rx.h decodeBurst) and publishes the picture after every layer. Family 131, engine standard 133, telemetry 132.

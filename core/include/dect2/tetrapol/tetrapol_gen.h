@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL test signal (tetrapol_rx.h): one GMSK 8 kbit/s carrier of PAS 0001-2 frames. Nothing is transmitted; the samples only exist
 // in memory or in a file.
 //

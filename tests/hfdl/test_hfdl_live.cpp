@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL nearby ground stations (hfdl_live.h): parsing a saved hfdl.observer list (tests/data/hfdl/hfdl_observer_active.json, 2026-11-12 08:11 UTC;
 // no network in the tests), relative and bad times, malformed text, the merge with the squitters (newer list wins, agreeing frequencies carry
 // both sources, stale data dropped), the distance and bearing sort, the hints and the tune point.

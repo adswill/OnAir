@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Image enhancement, noise and detail: switching median, bilateral, non-local means, destripe and deband, temporal averaging,
 // unsharp mask, Lanczos x2 without ringing, chroma fix, grey world, deinterlace.
 #include "enhance_util.h"

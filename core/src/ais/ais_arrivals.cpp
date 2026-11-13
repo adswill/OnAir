@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS arrivals board: see ais_arrivals.h.
 #include "dect2/ais/ais_arrivals.h"
 #include <algorithm>

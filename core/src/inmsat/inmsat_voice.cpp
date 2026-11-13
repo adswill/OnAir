@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice mixer and call recorder of the Inmarsat all-carriers mode (inmsat_voice.h).
 #include "dect2/inmsat/inmsat_voice.h"
 #include "dect2/codec/codec_registry.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Credits window (Help, Credits and licences; also the "by: ..." button in the menu bar): every project whose code, data or
 // specification OnAir uses, with its author, licence and a link that opens in the browser. The table is generated from
 // tools/credits_data.tsv into credits_data.h; the full notices are in THIRD_PARTY.md. The Contributors tab (people, and a view by mode)

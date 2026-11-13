@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 sensitivity (docs/SENSITIVITY-4.0-X2.md): the APT line filter (a local Wiener filter along the line with the noise measured on space A)
 // against the same receiver with it off (3.9), same noise. The receiver's own test signal (generator SNR: carrier to noise in 40 kHz) with a
 // 2.5 kHz carrier offset, a 30 Hz/s Doppler rate and an 80 ppm clock; the figure is the PSNR of image A and B against the test picture after a

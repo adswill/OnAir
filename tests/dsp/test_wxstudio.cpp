@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather studio: histogram, tone curves, palettes, vectors on a map, crop, mosaic of two synthetic passes, and the GeoTIFF read back.
 #include "dect2/dsp/wxstudio.h"
 #include <cmath>

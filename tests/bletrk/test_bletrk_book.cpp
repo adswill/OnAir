@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The tracker book on synthetic time: a tracker that stays near for long enough raises one alert, one that is far, patchy or marked as the
 // user's own does not, rotating addresses are chained, and identifiers are forgotten after the memory window.
 #include "dect2/bletrk/bletrk_book.h"

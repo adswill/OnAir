@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cameras / capture cards through FFmpeg libavdevice (v4l2, dshow). Used off macOS.
 #include "dect2/common/thread_name.h"
 #include "videoin_impl.h"

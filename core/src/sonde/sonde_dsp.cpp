@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Filters of the radiosonde channel (see sonde_chan.h).
 #include "sonde_chan.h"
 #include "dect2/common/window.h"

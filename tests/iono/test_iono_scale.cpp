@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ionogram scaling on synthetic layered ionospheres (makeIonoLayerIonogram): a local ionosonde (E and F2, then E, F1 and F2) gives foE,
 // foF1, foF2, fxF2, h'E, h'F, M(3000)F2 and MUF(3000)F2 within tolerance of the model; an oblique path gives its distance from the
 // delay, the 1F / 2F modes and the path MUF; a known sounder (rate and schedule) and the receiver location give the distance from

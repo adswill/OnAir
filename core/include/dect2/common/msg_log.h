@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Text log of received messages (pagers, selcall, digital voice text, ...): one line per message with the time, mode, frequency, address
 // and text. Used by the "Save..." button and the "Auto-save to file" switch of the message tabs. The time follows the Time display
 // setting (UTC or local, dect2/common/time_fmt.h); the data itself is never changed. Pure code: tests call it with an explicit zone.

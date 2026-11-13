@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSB conversations: the voice analyzer on speech-like audio and on decoys, the scanner on synthetic wide captures (two alternating stations on one
 // frequency with different offsets, drift, fading, a second conversation on the other sideband, adjacent AM, ALE / RTTY / PSK31 / FT8 / multi-tone
 // decoys, a carrier, band noise, noise only), the conversation state machine, filters, auto-listen, sweep plan, callsigns, export and clips.

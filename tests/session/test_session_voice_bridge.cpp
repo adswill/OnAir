@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // voice::Monitor -> SessionStore bridge: a call becomes a Session when it opens, is updated while it runs and is ended when the hang time is over;
 // an encrypted call keeps metadata only; two monitors with different receiver indexes do not mix.
 #include "dect2/session/session_store.h"

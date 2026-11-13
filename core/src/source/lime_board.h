@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What OnAir knows about each LimeSDR board, from the info string LMS_GetDeviceList gives ("LimeSDR Mini, media=USB 3.0, module=FT601,
 // addr=24607:1027, serial=1D40CA8B2ED29A"). Pure functions, no library calls, so the tests can check them without a radio.
 #pragma once

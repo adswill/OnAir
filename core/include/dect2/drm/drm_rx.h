@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM receiver: DRM30 (long, medium and short wave, robustness modes A to D) and DRM+ (mode E, 100 kHz, VHF bands I, II and III) digital radio;
 // the mode is found by itself (DRM+ needs an input rate of 100 ksps or more).
 // Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never blocks),

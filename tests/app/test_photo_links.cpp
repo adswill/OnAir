@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The database link builder: ids are checked and only [A-Za-z0-9-] reaches a URL.
 #include "panels/photo_links.h"
 #include <cstdio>

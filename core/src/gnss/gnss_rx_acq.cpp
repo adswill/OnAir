@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS receiver, starting channels from acquisition hits and running the per-system acquisitions.
 #include "gnss_rx_impl.h"
 

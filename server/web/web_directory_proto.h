@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web directory: the pure part of the heartbeat. What is sent, in which exact form, and what is signed. No network, no threads, so it is
 // tested on its own (tests/server/test_web_directory.cpp). The Worker side is web/onair-directory/src/logic.js; both build the same signing
 // text and a shared test vector keeps them identical (docs/ONAIR-DIRECTORY.md describes the protocol).

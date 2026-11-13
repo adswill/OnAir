@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde launch sites: see sonde_sites.h.
 #include "dect2/sonde/sonde_sites.h"
 #include <algorithm>

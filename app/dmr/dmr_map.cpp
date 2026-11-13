@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR Map and Table sub-tabs: the LRRP positions of the radios (see core/src/dmr/dmr_lrrp.cpp)
 // drawn on the shared slippy map, with Src / TG / age filters, per-radio movement tracks, a table
 // of the received positions and a CSV export.

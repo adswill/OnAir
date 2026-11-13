@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB Service and Programme Information (SPI, the electronic programme guide): ETSI TS 102 818 (XML), ETSI TS 102 371 (binary encoding and
 // transport as MOT objects, user application type 0x007 "EPG" of FIG 0/13). Written from the public specifications only.
 //

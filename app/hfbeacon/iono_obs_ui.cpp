@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "My ionosphere": see iono_obs_ui.h. The maths is in core/src/iono/iono_obs.cpp (unit tested); this file keeps the local log and draws it.
 #include "dect2/common/timecompat.h"
 #include "iono_obs_ui.h"

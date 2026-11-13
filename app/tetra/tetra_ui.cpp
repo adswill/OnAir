@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA screens: the base station table (frequency, network code, location area, colour code, encryption, last heard), the details of
 // the selected carrier, its neighbour cells, the carriers seen in the spectrum, a scan over a span, and the log. Only what base stations
 // broadcast in the clear to every terminal is shown: nothing is decrypted, no voice, no short data, no subscriber identities.

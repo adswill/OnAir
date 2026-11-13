@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // WSPR beacon schedule: which 2 minute slot to transmit in, and the message. Transmit only; the burst goes through HamSlotTx (the gate).
 #include "dect2/ham/ham.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 2 receiver against the generated signal (p25p2_gen.h): clean, with noise, with carrier offsets, at several input rates, with the slot choice,
 // scrambled with and without the right seed. Covered: sync and burst framing, S-ISCH / I-ISCH and the slot of the superframe, the DUID, the
 // descrambling, 4V / 2V / SACCH / FACCH bursts, the ESS, MAC PTT / END_PTT / ACTIVE / grants / status / identifier updates, the call table, that an

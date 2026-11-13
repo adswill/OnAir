@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR sound through the user-installed DRA+ add-on (cdr_dra.h), tested with fake libraries (tests/cdr/fake_onair_dra.c): no codec, no sound device.
 //  1  the loader: no file, a library without the functions, one whose decoder cannot be made (all refused with a reason), a good one, "Look again"
 //  2  CdrAudio without the add-on: nothing counted, nothing played, no crash

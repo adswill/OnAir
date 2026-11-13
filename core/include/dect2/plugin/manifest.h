@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The manifest.json of a plugin: parsing and validation. Hostile or malformed input is refused with a message, never crashes
 // (the JSON reader is bounded in size and depth), and nothing in a manifest can name a path outside the plugin's own folder.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB as a transmit mode: the TX session's generator. The payload packets of the container layer (kavb_av.h) go through the Packetiser (FEC groups) and the
 // PHY transmitter (kavb_phy.h), and the 4 samples per symbol stream is resampled to the radio's rate.
 // Payload source: a file (TxRequest::file; its bytes are sent as Data packets of stream 1, up to 64 MiB, so a receiver that writes the payload to a file gets the

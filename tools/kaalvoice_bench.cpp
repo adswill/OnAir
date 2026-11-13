@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // kaalvoice_bench: objective comparison of the KAAL voice codecs (KV4 profiles against the old KaalCodec3 / KaalCodec) on the repo's
 // speech sample and on synthetic speech, plus the real-time factor (CPU time of encode + decode per second of audio, one stream; the
 // old codecs' wrapper encodes three frames per frame, so their RTF is about 3x what a streaming encoder would need). No listening test: the numbers are SNR / spectral distances only.

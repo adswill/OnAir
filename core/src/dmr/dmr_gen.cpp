@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR test signal (see dmr_gen.h): the content of a base station or a handset as 4FSK symbols, the pulse shaping and the frequency modulator.
 #include "dect2/dmr/dmr_gen.h"
 #include "dect2/dmr/dmr_xpt.h"

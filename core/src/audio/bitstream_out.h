@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A sound device opened for an IEC 61937 bitstream (AC-3 / E-AC-3 passthrough to an AV receiver or soundbar): the data goes out as 16-bit
 // stereo "PCM" at the link rate, bit for bit, with the non-audio flag set where the platform lets a program set it. EXPERIMENTAL: written
 // from the platform documentation, NOT tested on real hardware (no receiver was available). See docs/ATMOS-3.9.md.

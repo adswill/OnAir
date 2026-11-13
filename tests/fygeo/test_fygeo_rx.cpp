@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FengYun receiver on its test signals, end to end.
 // S-VISSR: the scan lines of the test picture arrive in all five channels, clean, at 6 dB (still synced, the bit error ratio matches theory), with a
 // carrier offset, another sample rate and a symbol clock error; noise alone gives nothing.

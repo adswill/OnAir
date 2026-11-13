@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channel impairments for the sensitivity harness (tools/sens/sens_sweep.cpp). Everything is deterministic: every function takes the
 // seeded generator it draws from, and Gaussian noise comes from PortableNormal (the same values with every standard library).
 //

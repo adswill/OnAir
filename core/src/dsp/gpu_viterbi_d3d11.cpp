@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Direct3D 11 compute Viterbi decoder for Windows (GpuViterbi, see dect2/dsp/gpu_viterbi.h): the same chunks, trellis and arithmetic as the
 // Metal kernel (gpu_viterbi.mm) and the exact CPU decoder: 16-bit saturating path metrics brought back by the best one every 4 steps, the odd
 // predecessor taken when it is strictly better, trace-back from the best end state. Shader model 5.0 has no wave ballots, so one thread group of

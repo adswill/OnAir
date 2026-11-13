@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Apply SDR#-style SpyServer session setup to a SoapySpyServer source checkout.
 
 Run from the OnAir repository:

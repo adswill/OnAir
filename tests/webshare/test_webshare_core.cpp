@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web setup (app/webshare/webshare_core.*): saved choices, the capture plan, decoder rows for a range, the server and listing settings files, the
 // step 2 state machine, the test lines, the QR code. No window, no processes.
 #include "../../app/webshare/webshare_core.h"

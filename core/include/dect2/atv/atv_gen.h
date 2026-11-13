@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV test signal: a live test card (colour bars, grey ramp, multiburst, a moving box, a running clock, the text ONAIR TEST) as composite
 // video with the timing and levels of the chosen system (BT.470-6), amplitude modulated with a negative vision carrier through a
 // vestigial-sideband filter, plus an FM sound carrier that plays a 1 kHz tone with short interruptions or a melody.

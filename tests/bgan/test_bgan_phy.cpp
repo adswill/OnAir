@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BGAN physical layer: all published tables load, encode / decode round trips at a BER the code must reach, frame layout counts.
 #include "dect2/bgan/bgan_phy.h"
 #include <cmath>

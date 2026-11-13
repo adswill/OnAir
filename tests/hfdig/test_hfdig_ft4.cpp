@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, FT4 and FT2: the generator's stations, then several stations per slot at the threshold (FT4 -12 dB, FT2 -8 dB in
 // 2500 Hz) with the receiving side's faults: dial error +-100 Hz, sample clock +-100 ppm, DT +-1.5 s (FT2 +-0.8 s), upside down,
 // noise alone (no false decodes), a start in the middle of a slot.

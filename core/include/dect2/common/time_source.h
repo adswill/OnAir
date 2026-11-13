@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One clock for all modes (#218): where the times in the logs and exports come from.
 //   Computer: the computer's clock, read when the decoder produces the result. Lost samples and Stop / Start cannot move it
 //             (the signal time of the stream stops while the radio is stopped or drops blocks; the computer clock does not).

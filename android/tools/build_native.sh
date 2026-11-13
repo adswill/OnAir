@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Builds libonair.so (the desktop receiver library + the JNI bridge, android/native/CMakeLists.txt) for arm64-v8a, strips it and puts
 # it where Gradle packages it (android/app/src/main/jniLibs/arm64-v8a/, gitignored).
 #

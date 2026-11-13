@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero P channel, the coding layer between the demodulated bits and the signal-unit bytes:
 // unique word, frame header, interleaver, rate 1/2 convolutional code, scrambler, byte packing.
 // Every constant follows JAERO (github.com/jontio/JAERO, JAERO/aerol.cpp and aerol.h, jconvolutionalcodec.cpp), which is the

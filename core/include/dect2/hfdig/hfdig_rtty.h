@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RTTY decoder of the HF digital receiver (hfdig_rx.h): gets the 8 kHz upper sideband audio and decodes ITA2 (Baudot) frequency shift
 // keying: 1 start, 5 data (least significant bit first), 1.5 stop bits; 45.45, 50, 75 or 100 baud; shifts of 170, 200, 425, 450 or
 // 850 Hz. Normal: the mark tone is the lower one. The decoder looks for the pair of tones itself (300 .. 3300 Hz) and locks to it.

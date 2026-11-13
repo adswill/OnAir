@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RSPduo regression through the public IqSource interface and a strict vendor-library fake.
 // Runs on Windows, Linux and macOS; never opens a real radio.
 #include "../../core/src/source/native_common.h"

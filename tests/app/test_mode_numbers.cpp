@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode numbers stay unique (docs/MODE-NUMBERS.md). Modes were added by separate branches that picked their numbers on their own, so
 // two of them could take the same family, engine standard or poll slot and still compile (a duplicate mode-table row or seqs[] slot is
 // not a compile error). This test fails on any such clash:

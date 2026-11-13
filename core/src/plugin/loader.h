@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internal: loading a plugin library and the C host API trampolines shared by the in-process runner and the helper process.
 #pragma once
 #include "dect2/plugin/host.h"

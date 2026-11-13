@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web 3.9 access: who a request is, and what it may do (docs/WEB-3.9.md, "Access and security").
 //
 //  * Owner: knows the password (a login session, a cookie), or is on this computer or (app_lan=1, the default) on the private network and

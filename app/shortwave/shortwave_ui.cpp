@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shortwave mode screens: the General receiver's controls (frequency with kHz entry, demodulator, filter, squelch, S-meter, recording) over the
 // spectrum and waterfall, a quick band selector (HF broadcast, ham, utility, digital calling frequencies; the last frequency of each band is
 // remembered), a strip of one-click decoders (RTTY, CW, PSK31, FT8, SSTV, Olivia, ALE, NAVTEX, ...) and one pane per running decoder with its

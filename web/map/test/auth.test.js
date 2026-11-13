@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sign-in pieces of src/auth.js: the marketplace-compatible session token, OAuth state, CSRF, cookies and return paths.
 import test from "node:test";
 import assert from "node:assert/strict";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BLE tracker advertisements: recognising the item trackers (Apple Find My network accessories such as AirTag, Tile, Chipolo, Samsung
 // SmartTag, Google Find My Device network tags) from the advertising data of a Bluetooth LE packet. Only the public structure of the
 // advertisement is looked at (company identifier, service UUID, the type and status bytes); public key bytes and the owner's data are

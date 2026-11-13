@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MeshCore radio presets: the built-in table (mesh_presets_data.cpp), the api.meshcore.nz document parser and the saved-file loader.
 #include "dect2/mesh/mesh_presets.h"
 #include <algorithm>

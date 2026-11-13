@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS ducting detector (3.9, docs/SMART5-field-3.9.md item 4). VHF reaches a little beyond the radio horizon,
 // d = 4.12 (sqrt(h_rx) + sqrt(h_ship)) km with heights in metres (standard atmosphere, k = 4/3). In a tropospheric duct (a temperature
 // inversion over the sea) ships are heard two to ten times farther. This learns the station's normal range (the 90th percentile of the

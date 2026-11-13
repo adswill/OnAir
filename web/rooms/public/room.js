@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Room viewer: waterfall canvas, decoded text, chat. Every string from the server goes in through textContent.
 const id = location.pathname.split("/").pop();
 const $ = (x) => document.getElementById(x);

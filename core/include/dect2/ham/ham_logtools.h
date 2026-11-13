@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Logbook tools for the Ham screen (4.0): Cabrillo import (the export is ham_ops.h cabrilloExport, so a contest log round-trips), QSL
 // confirmations merged from a LoTW / eQSL / Club Log ADIF download, QSL tracking counts, dated backups of the log file, and the portable
 // activation programs (POTA, SOTA, WWFF, IOTA): the ADIF reference fields, the activation count, the POTA upload file name and the SOTA CSV.

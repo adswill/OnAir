@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The community marketplace panel (see market_ui.h). Network work runs on one background thread at a time; this file draws and starts
 // tasks. The client is core/src/pstore/market.cpp, the server tools/marketplace/server.
 #include "market_ui.h"

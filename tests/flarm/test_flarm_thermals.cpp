@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Thermals map (flarm_thermals.h): simulated gliders circling in drifting thermals, with GNSS noise, lost packets and climb noise;
 // straight glides and sinking circles must not count. Simulated only: no real FLARM recording of a thermal.
 #include "dect2/flarm/flarm_thermals.h"

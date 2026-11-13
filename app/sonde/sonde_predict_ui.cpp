@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde landing prediction 4.0 in the app (core: dect2/sonde/sonde_predict.h, docs/SONDE-PREDICT-4.0.md): one tracker per sonde fed
 // with every frame, the prediction refreshed live (about once a second for the selected sonde, with its ensemble), the terrain tiles and
 // the wind forecast. Nothing goes on the network unless "Download terrain and wind forecasts" is on and Offline mode is off; terrain

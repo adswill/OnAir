@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CODAR / HF ocean radar monitor: the test signal through the receiver (codar_gen.h, codar_rx.h): three radars with their width, rate,
 // direction and repetition, the call sign, noise alone, a carrier and a wide ionosonde chirp (nothing to count), other sample rates, a radio
 // on a band (band and absolute frequency), the scan plan, and the results file.

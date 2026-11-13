@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The programme guide: EIT sections built by hand (every descriptor the guide reads, text in several character sets, split extended text), the
 // time offset of the TOT around a summer time change, the database (overlaps, merge, expiry, limits, search, series, JSON), the packet collector
 // and a fuzz run of damaged sections.

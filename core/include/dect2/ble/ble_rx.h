@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth LE advertising monitor: the packets devices broadcast openly on the three advertising channels (37, 38, 39 at 2402, 2426 and
 // 2480 MHz), the same information a scanner app such as nRF Connect shows. Receive only: it never connects, pairs or transmits, and does
 // not follow connections (a CONNECT_IND is shown as a connection request, nothing more).

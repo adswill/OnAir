@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tone decoders on FM audio or sound-card audio: CTCSS (50 tones), DCS (23 bit Golay word, both polarities), DTMF, five-tone sequential
 // calling (ZVEI1 / ZVEI2, CCIR, EEA, EIA, DZVEI), SELCAL, and a generic two-tone sequential paging detector (measured tone pair).
 //

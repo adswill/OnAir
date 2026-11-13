@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR bursts and messages: bursts that were captured off the air (MMDVM frames of the ok-dmrlib test suite, https://github.com/OK-DMR/ok-dmrlib)
 // are taken apart with the burst layout of the specification and put together again bit for bit; then every message type is built and read back.
 #include "dect2/dmr/dmr_proto.h"

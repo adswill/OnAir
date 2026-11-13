@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 synchronisation on a continuous stream of samples: finding the bootstrap with an unknown carrier frequency offset, refining the
 // offset from the guard intervals, cutting out the frame and handing it to the frame decoder, and finding the next bootstrap.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireless M-Bus link layer: CRC, 3-of-6, frame formats A and B, manufacturer code, DIF / VIF records, encrypted payloads.
 #include "dect2/wmbus/wmbus_gen.h"
 #include "dect2/wmbus/wmbus_proto.h"

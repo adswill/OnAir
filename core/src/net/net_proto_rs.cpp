@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // net_proto.h on top of the Rust crate rust/onair_net: thin wrappers over the C ABI of core/include/dect2/rs/net.h.
 #include "dect2/net/net_proto.h"
 #include "dect2/common/rs_abi.h"

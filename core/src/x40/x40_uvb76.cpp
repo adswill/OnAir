@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UVB-76 ("The Buzzer", 4625 kHz AM) monitor. The station sends a harsh buzz tone in a regular train (about 25 buzzes a minute) day and night; from time to time
 // the train stops and a voice message follows. This mode times what is on the air: the audio energy is gated into buzz events, the buzz rate, length and
 // regularity are measured, a break in the train and any long transmission are logged. It does not decode or interpret the voice and makes no claim on

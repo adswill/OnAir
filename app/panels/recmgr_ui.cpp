@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > Recordings: one window over every folder the program records into (recordings, audio, tv, clips, goes, dab, sstv, screenshots): IQ, audio,
 // transport streams, pictures, decoded logs and SigMF. Columns, search, preview (audio plays, pictures show, IQ replays through the engine as the
 // file source), rename, trim to exact samples, export / convert, delete to a trash with undo, tags and notes, the per-folder size budget and the

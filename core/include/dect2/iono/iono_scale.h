@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Scaling of ionograms: the echo traces (group range against frequency) and the standard parameters they give.
 //
 // Traces: in each swept 50 kHz column the delay peaks well over the column's noise are taken (a column lit at most delays is an

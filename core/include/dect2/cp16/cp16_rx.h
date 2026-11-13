@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CP16 receiver: the picture of the 16 carriers and the characters read from it (cp16_proto.h has the mode).
 //
 // The channel (the dial frequency) is mixed to 0 Hz and brought to 8 kHz complex, so the audio of either sideband is there: upper sideband carriers at

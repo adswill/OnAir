@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B orbit / holding detector (4.0): spots aircraft that fly circles or racetracks (holding patterns, survey and patrol flights, helicopters over an
 // incident, military tankers) from their position fixes alone. The 3.9 manoeuvre alerts only react to a steep turn right now; this one looks at the
 // whole recent path: the signed heading change added up, how far the aircraft really got from where it was, and the centre and radius of the loop.

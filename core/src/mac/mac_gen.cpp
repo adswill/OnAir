@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MAC television test signal (see mac_gen.h).
 #include "dect2/mac/mac_gen.h"
 #include "dect2/mac/mac_proto.h"

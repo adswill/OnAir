@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A one-place mailbox where the newest value wins: the UI posts tuning requests as fast as the mouse makes them, a worker takes them
 // when it is free, and every request that was overtaken before the worker got to it is dropped (coalesced), never queued.
 // Tested in tests/dsp/test_latest_slot.cpp.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The streaming resampler: a tone keeps its frequency and phase through any ratio, and block boundaries do not matter.
 #include "dect2/dsp/exact_resampler.h"
 #include <cmath>

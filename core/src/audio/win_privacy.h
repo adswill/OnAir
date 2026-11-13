@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #pragma once
 // Windows 10/11 privacy switches for the camera and the microphone (Settings > Privacy & security). Switched off, they do not hide the
 // devices: they are still listed, but opening one fails (WASAPI: E_ACCESSDENIED; DirectShow: an open or frame error). The registry says

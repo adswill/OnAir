@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A small JSON value, writer and parser for the TV recorder files (EPG cache, schedule, recording sidecars). Not a general library: numbers are
 // doubles (exact for integers up to 2^53, which holds unix seconds and event ids), strings are UTF-8, nesting is limited so a hostile file
 // cannot exhaust the stack.

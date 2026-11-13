@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-GHz sensors receiver, see sensors_rx.h.
 // The pipeline in process() follows rtl_433's push_sdr_flow() (src/r_flow.c, GPL-2.0-or-later, (C) Benjamin Larsson, Tommy Vestermark,
 // Christian W. Zuckschwerdt and others) so that its own test recordings give the same pulse packages here.

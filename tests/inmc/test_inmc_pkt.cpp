@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C packets: bulletin board and EGC parsing, multi-part and multi-frame assembly, ITA2 text, the message list limits.
 // The byte layouts are those of the open decoder "inmarsatc" (inmarsatc_parser.cpp); no recorded frame was available, so the
 // packets here are built from the documented field positions (see inmc_pkt.h for what is not confirmed).

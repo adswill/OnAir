@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero C channel test signal: a ground station's voice channel (8400 bit/s OQPSK, framing and coding of aero_cchan.h) carrying
 // pseudo-random coded voice frames (no real vocoder: the content is random bytes, the frames are numbered so a test can compare), fill-in
 // signal units (type 0x01, GES id in octet 4, as seen on a real channel) and a call-progress unit (type 0x30, AES id, GES id) now and then.

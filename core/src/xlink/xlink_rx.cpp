@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Extra links receiver: resamples the capture to each PHY's rate, hands frames to the parsers (xlink_proto.cpp), keeps the frame and link lists.
 #include "dect2/xlink/xlink_rx.h"
 #include "dect2/common/mathconst.h"

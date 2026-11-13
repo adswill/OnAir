@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! BCH(31,21) with an overall even parity bit: the 32-bit code word of POCSAG (ITU-R M.584-2, annex) and of FLEX (public descriptions).
 //! A word has 21 data bits (first transmitted bit in bit 20 of the data), 10 check bits and one parity bit (bit 0). Up to two wrong bits are corrected.
 

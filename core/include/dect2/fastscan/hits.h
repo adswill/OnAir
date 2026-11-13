@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Activity detection for the fast scanner: signals above the local floor (findCandidates: runs of bins, so a signal that spans several bins
 // is one candidate with a bandwidth) and the hit tracker that turns the candidates of successive hops into hits with hysteresis, a minimum
 // duration and a hang time. Pure code, no radio: tests/fastscan/test_fastscan.cpp drives it with synthetic spectra.

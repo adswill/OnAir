@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode A / C reply code: squawk digits, the Gillham altitude (checked against the Mode S decoder's own Gillham table and for one bit per step).
 #include "dect2/modeac/modeac_proto.h"
 #include "dect2/adsb/adsb_msg.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The General receiver screen of 4.0 (general_screen.cpp, docs/GENERAL-4.0.md): the pieces general_ui.cpp draws into it, and the hooks of the
 // shared spectrum (plots.cpp) and top bar (ui2_shell.cpp). The layout state and the maths under it are in general_layout.h.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // W1A voiceband modes screens (families 800 - 802, core/src/w1a, docs/W1A-3.9.md): HF packet 300 Bd (AX.25 frames), the voice inversion
 // scrambler (detection, carrier estimate, descrambled audio to a WAV file) and the ELT 121.5 MHz swept-tone detector. Receive only.
 // Simulated signals only so far.

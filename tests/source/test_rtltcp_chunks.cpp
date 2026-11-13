@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // rtl_tcp source against a fake server that sends the stream in odd, random-sized TCP chunks (1 to 4099 bytes) after a greeting dribbled one
 // byte at a time: no IQ pair may be split, swapped or lost (byte i of the stream is i mod 251, so sample k must be (2k mod 251, 2k+1 mod 251)).
 // Also a greeting with an unknown tuner type and a server that sends a partial greeting then closes (a clear error, no hang).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Yaesu Fusion frame coding: sync, dibit mapping, Golay, convolutional code, FICH with CRC, DCH units, V/D mode 2 voice, whole frames of
 // every data type, and error correction / detection.
 #include "dect2/fusion/fusion_gen.h"

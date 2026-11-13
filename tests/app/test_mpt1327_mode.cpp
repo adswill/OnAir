@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT1327 trunking mode (work in progress): the mode row, the family count and the screen mapping in the app source, and the panel's strings.
 #include <cstdlib>
 #include <fstream>

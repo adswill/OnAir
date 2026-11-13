@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 Lane B group 2: talkgroup activity / follow, radiosonde launch clock, ADS-B track replay, transmit planning. Simulated data only.
 #include "dect2/adsb/adsb_replay.h"
 #include "dect2/sonde/sonde_launch_clock.h"

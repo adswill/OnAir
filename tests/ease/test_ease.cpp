@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure first-use helpers: launch windows, geostationary picks, what a preselection leaves alone.
 #include "dect2/ease/ease.h"
 #include <cmath>

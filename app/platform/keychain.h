@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OS keychain for the voice key store's master key (dect2/voicekeys/key_persist.h: setSecretProvider). Each platform has one file that is
 // compiled only on that system: keychain_mac.mm (Keychain, SecItem), keychain_win.cpp (Credential Manager, which stores under DPAPI),
 // keychain_linux.cpp (libsecret, loaded with dlopen at run time; absent = no provider). Where no provider exists the store falls back to

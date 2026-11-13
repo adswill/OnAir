@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Comma separated values as the OnAir channel list files use them (`scripts/ingest.py` writes them, RFC 4180 style): fields separated by `,`, records by
 //! `\n`, a field may be quoted with `"` (then it can hold `,` and line breaks and a doubled `""` is one quote), `\r` outside quotes is ignored, blank lines are skipped.
 //!

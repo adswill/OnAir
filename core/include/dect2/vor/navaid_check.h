@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Navaid signal check (3.9, docs/SMART5-avia-3.9.md): what the VOR / ILS receiver measures, averaged over the last windowSec, against
 // the signal-in-space limits of ICAO Annex 10 Volume I.
 //

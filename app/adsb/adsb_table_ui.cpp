@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B screens: the aircraft table, the selected aircraft's detail, the statistics view, the sources panel and the
 // unit controls.
 // Split from adsb_ui.cpp; the shared state is declared in adsb_internal.h.

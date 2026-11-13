@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The signal's own options in step 2 of the transmit panel: what to say (callsign, text, IDs), where the audio / video / file comes from, and the standard's
 // own choices, one block per kind of signal (TxPayloadKind). Empty fields fall back to the mode's demo signal; nothing here limits what is typed.
 #include "tx_state.h"

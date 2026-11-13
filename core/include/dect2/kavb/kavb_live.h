@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB for the engine: IQ in, container packets out. The radio-rate samples are mixed by a coarse carrier correction, resampled to 4 samples per symbol of the
 // symbol rate that is set (profile A 700, B 1050, C and D 1400 ksym/s: the receiver listens to one symbol rate at a time, and C and D share one), and given to
 // kavb::Receiver (frames), then to kavb::Depacketiser (FEC groups and packets). No AV1 or Opus decoder is built in: the telemetry lists the packets and counts

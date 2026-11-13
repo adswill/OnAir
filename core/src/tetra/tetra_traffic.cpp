@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA speech traffic channel decoding from ETSI EN 300 395-2 V1.3.1 clause 5.5, see tetra_traffic.h. Ambiguities of the printed text are marked AMBIGUITY.
 #include "dect2/tetra/tetra_traffic.h"
 #include <atomic>

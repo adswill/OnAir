@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSDV: packets dropped from a real SSDV stream made from a test picture, the gaps found and painted in. Simulated (ssdv encoder).
 #include "dect2/ssdv/ssdv_proto.h"
 #include <cmath>

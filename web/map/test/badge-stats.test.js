@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Stats, unique counting, streaks, badge thresholds and the anti-cheat rules of src/badge-stats.js, with tracks made by the hub's own
 // sanitize() (so the rows look exactly like the ones the hub credits).
 import test from "node:test";

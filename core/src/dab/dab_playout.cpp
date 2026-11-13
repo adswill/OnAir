@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB / DAB+ playout: concealment, splices and the rate control of the output buffer (dab_playout.h).
 #include "dect2/dab/dab_playout.h"
 #include <algorithm>

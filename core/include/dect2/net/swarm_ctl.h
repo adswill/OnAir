@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LAN swarm control channel: the encrypted, authenticated TCP link between paired nodes, the commands carried on it (control, pooled results,
 // coordinated scan, memory sync), and the pairing transport. Existing primitives only (HMAC-SHA256, AES-256-CTR from meshcrypto); nothing invented
 // beyond the standard encrypt-then-MAC framing described below. See swarm.h for the rules and docs/LAN-SWARM.md for the threat model.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CubeSat telemetry: the test signal (cubesat_gen.h) through the receiver (cubesat_rx.h): each framing alone and all together, with a
 // carrier offset (Doppler) and noise, at two radio rates; every frame sent comes out with the bytes sent and the right framing; frames
 // are named from the satellite table (callsign, frequency, the tracked satellite); noise alone gives no frame.

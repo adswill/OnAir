@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small helpers shared by the Engine member files (engine*.cpp). Private to core/src/engine/: not installed, not part of the API.
 #pragma once
 #include <chrono>

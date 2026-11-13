@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ASTERIX receiver: the demo traffic of the three categories merged into a track table, positions from range and azimuth, UDP input on the loopback
 // interface, a raw file and a pcap capture, live tracks aging out while file tracks stay, and the origin-less case.
 #include "dect2/asterix/asterix_engine.h"

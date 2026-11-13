@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band survey: synthetic sweeps with an always-on carrier, a burst that comes and goes, and a quiet gap; diff between two surveys.
 #include "../common/tmp_path.h"
 #include "dect2/common/stable_random.h"

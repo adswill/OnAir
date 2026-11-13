@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // cdma2000 / IS-95 test transmitter: pilot (W0), Sync Channel (W32, the real coding chain and Sync Channel Messages), a paging channel and
 // other code channels filled with random symbols (W1, W8 - W15), each base station at its own PN offset. Only for the tests and the
 // built-in test signal; nothing is transmitted.

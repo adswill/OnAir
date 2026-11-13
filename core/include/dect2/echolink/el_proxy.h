@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EchoLink proxy (relay) protocol: for a station whose UDP ports 5198 / 5199 cannot be reached (behind NAT, a firewall or a carrier that
 // blocks them), every EchoLink packet and the directory connection go through one TCP connection to an EchoLink proxy (default port 8100),
 // which sends and receives the UDP packets for it. The layout follows SvxLink's echolib EchoLinkProxy.cpp (GPL-2.0-or-later, Tobias

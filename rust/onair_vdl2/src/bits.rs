@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! VDL Mode 2 burst bit layer: the x^15 + x + 1 scrambler, the (25,20) burst header code and the layout of the data and FEC octets of a burst. ICAO Annex 10
 //! Vol III Part I section 6.3 and ICAO Doc 9776 (VDL Mode 2 technical manual), as dumpvdl2 implements them.
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium satellite identification and sky position from Doppler against TLEs (3.7, docs/SMART-maritime-3.7.md).
 // The ring-alert / broadcast channel (1626.2708 MHz) is on a known frequency, so the offset of a burst from it is the Doppler shift of the satellite
 // that sent it plus the receiver's own frequency error. The header names the satellite only by Iridium's internal number (0..127); this matches the

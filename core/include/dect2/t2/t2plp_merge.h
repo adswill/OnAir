@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Annex D of EN 302 755: rebuilding one transport stream from a data PLP and the common PLP of its group. The two partial streams are co-timed: where the data PLP has a null
 // packet and the common PLP a real one, the common packet goes in. This relies on the two streams lining up packet for packet per T2 frame: the common PLP's frame goes in first.
 #pragma once

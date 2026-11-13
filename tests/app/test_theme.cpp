@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Light and High contrast themes: the text colours of the palette (theme.h's pal:: and the style's text greys) keep a WCAG contrast
 // ratio of at least 4.5:1 on that theme's panes once main.cpp has recoloured the frame (contrast.h), and the Light turn-over is exact.
 #include "ui/theme.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A fake radio for the SoapySDR source test: a SoapySDR driver ("onairtest") that streams OnAir's synthetic DVB-T2 signal.
 // Built as a plugin module; the test points SOAPY_SDR_PLUGIN_PATH at it.
 #include "dect2/common/ring.h"

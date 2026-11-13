@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus balloon screens: the map with every payload's track, the table of payloads heard, the detail of the selected one
 // (last packet, custom fields, the sentence), the packet log, the user's payload ID and custom field tables, and the bottom row with
 // altitude against time and the tone estimator's view of the dial channel.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/integrations/mqtt.h"
 #include "../net/tcp_client.h"
 #include "../net/tls_conn.h"

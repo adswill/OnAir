@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Data feeds out: the formats (SBS, Beast, AIVDM, KISS, APRS-IS, ACARS / VDL2 JSON) and the feeds' sockets on localhost.
 #include "dect2/net/feeds.h"
 #include "dect2/ais/ais_proto.h"

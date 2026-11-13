@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small DSP helpers for the analog TV receiver and generator: FIR design, a phase accumulator, block filters, a table-driven noise source.
 #pragma once
 #include "dect2/common/ring.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/net/aprs_gate.h"
 #include "dect2/net/feeds.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The voice monitor on screen (dect2/voice/voice_monitor.h), the same in every digital voice mode: a strip at the top of the mode's tab
 // with the state (locked, codec, encrypted, hold, recording), the big "now talking" card with its error meter and quick buttons, and
 // the Voice monitor window (Help menu or the strip's button) with the calls, the history search, the filters and the sound settings.

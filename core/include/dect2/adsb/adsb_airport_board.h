@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B arrivals and departures of one airport (FR24 airport page, spotter groups): an aircraft that came down near the airport and stopped
 // (reported on the ground, or lost low) has landed; one that appears on the ground or low and climbing has taken off. With the time and the
 // runway direction from its track. docs/ADSB-AIRPORT-3.9.md.

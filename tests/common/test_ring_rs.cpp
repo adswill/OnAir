@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IqRing: the C++ ring against the Rust ring (rust/onair_ring). (1) differential: the same random operation sequences on both, every result
 // and counter identical; (2) two-thread stress on both (order, no loss, no duplicate, offered = accepted + dropped); (3) with --bench, ns/op.
 // Under -DDECT2_SANITIZE_THREAD=ON ThreadSanitizer sees the C++ ring fully; the Rust code is not instrumented (its orderings are argued in ring.rs).

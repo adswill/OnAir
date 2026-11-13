@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode A / C reply detector: complex baseband at 2 Msps or more -> replies (the thirteen information positions and the SPI position).
 //
 // Like the ADS-B demodulator it works on the power of the samples only, integrated over fractional windows of the running sum (so 2.4 or

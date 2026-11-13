@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth Classic (BR/EDR) discovery over a wide capture. Receive only: it never inquires, pages or answers.
 //
 // Classic Bluetooth hops over 79 channels of 1 MHz (2402 to 2480 MHz) 1600 times a second, so one narrow receiver sees a device about

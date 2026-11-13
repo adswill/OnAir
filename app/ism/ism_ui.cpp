@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors screens: the device table (sortable, with a history sparkline per device), the live log, the unknown signals with a pulse
 // viewer for reporting them, band presets and the privacy note.
 #include "dect2/common/time_fmt.h"

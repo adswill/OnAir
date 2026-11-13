@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // autodettool: the automatic standard detection (dect2/autodet/autodet.h) on an IQ recording, to check it on real signals.
 //   autodettool tv|voice <file> [--rate Hz] [--format cs8|cu8|cs16|cf32|wav] [--skip s] [--sec s] [--rf MHz] [--sat] [--repeat n]
 // The format comes from the extension when not given (.cs8 .cu8 .cs16 .cf32 .wav); a .wav file gives its own rate.

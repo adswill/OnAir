@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // trail.js - pure trail rules for the hub: how long and how many points each kind keeps, thinning,
 // the compact wire format and request parsing. No Cloudflare APIs here so node --test can run it.
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A user-chosen data folder (issue #383): <default data folder>/datadir.txt holds the path of the folder to use instead. The pointer stays in the
 // default folder because that is the one place OnAir can find before it knows anything else. DECT2_DATA_DIR still wins over it.
 #pragma once

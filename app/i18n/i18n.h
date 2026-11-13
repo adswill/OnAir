@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Interface translations. The key is the English text as written in the source: tr("Start") gives the text in the chosen
 // language, or the English text itself when there is no translation. The catalogs are app/i18n/<code>.txt, compiled in.
 // The returned pointers stay valid for the whole run (a language once loaded is never freed).

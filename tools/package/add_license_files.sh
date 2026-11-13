@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Puts the licence files into a package folder: LICENSE (GPL-3), THIRD_PARTY.md, LICENSES/ (the standard texts) and
 # LICENSE-NOTICES-BINARIES.md (licence of every bundled library, the source offer).   add_license_files.sh <package folder> [repo folder]
 # For the .deb and the macOS app the same files are installed by CMake / make_dmg.sh; this script is for the folders that are zipped or tarred.

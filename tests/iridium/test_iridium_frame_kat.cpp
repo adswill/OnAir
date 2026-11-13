@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Known answers for the Iridium frame layer, from public sources only (nothing here was checked against an off-air recording):
 //  - iridium-toolkit tests/test_parser.py: a real ISY frame (RAW bits after the unique word) that the toolkit decodes as "ISY: Sync=OK";
 //  - iridium-toolkit bitsparser.py: unique words, UW_DOWNLINK symbols, the FILL blocks of ring alerts and messages (BCH words of poly 1207),

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MT63 coding layer: Walsh codewords, interleaver delays, encoder -> deinterleaver round trip for both interleaves, the pulse shape.
 #include "dect2/mt63/mt63_proto.h"
 #include <cmath>

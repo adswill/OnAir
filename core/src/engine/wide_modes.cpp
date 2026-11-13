@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole-span decoding for the narrowband channel modes: see wide_modes.h.
 #include "dect2/engine/wide_modes.h"
 #include "dect2/channels/freq_db.h"

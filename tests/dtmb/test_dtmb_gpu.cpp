@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB LDPC on the GPU (GpuLdpc::decodeQc) against the CPU decoder: the same words, the same result (ok flag, iteration count, information bits),
 // then the whole channel decoder with the GPU against the CPU: the same transport stream. Skipped when this machine has no GPU kernel for it.
 #include "dect2/dtmb/dtmb_chain.h"

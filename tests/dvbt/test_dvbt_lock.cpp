@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T lock time (3.2 quality pass): signal time from the first sample to the first good transport packet, for different carrier modes, guard
 // intervals, offsets, noise levels and a start in the middle of a symbol. Prints the table; fails only when a case never locks or takes too long.
 #include "dect2/dvbt/dvbt_gen.h"

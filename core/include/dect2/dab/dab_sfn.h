@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB single-frequency network view: the paths in the channel impulse response, and which transmitter (from TII and the list of positions) each one probably is, from the differences
 // of distance from the receiver. Transmitters of one network may have static delays that are not known here: a path that fits nothing is shown as such.
 #pragma once

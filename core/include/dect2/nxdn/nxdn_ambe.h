@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AMBE+2 (NXDN voice) through the user's own mbelib, loaded at run time: AMBE is patented and OnAir does not ship it (docs/CODECS.md).
 // Without the library the NXDN receiver still shows the calls, ids, talkgroups, messages and site information, only without sound.
 #pragma once

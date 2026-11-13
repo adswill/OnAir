@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! EIT section parser (ETSI EN 300 468 section 5.2.4): the present / following event name of the service list and every event of the guide with its
 //! short event (0x4D), extended event (0x4E) and content (0x54) descriptors. Text fields are `Span`s into the section.
 use crate::{bcd, rd, rd16, Span};

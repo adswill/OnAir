@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM census: every carrier of a wide capture of a medium-wave or short-wave band from one spectrum: which raster channel holds what (AM, DRM, SSB,
 // a bare carrier), how strong, how it fades, which sideband is hit by interference. Analysis only (no demodulator per carrier); one FFT per frame for the whole span,
 // so the cost does not grow with the number of carriers. Ranked with the listenable ones first: the app offers one-click listen on the best.

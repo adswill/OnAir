@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The station fixed on the Time signals receiver (TimeReceiver::setStation, the Station choice of the Time signals screen). The test signal of each station (time_gen.h, a known time, started part way into a minute)
 // goes into a receiver fixed to that station, with a carrier error and a sample clock error: the station is the one of the entry, the decoded time is right (DCF77, MSF, WWVB, JJY 40 / 60, WWV, BPM), the first time comes after the first whole minute;
 // a signal of another station gives no time in a fixed receiver (DCF77 in the MSF entry, WWVB in the DCF77 entry, JJY 60 in the WWVB entry), and noise alone gives none in any entry. BPC, HLA, BPM coded and RWM are run too

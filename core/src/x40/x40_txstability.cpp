@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmitter frequency stability meter (a handheld, a repeater input, a beacon: one 12.5 / 25 kHz channel): for every transmission of 1 s or more the carrier frequency against time, so that the warm-up and drift
 // of a transmitter show as numbers. The channel power is taken in 20 ms blocks (a transmission starts 10 dB over the noise floor, the 10th percentile of the last minute, and ends when it has been under 5 dB over
 // for 0.3 s); during a transmission the mean instantaneous frequency (phase steps of the FM discriminator, 24 ksps) is taken every 50 ms. For each transmission: the frequency at the start (first 100 ms) and at the end (last 300 ms)

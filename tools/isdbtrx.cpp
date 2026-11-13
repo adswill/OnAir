@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // isdbtrx: decodes an ISDB-T IQ recording offline and writes the transport stream.
 //   isdbtrx recording.cs8 --rate 10e6 [--format cs8|cu8|cf32] [--out out.ts]
 #include "dect2/isdbt/isdbt_rx.h"

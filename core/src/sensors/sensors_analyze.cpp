@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Unknown signal analyser, see sensors_analyze.h. The width histogram idea and the guess names follow rtl_433's pulse analyser
 // (src/pulse_analyzer.c, GPL-2.0-or-later, (C) Benjamin Larsson, Christian W. Zuckschwerdt); the code is new.
 #include "sensors_analyze.h"

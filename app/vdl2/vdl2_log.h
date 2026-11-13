@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL2 session log (#309): every decoded frame of this session, not only the 400 the screen keeps, each with its UTC date and
 // time, and the export of it as CSV, JSON or plain text. Pure data and text (tests/vdl2/test_vdl2_log.cpp), no GUI.
 #pragma once

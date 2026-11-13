@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR error control codes, checksums and bit interleavers (ETSI TS 102 361-1 annex B), shared by the receiver and the test signal.
 // Bits are one per element (0 or 1) in the order they go on the air; words held in integers have their first bit in the top position.
 #pragma once

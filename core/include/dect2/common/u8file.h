@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Opening a file at a UTF-8 path, which is what the file dialogs return. On Windows a std::string given to std::ofstream or
 // fopen() is read in the ANSI code page, so a folder such as "OneDrive\Área de Trabalho" or a user name with an accent is not
 // found and the file is not written.

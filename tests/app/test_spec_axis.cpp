@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The shared frequency axis of the spectrum and the waterfall (app/gfx/spec_axis.h) and the colour additions (app/gfx/colormap.h).
 #include "../../app/gfx/spec_axis.h"
 #include "../../app/gfx/colormap.h"

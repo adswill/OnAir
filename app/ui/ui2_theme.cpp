@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The new interface: its three palettes (terminal, instrument, mono), the accent colour, the Dark / Light / High
 // contrast choice and applying the theme to ImGui's style. The shared declarations are in ui2_internal.h.
 // Split from ui2.cpp; the shared declarations are in ui2_internal.h.

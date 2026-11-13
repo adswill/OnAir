@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IPv4 and UDP (as carried by ALP) and the ATSC 3.0 low level signaling on top of it: the LLS table header and the Service List Table (A/331 section 6).
 #pragma once
 #include <tuple>

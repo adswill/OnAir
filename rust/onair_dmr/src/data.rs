@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! DMR data packets (ETSI TS 102 361-1 clause 9.3 and 9.2): the data header formats (unconfirmed / confirmed, response, short data defined and raw / status,
 //! UDT, proprietary), the data block sizes, and encoding / parsing of the blocks of rate 1/2 (BPTC), rate 3/4 (trellis) and rate 1 data including the
 //! confirmed data block serial number and CRC-9.

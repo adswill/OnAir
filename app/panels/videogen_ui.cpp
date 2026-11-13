@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > Digital video generator: a camera, a still picture or a video file encoded into an MPEG transport stream, written to a .ts
 // file or sent over UDP / RTP (port 5000 unless changed). Three tabs: "Sources and encoding" (the input, resolution and frame rate; with
 // Advanced ticked also the output and every encoder parameter; the bitrate estimate follows each change), "Preview" (the picture, with

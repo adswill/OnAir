@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HRPT / AHRPT, the layers above the demodulator (both directions: the test signal is built with the same code it is checked by).
 //
 // MetOp AHRPT and FY-3 AHRPT: QPSK, CCSDS convolutional code (K = 7, r = 1/2, G1 = 171, G2 = 133 octal, G2 inverted), 1024-byte CADUs

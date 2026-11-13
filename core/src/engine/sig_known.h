@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The table of modes the signal identifier knows (sig_ident.h): one row per mode the app can decode, what its signal looks like.
 // Adding a mode: one row in sig_known.cpp (docs/IDENTIFIER.md), then run test_specx_idmatrix and look at its line in the table. A mode without a
 // hand-written row gets one measured on its own test signal (sig_known_gen.cpp, written by test_specx_idmatrix --signatures) or, without a test

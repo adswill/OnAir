@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Broadcast character sets to UTF-8, and a clean-up for text that leaves the program (channel-list submissions, files).
 #pragma once
 #include <cstddef>

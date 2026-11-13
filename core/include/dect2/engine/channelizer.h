@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channeliser for several adjacent TV channels in one wide capture: every channel is mixed to baseband, low-passed and resampled to the rate
 // its receiver wants (ChannelFilter), the channel slots of the span come from the channel raster (spanSlots), and SpanScanner measures which
 // slots carry a signal (an averaged power spectrum, the noise floor from the quietest part of the span).

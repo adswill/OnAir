@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL frame version 4 under impairments: payload loss by Es/N0 per profile, carrier offset, sample-clock offset, fractional timing,
 // flat fading with Doppler, two-ray multipath, phase noise, 1..4 active voice slots with the rest as data, and the iterative /
 // decision-directed receiver parts on and off. Prints the tables of docs/KAAL-NEXT.md section 6; --full runs the longer measurement.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LEO downlink monitor, detect only: finds narrow carriers whose frequency drifts steadily over time (the Doppler of a satellite
 // pass) in a stream of spectrum frames. Pure function: no radio, no threads; nothing is decoded.
 #pragma once

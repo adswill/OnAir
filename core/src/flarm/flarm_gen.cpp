@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLARM test signal: see flarm_gen.h.
 #include "dect2/flarm/flarm_gen.h"
 #include "dect2/flarm/flarm_proto.h"

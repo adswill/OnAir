@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB channel decoder: the data symbols of every signal frame in, transport stream packets out.
 // de-interleaver (symbols, or bits for 4QAM-NR) -> soft demapper (-> NR decoder) -> codeword alignment -> LDPC -> BCH -> descrambler.
 // The LDPC decoding runs on worker threads; results come back in order through poll().

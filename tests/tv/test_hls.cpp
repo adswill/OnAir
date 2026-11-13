@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HLS pipeline: a transport stream goes in, a playlist and segments come out.
 //   test_hls                      checks that the demo programme (MPEG-2 picture) is refused with a clear message
 //   test_hls <file.ts> [outdir]   streams a recorded transport stream and checks the playlist and the segments; with `outdir` they are

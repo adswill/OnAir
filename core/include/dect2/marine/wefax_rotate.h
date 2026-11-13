@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather fax picture rotation: quarter turns clockwise (0..3), for the live picture, the saved PNGs and the gallery. Pure and header-only.
 // Row-major pictures of any pixel type (8-bit grey or 32-bit pixels). A turn count outside 0..3 wraps (-1 = one turn counter-clockwise).
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What the QO-100 tool reports (RxTelemetry::qo100, standard 54). Frequencies are true downlink RF (the beacon correction applied when
 // there is one), except where a field says IF.
 #pragma once

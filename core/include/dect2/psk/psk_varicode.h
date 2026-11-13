@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK31 / PSK63 protocol pieces: the varicode (G3PLX), the QPSK convolutional code (K = 5, polynomials 0x17 and 0x19) and its Viterbi
 // decoder. Sources (read, re-implemented, credited): P. Martinez G3PLX, "PSK31: A New Radio-Teletype Mode", RadCom 1998; fldigi
 // (W1HKJ et al., GPL-3) src/psk/pskvaricode.cxx (the table), src/psk/psk.cxx (the QPSK phase mapping), src/filters/viterbi.cxx.

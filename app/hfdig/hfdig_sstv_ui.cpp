@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, the SSTV view of the main tab (called by hfdig_ui.cpp): the picture being received (scaled to fit, aspect kept) with a
 // progress bar and the mode and slant under it; beside it (under it in a narrow pane) the last finished pictures as thumbnails to click,
 // Save (PNG) and Clear, and "Save every picture" (PNG files in <data folder>/sstv/, named by the time and the mode).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PLP decoding: time/cell de-interleaving, demapping, LDPC, BCH, BB-frame header parsing.
 // Runs on worker threads so that the receive path never stalls.
 #pragma once

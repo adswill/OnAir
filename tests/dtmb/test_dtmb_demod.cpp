@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channel estimate, header leakage removal, FFT and equaliser on the test signal (front end included), against the transmitted carriers.
 #include "dect2/dtmb/dtmb_demod.h"
 #include "dect2/dtmb/dtmb_front.h"

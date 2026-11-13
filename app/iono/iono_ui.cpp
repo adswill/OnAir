@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ionospheric sounder screens: the sounder picker and timing lock, the band coverage strip (what the radio has captured of 0 .. 30 MHz,
 // the span now, the columns the shown sounder was heard in), the ionogram (group range against frequency) with a read-out under the
 // mouse, the timeline of sweeps per sounder, PNG and CSV export, the list of sounders, and a short "?" guide. Scaling (iono_scale.h): the

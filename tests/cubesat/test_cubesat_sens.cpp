@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sensitivity of the Smart CubeSat chains: for each modulation and framing the lowest carrier-to-noise (dB in 10 kHz) at which at least 2 of 3 trials
 // decode at least 3 of 4 frames (2 of 4 for CW: the first message of a train is partly eaten by the keying detector's warm-up), 2 dB steps downward from 30 dB. Printed as a table (docs/CUBESAT-SMART.md quotes it). Only a coarse bound is asserted
 // (every case must decode at 30 dB): the numbers are measurements of this receiver, not claims about a theory.

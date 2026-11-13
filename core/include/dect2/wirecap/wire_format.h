@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireshark output: the byte formats, as pure functions (classic pcap, pcapng, GSMTAP, IPv4 + UDP, and the link-layer pseudo headers).
 // Layouts checked against the Wireshark sources (packet-gsmtap.h, packet-loratap.c, packet-btle.c, wiretap/pcap-common.c) and the tcpdump link type list.
 #pragma once

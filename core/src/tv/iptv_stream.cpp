@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internet TV: the stream reader. Opens an http(s) MPEG-TS stream, an HLS playlist (live or VOD, several bitrates, AES-128) or a UDP / RTP
 // (multicast) source, reconnects by itself and hands 188-byte transport stream packets to a sink (the player). See dect2/tv/iptv.h, docs/IPTV.md.
 #include "dect2/tv/iptv.h"

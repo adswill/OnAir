@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) MAC frames and channel plans: every beacon form (S1G beacon with and without elements, short beacon, management beacon, probe
 // request and response, data in all To DS / From DS directions), the elements a monitor lists (SSID, RSN, S1G Operation with every width, S1G
 // Capabilities, TIM, Country, power, rates, RAW, TWT), the FCS, garbage input, and the channel tables of every region (counts, edges, numbering, classes).

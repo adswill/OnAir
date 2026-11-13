@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The tinted rows of the mode list (ui2_shell.cpp modeList): each category's heading and its mode rows sit on a background mixed from the
 // pane and the category colour, the selected row on a stronger mix. No ImGui here, so tests/app/test_row_tint.cpp runs the same maths.
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! NMEA 0183 !AIVDM sentences: 6-bit armour, checksum, and the sentence parser.
 
 use crate::bits::get_u;

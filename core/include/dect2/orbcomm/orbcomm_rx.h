@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Orbcomm subscriber downlink receiver (137.2 - 137.8 MHz, orbcomm.h): decodes up to two downlinks in the passband at once.
 //
 // A spectrum of the input (Hann, about 60 Hz bins, averaged over about a second, smoothed over 5 kHz) finds the downlinks: peaks

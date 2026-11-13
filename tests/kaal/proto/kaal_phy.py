@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """KAAL physical layer, shared constants and helpers (v0.2 draft).
 Used by kaal_tx.py, kaal_rx.py and kaal_test.py. Do not change numbers here without updating all three.
 """

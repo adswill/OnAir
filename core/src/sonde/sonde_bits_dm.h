@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helpers shared by the M10 and M20 decoders (Meteomodem): the frame checksum, the differential Manchester line code
 // with its sync pattern, GPS time conversions, and a decoder base class that finds the sync and cuts frames out of the
 // symbol stream. Internal: not part of the interface in sonde_bits.h.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The voice upsampler 8 -> 48 kHz (dsp/up6.h): speech tones pass at unit gain, their images above 4 kHz are gone. The straight-line
 // interpolation it replaced kept a 3 kHz tone's image at 5 kHz only about 13 dB down (sibilant, metallic voice).
 #include "dect2/dsp/up6.h"

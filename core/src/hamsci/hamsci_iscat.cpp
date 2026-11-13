@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISCAT-A / ISCAT-B (WSJT): 42 tones, a 24-symbol frame = 4 Costas tones (0 1 3 2), 2 length tones (L and L+5 mod 42, L = message length + 1), 18 data tones
 // that run through the characters "@" + message and wrap. ISCAT-A: 512 samples at 11025 Hz per symbol (46.4 ms), tone spacing 21.53 Hz, first tone 47 x
 // spacing = 1012 Hz. ISCAT-B: half the symbol, double the spacing, first tone 13 x spacing = 560 Hz.

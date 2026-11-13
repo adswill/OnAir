@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4: decoder-side speech enhancer (receiver only, the bit stream does not change). See docs/KAAL-ENHANCE.md.
 //
 // Runs inside the decoder on the raw core synthesis and the decoder's side information (LPC, pitch lag and gains, pulse energy, the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The DJI polyphase resampler computes four outputs per pass; every output must equal the single-output computation bit for bit,
 // including the outputs whose window leaves the input (zero padded) at both ends. A one-output run takes the single path, which is the reference.
 #include "dect2/dji/dji_dsp.h"

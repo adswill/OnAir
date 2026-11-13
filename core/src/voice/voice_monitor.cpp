@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The voice monitor of the digital voice modes (voice_monitor.h).
 #include "dect2/voice/voice_monitor.h"
 #include "dect2/audio/audioout.h"

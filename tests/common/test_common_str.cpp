@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Compares dect2/common/str.h against the ORIGINAL per-file helpers (embedded here as references) on random strings:
 // lower/upper, the trim variants, split, toHex variants and the two JSON escapers.
 #include "dect2/common/str.h"

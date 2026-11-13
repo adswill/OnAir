@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals of the satellite detector modes. Nothing is transmitted; the samples only exist in memory or a file.
 #include "dect2/satmisc/satdetect_live.h"
 #include <cmath>

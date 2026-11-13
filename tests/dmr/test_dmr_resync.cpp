@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR cold-start resync (3.5): the first short transmission heard by a fresh receiver (a scan lands on a channel, a handset keys up after silence),
 // with a carrier offset the receiver has not learned yet, noise and a clock error. Measures the share of first calls that decode and the delay from the
 // start of the call to the first voice burst. Also: after the carrier has gone away for a while the receiver keeps what it learned, so the next short

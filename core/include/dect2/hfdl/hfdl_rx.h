@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL receiver: every HFDL channel of the list that lies inside the sample band, decoded at once.
 //
 // Per channel: the carrier (1440 Hz above the dial frequency) mixed to 0 Hz, a two-stage moving sum and a FIR filter bring it down,

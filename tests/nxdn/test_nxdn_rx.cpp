@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NXDN receiver against the test signal with real-world faults: both rates, +-1 kHz offset, off centre with clock errors, noise, symbol
 // errors, a call joined late, a call without its release, all at once; and noise only. Silent.
 #include "dect2/nxdn/nxdn_gen.h"

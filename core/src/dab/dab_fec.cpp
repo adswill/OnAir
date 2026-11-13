@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB channel coding: tables, CRCs, energy dispersal, the rate 1/4 convolutional code with puncturing (FIC and EEP sub-channels),
 // and the Reed-Solomon code of DAB+. Conventions verified against a live Band III ensemble.
 #include "dect2/fec/fec_proto.h"

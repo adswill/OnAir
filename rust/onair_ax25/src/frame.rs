@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! AX.25 v2.2 frame parsing and the text forms of a frame (callsign with SSID, digipeater path, TNC-2 monitor line, frame type name) and the FCS.
 //! Frames come without HDLC flags; the FCS is CRC-16/X-25 sent low byte first (AX.25 v2.2 section 3.8). Building frames stays in C++ (transmitter side).
 use crate::arena::Arena;

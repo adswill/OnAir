@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The update mirror: the address templates, the SHA256SUMS parser, and the order of the sources against two fake HTTP servers on 127.0.0.1
 // (GitHub and the mirror): the mirror is never asked unless the user turned it on, it answers only after GitHub failed, a package only the
 // mirror vouches for needs the explicit yes, GitHub's checksum wins over the mirror's, and a wrong checksum is refused.

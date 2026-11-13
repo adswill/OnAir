@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MeshCore transmit: see meshcore_tx.h.
 #include "dect2/mesh/meshcore_tx.h"
 #include "dect2/mesh/meshcore_node.h"

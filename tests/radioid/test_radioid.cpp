@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio ID list: the radioid.net CSV layouts, separators, quotes, BOM, damaged rows, duplicates, the global slots.
 #include "dect2/common/radioid_db.h"
 #include <cstdio>

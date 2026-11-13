@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde receiver: finds every sonde in the captured band (up to 8 at once), follows each on its own channel, tells the type from the
 // frame sync and decodes it. Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis
 // thread (never blocks: the work is done on the receiver's own thread), telemetry() and the setters from the interface thread.

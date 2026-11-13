@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signal of the radio astronomy tool (makeAstroSynth), for a radio tuned to the hydrogen line (1420.405751 MHz): Gaussian noise
 // whose spectrum has a sloped, slightly curved baseline (the receiver's band shape), plus a weak Gaussian line kAstroLineDb under the
 // noise at the frequency of the radial velocity kAstroLineKms (20 km/s wide). SynthConfig::modeOpt[0] = 1: off source (no line).

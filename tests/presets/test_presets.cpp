@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Presets: serialisation round trip, forward-compatible unknown fields, secrets and location left out, validation, radio-compatible
 // apply, the store (names, rename, delete, favourites, recents, default), the file and the built-ins.
 #include "dect2/presets/preset.h"

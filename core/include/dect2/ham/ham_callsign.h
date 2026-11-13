@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Callsigns and CQ calls in decoded text (4.0): for CW, PSK31, RTTY, Olivia, MFSK, JS8 free text. Pure code.
 //  - hamFindCallsigns(): every amateur callsign in a text line (prefix 1-2 letters/digit, one digit, 1-4 suffix letters, optional /P /M /QRP
 //    or a prefix like DL/), in the order they appear. "DE" is read as the separator, so "CQ CQ DE LY1ABC LY1ABC K" gives LY1ABC.

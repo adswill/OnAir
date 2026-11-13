@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! LoRa APRS and MeshCom 4 packet layer. LoRa APRS: payload = "<" 0xFF 0x01 + a TNC2 text packet "SRC>DEST,PATH:info" (lora_utils.cpp of
 //! richonguzman/LoRa_APRS_iGate; a trailing NUL, CR or LF is dropped). MeshCom: type byte (':' text, '!' position, '@' HEY, 'A' ack), message id (4 bytes
 //! little endian), flags / max hop byte, "SRCPATH>DEST" + type + payload + 0x00, hardware id, modulation | country << 4, 16 bit byte sum, firmware version and

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ppm calibration helpers: synthetic carriers at known ppm offsets in noise, the averager's confidence, sanity limits, quick check, drift, lists.
 #include "dect2/common/stable_random.h"
 #include "dect2/selfcal/ppmcal.h"

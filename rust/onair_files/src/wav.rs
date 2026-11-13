@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! RIFF / WAVE headers of two channel IQ recordings (SDR programs write them): the `fmt ` chunk, the choice of sample format, where the `data` chunk ends and the
 //! centre frequency that is often part of the file name. Walking the chunks (seeking in the file) stays in C++.
 

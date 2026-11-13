@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA voice path: an unencrypted generated traffic burst reaches the speech frame sink as the right coded frame; an
 // encrypted one, and one with unknown encryption state, produce "not decoded" and the sink is never called.
 #include "dect2/tetra/tetra_gen.h"

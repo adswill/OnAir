@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Smoke test in the real Workers runtime (workerd through Miniflare, with its local D1 and R2): the SQL dialect of D1 (RETURNING, ON CONFLICT,
 // LIKE ... ESCAPE), Ed25519 from a PKCS#8 seed, multipart parsing and DecompressionStream as Cloudflare runs them.
 // Run after `npm test` (it uses the compiled dist-test/src): node test/workerd-smoke.mjs

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "webshare_core.h"
 #include "web/web_json.h"
 #include "web/web_policy.h"

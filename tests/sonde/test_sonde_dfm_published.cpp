@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DFM-17 values that rs1729/RS printed in its issue #62 ("Validate temperatures < -55c for DFM17", 2025-02-28 flight, sonde IDxB:25004808:DFM17),
 // pushed through our encoder and decoder. This is a check of conventions (channel B = DFM-17, the serial number as a plain decimal, units,
 // the sign of the vertical speed, UTC), not of the bit layout: those lines are decoded output, not frames. The temperatures there are

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LDPC address tables of A/322 Annex A (Ninner = 64800), generated from the standard's text.
 #include "atsc3_ldpc.h"
 namespace dect2 {

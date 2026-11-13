@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multipath indicator (3.9, docs/SMART5-gnss-3.9.md item 23). A reflector (the ground, a roof, a wall) at height h below the
 // antenna adds a delayed copy whose phase turns with the satellite's elevation: C/N0 then oscillates around its elevation trend
 // with a frequency of 2 h / lambda cycles per unit of sin(elevation). Per satellite pass, this removes the smooth trend of C/N0

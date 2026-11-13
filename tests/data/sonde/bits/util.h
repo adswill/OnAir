@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared helpers of the test_sonde_bits / _dfm / _m10 / _m20 programs (a header, kept here so that it is delivered with the tests).
 #pragma once
 #include "dect2/sonde/sonde_bits.h"

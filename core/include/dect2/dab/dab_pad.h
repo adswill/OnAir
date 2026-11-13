@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB+ programme associated data: the PAD carried in the data stream element of every access unit (ETSI TS 102 563 clause 5.2, EN 300 401
 // clause 7.4), the MSC data groups sent in its X-PAD (EN 300 401 clause 5.3.3, X-PAD application types 1, 12 and 13) and the MOT objects in those
 // (ETSI EN 301 234, header mode). A MOT object whose content type is an image is the station's slide show picture.

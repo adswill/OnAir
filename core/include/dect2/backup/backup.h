@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Backup and restore of the user's data (Tools > Backup and restore). Pure functions, no UI and no globals.
 //
 // The archive (.onairbackup) is an ordinary zip with the entries stored (not compressed), so it opens with any zip tool:

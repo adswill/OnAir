@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Front end of one GNSS signal band: mixes a signal's centre frequency to zero and resamples to the rate its channels work at (a multiple of
 // the chip rate, chosen so that one code period is a power of two samples for the acquisition FFT). Any input rate from 2 Msps up, non-integer ratios included.
 #pragma once

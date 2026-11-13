@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // D-STAR screens: the current call (callsigns, repeaters, flags, message, position, voice), the call log, the slow data messages, the
 // positions on a map (the ADS-B map underneath, as for APRS and M17), the calling-channel presets, and a "?" about the mbelib library the
 // voice needs (docs/CODECS.md).

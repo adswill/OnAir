@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM: table types shared between drm_tables.cpp (generated data) and drm_defs.cpp. Not part of the public interface.
 #pragma once
 

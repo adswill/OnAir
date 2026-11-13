@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ham-feed.test.js - "ham contacts are always 0": the payload the desktop app posts (map_send.cpp + ham_mapfeed.cpp) goes through the hub's
 // ingest rules and the page's contact code, end to end. Each case below was a cause of the zero.
 import test from "node:test";

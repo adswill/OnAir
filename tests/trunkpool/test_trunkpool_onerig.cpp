@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Single-radio trunking (docs/TRUNK1-3.9.md): one wide capture holds a trunked system's control channel and several voice channels, and the
 // control channel and N simultaneous calls are decoded from that single stream. Per protocol, with the generators that exist:
 //   P25         control channel (TSBK grants) at an offset + 4 Phase 1 calls, one of them next to the DC spike; tuner ppm error, carrier offsets,

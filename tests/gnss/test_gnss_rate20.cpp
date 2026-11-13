@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The widest capture the HackRF makes, 20 Msps: the front end mixes, filters and resamples to 4.096 Msps, and the rest is as at 4 Msps. A full fix, and the
 // speed of feed() at this rate (the number is printed). A second check with the signal 6 MHz off the centre (the tuned centre set to 1581.42 MHz): the
 // receiver mixes the band down itself.

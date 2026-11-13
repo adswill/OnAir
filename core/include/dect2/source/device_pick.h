@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Choosing a radio from the list by what the user types on the command line: --list-devices prints the list, --device <index | serial |
 // name part> picks one, --antenna <name> picks the antenna socket of a radio that has several (an SDRplay RSP2 lists one entry per socket,
 // a SoapySDR radio one per input). Used by onair-cli (tools/dect2cli.cpp) and the app's command line (app/main.cpp). Header only, no I/O.

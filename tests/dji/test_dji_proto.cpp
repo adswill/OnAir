@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DJI DroneID (dji_proto.h): the building blocks and one burst at 15.36 Msps through noise, a carrier offset and a timing offset.
 //
 // VERIFIED AGAINST PUBLISHED MATERIAL: the structure constants (FFT 1024, 600 carriers, CP 80/72/.../80, 9880 samples = 643 us, ZC symbols 4 and 6 with roots

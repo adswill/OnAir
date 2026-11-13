@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wideband LoRa survey (loraraw_survey.h): several LoRa signals of different spreading factor, bandwidth and sync word in one 2 MHz capture,
 // found without being told any parameter and classified (Meshtastic preset, LoRaWAN plan channel, LoRa APRS, private); sensitivity of the
 // spectral gate against the Signal Lab search that is told the channel; false alarms on noise and interferers; carrier offsets; time.

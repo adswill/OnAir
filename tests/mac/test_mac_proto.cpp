@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MAC/packet codes: Golay header, BCH of line 625, Hamming 8/4, CRC, interleaving, companded sound blocks, SI data groups.
 #include "dect2/mac/mac_proto.h"
 #include <cmath>

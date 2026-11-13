@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BLE tracker detector for the engine: IQ in, item trackers and unwanted-tracking alerts out.
 //
 // No DSP of its own: the Bluetooth LE advertising demodulator (ble_rx.h) runs on the samples and hands every good packet here

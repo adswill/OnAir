@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Galileo E1-B next to GPS in the simulated sky: the BOC(1,1) signal is acquired and tracked, the I/NAV pages decoded (sync pattern, deinterleaving,
 // Viterbi, CRC), the ephemeris assembled from words 1-5 and compared with what was sent, the GST-GPS offset of word type 10 read, and the position
 // fixed with GPS and Galileo together (Galileo time moved to GPS time with that offset; before it has arrived, a clock unknown of its own).

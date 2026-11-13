@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers: resampler, mixer and spectrum (cell_dsp.h).
 #include "dect2/cell/cell_dsp.h"
 #include "dect2/dsp/fftutil.h"

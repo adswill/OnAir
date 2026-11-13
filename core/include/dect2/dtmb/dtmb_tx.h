@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB transmitter model (symbol rate): transport stream packets -> scrambler -> BCH -> LDPC -> mapping (and interleaver) -> frame body
 // (system information, carrier interleaver, 3780 point inverse FFT) -> PN header. Used by the test signal and the tests; nothing is transmitted.
 #pragma once

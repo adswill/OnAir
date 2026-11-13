@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator receiver (pskdsp_rx.h): search span, blind analysis (with a zoom for narrow signals), continuous demodulation with
 // Doppler following, bit decoding, saving.
 #include "dect2/pskdsp/pskdsp_rx.h"

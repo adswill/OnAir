@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NAVTEX threshold bench (SENSITIVITY-3.9-B): 100 Bd FSK +-85 Hz at the marine 24 kHz base rate, AWGN measured in 300 Hz, optional
 // carrier offset and drift. Runs the real FskSlicer + Spectrum centre finder + NavtexDecoder (the chain MarineReceiver::feed uses after its
 // front end). A unit is one message received complete with every character right.

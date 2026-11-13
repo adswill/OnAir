@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared state of the audio output: the lock-free ring buffer and the playback bookkeeping. A platform backend (CoreAudio, miniaudio)
 // calls render() from its real-time callback.
 #pragma once

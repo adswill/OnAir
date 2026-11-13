@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM modulation monitor: the deviation, pilot, stereo band, RDS and SCA readings against what the generator put in, at three input rates, with carrier offset and drift,
 // changes during the run, over-deviation, a noise sweep (the reading and the false pilot / RDS / SCA reports on a noise-only carrier). Simulated signals only.
 #include "x40_gen2.h"

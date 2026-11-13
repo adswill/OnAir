@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH OFDM tables (ETSI EN 302 583 V1.2.1 clause 5.7): the 1K mode next to the DVB-T 2K / 4K / 8K ones, the symbol interleaver with the
 // 1K permutation (table 5.16), and the TPS with the DVB-SH fields (5.7.4.3.2). The 2K / 4K / 8K pilot and TPS positions come from the DVB-T
 // code (the same tables, EN 300 744 and its annex F).

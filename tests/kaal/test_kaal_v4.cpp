@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL frame version 4: slot and control word round trips, layered LDPC, clean loopback with four slots, text, beacon, lock time,
 // no false lock on noise or on a v3 signal (docs/KAAL-NEXT.md).
 #include "kaal_v4_test_common.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA voice echo: the same piece of speech must reach the codec once. The clear cell of scene 1 sends a traffic burst of its own random bits in
 // every frame of timeslot 3 (the bits depend on the slot counter, so each burst is a fingerprint of its air time). Captures that follow each other,
 // a capture decoded twice, and captures that overlap must not give any burst twice; the frames of a lost stretch are silence, never a repeat.

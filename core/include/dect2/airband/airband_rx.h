@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airband receiver: AM voice in the VHF aeronautical band (118 - 137 MHz) and the military UHF air band (225 - 400 MHz, 25 kHz channels),
 // several channels of the sample band at once.
 //

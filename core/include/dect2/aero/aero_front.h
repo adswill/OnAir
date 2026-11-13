@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mixer + 4-stage CIC decimator in integers (wraps cleanly), input scaled to 16 bits: the front end of every Aero channel (P and C).
 #pragma once
 #include "dect2/common/ring.h"

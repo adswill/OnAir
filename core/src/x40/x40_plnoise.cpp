@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Power-line and impulse noise analyser (LF to VHF, any tuned frequency): the interference that arcing insulators, faulty street-lamp ballasts, dimmers and switch-mode supplies put
 // on a radio band. Impulses are found in the envelope (a robust level and spread follow the noise, an impulse is a peak over level + 6.5 spreads), and the spacing between impulses
 // is searched for a repetition: a rate near twice the mains frequency (100 / 120 Hz) is the signature of a power-line fault (an arc at every half-cycle), a rate near the mains

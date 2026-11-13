@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The screens of the 4.0 signal modes (families 881 - 885, docs/X40-4.0.md): one table of what was decoded, one Receiver page. One click: the mode tunes and needs no settings.
 #include "app.h"
 #include "dect2/x40/x40_rx.h"

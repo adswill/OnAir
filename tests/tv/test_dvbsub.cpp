@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB subtitles (EN 300 743): a page / region / CLUT / object set built here with 2-, 4- and 8-bit run-length strings is decoded, and the
 // rendered bitmap pixels, the region positions and the PTS timing are checked. No real broadcast recording is used (none is available).
 #include "dect2/tv/dvbsub.h"

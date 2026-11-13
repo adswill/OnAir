@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MeshCore transmit (TX mode "meshcore"): the LoRa frames of MeshCore packets that the MeshCore device screen (app/mesh/meshcore_ui.cpp)
 // built with the node (meshcore_node.h), sent once each, then the generator ends. Nothing is refused: the radio settings come from r.opt
 // (meshcore.sf, meshcore.bwHz, meshcore.cr, meshcore.preamble; defaults: the EU/UK Narrow preset, SF8, 62.5 kHz, 4/8, preamble 32) with

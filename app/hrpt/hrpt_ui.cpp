@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HRPT / AHRPT screens: the AVHRR picture of the pass growing line by line (a false-colour composite or one of the five channels in
 // grey), Save PNG and New picture; the frequency presets and the variant; the receiver's state, the packets heard and the constellation.
 // The tab and the empty-state text say what the mode needs: a dish and a fast radio.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde: the tuning entry, and the receiver on silence and noise: it reports at a steady rate whatever the chunk size and mode,
 // finds nothing, survives reset(), and stops its thread cleanly.
 #include "dect2/engine/modes.h"

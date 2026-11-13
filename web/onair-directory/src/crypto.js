@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ed25519 verification with WebCrypto (the same call works in Workers and in node 20+).
 import { fromHex } from "./logic.js";
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test transmitter for the KAAL receiver tests (v3 format): codec v3 frames -> rate-matched LDPC words of 480 bits (240 or 320 information
 // bits) -> 4-word pseudo-random interleave -> 16-QAM with preamble and pilots (160-symbol frames) -> RRC -> the sweep at -10 dB with the
 // station ID in its variants, plus channel helpers. Built from the PHY functions on purpose, not from VoiceTx.

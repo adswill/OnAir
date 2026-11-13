@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The small part of the Vulkan 1.0 API that the compute LDPC decoder uses, declared by hand so that building needs neither the Vulkan SDK nor
 // its headers. Types, values and structure layouts are those of the Vulkan specification (vulkan_core.h); the loader (libvulkan.so.1,
 // vulkan-1.dll, libvulkan.1.dylib / MoltenVK) is opened at run time and every entry point is looked up through vkGetInstanceProcAddr /

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The direction finder (View > Direction finder): bearing of a transmitter from a coherent multi-channel receiver (a KrakenSDR style array),
 // a live polar plot of the bearing spectrum, history, a calibration wizard, array settings, a local map with the bearing lines and a position
 // fix from several bearings. Sources: a built-in simulator (demo, no hardware needed), an interleaved cf32 / SigMF recording, or bearings

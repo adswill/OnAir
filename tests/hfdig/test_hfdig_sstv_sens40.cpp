@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 sensitivity guard (docs/SENSITIVITY-4.0-X2.md): the SSTV picture filter (along-line Wiener filter with the noise measured on the
 // sync pulses, then a 3x3 Lee filter on the picture) against the same decoder with the filter off (the 3.9 picture), same noise.
 // Test audio with a +-50 Hz tuning error and a +-50 ppm clock error, SNR in 3 kHz (as test_hfdig_sens39d.cpp):

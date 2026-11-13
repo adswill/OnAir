@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, JT4: the code (206 tones of 4, the timing), then the whole receiver on synthetic audio (clean, sub-modes A .. G, frequency and
 // time offsets, a weak signal, two stations, noise alone). The synthetic audio is loopback, but the encoder was checked against WSJT-X (jt9 -4 decodes
 // it) and the receiver against the real WSJT-X sample DF2ZC_070926_040700.WAV (JT4A, "K1JT DF2ZC JO30", sync bit inverted, 5.1 s late).

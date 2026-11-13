@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 trunking / Phase 2 file tool. Receive only.
 //   p25p2tool cc <file.cf32|.sigmf-data> <rate Hz> [<centre MHz>]
 //       the Phase 1 control channel: site, identifiers and every voice grant (Phase 2 grants with their carrier and slot)

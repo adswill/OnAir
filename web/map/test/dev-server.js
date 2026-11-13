@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dev-server.js - run the map page locally against the REAL hub rules, without Cloudflare.
 //   node test/dev-server.js --serve [--port 8791] [--seed] [--still]
 // Serves public/, takes POST /ingest through the same sanitize() + TrackBook the Durable Object uses, and answers /live (full and ?since=),

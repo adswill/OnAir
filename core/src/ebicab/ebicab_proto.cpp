@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Eurobalise telegram coding, see ebicab_proto.h (UNISIG SUBSET-036 issue 4.0.0, clause 4.3)
 #include "dect2/ebicab/ebicab_proto.h"
 #include <algorithm>

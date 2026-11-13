@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Lightning position (network): one station's processing and the server's (ltpos_core.h).
 #include "dect2/sferics/ltpos_core.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 bootstrap (A/321): the short signal at the start of every frame that tells a receiver the version, the bandwidth, the sample
 // rate of the rest of the frame and what the preamble looks like. It is always sent at 6.144 Msamples/s in a 4.5 MHz band.
 // The generator is for tests (nothing is transmitted); the detector finds the bootstrap in a stream and reads the signalling.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3.9 smart features, broadcast (docs/SMART5-broadcast-3.9.md items 1 - 10). Simulated only: synthetic receiver reports, deviation,
 // carriers, envelopes and audio with offsets, noise and drift; no recording of these faults was on hand.
 #include "dect2/smart5/am_carriers.h"

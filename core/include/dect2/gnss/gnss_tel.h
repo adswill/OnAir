@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS receiver telemetry, shared by the receiver and the UI. Designed for every system in the signal plan (GPS, GLONASS, BeiDou, Galileo),
 // whether or not the receiver decodes it yet: an unsupported system just never shows up in the tables.
 // Every vector is capped; a report stays well below 100 kB.

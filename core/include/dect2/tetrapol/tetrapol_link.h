@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL data link and signalling, written from the public PAS 0001-3-3 v2.0.6 (transport and link), 0001-3-2 v2.3.9 (messages) and
 // 0001-3-4 v1.3.0 (circuit mode LSDUs), on top of the data frames of tetrapol_codec.h:
 //   data block:  FN 00 single block, 01 11 bi-block, 01 10 11 ... 11 10 then a closing 01 block that is the XOR of the others (3-3 6.2);

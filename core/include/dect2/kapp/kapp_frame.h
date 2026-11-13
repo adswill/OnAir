@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP, the amateur packet protocol (spec: KAPP-SPEC-v0.1): the burst physical layer, transmit side.
 //
 // A burst = ramp up (8) + preamble (two Zadoff-Chu sequences, roots 41 and 86, 127 symbols each) + header (64 info bits + CRC-16, K = 7 rate 1/2

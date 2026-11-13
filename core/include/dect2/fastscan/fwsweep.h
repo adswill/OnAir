@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HackRF firmware sweep for the fast scanner (receive only). libhackrf's public sweep API (hackrf_init_sweep / hackrf_start_rx_sweep) makes the
 // firmware retune by itself and tag every 16 KiB block with 0x7F 0x7F and the tuned frequency, so the host pays no USB round trip per hop. The
 // scanner then treats each block as one hop capture (FastScanner::runBlocks). Falls back to the ordinary retune loop when the firmware or the

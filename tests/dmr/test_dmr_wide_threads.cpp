@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole-span DMR with the carriers decoded in parallel (WideBank on the shared pool) against the sequential loop: five generated carriers are
 // recorded once, then fed through two WideModes banks, one with WideParallel off. The carriers table and the merged call log must be identical;
 // prints the CPU and wall time of both feeds.

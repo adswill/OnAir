@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum ghost (app/state/spec_ghost.cpp): snapshot pooling, columns over a view, new-signal detection, file round trip, rolling prune, pick.
 #include "../../app/state/spec_ghost.h"
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ARDOP receiver on the generator's signals: every frame type of the test script, then the real-world impairments one by one: tuning
 // errors across the whole search range, noise, a sender clock off by 100 ppm, short and long leaders, a mis-tuned sender, a session ID,
 // and pure noise (nothing may be reported).

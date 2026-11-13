@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / packet: who repeated what. From the digipeater path of every frame heard (the H bits mark the hops that happened) a live graph of
 // stations, digipeaters and IGates is built, with the stations each digipeater relayed, their spread on the map, and flags for digipeaters that
 // loop packets or have gone quiet. Works off air and offline: no IGate connection needed. Pure data in, pure data out (no radio, no clock).

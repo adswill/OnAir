@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wize (169 MHz, Wize Alliance LAN protocol v1.x on EN 13757-4 mode N) in the Wireless M-Bus receiver.
 //   1. frame level: the PRES-EXCHANGE fields round-trip through a format B frame; a damaged byte fails the CRC; a frame cut short is refused
 //   2. over the air: the 169 MHz plan with two Wize meters (2.4 kbit/s with the L7 encrypted, 4.8 kbit/s with key selector 0) and the plain N1 meter,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CubeSat telemetry framings, without any radio: the codes and frame layouts amateur satellites on 2 m / 70 cm use.
 //  - AX.25 (packet_ax25.h) at 1200 baud AFSK or 9600 baud G3RUH: HDLC, NRZI, the G3RUH scrambler at 9600.
 //  - GOMspace NanoCom AX100 "Mode 5" (ASM + Golay): GMSK / FSK, the sync word 0x930B51DE, a Golay (24,12) coded length field (low 8 bits

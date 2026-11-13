@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web DSP on synthetic IQ: the shared overlap-save FFT and the per-user slices (a tone comes out where it should with a continuous phase),
 // every demodulator (AM, NFM, WFM, USB, LSB, CW) gives the modulating tone, the passband rejects a neighbour, squelch, the waterfall rows.
 #include "../../server/web/web_dsp.h"

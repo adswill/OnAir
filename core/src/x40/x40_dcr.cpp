@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DCR, Japan's digital convenience radio, 4-level FSK (ARIB STD-T98 Volume 3; docs/DCR-4.0.md). Receive only.
 //
 // The physical layer is NXDN48's: 2400 symbols/s, 6.25 kHz, the sync word 0xCDF59, a 384-bit frame of 80 ms, PN9 whitening and the same K = 5

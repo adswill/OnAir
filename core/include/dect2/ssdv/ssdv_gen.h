@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSDV test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 // A test picture cut into SSDV packets (ssdv_proto.h) as continuous-phase (optionally Gaussian filtered) 2-FSK, either a plain bit stream or
 // RTTY-framed bytes (8N2), with preamble, in white noise, with a carrier offset, a carrier drift and a clock error.

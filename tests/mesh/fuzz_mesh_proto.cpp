@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the mesh packet layers, meant for DECT2_SANITIZE=ON: every decoder must survive any bytes of
 // any length (also longer than a LoRa frame, which the Rust records cut instead of overflowing). Also a libFuzzer target with -DONAIR_LIBFUZZER.
 #include "dect2/mesh/mesh_proto.h"

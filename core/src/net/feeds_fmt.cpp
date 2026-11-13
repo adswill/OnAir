@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The data feed formats: SBS-1 BaseStation, Beast binary, KISS, APRS-IS, acarsdec and dumpvdl2 JSON.
 // References: the dump1090 / readsb "net_io.c" writers (SBS, Beast), the KISS protocol (Chepponis / Karn 1987),
 // aprs-is.net "IGate" and "q Construct" pages, acarsdec's JSON output, dumpvdl2's JSON output (as acarshub reads them).

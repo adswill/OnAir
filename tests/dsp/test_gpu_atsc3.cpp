@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 Type B LDPC (rates 6/15..13/15, 16200 and 64800) on the GPU (GpuLdpc::decode with the atsc3::qcCode graph) against the CPU decoder
 // (LdpcCode::decodeFast with the two-minimum correction): same code words from noisy BPSK soft bits, and the time per word of each. The GPU must
 // converge wherever the CPU does (within one word of 24 per code) and its hard decisions must equal the sent word whenever it reports ok.

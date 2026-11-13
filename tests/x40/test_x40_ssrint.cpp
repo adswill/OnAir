@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSR interrogations on 1030 MHz: Mode 1, 2, A, B, C and D (P1 - P3 spacing 3, 5, 8, 17, 21, 25 us), the side-lobe suppression pulse P2, the intermode P4 (short and long), Mode S (56 and 112 bit P6), interlaced trains of
 // two radars at different levels and rates, at 2, 4 and 10 Msps, with pulse-position jitter and noise. The mode names and the counts are compared with what the generator sent. Noise alone, a DME-like train (pairs 12 us apart),
 // a train with a wrong spacing (10 us) and a plain carrier give no interrogation. Simulated signals only: no recording of 1030 MHz was available.

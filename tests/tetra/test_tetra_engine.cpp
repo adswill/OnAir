@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA through the engine (setStandard(48)): the synthetic source plays the two test cells at 2 Msps; the receiver finds them and
 // reports through latestRx() with their network information.
 #include "dect2/engine/engine.h"

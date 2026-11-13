@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UHF RFID, EPC Class-1 Gen-2 / ISO 18000-63 (860 - 960 MHz): the commands of the READER. The reader modulates its carrier with pulse-interval encoding: every
 // symbol ends in a low pulse (PW), data-0 is one Tari long, data-1 between 1.5 and 2 Tari. A frame is a delimiter (12.5 us low), data-0, RTcal (a 0 plus a 1),
 // for Query also TRcal, then the bits; a symbol shorter than RTcal / 2 is a 0. Query (1000 + DR, M, TRext, Sel, Session, Target, Q, CRC-5), QueryRep, QueryAdjust,

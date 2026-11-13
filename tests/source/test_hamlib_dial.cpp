@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A Hamlib rig is tuned to the dial frequency, whatever the mode (#358). The rig's own receiver gives the audio, so there is no DC spike to
 // keep a narrow channel off; 3.7 still added the mode's tuneOffsetHz and FT8 on 7.074 MHz put an IC-7300 on 7.094. Runs the whole engine on
 // Hamlib's dummy rig (model 1) with a silent sound card, for every HF mode with the 20 kHz offset (FT8, PSK31, MT63, JS8, ALE, marine ...)

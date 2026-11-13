@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MeshCore device screen (the Device view of the MeshCore entry): OnAir as a MeshCore companion node that sends and receives, built on
 // dect2/mesh/meshcore_node.h. One click on Join MeshCore makes an identity on this computer (if there is none), sets the region's standard
 // radio preset (EU/UK Narrow 869.618 MHz in Europe, USA 910.525 MHz, Australia 915.8 MHz), starts the receiver and queues an advert. Chat:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero P channel demodulation: one carrier at a time, already moved near 0 Hz.
 //   600 / 1200 bit/s: MSK seen as offset QPSK with half-sine pulses; the bits are the changes between successive arm decisions
 //                     (JAERO mskdemodulator.cpp: DiffDecode of imag as is, of real negated, i.e. the signs of consecutive arm values compared with (-1)^k)

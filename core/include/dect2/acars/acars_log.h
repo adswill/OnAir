@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A bounded log of the interesting ACARS messages per aircraft, shared by the ACARS, VDL2 and HFDL screens, the ADS-B screens and the
 // map upload. Pure data and rules (no radio, no UI): classification of a message by its label and text, redaction of phone numbers and
 // e-mail addresses, and a store that attaches messages to an aircraft by ICAO address, registration or flight, never by a guess.

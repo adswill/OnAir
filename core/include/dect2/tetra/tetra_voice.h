@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA unencrypted voice path (receive only). Frame and burst structure follow the public ETSI EN 300 392-2 descriptions
 // (full slot traffic channel: two 216 bit blocks, scrambled and block interleaved over 432 bits).
 //

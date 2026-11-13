@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Service off-air detector (3.9, docs/SMART5-tv-3.9.md item 11). A transport stream keeps its PAT, PMT and null packets going
 // while one service's encoder stops: the mux looks healthy and the receiver shows a frozen or black picture. This tracker learns
 // each elementary PID's usual bitrate and reports the service "off air at the source" when its video or audio PID stops, or falls

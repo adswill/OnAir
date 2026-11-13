@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ASTERIX surveillance data decoder: UDP datagrams (unicast or multicast) or a recorded file in, a track table out. No radio is involved: a radar's
 // own pulses cannot be demodulated by a software defined radio in any useful way, so this mode takes the data a radar or an ADS-B / multilateration
 // ground station sends on a network (categories 021, 048 and 062, asterix_proto.h). Engine standard 153 (family 151, "ASTERIX"); the receiver lives in

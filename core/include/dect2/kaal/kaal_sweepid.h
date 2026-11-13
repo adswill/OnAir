@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL station ID carried in the sweep signature (port of kaal_phy_id.py, see scratchpad KAAL-V3-NOTES.md).
 // The sweep period is kSwL = 24240 samples at 48 kHz (0.505 s). Each period carries one of four chirp variants = 2 bits:
 //   0 up    full-period up chirp -5000 .. +5000 Hz, unit amplitude

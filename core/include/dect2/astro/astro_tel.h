@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What the radio astronomy tool reports (RxTelemetry::astro, standard 49).
 #pragma once
 #include <cstdint>

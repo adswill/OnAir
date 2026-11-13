@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Builders for the elements that 2.4 / 5 / 6 GHz access points announce their abilities with, and the FILS Discovery frame: the test signal's
 // side of wifi_elems.cpp (the layouts are those of IEEE 802.11-2020 9.4.2, 802.11ax-2021 9.4.2.248 - 9.4.2.249 and 802.11be-2024 9.4.2.312 - 9.4.2.313).
 // Nothing is transmitted; the bytes feed the generator and the tests.

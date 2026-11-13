@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // User-installed speech codecs for the voice modes (TETRA voice now, Iridium voice later). OnAir ships no speech codec: a codec is a
 // plug-in file the user puts in the codecs folder under the app data folder, and it is loaded only after the user has accepted the legal
 // notice. See docs/CODECS.md. Nothing here knows any particular codec.

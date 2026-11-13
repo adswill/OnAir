@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NXDN receiver: NXDN48 (2400 symbols/s, 6.25 kHz) and NXDN96 (4800 symbols/s, 12.5 kHz) four-level FSK, conventional and trunked.
 //
 // The channel is mixed to 0 Hz, decimated (CIC, windowed-sinc) to 48 kHz and FM-demodulated; two symbol filters (one per rate) feed two

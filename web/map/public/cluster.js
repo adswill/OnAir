@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // cluster.js - pure grid clustering for the zoomed-out map. Points {id, kind, lon, lat} -> clusters {lon, lat, n, kinds}.
 // Cell size in degrees shrinks with zoom; a cell with fewer than `minSize` points is returned as singles.
 

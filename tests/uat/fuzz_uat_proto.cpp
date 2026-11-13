@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the UAT message decoder, meant for DECT2_SANITIZE=ON: downlink and uplink decodes of any bytes
 // (full-size buffers, as the callers have) must never crash or hang. Also a libFuzzer target with -DONAIR_LIBFUZZER.
 #include "dect2/uat/uat_decode_c.h"

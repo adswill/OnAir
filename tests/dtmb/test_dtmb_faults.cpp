@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB receiver against what real radios do (part 2): level steps (AGC), impulse noise, a carrier wave inside the band, DC offset, IQ imbalance, a low
 // level, dropouts of zeros and of missing samples, reset. Same method as test_dtmb_impair.cpp. Pass an argument to run the cases whose name contains it.
 #include "dect2/dtmb/dtmb_testkit.h"

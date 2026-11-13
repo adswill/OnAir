@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 1.0 (8-VSB) against real-world faults (REAL_WORLD_CHECKLIST.md): a clean generated signal, impaired with tests/common/impair.h (written
 // independently of the receiver), through the real AtscReceiver. Every case must give nearly only good packets.
 //   test_atsc_realworld          all cases

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Feeds a MeshTopology (mesh_topology.h) from what each protocol layer decodes. One data model, four front ends:
 //   LoRa     Meshtastic (hop_limit / hop_start / relay byte of every copy) and MeshCore (the path hashes of a flood)
 //   802.15.4 Zigbee (MAC addresses, NWK originator, source route) and Thread (MAC addresses, 6LoWPAN mesh header), per PAN

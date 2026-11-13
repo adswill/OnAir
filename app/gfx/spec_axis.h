@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The frequency axis maths the spectrum and the waterfall share, as pure functions (no ImGui): where a bin and a waterfall column sit,
 // the columns a zoomed view shows, how far a retune moves the history, the band-edge drag and the frame pacing. Tested in
 // tests/app/test_spec_axis.cpp.

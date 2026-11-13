@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero receiver: finds the P channels in the band (up to 6), demodulates 600, 1200 and 10500 bit/s (rate found on its own),
 // decodes frames and hands the SUs to the SU layer (aero_su.h) for logons and ACARS messages.
 #pragma once

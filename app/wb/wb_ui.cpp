@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: open a recording (audio or IQ), look at it (overview, waveform, spectrogram with cursors and a selection of time and band),
 // measure it, demodulate a band and read the bits. The work is in core/src/wb_*.cpp; this file is the screens: loading, the plots with their
 // mouse handling, the mode hooks. The other tabs are in wb_tabs.cpp.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) OFDM demodulation pieces (halow_demod.h): FFT window, pilot tracking, equalisation, soft demapping, BCC data field decoding.
 #include "dect2/halow/halow_demod.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW skimmer, whole span: many carriers across +-100 kHz of a 2.4 Msps capture (different speeds and levels), each decoded by its own
 // decoder with the right offset from the dial; the CPU time of the receiver; with the switch off nothing outside +-7 kHz is heard.
 #include "dect2/cw/cw_gen.h"

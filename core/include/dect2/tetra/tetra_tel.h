@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA receiver telemetry, shared by the receiver and the UI.
 // Only what a TETRA base station broadcasts in the clear to every terminal is here: the network identity (MCC, MNC), colour code, location
 // area, the cell's carriers and services, its neighbour cells and whether the network uses air interface encryption. No subscriber

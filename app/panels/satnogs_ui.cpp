@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SatNOGS transmitters (View > SatNOGS transmitters): the public SatNOGS DB list of satellite transmitters (read only, no login, nothing is
 // sent), cached on disk for a day, with filters (alive, band, mode, name), a Tune button per row that sets the radio to the downlink (and starts the
 // OnAir mode that fits the SatNOGS mode, where there is one) and, when the pass planner has TLEs for the satellite, its next pass for the

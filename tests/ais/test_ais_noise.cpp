@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS: receiving only noise must not produce stations or positions (issue #87).
 #include "dect2/ais/ais_rx.h"
 #include "dect2/common/stable_random.h"

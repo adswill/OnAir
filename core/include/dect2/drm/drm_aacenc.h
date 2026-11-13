@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM AAC encoder for the test signal: mono AAC-LC with the 960 transform, written as a DRM audio frame (side information, then the spectral data in
 // codeword reordering order, clause 5.4.1), and the test sounds it codes (melody, tone, silence, noise). libavcodec's AAC encoder cannot be used: it only
 // makes 1024 sample frames and no HCR. The decoder side (drm_aac.h) reads these frames and hands them to libavcodec's AAC-LC decoder, which is the

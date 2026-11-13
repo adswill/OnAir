@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero C channel (circuit-mode voice, ground station to aircraft): the layer between the 8400 bit/s OQPSK soft bits and the
 // coded voice frames. Every constant and every step follows JAERO (github.com/jontio/JAERO, MIT, Jonti Olds): AeroL::DecodeC and
 // AeroL::setSettings in aerol.cpp, AeroLScrambler in aerol.h, PuncturedCode::depunture_soft_block, the 8400 settings of

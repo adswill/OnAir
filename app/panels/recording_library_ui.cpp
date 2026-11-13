@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The recording library: the recordings in the recordings folder, with what their sidecars say (length, rate, centre frequency and the mode
 // they were made in) and two actions per row. Open makes the recording the IQ file source; Re-analyse does the same and then opens the
 // chosen mode (by default the one the recording was made in). Opened from the "Library" button in the diagnostics row. Lists only the

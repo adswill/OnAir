@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Z-Wave test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 // A small network (home ID C0FFEE01, controller node 1, nodes 2 - 5) on the EU channels, one frame at a time with gaps of silence: R1 (Manchester,
 // 9.6 kbit/s) and R2 (40 kbit/s) frames with a switch, a dimmer, a temperature sensor, a battery report, a wake-up, a node info frame, acks, a multicast

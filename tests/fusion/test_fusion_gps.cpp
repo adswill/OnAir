@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Yaesu Fusion GPS block: bytes built from the YSFGateway layout. Simulated data only.
 #include "dect2/fusion/fusion_gps.h"
 #include <cstdio>

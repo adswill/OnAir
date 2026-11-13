@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protocol lab: line codings, HDLC framing, preamble and sync search, whitening.
 #include "dect2/protolab/protolab.h"
 #include <algorithm>

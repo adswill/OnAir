@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR link layer of the receiver: frame sync search on the demodulated symbols, time slot tracking, burst decoding and the call logic.
 // Input is the output of the matched filter at 48 kHz in Hz (ten samples per symbol), one sample at a time. Internal to the DMR receiver.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP for the engine: see kapp_live.h.
 #include "dect2/kapp/kapp_live.h"
 #include "dect2/kapp/kapp_arq.h"

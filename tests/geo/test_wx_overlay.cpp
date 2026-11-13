@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather-satellite map overlay: pixel geolocation of a scanned swath (centre on the sub-point, edges half a swath away at right angles,
 // left/right orientation, clock error shift, date line), resampling without seams, geostationary full disk geometry, GeoTIFF and KML.
 #include "dect2/geo/wx_overlay.h"

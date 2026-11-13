@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // macOS cameras and capture cards (Blackmagic, USB HDMI, Continuity, built-in).
 #include "videoin_impl.h"
 #import <AVFoundation/AVFoundation.h>

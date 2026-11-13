@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TD-SCDMA cells: the table of cells found, by SYNC-DL code (code group) and cell parameter.
 #include "app.h"
 #include "i18n/i18n.h"

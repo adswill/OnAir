@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The codec search path list (codec_paths.h): order, de-duplication, Windows paths with both slash styles and spaces, the macOS app bundle,
 // and the multi-folder plug-in loader (first folder wins, a second copy is reported as shadowed).
 #include "dect2/codec/codec_paths.h"

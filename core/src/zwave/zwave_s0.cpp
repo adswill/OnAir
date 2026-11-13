@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Z-Wave S0 (Security 0) with a user-imported network key: Ke / Ka derived from the network key with AES-ECB of 0xAA and 0x55 blocks, payload AES-OFB with
 // IV = sender nonce + receiver nonce, MAC an AES CBC chain over IV, command, source, destination, length and ciphertext (first 8 bytes). Layout from the Grizzly S0 documentation
 // and the arXiv Z-Wave security papers; S2 needs the session key handshake and is not decoded.

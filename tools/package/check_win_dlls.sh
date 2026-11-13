@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Checks a Windows folder (the one that is zipped and installed) without running anything: for every .exe and .dll in it,
 #   1. each DLL it imports is in the folder (next to the file or in the top folder) or is one Windows has itself, and
 #   2. each function it imports from a DLL of the folder is exported by that DLL (this is what proves that the newer libstdc++, libgcc_s,

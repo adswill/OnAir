@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham radio insights from your own decodes (docs/SMART5-ham-3.9.md):
 //  WhoHearsMe     - stations that call or answer you, the report they gave you, distance, bearing, link balance
 //  AntennaPattern - SNR against distance fitted over all located decodes, the rest averaged per 30-degree sector

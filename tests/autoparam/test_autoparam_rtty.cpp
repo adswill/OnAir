@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto for RTTY (docs/AUTO-PARAMS-3.8.md): every speed, shift and polarity with real-world impairments, simulated signals only (makeRttyTxAudio). Offset,
 // drift, a noise sweep, a second signal in view, noise alone, change of signal while running, a manual setting that must stick.
 #include "dect2/hfdig/hfdig_gen.h"

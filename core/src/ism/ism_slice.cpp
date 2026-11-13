@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors: the pulse slicers (PWM, PPM, PCM, Manchester-zero) that turn a train of pulses into a bit buffer. Written from rtl_433 src/pulse_slicer.c.
 #include "ism_internal.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL receiver: GMSK 8 kbit/s, 10 / 12.5 kHz channels (PAS 0001-2). Frame sync on the header of two frames in a row, the polarity
 // (the downlink is the inverse of the uplink) and the scrambling constant and band coding (VHF / UHF) are found automatically.
 // Control channel: data blocks, HDLC, D_SYSTEM_INFO (cell) and D_GROUP_ACTIVATION (group calls, encryption state).

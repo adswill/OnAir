@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The runtime loader of the user-installed mbelib (P25 IMBE, D-STAR / NXDN AMBE): with no library found the decoders say so; pointed at a fake
 // library (tests/p25/fake_mbelib.c, no codec) through DECT2_MBELIB_PATH they load it, and decoding fills 160 samples per frame.
 #include "dect2/p25/p25_imbe.h"

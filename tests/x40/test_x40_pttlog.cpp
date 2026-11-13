@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PTT and duty-cycle logger: the start and length of transmissions against what the generator keyed, with fades inside a transmission (must not split it) and longer gaps
 // (must), kerchunks, a stuck key, an offset / drifting carrier, a noise sweep and the false transmissions on noise alone. Simulated signals only.
 #include "x40_gen3.h"

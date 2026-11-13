@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir file formats: the pure parsing and writing layers of the files the program reads and writes. CSV (channel lists), SigMF meta files (with the small JSON reader
 //! they need), WAV headers of IQ recordings, NORAD two-line elements, the SQLite page / record / cell decoding behind the MBTiles map reader, and the header of the saved
 //! results container. File access, directory searches, the b-tree walks and every piece of state stay in C++. Safe code goes in the modules next to `ffi`; only `ffi`

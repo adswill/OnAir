@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors: device decoders for energy meters, wireless M-Bus and Z-Wave (passive). Written from rtl_433 src/devices/.
 #include "ism_internal.h"
 #include <algorithm>

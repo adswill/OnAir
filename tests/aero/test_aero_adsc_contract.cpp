@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-C contract requests, acknowledgements and the contract state per aircraft. Layouts as libacars documents them (adsc.c); the messages are built by the
 // test's builders, plus a real uplink quoted in JAERO's aerol.cpp through the same parser in test_aero_adsc. Simulated otherwise.
 #include "dect2/aero/aero_adsc.h"

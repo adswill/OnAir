@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-S/S2 rain-fade and margin log (see sat_fade.h).
 #include "dect2/smart5/sat_fade.h"
 #include <algorithm>

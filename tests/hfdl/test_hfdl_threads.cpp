@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The HFDL receiver with its channels on the shared pool gives the same result as with the channels one after the other:
 // two receivers get the same samples (traffic on three channels), the messages (order, serial numbers, frequencies, times), the
 // counters and the channel table must be identical.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // View > Protocol lab: a workbench for an unknown digital signal. Load a recording (or paste packets), pick the signal inside it, and the
 // lab tries demodulators, finds the baud rate, slices bits, tries the line codings, looks for a preamble / sync word and a CRC, and shows
 // which bytes are constant, counters, checksums or data. The result exports as a protocol description. The stages are in

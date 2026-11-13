@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TV auto-detection (autodet.h): which TV standard a channel carries and the parameters its receiver needs.
 //
 // 1. Spectrum: the occupied part (half-way between floor and plateau), its width and SNR; narrow lines (an ATSC pilot at the lower edge, the

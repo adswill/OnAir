@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Lists the tests that took 20 s or more in the last ctest run of a build directory, one name per line, for
 # tests/long_tests.txt: tools/test_times.sh build > tests/long_tests.txt (run the full suite first: ctest --test-dir build).
 set -e

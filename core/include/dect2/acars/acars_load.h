@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS / VDL2 channel load (4.0): per frequency, the message rate and the share of messages that were good (decoded without error), over a window,
 // and a ranking of which frequencies are worth a receiver in a multi-channel setup with limited bandwidth. Pure code.
 // Why: ACARS and VDL2 use several channels per region and most traffic is on two or three of them; the user picks those first.

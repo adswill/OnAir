@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Flipper Zero Sub-GHz chat: packets, CRC, keys, AES-256-GCM and messages, see esubghz_proto.h
 #include "dect2/esubghz/esubghz_proto.h"
 #include "dect2/mesh/mesh_crypto.h"

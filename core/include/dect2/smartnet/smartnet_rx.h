@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Motorola Type II (SmartNet, SmartZone) control channel receiver with call following (trunk pool + CaptureVoice): analog calls as FM, digital ones through the P25 receiver and the
 // user-installed IMBE plug-in. Encrypted calls are logged and not followed. Receive only. A band plan is set for you when the frequency says which one it is; VHF / UHF (OBT) sites need a custom plan.
 #pragma once

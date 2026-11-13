@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared helpers of the round-5 smart cards (app/smart5/smart5_ui.h; docs/SMART5-UI-3.9.md).
 #include "smart5_ui.h"
 #include "../ui/typography.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio clips: share a decoded moment. This header is the pure half (no GUI): the retroactive histories (waterfall lines, decoded rows), the range
 // maths, and the generators (PNG, WAV, ZIP, one-file HTML, Discord text and picture). clips_ui.cpp is the dialog. Tests link clips_core.cpp.
 #pragma once

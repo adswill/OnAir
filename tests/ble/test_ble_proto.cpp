@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth LE advertising: CRC, whitening, PDU and advertising data parsing (ble_proto.h).
 #include "dect2/ble/ble_proto.h"
 #include <cstdio>

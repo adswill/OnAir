@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The 802.15.4-2015 MAC header of a Wi-SUN frame (frame version 2: PAN ID rules of table 7-2, auxiliary security header), its header and payload IEs and the
 //! one-line summary. Secured frames keep their payload IEs and payload encrypted (reported as such, never decoded). Wi-SUN FAN TPS 1.0 section 6.3.
 use crate::ie::{self, add_ie, add_ie_hex, le16, le24, le32, le64, Schedule};

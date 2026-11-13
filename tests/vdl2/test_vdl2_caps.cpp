@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL2 tables have no small wall: 300 aircraft and 90 ground stations all stay in the lists (they used to stop at 200 and 64), and the
 // processing stays far below real time. The bursts are rendered in one second pieces so the clip never sits in memory whole.
 #include "dect2/limits.h"

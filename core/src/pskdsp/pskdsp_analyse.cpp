@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator: blind analysis of a block. Finds the signal, its symbol rate (the line of |x|^2 and the side lines of x^2 / x^4 around
 // the carrier line), the modulation order (power-law lines, then a trial demodulation per order), the pulse shape, carrier, Doppler and the
 // quality figures, and keeps the displays the analyser shows (the line spectra and the constellation).

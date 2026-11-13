@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB: the Map tab (the transmitters). The receiver names the transmitters of the network it hears by their TII codes (MainId / SubId, EN 300 401
 // clause 14.8); with a list of where each transmitter of an ensemble stands they go on the map, with the distance and bearing from the
 // antenna. Where a transmitter's position comes from, the first that has it winning:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web relay client: the pure parts (address, signing text, frames, header rewrite, status JSON) and the client against a fake relay and a fake
 // web server on 127.0.0.1 (no real relay is ever contacted): handshake, challenge and signed hello, the public address, a virtual connection carried
 // to the web server with the listener's address added (a spoofed X-Forwarded-For dropped), the answer carried back, close, reconnect after the link

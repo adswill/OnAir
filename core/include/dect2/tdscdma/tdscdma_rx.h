@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TD-SCDMA cells receiver: every 80 ms block (16 sub-frames) of the 1.6 MHz channel goes through tdscdma::search() whenever the previous one
 // is done, and the cells heard are kept in a table by SYNC-DL code and cell parameter. Receive only (tdscdma.h).
 #pragma once

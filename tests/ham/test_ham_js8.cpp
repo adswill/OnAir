@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham JS8: heartbeat, CQ, a directed SNR report and a multi-frame directed text, built by ham_js8 and played slot by slot (Js8Sender) as 48 kHz
 // audio, then through the repo's Js8Receiver as a radio input (250 kHz, dial offset, noise at -10 dB in 2500 Hz, a time offset) in every
 // submode; the gate, the duty limit and the frame limit. Nothing is transmitted: the rig is a recording fake.

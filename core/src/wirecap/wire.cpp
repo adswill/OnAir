@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireshark output: the hub (wire.h). One worker thread does all file and socket work, so a decoder only ever copies a packet into a queue.
 // It runs only while at least one switch is on: with all off there is no thread, no open port and no file.
 #include "dect2/wirecap/wire.h"

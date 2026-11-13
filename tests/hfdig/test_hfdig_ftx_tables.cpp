@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, FT8 / FT4 / FT2 / WSPR tables and codecs: the tables against values quoted from a second source (WSJT-X's
 // ldpc_174_91_c_generator.f90 row ends, genft4.f90's rvec, genft8.f90 / genft4.f90 Costas arrays and Gray maps, wsprsim_utils.c /
 // JTEncode's WSPR sync vector), the generator against the parity checks, CRC and LDPC, lookup3's published test values, and the

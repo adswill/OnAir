@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analogue TV second sound: NICAM-728 (ETSI EN 300 163) and A2 / Zweikanalton. See atv_sound2.h.
 #include "dect2/atv/atv_sound2.h"
 #include "atv_dsp.h"

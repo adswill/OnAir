@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Z-Wave receiver on the generator's signal: the whole schedule at R1 / R2 / R3, with a carrier offset, a bit clock error, a lower SNR, another
 // region; encrypted frames counted but not decoded; noise alone decodes nothing.
 #include "dect2/zwave/zwave_gen.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RS41: two sondes at once (far apart and 20 kHz apart), a carrier that drifts 2 kHz in a minute.
 #include "dect2/sonde/sonde_testkit.h"
 using namespace dect2;

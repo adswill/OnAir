@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM playout: from the decoded audio super frames to a steady 48 kHz stream for the sound device, without dropouts.
 //
 //   decoded super frames (every 400 ms, mode E 200 ms, with placeholders where audio frames were lost)

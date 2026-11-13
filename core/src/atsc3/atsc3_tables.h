@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Constant tables taken from A/322 (generated from the standard's text; see atsc3_tables.cpp).
 #pragma once
 namespace dect2 {

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode A / C receiver for the engine (see modeac_live.h).
 #include "dect2/modeac/modeac_live.h"
 #include "dect2/modeac/modeac_dsp.h"

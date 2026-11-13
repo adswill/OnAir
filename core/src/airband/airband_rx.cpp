@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airband receiver (see airband_rx.h): every listed channel of the sample band mixed down, filtered, AM-demodulated and squelched on its
 // own; the tuning error measured from all of them together; the open channels mixed (or scanned) to the sound card.
 #include "dect2/airband/airband_rx.h"

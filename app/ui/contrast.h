@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Colour maths of the Light and High contrast themes (WCAG 2.x contrast ratios). No ImGui here, so the unit test (tests/app/test_theme.cpp)
 // runs the very functions main.cpp applies to the text the interface draws.
 #pragma once

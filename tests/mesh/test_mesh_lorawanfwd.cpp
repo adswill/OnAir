@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN receive-only forwarder (round 4 #36): the rxpk JSON (time, freq, datr, codr, rssi, lsnr, size, base64 data), the PUSH_DATA and
 // PULL_DATA headers, the EUI, which packets go out (uplinks only, CRC good), and a loopback network server: PUSH_DATA received and acked,
 // the PULL_DATA keep-alive, a PULL_RESP downlink ignored.

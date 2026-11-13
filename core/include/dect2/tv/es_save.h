@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Saves a raw audio elementary stream (DRA, MPEG audio) to a file that FFmpeg can play, for sound OnAir cannot decode itself.
 #pragma once
 #include <cstddef>

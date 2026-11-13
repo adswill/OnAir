@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-VFO: several independent channels placed on ONE capture. Every channel has its own frequency (an offset from the capture centre),
 // bandwidth, mode (a demodulator that plays, or a decoder), squelch and mixer settings. The channels of the demodulators that are above
 // their squelch are mixed to one stereo stream (volume, pan, mute per channel); a decoder channel feeds its own receiver (POCSAG / FLEX

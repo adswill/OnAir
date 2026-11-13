@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DSC calls at the bit level: dot pattern, phasing hunt, DX/RX time diversity, ECC, polarity, bit offsets, damage.
 #include "dect2/marine/marine_dsc.h"
 #include <cstdio>

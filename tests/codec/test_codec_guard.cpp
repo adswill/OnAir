@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The codec guard (core/include/dect2/codec/codec_guard.h): a voice codec that crashes, hangs, answers nonsense or speaks another plug-in
 // interface version is disabled and the program goes on (Discord report 2026-10-23: a plug-in built against mbelib-neo took OnAir down).
 // argv[1]: the folder with the fake plug-ins (tests/codec/fake_codec_plugin.c).

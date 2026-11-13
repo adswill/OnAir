@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells screens: the cell table (band, GSCN, SS_REF, PCI, SSB spacing, beams, MIB, SS-RSRP / RSRQ / SINR, last seen), the beams of
 // each cell (SSB index and RSRP), a band scan over the NR sync raster, the map (the receiver; tower positions need the cell identity of
 // SIB1, which is not decoded) and the log. Only what cells broadcast to every phone is shown.

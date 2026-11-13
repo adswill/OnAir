@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // WSPR balloon telemetry spots (the S4 / U4B / Traquito convention): a special callsign starting 0, 1 or Q with a digit third, where callsign, locator and power carry altitude, the 5th and 6th locator
 // letters, temperature, battery, speed and GPS status. Formulas from the QRP Labs S4 page; simulated only. The page's own worked example prints 36 C and 3.8 V where these formulas give 38 C and 3.85 V for the same spot.
 #pragma once

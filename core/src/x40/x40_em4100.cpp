@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EM4100 / EM4102 LF RFID tags (125 kHz): a reader holds the carrier, the tag answers by loading it, an amplitude (ASK) change of a few percent. The tag repeats
 // a 64-bit Manchester frame at RF/64 (1953 bit/s; RF/32 is read too): 9 header ones, ten rows of 4 data bits plus an even row parity, four column parities
 // (even) and a stop bit 0. The 40 data bits are an 8-bit version / customer code and a 32-bit ID. The envelope is sliced with a hysteresis comparator, the

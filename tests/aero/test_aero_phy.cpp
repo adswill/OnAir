@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero coding layer: known answers taken from JAERO's constants, and frame round trips at the bit level.
 //   unique word 0xE15AE893 (JAERO aerol.cpp: preambledetector.setPreamble(3780831379LL,32), sent most significant bit first)
 //   scrambler start (aerol.h AeroLScrambler: register {1,1,0,1,0,0,1,0,1,0,1,1,0,0,1}, v = s[0]^s[14]); the first 16 bits worked out by hand

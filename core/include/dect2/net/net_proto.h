@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The pure protocol layers of the network code, over bytes and text with no socket: the remote-control API's HTTP / WebSocket side (SHA-1 and base64 for the handshake,
 // frames, the request head, URL and query text, flat JSON bodies), the rtl_tcp, SpyServer and SDR++ server protocols (greetings, commands, the SDR++ menu draw list) and
 // the list of network radios the settings keep. Implemented by the Rust crate onair_net

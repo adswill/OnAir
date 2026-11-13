@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: CC0-1.0
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tone detector: finds the strongest tone in the channel and reports its frequency offset and level. About 100 lines, no dependencies beyond the C ABI.
 #include "onair_plugin.h"
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DME (distance measuring equipment) for the engine: IQ in, the channel, the pair rate, the level and the Morse ident out.
 // The envelope the receiver works on is the magnitude of the IQ at the channel (the simplest envelope; the pulses are 3.5 us wide,
 // so the radio rate must be 2 Msps or more). The pulse detector is dme/dme_rx.h. Family 119, engine standard 121.

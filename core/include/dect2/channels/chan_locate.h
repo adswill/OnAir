@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Where a flat, wideband channel (DVB-T, DTMB) sits inside the sample band, from the averaged power spectrum. For recordings made beside the
 // channel (gqrx, SDR#) and radios tuned far off: the box of the channel's width with the most power, accepted only when both of its edges stand
 // clearly above what lies beside them. Plus the mixer that moves the channel to the centre. Header only.

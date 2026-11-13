@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectral kurtosis RFI finder (the estimator of Nita and Gary, used in radio astronomy): for a wide capture, which frequencies hold something that is not Gaussian noise, and whether it is a steady carrier or
 // pulsed. A 1024-point Hann spectrum per frame; per bin, over M = 128 frames, SK = (M + 1) / (M - 1) x (M x S2 / S1^2 - 1) with S1 the sum of the bin powers and S2 the sum of their squares; averaged over 8 such blocks.
 // For Gaussian noise SK = 1 with a standard deviation of about sqrt(4 / M) / sqrt(8) = 0.06; a bin is flagged outside 1 +- 4.5 standard deviations. SK well under 1 means the power of the bin hardly changes (a steady

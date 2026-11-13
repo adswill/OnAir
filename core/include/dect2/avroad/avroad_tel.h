@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Telemetry shared by the aviation, rail and road receivers of 3.8 (families 400 - 411, docs/AVIA-ROAD-3.8.md) and their screens.
 #pragma once
 #include <cstdint>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // First-use helpers that need no radio: when balloons fly, which geostationary satellite is highest, what a pick should leave alone.
 // Pure functions, no I/O; the screens that use them are in app/ease and in each mode's UI file.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-radio trunking (SDRTrunk style): one radio sits on the control channel, the others are retuned to the voice channels as grants arrive; calls are
 // tracked, recorded and logged. Receive only. Plain logic, no DSP and no threads: the host calls onGrant() / tick() and supplies the radios through the
 // VoiceReceiver interface (a real receiver in the app, a fake one in the tests).

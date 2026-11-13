@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // isDifferentMux(): when the live service list must be emptied; and the demux dropping the services of the old transport stream.
 #include "dect2/tv/mux_change.h"
 #include "dect2/tv/ts.h"

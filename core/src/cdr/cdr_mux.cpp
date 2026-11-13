@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR multiplex, GY/T 268.2-2013 (see cdr_mux.h). Reserved and padding bits are ones (4.3).
 #include "dect2/cdr/cdr_mux.h"
 #include "dect2/cdr/cdr_defs.h"

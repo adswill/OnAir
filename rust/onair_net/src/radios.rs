@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The list of network radios the settings keep as text: "rtltcp,host,port;pluto,host,0;soapyremote,host,port,remote driver;..." (parse and format), the clean-up of a typed
 //! host name, and the type tables (key, display name, default port and host). Bad items are skipped.
 use crate::{atoi, Span};

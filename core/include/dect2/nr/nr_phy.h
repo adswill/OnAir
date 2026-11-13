@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells: the physical layer of the SS/PBCH block (3GPP TS 38.211 / 38.212 / 38.213 / 38.104), written from the specifications.
 // Only what every cell broadcasts to all phones is handled: PSS and SSS (the physical cell id), the PBCH DMRS (SSB index, half frame) and
 // the PBCH itself (polar code, CRC24C) carrying the MIB. Nothing addressed to a phone is decoded, and nothing is decrypted.

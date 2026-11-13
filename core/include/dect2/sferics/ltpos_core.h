@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Lightning position (network): one station's processing (StationCore: time the sferics, discipline the sample clock, pick the best timing
 // source, produce the detections and the common-view readings) and the server's (ServerCore: check and decode packets, keep the station table,
 // correct the common-view clocks, match and locate). Both are pure (no sockets, no clock): the receiver (ltpos_rx.h) and the tests drive them.

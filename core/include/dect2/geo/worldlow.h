@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A very coarse, hand-made world outline (continents and the larger islands, a few dozen points each, lon/lat in degrees) so the map
 // is never blank without tiles. It is schematic: coast errors of 100 km and more, no lakes or seas inside the land (Black Sea, Caspian),
 // no country borders (the repository has no border data). Not for navigation. Header only.

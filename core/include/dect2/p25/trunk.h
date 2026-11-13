@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Trunking follower for P25 (TIA-102) and, as far as the public specs allow, DMR Tier III (ETSI TS 102 361-4). Receive only.
 //
 // Pieces, all plain logic with no DSP and no threads of their own (the interface thread drives them):

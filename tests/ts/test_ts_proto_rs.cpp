@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the transport-stream parsing layer (dect2::tsp, the Rust crate onair_ts): CRC-32, packet header, PAT packet, and PAT / PMT / SDT / NIT / EIT /
 // TVCT / TDT sections built from random descriptors, mutated, truncated, with corrupt length fields, over ONAIR_DIFF_ITERS (default 200000) seeded inputs per
 // family. Buffers are exactly as long as the section so a sanitizer build sees any read past the end. Every result goes into a digest (tests/common/golden.h)

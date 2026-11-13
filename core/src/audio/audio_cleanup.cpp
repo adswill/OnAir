@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Audio cleanup chain (audio_cleanup.h). Own implementation; algorithms from the literature, no code taken from elsewhere:
 //  - noise tracking: R. Martin, "Noise Power Spectral Density Estimation Based on Optimal Smoothing and Minimum Statistics", IEEE Trans.
 //    Speech Audio Process. 9(5), 2001 (smoothed periodogram, minimum over sliding sub-windows, fixed bias factor)

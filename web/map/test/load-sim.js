@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // load-sim.js - load simulator for the map hub. Not a unit test: it only runs with --run.
 //
 //   node test/load-sim.js --run --tree /path/to/checkout [--secs 60] [--warm 15] [--stations 70] [--live 200] [--ws 50]

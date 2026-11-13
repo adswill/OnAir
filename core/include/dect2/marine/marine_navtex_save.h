@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Saves every NAVTEX message the receiver publishes as a text file, once: <dir>/<YYYY-MM-DD>/<HHMMSS>_<B1B2B3B4>.txt (UTC).
 // The receiver already merges repeats of one message into one entry; this also remembers (as 64 bit hashes, so the memory stays small
 // however long the session runs) what it has written, so a message heard again later, or an entry that is only updated, is not written twice.

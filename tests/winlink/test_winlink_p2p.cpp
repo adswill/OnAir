@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Winlink leftovers of 3.9: resuming a message cut off part way, gzip proposals (FD), and peer-to-peer sessions between two OnAir
 // stations. Everything runs in memory: B2F sessions joined by byte queues, and two stations over a simulated packet or ARDOP channel.
 // No real gateway, RMS, CMS or radio is used.

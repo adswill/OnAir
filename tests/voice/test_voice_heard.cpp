@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Heard-ID repair (voice/heard_ids.h): the dictionary, D-STAR header repair with the CRC as the judge and DMR voice LC repair with the Reed-Solomon
 // check as the judge. Measures how many damaged headers come back and that a wrong ID is never made up.
 #include "dect2/voice/heard_ids.h"

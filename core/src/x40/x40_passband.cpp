@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Passband signal classifier (the 48 kHz around the tuned frequency: a satellite linear transponder, a band segment of 10 / 6 / 2 m, a repeater input): every signal that stands out of the noise is tracked
 // in a 94 Hz-resolution spectrogram (10.7 ms frames) and, once it has lasted a second and a half, named by what it does: an unmodulated carrier, keyed CW, a narrow data signal
 // (PSK / FSK of a few hundred Hz), an SSB or voice-like signal (1.5 - 3.8 kHz wide, the level moving with the syllables), or a wideband steady signal (FM or high-rate data). The class is a

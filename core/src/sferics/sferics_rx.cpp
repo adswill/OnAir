@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sferics receiver: smoothed power |x|^2 (25 us), a noise floor from the median of 1 ms block means over the last 4 s, a threshold over it, and a
 // small state machine that turns each crossing into an impulse (start, peak, width). Pulses closer than the merge time are one strike. An impulse
 // that repeats at a multiple of the 100 / 120 Hz mains half period is mains interference: the receiver waits 0.5 s before it counts an impulse so a

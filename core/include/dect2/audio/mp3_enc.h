@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MP3 recording through LAME (libmp3lame), loaded at run time: OnAir does not ship the library (LGPL, patents in some regions), so MP3 is
 // offered when it is installed and the WAV / FLAC recorders work without it.
 #pragma once

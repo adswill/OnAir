@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests of the UAT decoder that do not need the C reference: the DO-282 short frame vector and an uplink frame with one FIS-B frame of each time format.
 use crate::downlink::{self, Math};
 use crate::uplink;

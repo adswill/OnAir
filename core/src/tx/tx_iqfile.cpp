@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit into an IQ file: see tx_iqfile.h.
 #include "dect2/tx/tx_iqfile.h"
 #include "dect2/source/iq_record.h"

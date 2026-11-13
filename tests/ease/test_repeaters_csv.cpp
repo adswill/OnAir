@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The imported repeater list: common CSV shapes, bad rows, mode filter, nearest first
 #include "dect2/ease/repeaters.h"
 #include <cstdio>

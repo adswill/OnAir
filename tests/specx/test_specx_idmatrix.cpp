@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "What is this?" on the app's own test signals: every mode that has a generator is rendered at random frequency offsets and SNRs, the
 // identifier (dect2/engine/sig_ident.h) is run on the region a click would select, and the result is scored against the mode that made the
 // signal. Prints the per-family and per-mode accuracy, the confusions, the reliability of the confidence numbers and the reject rates; the

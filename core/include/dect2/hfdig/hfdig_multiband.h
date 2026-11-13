@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-band monitor for FT8, FT4, FT2 and WSPR: the user picks (band, mode) pairs (160 m .. 6 m), and every pair that lies inside the
 // radio's capture is decoded at once, whatever the radio: an RTL-SDR V4 (2.4 MHz) tuned to 14 MHz hears 20 m FT8, FT4, FT2 and WSPR,
 // a wideband radio (Airspy HF+, SDRplay, Hermes Lite 2, HackRF, RX888) hears every selected band.

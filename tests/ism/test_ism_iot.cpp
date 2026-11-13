@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors, smart-home buses: KNX RF and HomeMatic BidCoS. Every frame is built here from the protocol description (block structure and CRC of
 // EN 13757-4 format A with the KNX values; the BidCoS obfuscation and CC1101 CRC), turned into a pulse train with timing errors, noise spikes and
 // both line polarities, and decoded; the values must come back, a damaged frame must give nothing. Simulated signals only: no recording of

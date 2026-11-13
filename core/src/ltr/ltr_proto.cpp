@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LTR word encode / parse and the test-signal modulator (see ltr_proto.h for the sources and what is not established).
 #include "dect2/ltr/ltr_proto.h"
 #include <cmath>

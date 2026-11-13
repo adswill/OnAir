@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 control channel: codeword check bits against the standard's own constraints, address codeword field round trips, the decoder on
 // generated FFSK audio (clean, shifted, other sample rates, inverted tones, noise, bit errors) and the engine receiver on a generated FM signal.
 #include "dect2/engine/mode_tuning.h"

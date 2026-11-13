@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T signal generator (transmitter): transport stream in, baseband IQ at the native rate (64/7 MHz for 8 MHz) out.
 #pragma once
 #include "dvbt.h"

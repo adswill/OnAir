@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Known radiosonde launch sites: the lookups and the user's file (sonde_sites_known.h); the table itself is sonde_sites_known.cpp.
 #include "dect2/sonde/sonde_sites_known.h"
 #include <algorithm>

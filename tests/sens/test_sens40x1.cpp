@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 sensitivity pass X1 (docs/SENSITIVITY-4.0-X1.md): information a single-frame decoder throws away. Repeat combining (soft bits of failed frames
 // added to the same transmitter's next frames) and long integration over repeated content. Each section runs the receiver twice on the same noise
 // (technique on / off), with a carrier error and a clock error, and noise alone (no decode allowed). Simulated signals only.

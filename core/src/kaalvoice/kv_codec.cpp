@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4: the frame codec around the core (band split, high band, VAD / DTX / SID / comfort noise, noise suppression),
 // and the FrameCodec wrappers of the old KAAL codecs.
 #include "dect2/kaalvoice/kaal_voice.h"

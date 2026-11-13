@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The 4.0 station layer of the Ham view (ham_station_ui.cpp): the big frequency and S-meter, the band bar with the frequency memory per band
 // and mode, every other amateur mode in one list, online spots (DX cluster, RBN, POTA, SOTA, PSK Reporter: each off until switched on),
 // callsign lookup (cache, earlier QSOs, QRZ / HamQTH only with the user's own account), needed and alert marks, POTA / SOTA / WWFF activation,

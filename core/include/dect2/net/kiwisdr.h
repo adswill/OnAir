@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KiwiSDR (a web-based HF receiver, 0 to 30 MHz, found worldwide): what the app asks of the source beyond the IqSource interface.
 // The source itself is core/src/source/source_kiwisdr.cpp; docs/kiwisdr.md says what works and the etiquette on public receivers.
 #pragma once

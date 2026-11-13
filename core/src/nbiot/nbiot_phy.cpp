@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT physical layer (nbiot_phy.h): messages, synchronisation signals, reference signals, OFDM, channel estimate and soft demapping.
 #include "dect2/nbiot/nbiot_phy.h"
 #include "dect2/dsp/fftutil.h"

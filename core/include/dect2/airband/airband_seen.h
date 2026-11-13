@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band watch: finds the carriers on the air in the whole sample band, whether the user listed them or not, so the list can be filled
 // from what is really transmitted. Spectrum of the input (300 - 600 Hz bins), peak hold with a 6 s half life, carriers = lines that stand
 // 11 dB out of the noise around them and 9 dB out of the bins 4.5 - 9 kHz either side (voice sidebands and a neighbour on one side do not

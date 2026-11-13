@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth Classic discovery receiver over the air (synthetic): the test scene (two phones' worth of inquiry responses, a scanner, two piconets) at
 // 20 / 10 / 8 / 4 Msps through the receiver with the faults of a real band: carrier offsets, noise, a wideband burst (Wi-Fi), cut-off packets, a strong
 // neighbour. Every LAP the receiver reports must be one the scene sends (a wrong one fails every case); every response it decodes must carry the

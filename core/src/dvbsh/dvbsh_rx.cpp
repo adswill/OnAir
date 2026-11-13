@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH OFDM (SH-A) receiver, EN 302 583 V1.2.1. See dvbsh_rx.h.
 #include "dect2/dvbsh/dvbsh_rx.h"
 #include "dect2/dvbt/dvbt.h"

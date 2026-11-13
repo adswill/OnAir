@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Codec Setup assistant's logic (voice/codec_setup.h) on made-up folders: missing, installed, loaded, the first folder winning with
 // copies in later folders listed as ignored, a plug-in built for another processor (an arm64 file in an Intel OnAir), the summary and
 // completeness, and the per-OS steps naming the right command and tools.

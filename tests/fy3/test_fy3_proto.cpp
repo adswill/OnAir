@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FY-3 AHRPT / MPT layers: the differential coder, the rail code, CADUs, VIRR frames, the bit stream framer and the MERSI reader, both ways.
 #include "dect2/fy3/fy3_proto.h"
 #include "dect2/hrpt/hrpt_proto.h"

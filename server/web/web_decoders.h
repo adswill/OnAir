@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web decoders: the existing receivers (ADS-B, AIS, APRS, FT8 / FT4 / WSPR, SSTV, weather fax, Meteor-M LRPT, RDS, CW, RTTY) as shared
 // web decoders (WebDecoder / DecoderFactory of web_hub.h). Each gets its own slice of the capture at the rate it needs; listeners who ask for
 // the same kind on the same kHz share one instance. Results are `event` messages with a versioned schema (docs/ONAIR-WEB-PROTOCOL.md,

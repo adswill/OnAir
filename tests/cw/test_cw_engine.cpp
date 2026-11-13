@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW through the engine (setStandard(36)): the synthetic source plays the test band, the receiver reports through latestRx().
 #include "dect2/cw/cw_rx.h"
 #include "dect2/engine/engine.h"

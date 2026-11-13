@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT test signal (nbiot_gen.h, nbiot_phy.h).
 #include "dect2/nbiot/nbiot_gen.h"
 #include "dect2/common/stable_random.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec (spec v0.1): 16 kHz mono, 20 ms frames of 320 samples, MDCT with the sine window, 16 bands, band energies in 1.5 dB
 // steps, adaptive binary arithmetic coding, exactly 320 bits (16 kbit/s) per frame. A port of the reference kaal_codec.py; the output
 // follows it to within one LSB of int16. The decoded signal is delayed by kDelay samples against the input; encode() adds one frame so

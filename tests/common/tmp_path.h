@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A path inside the system temp folder (a native Windows program has no /tmp).
 #pragma once
 #include <filesystem>

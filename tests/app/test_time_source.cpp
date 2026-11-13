@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One clock for all modes (core/include/dect2/common/time_source.h): the computer clock wins when a result was stamped, the signal
 // time is converted otherwise, and the ISO 8601 text carries milliseconds and the UTC offset.
 #include "dect2/common/time_source.h"

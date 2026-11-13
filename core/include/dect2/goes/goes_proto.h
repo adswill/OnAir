@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES-R series HRIT (GOES-16 / 18 / 19, 1694.1 MHz), the layers above the CADU (both directions: the test signal is built with the
 // same code it is checked by). The frame layer (sync word, randomiser, Reed-Solomon (255,223) interleave 4) is meteor_proto.h's.
 //

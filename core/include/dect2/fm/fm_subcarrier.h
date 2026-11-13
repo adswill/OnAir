@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The rest of the FM multiplex: the three RDS2 data subcarriers (66.5, 71.25 and 76 kHz, ITU-R BS.643-4) and the analogue SCA audio subcarriers (67 and 92 kHz).
 // RDS2: the same 1187.5 bit/s biphase signal as RDS on 57 kHz: blocks, checkwords and raw groups. The tunnelling and RFT file layers (IEC 62106-2 Ed2) are not
 // public and are not decoded. SCA: narrow FM audio.

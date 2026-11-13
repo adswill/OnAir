@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The zoom spectrum (4.0, docs/WATERFALL-4.0.md): when the view is zoomed in so far that the full-band FFT has fewer bins than the plot has
 // pixels, the visible part of the band is mixed down to DC, decimated by a power of two (a 4-stage CIC, then half-band filters) and
 // transformed on its own, so the view gets at least one real bin per screen pixel at a small fraction of the cost of a full-band FFT that

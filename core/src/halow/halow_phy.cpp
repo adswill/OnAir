@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah, S1G) PHY tables: tone layouts of the 1 - 16 MHz channels, preamble training fields, MCS table (halow_phy.h).
 // IEEE 802.11-2020 clause 23 (S1G PHY) follows the 802.11ac VHT PHY at one tenth of the clock: 1 MHz = new 32-point layout, 2 / 4 / 8 / 16 MHz = the
 // 11ac 20 / 40 / 80 / 160 MHz layouts.

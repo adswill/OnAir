@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec v3 (port of kaal_codec_v3.py): 16 kHz mono, 20 ms frames of 320 samples, MDCT with the Vorbis power-sine window,
 // 26 bands, band energies in 4.5 dB steps, context-modelled adaptive binary arithmetic coding with trained start probabilities,
 // high-band noise fill. Four profiles: 12, 16, 24 and 32 kbit/s = 240, 320, 480 and 640 bits per frame. Every frame starts with a

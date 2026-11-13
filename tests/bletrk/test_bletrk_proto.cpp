@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BLE tracker advertisements: the Find My network frame, Tile, Chipolo, Samsung SmartTag and Google Find My Device tags are recognised,
 // ordinary advertisers (a phone's Nearby Info, a beacon, a short Apple frame) are not.
 #include "dect2/ble/ble_proto.h"

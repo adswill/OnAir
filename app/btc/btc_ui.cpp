@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth Classic screens: the devices and piconets heard (LAP, and for a discoverable device its full address and class of device), the access
 // code log, the receiver details. Receive only: it never inquires, pages or answers; it listens to what devices and piconets send anyway.
 #include "dect2/common/time_fmt.h"

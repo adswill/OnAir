@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Stall watchdog of a USB sample stream (Android RTL-SDR, rtl_fd_shim.h; no Android types, so the logic runs in desktop tests).
 // A phone can stop a bulk stream without anything unplugging: the endpoint halts (EPIPE, "broken pipe") or the transfers stop completing
 // (power saving, a USB controller glitch). Waiting 10 s and then reopening the radio was not enough: a halted endpoint stays halted over a

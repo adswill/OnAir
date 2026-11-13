@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helpers of the Inmarsat-C tests: play the test signal into the receiver with the impairments the tests need.
 #pragma once
 #include "inmc_gen.h"

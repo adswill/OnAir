@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tone tables and the DCS word: the Golay (23,12) code word of 023 against the published pattern, every code, rotations, polarity, the lists.
 #include "dect2/tones/tones_proto.h"
 #include <cmath>

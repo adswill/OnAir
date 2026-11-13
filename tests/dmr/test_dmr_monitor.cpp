@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR voice through the stub codec plug-in (tests/codec/stub_codec_plugin.c, no codec) into the voice monitor (voice_monitor.h): the loop
 // generator -> DmrReceiver -> monitor -> plug-in -> recording. Busy two-slot traffic on three talkgroups, the monitor clock follows the air.
 //  1. defaults: one call is played at a time, the calls are listed with their talkgroup, source and colour code, each played call is

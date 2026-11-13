@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT physical layer: block packing, header, preamble, frame / burst builder, RRC shaping, resampler. See kaft_frame.h.
 #include "dect2/kaft/kaft_frame.h"
 #include <algorithm>

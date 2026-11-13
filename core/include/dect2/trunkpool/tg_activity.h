@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Talkgroup activity for the voice and trunking modes (DMR, P25, NXDN, TETRA, dPMR, EDACS, LTR...): per talkgroup the calls, the airtime and the
 // distinct radios over a window, an activity timeline (airtime per time bucket), the busiest talkgroups, and "follow the busiest" with a
 // hysteresis so a listener is not thrown between two talkgroups that alternate. Pure logic, no clock of its own (callers pass seconds).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham keyboard modes: PSK31 .. PSK250, QPSK31 .. QPSK125, RTTY, MT63, FSQ, IFKP, Olivia, Contestia, MFSK, THOR, DominoEX, Hellschreiber and CW. The text of a transmission becomes
 // audio (kbdRender, one burst at a time, 48 kHz), the macros (CQ, answer, RST, QTH, name, 73) are filled from the station settings, the callsign
 // of the other station is picked from the decoded text, and the QSO is logged. Nothing here transmits: the burst goes through HamSlotTx::sendAudio,

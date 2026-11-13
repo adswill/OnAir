@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde decoders for iMet-1 / iMet-4 (Bell 202 AFSK, UART, 1 packet set per second), iMet-54 (4800 baud UART, Hamming(8,4) with a block interleaver),
 // Meisei iMS-100 (biphase-S, BCH(46,34)) and MRZ (MP3-H1, Manchester). Protocol knowledge from zilog80's RS demodulators (github.com/rs1729/RS, GPL-3.0).
 // These were validated on the simulated signals of sonde_gen only: no recording of these types was available.

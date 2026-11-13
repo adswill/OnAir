@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Regenerates rust/onair_usb/tests/golden/*.log from the ORIGINAL librtlsdr (RTL-SDR Blog fork 1.3.6) over the fake libusb of ref_harness.c.
 #   RTLSDR_SRC=/path/to/rtl-sdr-blog-1.3.6 LIBUSB_INC=/opt/homebrew/include/libusb-1.0 rust/onair_usb/tests/ref/gen_golden.sh
 # Needs only a C compiler and the libusb header; nothing is linked against libusb and no device is touched. The golden files are committed, so CI and

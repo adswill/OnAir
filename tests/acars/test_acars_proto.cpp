@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS block layer: check sequence, parity, repair, field parsing, labels. Known answers come from acarsdec (syndrom.h, acars.c) and libacars (acars.c).
 #include "dect2/acars/acars_proto.h"
 #include <cstdio>

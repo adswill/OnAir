@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DECT NR+ physical control channel (core/src/xlink/nrplus.cpp) against its own generator: turbo code and rate matching round trip, both control field types,
 // the CRC masks, carrier offsets up to 40 kHz, timing, two-path channel, noise sweep, packets back to back, noise only. Simulated signals only.
 #include "dect2/xlink/nrplus.h"

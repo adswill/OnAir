@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Our own plotting on top of Dear ImGui's draw lists: axes with ticks and grid, lines, dots, bars, shaded areas, images and heat maps,
 // panning and zooming with the mouse. It replaces the ImPlot library; the names follow ImPlot's, so a plot reads the same way.
 //

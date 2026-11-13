@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/atsc3/atsc3_ip.h"
 #include "dect2/common/inflate.h"
 #include "dect2/common/xmlmini.h"

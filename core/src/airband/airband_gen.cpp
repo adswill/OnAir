@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airband test signal (see airband_gen.h): AM channels with keyed carriers, voice-like audio or a tone, over noise.
 #include "dect2/airband/airband_gen.h"
 #include "dect2/common/stable_random.h"

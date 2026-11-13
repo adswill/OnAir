@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB receiver on the test signal: lock, bit-exact packets, header modes and profiles, carrier and clock offsets, echoes, input rates, odd chunk
 // sizes, 8-bit samples with DC offset and IQ imbalance, dropouts, reset.
 #include "dect2/dtmb/dtmb_gen.h"

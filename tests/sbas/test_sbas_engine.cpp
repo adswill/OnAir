@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SBAS mode end to end: the synthetic sky of the GNSS generator with only its three geostationary satellites (PRN 123, 127, 128), through the SBAS receiver
 // (no GPS satellite to lock first): acquisition on the SBAS PRNs, tracking, Viterbi and CRC, and the content decoder. With a clean signal and with a
 // frequency offset of +-5 kHz and a sample clock 20 ppm off (the faults of a cheap radio). The content is the generator's (sbas::synthData), so the decoded

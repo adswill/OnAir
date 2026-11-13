@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADC level assessment, automatic gain control and a gain sweep ("gain helper") for the HackRF's three gain stages.
 #pragma once
 #include "dect2/dsp/spectrum.h"

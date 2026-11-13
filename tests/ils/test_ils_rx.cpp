@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ILS receiver: localizer and glide slope DDM across the needle range and through the faults of tests/common/impair.h (carrier offset +-5 kHz,
 // clock +-50 ppm, low SNR, multipath echo, 8-bit clipping); the marker beacons; the localizer identification; the frequency pairing.
 // Target: DDM within 0.005.

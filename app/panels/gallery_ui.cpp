@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The picture gallery window (View > Images): the pictures every image receiver finished, kept across restarts in <data folder>/images/
 // (index.tsv, one PNG per picture, a small thumbnail, the separate channels of a multi-channel picture, the ground track of a pass), capped by
 // size. A viewer with zoom and pan, contrast stretch, gamma, histogram equalise, invert, false-colour presets, and for passes with a ground

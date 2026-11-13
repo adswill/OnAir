@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa): frame success against SNR for SF 7..12 (125 kHz, 4/5, 20-byte frames) and the two mesh defaults, compared with the
 // demodulation floors of the Semtech SX1276 datasheet (table 13: SF7 -7.5 dB ... SF12 -20 dB). Prints the table; fails when a setting
 // needs more than 1.5 dB above the datasheet floor for 90 % of its frames.

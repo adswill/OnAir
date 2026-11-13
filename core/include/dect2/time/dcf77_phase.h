@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DCF77 phase code: the carrier is phase keyed +-15.6 degrees by a 512-chip pseudo-random sequence (chip 120 carrier cycles, 1.548 ms) from 200 ms into each second; the
 // sequence is inverted for a time-code 1 (PTB; the code is the same BCD time as the AM keying). This reads each second by correlation, and finds the second by itself.
 #pragma once

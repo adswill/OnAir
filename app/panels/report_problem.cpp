@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Help > Report a problem (report_problem.h). The zip is written only when the user presses Save, to a file the user picks.
 // Everything here runs on this computer: no network, no recordings, no settings file. Log lines are shortened (personal folder
 // paths become "~" or the folder name) and a line that may hold a key, token, password or serial is left out.

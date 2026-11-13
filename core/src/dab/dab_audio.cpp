@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB / DAB+ audio: superframe assembly (Reed-Solomon, firecode, access units) and decoding with FFmpeg.
 #include "dect2/codec/codec_paths.h"
 #include "dect2/dab/dab.h"

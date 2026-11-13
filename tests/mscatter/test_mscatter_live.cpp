@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The meteor scatter receiver as the engine runs it: IQ chunks in, telemetry out; the list, the hourly and daily counts, the CSV log file,
 // the threshold, clearing, and input that must not poison the filters.
 #include "dect2/mscatter/mscatter_gen.h"

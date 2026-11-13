@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #pragma once
 // Spectrum analyser resolution: the FFT size that gets closest to the bin width the user asked for, and the bin width that really results.
 // An FFT of N points at sample rate R has bins of R / N, and N is a power of two, so only some widths exist. The HackRF's own sweep takes

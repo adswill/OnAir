@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) on an RTL-SDR, issue #386:
 //  1. meshRtlRateHz(): 1.024 Msps for an RTL-SDR (rtlsdr / rtltcp) and a channel that still fits there with the mode's 300 kHz tune offset;
 //     every Meshtastic, MeshCore, LoRa APRS and MeshCom setting of every region is checked against the receiver's own band rule.

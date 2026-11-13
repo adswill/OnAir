@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Played list and broadcast events: see played_ui.h. Core: dect2/dab/played_log.h.
 #include "app.h"
 #include "dab/played_ui.h"

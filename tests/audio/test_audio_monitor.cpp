@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Monitor audio": the tuned channel of any mode demodulated to the speaker / a second device / a TCP stream. A fake sink stands in for the sound
 // devices: USB, LSB, NFM and AM tones at an offset from the capture centre, a wrong shift, yielding to a mode that plays, the TCP stream, device list.
 #include "dect2/audio/audio_monitor.h"

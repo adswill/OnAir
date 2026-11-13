@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Trunking controller: control channel messages in, calls and follow actions out. Also the DMR Tier III grant model.
 #include "dect2/p25/trunk.h"
 #include "dect2/dmr/dmr_vendor.h"

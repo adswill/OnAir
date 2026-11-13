@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // fldigi 8PSK125 / 8PSK250 (no FEC) on simulated signals: the phase map against psk.cxx (symbol k = 180 + 45 k degrees in fldigi's baseband,
 // the opposite on the air), the MFSK varicode round trip, then the receiver over tuning errors, drift, a clock error, a noise sweep, two signals
 // at once and noise alone. Simulated only: no recording of an on-air 8PSK signal was available.

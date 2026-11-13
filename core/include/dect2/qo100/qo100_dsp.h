@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // QO-100 (Es'hail-2) maths, shared by the receiver, the app and the tests: the downlink plan, the LNB (local oscillator, IF, inverted
 // spectrum above the downlink), decimating channel filters, a phase-exact mixer, the fine frequency estimate of a carrier, the search for
 // the two CW beacons of the narrowband transponder, and the drift fit.

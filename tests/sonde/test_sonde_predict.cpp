@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Landing prediction 4.0 (dect2/sonde/sonde_predict.h), the pieces on generated data: the atmosphere, the ascent wind extraction with a
 // swing, GPS noise, glitches and a dropout, the descent fit (with and without a parachute, thinned track), the Kalman drift, the
 // terrain loop, the ensemble, the forecast parser on a saved Open-Meteo answer, the Tawhiri path winds, and the old API. No network.

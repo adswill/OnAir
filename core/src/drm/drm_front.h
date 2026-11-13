@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM receiver front end: any input rate to the 48 kHz complex baseband the OFDM receiver works on (DRM+, mode E: 192 kHz). Private to the DRM receiver.
 #pragma once
 #include "dect2/dsp/exact_resampler.h"

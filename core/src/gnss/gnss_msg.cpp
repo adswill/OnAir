@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Coded navigation messages: SBAS L1 and Galileo I/NAV (see gnss_msg.h).
 #include "dect2/gnss/gnss_msg.h"
 #include <algorithm>

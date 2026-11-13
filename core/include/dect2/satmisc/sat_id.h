@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "What satellite is this?": given a carrier followed through a pass (DopplerSample list), rank every satellite with known elements by how well its
 // predicted Doppler curve fits. The nominal transmit frequency is unknown, so a constant offset is solved for each candidate; what remains is the shape
 // of the curve, which only a satellite at the right place in the right orbit can produce. The best candidates are then refined with fitDopplerOrbit.

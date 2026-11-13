@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Mine" view of wM-Bus (3.9, docs/SMART5-iot-3.9.md item 12, wired in docs/SMART5-UI-3.9.md): the user marks their own meters; only those are
 // followed. The use per hour and day comes from the meter's current register (function 0, storage 0, Volume or Energy) through
 // dect2/sensors/meter_usage.h, the same logic as the Sub-GHz sensors' Mine view. Encrypted meters show nothing until the user imports their key.

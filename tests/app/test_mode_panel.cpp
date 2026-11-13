@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The pure parts of the per-mode Simple / Advanced view (app/ui/kit/mode_panel_logic.h).
 #include "../../app/ui/kit/mode_panel_logic.h"
 #include <cmath>

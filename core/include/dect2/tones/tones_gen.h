@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tone signalling test signals. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // ToneScene builds an audio signal (1.0 = 5 kHz FM deviation) out of CTCSS, DCS, DTMF, sequential, SELCAL and two-tone parts, speech-like

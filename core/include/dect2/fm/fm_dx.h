@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM DX log: which stations are normally heard, and an alert with PI proof when a foreign one appears (a tropospheric or sporadic-E opening).
 // Pure data and rules; the heard table comes from the census, the band scanner and the station being listened to.
 #pragma once

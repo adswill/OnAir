@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH (family 746, engine standard 748, active receiver 747) in the engine: the SH-A receiver behind a resampler from the radio rate to
 // the OFDM rate of the channel, the automatic channel width (5, 8, 7, 6 and 1.7 MHz tried in turn), the telemetry, the tuning and the test
 // signal. The transport stream goes to the TV player like DVB-T. The TDM waveform (SH-B, dvbsh_tdm.h) is received by the same entry: on

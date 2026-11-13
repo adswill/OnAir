@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 sensitivity part 2 (docs/SENSITIVITY-4.0-A2.md): Argos PTT uplink bursts, burst extent from the coherent 1 ms power and the message length chosen by where the
 // phase steps stop. The receiver's own test signal through tools/sens, noise in 5 kHz. The 3.9 receiver decodes nothing below 10 dB; this checks the
 // fraction of units decoded at 2 dB and 0 dB (also with a carrier error) and that noise alone gives nothing. Simulated signals only.

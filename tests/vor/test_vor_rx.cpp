@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VOR receiver: conventional and Doppler VOR test signals at every 45 degrees and through the faults of tests/common/impair.h (carrier offset
 // +-5 kHz, clock +-50 ppm, low SNR, multipath, 8-bit clipping); radial error, signal quality and the 1020 Hz identification.
 // Targets: radial error < 1 degree at good SNR, < 3 degrees at low SNR, the identification decoded.

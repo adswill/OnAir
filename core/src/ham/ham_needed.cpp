@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Worked-before and needed (4.0): see ham_needed.h.
 #include "dect2/ham/ham_needed.h"
 #include <algorithm>

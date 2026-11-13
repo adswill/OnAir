@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // D-STAR receiver: amateur digital voice (JARL D-STAR, DV mode), GMSK at 4800 bit/s (BT 0.5, +-1.2 kHz) in a 6.25 kHz channel, 2 m and
 // 70 cm.
 //

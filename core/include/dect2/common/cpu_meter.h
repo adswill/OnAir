@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CPU accounting: how much processor time each receiver (and each part of it) uses, for the status-bar CPU meter.
 //
 //   cpu::account("rx1 decoder")   an account id (created on first use; the same name gives the same id). 0 = nothing (not counted)

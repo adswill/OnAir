@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! GF(64) arithmetic for the P25 Reed-Solomon codes: the field of x^6 + x + 1, tables built at compile time.
 
 /// (exp doubled to 128 entries, log) tables of GF(64) with primitive polynomial x^6 + x + 1 (0x43).

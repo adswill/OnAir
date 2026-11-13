@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM multiplex power and deviation statistics (3.9, docs/SMART5-broadcast-3.9.md item 2), the measurement of ITU-R BS.412-9 annex 2:
 // the power of the whole multiplex integrated over 60 s, in dB relative to the power of a sine giving +/- 19 kHz peak deviation
 // (0 dBr; the usual limit is +0 dBr). Also the peak-deviation distribution of the same minute (50, 99 and 99.9 % points, as

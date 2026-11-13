@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir engine threading core: the lock-free single-producer / single-consumer ring of complex float samples (`IqRing`,
 //! core/include/dect2/common/ring.h) behind a C ABI. The C++ side owns the storage (a `std::vector<cf32>`) and a header block; this crate
 //! holds only the algorithm, so it needs no allocator and no `std`. The bounded queue / re-order buffer / pool of the C++ threading

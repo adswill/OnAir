@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice key store + decryption tests, synthetic frames and synthetic keys only. No captured traffic, no key search.
 // Verifies: the cipher primitives against public vectors; round-trip decryption of synthetically encrypted voice frames; that a wrong
 // key is flagged (never searched); that nothing is decrypted when no key is present or the legal notice is not accepted; CSV import/export;

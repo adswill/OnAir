@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV receiver: PAL, SECAM and NTSC with FM sound.
 // The channel is centred in the input; the receiver finds the vision carrier (and the sound carrier), locks to it, demodulates the picture
 // (synchronous detection against the recovered carrier, envelope detector as the fall-back), finds line and field sync, decodes luminance

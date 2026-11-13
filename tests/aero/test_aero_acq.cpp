@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero demodulators: acquisition (time to the first good SU) against Eb/N0 and carrier offset, off-centre carriers, drift.
 // Reports the lock time per rate; asserted: lock inside the budget at the rate's sensitivity limit and across the search range.
 #include "dect2/aero/aero_demod.h"

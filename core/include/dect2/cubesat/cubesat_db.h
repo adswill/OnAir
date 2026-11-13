@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Smart CubeSat decoder's satellite knowledge: the transmitter table (frequency, modulation, baud, framing hint; a snapshot of SatNOGS DB,
 // CC-BY-SA 4.0, credit SatNOGS DB contributors) and a TLE snapshot (CelesTrak, T.S. Kelso), plus the pass planner built on the SGP4 code of
 // geo/passes.h. The snapshot is a starting point: the app refreshes the TLEs from CelesTrak and the user can add transmitters.

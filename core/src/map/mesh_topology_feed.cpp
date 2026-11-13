@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protocol front ends of the shared mesh topology (mesh_topology_feed.h).
 #include "dect2/map/mesh_topology_feed.h"
 #include <cctype>

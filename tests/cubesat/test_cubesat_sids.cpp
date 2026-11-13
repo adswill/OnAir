@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SatNOGS DB live forwarding (round 4 #30): the SiDS form as gr-satellites' telemetry forwarder posts it (field names, upper-case hex frame,
 // millisecond UTC time with Z, N/S and E/W suffixes, URL encoding of the callsign), and the packets that must not go out.
 #include "dect2/cubesat/cubesat_smart.h"

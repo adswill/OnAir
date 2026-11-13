@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Cyclic-shift chirp modem (profiles P0-P4, spec section 2 and 7.4). Complex baseband at one sample per chip (2400/s); a symbol of spreading factor sf has
 //! M = 2^sf chips, value m = 0..M-1 = a cyclic shift of the base chirp by m chips, rising (d = +1) or falling (d = -1). The direction of symbol n follows
 //! the weave LFSR. Demodulation: multiply by the conjugate base chirp (rising) or the base chirp (falling) and take an M-point FFT; the peak bin is m.

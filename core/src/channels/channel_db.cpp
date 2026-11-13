@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The shared channel database: see channel_db.h.
 #include "dect2/common/text_charset.h"
 #include "dect2/channels/channel_db.h"

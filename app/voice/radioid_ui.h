@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The radio-ID name list of DMR and NXDN (dect2/common/radioid_db.h): where the user downloads or imports it, shown in the mode's
 // Receiver tab, and the loading of the saved file at start. docs/RADIOID.md.
 #pragma once

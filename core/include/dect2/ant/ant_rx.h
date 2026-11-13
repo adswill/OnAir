@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ANT+ sensor monitor: the broadcasts of heart rate straps, bike sensors, power meters, footpods and other ANT+ devices on 2457 MHz
 // (and any ANT network on its own channel), the same frames a watch or bike computer listens to. Receive only: it never transmits,
 // pairs or acknowledges, and shows only what every device broadcasts in the clear.

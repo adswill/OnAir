@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite AIS: geometry, collision-tolerant burst decoding, Doppler tracking and the pass statistics (ais_sat.h).
 #include "dect2/ais/ais_sat.h"
 #include "dect2/ais/ais_gen.h"

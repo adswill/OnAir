@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Station and antenna health report. One run retunes the radio over a few fixed bands and measures, per band, the noise floor, the strongest signal, the
 // ADC level (rms, peak, clipping) and the reference stations that should be there (FM, DAB, DVB-T); it also takes an ADS-B range plot and a
 // frequency error (ppm) from a known carrier when the caller has them, and turns it all into plain findings (add a filter or LNA, lower the gain,

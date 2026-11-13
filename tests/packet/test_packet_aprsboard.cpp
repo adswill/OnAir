@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS weather stations and messages (aprs_board.h, docs/APRS-BOARD-3.9.md): the unit conversions, the merge and the 24 h history of the weather
 // values, the addressee kinds, "to me", retries, acks and rejects, and then the generator's cycle through the real receiver under offsets, noise and
 // clock error: the weather station must carry its values and the message must show as acknowledged. Simulated signals only.

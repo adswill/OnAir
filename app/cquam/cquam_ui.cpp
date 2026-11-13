@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM stereo (C-QUAM) screens: the medium-wave presets, the stereo mode (automatic, mono, stereo), the audio bandwidth and the squelch; a big
 // STEREO / MONO / NO CARRIER indicator, the left and right level bars with a short history, and the quadrature channel's spectrum from
 // 0 to 60 Hz with the 25 Hz pilot marked.

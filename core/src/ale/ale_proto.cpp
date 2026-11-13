@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF ALE word and call layer (see ale_proto.h).
 #include "dect2/ale/ale_proto.h"
 #include <algorithm>

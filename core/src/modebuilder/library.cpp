@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode Builder library: the example definitions (data/modes/*.json, compiled in by CMake as generated/modebuilder_examples.inc) and the
 // user's saved definitions in a folder.
 #include "dect2/modebuilder/modebuilder.h"

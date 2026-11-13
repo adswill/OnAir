@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: writing what was found: a selection of the recording (a time range, optionally one band moved to baseband) as .wav, .cf32
 // or SigMF, demodulated audio as .wav, the peak table as CSV.
 #pragma once

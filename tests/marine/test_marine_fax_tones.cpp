@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Start and stop tone detection: tone frequencies of fldigi wefax.cxx (300 Hz IOC 576, 675 Hz IOC 288, 450 Hz stop),
 // mistuning of +-50 Hz, noise, dropouts, and no false alarms on noise or speech-like audio.
 #include "../data/marine/fax/fax_util.h"

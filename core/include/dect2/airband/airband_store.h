@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The airband channel list as one line of text for the settings file (#148).
 #pragma once
 #include "dect2/airband/airband_rx.h"

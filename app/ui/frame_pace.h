@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // How often the main window is redrawn: the policy of paceFrame() (main.cpp) as a pure function, so it can be tested and benchmarked
 // without a window (tests/app/test_frame_pace.cpp, tests/bench/bench_ui_power.cpp). The loop sleeps in glfwWaitEventsTimeout() for the
 // interval; input wakes it at once. 0 = no pacing (the --shot runs count frames).

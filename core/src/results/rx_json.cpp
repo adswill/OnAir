@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/results/rx_json.h"
 #include "dect2/results/sessions_json.h"
 #include "dect2/source/gain_opt.h"

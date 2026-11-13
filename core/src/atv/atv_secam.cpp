@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV receiver, SECAM colour. See atv_secam.h.
 #include "atv_secam.h"
 #include "atv_dsp.h"

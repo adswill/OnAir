@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FT8 / FT4 / WSPR / JS8: heard stations, spot summary per band, clear transmit frequency, band suggestion. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../ui/typography.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CP16: fonts, the text cells, the transmitter's carriers and the character recognition (cp16_proto.h).
 #include "dect2/cp16/cp16_proto.h"
 #include "../hfdig/hfdig_kbd_tables.h"

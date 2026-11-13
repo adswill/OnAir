@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EM4100 LF RFID: ids and polarities, RF/64 and RF/32, a bit clock that is 4 % off, a carrier at the edge of the channel, a drifting carrier, a noise sweep
 // with the false-read count, and 15 minutes of noise alone. Simulated signals only.
 #include "x40_gen2.h"

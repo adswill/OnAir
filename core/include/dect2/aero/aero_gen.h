@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero test signal: P channels (ground to aircraft) carrying system tables, logons and ACARS uplinks to six aircraft
 // over the Gulf and the Indian Ocean, with valid framing and coding (aero_phy.h) and SUs from the SU layer's builders (aero_su.h).
 // The aircraft also send position reports (ADS-C basic reports in labels B6 and H1, one ARINC 702 text POS report), as downlinks on the

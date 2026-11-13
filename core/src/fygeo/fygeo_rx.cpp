@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FengYun geostationary receiver (fygeo_rx.h).
 #include "dect2/fygeo/fygeo_rx.h"
 #include "dect2/dsp/rrc.h"

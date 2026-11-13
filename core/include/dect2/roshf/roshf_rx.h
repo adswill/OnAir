@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROS (HF) detector mode. ROS (José Alberto Nieto Ros, EA5HVK) is a proprietary weak-signal HF chat mode whose framing, coding and FEC are not
 // public, so nothing can be READ from it. This receiver brings the upper sideband to 8 kHz audio (as the other HF modes: 24 kHz front end, USB),
 // keeps a waterfall of it, and every two seconds measures the last 16 s with the ROS identifier (ros/ros_detect.h): one tone at a time on a

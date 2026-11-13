@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: opening recordings (raw IQ in every format, SigMF, WAV mono / stereo-as-IQ, MP3), exporting selections, the band
 // extractor's frequency placement, the overview and the spectrogram tiles.
 #include "../common/tmp_path.h"

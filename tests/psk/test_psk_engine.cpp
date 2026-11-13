@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK31 through the engine (setStandard(38)): the synthetic source plays the test band, the receiver reports through latestRx().
 #include "dect2/psk/psk_rx.h"
 #include "dect2/engine/engine.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero C channel (voice): coding layer, framer and the demodulator with real-world impairments. Framing and coding follow JAERO
 // (aero_cchan.h) and were checked on a real 8400 bit/s recording from JAERO's sample set (test_aero_cchan_real); everything here uses synthetic
 // signals made from that framing (aero_cgen.h). The voice content is random bytes: no vocoder is involved.

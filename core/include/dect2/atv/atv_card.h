@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The analog TV test card: EBU colour bars, grey ramp and staircase, multiburst, resolution wedge, checkerboard, a circle, the text
 // ONAIR TEST, a moving box, a running clock and a frame counter. Drawn at the picture size of the format (768 x 576 or 640 x 480) as
 // luma and colour-difference planes (E'Y, E'U, E'V in the units of BT.470: Y 0..1, U and V the weighted differences).

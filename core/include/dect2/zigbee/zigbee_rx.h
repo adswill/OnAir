@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Zigbee / IEEE 802.15.4 monitor: the frames devices send openly on the 2.4 GHz channels 11 - 26 (2405 + 5 (k - 11) MHz), the same information
 // a sniffer shows. Receive only: it never transmits, joins or answers a network; payloads that are encrypted (the network key is not
 // obtainable here) are shown as encrypted, not decoded; only what is sent in the clear is decoded.

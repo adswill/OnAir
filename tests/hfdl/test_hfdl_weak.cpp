@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weak HFDL bursts: the receiver falls back from the equaliser to a gain / phase tracker and to known symbols only when a burst does not decode.
 #include "dect2/hfdl/hfdl_gen.h"
 #include "dect2/hfdl/hfdl_rx.h"

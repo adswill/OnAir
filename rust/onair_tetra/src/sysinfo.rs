@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! SYNC and SYSINFO broadcast PDUs, BS service text, security class, carrier frequencies, network time and the AACH slot usage
 //! (ETSI EN 300 392-2 clauses 18.4, 18.5, 21.4 and 21.5). All of it is broadcast to every terminal.
 use crate::abi::{Sync, Sysinfo};

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Amplitude scintillation index S4 (see gnss_s4.h).
 #include "dect2/smart5/gnss_s4.h"
 #include <algorithm>

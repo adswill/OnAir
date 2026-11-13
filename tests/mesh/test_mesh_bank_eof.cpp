@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A complete LoRa frame must be recoverable from the Bank's last partial input block.
 #include "../data/mesh/testutil.h"
 #include "dect2/lorawan/lora_bank.h"

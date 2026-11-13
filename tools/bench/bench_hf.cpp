@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CPU cost and decode count of the HF weak-signal slot decoders (FT8 FT4 FT2 WSPR JT65 JT9 Q65 JT4 FST4 MSK144) on synthetic slots with N stations.
 //   bench_hf <mode> [stations] [slots] [snr_lo] [snr_hi]    prints: CPU s, s of signal, cost (CPU s per s of signal), decodes, digest of the decoded set, peak RSS
 // Built by tools/bench/bench_hf.sh (needs the unit-test helpers in tests/hfdig).

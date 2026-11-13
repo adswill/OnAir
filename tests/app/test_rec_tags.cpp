@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Recording tags and notes (app/state/rec_tags.cpp): tag parsing, save/load round trip with tabs and line breaks in notes, search and filter.
 #include "../../app/state/rec_tags.h"
 #include <cstdio>

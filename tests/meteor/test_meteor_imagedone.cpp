@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // image.done recipes (round 4 #13) and the daily digest recipe (#25): "Post my Meteor pass to Discord" builds the Discord message from the event, only for Meteor pictures, once
 // per picture; "Picture finished" for any source; the event is in the catalog and the image family.
 #include "dect2/automation/engine.h"

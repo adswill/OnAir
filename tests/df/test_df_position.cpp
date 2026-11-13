@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Position fixing: WGS-84 geodesics, 2-4 station fixes with noisy bearings (median error, ellipse calibration), outliers, degenerate geometry,
 // range prior, the antimeridian.
 #include "dect2/df/df.h"

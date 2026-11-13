@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ionosphere from my own receptions: a local observation log of what this receiver actually heard (FT8/FT4/WSPR spots with
 // locators, HFDL ground stations, beacons, time stations) turned into propagation evidence: a heard grid per band and hour,
 // a maximum-usable-frequency ESTIMATE per distance bin (the highest band with decodes there, no physics) and a comparison with

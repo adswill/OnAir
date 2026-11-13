@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite identification of the Inmarsat all-carriers mode: content, frequency and geometry evidence on synthetic carrier sets of two or three
 // satellites, with offsets, with carriers missing, with the wrong location and with clues that disagree. The tables are unverified against a real
 // capture: needs a user test with a real capture.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The FM sound options of issue #213 on the test transmitter (fm_gen.h): de-emphasis off keeps a 10 kHz tone that 50 us cuts, the 5 kHz
 // audio bandwidth removes a 10 kHz tone and passes 1 kHz, the squelch mutes noise and opens on a station, and the stereo choice (auto,
 // mono, stereo with a weak pilot) changes what reaches the right channel.

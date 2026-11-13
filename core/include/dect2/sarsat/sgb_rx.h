@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // COSPAS-SARSAT second-generation beacon (SGB, C/S T.018) burst receiver. Receive only.
 // Input: complex samples at exactly 153.6 kHz (4 samples per chip), nominal channel centre at 0 Hz. The 166.7 ms preamble is known (the first 6400 chips of
 // the two PRN segments, all data bits zero), so the burst is found by a differential matched filter (insensitive to the carrier offset, +-38 kHz) done with

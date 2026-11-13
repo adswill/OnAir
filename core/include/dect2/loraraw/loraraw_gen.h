@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa (raw) test signal: plain LoRa frames at several settings (SF7 - SF12, 125 / 250 / 500 kHz, coding rates 4/5 - 4/8, with and without CRC, the
 // low data rate optimisation at SF11 / SF12 at 125 kHz), one after the other, over complex white noise. Nothing is transmitted: the samples only exist
 // in memory or in a file. Uses the LoRa modulator of mesh_lora.h (TxFrame).

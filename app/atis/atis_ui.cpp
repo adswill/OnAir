@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATIS screens (the Automatic Transmitter Identification System of the European inland waterways, not AIS): the messages heard (ten digit
 // identity, country, the call sign it spells, the ship name from your own table), the stations (one row per identity), and a converter between
 // call signs and ATIS numbers. The voice of the channel plays as narrow FM (Listen); the ATIS comes right after the voice.

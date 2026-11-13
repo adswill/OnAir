@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna designer: parametric templates. Each takes the design frequency and a few parameters whose defaults come from the usual
 // textbook / handbook formulas (docs/ANTENNA.md lists them); the solver then shows how close the formula is.
 #include "dect2/antd/antd_tools.h"

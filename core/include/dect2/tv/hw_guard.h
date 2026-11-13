@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hardware video decoding start guard. A stream joined mid-GOP gives the GPU decoder (VideoToolbox, Direct3D 11) pictures it must skip
 // (RASL / trailing pictures without their IRAP); it reports no error and simply stays silent. The guard (1) holds packets back
 // until a keyframe so the GPU session starts on an IRAP, and (2) says "use the CPU decoder" when the GPU has returned no picture for a

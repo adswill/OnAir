@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RINEX 3.04 observation output (see gnss_rinex.h).
 #include "dect2/gnss/gnss_rinex.h"
 #include <algorithm>

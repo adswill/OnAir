@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ham.decode: one event per station heard on the HF digital modes (FT8, FT4, FT2, WSPR, FST4, JT, MSK144, Q65) and CW, with the logbook's
 // marks (new DXCC, new on the band, new grid, worked before). Feeds the automations (JTAlert-style alerts), Integrations and the message
 // database ("Search everything heard"). docs/HAM-ALERTS-3.9.md.

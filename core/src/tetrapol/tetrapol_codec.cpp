@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL physical frames, PAS 0001-2 clause 6 (tetrapol_codec.h): voice and data frames of the 8 kbit/s GMSK channel.
 #include "dect2/tetrapol/tetrapol_codec.h"
 #include <algorithm>

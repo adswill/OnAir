@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather fax through the radio layer: a picture of 800 lines (200 s at 240 lpm) with a sample clock 30 ppm off. The slant of the picture
 // (shift of the rows from the first to the last 20 % of the picture) with and without the automatic correction.
 #include "../data/marine/rf_util.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteosat High Rate DCP (HRDCP) message format and coding, from EUMETSAT TD 16 "Meteosat Data Collection and Distribution Service"
 // (EUM/OPS/DOC/08/0325 v2B, sections 3.2 - 3.4 and 5.3). Both directions: the test signal is built with the same code it is checked by.
 //

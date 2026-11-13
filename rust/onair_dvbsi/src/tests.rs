@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests that need no C++ reference: Hamming codes, character sets, the teletext data unit, the renderer, subtitle pixel strings and colours.
 use crate::charset::{self, Out};
 use crate::subpix::{decode_field, default_clut, ycrcb};

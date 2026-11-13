@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham science event monitors (hamsci_evt.h): the signal processing of the Schumann, whistler / tweek, Moon-echo, Radio Jove, CALLISTO-style and
 // aurora / sporadic-E / TEP monitors. Written for OnAir from the public descriptions listed in docs/W1B-3.9.md; no third-party code.
 #include "dect2/hamsci/hamsci_evt.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The GPU Viterbi (GpuViterbi, Metal) against the exact CPU decoder (dvbt::Viterbi::decode, 16-bit): the same bits and the same summed path
 // metric on DVB-T-sized blocks (noisy, punctured and full-scale soft values), and the time each takes. Passes without a GPU (nothing to compare).
 #include "dect2/dsp/gpu_viterbi.h"

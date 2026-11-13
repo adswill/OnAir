@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VOR / ILS test signal (see vor_gen.h).
 #include "dect2/vor/vor_gen.h"
 #include "dect2/vor/vor_rx.h"

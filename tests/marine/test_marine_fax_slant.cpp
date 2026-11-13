@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Slant: an audio clock error of up to +-50 ppm is measured from the phasing lines and corrected, so that over 800 lines
 // the picture drifts by less than a pixel. Also the manual correction (auto off) and a manual change in mid-picture.
 // A clock error is made by running the test source at rate * (1 + ppm * 1e-6) while the decoder believes in the nominal rate.

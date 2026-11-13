@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Station health (View > Station health): one button measures the noise floor, ADC level and reference stations on a few fixed bands, adds the ADS-B range
 // plot and a frequency error from a known carrier when there is one, and lists plain advice. The analysis is in core/src/sweep/station_health.cpp
 // (docs/STATION_HEALTH.md); this file is the window, the worker thread and the report text.

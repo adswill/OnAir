@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-II / -III / -IV screens (receive only, physical layer): the band presets, then three views: the signal (what the analysis found: carriers,
 // baud, clock error, speed level, frame period and sync pattern), the symbols (the newest phase steps of the first carriers) and the events.
 // The channel coding is proprietary and not decoded, so there is no text (docs/pactorhf.md).

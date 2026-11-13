@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One value of settings.conf (FilePrefs in platform_posix.cpp, the Linux and Windows settings file). The file holds one key=value
 // a line, so a value with line breaks (the mesh channel keys, the FM scan list, ...) is written with \n, \r and \\ escapes and read
 // back whole (#360: only the first MeshCore key came back after a restart). A file from before the escapes has no settingsFormat

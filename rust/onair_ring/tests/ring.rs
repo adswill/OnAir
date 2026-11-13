@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Tests of the Rust SPSC ring: against a trivially correct model (random operation sequences, wrapped counters), threaded stress, and an
 //! exhaustive search of the interleavings of a step-by-step model of the algorithm (a std-only stand-in for loom: sequentially consistent
 //! steps, so it checks the logic, not the memory orderings; those are argued in ring.rs and checked by ThreadSanitizer on the C++ side).

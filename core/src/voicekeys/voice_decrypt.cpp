@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Per-call voice decryption (see voice_decrypt.h). Applies a user key's keystream to the voice-frame bits. No key search or recovery.
 #include "dect2/voicekeys/voice_decrypt.h"
 #include <algorithm>

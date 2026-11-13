@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The near-me list of navigation aids (dect2/vor/navaid_list.h).
 #include "dect2/vor/navaid_list.h"
 #include "dect2/vor/vor_db.h"

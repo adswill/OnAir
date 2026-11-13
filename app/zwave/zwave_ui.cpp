@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Z-Wave screens: the frame log (home ID, source > destination, command class and command), the nodes, the networks (home IDs) and the channels of
 // the region with what each carried; the region picker. Receive only: S0 and S2 payloads are named as encrypted and stay so.
 #include "dect2/zwave/homenet_health.h"

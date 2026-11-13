@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mixed-radix FFT (see dtmb_fft.h). Decimation in time in Stockham form: a level of radix r with sub-length m (n = r m) and stride s reads
 // in[q + s (r p + k)] for k < r, multiplies by exp(-j 2 pi p k / n), takes the r point DFT and writes out[q + s (p + m j)]. The levels are
 // applied from the one with the largest stride (the first radix to be computed) to the one with stride 1, which produces the natural order.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/hfbeacon/hfbeacon_rx.h"
 #include "dect2/hfbeacon/hfbeacon_dsp.h"
 #include "dect2/hfbeacon/hfbeacon_tel.h"

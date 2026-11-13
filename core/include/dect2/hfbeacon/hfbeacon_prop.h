@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF propagation dashboard model: what the user's own receiver has heard, per amateur HF band, over the last 24 hours. Observations come from
 // the beacon monitor (NCDXF/IARU, Long Dashes, single letters, carriers / time signals) and from the WSPR / FT8 / FT4 / FT2 decodes the HF
 // digital receiver already makes (a spot is a station heard, with its distance from the receiver when both locators are known). Nothing is

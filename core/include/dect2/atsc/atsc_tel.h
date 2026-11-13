@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Telemetry of the ATSC receiver (plain data, shared with RxTelemetry).
 #pragma once
 #include <cstdint>

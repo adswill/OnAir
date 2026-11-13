@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // D-STAR receiver against the test signal with real-world faults (tests/common/impair.h): tuning error +-2 kHz, a channel off centre with a
 // clock error, noise, swapped I/Q, bit errors in the header (corrected; or too many, then the header comes from the slow data), lost slow
 // data blocks, a start in the middle of a call (late entry), and a carrier that stops without the end pattern. Silent: no sound device.

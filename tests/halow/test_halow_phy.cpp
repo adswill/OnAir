@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) PHY tables against independent references: the published S1G data rates (tone counts, bits per symbol, valid MCS), the
 // 802.11 constellation and puncturing definitions, the 127-bit scrambler sequence of the 802.11 standard, and the structural properties of every
 // width (tone layouts 1 - 16 MHz, interleaver permutations for every width and MCS, STF periodicity, SIG field round trips of both preambles).

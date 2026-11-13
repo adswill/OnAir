@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tone decoders on synthetic audio and FM: every CTCSS tone, DCS codes in both polarities and at any start phase, DTMF, the sequential plans,
 // SELCAL, a two-tone page, all of it in noise and under speech-like interference; no detections in noise and speech alone; the gate; the FM path.
 #include "dect2/tones/tones_gen.h"

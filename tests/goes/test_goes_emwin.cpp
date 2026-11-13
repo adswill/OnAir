@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EMWIN bulletin parsing on a representative tornado warning and a forecast product (test text).
 #include "dect2/goes/emwin_parse.h"
 #include <cmath>

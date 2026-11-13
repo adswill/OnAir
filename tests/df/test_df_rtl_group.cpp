@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hub plumbing with fake dongles: hub detection and label, identical configuration of every link, noise switch around the calibration,
 // and a calibrated bearing from u8 IQ streams of a synthetic array whose devices start at different offsets.
 #include "dect2/df/rtl_group.h"

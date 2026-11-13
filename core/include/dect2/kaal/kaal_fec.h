@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL FEC (port of kaal_fec.py): systematic rate-1/2 quasi-cyclic LDPC, n=640 k=320 (Z=32, 10x20 base matrix),
 // normalised min-sum decoder, plus the old K=7 convolutional encoder for reference.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The adaptive main area (app/ui/overview_layout.h, docs/LAYOUT-4.0.md): an empty lower row is hidden and comes back when content
 // appears, a small plot moves into the right column, a short list becomes a strip, the user's dragged sizes are kept, content that
 // flickers does not make the layout jump, and no box ever leaves the area or overlaps another, at every window size from 640 x 400 to

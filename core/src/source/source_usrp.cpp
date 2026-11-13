@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Native driver for the USRP: the radio's own library is loaded at run time when it is installed. See native_common.h.
 #include "dect2/tx/tx_control.h"
 #include "native_common.h"

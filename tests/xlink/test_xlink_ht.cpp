@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HT PHY (core/src/xlink/ht_phy.cpp): every MCS, both guard intervals, carrier and clock offsets, noise sweep, multipath, two frames overlapping, noise only.
 // Simulated signals only: no real HT capture is used here.
 #include "dect2/xlink/ht_phy.h"

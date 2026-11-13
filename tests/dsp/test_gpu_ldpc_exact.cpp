@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The GPU LDPC decoder for the DVB-T2 / DVB-S2 codes (GpuLdpc::decode: Metal, Direct3D 11 or Vulkan) against a scalar CPU version of the same
 // layered normalised min-sum, on identical soft inputs: the hard decisions, the ok flag and the iteration count must agree to the bit for every
 // block (clean, near the threshold, failing). Skipped when no GPU backend is usable (on Linux, DECT2_VULKAN=1 also accepts lavapipe).

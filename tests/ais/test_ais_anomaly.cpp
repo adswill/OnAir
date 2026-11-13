@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS anomaly engine (ais_anomaly.h): clean traffic with GPS noise, lost reports and ships leaving the covered sea must raise nothing; injected spoofing,
 // clones, moved aids, wrong classes, impossible speeds, renamed ships and ships that go dark inside coverage must be found.
 #include "dect2/ais/ais_anomaly.h"

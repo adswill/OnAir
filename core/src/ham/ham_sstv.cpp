@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham SSTV send: picture files, fitting, the audio of a picture through the repo's SSTV modulator, CW ID, the gated send (ham_sstv.h).
 #include "dect2/ham/ham_sstv.h"
 #include "dect2/ham/ham_keyer.h"

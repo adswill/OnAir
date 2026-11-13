@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM signalling and message formats: FAC, SDC data entities, text message, AAC audio super frame.
 #include "dect2/drm/drm_msg.h"
 #include "dect2/drm/drm_fec.h"

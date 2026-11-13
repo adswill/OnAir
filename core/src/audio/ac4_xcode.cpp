@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AC-4 access units -> AC-3 frames: decoded with the optional AC-4 library (ac4_dec.h), mixed to stereo or 5.1 and encoded by the FFmpeg
 // inside OnAir, so that the transport stream of the ATSC 3.0 receiver carries audio the player can decode.
 #include "dect2/audio/ac4_dec.h"

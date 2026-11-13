@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa (raw) monitor: plain LoRa between two radios (point to point, not LoRaWAN and not a mesh): the chirp spread spectrum frames any SX127x / SX126x
 // device sends, shown as bytes (hex and text) with level, SNR and carrier offset. Receive only: nothing is sent, nothing is decrypted or interpreted.
 //

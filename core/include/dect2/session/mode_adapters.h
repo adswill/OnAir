@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Adapters from a mode's telemetry to Sessions (docs/MODE-EXPERIENCE.md). Each is called by the receiver when the telemetry is read, with the telemetry
 // it just built; it only pushes to the session store through a TrackBook (never SQLite, never a file). Message text is not stored here.
 //   ADS-B (family 11)  -> Track per aircraft (ICAO), gap 2 min

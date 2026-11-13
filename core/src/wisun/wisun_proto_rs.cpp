@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-SUN FAN / IEEE 802.15.4g frame layers on top of the Rust crate rust/onair_wisun: the functions of wisun_proto.h;
 // wisun_proto.cpp keeps the channel plan tables, the MPDU builder and the text helpers that call the 2.4 GHz mode.
 #include "dect2/wisun/wisun_proto.h"

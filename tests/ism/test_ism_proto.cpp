@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors, the protocol layer alone: every test device's frame is decoded to the right model, ID and values; cut-off frames,
 // frames with a flipped bit and frames with timing errors give the right reading or none, never a wrong one; noise gives nothing.
 #include "dect2/ism/ism_gen.h"

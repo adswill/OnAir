@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Exporters: pure writer functions that turn what a panel shows into a file's text (KML, GPX, GeoJSON, CSV, JSON, plain text, ADIF) and the
 // small ExportSink interface a panel hands the result to. No UI, no files and no clock in the writers: the same input is the same output, so
 // the tests compare text. Numbers are written with '.' whatever the locale; times are UTC (ISO 8601 "2026-10-22T08:30:00Z", ADIF dates).

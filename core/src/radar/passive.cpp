@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Passive coherent location chain; see passive.h and docs/passive-radar.md.
 #include "dect2/radar/passive.h"
 #include <algorithm>

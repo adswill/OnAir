@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // QRSS and DFCW grabber on simulated signals: element length 1 .. 60 s found automatically, text, centre found automatically, tone drift, noise sweep,
 // noise alone, DFCW with both frequency orders. Simulated only: no recording of a real QRSS or DFCW signal was available.
 #include "dect2/hamsci/hamsci_dsp.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "record_rules_ui.h"
 #include "app.h"
 #include "dect2/session/record_rules.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DJI drone receiver: detection by signal shape (OcuSync-like, Lightbridge-like, unknown wideband OFDM) and DJI DroneID decoding. Receive only.
 //
 // The radio must give at least 16 Msps (20 Msps for a 20 MHz-wide OcuSync signal to fit): the bursts are found from the signal's power in 10 us steps,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RC and mesh link screens: the links heard (Reticulum destinations, ExpressLRS links, MAVLink systems, FrSky and FlySky transmitters), their frames, and a map of
 // the MAVLink positions. Receive only. Encrypted or bound payload stays structure only; the ExpressLRS binding phrase is typed here, kept in memory and never saved.
 #include "app.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM back end: FAC, SDC and MSC decoding from equalised cells.
 #include <atomic>
 #include "dect2/drm/drm_dec.h"

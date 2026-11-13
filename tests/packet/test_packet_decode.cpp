@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / Packet receiver on the test signal, fed directly: one full cycle of the generator with noise and a carrier offset, every frame must come
 // out with exactly the contents that were sent. 1200 baud at 12 dB carrier to noise (in 25 kHz), 9600 baud at 18 dB, then both together.
 #include "dect2/dsp/gen_util.h"

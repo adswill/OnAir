@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! P25 IMBE voice frame interleave (TIA-102.BABA, as in DSD): one frame is 72 dibits as sent; the eight code vectors c0..c7 (23, 23, 23, 23, 15, 15, 15, 7
 //! bits) are laid out the way mbelib takes them (`char fr[8][23]`, 184 bytes row major). The vocoder itself stays in C++.
 

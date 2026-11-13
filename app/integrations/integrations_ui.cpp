@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Integrations window (View > Integrations): decoded events out as MQTT messages (optionally with Home Assistant discovery), a webhook post and a
 // JSON-lines file. Everything is off until the user switches a sink on and types the broker / address; no server is ever contacted by default.
 // The password and token are written to integrations/integrations.json (owner-only) and never to a log or the status text. The work is in

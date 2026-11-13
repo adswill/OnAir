@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW code table, callsign pattern and timing decoder: perfect keying from 5 to 50 WPM, Farnsworth spacing, hand keying (jitter, heavy
 // dashes), a change of speed, noise spikes and drop-outs.
 #include "dect2/cw/cw_morse.h"

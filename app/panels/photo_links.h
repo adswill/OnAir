@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Links to public aircraft and ship databases (photos and details), built from the identifiers the program has.
 // Nothing is fetched or embedded: choosing a link only opens the browser, so nothing leaves the program until then.
 // Identifiers are checked and kept to [A-Za-z0-9-]; anything else gives no link (no text of a received message reaches a URL).

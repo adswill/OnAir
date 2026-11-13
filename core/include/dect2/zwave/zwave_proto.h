@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Z-Wave frame layer (ITU-T G.9959 MAC, clean-room from the public specification): the regional channel tables, the MPDU layout of R1 / R2 / R3,
 // the checksum (R1, R2: XOR) and CRC-16 (R3), and the names of command classes and commands. Receive only: S0 and S2 payloads are named as
 // encrypted and never decoded.

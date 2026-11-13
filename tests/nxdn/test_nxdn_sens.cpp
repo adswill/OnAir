@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NXDN sensitivity: the test signal (NXDN48 and NXDN96, carrier to noise in 12.5 kHz) at 7 dB decodes nine blocks in ten, at 5 dB about
 // half; the receiver before the low-pass symbol filter got 41 of 247 at 7 dB and none at 5 dB. Noise alone gives at most one block (the
 // 6-bit SACCH CRC passes noise now and then; nothing reaches the call log from it).

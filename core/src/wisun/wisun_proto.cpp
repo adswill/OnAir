@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-SUN FAN / IEEE 802.15.4g SUN FSK frame layers (see wisun_proto.h).
 #include "dect2/wisun/wisun_proto.h"
 #include "dect2/zigbee/zigbee_proto.h"

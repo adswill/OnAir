@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RS92 frame decoder and builder (see sonde_rs92.h).
 #include "dect2/sonde/sonde_rs92.h"
 #include "dect2/sonde/sonde_geo.h"

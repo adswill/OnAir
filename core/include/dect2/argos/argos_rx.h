@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Argos receiver (see argos_proto.h for what is public and what is not). Two links in one mode, picked from the dial or by hand:
 //   uplink, 401.650 MHz: burst finder (the 160 ms unmodulated carrier), PTT-A2 Manchester phase demodulator (+-1.1 rad, 400 bit/s) with a
 //     search over bit timing and rate, message fields (28 bit ID, user data), and a per-platform list of the burst frequencies (the Doppler

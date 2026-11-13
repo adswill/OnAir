@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DCR, Japan's digital convenience radio (ARIB STD-T98 Volume 3, 4-level FSK): the channel plan of Tables 3-4, 3-5 and 3-6, 6.25 kHz apart.
 //   154 MHz   licensed, channels 1 - 28 from 154.44375 MHz (20 - 28 are data only)
 //   467 MHz   licensed, channels 1 - 65 from 467.00000 MHz, 66 - 75 from 465.096875 MHz

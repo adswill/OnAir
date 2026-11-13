@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/qo100/qo100_rx.h"
 #include "dect2/qo100/qo100_tel.h"
 #include "dect2/qo100/qo100_dsp.h"

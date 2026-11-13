@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL known answer from the air: a real 600 bit/s aircraft downlink (tests/data/hfdl/real_burst.h) through the receiver must give its
 // performance data. The loopback tests (generator into receiver) cannot see a convention that both sides get wrong the same way, such as
 // the order of the two code polynomials; this one can.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF radiofax directory and schedule (see marine_wefax_stations.h). Edit the two tables below to update.
 // Frequencies are the assigned carriers in kHz (tune the USB dial 1.9 kHz lower). Broadcast times are UTC; most are marked
 // approximate: they follow the published schedules only roughly, and stations change them with the seasons.

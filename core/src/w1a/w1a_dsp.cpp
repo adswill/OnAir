@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // W1A voiceband modes: HF packet 300 Bd decoder, test impairments and the packet generator (see w1a_dsp.h). Receive only.
 // The AFSK receiver and the AX.25 parser are the ones the repo already has (core/src/ham/ham_aprs.cpp, core/src/packet).
 #include "w1a_priv.h"

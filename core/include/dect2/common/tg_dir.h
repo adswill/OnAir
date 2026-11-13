@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Talkgroup directory for DMR, TETRA and P25: names for talkgroup numbers, edited by the user and imported / exported as CSV, shown beside the
 // numbers in the voice and trunking panels. One kind has its own numbering, so a name belongs to (kind, id). The data is never shipped
 // (docs/TALKGROUPS.md says where to get lists).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FANS-1/A CPDLC (ARINC 622 IMI AT1 / CR1 / CC1 / DR1) inside ACARS text: the ASN.1 PER body decoded to the plain message text
 // ("CLIMB TO AND MAINTAIN FL350", "REQUEST DIRECT TO [position]", ...). The decoder is the one of libacars (Tomasz Lemiech, MIT,
 // third_party/libacars): asn1c unaligned PER tables of the FANS-1/A ATC uplink and downlink messages, see THIRD_PARTY.md.

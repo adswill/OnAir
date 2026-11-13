@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sun drift-scan pointing calibration (see drift_scan.h).
 #include "dect2/smart5/drift_scan.h"
 #include "dect2/smart5/sun.h"

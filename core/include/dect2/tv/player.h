@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Live player: decodes the selected service of the transport stream (video with VideoToolbox when possible, audio
 // through CoreAudio) and keeps audio and video in sync using the stream's timestamps.
 #pragma once

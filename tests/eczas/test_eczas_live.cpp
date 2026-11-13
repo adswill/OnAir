@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // e-Czas streaming receiver: the test signal (eczas_gen.h) through EczasLiveReceiver with the impairments of a real long-wave channel: carrier offset,
 // noise, level, fading, sample clock error, input rates from an 8 kHz audio recording to 2 Msps IQ; the time stamp and the computer clock offset
 // (the receiver's clock origin is known here); noise alone and a bare carrier give nothing; every field of the packet; the calendar edges of the

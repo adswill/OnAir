@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The signal identifier (dect2/engine/sig_ident.h) on a synthetic evaluation set: signals of about thirty modes made here from their published
 // parameters (symbol rate, deviation, pulse shape, frame syncs, OFDM symbol and guard lengths, burst timing), not with the app's own generators,
 // so this is not the data the signature table was measured on. Each one is impaired (a random frequency offset, noise at 10 / 15 / 25 dB SNR over

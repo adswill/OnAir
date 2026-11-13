@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The pure rules of the remote API (token, rate limit, sizes, routes and the refusal list, message lines, rigctl) and the parts built on them:
 // the HTTP server with token on loopback, rate limit and the new endpoints, the rigctl TCP server, the UDP output. Plus a guard: the sources of
 // the API must not mention the key store (transmit is allowed since 3.2: the operator decides).

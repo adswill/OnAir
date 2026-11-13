@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dPMR test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A schedule of transmissions: voice calls (header, superframes of CCH + four voice frames, end frame), status messages, short messages

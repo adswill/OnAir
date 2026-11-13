@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // D-STAR test signal (see dstar_gen.h): whole DV transmissions as GMSK, over noise.
 #include "dect2/dstar/dstar_gen.h"
 #include "dect2/dstar/dstar_rx.h"

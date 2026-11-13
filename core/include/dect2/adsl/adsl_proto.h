@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-L 4 SRD-860 (EASA, Issue 2, December 2025): the air format of the European light-aviation iConspicuity link. Written from the EASA specification;
 // the OGN / SoftRF ads-l.h (GPL-3) was read to settle what the specification leaves open (see docs/ADSL-3.8.md).
 //   M-band   868.2 / 868.4 MHz   GFSK BT 0.5, +-50 kHz, 100 kchip/s, Manchester (1 = chips 01) over sync and packet; preamble not Manchester coded.

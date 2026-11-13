@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "adsb_acars.h"
 #include "adsb_internal.h"
 #include "state/receivers.h"

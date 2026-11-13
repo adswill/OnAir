@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN in the mesh mode (the "lorawan" protocol entry).
 // 1. Packet layer: data frames and join requests built byte by byte as the LoRaWAN spec lays them out decode to the exact MHDR,
 //    DevAddr, NetID / network, FCtrl, FCnt, FOpts MAC commands, FPort, encrypted length and MIC; DevEUI / JoinEUI / DevNonce and the

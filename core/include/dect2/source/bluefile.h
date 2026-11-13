@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #pragma once
 // X-Midas BLUE files (.tmp, .prm, .blue, .bluefile): a 512-byte header, the samples, and an optional extended header of keywords.
 // Written from the public format description (sigplot.lgsinnovations.com bluefile page); no third-party code is used.

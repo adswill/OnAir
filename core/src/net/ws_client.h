@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A small WebSocket client (RFC 6455) over the TCP helpers of tcp_client.h, for the SDRconnect API of the nRSP-ST (source_nrspst.cpp):
 // the upgrade handshake (ws://, no TLS), masked text and binary frames out, frames in with fragmentation, ping/pong, close, and a limit
 // on the size of one message. A blocking client: reads give up after the socket's receive timeout (sockRecvTimeout).

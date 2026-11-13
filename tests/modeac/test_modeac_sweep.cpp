@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode A / C reply detector under real-world impairments, against the generator's own list: weaker and weaker signals, carrier errors of the
 // whole capture, a narrow radio filter, a dense airspace, odd sample rates, a busy sky of Mode S traffic.
 #include "dect2/modeac/modeac_gen.h"

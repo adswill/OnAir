@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Flipper Zero Sub-GHz chat: the GFSK modulator (CC1101 9.99 kbaud, 19.04 kHz deviation, Gaussian BT 0.5) that both the transmitter and the
 // test signal use. The test signal sends nothing: its samples only exist in memory or in a file.
 // Test signal (makeEsubghzSynth): a short conversation of two Flippers, plain lines and lines encrypted with the password "onair" (one of them

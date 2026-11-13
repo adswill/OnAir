@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automatic gain, part 4 and 5: the controller (Auto / Optimise once / Safe start), the per-radio memory, the blocking runner and the
 // engine adapter, the read-only JSON. See docs/AUTOGAIN.md.
 #include "dect2/source/autogain.h"

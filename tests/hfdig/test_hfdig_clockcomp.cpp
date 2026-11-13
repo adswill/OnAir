@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The automatic clock correction of the slot decoders (dect2/hfdig/clock_comp.h): stations whose DT says the computer clock is wrong, fed through the
 // real FT8 decoder with a simulated system clock. Simulated signals only: the proof on air needs a real band and a wrong clock.
 #include "dect2/hfdig/hfdig_rx.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATIS receiver (ETSI EN 300 698-1 annex B): one VHF marine channel (the inland channels 156.3 - 162.0 MHz) received as narrow FM. The voice
 // of the channel plays on the sound card (Listen, on by default: the ATIS is sent after the voice) and the 1300 / 2100 Hz tones in the same
 // audio are decoded: front end to 24 kHz (marine::Front), FM discriminator and tone slicer at 1200 baud (marine::VhfSlicer) in a few small

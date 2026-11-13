@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A small full-JSON value for the MCP server: parser (depth and size limited, UTF-8 and \u escapes) and compact writer.
 #include "dect2/mcp/mcp.h"
 #include <cmath>

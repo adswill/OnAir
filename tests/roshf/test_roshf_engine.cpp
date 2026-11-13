@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROS (HF) through the engine (setStandard(207)): the synthetic source plays the reported-grid test signal, the receiver reports through latestRx().
 #include "dect2/roshf/roshf_rx.h"
 #include "dect2/engine/engine.h"

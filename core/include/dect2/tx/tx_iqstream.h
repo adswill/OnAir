@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The IQ of a transmission on a TCP socket: GNU Radio (or any program) connects and receives the samples OnAir is generating, whether they go to a radio,
 // an IQ file or the "Test (dry run, no RF)" sink. Plain TCP, no extra library. It never blocks or refuses a transmission: a client that cannot keep up
 // loses blocks (whole blocks, so the sample stream stays aligned), a client that goes away is dropped, and a port that cannot be opened is a warning.

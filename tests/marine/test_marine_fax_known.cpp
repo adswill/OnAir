@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Known answers for the weather fax layer, from fldigi src/wefax/wefax.cxx (which follows HAMFAX / ITU-T T.3 / WMO 386):
 //  - ioc_to_width(): width = IOC * pi cut to an integer
 //  - APT start tone 300 Hz (IOC 576) or 675 Hz (IOC 288), APT stop tone 450 Hz for 5 s (m_stop_duration = 5)

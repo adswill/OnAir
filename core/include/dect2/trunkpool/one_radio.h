@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Single-radio trunking (docs/TRUNK1-3.9.md), the part every trunking mode shares: one wide capture holds the control channel and the voice
 // channels; the mode decodes its control channel and hands each grant here, and the calls inside the capture are followed at once as slices of
 // the same samples (CaptureVoice), several at a time (the voice slots), each with its own sound, recording and call row (TrunkPool). A grant

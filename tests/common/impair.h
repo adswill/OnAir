@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Real-world faults applied to a clean test signal, written independently of every receiver, so a test cannot pass only
 // because the generator and the receiver share the same assumption. See REAL_WORLD_CHECKLIST.md.
 #pragma once

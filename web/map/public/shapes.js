@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // shapes.js - original vector artwork for the map icons, hand-authored as SVG path data in a -32..32 box, nose up.
 // Pure data (no DOM). Each shape = {
 //   body:   [path...]  filled with the track colour and outlined (1.2 px at icon-size 1),

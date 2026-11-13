@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SDR input health meter: level, peak, clipping, DC offset and the blind IQ mismatch read against what the generator put in (noise plus a few signals), at three sample rates, with the verdicts for
 // low, good, high and overloaded input. Simulated signals only.
 #include "x40_gen3.h"

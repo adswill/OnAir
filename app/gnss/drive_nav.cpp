@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS > Navigate. The position is the fix of the GNSS decoder (nothing else is read); between fixes it is carried on along the last course
 // (dead reckoning, at most 10 s), and "no fix" is shown as such. Routes are waypoints clicked on the map or a GPX file; no routing data is
 // fetched, so the course is the straight line between the waypoints. Accuracy is whatever the fix gives; this is not a safety aid.

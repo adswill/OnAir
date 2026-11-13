@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band survey: many sweeps of one range over hours or days, kept as a compact time x frequency grid (level above the noise floor per bin),
 // with an occupancy heatmap, the persistent signals, a "what changed since the last survey" diff and a quiet-frequency finder.
 // Source-agnostic: it takes the Sweep structs runSchedule() produces.

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Broadcast-FM test signal with real English speech, as SigMF (cf32). Used by e2e_fm_transcript.sh.
 usage: gen_fm_speech_iq.py speech.wav out_base [snr_db=25] [freq_mhz=93.9]
 75 kHz deviation, 50 us pre-emphasis, 15 kHz audio bandwidth, 1.2 Msps, white noise added at snr_db over the 200 kHz channel."""

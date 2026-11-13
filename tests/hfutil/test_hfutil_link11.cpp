@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Link 11 CLEW frame-structure reader (hfutil/hfu_link11.h): generated messages at both frame rates and both phase-change constellations
 // with a Doppler offset, noise in 3 kHz, a sample clock error, an echo, chunk sizes, two messages and noise only. The generator and the
 // receiver follow the same published summary, so this checks the reader, not the summary. Simulated signals only.

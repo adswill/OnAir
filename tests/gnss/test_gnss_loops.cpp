@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The loops on their own: (A) acquisition of a single satellite of the simulated sky at several C/N0 values, many noise seeds each: how often it is found,
 // how well Doppler and code phase come out, and the false alarm count on satellites that are not there; (B) a lone C/A signal made in this file (Doppler, a
 // Doppler rate, random data bits, noise) through one tracking channel: lock time, Doppler and code phase accuracy, C/N0 estimate; (C) noise only, 40 s

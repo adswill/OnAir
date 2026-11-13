@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Dolby broadcast audio: what a stream is (AC-3, E-AC-3, E-AC-3 with Dolby Atmos JOC, AC-4 immersive), how its channel bed is laid out, the
 // layout the player sends to the sound device, and the IEC 61937 packer that passes an AC-3 / E-AC-3 stream untouched to an AV receiver.
 //

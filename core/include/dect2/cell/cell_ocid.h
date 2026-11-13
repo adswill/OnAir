@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell tower positions from OpenCelliD (opencellid.org, data CC BY-SA 4.0): towers do not broadcast where they are, so a decoded cell's
 // identity (MCC, MNC, TAC/LAC, cell id) is looked up in the public database with the user's own API key. Only those identifiers and the
 // key are sent. Results are kept in a small CSV cache so repeat lookups and offline use need no network; "not found" is kept for a day.

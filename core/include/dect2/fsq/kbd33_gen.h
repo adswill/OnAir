@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSQ / IFKP test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Signals in white noise, each with its own mode, speed, audio frequency, text, level, start, drift and symbol clock error, optionally through a

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Every mode through the whole engine under malformed input, meant for DECT2_SANITIZE=ON (ASan + UBSan): each mode runs in a child
 // process of its own (a crash, a sanitizer report or a hang is pinned on that mode, and the next mode still runs) and gets, from a
 // source in memory (setTestSourceFactory):

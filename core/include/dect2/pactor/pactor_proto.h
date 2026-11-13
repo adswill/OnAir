@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-I packet layer, from the public descriptions (ARRL "PACTOR", SCS / Wavecom / amateur articles). Receive-side monitor only.
 //
 // What the public descriptions give and this file uses: FSK with 200 Hz shift at 100 or 200 baud, a cycle of 1.25 s (packet 0.96 s, pause

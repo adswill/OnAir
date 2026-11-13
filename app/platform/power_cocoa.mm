@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // macOS parts of power.h: whether the window can be seen, and the App Nap activity while a receiver runs.
 #include "power.h"
 #import <Cocoa/Cocoa.h>

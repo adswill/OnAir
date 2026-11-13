@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH OFDM (SH-A) generator -> receiver round trips with impairments: unknown start, carrier offset (fractional and integer
 // carriers), sampling clock offset, AWGN, a static echo inside the guard, a signal blockage under the long early/late time interleaver,
 // and hierarchical 16-QAM (HP and LP). Simulated signals only. ONAIR_TEST_LONG=1 adds the remaining FFT size / constellation combinations.

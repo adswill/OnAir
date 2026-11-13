@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internet TV (IPTV) as a mode row: no radio and no samples, the engine only needs a tuning entry (engine standard 211, family 209) and a silent
 // test signal so that the mode can be selected like any other. The stream itself is read by iptv::Stream (iptv_stream.cpp) and played by the Player.
 #include "dect2/tv/iptv_mode.h"

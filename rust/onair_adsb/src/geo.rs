@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Geometry and the small physical models around the messages: great circle, magnetic declination, wind triangle, static air temperature.
 use crate::ffi::math::{atan2, cos, hypot, sin, sqrt};
 

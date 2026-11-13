@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The command palette (Ctrl+K): see command_palette.h. Every entry calls a function the menus and buttons already use.
 #include "command_palette.h"
 #include "../i18n/i18n.h"

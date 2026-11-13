@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATIS format (ETSI EN 300 698-1 annex B / C): the worked example of the standard, identity conversions, the frame the DSC decoder reads back.
 #include "dect2/atis/atis_proto.h"
 #include "dect2/marine/marine_dsc.h"

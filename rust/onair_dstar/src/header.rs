@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! D-STAR radio header fields (JARL D-STAR specification): the 41 byte header (3 flag bytes, RPT2, RPT1, UR, MY of 8 characters, MY suffix of 4, CRC-CCITT low
 //! byte first), the CRC (reflected 0x8408, start 0xFFFF, inverted), the flag text, and the AMBE voice bit order into mbelib's `ambe_fr[4][24]`.
 

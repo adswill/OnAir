@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spreading codes of the satellite navigation signals (see gnss_codes.h).
 #include "dect2/gnss/gnss_codes.h"
 #include "dect2/gnss/gnss_tel.h"

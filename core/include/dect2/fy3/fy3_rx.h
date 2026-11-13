@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FY-3 AHRPT and MPT receivers (Fengyun-3 polar orbit weather satellites, FY-3A .. FY-3H).
 //
 // FY-3 AHRPT: QPSK, 1704.5 MHz at 2.8 Msym/s (FY-3A / B), 1701.4 MHz at 2.6 Msym/s (FY-3C); FY-3D onwards use X-band (7.8 GHz, 30 - 38.4 Msym/s, FY-3G

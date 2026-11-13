@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Builds without the Metal FFT (everything except macOS for now): the GPU FFT reports itself as unavailable and the CPU transforms are used.
 #include "dect2/dsp/gpu_fft.h"
 

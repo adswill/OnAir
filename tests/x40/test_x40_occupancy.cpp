@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum occupancy monitor: duty cycle and transmissions of channels against what the generator keyed, with a radio offset, a drifting radio, three input rates,
 // the noise sweep and the false reports on noise alone. Simulated signals only.
 #include "x40_gen3.h"

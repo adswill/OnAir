@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BLER-versus-Es/N0 measurement of the whole KAVB chain (transmitter -> AWGN channel with random carrier offset, fractional delay and phase -> receiver with
 // sync, V-sweep removal, pilot equaliser and LDPC) for the profiles. Only runs with KRIS_MEASURE=1 in the environment (slow); without it the test passes at once.
 // For every configuration it sweeps Es/N0 (data power over noise in the symbol bandwidth; the chirp is extra, -10 dB) in 0.5 dB steps and prints

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radios on the network that the user adds by address: see netradio.h
 #include "tcp_client.h"
 #include "../source/native_common.h"

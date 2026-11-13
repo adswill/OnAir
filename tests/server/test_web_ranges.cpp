@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web frequency ranges (server/web/web_ranges.*): parsing with units, merging (overlap, adjacent, nested), the allow / block rules
 // (block inside allow, mode lists, per listener class), the passband containment with its guard margin, the capture-edge rule, snapping,
 // spectrum masking, the presets and the settings round trip. UNRUN when written: the host was on battery (see docs/PATHWAY.md).

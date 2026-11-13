@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Issue and purge times of a SAME header (47 CFR 11.31 (c): `JJJHHMM` is the day of the year and the UTC time, `TTTT` the purge time).
 use crate::text::Buf;
 

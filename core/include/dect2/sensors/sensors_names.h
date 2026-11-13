@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-GHz sensors: the user's names for sensors ("Garden", "Freezer"), the hint to move a name to the new id a sensor takes after a battery change,
 // and the sensor.reading event (automations, Integrations, Home Assistant). docs/SENSORS-HOME-3.9.md.
 #pragma once

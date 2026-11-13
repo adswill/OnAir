@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Trajectory and sensor simulator for the position estimator tests: flights between real city pairs (great-circle legs with lateral
 // waypoints, bank-limited fly-by turns, climb and descent, speed wander), holding patterns, and per-source sensor noise.
 // Deterministic (own generator and Box-Muller: the standard library's distributions differ between platforms).

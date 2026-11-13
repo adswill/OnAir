@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir USB drivers: the RTL-SDR protocol layer (RTL2832U registers, R820T / R820T2 / R828D and E4000 tuners) as pure logic over a [`UsbTransfer`]
 //! trait, so one implementation runs over libusb on a desktop and over an Android `UsbDeviceConnection` file descriptor from JNI.
 //! Safe protocol code goes in modules next to `ffi`; only `ffi` may use `unsafe` (see rust/README.md).

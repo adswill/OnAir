@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pass report card (round 4 #20): a pass from the receiver's running counters (frames before it not counted, the end after a quiet minute,
 // a second pass on continuing counters, a receiver restart resetting them), the comparison with similar passes, and the CSV.
 #include "dect2/meteor/pass_report.h"

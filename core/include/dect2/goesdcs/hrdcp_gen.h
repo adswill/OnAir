@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteosat HRDCP test signal: platforms on the 402.2 - 402.435 MHz regional band, each sending its message now and then: 2 s carrier, preamble and
 // marker as BPSK, the coded message as offset QPSK (hrdcp_proto.h), root raised cosine roll-off 0.5, with frequency, drift and clock errors and noise.
 // Nothing is transmitted: the samples only exist in memory or a file.

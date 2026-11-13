@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internet TV (IPTV) screen: playlists (M3U / M3U8, a URL or a file), a single stream address, the channel list with logos, groups, search and
 // favourites, the programme guide (XMLTV), and the player with its usual controls. OnAir only plays: it ships no channels (docs/IPTV.md).
 // The bytes are fetched by dect2::iptv::Stream (HTTP(S), HLS, UDP / RTP) and go to the Player as transport stream packets, the same way a

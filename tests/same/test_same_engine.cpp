@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NOAA weather radio SAME through the engine (setStandard(78)): the synthetic source plays the test signal, the receiver reports through latestRx().
 // No sound.
 #include "dect2/engine/engine.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Front end: transmitter model -> square-root raised cosine at the radio's rate -> matched filter and resampling -> symbols again.
 #include "dect2/dtmb/dtmb_front.h"
 #include "dect2/dtmb/dtmb_gen.h"

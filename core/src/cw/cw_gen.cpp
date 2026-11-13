@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW (Morse) test signal (see cw_gen.h).
 #include "dect2/cw/cw_gen.h"
 #include "dect2/common/stable_random.h"

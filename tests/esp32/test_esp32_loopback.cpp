@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ESP32 radio loopback: OnAir's driver (esp32_radio) talks over an in-memory serial pair to the firmware's own dispatcher (onair_core.h) running on a fake
 // hardware layer. Proves the protocol and the logic on both sides; it does not prove the radio: there was no ESP32 or nRF24 module to try (docs/ESP32-NRF24-DESIGN.md).
 #include "dect2/esp32/esp32_radio.h"

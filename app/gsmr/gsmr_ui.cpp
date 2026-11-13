@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R screens: the base station table (ARFCN, BSIC, operator code, location area, cell identity, level, last seen), the channel lists
 // of System Information 1 and 2, the carriers seen in the spectrum, a band scan for radios that cannot take the whole railway band at
 // once, and the log. Only what base stations broadcast to every mobile is shown.

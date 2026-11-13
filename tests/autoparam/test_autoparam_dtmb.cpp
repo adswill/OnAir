@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto for the DTMB channel width: 8 MHz (7.56 Msym/s) against 6 MHz (5.67), measured from the spectrum. Simulated signals only (dtmb_gen).
 #include "dect2/dtmb/dtmb_testkit.h"
 #include <chrono>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RDS-TMC in plain words: the user's own event list and location table (ISO 14819-2 / -3, as the national TMC services and TISA publish
 // them), imported from their files, and the decoded messages turned into text (event, road, location, direction, extent, duration,
 // diversion) and written to a log. No country database ships with OnAir: the location tables are licensed national data. Without the

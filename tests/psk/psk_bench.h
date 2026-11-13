@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK31 threshold bench (SENSITIVITY-3.9-B): one signal through the whole PskReceiver at 250 kHz, SNR in the signal's bandwidth (the baud
 // rate, as PskGenSignal defines it), optional tuning error and drift. A unit is a word of the sent text found in the decoded text.
 #pragma once

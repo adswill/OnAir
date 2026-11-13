@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Motorola Type II (SmartNet, SmartZone) screens: lock and word counts, the calls followed inside the capture with the sound of one of them, the talkgroups, the sites and patches, the control channel messages. One click on top; the band plan and the call filters under Advanced.
 #include "app.h"
 #include "i18n/i18n.h"

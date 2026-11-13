@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // My meter and my tyres (meter_usage.h, tpms_watch.h): simulated register readings with gaps, repeats, a wrap and a reset; TPMS readings
 // through day/night temperature swings with a slow leak on one tyre.
 #include "dect2/sensors/meter_usage.h"

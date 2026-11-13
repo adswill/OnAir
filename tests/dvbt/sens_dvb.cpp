@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sensitivity and time-to-lock sweep for DVB-T and DVB-T2 (not a ctest: run by hand, see docs/SENSITIVITY.md, DVB section).
 //
 //   sens_dvb t  <mode 0=2K 1=8K> <gi 0..3 = 1/32..1/4> <mod 0..2> <cr 0..4> [options]

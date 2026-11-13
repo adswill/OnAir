@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sunrise and sunset marks per VLF path (see vlf_terminator.h).
 #include "dect2/smart5/vlf_terminator.h"
 #include "dect2/smart5/sun.h"

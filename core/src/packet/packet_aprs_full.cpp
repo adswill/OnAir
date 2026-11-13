@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // aprs::parseFull(): parse() plus what a receiver needs on top of it (packet_aprs.h). Written from APRS101 (chapter 5: a '!' position may
 // follow up to 40 characters of other text; chapter 17: third-party headers) and the NMEA 0183 RMC / GGA sentence layout.
 #include "dect2/packet/packet_aprs.h"

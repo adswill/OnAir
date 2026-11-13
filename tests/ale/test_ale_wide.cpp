@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF ALE on every known channel of one capture: two generated ALE signals through the engine's bank. Simulated (ale_gen).
 #include "dect2/ale/ale_gen.h"
 #include "dect2/ale/ale_rx.h"

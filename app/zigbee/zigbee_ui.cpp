@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Zigbee / IEEE 802.15.4 screens: the PAN list (PAN ID, extended PAN ID, channel, coordinator, devices, level, packets, last seen), the device list
 // (short and extended address, vendor from the OUI, role, level), the live frame log (time, channel, frame type, source > destination, length, FCS)
 // with a packets-per-second plot, the channel picker (11 - 26) and the channel scan.

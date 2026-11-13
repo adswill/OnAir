@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireless M-Bus link layer and data records (see wmbus_proto.h). Clean room from the public EN 13757-3 / -4 descriptions.
 #include "dect2/wmbus/wmbus_proto.h"
 #include "dect2/voicekeys/net_crypto.h"

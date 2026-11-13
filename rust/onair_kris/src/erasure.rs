@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Reed-Solomon style erasure code over GF(256) (polynomial 0x11D) with a Cauchy parity matrix, for the KAVB FEC groups: `g` data cells and `p` parity cells of `cell_len`
 //! bytes each; any `g` of the `g + p` cells restore the group. Parity cell j = sum over i of C[j][i] * data cell i with C[j][i] = 1 / (j xor (p + i)) (x_j = j and
 //! y_i = p + i are all different, so every square submatrix of the generator is invertible). `g + p` is at most 256.

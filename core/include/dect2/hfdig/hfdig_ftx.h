@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FT8, FT4, FT2 and WSPR decoder of the HF digital receiver (hfdig_rx.h): gets the 8 kHz upper sideband audio, cuts it into the UTC
 // time slots of each mode (FT8 15 s, FT4 7.5 s, FT2 3.75 s, WSPR 2 minutes from even minutes) and decodes every signal in the
 // 200 .. 3000 Hz passband of each slot, several at once: sync search over the whole band and +-2.5 s (FT2 +-1 s) of time offset (DT),

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // nRF24 receiver on the synthetic GFSK signal: every data rate, CRC-8 and CRC-16, address lengths 3..5, carrier offset of the real chips (+-100 kHz),
 // noise, 8 and 10 Msps, the mirrored spectrum, and the negative tests (noise, bursts of random bits, a CW tone, a wrong rate setting) give no frame.
 #include "dect2/nrf24/nrf24_gen.h"

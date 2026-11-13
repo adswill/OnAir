@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Played list of FM (RadioText+) and DAB (DL Plus): every "artist - title" a station tagged, with the time and the station, searchable and
 // exportable ("what was that song 20 minutes ago?"). One entry per song: repeats of the same tags and tags that arrive one at a time are merged.
 // docs/PLAYED-3.9.md.

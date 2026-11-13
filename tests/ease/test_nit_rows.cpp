@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The NIT consumer: real table sections through SiCollector to rows, LNB mapping, cable, malformed input
 #include "dect2/ease/nit.h"
 #include <cmath>

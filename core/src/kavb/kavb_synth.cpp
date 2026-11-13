@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB test signal for the engine's synthetic source (see kavb_gen.h).
 #include "dect2/kavb/kavb_gen.h"
 #include "dect2/kavb/kavb_txgen.h"

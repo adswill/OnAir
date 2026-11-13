@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Which processor a codec plug-in and OnAir itself are built for, and plain words when they differ (Discord report 2026-10-23: the Intel
 // build of OnAir under Rosetta on an M4 Mac could not load the user's arm64 plug-ins, and the dlopen text alone did not say why).
 // The parsing is pure (tests/codec/test_codec_arch.cpp); the file and process helpers are thin.

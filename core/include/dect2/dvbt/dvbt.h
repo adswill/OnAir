@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T (EN 300 744): parameters, pilot/TPS tables, TPS coding and the channel-coding chain. With annex F (DVB-H): the 4K mode, the in-depth
 // inner interleaver of the 2K and 4K modes and the DVB-H signalling bits of the TPS.
 // The transmit-side stages exist for the signal generator and for tests against the GNU Radio reference; the receive-side

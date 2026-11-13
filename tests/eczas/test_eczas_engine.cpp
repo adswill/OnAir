@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // e-Czas through the engine (setStandard(87)): the synthetic source plays the 225 kHz test signal at the computer's clock and the receiver reports
 // through latestRx() with a clock offset; then a recording (IQ file, looped) is played, which has no clock to compare. No sound.
 #include "dect2/eczas/eczas_gen.h"

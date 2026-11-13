@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW language model (see cw_lm.h). Clean-room: the vocabulary and the sentences below are written from ordinary amateur-radio practice.
 #include "dect2/cw/cw_lm.h"
 #include <algorithm>

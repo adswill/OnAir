@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protocol lab: exports. The protocol definition is a small JSON document (readable by people and by our own tools); the rtl_433 line is a
 // best-effort starting point for a "flex" decoder, not a tested decoder; the bit text has one packet per line.
 #include "dect2/protolab/protolab.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM: write the test signal to a file (drmtool gen ...) or run the receiver on a recording (drmtool rx ...).
 //
 //   drmtool gen <file.cs8|file.cf32> [--secs 20] [--rate 2000000] [--mode A|B|C|D|E] [--occ 0..5] [--qam 16|64 (E: 4|16)] [--prot 0..3] [--short] [--snr 30]

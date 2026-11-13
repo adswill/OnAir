@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The records board: personal best distances of every mode (core: dect2/common/records.h), kept in <data folder>/stats/records.txt.
 #pragma once
 #include <string>

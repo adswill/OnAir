@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sun outage predictor (3.9, docs/SMART5-sat-3.9.md item 17). Twice a year the Sun passes behind a geostationary satellite as
 // seen from your dish; its noise swamps the downlink for a few minutes a day over several days. This gives those days and
 // minutes from your position, the satellite's longitude and the dish's beamwidth (70 lambda / D), so a dropout is not taken for

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The touch interface's pickers and sheets: the numeric keypad for the frequency, the tuning step picker, the full-screen mode picker
 // (a grid of big tiles in the mode list's group colours, searchable) and the menu sheet that replaces the menu bar.
 #include "touch.h"

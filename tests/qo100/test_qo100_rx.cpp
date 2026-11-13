@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // QO-100 tools on the test signal, fed straight to the receiver: the CW beacons are found and the LNB error (+27 kHz, drifting 120 Hz/min)
 // measured within 50 Hz, the drift is followed, a test carrier's corrected frequency is right within 20 Hz, a 200 kHz error and an
 // inverted (10600 MHz) LNB lock too, the whole downlink at 10 Msps shows the DATV beacon at 1.5 Msym/s, SSB listening gives audio, and

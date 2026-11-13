@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BGAN forward-bearer test signal: a real frame structure (UW, pilots, scrambled and turbo coded FEC blocks with synthetic signalling). Nothing is transmitted.
 // SynthConfig for the mode's test signal: modeOpt[0] = 0 for the default group of carriers, n > 0 for a single bearer (index n - 1); modeVal[0] = C/N0 in dBHz (0 = 70).
 #pragma once

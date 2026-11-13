@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The setup wizard v2 (app/ui/setup_logic.h): the place search, the mapping from a place or a position to the country, ITU region, band
 // plan, FM step, DAB band III, TV plan and time zone for several countries, the interests, and who gets the wizard.
 #include "../../app/ui/setup_logic.h"

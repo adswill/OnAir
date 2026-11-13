@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDES receiver: see vdes_rx.h. ASM goes through the AIS receiver (ais_rx.cpp), VDE-TER through a power detector per 25 kHz sub-channel and a
 // symbol-statistics classifier.
 #include "dect2/vdes/vdes_rx.h"

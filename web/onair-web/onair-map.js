@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* Offline interactive map for the decoder results (ADS-B aircraft, AIS vessels, APRS stations). Web Mercator on a canvas: drag to pan, wheel / pinch to zoom,
  * click a marker to select it. No tiles and no network: the land is the coarse outline of onair-world.js. Pure maths (project / unproject / fit / zoom) is tested
  * by tests/web/run.js; the canvas class below needs a DOM. */

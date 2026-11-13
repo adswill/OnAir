@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bit-level helpers shared by the protocol decoders: popcount/parity, Gray code, bit reversal,
 // and readers/writers for "unpacked" bit vectors (one bit per byte, only bit 0 significant).
 // MSB-first means the first element is the most significant bit of the field (the usual air order);

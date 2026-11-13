@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum analyser receiver: wide sweeps put together from FFT snapshots, either from the HackRF's own sweep (blocks tagged with their
 // tuning, through SaSweepTap) or by stepping the radio over the range. See specan_rx.h.
 #include "dect2/specan/specan_rx.h"

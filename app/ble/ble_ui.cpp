@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth LE screens: the device table (address and its type, name, level with a short history, last seen, packets, vendor, beacon and
 // services) with name and level filters, the packet log, the advertising channel picker and the hop between 37, 38 and 39.
 // Receive only: what devices broadcast openly, as a scanner app shows it; nothing is ever sent, connected to or paired with.

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Build tests/sensors/families.txt: for each protocol family one real recording of rtl_433's test set, reduced to its pulse trains
 (rtl_433 -w), so that the unit test can rebuild an IQ signal from them and run the whole receiver.
   tools/sensors_make_families.py <rtl_433_tests/tests dir> <report.json from sensors_vectors.py> > tests/sensors/families.txt

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ATSC 3.0 test signal without a receiver: the programme (fragmented MP4 made in memory), the level, the channel model (noise, carrier offset, clock
 // offset, echo), independence of the chunk size, the speed.
 #include "../../core/src/atsc3/atsc3_synth_content.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The spectrum analyser through the engine (setStandard(44)) with the synthetic source, which plays a HackRF native sweep of
 // 1 - 6000 MHz with carriers at 100, 433.92, 1090 and 2440 MHz. No radio.
 #include "dect2/specan/specan_rx.h"

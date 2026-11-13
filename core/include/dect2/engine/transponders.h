@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole-span DVB-S/S2: finding the occupied transponders in the averaged spectrum of a wide capture. A pure function: a power spectrum in, a list of
 // (centre, bandwidth, symbol rate) out, so it is tested with synthetic spectra. See docs/WHOLESPAN-TV.md.
 //

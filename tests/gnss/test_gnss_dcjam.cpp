@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A radio's DC spike (0.05 of full scale, a quarter of the noise rms) and a continuous-wave jammer 400 kHz above the centre (amplitude 0.3, a little above the
 // noise rms): the receiver removes the DC, cuts the line out of the spectrum, and still acquires, decodes and fixes. (Without the excision the jammer makes
 // false satellites: the code's line spectrum has a line at every kilohertz that a jammer on a multiple of 1 kHz correlates with.)

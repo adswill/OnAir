@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The demodulator of the ham decoders' shared audio front end (HF digital, HF ALE): upper or lower sideband, narrow FM or AM, and "Auto",
 // which picks the upper sideband below 30 MHz and narrow FM at and above it (VHF / UHF SSTV and data, e.g. the ISS on 145.800 MHz).
 #pragma once

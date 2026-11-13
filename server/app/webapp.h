@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web 3.9: the whole receiver in a browser (docs/WEB-3.9.md). Mounted under /app on the web server (web_server.h AppHandler):
 //   /app/                 the page (web/onair-app: vanilla JS, no build step)
 //   /app/v1/...           the JSON API (status, modes, schema, panel, devices, settings, login) - docs/WEB-3.9.md lists it

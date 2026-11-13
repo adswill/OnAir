@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B mode entry: the screen state, the receiver position, the tick, and the entry points the shell calls (tab,
 // list, receiver, panels, status, summary, tuner, decoder, synth, meters). The table views are in adsb_table_ui.cpp, the
 // radar and map in adsb_map_ui.cpp.

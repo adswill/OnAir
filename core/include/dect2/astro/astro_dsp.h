@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio astronomy (hydrogen line) maths: frequency <-> radial velocity, DC spike removal, on - off / off, frequency-switch folding,
 // polynomial baseline flattening outside a marked line window, smoothing, the peak, and the CSV format of a saved spectrum.
 // Pure functions on power spectra (linear power per bin, lowest frequency first, centre bin = the radio's frequency).

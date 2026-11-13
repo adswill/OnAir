@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Per-call voice decryption with a user-supplied key. A receiver that has detected encryption (the DMR privacy flag, the P25/NXDN cipher
 // fields) builds a Decryptor for the call from the key the store matched, then hands each voice frame's bits through decryptFrame() before
 // the vocoder. When no key matches, nothing is built and nothing is decrypted — the call is still only reported, exactly as before.

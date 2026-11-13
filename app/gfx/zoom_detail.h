@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The zoom detail of the spectrum and the waterfall (4.0, docs/WATERFALL-4.0.md): the screen side of the engine's zoom spectrum
 // (core dsp/zoom_spectrum.h). The plots ask for the view they show (request); each new zoom frame updates its own trace lines (the
 // average in power, the max hold, on its real bins) and a waterfall history whose rows run parallel to the main history's ring (row i of

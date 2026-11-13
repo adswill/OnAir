@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: what the screen shows of a recording of any size, computed on background threads:
 //  - Overview: one pass over the file that keeps min / max / power per block (a decimated waveform and the power over time),
 //  - SpecEngine: the spectrogram of what is in view, one FFT (or a few, averaged or max-held) per pixel column, so the cost follows the

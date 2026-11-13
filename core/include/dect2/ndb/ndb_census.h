@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NDB census: every beacon inside the captured band at once. Carriers are found in an averaged spectrum and each gets its own channel with the NDB decoder.
 #pragma once
 #include "dect2/common/ring.h"

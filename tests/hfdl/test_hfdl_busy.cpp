@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL "Busiest band" (HfdlBusiestBand, hfdl_hop.h) against a simulated sky: Poisson PDUs per band, each from one of the band's aircraft, the band's
 // ground stations' squitters every 32 s (some lost), a retune that takes 1 - 5 s. Checks: it finds the busiest band where "Find a working band"
 // (HfdlBandHopper) stays on the first one that works (the user's report), the hints shorten the survey, a band that dies is left and the new

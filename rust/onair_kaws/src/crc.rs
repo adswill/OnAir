@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! CRC-16-CCITT (poly 0x1021, init 0xFFFF, "123456789" -> 0x29B1) and CRC-24 (OpenPGP: poly 0x864CFB, init 0xB704CE, "123456789" -> 0x21CF02), MSB first.
 pub fn crc16(d: &[u8]) -> u16 {
     let mut c: u16 = 0xFFFF;

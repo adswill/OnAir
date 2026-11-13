@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B arrivals and departures (round 4 #28): an approach down to the ground, an approach lost low before touchdown, a departure from the
 // ground, a turnaround (land, then depart again), an overflight high above, a go-around that climbs away, a missed far approach, runway names.
 #include "dect2/adsb/adsb_airport_board.h"

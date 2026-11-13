@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The DRM broadcast schedule of the DRM Association (www.drm.org/drm-in-the-world/broadcast-schedule/): read from the page the app fetches
 // when the user asks (the page says "All rights reserved", so the schedule is never bundled), kept as a cached copy, credited where it is shown.
 // The page carries the short wave schedule as JSON (<script id="drm-sw-data">: season, validity, records of [time, station, kHz, days,

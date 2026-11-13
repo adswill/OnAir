@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite carrier and burst detection (see satdetect_live.h).
 #include "dect2/satmisc/satdetect_live.h"
 #include "dect2/satmisc/line_tracker.h"

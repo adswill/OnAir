@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CP16 screens: the picture of the 16 carriers (as a waterfall would show it, wrapped in strips), the characters read from it, and under Advanced the fixed
 // parameters and the font.
 #include "app.h"

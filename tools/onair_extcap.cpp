@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // onair-extcap: makes OnAir appear as capture interfaces inside Wireshark (the extcap interface, see the wireshark "extcap" manual page).
 // Wireshark runs this program; it connects to OnAir on this computer (127.0.0.1) and copies the packets of one mode into Wireshark's pipe as a pcap stream.
 // In OnAir the mode's switch in the Wireshark window must be on. docs/WIRESHARK-3.8.md.

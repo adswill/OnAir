@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R System Information messages (gsmr_si.h).
 #include "dect2/gsmr/gsmr_si.h"
 #include <algorithm>

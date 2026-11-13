@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Continual pilot carrier indices of A/322 Annex D (absolute carrier numbers). Generated from the standard's tables.
 #include "atsc3_tables.h"
 namespace dect2 {

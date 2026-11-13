@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Contact graph: the message parser (FT8 / FT4 / JS8 / WSPR formats, hashed and compound calls), graph building, completed contacts,
 // expiry, station positions (locator, prefix estimate) and the great-circle sampling
 #include "dect2/map/contact_graph.h"

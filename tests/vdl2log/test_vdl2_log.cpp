@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL2 session log (#309): all frames kept past the screen's 400, UTC date and time on each, CSV / JSON / text export.
 #include "../../app/vdl2/vdl2_log.h"
 #include <cstdio>

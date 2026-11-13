@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The decoder factory and the tuning of each 4.0 signal mode.
 #include "x40_int.h"
 

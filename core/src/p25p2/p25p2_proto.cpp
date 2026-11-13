@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 2 protocol pieces (see p25p2_proto.h for what is established and what is this program's own layout).
 #include "dect2/p25p2/p25p2_proto.h"
 #include "dect2/p25/p25_proto.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The transmit panel's pieces for other screens (tx_api.h): thin wrappers over the panel's own state and drawers.
 #include "tx_api.h"
 #include "tx_state.h"

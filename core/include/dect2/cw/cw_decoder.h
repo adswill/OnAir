@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW adaptive decoder: key-down / key-up durations in, text with a confidence per character out.
 //
 // The sender is learned while the text comes: the lengths of the marks and the gaps are modelled in the log domain as classes (dot, dash;

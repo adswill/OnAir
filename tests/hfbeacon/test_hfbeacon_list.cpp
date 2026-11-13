@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF beacon list: the shipped default against its sources (sigidwiki Long Dashes, priyom single-letter beacons, the NCDXF/IARU schedule text), the
 // JSON round trip and refusals, the NCDXF slot arithmetic, and the planning of radio centres.
 #include "dect2/hfbeacon/hfbeacon_list.h"

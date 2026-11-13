@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drone Remote ID screens: the drone table (serial number or session ID, UA type, position, altitude and height, speed and track, operator
 // position, last seen), a map with each drone, its trail and a line to its operator, the message log, and the band picker.
 // Receive only: Remote ID (ASTM F3411 / ASD-STAN EN 4709-002) is a public broadcast meant for anyone to read; nothing is transmitted.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Flipper Zero Sub-GHz chat receiver: the modulator's deviation and rate; messages through noise, carrier offset and several radio rates into
 // the receiver; plain, encrypted (with the key, without, a repeat), longer than one packet, and with the spectrum inverted.
 #include "dect2/esubghz/esubghz_gen.h"

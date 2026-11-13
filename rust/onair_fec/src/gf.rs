@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! GF(2^8) with the primitive polynomial x^8 + x^4 + x^3 + x^2 + 1 (0x11D), the field of every byte-wise Reed-Solomon code of OnAir
 //! (DVB-T RS(204,188) EN 300 744 section 4.4, ATSC RS(207,187) A/53 part 2 section 6.4.1, DAB RS(120,110) EN 300 401 section 5.3.3).
 //! The tables are computed at compile time (`const fn`), so nothing has to be initialised at run time and no allocation is needed.

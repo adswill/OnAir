@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 802.15.4 sub-GHz BPSK demodulator (see zigbee_bpsk.h).
 #include "zigbee_bpsk.h"
 #include "dect2/common/mathconst.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AES helpers against published vectors (RFC 4493, RFC 3610 packet vector), then each protocol's user-key decode on simulated frames with a wrong key that must be rejected.
 #include "dect2/voicekeys/net_crypto.h"
 #include "dect2/wisun/wisun_proto.h"

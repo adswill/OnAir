@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MT63 tool: write the test signal, or decode an IQ recording.
 //   mt63tool gen <out.cf32> [--rate Hz] [--secs s] [--bw 500|1000|2000] [--long] [--centre Hz] [--snr dB] [--cfo Hz] [--text "..."]
 //   mt63tool rx <file.cf32> [--rate Hz] [--offset Hz] [--bw 500|1000|2000] [--intl 1|2]

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-L screens: one aircraft table and one map for ADS-L and for the FLARM aircraft heard in the same capture (the engine feeds both receivers in this mode, docs/ADSL-3.8.md).
 // One click: the mode tunes 868.875 MHz at 2 Msps and needs no settings. The receiver position only adds distance and bearing and lives under Advanced.
 #include "app.h"

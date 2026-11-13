@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Registers the global slash commands. Usage:
 //   DISCORD_APP_ID=... DISCORD_BOT_TOKEN=... node register-commands.mjs
 const { DISCORD_APP_ID, DISCORD_BOT_TOKEN } = process.env;

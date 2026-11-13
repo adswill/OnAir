@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi channel plans (see wifi_chan.h). Frequencies follow IEEE 802.11-2020 Annex E.1 (5 GHz: 5000 + 5 n MHz) and 802.11ax-2021 Annex E.4 (6 GHz:
 // 5950 + 5 n MHz, channel 2 at 5935 MHz).
 #include "dect2/wifi/wifi_chan.h"

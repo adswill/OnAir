@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T: Reed-Solomon, TPS, Viterbi and the whole coding chain (TS -> cells -> noise -> TS) for several modes.
 #include "dect2/dvbt/dvbt_fec.h"
 #include "dect2/common/stable_random.h"

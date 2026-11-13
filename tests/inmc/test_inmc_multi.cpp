@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C channel search: three more channels in the same 2 Msps capture (LES TDM channels with their own messages, stations and carrier errors) next to
 // the one tuned to. The receiver must find them from the spectrum, decode their frames and messages, and not disturb the main channel.
 #include "dect2/inmc/inmc_testutil.h"

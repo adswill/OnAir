@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa demodulator for offline use (the Signal Lab): one recording or selection in, frames out, with every parameter adjustable, and an
 // automatic search for the parameters. Built on the LoRa physical layer of the mesh receiver (mesh_lora.h), the same Channelizer / Demod
 // pair the LoRa (raw) receiver uses. Receive only; nothing is decrypted or interpreted.

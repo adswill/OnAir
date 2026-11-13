@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // the TV side: player, service list, programme guide, teletext
 #include "../app.h"
 #include "../transcribe/transcribe_app.h"

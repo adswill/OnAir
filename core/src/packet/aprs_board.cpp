@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS weather stations and messages (aprs_board.h).
 #include "dect2/packet/aprs_board.h"
 #include <algorithm>

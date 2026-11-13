@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The fallback sound backend for Windows and Linux: miniaudio (ALSA / PulseAudio / PipeWire on Linux, WASAPI on Windows), used when our own
 // backend (audioout_native.cpp) cannot open the sound device, or when DECT2_AUDIO=miniaudio is set. If no sound device can be opened (a
 // headless machine, CI), a null device with correct timing is used so that playback and A/V sync still behave.

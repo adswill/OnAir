@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium command line tool: write the test signal to a file, decode a recording, show the simulated sky.
 //   iridiumtool gen <secs> <file.cs8|.cf32> [--rate sps] [--snr dB] [--cn0 dBHz] [--sats n] [--seed n] [--cfo Hz] [--sro ppm]
 //                   [--center MHz] [--no-voice] [--no-doppler]

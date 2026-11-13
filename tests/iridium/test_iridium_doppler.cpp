@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium Doppler identification (iridium_doppler.h) against a synthetic 66-satellite constellation: which satellite sent a burst, the receiver's frequency
 // error, and the beam circle. Noise, a frequency error of the receiver, time stamp errors and TLEs that are a little wrong are swept.
 #include "dect2/iridium/iridium_doppler.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MeshCore packet layer: header, path, adverts (Ed25519 signature), group text on the Public channel and user channels.
 // Sources: meshcore-dev/MeshCore src/Packet.h, Packet.cpp, Mesh.cpp, Utils.cpp, helpers/BaseChatMesh.cpp, helpers/AdvertDataHelpers,
 // examples/companion_radio/MyMesh.cpp (PUBLIC_GROUP_PSK "izOH6cXN6mrJ5e26oRXNcg=="), docs/packet_format.md.

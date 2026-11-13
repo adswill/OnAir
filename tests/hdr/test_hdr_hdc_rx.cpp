@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio sound inside the real receiver (HdrReceiver, FM hybrid test signal), with and without a user-installed HDC library (a fake one,
 // tests/hdr/fake_faad_hdc.c; no codec, no sound device). The test signal's audio packets are filler: HD1's are 160 bytes and HD2's 80, which the
 // fake turns into R = 1600 and R = 800, so the program that is heard can be told from the sound that comes out.

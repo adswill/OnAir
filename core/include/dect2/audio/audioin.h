@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Audio capture for the transmitter: CoreAudio on macOS, miniaudio elsewhere (the same split as audioout_*).
 // The microphone is never opened until startMic() — TxSession does that only on START TRANSMITTING.
 #pragma once

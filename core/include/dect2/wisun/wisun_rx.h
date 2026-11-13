@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-SUN FAN monitor: the frames smart meters, street lights and their border routers send on the 902 - 928 MHz band (IEEE 802.15.4g
 // SUN FSK). Receive only: it never transmits, joins or answers a network; what is encrypted (PAN configuration and data frames: the keys come
 // from an EAP-TLS exchange) is shown as encrypted, not decoded; only what is sent in the clear is decoded.

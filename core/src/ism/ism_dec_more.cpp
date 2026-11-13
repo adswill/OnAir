@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors: more thermometers and utility meters. Written from the protocol descriptions in rtl_433 (GPL-2.0-or-later) src/devices/:
 // acurite.c (606TX, 609TXC), prologue.c, kedsum.c, gt_wt_02.c, bresser_3ch.c, fineoffset.c (WH2), thermopro_tp11.c, thermopro_tp12.c,
 // ft004b.c, ert_scm.c, ert_idm.c. The code is our own; the formats, checks and constants are theirs.

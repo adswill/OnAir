@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Reed-Solomon FEC for UAT downlink frames (from dump978/fec.c, GPL).
 #include <stdint.h>
 #include "fec.h"

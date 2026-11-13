@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web: the Decoders tab. Pure helpers first (tested in tests/web/run.js), then the DOM views (browser only).
  * Events are the v1 schema of docs/ONAIR-WEB-PROTOCOL.md ("Decoder events"): {v:1, kind, type, ...}. Everything from the server is data: text goes in with
  * textContent, numbers are checked, pictures are drawn from PNG data URLs after the checks below. Nothing is stored on the server; "Save PNG" saves in this browser. */

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UMTS cell search on simulated downlink signals: several cells, frequency offset, noise, the whole set of code groups.
 #include "dect2/umts/umts_cell.h"
 #include <cstdio>

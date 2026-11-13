@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The hover preview of the appearance choices: the tooltip, the settings in use, the dev gallery (ui_preview.h, docs/UI-PREVIEW-4.0.md).
 // The miniature itself is drawn by ui_preview_draw.cpp.
 #include "ui_preview.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio through the engine, as the app uses it: the synthetic source plays the test signal (FM hybrid, then AM hybrid) at the rate of
 // the tuning table with 15 dB SNR and a 1 kHz carrier offset, then AM all-digital (MA3) at the 1 Msps the app asks for in the AM band; the engine must find the waveform, decode the station information, both
 // programs, their program data and the picture, report it through latestRx with the mode's standard, and keep up with real time.

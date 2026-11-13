@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """List untranslated keys per language catalog (app/i18n/*.txt).
 
 A key is untranslated when the catalog value equals the English key, the key

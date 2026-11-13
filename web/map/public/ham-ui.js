@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ham-ui.js - the "Ham contacts" rail section: band / mode / age filters, a list of contacts (newest first) and the map lines between
 // the two stations of a contact, coloured by mode. Data comes from the ham tracks the site already receives (see ham.js).
 import { BAND_NAMES, MODE_NAMES, buildContacts, filterContacts, contactFeatures, modeColour } from "./ham.js";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Radio clips": a rolling memory of the last seconds of the sound you hear (mono, 16-bit, at the output's rate), so a clip can be made after the
 // interesting thing happened. AudioOut::write() offers every block; the audio thread only copies samples into a pre-allocated ring (no lock, no
 // allocation). Nothing is allocated until a block has been seen and the UI thread asked for the ring (an unused audio output costs nothing).

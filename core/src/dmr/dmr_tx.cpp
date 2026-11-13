@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR subscriber transmit (see dmr_tx.h): translate the operator's request into a DmrGenConfig the generator plays once.
 #include "dect2/dmr/dmr_tx.h"
 #include <algorithm>

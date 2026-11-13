@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi 5 and 6 GHz through the engine (setStandard(56), synthetic source modeOpt[0] = 1 / 2): the receiver learns the band from the radio's
 // centre frequency, the OFDM chain decodes the scene, the mode accepts the frequencies of both bands and reports the band and channel.
 #include "dect2/wifi/wifi_chan.h"

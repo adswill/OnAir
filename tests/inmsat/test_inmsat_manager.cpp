@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Stage 2 of the Inmarsat all-carriers mode: ONE wide capture with the Aero test signal (P channels at 600, 1200 and 10500 bit/s), a second
 // Aero group 2 MHz away, an Inmarsat-C channel with an extra channel, and an unrelated wide carrier, all decoded in parallel by the manager.
 // Synthetic signals only (the same generators the single-channel tests use, moved to different places in the band and summed, with a

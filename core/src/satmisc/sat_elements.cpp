@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Elements for the satellite identification modes (see sat_elements.h).
 #include "dect2/satmisc/sat_elements.h"
 #include "dect2/cubesat/cubesat_db.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shortwave broadcast bands (ITU Radio Regulations Art. 5, as used in the HFCC seasonal schedules). All frequencies in kHz.
 // The AM broadcast entry of the General receiver shows one button per band.
 #pragma once

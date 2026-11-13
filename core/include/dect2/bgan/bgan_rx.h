@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat BGAN forward bearers (ETSI TS 102 744 "Family SL"), signalling and structure only: which carriers are BGAN, what bearer type they are, satellite,
 // spot beam, network, load and the system information the network broadcasts. Never user traffic and no subscriber identity.
 // Not validated on a real BGAN signal: synthetic signals only (docs/BGAN-3.7.md). Engine standard 247, active standard 246, family 245.

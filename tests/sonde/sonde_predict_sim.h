@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Simulated radiosonde flights for the landing-prediction tests (docs/SONDE-PREDICT-4.0.md). The truth is deliberately not the
 // predictor's own model: a non-standard atmosphere, a parachute whose drag changes with height, a wind field with a boundary layer,
 // shear, a jet stream and fine structure that changes in time and with place, gusts, a swing under the balloon and the parachute, GPS

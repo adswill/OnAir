@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DECT through the engine (setStandard(80)): the synthetic source plays the test base stations, the receiver reports through latestRx().
 #include "dect2/engine/engine.h"
 #include "dect2/dect/dect_rx.h"

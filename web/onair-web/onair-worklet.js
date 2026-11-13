@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web: audio player. A jitter buffer with a linear resampler, used inside an AudioWorklet (and by the node tests).
  * Frames of Float32 mono at the stream's rate are pushed; process() pulls them at the context's rate.
  * Target latency about 120 ms; if more than 450 ms piles up the oldest audio is dropped; after an underrun it waits for the target again. */

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Voice inversion" (core/include/dect2/audio/voice_inversion.h): a small button next to the audio cleanup button opens a pop-up with the
 // descrambler for analog voice (airband, NFM, WFM, SSB, generic receivers): simple inversion with a carrier, split-band inversion, and a
 // search for the carrier / split frequency. Off by default; the settings are kept per mode ("vi.<mode>.<field>") in the preferences.

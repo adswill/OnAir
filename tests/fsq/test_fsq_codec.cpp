@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSQ / IFKP coding layer: the varicode against the entries of fldigi's tables, the tone steps, the CRC of the callsign, the line parser.
 #include "dect2/fsq/kbd33.h"
 #include "dect2/fsq/kbd33_gen.h"

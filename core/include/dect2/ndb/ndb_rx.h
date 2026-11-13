@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NDB (non-directional beacon) receiver. Receive only.
 //
 // The usual band is the long-wave beacon band, 190-535 kHz (some beacons sit higher, up to about 1750 kHz; the tuner is not

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ARDOP test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A script of ARDOP frames (leader of two tones, the sync symbol with its phase reversed, the ten frame type symbols, the body of 4FSK

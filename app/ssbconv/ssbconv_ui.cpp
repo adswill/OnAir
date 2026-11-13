@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Conversations window (View > Conversations): SSB voice found on the captured span and organised into conversations to listen to. The finding and the
 // grouping are in core/src/ssbconv (docs/SSB-CONVERSATIONS.md); this file is the window, the sample tap, the worker thread, Listen / auto-listen through the
 // Multi-VFO channel (the radio is not retuned while the signal is inside the span), the clip files and the events for the automations / integrations.

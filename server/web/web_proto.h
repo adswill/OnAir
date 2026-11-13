@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web protocol, version 1 (docs/ONAIR-WEB-PROTOCOL.md is the specification; keep the two in step). The pure part with no sockets:
 // the client messages and their validation, the WebSocket framing (RFC 6455) both ways, the binary spectrum and audio frames, the IMA ADPCM
 // audio codec and the SHA-1 / base64 of the handshake. Everything a browser sends goes through parseClientMsg() before anything acts on it.

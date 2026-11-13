@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // COSPAS-SARSAT 406 MHz beacon receiver telemetry. RxTelemetry::sarsat, engine standard 94, active standard 93.
 // Receive only; nothing is transmitted.
 #pragma once

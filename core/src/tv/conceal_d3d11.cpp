@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Direct3D 11 compute version of the picture repair's synthesis step (Windows). The motion between the two real pictures is estimated on the
 // CPU (conceal.cpp, once per gap); this file makes the pictures in between from it, one GPU thread per 4x4 cell, with the same per-cell
 // choice of motion and the same bilinear, motion-compensated blend as the CPU code. The pictures of a gap are made in a few short

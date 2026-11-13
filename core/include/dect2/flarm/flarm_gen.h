@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLARM test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // makeFlarmSynth(): made-up gliders and light aircraft circling around a reference position send V6 packets about once a second on 868.2 and

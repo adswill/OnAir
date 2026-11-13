@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dPMR mode 1 air interface (ETSI TS 102 490, peer to peer, 6.25 kHz): the parts both the receiver and the test signal use.
 //
 // Four-level FSK, 2400 symbols/s (4800 bit/s), outer deviation +-1050 Hz; dibits 01 +3, 00 +1, 10 -1, 11 -3.

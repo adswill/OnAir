@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T and DVB-T2 through a lossy USB link (a PlutoSDR on its USB 2 cable run above the ~4 Msps it carries, rate_choice.h linkRateFor):
 // gaps of 1-10 ms of lost samples, spaced so 0.5 %, 2 % or 5 % of the samples are gone (tests/common/impair.h drop). Prints the packet (DVB-T)
 // and baseband-frame (DVB-T2) error rates, which are what the app can promise, and checks them against limits. Each gap moves the symbol

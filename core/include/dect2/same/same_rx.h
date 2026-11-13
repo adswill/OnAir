@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NOAA Weather Radio SAME (Specific Area Message Encoding, the EAS alerts of the US and Canada) on the seven NFM weather channels
 // 162.400 - 162.550 MHz: receive only. The text of an alert is a public broadcast.
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ham.decode events: see ham_events.h.
 #include "dect2/ham/ham_events.h"
 #include <cctype>

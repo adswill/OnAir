@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C receiver: spectrum -> carrier offset and symbol rate, interpolating matched filter + Gardner timing loop (2 samples a symbol),
 // fractionally spaced equaliser (CMA, then decision directed LMS inside a carrier loop), QAM order and spectral inversion tried until the transport
 // stream sync bytes appear, differential decoding of the quadrant, then the DVB-T outer decoder (de-interleaver, Reed-Solomon, energy dispersal).

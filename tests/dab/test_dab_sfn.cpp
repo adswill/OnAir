@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB network paths and transmitter matching on synthetic impulse responses: delays from distances, a static offset that fits nothing, a path beyond the guard interval.
 #include "dect2/dab/dab_sfn.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Where does the receiver's error correction fall off a cliff? Frame error rate against SNR for one DVB-T2 mode, comparing the production
 // decoder (normalised min-sum, 50 iterations, then a retry pass) with a floating-point sum-product reference with many iterations.
 //   bench_threshold [mod 0..3] [rate 0..] [rotation 0|1] [blocks per point] [snr_from snr_to step] [short 0|1]

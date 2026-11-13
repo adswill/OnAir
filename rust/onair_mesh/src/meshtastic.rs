@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Meshtastic packets after decryption: the 16 byte radio header and the `Data` protobuf (portnum first) with the port payloads Text, Position, NodeInfo,
 //! Telemetry, Routing, Traceroute and NeighborInfo turned into one detail line plus at most one node update or text message. Sources: meshtastic/firmware
 //! src/mesh/RadioInterface.h (PacketHeader, flag masks) and meshtastic/protobufs mesh.proto (Data, Position, User, Routing, RouteDiscovery, NeighborInfo),

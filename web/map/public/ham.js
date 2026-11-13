@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ham.js - pure helpers for the "Ham contacts" section: band from frequency, parsing the contact hints a ham track may carry in
 // its `extra` (JSON text or object: {m: mode, f: Hz, b: band, to: callsign, tlat, tlon}), building contacts (station -> peer),
 // filtering by band / mode / age, colour by mode. No DOM, no ingest changes: tracks that carry no hints simply give no contact.

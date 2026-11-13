@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The fine-frequency snap of "Auto setup" (app/ui/kit/mode_actions_logic.h): finds a narrow signal near the tuned frequency, leaves noise and wide captures alone.
 #include "../../app/ui/kit/mode_actions_logic.h"
 #include <cstdio>

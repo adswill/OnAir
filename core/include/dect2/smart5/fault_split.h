@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fault or reception? (3.9, docs/SMART5-broadcast-3.9.md item 7). Multiplexed broadcasts carry many services over one signal.
 // When the signal is the problem every service suffers at once; when one service fails while the multiplex signalling (DAB FIC,
 // DVB PAT/SDT, DRM FAC/SDC) and the other services decode cleanly, the fault is at the station's feed or encoder.

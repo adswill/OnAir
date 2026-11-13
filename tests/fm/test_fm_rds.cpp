@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RDS data layer (fm_rds.h): block sync, error correction (bursts and two weak symbols), the group types beyond PS/RT (AF, ECC, PIN, CT,
 // PTYN, ODA, RT+, eRT, EON, 2B with C'), no wrong text from corrected blocks; then the whole receiver: the weak-signal threshold, the
 // multipath equaliser switching itself in and out, and the stereo blend.

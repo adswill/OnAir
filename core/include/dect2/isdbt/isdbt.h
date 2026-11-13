@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T (ARIB STD-B31): parameters, carrier layout, pilots, TMCC and the shared parts of the channel-coding chain.
 // The transmit-side stages are used by the signal generator and the tests; the receiver uses the same tables and the inverse stages.
 #pragma once

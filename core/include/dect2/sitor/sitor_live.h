@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SITOR for the engine (family 119, active standard 120, engine standard 121): IQ in, SITOR-B (FEC, collective broadcast, as used by
 // NAVTEX) text out. The FSK front end, tone finder and slicer are the marine ones; the framing is NavtexDecoder's (bit phase search over
 // the 7-bit words, time diversity of the repeated characters, either tone polarity) with its character callback, so the text is shown

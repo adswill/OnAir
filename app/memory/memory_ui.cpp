@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Memory panel: the frequencies the user keeps with their mode and settings. A window (View > Memory, Ctrl+M), an optional tab of the main
 // screen, and the "M" menu of the quick list. The model and the files are in core (dect2/channels/memory_bank.h), what is captured from and
 // applied to a receiver in memory_options.cpp, the edit dialog in memory_edit.cpp.

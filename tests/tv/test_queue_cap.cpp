@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Player picture queue: the cap follows the frame rate and the picture size; over the cap the late pictures go first, then the newest.
 #include "dect2/tv/player.h"
 #include <cstdio>

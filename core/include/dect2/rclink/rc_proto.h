@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio-control and mesh links, packet layer (no radio): Reticulum over RNode LoRa, ExpressLRS, MAVLink inside SiK radio packets, FrSky D8 / D16 and
 // FlySky AFHDS / AFHDS 2A. Receive only: nothing here builds a command for a transmitter. Facts and sources are in docs/MESH-RC-3.8.md.
 //

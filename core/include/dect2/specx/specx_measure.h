@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum explorer maths, shared by the app and the tests: frequency text ("1.2G", "433.92M", "145500k"), LNB / converter offsets,
 // a noise floor that may be tilted, measurements of a region (occupied bandwidth at -3 and -26 dB, channel power, peak, SNR, symbol
 // rate of a flat-topped carrier), signal detection, and the panorama a sweep stitches together.

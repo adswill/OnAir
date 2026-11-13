@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // wfb-ng and OpenHD frames over the air: built with the real header layouts, through the 802.11n transmitter, into XlinkReceiver at 20 and 40 Msps with an offset channel.
 // Simulated signals only; no real capture of either link is available.
 #include "dect2/xlink/ht_phy.h"

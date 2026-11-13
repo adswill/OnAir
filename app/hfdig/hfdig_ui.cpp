@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital screens: the shell. One main tab with a view per decoder (RTTY, SSTV, FreeDV); each view is drawn by that decoder's own
 // file (hfdig_rtty_ui.cpp, hfdig_sstv_ui.cpp, hfdig_freedv_ui.cpp). The shell also keeps the sound controls in step for FreeDV's speech,
 // lists what happened (ACTIVITY, on the right) and draws the spectrum and waterfall of the 8 kHz audio at the bottom, to tune the tones by eye.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium short burst data (Phase B): IDA frames joined into packets, the SBD headers, ACARS messages inside them.
 // Format knowledge about IDA reassembly and SBD headers (as documented by iridium-toolkit, which has no licence file; no code copied);
 // not checked against a real recording. ACARS parity and any ACARS checksum are not checked (the IDA frames carry their own CRC).

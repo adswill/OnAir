@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_files` (core/include/dect2/rs/files.h). Every export is `onair_files_*`; pointers come as (pointer, length) pairs and the caller owns all buffers.
 //! Text writers return the length the text has (also when the buffer was too short: nothing is written past it), `usize::MAX` marks a failure. Null pointers are
 //! empty input / failure, never a crash.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AVS+ video (DTMB television in China, PMT stream_type 0x42, sequence header profile_id 0x48) through an OPTIONAL FFmpeg add-on.
 // The FFmpeg inside OnAir decodes AVS1 only in its JiZhun profile (profile 0x20) and OnAir ships no patented codec. As with AC-4 (ac4_dec.h): the
 // user may put libavcodec + libavutil, built from an FFmpeg patched for AVS+ (github.com/maliwen2015/ffmpeg_cavs_dra: a patch for FFmpeg 7.1.2 that

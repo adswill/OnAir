@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 2 screens: the two time slots (unit ID, talkgroup, emergency, encryption, voice), the call log with the voice channel grants, the trunking
 // system (site, adjacent sites, channel identifiers), the talkgroups, the decoded MAC messages, the "Listen to" slot choice and the descrambler seed
 // (WACN / system / NAC of the site, which the P25 trunking follower fills in by itself). Receive only; encrypted calls are only reported. The burst layer

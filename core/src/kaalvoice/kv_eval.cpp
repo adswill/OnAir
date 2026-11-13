@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Objective evaluator and synthetic test speech for the KAAL voice codecs (see kaal_voice_eval.h). The synthesiser uses the codec's
 // own deterministic math so the test signals (and the golden digests built on them) are the same on every platform.
 #include "dect2/kaalvoice/kaal_voice_eval.h"

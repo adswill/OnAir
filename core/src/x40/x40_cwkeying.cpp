@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW keying quality meter: what a keyed carrier's timing and shape look like, for the person who sent it or the person who wants to know why it sounds wrong. The carrier (within +-1.5 kHz of the tuned
 // frequency) is found and followed; its envelope (2 kHz rate, 800 Hz bandwidth) is cut into marks and spaces at the 50 % points with hysteresis (on above 50 % of the recent peak, off under 35 %).
 // From the last 60 elements: the dit and dah lengths by two-means clustering of the marks (and the speed: PARIS standard, words per minute = 1200 / T in ms with T = (dit + element gap) / 2), the dah to dit ratio

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FY-3 AHRPT and FY-3 MPT screens (families 235 and 236): the instrument pictures of the pass growing row by row (VIRR, MERSI: a colour composite or one
 // channel in grey), Save PNG and New picture; the satellite preset with its frequency and symbol rate, the symbol rate and roll-off for anything else;
 // the receiver's state with a "why it does not decode yet" line, the margin over the Es/N0 the decoder needs, the next pass of the satellite when a TLE

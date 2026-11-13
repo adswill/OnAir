@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Decode help: see decode_progress.h.
 #include "dect2/doctor/decode_progress.h"
 #include "dect2/source/gain.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CROWD36 (34-tone MFSK, 40 Bd). What is checked:
 //  1. messages built from the format as Rivet reads it (the two sync tones with tone 24 high, the letter shift, five-letter groups, line ends)
 //     through the receiver with impairments: dial error, off-centre tuning (-800 Hz), sender clock error, drift, 48 and 250 ksps;

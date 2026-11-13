@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole-span pagers: three carriers of different speeds in one 2 Msps capture (POCSAG 512 on the raster, a weak POCSAG 2400 1.2 kHz off it, FLEX 3200/4
 // 3 kHz off it, the last one starting late). Every carrier must get its own receiver, every page must arrive with its exact text and address and be
 // stamped with the frequency of the carrier that sent it, none may turn up at another carrier; a retune must keep the rows at their absolute

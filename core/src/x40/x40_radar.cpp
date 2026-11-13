@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radar pulse analyser (S, C and X band marine, air-traffic and weather radars, or any pulsed emitter): the pulses of one dominant emitter are found in the envelope and
 // measured, as a pulse-analysis receiver does: pulse width at the half-power point, time of arrival, level, the frequency of the carrier inside the pulse. The spacings (PRI)
 // are classified: constant, staggered (a repeating sequence of 2 to 8 spacings), jittered (random spread) or irregular; the pulse level over the last 30 s gives the

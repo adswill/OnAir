@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS interference detector (L1 1575.42 MHz, L2 1227.6 MHz, B1, G1 and others): looks at a wide capture of a navigation band and says whether something other than the satellites'
 // own noise-like signals is in it, and what kind: a continuous tone (CW), narrowband interference, a swept tone (the sawtooth chirp of a car-mounted jammer: sweep range, period, rate),
 // or a wideband noise-like jammer. The satellites are 20 dB under the thermal noise, so a clean band shows a flat spectrum and a steady envelope. Once a second, 65536 samples are

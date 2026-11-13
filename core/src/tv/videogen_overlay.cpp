@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital video generator: overlay layout, snapping and renderer (videogen_overlay.h). Text is drawn with stb_truetype (the copy that
 // comes with Dear ImGui, compiled here as static functions). The logo is a picture file: PNG through OnAir's own decoder (every build,
 // transparency kept), other formats through FFmpeg when the build has a decoder for them; scaled with swscale.

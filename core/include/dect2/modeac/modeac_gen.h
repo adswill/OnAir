@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode A / C test signal: the simulated airspace of the ADS-B generator (Mode S / ADS-B messages from aircraft around a reference point) with the
 // old secondary-radar replies mixed in. Every aircraft answers interrogations with Mode A (its squawk) and Mode C (its altitude, 100 ft steps,
 // Gillham code) replies at random times, at a level that falls with distance, with a carrier error of its own; replies and Mode S messages overlap

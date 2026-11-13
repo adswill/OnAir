@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Per-mode presets: named sets of the settings that matter for one mode (frequency, mode options, gain, bandwidth, squelch,
 // audio, spectrum, radio, sample rate). Everything here is pure data and pure functions: (de)serialisation to a small versioned
 // JSON (.onairpreset), merging of fields this version does not know, validation, and applying against what the radio can do.

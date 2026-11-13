@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Parity-check tables of the DVB-T2 / DVB-S2 style IRA LDPC codes (EN 302 755 section 6.1.2, EN 302 307 section 5.3): the address table of the 360 bit
 //! groups of information bits is expanded into everything the encoder and the decoders walk (the decoders themselves stay in C++, where the NEON / AVX2 /
 //! GPU paths are). Address `a` of group `g`, information bit `c` of the group (0..360) is connected to parity check `(a + c * q) mod m`, with

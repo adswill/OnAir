@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite signals that have no public specification (or whose payload we do not decode): find them, measure them and say whose they are,
 // without inventing a decoder. Three methods, chosen per system by the table in satdetect_systems:
 //   Carrier: narrow lines followed through time, each matched against the catalogue's channels and, when elements are given, against satellite Doppler curves.

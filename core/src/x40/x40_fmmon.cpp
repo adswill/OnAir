@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM broadcast modulation monitor (87.5 - 108 MHz): the measurements a broadcast engineer reads from a modulation monitor, taken from the FM-demodulated multiplex (MPX) of a
 // station: peak and RMS deviation, the carrier offset, the 19 kHz pilot (nominal 8 - 10 % of 75 kHz, i.e. 6 - 7.5 kHz) and stereo, the 57 kHz RDS injection (nominal 1 - 7.5 kHz),
 // SCA subcarriers (67 and 92 kHz), the audio (L+R) level and the MPX power in dB against a sine of 19 kHz deviation (the ITU-R BS.412 reference; the 60 s averaging and the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Where the right-hand buttons of the classic top bar go (radio settings, support, version, clear all, language, server, new interface, touch,
 // tour). They were put at fixed offsets from the window's right edge, and the language group at "right edge minus a width that left out the
 // Touch button". On a narrow window (640 px on a Pi, #139) or a wide mode selector (#424) the buttons landed on top of the mode selector and

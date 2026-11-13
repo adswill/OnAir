@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL voice gate, plug-in frame and per-call WAV (tetrapol_voice.h).
 #include "dect2/tetrapol/tetrapol_voice.h"
 #include <cstring>

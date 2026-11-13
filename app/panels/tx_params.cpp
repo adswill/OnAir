@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The parameters of the transmit panel, drawn from the core table (dect2/tx/tx_params.h, one place for every mode): the Simple rows under "What to send"
 // (simpleRows), the Advanced rows in their groups Modulation, Audio, Filters, Framing, Output and Timing (advancedPanel), with presets and "Reset to default".
 // A row is drawn by one function (paramRow) from its type, range, unit and help, or by the mode's own widget when it is a custom row (customRow,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FengYun geostationary receiver: FY-4A / FY-4B LRIT and FY-4A HRIT-II/III (DVB-S2, QPSK, CCSDS xRIT files with JPEG 2000 pictures) and FY-2 S-VISSR
 // (uncoded differential BPSK, 660 ksym/s, scan lines of IR1 - IR4 and VIS). Receive only; needs a dish (about 1 m or more) with an LNA at 1.7 GHz.
 //

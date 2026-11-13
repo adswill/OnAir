@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B frame checks and the aircraft table: published messages go in as sliced frames, the table must come out as the documents say.
 // Messages and positions: "The 1090 Megahertz Riddle" (see test_adsb_msg.cpp). Everything else is built here with the encoders and checked against what was put in.
 #include "dect2/limits.h"

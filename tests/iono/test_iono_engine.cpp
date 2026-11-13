@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ionospheric sounders through the engine (setStandard(54)): the synthetic source plays the two-sounder test scene in real time at
 // 1 Msps around 0.5 MHz; the 100 kHz/s sweep that starts at 2 s comes back through latestRx() as standard 53 with its ionogram.
 #include "dect2/iono/iono_dsp.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM audio tone control: the shelves' gains read from their coefficients (DC, the corner, high frequencies, the Warm cut), the
 // stability of every setting, the treble and Warm mapping, and the processing (a DC level through a bass boost, the off state passes the audio untouched).
 #include "dect2/fm/fm_tone.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // badges/page.js - the profile page (/u/<github-login>) and the leaderboard (/leaders). Everything from the server is written with
 // textContent; the only markup inserted is the badge art from art.js (our own strings). The pure helpers are tested in test/badges-ui.test.js.
 

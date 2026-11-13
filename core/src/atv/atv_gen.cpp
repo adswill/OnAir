@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV test signal, see atv_gen.h.
 //
 //   test card (field by field) -> composite video line by line at 12 Msps, timing from the half-line grid of BT.470-6

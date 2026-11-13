@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT physical layer pieces (nbiot_phy.h): the messages, the synchronisation sequences, the resource element maps, OFDM, the channel estimate,
 // the NPBCH code and the generator.
 #include "dect2/nbiot/nbiot_phy.h"

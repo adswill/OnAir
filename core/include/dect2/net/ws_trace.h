@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Optional log of the WebSocket text traffic between OnAir and SDRconnect (nRSP-ST source): one timestamped line per message sent or received,
 // plus open/close events. Off by default (Settings > Advanced > Log SDRconnect websocket traffic). IQ (binary frames) is never logged.
 #pragma once

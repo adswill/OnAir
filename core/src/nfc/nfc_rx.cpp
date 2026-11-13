@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NFC / RFID physical-layer demodulation (see nfc_rx.h). Clean-room; receive only.
 //
 // Reader (PCD) frames: the field envelope |x| is tracked; a "pause" is a sharp dip. Once a start pause is seen the etu grid is

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) MAC frames as far as the PHY gives bytes: the S1G beacon (frame control, SA, timestamp, change sequence, compressed SSID,
 // information elements), the management beacon, probe response and request, data frames, the FCS, and the information elements a monitor lists:
 // SSID, RSN (security shown for information only), S1G Operation and Capabilities, TIM, Country, power constraint, supported rates, RAW parameters

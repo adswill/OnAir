@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the network protocol layers (dect2::netp, the Rust crate onair_net): SHA-1 / base64 / WebSocket accept key and server frames, client WebSocket
 // frames (valid, unmasked, fragmented, odd opcodes, every length class, cut short), URL text (percent decoding, query strings, Host headers, loopback names, constant
 // time compare, reason phrases), flat JSON bodies (built from random members, mutated, truncated, odd numbers and escapes), HTTP request heads (request lines, header

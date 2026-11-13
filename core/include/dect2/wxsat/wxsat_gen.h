@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals of the wxsat links (wxsat_tel.h). Nothing is transmitted: the samples only exist in memory or in a file.
 #pragma once
 #include "dect2/engine/mode_synth.h"

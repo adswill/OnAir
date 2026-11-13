@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB+ slide show: the PAD in the data stream element, X-PAD (variable and short, with and without content indicators), data groups, MOT segments.
 // The generator's signal (dab_gen_pad.cpp, written from the standards without the receiver's code) goes through the PAD decoder directly, through
 // DabAudio (Reed-Solomon, access units, libavcodec) and through the whole receiver; hand made PAD covers the other X-PAD forms and bad data.

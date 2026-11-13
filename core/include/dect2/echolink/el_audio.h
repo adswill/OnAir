@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EchoLink audio helpers: 48 kHz <-> 8 kHz rate conversion for the sound card, a VOX, and the rules of the optional RF bridge.
 #pragma once
 #include <cstdint>

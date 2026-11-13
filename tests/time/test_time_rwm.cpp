@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RWM (Moscow): the keyed carrier through the time receiver. The 1 pulse minutes give the seconds, the minute pulse and DUT1 / dUT1 from
 // the doubled pulses; the 10 pulse minutes give the seconds and the minute pulse only (their 20 ms pulses must not be taken for the second);
 // the plain carrier minutes give nothing. RWM sends no time of day, so the minute comes from the clock and the check is the clock offset.

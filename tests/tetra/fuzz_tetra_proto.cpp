@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the TETRA network information layer, meant for DECT2_SANITIZE=ON: SYNC, SYSINFO, the
 // signalling block walk, texts and carrier maths must never crash or hang on any bytes (also bytes above 1 and every length). Also a libFuzzer target with
 // -DONAIR_LIBFUZZER.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protocol lab: baud rate estimate (transition intervals) and the bit slicer with a clock that follows the transitions.
 #include "dect2/protolab/protolab.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor-M pass report card: one row per pass (maximum elevation, SNR, % frames decoded, lines, gaps), compared with earlier passes at a similar
 // elevation; kept in <data folder>/stats/meteor-passes.csv. Core: dect2/meteor/pass_report.h.
 #include "app.h"

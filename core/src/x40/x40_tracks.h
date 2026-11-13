@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by the intermodulation finder and the spur and image finder: Hann-windowed spectra of a wide capture, averaged into snapshots, the peaks of every snapshot, and tracks
 // that follow a peak from snapshot to snapshot (level in dB over the noise, NaN when it is not there). A relation between two tracks (a product follows its parents with a known
 // slope in dB per dB) is the evidence both decoders use.

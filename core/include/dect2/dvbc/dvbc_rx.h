@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C receiver (EN 300 429 / J.83 annex A and C): carrier and symbol rate from the spectrum, an interpolating matched filter with a Gardner
 // timing loop, a fractionally spaced equaliser (CMA, then decision directed LMS with a carrier loop), the QAM order and the quarter turn found from
 // the transport stream sync bytes (the differential coding makes the data immune to a quarter turn), then the DVB-T outer decoder: de-interleaver,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // receiver analysis tabs: sync, history, frame map, signalling, constellations, channel, impulse, SNR, FEC, transport stream, log
 #include "../app.h"
 #include "dect2/t2/tv_diag.h"

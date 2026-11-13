@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB demodulator pieces on symbol-rate samples: channel estimate from a PN header, removal of the header's leakage into the frame body
 // (TDS-OFDM), the 3780 point FFT and the equaliser, and the system information decoder.
 #pragma once

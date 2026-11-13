@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Room list page. Text only through textContent.
 const ul = document.getElementById("list"), empty = document.getElementById("empty");
 async function load() {

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IEEE 802.15.4 sub-GHz BPSK PHY (868 MHz channel 0: 300 kchip/s, 20 kbit/s; 902 - 928 MHz channels 1 - 10: 600 kchip/s, 40 kbit/s).
 // Every PSDU bit is differentially encoded (R_n = E_n xor R_{n-1}) and spread by the 15-chip m-sequence 111101011001000 (a 1 sends the
 // inverse); the chips are BPSK with a raised-cosine pulse (roll-off 1). PPDU: 32 zero bits of preamble, SFD 0xA7 (sent LSB first: 1 1 1 0 0 1 0 1),

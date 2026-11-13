@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Carrier finder and channelizer for "decode the whole visible span": from the power spectrum of the captured span, find the carriers that sit
 // on a channel raster (12.5 kHz, 25 kHz, 6.25 kHz or any step), keep each one tracked while it talks and for a holding time after it goes quiet,
 // and bring each one down to a baseband stream at the rate a single-channel decoder wants. Nothing here knows a protocol.

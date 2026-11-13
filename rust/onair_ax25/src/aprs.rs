@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! APRS information field parser, after APRS 1.0.1 (APRS101.pdf) chapters 5 to 12 and the 1.2 addenda: uncompressed and compressed positions, Mic-E,
 //! objects, items, status, messages (with ack / reject and message numbers), weather, telemetry, raw GPS, capabilities, queries, third-party traffic.
 //! The Mic-E longitude and speed rules were cross-checked against the description in Dire Wolf's decode_aprs.c - no code was copied.

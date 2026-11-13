@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Root raised cosine pulse shared by the test signal generators and the matched filters of the satellite and HF data modes (GOES, Meteor, HRPT, Elektro, HFDL).
 #pragma once
 #include <cmath>

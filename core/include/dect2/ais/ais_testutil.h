@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helpers for the AIS tests and the tool: random messages, running a receiver over a signal, and collecting what it decoded from its !AIVDM sentences.
 #pragma once
 #include "ais_gen.h"

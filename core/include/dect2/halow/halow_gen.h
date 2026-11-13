@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) test signal, sub-GHz S1G OFDM. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A schedule of PPDUs (halow_phy.h builds them: STF, LTF1, SIG, data at any MCS) at 1, 2, 4, 8 and 16 MHz with the S1G_1M, S1G_SHORT or S1G_LONG

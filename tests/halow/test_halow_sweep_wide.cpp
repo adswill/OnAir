@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow round-trip sweep, 8 and 16 MHz (radio at 10 and 20 Msps): every valid MCS 0 - 9 x S1G_SHORT and S1G_LONG x both guard intervals x three
 // impairment sets (see halow_sweep.h). 16 MHz MCS 8 and 9 use two BCC encoders.
 #include "halow_sweep.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JS8Call screens: the dial-frequency presets, the submodes looked for (normal, fast, turbo), the waterfall of the audio passband with
 // the newest frames marked, then four views: every frame decoded (UTC, submode, SNR, DT, Hz, text), the messages put together from
 // their frames (directed messages, free text, relays), the stations heard (call, grid, SNR, last heard), and their grids on a map.

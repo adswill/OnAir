@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 1.0 (A/53, 8-VSB): constants, framing and the channel-coding chain (randomiser, Reed-Solomon (207,187), convolutional byte
 // interleaver, 12-way interleaved trellis code). The transmit side is used by the test signal generator, the receive side by the
 // receiver: Viterbi decoding of a whole data field, de-interleaving, Reed-Solomon correction and de-randomising.

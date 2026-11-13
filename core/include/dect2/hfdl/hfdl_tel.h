@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL (HF Data Link, ARINC 635 / ICAO Doc 9741) receiver telemetry, shared by the receiver and the UI.
 // The first members of HfdlTelemetry are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once

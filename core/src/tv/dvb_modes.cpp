@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital video generator: the DVB transmission modes and which of them a link can carry (dvb_modes.h). The tables are those of the
 // sheet Std_Tables of DVB_transmission_modes.xlsx, each from the ETSI table named beside it; the formulas are those of its mode sheets.
 #include "dect2/tv/dvb_modes.h"

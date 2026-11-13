@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4: decoder-side speech enhancer (see kv_enhance.h and docs/KAAL-ENHANCE.md).
 #include "kv_enhance.h"
 #include <cmath>

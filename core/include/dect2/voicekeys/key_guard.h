@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Where the voice key file lives and what must never leave the computer with it. Header-only so the bug-report writer, the crash-log
 // collector and their tests share one list. Nothing here touches key material: it only looks at file names.
 //

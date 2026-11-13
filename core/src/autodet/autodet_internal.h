@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared pieces of the automatic standard detection (autodet.h): spectrum, percentiles, bringing a signal to baseband.
 #pragma once
 #include "dect2/autodet/autodet.h"

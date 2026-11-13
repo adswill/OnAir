@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VOR and ILS receiver (aircraft navigation beacons, ICAO Annex 10 Volume I, 3.1 and 3.3).
 //
 // One channel at the dial frequency: mixed to 0 Hz, decimated to about 50 kHz, the carrier found (FFT, +-8 kHz) and moved to 0 Hz,

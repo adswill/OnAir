@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EUROCONTROL ASTERIX surveillance data: the data block framing and the data items of categories 021 (ADS-B target reports, edition 2.x user
 // application profile), 048 (monoradar target reports) and 062 (system track data). Written from the public category descriptions.
 // Only what a track table and a map need is read out of each record; every other data item is skipped by its length, and when an item is met whose

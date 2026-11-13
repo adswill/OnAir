@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The OpenGL fallback table (app/gfx/gl_level.h, #283): 3.2 core stays the first level, lower ones follow with matching GLSL versions.
 #include "../../app/gfx/gl_level.h"
 #include <cstdio>

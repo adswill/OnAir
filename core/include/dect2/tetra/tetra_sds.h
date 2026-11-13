@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA SDS interpreter: the clear D-SDS-DATA CMCE PDU (EN 300 392-2 clause 14.8), its SDS-TL protocol identifier and the two payloads that matter on
 // the air: simple text messages and the Location Information Protocol short location report (ETSI TS 100 392-18-1) as a position for the map and the
 // call log. Unencrypted PDUs only: the caller never passes an air interface encrypted block. Bit layouts are written from the standards and checked

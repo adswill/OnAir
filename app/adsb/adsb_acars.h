@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS messages attached to the aircraft the ADS-B screens (and the map upload) show. The log itself is core/src/acars/acars_log.cpp;
 // this file feeds it from the ACARS, VDL2 and HFDL receivers of every receiver slot and answers "what did this aircraft say".
 #pragma once

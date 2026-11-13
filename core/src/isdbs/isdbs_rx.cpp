@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-S receiver, see isdbs_rx.h.
 #include "dect2/isdbs/isdbs_rx.h"
 #include "../dvbs/dvbs_front.h"

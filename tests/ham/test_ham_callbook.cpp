@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Callsign lookup (4.0): QRZ and HamQTH XML (record, login answer, errors), the logbook as a callbook, filling a QSO, the cache file round trip,
 // and the client with a fake transport: off by default sends nothing, credentials only in the POST body, one login then lookups, the cache
 // answers the second time, an expired session logs in once more. The services themselves were not contacted.

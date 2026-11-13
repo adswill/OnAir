@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3.9 sensitivity pass D (docs/SENSITIVITY-3.9-D.md): satellites, trunking, pagers and voice receivers of the sens_sweep registry, plus
 // the modes added for this pass in tools/sens/sens_modes_d.h.
 //

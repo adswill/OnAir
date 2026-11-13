@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Field insights (3.9, docs/SMART5-field-3.9.md): the aviation, marine and IoT analysers that work on one decoder's own output, joined to
 // the insight hub (hub.h). ADS-B, AIS and NAVTEX come in through the automation events ("adsb.aircraft", "ais.vessel", "msg.navtex");
 // FLARM, HFDL, LoRa mesh, LoRaWAN and the user's own water meter are handed over by the interface from the receivers' telemetry. Findings become

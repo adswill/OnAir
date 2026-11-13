@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RBDS (the US flavour of RDS, NRSC-4-B): the programme type names, the call letters hidden in the PI code, and the choice between RDS
 // (Europe, the rest of the world) and RBDS. The bit stream, groups and checkwords are identical; only these meanings differ.
 #pragma once

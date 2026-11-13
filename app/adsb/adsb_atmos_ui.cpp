@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B Atmosphere view (3.9, docs/SMART5-avia-3.9.md): the sounding built from the aircraft's winds and temperatures, and the altimetry
 // cross-check (an aircraft whose GNSS-minus-barometric difference disagrees with the others at its level; a whole band moving together).
 // The logic is in core (dect2/adsb/adsb_atmos.h); this file feeds it from the telemetry and draws it.

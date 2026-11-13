@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLARM receiver under real-world impairments: AWGN near the threshold, carrier offsets of +-10 kHz, chip clock errors of +-50 ppm, two transmitters
 // colliding, a transmitter clock a few seconds off at a key-time step boundary. Loopback against our own generator (flarm_gen.h), not on-air captures.
 #include "dect2/flarm/flarm_gen.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The new interface, in a plain developer-tool style: flat, dense and monochrome. A text list of modes with keyboard shortcuts
 // on the left, square bordered panes and hairlines instead of cards, one muted accent. It reuses every panel of the classic
 // interface (main.cpp). This file holds the entry point drawShell2() and the Sidebar / Scope / Tiles layouts; the others

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Runs the Sub-GHz sensors receiver over a recording (.cu8 / .cs8 IQ from rtl_433's test set) or a bit code and prints the decoded
 // messages as rtl_433 JSON lines, the way `rtl_433 -F json -r file` does (tools/sensors_vectors.py compares them with the expected files).
 //   sensorstool [-R n[,n...]] [-Y classic|minmax|auto|level=dB|minlevel=dB] [-s rate] file.cu8

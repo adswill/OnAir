@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Two-line element sets (NORAD TLE, as Celestrak publishes them): column layout, line checksum, the implied-decimal exponent fields, the epoch as a Julian date,
 //! and the scan of a whole text (a file, or what a user pasted) for name / line 1 / line 2 groups. The propagator (SGP4) stays in C++.
 use crate::ffi::cfn;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Qi wireless charging, receiver-to-transmitter communication (Wireless Power Consortium Qi, baseline power profile, 110 - 205 kHz): the phone modulates the load
 // of the power signal, a few percent of its amplitude, at 2 kbit/s (500 us, 2 kHz +- 4 %) in differential bi-phase (a level change at the start of every bit, one more
 // in the middle of a 1). A byte is 11 bits: start 0, 8 data bits LSB first, odd parity, stop 1. A packet is a preamble of at least four 1 bits, a header byte (its value gives the

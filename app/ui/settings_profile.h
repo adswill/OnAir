@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Settings profiles (Settings > Profiles): a named set of every setting of the Settings window plus the keyboard and mouse bindings, kept as one
 // text file in <data folder>/profiles/<name>.onairprofile, and exported or imported as the same file. No ImGui, no App: tests/app/test_settings.cpp.
 //

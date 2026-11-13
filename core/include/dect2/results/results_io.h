@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Decoded results on disk: the lists every receiver keeps until the user clears them (messages, aircraft, vessels, cells, pictures...)
 // are saved as a compact binary form of plain structs and the standard containers. A file starts with a signature of the saved types,
 // so a build whose structs differ (a field added, removed or retyped) discards an old file instead of misreading it.

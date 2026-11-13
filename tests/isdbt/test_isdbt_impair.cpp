@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T receiver against real-world faults (REAL_WORLD_CHECKLIST.md): the generator's signal is damaged with tests/common/impair.h, which shares
 // nothing with the receiver, and must still decode.
 #include "dect2/dsp/exact_resampler.h"

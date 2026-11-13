@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! A bounded text writer for the protocol crates (they do not allocate): decimal and hex numbers, bytes and strings into a caller buffer, with the
 //! padding rules of C `printf` (`%u`, `%d`, `%02x`, `%08X`, `%016llX`). Floating point goes through a function the crate supplies (its C library `snprintf`),
 //! so digits are identical to the C++ reference.

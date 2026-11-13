@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LBJ (Chinese railway train broadcast) receiver: FM on the railway UHF warning channel (about 821.2375 MHz),
 // 1200 bit/s FSK after FM demodulation, BCH-protected frames with train number, kilometre marker and locomotive data.
 // Receive only.

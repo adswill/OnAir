@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog FPV video receiver, see fpv_live.h.
 //
 //   IQ -> spectrum (1024-point FFT, averaged): power of every channel of the plans inside the capture, noise floor

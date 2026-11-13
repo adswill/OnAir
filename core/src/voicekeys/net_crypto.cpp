@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AES-128 helpers, CMAC and CCM* (net_crypto.h).
 #include "dect2/voicekeys/net_crypto.h"
 #include "../tv/iptv_aes.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The scheduler core: next-run times (cron, daily, weekly, DST in the EU and US rules), overlap resolution, missed jobs, the disk guard,
 // the file-name template, the JSON round trip, and the scheduler driven against a fake radio.
 #include "dect2/sched/sched.h"

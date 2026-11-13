@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UVB-76 buzzer monitor: buzz rate and length, a break in the train, a long transmission, with carrier offset, noise and period drift; noise alone logs nothing.
 #include "x40_gen.h"
 using namespace x40gen; using namespace dect2;

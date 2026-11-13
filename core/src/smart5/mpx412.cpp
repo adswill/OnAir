@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM multiplex power per ITU-R BS.412 (see mpx412.h).
 #include "dect2/smart5/mpx412.h"
 #include <algorithm>

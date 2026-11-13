@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather-satellite pictures on the map: the ground position of every pixel of a scanned swath (Meteor-M LRPT, NOAA-style line
 // scanners) from the orbit (TLE / SGP4) and the time the picture began, or of a geostationary full-disk picture (GOES) from the
 // satellite longitude; the resampling of the picture into a map raster (Web Mercator for the live map, plate carree for files);

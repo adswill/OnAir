@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Narrow Bandwidth Television and mechanical television: see atv_nbtv.h.
 #include "dect2/atv/atv_nbtv.h"
 #include "dect2/atv/atv_std.h"

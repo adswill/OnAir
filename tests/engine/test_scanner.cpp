@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The scanner's state machine (app/scan/scan_list.h) with a fake activity source: stops on activity, holds, hangs, resumes, lockout, priority, CSV.
 #include "../../app/scan/scan_list.h"
 #include <cmath>

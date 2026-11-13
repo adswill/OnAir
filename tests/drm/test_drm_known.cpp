@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM known answers: CRC and energy dispersal vectors, cell counts and code sizes against the tables of ETSI ES 201 980 (V4.3.1), the pilot rules,
 // the message formats, and decoding of real over-the-air cells (FAC of modes A, B and C, SDC and MSC of mode A).
 #include "dect2/drm/drm_defs.h"

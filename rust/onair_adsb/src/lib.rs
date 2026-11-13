@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir ADS-B: the Mode S / ADS-B (1090 MHz) message layer: CRC-24, single-bit error correction, altitude and identity codes, compact position
 //! reporting (CPR), Comm-B register inference, magnetic declination and wind helpers, and the field extraction of a whole message (DF types,
 //! extended squitter type codes, velocity, target state, operational status). No signal processing here.

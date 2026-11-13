@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM stereo receiver (C-QUAM, Motorola; the system of most AM stereo stations: Canada, the USA, Mexico, Brazil, Japan, Australia).
 //
 // The channel (dial + channel offset) is mixed to 0 Hz and brought to exactly 48 kHz like the AM broadcast entry of the general receiver

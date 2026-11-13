@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 television / radio-digital helpers (pure, no GUI). Tests: tests/d40/test_tv_d40.cpp
 //  1. guessQam       DVB-C / J.83 / cable: which QAM order is in a cloud of equalised symbols (16, 32, 64, 128, 256): fit every ideal grid (square or cross), best fit above its own quantisation floor wins (a finer grid always fits a little better,
 //                    so each fit is judged against d^2/6), and the answer is "none" when no grid beats that floor by 3 dB.

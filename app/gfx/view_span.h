@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The frequency view of the spectrum and the waterfall when it is zoomed by the Zoom slider or the zoom keys (plots.cpp): around the TUNED
 // frequency (the VFO, the channel being listened to), kept in the middle of the view, never around the middle of the capture. Only the view
 // moves: the radio's centre frequency stays. Near the edge of the captured band the view stops at the edge instead of showing empty space.

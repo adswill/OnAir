@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // QO-100 through the engine (setStandard(55)): the synthetic source plays the narrowband transponder at 2 Msps in real time; the beacons
 // lock and the reports come back through latestRx() as standard 54 with the LNB error.
 #include "dect2/engine/engine.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3.9 smart features, TV (docs/SMART5-tv-3.9.md items 11 - 15). Simulated only: synthetic PID counts, per-carrier SNR, Es/N0
 // series, a hand-built cell_list_descriptor and generated test lines, with offsets, noise and filtering; no recording was on hand.
 #include "dect2/smart5/cell_tx.h"

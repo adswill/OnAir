@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh transmit identity: PSK / node ID parsing, the packets built from a user's own node, decoded back with the receiver's decoder
 // (names, node ID, channel, PSK, hop limit, callsign prefix), and warnings that never refuse anything.
 #include "dect2/mesh/mesh_proto.h"

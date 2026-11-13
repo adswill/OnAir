@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wrapping for the button line laid over a map: pure maths, so the layout can be tested without ImGui.
 #pragma once
 

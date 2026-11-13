@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-II / -III / -IV: demodulation and framing of the physical layer (receive only).
 //
 // What is public (SCS technical descriptions, Wavecom decoder notes, see docs/pactorhf.md): PACTOR-II is two D-PSK carriers 200 Hz apart at 100 baud,

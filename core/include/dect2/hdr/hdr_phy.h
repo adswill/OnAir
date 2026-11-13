@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio (NRSC-5) Layer 1: the OFDM receivers of the FM hybrid (MP1 primary main sidebands: P1 and PIDS), the AM hybrid (MA1: P1,
 // P3 and PIDS) and the AM all-digital (MA3: P1, P3 and PIDS) waveforms, and the matching modulators of the test signal.
 //

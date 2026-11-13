@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The voice watch list (voice/watch.h): matching a talkgroup, a radio and a callsign across modes, one event per call, the mode filter,
 // the history (active and ended calls), the record rules it keeps in step, the saved text. A test clock drives the monitors; nothing is played.
 #include "dect2/voice/watch.h"

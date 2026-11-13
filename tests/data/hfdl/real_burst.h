@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A real HFDL burst for a known-answer test: 13.351 MHz (Auckland's channel), received with a Hermes Lite 2 near Sydney on
 // 2026-10-17 at 00:51:43 UTC. An aircraft downlink, 600 bit/s single slot: performance data from CES202 at about -33.93, 151.17.
 // Cut from a 384 ksps OnAir recording (50.45 to 53.15 s), mixed so the carrier sits at -2700 Hz, low-pass filtered and taken

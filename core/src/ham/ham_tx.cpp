@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HamSlotTx: one ham burst through a radio. Order on every path: gate (hamTxAllowed: Arm and a number; the rest are warnings), the radio's prepare()
 // (it tunes to the frequency), audio start, PTT on, audio, drain, PTT off. No burst length or duty-cycle limit and no output-stall stop: the operator
 // decides (long bursts and duty cycles are only a warning in the audit log). A radio error stops the burst and releases PTT; every attempt goes to

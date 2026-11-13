@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells test signal (nr_gen.h).
 #include "dect2/nr/nr_gen.h"
 #include "dect2/common/stable_random.h"

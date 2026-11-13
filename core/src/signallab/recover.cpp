@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab stage 3b: symbol recovery. A matched filter for the family, a Gardner timing loop (cubic interpolation) at the
 // estimated rate, then for PSK/QAM a carrier loop (x^M coarse lock + decision-directed second-order PLL), and a slicer.
 #include "dect2/signallab/signallab.h"

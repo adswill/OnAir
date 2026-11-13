@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi client view (wifi_clients.h). Frame control and address layout: IEEE 802.11-2020, clause 9.2-9.3.
 #include "dect2/wifi/wifi_clients.h"
 #include <algorithm>

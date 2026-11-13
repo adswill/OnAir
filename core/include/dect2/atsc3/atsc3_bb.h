@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 baseband packets (A/322 section 5.2): the header with the pointer to the first ALP packet, optional and extension fields, and the
 // scrambling of the packet. A baseband packet fills one FEC frame payload (Kpayload bits).
 #pragma once

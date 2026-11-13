@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meshtastic channel URLs (https://meshtastic.org/e/#<base64url ChannelSet>), the links and QR codes the phone app and the web client share.
 // ChannelSet (apponly.proto): 1 repeated ChannelSettings, 2 Config.LoRaConfig. ChannelSettings (channel.proto): 1 channel_num, 2 psk, 3 name, 4 id (fixed32),
 // 5 uplink_enabled, 6 downlink_enabled, 7 module_settings {1 position_precision, 2 is_muted}. LoRaConfig (config.proto): 1 use_preset, 2 modem_preset,

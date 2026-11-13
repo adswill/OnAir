@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OpenSky signal identifier telemetry. RxTelemetry::opensky, engine standard 324, active standard 323 (family 322). Receive only, no decoding: OpenSky's air interface is not published and the traffic is encrypted.
 #pragma once
 #include <cstdint>

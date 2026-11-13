@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hardware plumbing for a KrakenSDR / KerberosSDR hub: N RTL-SDR dongles on one USB hub that share one clock and one switchable noise source.
 // Pure logic behind small interfaces (RtlLink, NoiseSwitch) so it is tested with fakes; the real RtlLink (librtlsdr) is makeNativeRtlLink() in
 // core/src/source/source_rtlsdr.cpp. Verified only against fakes: no hub has been connected.

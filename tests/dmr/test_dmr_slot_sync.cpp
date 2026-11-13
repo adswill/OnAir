@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR subscriber TX slot timing (dmr_slot_sync.h, TS 102 361-1 4.2 / 4.5 / 5.1.1): listen to a simulated repeater output, fit its TDMA frame from
 // the CACH reports of the receiver, key up with the lead the fit gives, and check where OnAir's own inbound bursts land: each burst centre must sit
 // on the centre of the outbound burst of the same inbound slot number plus 30 ms (offset channel timing), or of the other number (aligned), inside

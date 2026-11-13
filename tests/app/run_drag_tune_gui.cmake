@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Runs `onair --hidden --mute --drag-selftest` from a renamed copy of the program (its own data, config and user-defaults domain, deleted after):
 # mouse drags are injected on the spectrum (drag to tune, the scale pan, right and middle drag, Shift fine steps, the old Pan setting) and
 # the tuned frequency and the view are checked (app/gfx/plots.cpp dragTuneSelfTest). Nothing is drawn on the real screen, no sound plays.

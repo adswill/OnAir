@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Two-branch diversity combiner for narrowband signals heard by two radios tuned to the same frequency (two dongles, two antennas).
 //
 // Both inputs are complex baseband at the same nominal sample rate but come from free-running radios, so branch B differs from branch A by a

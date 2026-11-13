@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers receiver (cell_rx.h): blocks of input, carriers found in the spectrum, cells searched and their broadcast decoded.
 #include "dect2/common/thread_name.h"
 #include "dect2/wirecap/wire.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ham.decode from the HF digital modes and the CW skimmer (ham_events_ui.cpp; core: dect2/ham/ham_events.h)
 #pragma once
 struct App;

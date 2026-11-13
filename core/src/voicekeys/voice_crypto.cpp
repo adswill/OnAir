@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Standard cipher primitives (see voice_crypto.h). Public specifications: RC4 (public description), DES FIPS 46-3,
 // OFB SP 800-38A, AES FIPS 197 (via dect2::meshcrypto). No key search, recovery or brute force lives here.
 #include "dect2/voicekeys/voice_crypto.h"

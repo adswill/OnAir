@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // #439: a video file sent as analog TV played as fast as the decoder ran, not at its own speed. It now follows the signal's clock. The demo programme is used
 // as the file: its picture shows its frame number (mod 25) as a bar at the bottom, so the frame on show can be read back at 50 and 59.94 fields a second, with
 // a generator running far faster than real time, through the file's loop, and while the clock stands still.

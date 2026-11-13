@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Flipper Zero Sub-GHz chat receiver (the "Enhanced Sub-GHz Chat" app and the firmware's CLI chat, esubghz_proto.h). The channel is mixed to
 // DC, low-passed and decimated to about 200 ksps; an energy detector marks each packet's burst, which is FM demodulated, corrected for the
 // carrier offset measured on the preamble, sampled at the bit timing found on the preamble, searched for the sync word (both frequency

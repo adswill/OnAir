@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP burst PHY: clean loopback of every profile, AWGN at threshold + 3 dB with carrier offset and random start, header at -6 dB, ACK burst,
 // preamble false alarms on noise, the radio-rate resampler, two bursts in one stream.
 #include "kapp_test_util.h"

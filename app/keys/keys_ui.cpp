@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Keys window (Tools > Voice keys; also reached from the "encrypted: add your key" text of every voice panel): the user's own
 // decryption keys for digital voice (docs/KEYS.md). Nothing is decrypted until the first-use notice is accepted. The window never
 // writes a key to a log or the console; keys show masked unless the user presses Reveal; the logic is in keys_logic.*.

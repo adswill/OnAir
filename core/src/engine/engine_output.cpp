@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What the engine hands out after decoding: the per-frame PLP callback (onPlp, with its lock-timing counters), the EPG and
 // BB statistics getters, and the latest receiver telemetry and spectrum frame.
 #include "dect2/engine/engine.h"

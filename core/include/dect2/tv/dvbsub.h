@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB subtitles (ETSI EN 300 743): the segments of one subtitling PID (PES private stream 1, data_identifier 0x20) decoded into bitmaps -
 // page composition, region composition, CLUT definition, object data (2/4/8-bit run-length pixel strings, map tables) and display
 // definition - with the presentation time of every display set, so the player's clock decides when it is shown.

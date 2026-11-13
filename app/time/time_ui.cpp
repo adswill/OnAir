@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Time signal screens: the received time in large type with the date, time zone, summer time, leap second and DUT1 flags, the computer
 // clock against it (after the path delay from the shared receiver position), the seconds tick, the symbols of the minute, the decoded
 // minute log, level / SNR / tick / offset histories, and the station and frequency pickers. LF stations need a radio that tunes below

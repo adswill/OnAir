@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB receiver as the engine uses it: feed() runs on one thread while another reads telemetry, resets the receiver and changes the number of decoder
 // threads. Meant for a thread sanitiser build as much as for the check itself: the signal must still lock before the reset and again after it, the telemetry
 // sequence must only grow, and the packets must stay right.

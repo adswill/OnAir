@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Offline aircraft identity from the 24-bit ICAO address: the country (ICAO Annex 10 Vol III allocation blocks), the registration where the
 // address is a fixed function of it (US N-numbers, Canada C-Fxxx / C-Gxxx, Australia VH-xxx), the type from the emitter category, and a
 // user-supplied database (readsb / tar1090 aircraft CSV). No network, no photos.

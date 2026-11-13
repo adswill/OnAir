@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Receive beamforming for a coherent N-channel array (KrakenSDR / KerberosSDR, or a recorded N-channel file): delay-and-sum, MVDR (Capon,
 // diagonal loading) and LCMV (look direction plus null constraints) weights for a chosen azimuth (and elevation on a 3D array), the polar
 // beam pattern, measured gain / null depth, auto-steering to the strongest MUSIC peak, and a bank of up to four simultaneous beams that is

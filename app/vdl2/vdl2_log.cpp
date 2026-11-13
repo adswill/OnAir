@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "vdl2_log.h"
 #include "../state/results_export.h"
 #include "dect2/common/time_fmt.h"

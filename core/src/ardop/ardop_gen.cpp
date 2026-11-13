@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ARDOP test signal (see ardop_gen.h).
 #include "dect2/ardop/ardop_gen.h"
 #include "dect2/ardop/ardop_proto.h"

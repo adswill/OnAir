@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Played list (round 4 #12): tags repeated every few seconds for the whole song are one entry; title before artist (and the other way) merge;
 // two stations at once; the same song an hour later is a new entry; empty tags; search; the CSV round trip with commas and quotes.
 #include "dect2/dab/played_log.h"

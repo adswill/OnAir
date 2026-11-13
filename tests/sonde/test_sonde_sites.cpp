@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde sites (round 4 #39): two launches 2 km apart are one site, one 40 km away another, a sonde first heard at 9 km is no launch,
 // landings after a burst go to their site (not one still in the air, not one without a burst), renaming, the saved text.
 #include "dect2/sonde/sonde_sites.h"

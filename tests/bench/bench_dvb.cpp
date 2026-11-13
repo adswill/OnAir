@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB family cost per stage: each TV standard's built-in test signal, at the radio rate a user runs it at, straight through its receiver
 // (no Engine, no pacing), with the per-stage CPU accounting of dect2/common/stage_prof.h switched on.
 //

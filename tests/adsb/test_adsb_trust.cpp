@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Per-aircraft trust score and the ACAS conflict timeline. All signals here are simulated: a learned level curve from a synthetic fleet with
 // random antenna gain per aircraft, then ghosts of each kind; DF16 and TC 28 advisories through the real tracker and parser.
 #include "dect2/adsb/adsb_encode.h"

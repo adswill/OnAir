@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What a TETRA listener chooses (issue #267): the single-carrier mode decodes only the 25 kHz channel at the dial frequency, so a second
 // cell in the span is not decoded (no second copy of a call, a capture decoded in a fraction of the time); the default still finds both
 // cells. The timeslot and carrier choices are accepted and the playing stream is reported as none on a cell without clear voice.

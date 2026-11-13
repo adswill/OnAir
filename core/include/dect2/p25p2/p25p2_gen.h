@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 2 test signal: a base station downlink of two logical channels made of the bursts of p25p2_proto.h, differential QPSK through a root
 // raised cosine, with a carrier offset and noise. The voice frames are a known pattern (p25p2VoiceBits): there is no free AMBE+2 encoder.
 // The superframe (which slots carry the sync word, the I-ISCH, the order of 4V / 2V / SACCH bursts of each channel), the voice and ESS places and

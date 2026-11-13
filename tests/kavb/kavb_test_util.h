@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared helpers of the KAVB tests: seeded random draws, a channel (noise, carrier offset, phase, fractional delay, echo) and a one-frame run.
 #pragma once
 #include "dect2/kavb/kavb_phy.h"

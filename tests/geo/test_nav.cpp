@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Car navigation maths (core/include/dect2/geo/nav.h): route progress, off-route, arrival, dead reckoning, GPX round trips.
 #include "dect2/geo/nav.h"
 #include <cstdio>

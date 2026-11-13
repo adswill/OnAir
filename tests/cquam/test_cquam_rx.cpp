@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C-QUAM receiver on the test signal: stereo found through the pilot and separated into the right channels, plain AM stays mono, noise
 // alone gives nothing, and the same under tuning error, noise and fading.
 #include "dect2/cquam/cquam_gen.h"

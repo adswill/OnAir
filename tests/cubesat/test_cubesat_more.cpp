@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The 3.9 CubeSat framings (cubesat_more.h): U482C, CCSDS concatenated, USP, NGHam, Mobitex / BEESAT.
 //  - the convolutional code against the AO-40 decoder (verified on a real FUNcube recording), Reed-Solomon with 16 / 32 parity against rsParity
 //  - gr-satellites' own qa vectors: the USP long and short frames (qa_usp_deframer.py) and a real BEESAT-9 Mobitex-NX packet

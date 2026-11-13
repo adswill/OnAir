@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CIS (Russian) HF data modes: demodulators, frame readers, detectors and test generators. Receive only.
 // Written from public descriptions only (sigidwiki, Wavecom decoder notes, SHOC mode sheets, the Rivet decoder's notes on CIS 36-50; see
 // docs/CIS-HF-3.9.md). What each kind reads:

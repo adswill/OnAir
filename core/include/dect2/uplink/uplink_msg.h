@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode S uplink (1030 MHz) message layer: the uplink formats UF0, 4, 5, 11, 16, 20, 21 and 24, their fields, and the address / parity field.
 // Source: ICAO Annex 10 Vol. IV 3.1.2 (formats, fields, codes) and 4.3.8.4 (ACAS resolution messages in UF16). Bit numbers are the standard's
 // (bit 1 is the first, most significant bit). The AP field is the 24 parity bits XOR the address (all ones for the UF11 all-call), so the

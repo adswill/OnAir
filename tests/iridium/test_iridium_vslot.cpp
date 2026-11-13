@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice slot content (frame layer): the toolkit's order CRC24 -> RS6 -> RS8 -> zero-sum -> vocoder. Known answers for the two Reed-Solomon codes
 // come from the toolkit's own rs.py / rs6.py parameters run through the reedsolo library (rs_encode_msg); a vocoder frame must stay "VOC"
 // (what the codec gets), the data kinds must not, and data slots must never reach the codec.

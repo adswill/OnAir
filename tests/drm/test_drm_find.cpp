@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM Whole span: the finder on a wide capture of generated DRM signals, an AM station, an SSB-like band of noise, and noise; receivers per confirmed signal through the
 // engine's bank. All signals are simulated (drm_gen): no wide recording of real DRM on hand.
 #include "../data/drm/testkit.h"

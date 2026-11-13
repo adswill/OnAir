@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A sensor's health, learned from what it sends: its reporting interval (a repeat within 3 s is the same transmission), silence against that interval, a reading far from its own
 // recent values, two sensors sharing an id (readings that keep jumping between two levels), and a battery voltage that is falling.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) MAC frames, receive side and test-signal builders (halow_mac.h): S1G beacon, management beacon, probe request and response,
 // data frames, the information elements a monitor lists (SSID, RSN, S1G Operation and Capabilities, TIM, Country, power, rates, RAW, TWT) and the FCS.
 // IEEE 802.11-2020 clause 9 (frame formats: 9.3.4 S1G beacon, 9.4.2 information elements).

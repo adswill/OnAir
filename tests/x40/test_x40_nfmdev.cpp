@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Narrowband FM deviation and CTCSS meter: voice-like audio (a sum of tones with a few levels) plus a CTCSS tone through an FM modulator, with a carrier offset, noise, and over-deviation; the voice peak
 // deviation, the CTCSS frequency (and the nearest standard tone), its deviation and the offset are compared with the generator. Simulated signals only.
 #include "x40_gen3.h"

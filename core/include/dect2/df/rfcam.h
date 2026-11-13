@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "RF camera": the spatial spectrum of a coherent multi-channel receiver (df.h) laid over a camera frame or a panorama picture as a heat map.
 // Pure maths, no image decoding and no I/O: the angle <-> pixel mapping with a two-point field-of-view calibration, a sub-band split of the
 // capture (so every transmitter keeps its own frequency and a band filter can pick some), the heat map blend and the peak marker layout.

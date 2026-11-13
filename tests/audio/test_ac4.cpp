@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AC-4 support of the ATSC 3.0 receiver (core/src/audio/ac4_dec.cpp, ac4_xcode.cpp, the AC-4 branch of atsc3_remux.cpp).
 //   test_ac4 [dir-with-a-stock-libavcodec-and-libavutil]
 // There is no real AC-4 stream and no AC-4 decoder in this repository, so what is checked is everything around the decoder:

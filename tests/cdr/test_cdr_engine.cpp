@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR through the engine (setStandard(24)): the synthetic source plays the default test signal (transmission mode 1, spectrum mode 1,
 // QPSK 3/4) at 25 dB; the telemetry that latestRx() reports must show the multiplex: network, three services, text, no LDPC failures.
 // Real time, at most about 6 s.

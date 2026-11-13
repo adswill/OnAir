@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB announcements (ETSI EN 300 401 clause 8.1.6): which announcement, if any, a listener of a service should be switched to.
 #pragma once
 #include "dab_tel.h"

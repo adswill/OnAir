@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C test signal: the generator the synthetic source plays and inmctool writes to a file. Nothing is transmitted.
 //
 // What it makes: the NCS common channel of the Indian Ocean Region: continuous BPSK at 1200 symbols/s (root raised cosine, roll-off 1),

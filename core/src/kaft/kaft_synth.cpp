@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT test signal for the engine's synthetic source (see kaft_gen.h).
 #include "dect2/kaft/kaft_gen.h"
 #include "dect2/kaft/kaft_txgen.h"

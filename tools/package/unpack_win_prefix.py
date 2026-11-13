@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Unpacks the Windows dependency prefix (tools/release/upload_win_prefix.sh) and points its pkg-config and CMake files at the new folder.
 
   unpack_win_prefix.py <tarball> <destination, no spaces>

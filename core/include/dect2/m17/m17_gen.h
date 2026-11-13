@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // M17 test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A schedule of transmissions, each a full M17 burst: preamble, LSF, stream or packet frames, end-of-transmission marker; 4FSK at 4800

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT for the engine: IQ in, files out. kaft::FrameReceiver finds the frames of all three widths at once; the control frames and the data bursts go to a
 // kaft::Receiver session (OPEN, START, data, FINISH), and a file whose hash checks is written to the folder the user chose. This receiver only listens: it
 // never sends ACK, ACCEPT or VERIFIED (OnAir has no half-duplex turnaround), so a sender that waits for replies cannot finish through it; the transmit

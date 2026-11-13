@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shortwave mode, the routing part (pure logic: no DSP, no GUI, no clock, no radio).
 //
 // The Shortwave mode is the general receiver (AM / USB / LSB / CW listening on a click-to-tune channel) plus a strip of one-click

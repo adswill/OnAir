@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Graphics back end behind the UI: Metal (macOS) or OpenGL 3 (everything else, and optionally macOS).
 #pragma once
 #include "imgui.h"

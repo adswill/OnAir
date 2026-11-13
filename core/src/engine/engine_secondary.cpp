@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The second mode that runs at the same time (setSecondary): capture shifter, start/stop/refresh of the secondary receiver and
 // its thread, and applySubMode().
 #include "dect2/engine/engine.h"

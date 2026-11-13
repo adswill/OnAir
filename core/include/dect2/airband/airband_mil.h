@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The military UHF air band (225.000 - 399.975 MHz, AM, 25 kHz channels: 7000 channels) for the airband mode: the band limits, the raster
 // and the few frequencies that are published for common use. Everything else in the band is assigned per country, base and exercise; the
 // user adds those channels by hand, from the band watch or from a fast scan ("Military UHF air 225-400" profile).

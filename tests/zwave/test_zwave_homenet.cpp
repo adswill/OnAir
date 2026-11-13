@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Home network health (homenet_health.h): a simulated Z-Wave network (controller 1, nodes 2-5) with lost frames, retries and a fading node.
 #include "dect2/zwave/homenet_health.h"
 #include <random>

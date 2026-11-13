@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench receiver: a level meter on the radio's samples. The analysis itself is done on recordings by the classes of wb_*.h,
 // which need no radio and no engine.
 #pragma once

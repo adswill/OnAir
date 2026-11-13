@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The pure parts of the per-mode "Auto setup" and "Reset this mode" buttons (app/ui/kit/mode_actions.cpp), tested by tests/app/test_mode_actions.cpp.
 // Auto setup = gain (Auto gain), bandwidth and sample rate (the mode's own again) and the fine frequency (this file): one click, nothing to type.
 #pragma once

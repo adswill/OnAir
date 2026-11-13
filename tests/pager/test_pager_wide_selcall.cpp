@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole-span pagers + five-tone selective calls: a CCIR call on an FM carrier inside a 2 Msps capture is read by that carrier's receiver
 // (setPagerOptions with selcall on), stamped with the carrier's frequency, and not decoded at all with the option off.
 #include "dect2/engine/modes.h"

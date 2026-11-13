@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Datawell Waverider buoy HF link monitor: receive only. Datawell wave buoys send their data to a shore receiver on HF (25.5 - 35.5 MHz, up
 // to 45 MHz on request) as FSK heard in USB: 2FSK ("HXV" format: DWR-MkIII, DWR-G, WR-SG; 81.92 bit/s) or 4FSK ("HVA" format: DWR4 with the
 // acoustic current meter option; 163.84 bit/s), both at 81.92 symbols per second (Datawell RX-C4 manual; tones measured on the sigidwiki recordings).

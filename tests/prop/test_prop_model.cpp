@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Propagation model regression suite: synthetic known cases from public formulas and textbook values.
 //  free space (P.525), two-ray / plane earth and the radio horizon, knife-edge (P.526), smooth-earth diffraction continuity, Okumura-Hata
 //  open-area agreement, a broad P.1546-style band, troposcatter (P.452), clutter (P.2108), rain (P.838), gases, HF ground wave (P.368

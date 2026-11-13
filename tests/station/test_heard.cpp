@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Search everything heard: the query parser and the grouping over the message database.
 #include "dect2/station/heard.h"
 #include "dect2/track/track_hub.h"

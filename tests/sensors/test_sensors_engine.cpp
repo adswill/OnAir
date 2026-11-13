@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-GHz sensors through the engine (setStandard(243)): the synthetic source plays Nexus-type sensors and one unknown PWM burst, the receiver reports through latestRx().
 #include "dect2/sensors/sensors_rx.h"
 #include "dect2/engine/engine.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / Packet protocol layers: CRC, bit stuffing and HDLC, AX.25 frames, APRS parsing. Pure functions, no signal; instant.
 #include "dect2/packet/packet_aprs.h"
 #include "dect2/packet/packet_ax25.h"

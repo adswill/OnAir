@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FPV channel plans: the tables, names and the nearest-channel lookup.
 #include "dect2/fpv/fpv_chan.h"
 #include <cmath>

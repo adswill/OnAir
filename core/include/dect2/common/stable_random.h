@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // std::normal_distribution and std::uniform_real_distribution that give the same numbers on every platform.
 //
 // The standard fixes the engines (std::mt19937 is the same everywhere) but not the distributions: libc++ (macOS) and libstdc++ (Linux, MinGW) turn the

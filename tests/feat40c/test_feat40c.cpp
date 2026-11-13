@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 Lane B group 3: AIS coverage / name cache, airband ATIS tracker, pager keywords and groups, callsigns in text, mode guess, spot summary,
 // ISM burst classifier. Simulated data only (no recorded signals).
 #include "dect2/ais/ais_coverage.h"

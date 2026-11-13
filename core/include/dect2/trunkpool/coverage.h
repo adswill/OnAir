@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Single-radio trunking (docs/TRUNK1-3.9.md): which voice channels one capture can hold together with the control channel, the span a
 // channel outside it would need, the channels a site has used (learned from its grants), and the centre and sample rate that cover the
 // control channel and the most used voice channels within what the radio can deliver. Plain logic, no DSP; shared by every trunking mode.

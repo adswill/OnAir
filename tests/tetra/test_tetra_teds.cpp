@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA TEDS (3.9): the extended services broadcast, pi/8-D8PSK slots and their signalling, and the QAM carrier identifier, on the test
 // signal only (no TEDS recording was available: simulated only).
 #include "dect2/tetra/tetra_gen.h"

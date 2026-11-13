@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Cross-compile OnAir for Windows x64 on macOS/Linux with mingw-w64 and make a zip and an installer.
 #   tools/package/cross_deps_windows.sh   (once: builds FFmpeg, GLFW, libusb and the radio libraries for Windows into ~/onair-win-prefix)
 #   tools/package/make_windows_cross.sh

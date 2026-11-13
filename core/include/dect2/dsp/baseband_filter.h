@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // User-selectable baseband (channel) filter shared by the modes: bandwidth, window shape, transition width and centre offset, a design
 // routine that gives the FIR taps, the response for the live plot, a text form for the preferences, and the per-mode presets.
 // A configuration with enabled == false means "the mode's own filter, exactly as before"; nothing changes until the user opens it.

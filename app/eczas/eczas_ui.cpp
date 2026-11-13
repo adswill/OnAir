@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // e-Czas screens (Poland's national time service, 225 kHz long wave, GUM): the time and date of the last time packet with the local offset, the
 // summer-time and leap-second flags, the transmitter state, lock / sync / time lamps, the carrier level and SNR, the computer clock against the
 // received time (and its history), the frame counters with the error counts, the phase plot of the carrier and the signal the bit slicer sees,

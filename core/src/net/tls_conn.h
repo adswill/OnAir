@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TLS for the remote-control API server (headless mode): a thin layer over OpenSSL, compiled only when the build has it (DECT2_TLS). Without it available()
 // is false and the server refuses a certificate in its config with a clear message (put a reverse proxy in front instead). Mostly server side (makeClientCtx / connect give the small HTTPS client of the OnAir Web directory heartbeat): one context
 // from a certificate and key file, one Conn per accepted socket, used by the connection's own thread.

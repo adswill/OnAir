@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Minimal polynomials of the DVB-T2 BCH generators (EN 302 755 section 6.1.1, Tables 6a and 6b), coefficient of x^0 first: the generator of a code with
 //! t errors is the product of the first t of them. `NORMAL` is for the 64800 bit frames (field GF(2^16), 17 coefficients each), `SHORT` for the 16200 bit
 //! frames (GF(2^14), 15 coefficients each).

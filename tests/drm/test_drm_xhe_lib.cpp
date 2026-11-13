@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Optional xHE-AAC decoder plug-in: the symbol loader and the decode session with a stub library, and the xHE-AAC super frame parser with a
 // hand built frame. A real libfdk-aac and a real DRM xHE-AAC recording are NOT used here, so the bitstream itself is not verified by this test.
 #include "dect2/drm/drm_audio.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital voice auto-detection (autodet.h): which land-mobile system a narrowband signal is, from its frame syncs.
 //
 // Each signal is brought to baseband twice (48 kHz class for 2400 / 4800 / 6000 Bd, 144 kHz class for TETRA's 18000 Bd) and turned into

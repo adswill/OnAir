@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Packet radio with forward error correction, alongside plain AX.25 on the same demodulator: FX.25 (TAPR, Stensby) and IL2P (N. Carrillo KK4HEJ, draft 0.6). Tags, parity sizes and the
 // FX.25 block layout were checked against Dire Wolf's source (GPL-2+), IL2P against the v0.6 specification; the scrambler initial values come from Dire Wolf.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 display resolution (docs/WATERFALL-4.0.md), the screen side: the pixel-exact mapping of history columns and bins onto pixels (a
 // one-column signal lands in exactly one pixel at any zoom and pan; coarse columns become sharp steps with no level made up), the zoom
 // history beside the main one (rows shift on a pan of the same shape, start again on a new shape or a retune, missing rows fall back to the

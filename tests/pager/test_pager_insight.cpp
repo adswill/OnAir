@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pager insights (docs/SMART5-pager-3.9.md) and the insight hub that feeds every analyser from the automation events.
 // Simulated page streams only: steady automatic pages with jitter, random dispatch pages, bursts, a channel going silent.
 #include "dect2/insight/hub.h"

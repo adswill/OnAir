@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT cell search and decode (nbiot_phy.h): NPSS detection, timing and carrier / clock offset, NSSS (cell id), NPBCH (MIB-NB), SIB1-NB.
 #include "dect2/nbiot/nbiot_phy.h"
 #include "dect2/cell/cell_dsp.h"

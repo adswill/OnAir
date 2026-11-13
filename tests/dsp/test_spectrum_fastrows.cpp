@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fast waterfall rows (SpectrumAnalyzer::setFastRows): the row count and spacing are exact, keyed signals show up where they are in time,
 // the level agrees with the ordinary frames, the queue is bounded, and the frames themselves are untouched.
 #include "dect2/dsp/spectrum.h"

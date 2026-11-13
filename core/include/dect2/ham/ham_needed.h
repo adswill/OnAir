@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Worked-before and needed (4.0): for a station heard or spotted, what it would add to the log: a new DXCC entity, the entity on a new band or
 // mode class, a new CQ or ITU zone, a new US state, a new grid square, a new WPX prefix, or a call not yet worked on this band and mode. Also
 // the alert rules (needed entity / zone / state / grid / prefix, a watch list of calls with * and ? wildcards) with a quiet time per station.

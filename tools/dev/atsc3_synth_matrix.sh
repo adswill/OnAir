@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Runs the ATSC 3.0 test signal (core/src/atsc3/atsc3_synth.cpp) through the real receiver over the whole matrix: output rates 6.144, 8, 10 and 20 Msps, SNR 25
 # and 15 dB, carrier offset +-3 kHz, clock offset +-20 ppm, generator chunks of 1, 7, 4096 and 65536 samples. Prints one line per case.
 #   tools/dev/atsc3_synth_matrix.sh [seconds per case, default 20]       (needs the normal build in build/, or BUILD=dir)

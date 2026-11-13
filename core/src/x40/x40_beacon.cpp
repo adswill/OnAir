@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Beacon propagation monitor (50 / 144 / 432 MHz and 28 MHz beacons, CW or a steady carrier): one narrow beacon is followed and what the path does to it is
 // classified from three measurements per spectrum: the level over the noise, the Doppler spread of the line (aurora scatter smears a CW line over tens to hundreds
 // of Hz, 'a buzz') and the slow swing of the level (sporadic-E and tropospheric fading). Classes: steady, fading, aurora-like, none. A change of class is logged.

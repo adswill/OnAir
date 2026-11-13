@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB receiver against noise: for six profiles the numbered test packets must come out clean 1 dB above the C/N where this receiver starts to lose
 // codewords (measured with `dtmbtool sweep`, see docs/modes/dtmb.md) and no wrong packet may ever come out, also below that point. The thresholds
 // are this receiver's, not the standard's: they sit 1 to 3 dB below the C/N values that planning documents give (3 / 5 / 7 dB for 4QAM at rate

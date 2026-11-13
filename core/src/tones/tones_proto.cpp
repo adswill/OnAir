@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tone signalling tables: see tones_proto.h.
 #include "dect2/tones/tones_proto.h"
 #include <algorithm>

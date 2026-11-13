@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One-button Scan and Identify (specx::proposeAll / proposeOne): DMR, NXDN96 and P25 together in one wide capture at several offsets (off the
 // centre, a carrier error each) and noise levels. Each must come back at its frequency with the right name and a mode that opens it; noise alone
 // must give nothing sure.

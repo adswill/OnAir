@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Telephone-style FSK modems on a radio channel: Bell 103 (originate, answer), V.21 (channels 1 and 2), V.23 mode 2 and Bell 202, as audio tones in the upper or the lower sideband. Asynchronous bytes (8N1 and 8N2) with a
 // dial error of up to +-30 Hz, a clock error of 1 %, noise and gaps between the bytes; the standard is named from the two tones, the bytes are compared with what was sent. Noise alone, a single tone,
 // a tone pair that is not a standard and a burst with the wrong baud rate give no message. Simulated signals only: no recording of these modems was available.

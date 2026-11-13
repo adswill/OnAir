@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS receiver, the measurement epoch: pseudoranges, the position solution, the clock estimate and the sky prediction.
 #include "gnss_rx_impl.h"
 #include "dect2/automation/engine.h"

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Decode a library of real recordings with dect2cli and check what comes out (docs/REAL-SIGNALS.md, the hook for CI).
 
   signal_library.py --cli path/to/dect2cli [--manifest tests/real/signal_library.txt]

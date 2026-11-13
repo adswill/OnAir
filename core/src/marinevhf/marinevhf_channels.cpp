@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF channel plan: see marinevhf_channels.h. The table is data/bandplans/marine_vhf_channels.csv, compiled in through the generated
 // marinevhf_data.inc (CMakeLists.txt).
 #include "dect2/marinevhf/marinevhf_channels.h"

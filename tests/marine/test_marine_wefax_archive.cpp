@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // WEFAX archive rules: names, side-car JSON, station match, oldest-first cleanup that spares starred charts, sort/search, thumbnails.
 #include "dect2/marine/wefax_archive.h"
 #include "dect2/marine/marine_wefax_stations.h"

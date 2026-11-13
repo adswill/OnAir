@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Elektro-L / Arktika-M GGAK (heliogeophysical) L-band downlink: PCM/PM, 5 ksym/s, 1693 MHz.
 // 224-byte CADU, CCSDS ASM 0x1ACFFC1D, no convolutional code and no Reed-Solomon (the frame is sent twice).
 // Format from the public GGAK-Worky notes (SatDump / amateur reverse engineering). Receive only.

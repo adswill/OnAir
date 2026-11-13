@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF utility FSK / MFSK text modes (receive only and test generators). Written from public descriptions; each decoder reads only what those describe:
 //   ARQ-E and ARQ-N (ITA2-P, 7 bit words), AUTOSPEC and SPREAD 11/21/51 (10 bit Bauer code), G-TOR (Golay, interleaver, CRC),
 //   DCF49 / DCF39 EFR teleswitch (200 Bd, DIN 19244 frames; the Semagyr-TOP and Versacom content stays hex), Piccolo Mk VI and Coquelet-8 (tone pairs).

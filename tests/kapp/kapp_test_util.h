@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared helpers of the KAPP tests: seeded random draws (kris XorShift64, Box-Muller) and a channel (noise, carrier offset, start offset).
 #pragma once
 #include "dect2/kapp/kapp_arq.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // plane-alert-db import: see plane_alert.h.
 #include "dect2/watchlist/plane_alert.h"
 #include <algorithm>

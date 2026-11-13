@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LTE band of a cell (#164): bands overlap, so a frequency alone does not name the band. Band 66 and 71 cells were shown as 64 (SIB1's
 // freqBandIndicator is 64 for every band above 64), and 4, 13, 14 as 1, 20, 28 (the first band that holds the frequency was shown as if known).
 // Values from 36.101 Table 5.7.3-1: N_DL = N_Offs-DL + 10 (F_DL - F_DL_low).

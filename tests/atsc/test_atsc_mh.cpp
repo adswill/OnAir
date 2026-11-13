@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ATSC-M/H presence detector on simulated transport streams: every slot pattern, lost packets, and streams that must not trigger it.
 #include "dect2/atsc/atsc_mh.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small ASCII string helpers shared by parsers and exporters: case folding, trimming, splitting,
 // hex encoding and JSON string escaping. All are locale-independent in the "C" locale the programs run in
 // (they call tolower/toupper/isspace on unsigned chars exactly as the per-file copies they replace did).

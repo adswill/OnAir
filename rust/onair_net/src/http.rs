@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The head of an HTTP/1.1 request as the remote-control API reads it (RFC 9112 section 3): request line, header fields, and the checks that decide whether a body
 //! may follow. Works on the bytes the caller has gathered; nothing is allocated, the results are ranges of the input.
 use crate::Span;

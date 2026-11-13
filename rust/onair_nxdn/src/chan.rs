@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The NXDN coded channels (NXDN TS 1-A section 4.4): SACCH, FACCH1 and CAC. Information bits plus CRC plus four tail zeros go through the K=5
 //! convolutional code (G1 = 1 + D^3 + D^4, G2 = 1 + D + D^2 + D^4), are punctured, and block interleaved; decoding is a soft Viterbi
 //! (positive soft value = a 1) followed by the CRC check. Fixed buffers, no allocation.

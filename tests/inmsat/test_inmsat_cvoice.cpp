@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat all-carriers mode, voice: two Aero C (voice) channels in ONE wide capture (2.4 Msps, noise, carrier offsets), found by the carrier
 // detector, demodulated by the manager's C-channel receivers, and their coded voice frames handed to the mixer with the call details (aircraft
 // address, ground station). A fake decoder stands in for the user-installed AMBE codec. Synthetic signals made from the framing that was checked

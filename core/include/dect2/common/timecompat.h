@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // gmtime_r / localtime_r under one name on POSIX and Windows.
 #pragma once
 #include <chrono>

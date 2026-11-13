@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: working on a recovered bit stream (one bit per byte, 0 or 1): the usual line-code and bit-order transforms, text views,
 // pattern search and export.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Product cadence watchdog (see product_cadence.h).
 #include "dect2/smart5/product_cadence.h"
 #include <algorithm>

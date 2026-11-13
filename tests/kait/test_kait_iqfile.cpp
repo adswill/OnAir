@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT through the transmit IQ-file sink (tx_iqfile.h): the burst is resampled to 1 Msps, written as a raw cf32 file, read back and decoded at that rate.
 #include "kait_test_util.h"
 #include "dect2/kapp/kapp_frame.h"

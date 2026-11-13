@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Build and test the project on Linux inside a container (needs Docker, for example via Colima on macOS).
 #   tools/dev/linux-test.sh                 build, then run the quick tests
 #   tools/dev/linux-test.sh all             build, then run every test

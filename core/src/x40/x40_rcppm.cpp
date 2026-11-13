@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RC model transmitters, PPM frames (26 / 27 / 35 / 40 / 72 MHz, AM or FM): the channel values of the frame. The transmitter keys its carrier
 // (AM) or shifts it (FM) for a short pulse before each channel; the time from one pulse to the next is that channel (about 1.0 to 2.0 ms, 1.5 ms
 // at centre), and one long gap (the sync, more than 3.5 ms) closes a frame of 18 to 25 ms. The pulse is taken as the state the carrier spends

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Time signal receiver: DCF77, MSF, WWVB, JJY (LF), WWV / WWVH and CHU (HF). It finds the seconds, reads the minute frames (time_proto.h),
 // and compares the received time, after the path delay from the receiver position, with the computer's clock.
 //

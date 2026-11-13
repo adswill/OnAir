@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CIS HF modes: every decoder / identifier against its generator, with carrier offsets, noise, a sample clock error and the
 // other CIS signals (each identifier must stay quiet on the others). Simulated only: no real recording went through this test.
 #include "dect2/cishf/cishf_dsp.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM census: carriers with a known modulation at known places in one wide capture: each must be found on the raster and classified, a fading one flagged,
 // an interfered sideband named; a bare spur must not read as a station.
 #include "dect2/general/am_census.h"

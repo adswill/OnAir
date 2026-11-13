@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JPEG 2000 (ISO 15444-1) decoder for the pictures of the GK-2A xRIT files (lossless, reversible 5/3, one component). Written from the
 // standard; no third-party code. Also handles the 9/7 irreversible transform, several tiles, layers and the five progression orders.
 // Not handled: the selective arithmetic-coding bypass style, packed packet headers (PPM / PPT), region-of-interest shifts. The decoder

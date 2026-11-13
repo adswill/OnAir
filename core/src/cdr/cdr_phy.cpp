@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR physical layer building blocks (see cdr_defs.h); clause and table numbers refer to GY/T 268.1-2013 and GY/T 268.2-2013.
 #include "dect2/cdr/cdr_defs.h"
 #include "dect2/cdr/cdr_ldpc.h"

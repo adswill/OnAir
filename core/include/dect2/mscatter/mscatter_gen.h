@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor scatter test signal: a CW beacon (offset a little from the radio's centre, like a real radio's frequency error) in noise, and meteor echoes
 // that appear as short Doppler-shifted copies of it: sharp rise, exponential decay (underdense) and some long flat ones (overdense), now and then
 // a broadband interference burst that must not be counted. Nothing is transmitted: the samples only exist in memory or a file.

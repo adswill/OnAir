@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The 3D waterfall (app/gfx/wf3d.h, wf3d_draw.h): projection and its inverse, the camera, the decimation and the budget, the 3D history,
 // the painter's order, the mesh chunks, the ray pick, and the picture itself: the draw list that the app hands to the GPU is rasterised
 // here in software (in the order the GPU draws it) and checked by pixel. With an argument the picture is also written there as a PNG.

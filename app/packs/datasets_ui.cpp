@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Datasets window (Tools > Datasets): every reference dataset OnAir uses, with source, licence, version, size, status and the actions
 // import (file or folder, validated with a preview first), export, reset to bundled, and an opt-in update check.
 // Nothing is fetched by itself: "Check for updates" and "Install" are clicks, only from sources the user listed (shown right above the button),

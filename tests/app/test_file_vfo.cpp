@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tuning inside an IQ recording: app/gfx/file_vfo.h (mapping, clamp, edge note, spike, centre from the name) and the DC notch.
 #include "../../app/gfx/file_vfo.h"
 #include "dect2/dsp/dc_notch.h"

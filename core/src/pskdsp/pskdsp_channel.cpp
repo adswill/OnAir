@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator: find the strongest narrow signal in a block of samples (its carrier, widths and SNR), zooming in for narrow ones.
 #include "dect2/pskdsp/pskdsp.h"
 #include "dect2/signallab/signallab.h"

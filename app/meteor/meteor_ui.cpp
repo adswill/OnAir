@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor-M LRPT screens: the picture of the pass growing line by line (a colour composite, 123 by day or 125 with the infrared channel
 // at night, chosen from the channels sent, or one channel in grey), Save PNG and New picture; the frequency (137.900 / 137.100) and
 // the modulation; the receiver's state, the channels heard and the symbol constellation.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS interference detector: a clean band, a tone, narrowband interference, a sawtooth chirp (range, period, rate) and a wideband noise jammer at several levels and two input rates,
 // start and stop during a run, and 20 minutes of clean noise. Simulated signals only.
 #include "x40_gen2.h"

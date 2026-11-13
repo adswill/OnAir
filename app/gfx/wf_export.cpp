@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Waterfall export: the waterfall written as a sequence of PNG files (one per frame) into a folder the user picks.
 // Two ways to take the rows: Frames (a snapshot of the newest rows every few seconds) or Timelapse (one row every few
 // seconds, 512 rows to a frame). There is no video encoder here: the user turns the PNG files into a video with their own tool.

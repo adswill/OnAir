@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Adaptive notch for the radio's own spurs (clock harmonics, USB and switching-supply lines, LO leakage away from DC): narrow lines that sit at
 // the same place of the baseband for seconds. Measured from the signal itself (a 4096-point Hann FFT every 0.2 s, averaged by power, a line is a
 // local maximum 14 dB over its surroundings that is narrow and stays), cut with one complex one-pole notch per line (the line is mixed to DC, its mean

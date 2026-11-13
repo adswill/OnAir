@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The keyboard-mode half of the Ham view: see ham_kbd_ui.h.
 #include "ham_kbd_ui.h"
 #include "ham_station_ui.h"

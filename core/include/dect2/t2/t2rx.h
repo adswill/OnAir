@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T2 receiver front-end (phase 1): P1 detection and S1/S2 decoding, guard-interval detection,
 // symbol synchronisation, CFO / timing tracking and raw OFDM cell extraction.
 #pragma once

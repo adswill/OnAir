@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Direction finding: eigen solver, bearing accuracy vs SNR and array (RMS error table), two-source resolution, calibration recovery,
 // multipath handling, beamforming, circular statistics, sources (simulator, file, Kraken header, DoA line).
 #include "../common/tmp_path.h"

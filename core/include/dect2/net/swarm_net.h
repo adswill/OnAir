@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LAN swarm discovery over UDP multicast (see swarm.h for the rules). Opt-in: nothing is opened until start(). Announces go to 239.255.77.31:47831
 // with TTL 1 (a router never forwards them), sent only on private IPv4 interfaces, and received packets are accepted only from a private address on
 // the same subnet as one of this computer's interfaces. Carries the Announce text only: no IQ, no audio. POSIX only for now (Windows returns an error).

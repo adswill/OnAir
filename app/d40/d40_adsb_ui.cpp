@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B: track replay. Every position fix is kept (bounded) and a slider shows where every aircraft was up to the last hour back. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../ui/typography.h"

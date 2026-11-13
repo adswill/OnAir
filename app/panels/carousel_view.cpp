@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Carousels view of the TV data tab (DTMB and the DVB TV modes): the DSM-CC carousels with progress, their files, "Save all files", and a preview of the selected file:
 // text as text, PNG/JPEG as a picture, MHEG-5 files as the parsed object tree and, for a Scene, a static drawing (experimental: no real broadcast stream was available;
 // nothing is executed and the interactive links are not followed).

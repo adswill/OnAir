@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB receiver cost: CPU seconds per second of signal for DabReceiver::feed alone (the test signal is generated first, outside the timer),
 // at the DAB rate and at a wider input rate, with a hash of the access-unit bytes and the FIB counts to show the output did not change.
 // Usage: bench_dab [rateMsps=2.048] [seconds=8] [snrDb=30] [cfoHz=0]

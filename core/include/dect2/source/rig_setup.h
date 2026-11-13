@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helpers for setting up a Hamlib rig: the model list (searchable by name or number) and the connection choices (serial ports found on
 // this computer, baud rates). The list-building functions are pure so they can be tested; the scanning ones are thin.
 #pragma once

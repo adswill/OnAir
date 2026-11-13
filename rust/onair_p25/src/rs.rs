@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Reed-Solomon over GF(64) (x^6 + x + 1), shortened from (63, ...), as used by the P25 header, link control and encryption sync (TIA-102.BAAA annex):
 //! `sym[0]` is the first hexbit sent, the data first, then n - k parity symbols. Systematic encoder, Berlekamp-Massey decoder with Chien search and Forney
 //! error values, and a final syndrome check. Block length at most 63.

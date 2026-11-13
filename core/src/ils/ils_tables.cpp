@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ILS localizer / glide path frequency pairing, ICAO Annex 10 Volume I, 3.1.6.1 (checked against the list at sigidwiki.com).
 #include "dect2/ils/ils.h"
 #include <cmath>

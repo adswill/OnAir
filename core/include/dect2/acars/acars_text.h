@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Plain-text ACARS formats: position, OOOI, ETA, fuel, delay, fault and loadsheet messages by label and preamble. The layouts come from the published
 // plugin list and example messages of airframesio/acars-decoder-typescript (MIT, see THIRD_PARTY.md); no code of it is used. Airlines differ, so a text
 // that does not match every field of a layout gives nothing rather than half a reading.

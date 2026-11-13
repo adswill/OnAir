@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat (all carriers) screens: Carriers (a strip of the whole capture and the table of every carrier found, click one to focus it), Messages
 // (ACARS and ADS-C from all P channels, Inmarsat-C EGC), Aircraft (map and table from the position reports) and Voice (the C-channel calls, mute / solo,
 // recording, the user-installed codec). One Auto button restarts the search; the CPU budget and the Inmarsat-C switch are under Advanced.

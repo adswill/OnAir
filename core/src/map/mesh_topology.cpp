@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Passive mesh topology model shared by the Meshtastic, Zigbee / Thread and Z-Wave monitors (mesh_topology.h).
 #include "dect2/map/mesh_topology.h"
 #include <algorithm>

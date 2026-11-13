@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV receiver on weak signals: PAL, NTSC and SECAM test cards at carrier-to-noise ratios down to 5 dB. The line sync is found by folding the
 // signal at the line period (a matched filter over hundreds of lines) and followed by matched filters at the slots the loop expects, the picture
 // is cleaned by the temporal filter. The picture must lock, have the right raster and stay close to the card (mean luminance difference, 0..255);

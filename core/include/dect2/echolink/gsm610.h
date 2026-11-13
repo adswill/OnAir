@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM 06.10 full-rate speech codec (RPE-LTP, 13 kbit/s), the codec EchoLink carries in its RTP packets (payload type 3).
 // Written from the algorithm description of ETSI EN 300 961 (GSM 06.10): the 16-bit fixed-point arithmetic of its section 5 (add, mult_r,
 // norm, div ...), preprocessing, LPC analysis (autocorrelation, Schur, log-area ratios), short-term analysis / synthesis filters, long-term

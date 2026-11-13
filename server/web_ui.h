@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The page the headless server serves at GET /: a spectrum and waterfall, the receiver's controls, a Listen button and the telemetry, in one file with no
 // external script, font or image (the server's Content-Security-Policy allows none). It talks to the remote-control API of the same server.
 #pragma once

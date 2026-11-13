@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Manager of the Inmarsat all-carriers mode (inmsat_manager.h).
 #include "dect2/limits.h"
 #include "dect2/inmsat/inmsat_manager.h"

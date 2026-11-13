@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Persistent carrier finder: steady, drifting, weak, keyed and frequency-modulated signals in a wide capture; the list must hold the persistent narrow ones with their frequency, drift and
 // class, not the keyed one, and nothing on noise. Simulated signals only.
 #include "x40_gen3.h"

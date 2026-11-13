@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # OnAir release, one command: build every asset on GitHub, collect them, make a DRAFT release; --publish makes it public, and only after every asset is on the draft.
 #
 #   tools/release/release.sh 3.0.0 [options]

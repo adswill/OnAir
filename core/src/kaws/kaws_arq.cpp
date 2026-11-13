@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS ARQ. See kaws_arq.h.
 #include "dect2/kaws/kaws_arq.h"
 #include <algorithm>

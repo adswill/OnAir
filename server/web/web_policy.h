@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web: what the host lets web listeners use, and who may connect.
 //
 // SAFETY AND LEGAL DEFAULTS (hard rules; tests/server/test_web_safety.cpp checks them):

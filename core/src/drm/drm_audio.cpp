@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM audio: xHE-AAC super frames and the glue to libavcodec's USAC decoder (see drm_audio.h).
 #include "dect2/drm/drm_audio.h"
 #include "dect2/drm/drm_aac.h"

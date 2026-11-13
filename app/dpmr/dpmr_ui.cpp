@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dPMR screens: the current call (own / called id, call type, colour code, voice), the call log (voice, status, short messages, packet
 // data), the decoded headers and end frames, the PMR446 channel presets with "scan all 16", and a "?" about the mbelib library the
 // voice needs (docs/CODECS.md).

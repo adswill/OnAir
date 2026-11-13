@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by main.cpp, main_window.cpp, main_start.cpp and the main-window layout in ui/ (draw_ui.cpp, main_tabs.cpp):
 // the developer-flag state, the few globals and the helpers that were one file before.
 // Nothing in it changes behaviour: it only lets main.cpp be smaller.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CODAR / HF ocean radar test signal (see codar_gen.h).
 #include "dect2/codar/codar_gen.h"
 #include "dect2/codar/codar_rx.h"

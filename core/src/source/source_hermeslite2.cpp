@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hermes Lite 2 client: the HL2 speaks openHPSDR protocol 1 over UDP on port 1024 (HL2 wiki "Protocol"; XMC_SDR's HermesLite2_IO is the
 // reference this follows). Discovery: 63 bytes EF FE 02 0.., broadcast; each radio answers EF FE 02 (idle) or 03 (streaming), its MAC, its
 // gateware version, board id (6 for the HL2) and, at byte 0x13, how many receivers its gateware has. Start/stop: 64 bytes EF FE 04 01/00,

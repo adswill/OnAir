@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The daily digest: at a chosen local time one session.digest event with a line from every mode that has something to say ("312 aircraft,
 // farthest 412 km; 2 new DXCC; 41 Meteor lines lost"). The built-in recipe "Daily digest" sends it as a notification (or to ntfy / Telegram).
 #pragma once

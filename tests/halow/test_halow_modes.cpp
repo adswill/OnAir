@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow monitor behaviour above the single-PPDU sweeps (test_halow_sweep_*): sensitivity of every width, the whole schedule at 10 and 20 Msps
 // (8 and 16 MHz networks), the sample-rate limits, manual width selection, PPDUs that are only reported (streams, STBC, LDPC, A-MPDU, NDP), beamformed
 // long-preamble frames (channel from the D-LTF), invalid MCS / width combinations, the longest PSDU, a random mixture of everything over noise, and

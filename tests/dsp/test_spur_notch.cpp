@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Adaptive spur notch (dsp/spur_notch.h): a line is cut by 25 dB or more only when the same baseband place was a line under another radio centre (a real signal
 // moves with the tuner), inside the channel or outside it, with the wanted carrier untouched; persistence alone cuts nothing; a signal that moved with the tuner is
 // never cut; a clean capture comes out bit for bit. Then every mode of the registry with its own channel width, rate and tune offset (the engine's rule).

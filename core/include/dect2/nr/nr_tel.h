@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells receiver telemetry, shared by the receiver and the UI.
 // Only what an NR cell broadcasts to every phone is here: its physical cell id, its SS/PBCH blocks (beams) and its MIB.
 // The first members of NrTelemetry are copied into RxTelemetry (history plot, top bar): keep them and their meaning.

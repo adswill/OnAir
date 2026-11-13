@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium radio layer: known answers (unique words, DQPSK mapping, sync word rule) and single bursts through the detector and the
 // demodulator at the rates the radios offer.
 #include "dect2/iridium/iridium_frame.h"

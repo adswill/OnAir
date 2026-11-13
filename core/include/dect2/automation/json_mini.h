@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A small JSON reader and writer for the automation rules and recipes: bounded depth and size, no exceptions, UTF-8 passed through.
 #pragma once
 #include <cstdint>

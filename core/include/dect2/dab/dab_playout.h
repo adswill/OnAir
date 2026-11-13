@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB / DAB+ playout (docs/DAB-AUDIT.md): what goes to the audio output between the decoder and the sound card.
 //  - concealment: a lost access unit or MP2 frame is replaced by the last audio, repeated with a crossfade at every splice and faded out after
 //    kHoldFrames, so a short loss is not heard and a long one goes quiet without a click; audio that comes back is spliced in the same way

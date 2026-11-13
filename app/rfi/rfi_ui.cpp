@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The interference hunter (View > Interference hunter): watches a band for new interference and finds where it comes from.
 // Monitor: repeated sweeps against a learned baseline, alerts for new spurs and a rising noise floor, with a guess of the kind of source.
 // Walk: a loud / quiet meter while you carry the radio around, with a log of readings by time and position (docs/rfi-hunter.md).

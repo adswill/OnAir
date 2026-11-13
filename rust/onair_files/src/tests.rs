@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests of onair_files with known vectors (the C++ differential test covers equality with the old code).
 use crate::{container, csv, json, sigmf, sqlite, tle, wav};
 

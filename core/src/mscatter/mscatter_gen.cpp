@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor scatter test signal (see mscatter_gen.h).
 #include "dect2/mscatter/mscatter_gen.h"
 #include "dect2/mscatter/mscatter_dsp.h"

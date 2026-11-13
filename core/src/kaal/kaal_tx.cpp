@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice transmitter, streaming port of kaal_tx.py.
 #include "dect2/kaal/kaal_tx.h"
 #include "dect2/kaal/kaal_codec.h"

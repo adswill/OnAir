@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM playout (drm_playout.h) on its own: a 440 Hz tone in audio super frames of 400 ms, with lost frames, missing super frames and long outages, played
 // by a simulated sound device whose clock runs off the radio's by up to +-300 ppm. Checks: the device never runs empty, its queue stays near the
 // target, the resampler finds the clock offset, the joins into and out of a concealment have no steps (clicks), a concealment keeps the level for the

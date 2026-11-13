@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The live miniature of the hover preview (ui_preview.h, docs/UI-PREVIEW-4.0.md): drawn from the description of ui_preview_logic.h
 // with ImGui draw lists, no pictures, nothing to ship, always the colours, spacing and layout the choice would really give. Text is
 // drawn as short bars, so the High contrast pass (it recolours glyphs only) leaves the miniature alone and the Light pass is undone

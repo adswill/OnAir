@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Private to the ISM sensor decoders: the bit buffer, the pulse-slicer types and the prototypes of the slicers and device decoders
 // shared by ism_proto.cpp, ism_slice.cpp and ism_dec_*.cpp. Not part of the API. Written from rtl_433 (GPL-2.0), see ism_proto.cpp.
 #pragma once

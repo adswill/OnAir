@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells: SSB search and PBCH decoding in a block of samples (nr_phy.h searchDecode).
 //
 // One candidate SS_REF and one subcarrier spacing at a time: the block is brought down to 128 x SCS for the PSS search (three N_ID2, a few

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airport table: the built-in data, frequency normalisation, search, near, the airband channels of an airport, grouping into captures,
 // and the OurAirports CSV import with damaged input.
 #include "dect2/airports/airports.h"

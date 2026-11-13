@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB census: three generated ensembles upsampled into one 8.192 Msps capture, noise sweep, offset, adjacent channels. Simulated (DabGenerator): no wide recording on hand.
 #include "dect2/dab/dab.h"
 #include "dect2/dab/dab_gen.h"

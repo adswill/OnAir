@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Runs independent test cases on up to 4 threads. A case prints through jprintf(); each case has its own output buffer and the buffers are
 // written in the order the cases were added, so the log reads the same whatever the threads do. Cases must not share state (CHECK counters
 // are atomic, everything else a case touches is its own).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // M17 receiver against the test signal with real-world faults (tests/common/impair.h): tuning error +-1.5 kHz, clock +-100 ppm, deviation
 // +-20 %, swapped I/Q, a start in the middle of a stream (the LSF rebuilt from the LICH), and a BER curve over the SNR.
 // Each case plays the test schedule once: a voice stream with META text, a packet SMS, a voice + data stream with a GNSS META, and an

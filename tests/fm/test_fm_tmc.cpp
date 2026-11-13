@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RDS-TMC: group 3A announcement, single-group and multi-group 8A messages, repeats, lost groups, and a full path through the FM generator and receiver.
 #include "dect2/fm/fm_gen.h"
 #include "dect2/fm/fm_rx.h"

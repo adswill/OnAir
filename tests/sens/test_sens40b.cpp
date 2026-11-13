@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sensitivity of the 4.0 pass B receivers (narrowband and data modes, docs/SENSITIVITY-4.0-B.md): the mode's own test signal through white noise
 // (and a carrier offset and a sample-clock error) into a fresh receiver, seeded trials; a trial passes when the receiver counted at least half the valid
 // units of a clean run (as sens_sweep). The "off" entries run the 3.9 path of the same receiver (a switch of the receiver), so before and after are

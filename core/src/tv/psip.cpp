@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A/65 tables: see psip.h.
 #include "dect2/tv/psip.h"
 #include "dect2/tv/ts_proto.h"

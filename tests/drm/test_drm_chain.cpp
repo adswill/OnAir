@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM transmitter and back end without the synchronisation: the transmitter's baseband is cut into symbols at the exact positions, transformed, and
 // the cells go to the back end (FAC, SDC, time deinterleaver, multilevel decoder). Checks the structure of the signal and the formats.
 #include "dect2/drm/drm_dec.h"

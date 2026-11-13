@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The "Sync computer clock" section and the optional NTP server (clocksync_ui.h). Nothing here sets the clock by itself: only a click on
 // "Sync now" runs the operating system's administrator prompt, and only for a locked, plausible measurement (core/src/time_ntp.cpp).
 #include "dect2/common/thread_name.h"

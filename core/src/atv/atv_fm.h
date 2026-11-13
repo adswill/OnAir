@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV, FM video: the frequency modulation of analog FPV links (5.8 GHz and 1.2 GHz video transmitters) instead of the amplitude
 // modulated vision carrier of broadcast TV. The composite video is the frequency of the carrier: discriminator, a low-pass at the video band
 // edge (which also takes out the audio subcarriers above it) and a decimation to about 10 Msps, the rate the picture decoder works at.

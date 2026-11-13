@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The mode and manufacturer filters of the wireless M-Bus receiver (setPhyMask, setMfrFilter, the Mode and Maker choices of the Wireless M-Bus screen).
 // The simulated meters of wmbus_gen (all modes of the 868 MHz plan, and mode N of the 169 MHz plan) go, with carrier errors and noise, into one receiver without a view and one per view, from the same samples:
 //   - a view lists exactly the meters and the frames of the receiver without a view that belong to its modes, and no others;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band plans: the channel rasters and allocations of a country (TV channels, FM, DAB, AM, airband, PMR, marine, ham, ISM).
 // The built-in plans come from data/bandplans/builtin.json (embedded at build time); users add their own from CSV or JSON files.
 // The file format is described in docs/band-plans.md. All frequencies are in Hz.

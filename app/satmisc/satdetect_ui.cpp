@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Screens of the satellite carrier and burst detector modes (core/src/satmisc). One screen, driven by the system table: it says plainly what each
 // system is and what is not known about it. Elements come from the same folder as the tracker's.
 #include "app.h"

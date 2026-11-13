@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL data blocks, HDLC, TPDU and the signalling messages OnAir reads (tetrapol_link.h).
 #include "dect2/tetrapol/tetrapol_link.h"
 #include <algorithm>

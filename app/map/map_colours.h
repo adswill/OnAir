@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Map colour schemes (sea/background, grid, coastline, label text, tile tint) and the contrast helpers that keep the overlays readable.
 // No ImGui here: tests/app/test_map_colours.cpp runs the very table and functions the map draws with.
 #pragma once

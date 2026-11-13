@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR subscriber TX slot timing (ETSI TS 102 361-1 clauses 4.2, 4.4.1, 4.5 and 5.1.1). A radio talking through a repeater must "synchronize to
 // an outbound channel and base its inbound timing entirely on the outbound timing" (4.4.1). OnAir is half-duplex: it listens to the repeater's
 // output first (the DMR receiver reports every clean CACH, its TDMA channel bit TC and access type AT, and the centre time of the burst after

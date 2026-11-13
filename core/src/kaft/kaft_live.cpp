@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT for the engine: see kaft_live.h.
 #include "dect2/kaft/kaft_live.h"
 #include "dect2/kaft/kaft_frame.h"

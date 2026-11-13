@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airport weather from datalink text (3.9, docs/SMART5-avia-3.9.md): METAR, SPECI and TAF reports inside ACARS, VDL2 and HFDL messages
 // (weather requests, D-ATIS uplinks, printer messages) are found in the free text and parsed into one row per airport: wind, gust,
 // visibility, ceiling, temperature and dew point, QNH, and the flight category. Format: WMO No. 306 FM 15 / FM 16 / FM 51 and the ICAO

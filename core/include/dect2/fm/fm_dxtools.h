@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM DX helpers that look at what the census / scanner / listener already collected (pure rules, no GUI):
 //  1. PiWatch      co-channel interference: on ONE frequency two different PI codes alternate (two stations sharing the channel, often a tropo or sporadic-E opening);
 //                  reports both PIs with their share and which one is stronger by SNR. A single wrong PI from a bit error is not an alternation: a PI must be seen

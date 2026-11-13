@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Phase 2 audit fixes, one check each: A2 the receiver joins mid-superframe (the first bursts after the lock are not read on a guessed slot), B8 a lost ESS
 // does not make an encrypted call unknown, B9 a call that never gets an ESS is labelled and skipped (not silently held), keyed calls carry key ID and MI from
 // the PTT, C14/C15 the MAC message length rules (null, avoid-zero-bias, variable lists, extended grant), and the explicit grant takes channel (T).

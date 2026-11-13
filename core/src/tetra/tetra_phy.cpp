@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA downlink physical layer and lower MAC (tetra_phy.h).
 #include "dect2/tetra/tetra_phy.h"
 #include <algorithm>

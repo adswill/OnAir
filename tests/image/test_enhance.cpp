@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Image enhancement (core/include/dect2/image/enhance.h): synthetic pictures with known degradations (slant, phase, missing and
 // corrupted lines, jitter, impulses, gaussian noise, stripes, chroma lag, interlace, repeated noisy copies) and measurable improvement
 // against the clean picture: PSNR, SSIM, slant error in px. Prints the numbers used in docs/IMAGE-ENHANCE.md.

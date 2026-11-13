@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C receiver for the NCS common channel: 1200 symbol/s BPSK in frames of 8.64 s with EGC messages (SafetyNET, FleetNET).
 // The channel at -tuneOffsetHz is decoded; a search of the whole capture band adds up to three more Inmarsat-C channels it finds (telemetry().channels).
 #pragma once

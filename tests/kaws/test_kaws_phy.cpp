@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS physical layer through the Rust crate: a burst of every profile through the Watterson channel, 12 kHz audio and a WAV file, back to the same bits;
 // +-100 Hz offset and +-2 s clock error; chat, beacon and ack frames over the air; voice superframes over P6 / P7
 #include "dect2/kaws/kaws_arq.h"

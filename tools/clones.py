@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Token-based clone detector for core/ and app/ (C and C++).
 
 Tokens are normalised (identifiers -> I, numbers -> N, strings -> S, characters -> C, keywords and punctuation kept) so renamed copies still match. Every window of

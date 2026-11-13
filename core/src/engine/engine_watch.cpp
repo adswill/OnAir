@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Watching the radio and the sample path: unplugged-radio detection and reconnect, catching up after a stall, and the
 // delivery/sample-loss accounting that feeds the status bar.
 #include "dect2/engine/engine.h"

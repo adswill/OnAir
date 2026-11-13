@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! SHA-1 (RFC 3174) and base64 (RFC 4648), only for the WebSocket handshake (`Sec-WebSocket-Accept`, RFC 6455 section 4.2.2): the key is not a secret, so neither
 //! algorithm needs to be constant time or collision resistant.
 

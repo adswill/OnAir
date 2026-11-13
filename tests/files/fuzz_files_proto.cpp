@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the file format layer, meant for DECT2_SANITIZE=ON: every parser must never crash or hang on any bytes, at
 // any length (the input is copied to an exactly sized heap block). Also a libFuzzer target with -DONAIR_LIBFUZZER.
 #include "dect2/files/files_proto.h"

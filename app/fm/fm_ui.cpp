@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM broadcast radio panels: tuning, status line, station panel with RDS, diagnostic plots and the band scanner.
 #include "../d40/d40_ui.h"
 #include "app.h"

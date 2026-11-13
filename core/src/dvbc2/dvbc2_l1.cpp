@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C2 L1 signalling part 2 (EN 302 769 clause 8): the fields of table 18, the CRC-32, the segmentation into 16K LDPC blocks (8.4.2),
 // their coding (8.4.3 - 8.4.4: DVB-T2's shortened and punctured L1-post code, 16QAM) and the L1 time interleaving (8.5).
 #include "dect2/dvbc2/dvbc2.h"

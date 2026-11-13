@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor-M LRPT layers: convolutional code and Viterbi, the sync word as other decoders know it, the CCSDS PN, Reed-Solomon (255,223)
 // dual basis, CADU round trip with errors, M_PDU packet reassembly across VCDUs and a lost VCDU, the MSU-MR JPEG-like strip coder.
 #include "dect2/meteor/meteor_proto.h"

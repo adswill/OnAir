@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The beginner's two buttons in the Simple view (docs/SCAN-IDENTIFY.md): "Scan" finds every signal in what the radio sees, says what each one is
 // and opens the right mode in one click; "Identify" is for "I don't know what this is": it runs the identifier on the strongest signal around the
 // tuned frequency, or on the region dragged on the spectrum, and lists ranked guesses with a confidence. Both use the signal identifier's own

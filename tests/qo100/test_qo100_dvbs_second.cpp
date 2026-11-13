@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-S/S2 as the second mode beside QO-100 (Engine::setSecondaryDvbs): QO-100 is the first mode on a 10 Msps capture of the whole downlink; two
 // DVB-S2 carriers sit on the wideband transponder (1 Msym/s at +2.25 MHz, 0.5 Msym/s at -2.5 MHz). The second mode decodes the one that was asked for:
 // the report comes through latestRx2() as standard 7 with a transport stream lock and the symbol rate of that carrier, the stream reaches the

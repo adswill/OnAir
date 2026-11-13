@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice clip history (core/include/dect2/voice/clip_history.h): the retention rules (count, age, size, pinned), clip metadata, WAV helpers,
 // folder scan and pin persistence. Pure: temp files only.
 #include "dect2/voice/clip_history.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! AIS message decoding (ITU-R M.1371-5 annex 8, field offsets as in the gpsd AIVDM document).
 
 use crate::bits::{get_s, get_text, get_u};

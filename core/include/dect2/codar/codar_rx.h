@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CODAR / HF ocean radar monitor (SeaSonde, WERA and similar coastal FMCW radars in the ITU oceanographic bands): receive only. These are
 // broadcast radar sweeps: nothing is decrypted and nothing is transmitted.
 //

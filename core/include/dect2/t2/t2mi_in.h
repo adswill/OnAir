@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // T2-MI ingest (ETSI TS 102 773): finds the T2-MI stream in a transport stream (a PID whose packets carry T2-MI packets with good CRCs, such as a DVB-S feed to a DTT
 // transmitter), and rebuilds each PLP's transport stream from its baseband frames. No radio layer is involved: the frames are taken as sent.
 #pragma once

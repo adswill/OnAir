@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NDB (non-directional beacon) telemetry. RxTelemetry::ndb, engine standard 31, active standard 30.
 //
 // An aeronautical NDB is a steady carrier in the long-wave beacon band with a slow Morse ident. The ident is what this

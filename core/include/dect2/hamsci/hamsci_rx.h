@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham science receivers (QRSS, DFCW, FSK441, ISCAT, PI4, Throb, SuperSID, riometer, pulsar): one class, constructed with the kind. The digital modes take the
 // upper sideband audio of the channel (dial at 0 Hz, 200 .. 3800 Hz above it) from the usual front end and hand 12 kHz audio to the decoders of hamsci_dsp.h;
 // SuperSID takes a VLF span, the riometer the whole capture as a noise power, the pulsar folder the whole capture as a filter bank.

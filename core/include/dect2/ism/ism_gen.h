@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Every test device builds its frame from the layout its rtl_433 decoder documents (the same file the decoder cites) and sends it with

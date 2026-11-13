@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Which PlutoSDR boards listing may ask about their firmware (#215). No hardware: the decision function is checked directly. A network board the
 // user did not add is never asked (no network contact while listing or scanning), and nothing here writes to a device.
 #include "../../core/src/source/native_common.h"

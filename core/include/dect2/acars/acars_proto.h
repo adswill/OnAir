@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS (ARINC 618) block layer: check sequence, parity, repair, field parsing, and the same in reverse for the test signal.
 // Written from the ARINC 618 block format (CRC-16 KERMIT, odd parity, field layout, block id rule) as the public descriptions of acarsdec
 // and libacars document it; no code of either is used. Nothing here touches a radio signal.

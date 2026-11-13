@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA DMO bursts and PDUs (see tetradmo_proto.h).
 #include "dect2/tetradmo/tetradmo_proto.h"
 #include <cstdio>

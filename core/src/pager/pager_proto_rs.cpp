@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The POCSAG / FLEX code word, text and phase layer on top of the Rust crate rust/onair_pager: the functions of pager_proto.h;
 // pager_proto.cpp keeps the generators and the POCSAG message assembler.
 #include "dect2/pager/pager_proto.h"

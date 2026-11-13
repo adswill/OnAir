@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Navigation beacon list (CSV import) and the two-radial position fix (see vor_db.h).
 #include "dect2/vor/vor_db.h"
 #include <algorithm>

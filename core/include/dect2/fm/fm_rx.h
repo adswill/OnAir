@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM broadcast radio receiver (87.5 - 108 MHz): channel filter, discriminator, stereo decoder (19 kHz pilot) and RDS (57 kHz).
 // The station must be in the centre of the input; any input rate from 500 kHz up works.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CubeSat telemetry per satellite: a GOMX-1 beacon built from the published layout (gr-satellites), bit by bit.
 #include "dect2/cubesat/cubesat_telem.h"
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NAVTEX sensitivity (docs/SENSITIVITY-3.9-B.md): messages that arrive complete with every character right, at low SNR (noise in 300 Hz),
 // with a carrier offset and drift, through the real FSK slicer, centre finder and decoder; noise alone must give no characters; the
 // whole receiver must decode an input whose noise is far above 8 units (the old fixed-point clip of the front end).

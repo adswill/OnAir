@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Label names and the short reading of fixed-format text. Names are those the decoders' own message formats support (acarsdec label.c reads fields
 //! from these labels) plus the service labels of ARINC 618; the full ARINC 620 list is not public and is not reproduced.
 use crate::text::Buf;

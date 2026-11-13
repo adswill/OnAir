@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The X-band links: each has its own mode-list row, its tuning, poll slot and screen wiring.
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/xband/xband_tel.h"

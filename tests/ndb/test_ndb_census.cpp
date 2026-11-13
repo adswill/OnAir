@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NDB census: three beacons at different offsets inside one capture, 400 Hz, 1020 Hz and a keyed carrier, with offsets and noise; no beacon on an empty band. Simulated signals only.
 #include "dect2/ndb/ndb_census.h"
 #include "dect2/ndb/ndb_gen.h"

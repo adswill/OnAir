@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automatic standard detection: shared helpers and the names (autodet.h).
 #include "autodet_internal.h"
 #include "dect2/dsp/carrierfind.h"

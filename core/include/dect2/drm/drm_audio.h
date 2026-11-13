@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM audio: from the logical frame of an audio stream to sound. xHE-AAC goes through libavcodec's USAC decoder; AAC (ER AAC with a 960 transform)
 // has its own decoder (drm_aac.h), because libavcodec cannot read the DRM variant of that stream.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS physical layer wrapper. See kaws_phy.h.
 #include "dect2/kaws/kaws_phy.h"
 #include "dect2/rs/kaws.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The shared Items tab of a mode (docs/MODE-EXPERIENCE.md, 2.4): header (Logging state, count, drops), search and filters, the list of sessions
 // (Calls, Threads or Tracks by type), a detail pane (fields, notes, tags, Keep, linked items) and one Export button. The list is read from the
 // session store through a CachedList: it asks again only when the mode's generation counter changed, never on the UI thread.

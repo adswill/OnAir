@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Field extraction of a whole Mode S message (DF0 / 4 / 5 / 11 / 16 / 17 / 18 / 19 / 20 / 21) and of the ADS-B extended squitter: identification,
 //! surface and airborne position, velocity, aircraft status, target state and operational status (DO-260B 2.2.3.2.*; the Riddle chapters).
 use crate::altitude::{char_from_6bit, decode_ac13, decode_alt12, decode_id13};

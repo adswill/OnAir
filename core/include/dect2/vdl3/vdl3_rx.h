@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 3 receiver: one 25 kHz VHF channel, the D8PSK bursts of ICAO Annex 10 Vol III 6.4.4 (see vdl3_proto.h).
 //
 // The channel is mixed to 0 Hz, integrated and dumped to 16 samples per symbol (any input rate from 250 kHz up), low-pass filtered (+-13.5 kHz)

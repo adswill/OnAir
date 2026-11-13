@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Smart CubeSat view (docs/CUBESAT-SMART.md): one button, "Auto decode cubesats". It tunes a span that holds the satellites about to pass, follows
 // their Doppler, scans the span for narrow carriers, identifies each (CW, AFSK, FSK / GMSK, BPSK and its baud rate) and decodes it. The view
 // shows the next passes, the carriers with what each is doing, the decoded packets with their telemetry, and the exports (SatNOGS-ready file,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW test signals made by human fists (see cw_fist.h).
 #include "dect2/cw/cw_fist.h"
 #include "dect2/common/mathconst.h"

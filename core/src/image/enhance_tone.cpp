@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Image enhancement, tone: auto levels, gamma, CLAHE, histogram matching, weather chart levels, palettes.
 #include "enhance_util.h"
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EchoLink: GSM 06.10 vectors and codec quality, RTP / RTCP framing, the directory protocol against a mock server on 127.0.0.1, two clients
 // talking over loopback, the connection timers on a fake clock, the rate converters, the VOX and the RF bridge rules.
 // Nothing here contacts the real EchoLink servers: every socket is on 127.0.0.1.

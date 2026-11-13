@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FengYun geostationary downlinks: the formats above the radio layer (both directions: the test signals are made with the same code the
 // receiver uses to read them).
 //

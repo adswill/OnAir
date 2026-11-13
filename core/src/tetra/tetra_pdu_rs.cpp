@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA network information parsing on top of the Rust crate rust/onair_tetra: the parse side of tetra_pdu.h;
 // tetra_pdu.cpp keeps the encoders and the generator PDUs. Only broadcasts are read (see tetra_pdu.h).
 #include "dect2/tetra/tetra_pdu.h"

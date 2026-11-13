@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The KAWS mode (family 133, active standard 134, engine standard 135, telemetry slot 136) in the group "Kris custom modes": the mode-table row, the unique
 // family numbers, the modeui case, the receive panel, the transmit options, the engine wiring and the transmit registration are in the sources. Text checks
 // only, so it builds without the app.

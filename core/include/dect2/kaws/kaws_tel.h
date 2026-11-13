@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS receiver telemetry. RxTelemetry::kaws, engine standard 135, active standard 134 (family 133), poll slot 136.
 // KAWS is an amateur HF weak-signal mode (2.4 kHz of audio, chat / beacons / voice). Simulation-only: nothing here has been tested on a real HF path.
 #pragma once

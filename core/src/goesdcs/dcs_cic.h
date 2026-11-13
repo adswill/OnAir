@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The fourth-order CIC decimator the DCS receivers share (goesdcs_live.cpp, hrdcp_live.cpp). Internal to core/src/goesdcs.
 #pragma once
 #include "dect2/common/ring.h"

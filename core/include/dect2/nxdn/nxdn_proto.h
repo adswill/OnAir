@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NXDN common air interface (NXDN TS 1-A): the parts both the receiver and the test signal use.
 //
 // A frame is 192 four-level symbols (384 bits): the 10-symbol frame sync word (FSW), then 182 symbols scrambled by PN9 (x^9 + x^5 + 1,

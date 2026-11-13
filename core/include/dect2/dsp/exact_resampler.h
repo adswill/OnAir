@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Streaming resampler for any ratio (windowed sinc, finely interpolated phases, position tracked in double precision), for receivers whose
 // sample rate is not a small rational multiple of the radio's (a rational approximation is tens of ppm off at 10 Msps).
 #pragma once

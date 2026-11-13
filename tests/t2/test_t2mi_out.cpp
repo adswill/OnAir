@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // T2-MI / raw BB frame export of the DVB-T2 PLP (core/include/dect2/t2/t2mi_out.h): packet layout, CRC, TS framing at awkward frame sizes
 // (not a multiple of 184 bytes), lost blocks, other PIDs in the stream, bad CRCs, and end to end through the generator and the receiver
 // (noise, a carrier offset, T2-Base and T2-Lite sizes) with the exported frames compared with what the generator sent.

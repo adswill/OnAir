@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4 is deterministic: the bit stream and the decoded samples of fixed inputs are the same on every platform (the codec
 // uses its own elementary functions and is built without fused multiply-add contraction). The digest covers several profiles, both
 // frame lengths, both sample rates, DTX with the in-band type bit, the noise suppressor and a lossy channel.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/dsp/exact_resampler.h"
 #if defined(__GNUC__) && defined(__x86_64__) && !defined(DECT2_NO_SIMD)
 #include <immintrin.h>

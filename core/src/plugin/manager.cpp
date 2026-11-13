@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/plugin/host.h"
 #include "dect2/automation/engine.h"
 #include "dect2/automation/json_mini.h"

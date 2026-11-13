@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Watterson HF channel simulator for tests (ITU-R F.520-2 / Rec. 520-2, the model MIL-STD-188-110 C.6.1 and 188-141 test against):
 // independent Rayleigh-fading paths with fixed delays, each tap a complex Gaussian process with a Gaussian Doppler spectrum of the given
 // two-sigma width, then optional frequency offset and noise measured in 3 kHz. Written for OnAir's tests, independently of every receiver.

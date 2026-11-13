@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Route knowledge for the position estimator: an airport table, parsing of the route / ETA / OOOI / position lines of ACARS and VDL2 text
 // where the formats are well defined, line-of-sight range from a ground station, and a small wind field from aircraft that report wind.
 #pragma once

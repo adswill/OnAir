@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AES-128-CBC decryption with PKCS#7 padding, for the plain HLS segment encryption (#EXT-X-KEY:METHOD=AES-128, RFC 8216 section 4.3.2.4).
 // That is ordinary transport encryption with a key the playlist hands out, not DRM; Widevine / FairPlay / PlayReady / SAMPLE-AES are refused elsewhere.
 // Written from FIPS-197; small and table free on purpose (a few MB/s are needed, not hundreds).

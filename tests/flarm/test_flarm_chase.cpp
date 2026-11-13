@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLARM Chase decoding (3.9, docs/SENSITIVITY-3.9-C.md): near the threshold the receiver with the 6-bit Chase search must accept more packets
 // than hard decisions alone, never make up an aircraft, and give nothing on noise. Simulated signals only (flarm_gen.h).
 // ONAIR_TEST_LONG=1 prints the whole curve at 1 and 2.4 Msps.

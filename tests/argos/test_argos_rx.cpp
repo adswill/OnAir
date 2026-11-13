@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Argos receiver on its test signal.
 // Uplink: every made-up platform arrives with its ID and data, clean, at 16 dB in 2.4 kHz, with radio offsets of a few kHz, with the carrier
 // drifting 40 Hz/s during each burst, at another sample rate; a burst of another modulation is listed as "not A2" and never decoded; the

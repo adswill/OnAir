@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fault or reception (see fault_split.h).
 #include "dect2/smart5/fault_split.h"
 #include <cstdio>

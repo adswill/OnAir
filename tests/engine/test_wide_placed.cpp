@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Several modes at once (issue #384, core/include/dect2/engine/wide_placed.h): on ONE 2.4 Msps capture a POCSAG pager carrier and an air-band AM station are
 // placed by hand and decoded together, a DMR carrier in the same capture that was not placed is left off, and the placed list follows a retune. Simulated signals only.
 #include "dect2/dmr/dmr_gen.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS time structure and planning (spec section 3 and 2.1): the UTC slot grid, the transmit start, the receive window, burst timing per profile, blocks per
 // slot, message time for a given size, and the profile suggestion from a measured SNR.
 #pragma once

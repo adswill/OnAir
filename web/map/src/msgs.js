@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // msgs.js - ACARS messages attached to an aircraft: validation, sanitising, limits. Pure functions (tested in test/msgs.test.js).
 // The text is public radio but may hold personal data, so it is cut hard here as well as in the app (the app drops phone numbers and
 // e-mail addresses first). The page shows it with textContent only.

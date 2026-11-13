@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Runs sens_sweep for some modes and compares with the committed baseline. docs/SENSITIVITY.md.
 #   tools/sens/run.sh [--quick|--full] [--mode REGEX] [--scenario REGEX] [--trials N] [--out DIR] [--build DIR] [--no-compare] [--update-baseline]
 # Examples:

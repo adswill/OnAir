@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The woven lattice (spec section 7): the preamble unit (4 rising + 4 falling chirps of 1 s over 1600 Hz and a 7-tone zig-zag comb, 3.5 s), the closing
 //! weave (1 s) and the detector. Signals are complex baseband at 2400/s (audio frequency = 1500 Hz + baseband frequency), every unit scaled to mean power 1
 //! so it sits at the level of the constant-envelope data. Element edges carry a 4 ms raised-cosine ramp (not in the spec text, which has hard edges).

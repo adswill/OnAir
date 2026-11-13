@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / Packet receiver: one 25 kHz FM channel, AX.25 at 1200 baud (Bell 202 AFSK) and 9600 baud (G3RUH) decoded at the same time.
 // Front end: mix out the signal offset, decimate to about 100 kHz, resample to exactly 96 kHz, channel filter, FM discriminator.
 // 1200 baud: the audio goes to 48 kHz and three tone-correlator pairs run side by side (different windows and clock-loop speeds), each

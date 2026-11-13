@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Icom IC-R8600 I/Q driver, the parts that need no radio: the marker decoder fed with synthetic USB chunks, CI-V frames and setting
 // payloads, the .spt (CSPT) to RAM-write conversion with a SYNTHETIC file (the real Icom firmware is never fetched or shipped), the
 // firmware import and its checks, and the detection with no hardware. NOT covered: a real IC-R8600 (needs a user test).

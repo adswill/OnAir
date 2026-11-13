@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit into an IQ file (tx_iqfile.h): a short generated IQ written in every format and read back with the project's own reader (probeIqFile
 // for the SigMF and WAV sidecar / header, then the samples from the data file). The sample rate, the centre frequency, the sample count and the samples
 // are compared. The sink also runs inside a TxSession with a generated tone, unpaced, and stops cleanly.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-VFO channel rows of the app: what the list shows and the preferences keep ("vfoRows"). Pure data and text, no ImGui (docs/MULTI-VFO.md).
 #pragma once
 #include "dect2/engine/vfo.h"

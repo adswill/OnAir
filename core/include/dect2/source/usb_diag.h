@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Why a USB radio that is plugged in does not show up: permissions, a kernel driver that holds it (Linux).
 #pragma once
 #include <string>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Frequencies panel: the built-in frequency database (core/include/dect2/channels/freq_db.h, data/frequencies) and the user's own entries.
 // A window (View > Frequencies, Ctrl+Shift+F), an optional tab of the main screen, and the "Known frequencies" drop-down of the Tuner panel.
 // Tuning goes through the Memory panel's recall (memory_options.h), so the mode is switched and its tuning applied exactly as a recalled memory does.

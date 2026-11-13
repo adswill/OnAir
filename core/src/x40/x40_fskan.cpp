@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSK parameter analyser: for an unknown FSK or GFSK signal in the 90 kHz around the tuned frequency (default 250 ksps; symbol rates from about 100 Bd to 20 kBd): the symbol rate, whether it
 // is 2-level or 4-level, the shift, the modulation index and the centre frequency. Every 2 s of the FM-demodulated signal (instantaneous frequency in Hz): the symbol rate from the line of the squared
 // demodulated signal (transitions happen only on the symbol grid, so |y|^2 has a line at the symbol rate); the symbol timing as the phase where |y| is largest; the signal sampled at the symbol centres and

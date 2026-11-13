@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto-record in the interface (docs/MODE-EXPERIENCE.md, 3.2): the master switch (OFF by default), the "Record rules" editor and the one-click
 // "Record this" of a row. The rules themselves live in core/include/dect2/session/record_rules.h.
 #pragma once

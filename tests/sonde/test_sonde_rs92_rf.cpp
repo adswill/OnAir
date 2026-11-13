@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RS92 through the whole receiver: serial, frame number, calibration progress, announced frequency, no position, impairments, SNR sweep.
 #include "dect2/sonde/sonde_testkit.h"
 using namespace dect2;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The voice monitor on screen (voice_monitor_ui.h). English only, like the codec helper.
 #include "voice_monitor_ui.h"
 #include "voice_clips_ui.h"

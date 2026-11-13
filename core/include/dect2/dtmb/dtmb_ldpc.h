@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB forward error correction: the LDPC codes, BCH(762,752), the scrambler, the 4QAM-NR inner code and the convolutional interleaver.
 #pragma once
 #include "dtmb_defs.h"

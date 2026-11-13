@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared body of the per-type radio tests of the radiosonde mode (DFM, M10, M20) through the whole receiver: rates, carrier offset,
 // clock offset, 8-bit samples, DC offset, a gap, reset, and the SNR at which frames start to fail.
 #pragma once

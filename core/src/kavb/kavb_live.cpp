@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB for the engine: see kavb_live.h.
 #include "dect2/kavb/kavb_live.h"
 #include "dect2/kavb/kavb_av.h"

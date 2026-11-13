@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared mesh topology (map/mesh_topology.h, mesh_topology_feed.h): the graph model (relay ranking, single points of failure, flood factor),
 // the Meshtastic relay-byte resolver on a synthetic flooding network with last-byte collisions, MeshCore paths, the Z-Wave route header
 // (build / parse / graph), Zigbee source routes and Thread mesh headers, each with frame loss, duplicates and shuffling.

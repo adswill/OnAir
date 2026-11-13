@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web client strings. English is the master list; a language only needs the keys it translates (the rest fall back to English).
  * Markup: data-i18n="key" (text), data-i18n-title, data-i18n-aria (aria-label), data-i18n-ph (placeholder). Code: t("key", {name: value}) with {name} placeholders.
  * To add a language: add a catalog below and its code to the `lang` list in onair-settings.js. Pure code: tested by tests/web/run.js. */

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MixedFft against a direct DFT, round trips, and speed at the DTMB size.
 #include "dect2/dtmb/dtmb_fft.h"
 #include "dect2/common/stable_random.h"

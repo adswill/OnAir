@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MFSK text and pictures (hfdig_kbd_mfsk.cpp): the variants of fldigi's mfsk.cxx (MFSK16 .. MFSK128, the L modes), the picture mode that Shortwave
 // Radiogram uses (header "Pic:WxH[C][pN];", then one tone per pixel) in grey and colour at X1 / X2 / X4, and the real-world cases: tuning error,
 // sample clock error, noise, fading, a receiver centre that is off, text before and after a picture.

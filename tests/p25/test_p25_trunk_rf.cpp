@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The trunking follower fed by the real receiver: the synthetic control channel (identifier update, network / RFSS / adjacent status, voice grants)
 // goes through the C4FM demodulator, the TSBK decoder and the telemetry queue into the Controller. Silent.
 #include "dect2/p25/p25_gen.h"

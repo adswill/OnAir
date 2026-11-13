@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The KAIT receiver wrapper on input it must survive without a signal: noise, silence, a constant, full-scale random, blocks of 1, 7, 96, 4801 samples,
 // at 48 kHz and at radio rates. Nothing may crash or lock on noise.
 #include "dect2/kait/kait_live.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA physical layer and PDUs: channel coding round trips with errors, Reed-Muller, the PDU layouts, and one carrier of the test
 // signal decoded at 4 samples per symbol.
 #include "dect2/tetra/tetra_gen.h"

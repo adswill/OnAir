@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Tests for tools/check_bandplan_br.py on small made-up ZIPs shaped like Anatel's planos_basicos.zip.
 
   python3 -m unittest tools/test_check_bandplan_br.py"""

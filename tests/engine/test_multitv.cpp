@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-channel TV, the core: the channeliser (mix, low-pass, resample) and the slot scan, and MultiTv fed with two and three DVB-T2 channels
 // (and DVB-T) side by side in one wide capture. Every occupied channel must lock and show its own service list; an empty slot gets no receiver;
 // the cap holds; the selected channel's packets reach the sink and switching works. CPU per instance is printed.

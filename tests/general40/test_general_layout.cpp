@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The General receiver screen of 4.0 (docs/GENERAL-4.0.md): the logic under the layout and the VFO, without a window.
 //  - the layout text in the preferences: round trip, old / foreign / damaged text gives the defaults, unknown keys skipped, values clamped
 //  - the sidebar width for a window width: hides itself in a narrow window, the button shows it anyway; the toggle

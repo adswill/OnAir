@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ATSC 3.0 receiver chain after the physical layer: baseband packets -> ALP -> IP/UDP -> low level signaling (service list) and ROUTE for
 // the selected service -> MP4 fragments -> transport stream (readTs(), the input of the HLS pipeline).
 #pragma once

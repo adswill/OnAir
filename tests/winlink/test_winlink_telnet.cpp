@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Winlink over Telnet, against a mock CMS on 127.0.0.1 in this process only (never the real CMS): the "Callsign :" / "Password :"
 // login, then a whole B2F session with the secure login; and the setting that keeps Telnet off by default.
 #include "winlink_harness.h"

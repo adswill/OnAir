@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ham.decode (round 4 #6, #14): the event from a decode and the logbook's marks (a log with QSOs: worked, new on band, new DXCC, new grid),
 // the locator to lat/lon, each decode once, CW calls once per signal, and the four JTAlert-style recipes on the engine (fire / quiet / cooldown).
 #include "dect2/automation/engine.h"

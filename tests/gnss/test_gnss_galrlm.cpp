@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Galileo SAR return link messages: part ordering by the start bit, spare pages, parity. Field layout from the Galileo OS SIS ICD issue 2.1 tables 60-63, 103-104. Simulated data only.
 #include "dect2/gnss/gnss_msg.h"
 #include <cstdio>

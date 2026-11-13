@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Record audio": saves the audio you hear (before the volume slider) from any mode to a WAV, FLAC or MP3 file. Every AudioOut::write() offers its
 // frames to this recorder; the first output that writes after Start owns the recording (other outputs are ignored until it has been silent for 2 s,
 // so a mode change hands over to the new mode's output). The audio thread only copies into a lock-free ring; a writer thread gates, encodes and writes.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Casting the playing service to an AirPlay device (Apple TV, AirPlay TVs and speakers). macOS only: the system's AirPlay does the work;
 // OnAir serves the service as an HLS stream (the network tuner) and hands that address to the system player, which passes it on to the device.
 #pragma once

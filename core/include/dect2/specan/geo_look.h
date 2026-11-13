@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Look angles to a geostationary satellite from a point on the Earth: azimuth (degrees clockwise from true north) and elevation
 // (degrees above the horizon, negative below it). Spherical Earth, no atmosphere, no refraction. No radio, no threads.
 #pragma once

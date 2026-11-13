@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Outbound feed targets: send ADS-B (Beast / SBS) and AIS (NMEA) to aggregators and other programs you name.
 // Every target is OFF by default; nothing is sent, and no connection is opened, until the user enables that one target.
 // One decoder serves any number of targets (fan-out). TCP targets reconnect with a growing wait; UDP targets just send.

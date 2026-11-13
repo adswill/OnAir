@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Beacon propagation monitor: a steady beacon, a fading one (sporadic-E style), an aurora-smeared one, with offset, drift and noise; no beacon gives no class.
 #include "x40_gen.h"
 using namespace x40gen; using namespace dect2;

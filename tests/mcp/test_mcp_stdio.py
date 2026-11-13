@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """A real MCP client against the real program: `onair-server --mcp-stdio` as a child process on the built-in test signal.
 stdout must carry JSON-RPC lines and nothing else (the log goes to stderr); then the same over HTTP (`--mcp-http`)."""
 import json, os, subprocess, sys, tempfile, time, urllib.request

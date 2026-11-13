@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DECT NR+ (DECT-2020 NR, ETSI TS 103 636-3 / -4 V1.5.1): packets on a 1.728 MHz channel (subcarrier scaling mu = 1, Fourier scaling beta = 1: 64-point FFT, 27 kHz
 // subcarriers, 56 occupied), one transmit stream. Finds the STF (7 repetitions of a 16-sample sequence under the cover sequence), equalises on the DRS and decodes the
 // Physical Control Channel: 98 QPSK resource elements, scrambling with 0x44454354, rate matching and the rate 1/3 turbo code of clause 6.1 (the LTE design), CRC-16,

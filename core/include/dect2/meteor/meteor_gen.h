@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor-M LRPT test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A test picture (gradients, a grid and rings, different in each channel) coded the way MSU-MR does it (meteor_proto.h): image

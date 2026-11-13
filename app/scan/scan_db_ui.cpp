@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The shared channel database in the scan tabs: the question after a scan ("share it?", country, city, the exact text, then GitHub opens with
 // the issue filled in) and the "Shared data" view (a country's channels by city, which of them the last scan found). Nothing is sent by the
 // app; downloads happen only after a yes. The files live in github.com/adswill/OnAir-channels; DECT2_CHANNELDB_URL replaces the address

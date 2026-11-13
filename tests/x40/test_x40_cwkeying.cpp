@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW keying quality meter: Morse sent by a generated keyer or hand (speed 12 to 30 wpm, dah ratio, weight, scatter, character and word gaps, shaped edges, chirp), with a carrier offset and drift, noise,
 // fades; the speed, ratios, rise and fall times and chirp are compared with what the generator did; noise alone gives nothing. Simulated signals only.
 #include "x40_gen3.h"

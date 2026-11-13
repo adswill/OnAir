@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B / Mode S message encoders (see adsb_encode.h).
 #include "dect2/adsb/adsb_encode.h"
 #include <algorithm>

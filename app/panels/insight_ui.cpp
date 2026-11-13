@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Insights (View > Insights; docs/SMART5-ham-3.9.md, SMART5-voice-3.9.md, SMART5-pager-3.9.md, SMART5-hfutil-3.9.md): what the smart analysers of
 // core/include/dect2/insight found in this receiver's own decodes. On by default; they are fed through the automation analyser hook and the FT8 view,
 // and every finding also goes on as an automation event "insight.<kind>". Offline; per talkgroup or system, never per radio.

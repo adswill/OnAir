@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Small fixed-size FIFO ring of `Copy` values, no allocation. Not thread safe (the engine crate owns the concurrent one).
 
 /// FIFO with capacity `N`. `push` on a full ring drops the oldest element and returns it.

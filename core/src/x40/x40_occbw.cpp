@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Occupied bandwidth meter (ITU-R SM.328, SM.443): the bandwidth of one signal in a wide capture, as a regulator or a transmitter test sheet states it. A 16384-point Blackman-Harris spectrum
 // averaged over one second (0.5 s steps); the noise floor is the median bin, subtracted before any power is summed. The strongest contiguous region 3 dB over the floor (gaps up to 1 % of the
 // span bridged) is the signal. Reported: the 99 % occupied bandwidth (0.5 % of the signal power below the lower edge and 0.5 % above the upper), the bandwidths at 3, 6, 20 and 26 dB below the spectral

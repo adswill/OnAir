@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The radiosonde map's marks and the Tawhiri flight prediction (sonde_map_overlay.h).
 #include "dect2/sonde/sonde_map_overlay.h"
 #include "dect2/common/thread_name.h"

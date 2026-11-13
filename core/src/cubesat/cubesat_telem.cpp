@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Telemetry parsing: see cubesat_telem.h.
 #include "dect2/cubesat/cubesat_telem.h"
 #include "dect2/cubesat/cubesat_proto.h"

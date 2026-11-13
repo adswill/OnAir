@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The macOS app's Info.plist (written by tools/package/make_dmg.sh; packaging/macos/Info.plist for local bundles) has a usage text for every
 // protected resource the code opens (#358). Without NSMicrophoneUsageDescription macOS never asks and a sound card input (an IC-7300's USB
 // Audio CODEC) delivers silence; without NSCameraUsageDescription opening a camera ends the program; without the location texts the ADS-B

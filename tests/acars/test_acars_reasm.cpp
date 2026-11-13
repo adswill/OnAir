@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-block ACARS message reassembly (core/include/dect2/acars/acars_reasm.h): ETB blocks are held, the ETX block completes one
 // message; timeouts, resends, lost blocks, interleaved aircraft and labels, a new message number cutting the old one, and the same
 // through the real block parser (acarsBuildFrame > acarsParseBlock) and through VDL2 AVLC frames (vdl2AcarsInfo > vdl2ParseFrame).

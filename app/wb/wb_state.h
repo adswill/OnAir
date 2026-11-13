@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench screens: the state shared by app/wb_ui.cpp (loading, the waveform and spectrogram) and app/wb_tabs.cpp (measure, demodulate,
 // bits, export). Everything here is the interface thread's; the background jobs hand their results over through the flags.
 #pragma once

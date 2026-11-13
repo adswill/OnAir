@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL beacon (port of kaal_beacon_v2.py and kaal_beacon_slice.py): the station identity frame (no UTC time, no icon, text up to 100
 // characters) and its narrow side channel: BPSK 1000 sym/s, RRC 0.35, centred +4500 Hz from the voice channel, rate 1/4 K=7 convolutional
 // code (generators 171 133 165 117 octal), a 64-symbol sync word in front. Header-only frames carry 170 bits, full frames add the text.

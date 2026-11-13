@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The per-mode transmit parameter table (tx_params.h). One builder per kind of signal; every row names where its value goes, and the rows that do not change
 // the samples say so (meta). docs/TX-4.0.md has the audit that this table came from.
 #include "dect2/tx/tx_params.h"

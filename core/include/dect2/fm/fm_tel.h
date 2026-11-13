@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM receiver telemetry, shared by the receiver and the UI.
 #pragma once
 #include "dect2/common/ring.h"

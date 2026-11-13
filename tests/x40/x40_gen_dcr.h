@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals for DCR (ARIB STD-T98 volume 3, 4-level FSK): frames built from the standard, 4-level FSK with the raised cosine pulse (roll-off 0.2) at
 // +-315 / +-945 Hz, with the impairments the receiver has to live with. Exists only in the tests; nothing here is reachable from the transmit side of the application.
 #pragma once

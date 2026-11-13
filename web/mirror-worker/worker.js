@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Example update mirror for OnAir (docs/UPDATE-MIRROR.md). A Cloudflare Worker that forwards GET requests for the project's own release
 // list and release files, and nothing else. Use it as  https://<your-domain>/{url}  (the project's own copy: https://mirror.on-air.dev/{url})
 const RELEASES_API = /^https:\/\/api\.github\.com\/repos\/adswill\/OnAir\/releases(\?per_page=\d{1,3})?$/;

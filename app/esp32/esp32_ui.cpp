@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > "nRF24 / ESP32 radio": an ESP32 board (with an nRF24L01+ module on its SPI bus) on a USB serial port as a receiver and, behind the Arm switch,
 // a transmitter. Receive first: nRF24 packets, BLE advertising, WiFi networks / clients / signal / channel load (observation only). Every parameter is under
 // Advanced. The driver is core/src/esp32; the firmware is firmware/esp32. Untested on a real board (docs/ESP32-NRF24-DESIGN.md).

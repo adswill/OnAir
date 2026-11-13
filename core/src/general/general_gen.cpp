@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General receiver test signal (see general_gen.h).
 #include "dect2/general/general_gen.h"
 #include "dect2/general/general_rx.h"

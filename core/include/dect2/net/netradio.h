@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radios on the network that the user adds by address (issues #28, #54, #68): a PlutoSDR by IP, an rtl_tcp server, a SoapyRemote server,
 // a SpyServer, an SDR++ server, a Hermes Lite 2, a Red Pitaya, a KiwiSDR (found by discovery, or by address).
 // They are listed with the other radios (listRadios) once setNetworkRadios() has them.

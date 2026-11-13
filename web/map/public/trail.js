@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // trail.js - merge the trail the hub keeps with the points this page saw live (pure, tested in node).
 // A point is [t_ms, lat, lon, alt|null, heading|null], the same shape the hub serves.
 

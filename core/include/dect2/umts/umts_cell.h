@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UMTS / WCDMA downlink cell search (3GPP TS 25.213): primary and secondary synchronisation channels and the CPICH, at 3.84 Mchip/s. For every cell heard: its primary
 // scrambling code number, the code group, level and Ec/Io, the frame timing and the frequency offset. The P-CCPCH is decoded for the operator (MIB) and cell identity (SIB 3) (umts_bch.h).
 #pragma once

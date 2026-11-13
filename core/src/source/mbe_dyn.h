@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The user-installed mbelib, loaded at run time (patented voice codecs are never shipped, docs/CODECS.md): the part that the AMBE (D-STAR, NXDN) and IMBE (P25) decoders share.
 // Only two functions of mbelib.h (1.3) are needed: mbe_initMbeParms and one frame function per codec. mbe_parms is a plain struct of a few kilobytes at most; it is kept in a
 // larger buffer of our own (MbeState), so its layout is never needed.

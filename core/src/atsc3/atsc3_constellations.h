@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Constellations used for L1-Basic and L1-Detail (A/322 Annex C).
 #pragma once
 #include "dect2/common/ring.h"

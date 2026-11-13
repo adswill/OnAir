@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The list of public KiwiSDR receivers (parseKiwiList, kiwisdr.h): a JSON array of flat objects, as the public listing publishes it, also when it is
 // wrapped in a JavaScript assignment. A tolerant reader: unknown fields and nested values are skipped, a bad entry is dropped, garbage gives {}.
 // The field names are ASSUMED from the public listing (name, url, loc, antenna, sdr_hw, gps, users, users_max, snr, bands, offline): the endpoint

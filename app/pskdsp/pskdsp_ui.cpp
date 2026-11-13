@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator screens (family 202, experimental): the analyser (what the blind analysis found: symbol rate and its candidates, order
 // with the EVM of each trial, pulse shape, carrier, Doppler, Eb/N0, and the two line spectra the rate and the carrier come from), the bits
 // (hex and text, lines starting at each sync word) and the log; the constellation and the eye diagram in the analysis row. Everything is

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Military / government HF waveform identifier: measures the physical layer of an audio-rate signal (occupied band, baud rate, tone comb,
 // constellation order, frame periodicity, pilots, bursts) and ranks candidate waveforms. IDENTIFICATION ONLY: nothing is decoded,
 // no message content is read and no encryption is touched. The candidates are estimates from measured features, not decoder results.

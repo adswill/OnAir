@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMF keypad of the analog voice transmitter (tx_dtmf.h): the keys go through the real TX generators (NFM of a digital-voice mode's
 // "analog" box, airband AM, QO-100 USB) and are read back by OnAir's own tone decoder (tones_rx.h) from the IQ, with a carrier offset,
 // noise, every key, several tone / gap lengths and twist; the microphone (a 1 kHz tone) is muted while a key plays. In memory only:

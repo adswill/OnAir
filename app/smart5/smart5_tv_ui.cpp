@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Round-5 smart engines for TV in the mode screens (docs/SMART5-tv-3.9.md items 11-15, and item 7 for TV; docs/SMART5-UI-3.9.md):
 // service off air at the source (per-PID rates) and fault or reception (per service) from the transport stream of DVB, ATSC,
 // ISDB and DTMB; the OFDM interferer locator from the per-carrier SNR (DVB-T, DVB-T2, ISDB-T); the transmitter from the cell ID

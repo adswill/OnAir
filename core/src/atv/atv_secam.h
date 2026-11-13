@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV receiver, SECAM colour: the chrominance is an FM subcarrier (4.40625 MHz on D'R lines, 4.25 MHz on D'B lines, line by line). In the
 // complex baseband of the vision channel the subcarrier is a single-sideband signal, so it can be taken from there directly: mix 4.286 MHz to
 // zero, low-pass, decimate to about 2.5 Msps, undo the high-frequency pre-emphasis (the "bell", an FIR made from the response of BT.470-6 item

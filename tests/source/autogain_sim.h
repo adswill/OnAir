@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A simulated radio for the automatic-gain tests (tests/source/test_autogain.cpp): the profile's gain stages with their step tables, a noise
 // figure that follows the stage split (Friis, a turned-down LNA lets the later stages' noise in), a front end with a finite IIP3 (third-order
 // products of strong neighbours, compression near P1dB), an ADC that clips and quantises, gain changes that reach the samples only after the

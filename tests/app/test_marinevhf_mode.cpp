@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF mode: the engine tuning is registered under its number, the mode row, the family count, the screen mapping and the DSC jump agree,
 // and the panel strings are in the screen sources.
 #include "dect2/engine/mode_tuning.h"

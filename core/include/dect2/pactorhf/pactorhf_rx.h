@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-II / -III / -IV receiver (receive only, physical layer; see pactorhf_dsp.h and docs/pactorhf.md). One class for the three modes: the
 // variant says what the mode looks for (2, 3 or 4); the analysis reports what it finds (so PACTOR-II mode tells you when the signal is PACTOR-III).
 //

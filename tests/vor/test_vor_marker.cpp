@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ILS marker beacons (75 MHz, ICAO Annex 10 Vol I 3.1.7): outer 400 Hz keyed in dashes at 2 per second, middle 1300 Hz dot-dash, inner 3000 Hz dots at 6
 // per second, 95 % AM. The test signals of vor_gen.cpp through carrier offset, noise, a clock error and 8-bit clipping: the tone (marker kind), the keying
 // pattern and that the keying matches the tone; negatives: a localizer signal and noise alone on 75 MHz give no marker. Simulated signals only.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // #104: a pane whose content ends with SetCursorScreenPos and no item made ImGui report "extend window/parent
 // boundaries" (an assert in a Debug build). ui::closeCursorMove() before EndChild must keep that report away and grow the pane.
 #include "../../app/ui/setpos_guard.h"

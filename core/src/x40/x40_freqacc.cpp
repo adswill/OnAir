@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Carrier frequency accuracy meter: tune a carrier of a known frequency (a time-signal or broadcast station, a GPS-locked beacon, a calibrator) and read the error of the radio
 // in Hz and in parts per million of the tuned frequency. Every window the carrier is found in a +-2.8 kHz window (a Hann-windowed FFT of 1 to 2 s, a power of two of samples, log-parabolic peak), its offset from the
 // tuned frequency and its carrier-to-noise-density ratio are taken. From the readings: the average and the scatter of the last ten, the drift (straight-line fit over up to four minutes,

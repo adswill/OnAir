@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Writes kaal_golden_codec3.h: golden vectors from the reference kaal_codec_v3.py (path: argv[1], default /tmp/kaal-codec).
 Signal (also built in test_kaal_codec3.cpp): 1 s, 16 kHz, a modulated three-partial voice-like tone plus integer LCG noise, truncated to int16.
 Per profile (12, 16, 24, 32 kbit/s): the first NF frames' bits (hex), the Python decode of them. For 16 kbit/s also the Python decode of

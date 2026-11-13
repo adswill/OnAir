@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The RTL-SDR driver (source_rtlsdr.cpp) drives the radio through a table of librtlsdr entry points (RtlApi). Where the platform hands over an
 // opened USB descriptor instead of letting a library scan the bus (Android), the same table is filled with the functions below: the RTL2832U /
 // tuner protocol is the Rust layer rust/onair_usb (rs/usb_rtl.hpp) running over a usbfs descriptor (usb_fd_io.h). The driver itself is shared;

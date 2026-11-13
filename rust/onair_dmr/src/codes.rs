@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! DMR short block codes and Reed-Solomon (ETSI TS 102 361-1 annex B): Golay (20,8), quadratic residue (16,7,6), Hamming (7,4,3), the Hamming
 //! codes of the block product codes (13,9,3), (15,11,3), (16,11,4), (17,12,3), and Reed-Solomon (12,9) over GF(256) for header / terminator link control.
 //! The generator matrices are those of tables B.11 to B.17 (parity part of the systematic matrix, first information bit first, first parity column on top).

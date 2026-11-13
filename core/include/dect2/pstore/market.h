@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The community plugin marketplace (client side, docs/PLUGIN-MARKETPLACE-4.0.md): anyone signed in with GitHub can publish a plugin; it is
 // live at once and marked "unreviewed". Browsing, liking and downloading need no account. The server is tools/marketplace/server (a
 // Cloudflare Worker). Every answer this class trusts for what to install (the list, a plugin page, the download address and its sha256) is

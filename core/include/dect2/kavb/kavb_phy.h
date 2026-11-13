@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB, the amateur digital video mode (spec: KAVB-SPEC-v0.1): the physical layer, transmit side and the shared frame layout.
 //
 // One frame = preamble (32 symbols, Zadoff-Chu root 7) + header (64 info bits incl. CRC-16, K = 7 rate 1/2 convolutional code, BPSK, 140 symbols) + data region

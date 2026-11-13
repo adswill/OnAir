@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MAC through the engine (setStandard(49)): the synthetic source plays the D2-MAC test signal at 20 Msps, the receiver reports through
 // latestRx() and makes pictures. Silent: the receiver never opens the sound device.
 #include "dect2/mac/mac_rx.h"

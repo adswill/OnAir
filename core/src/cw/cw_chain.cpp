@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW signal chain (see cw_chain.h).
 #include "dect2/cw/cw_chain.h"
 #include <algorithm>

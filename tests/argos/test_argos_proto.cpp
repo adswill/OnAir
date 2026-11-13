@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Argos message layers: every A2 length goes through buildA2 / parseA2 with its fields; nearestA2Length only gives lengths that exist; the
 // HDLC deframer gets frames back from hdlcFrameBits (zero-bit insertion, back-to-back flags, the FCS), a damaged frame fails the FCS and
 // the CRC-16/X.25 check value is right.

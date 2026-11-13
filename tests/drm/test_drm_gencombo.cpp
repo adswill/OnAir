@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The DRM test signal for every choice of the generator panel (mode, occupancy, QAM, protection): the synthetic source must always produce samples.
 // Regression (3.9, Discord report): 16-QAM with protection 2 or 3 in modes A to D (which have levels 0 and 1 only) made an invalid transmitter, its
 // fallback kept the invalid protection, and DrmSynth::generate() looped forever waiting for samples, freezing the app. Now the protection is clamped

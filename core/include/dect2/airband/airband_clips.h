@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airband: one WAV per transmission (RTLSDR-Airband, SDRTrunk). Each squelch opening of a channel is saved as a short clip named with the channel,
 // the frequency and the UTC time, plus a rolling 30 s of each channel for "replay the last 30 s". Fed by the receiver with each channel's 8 kHz audio
 // after the squelch (zeros while it is closed). Thread safe: the receiver feeds, the interface reads the finished clips. docs/AIRBAND-CLIPS-3.9.md.

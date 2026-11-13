@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests for the NXDN layer: LICH round trip, CRC sensitivity, channel encode / decode with bit errors, message round trips.
 use crate::chan::{self, Ch};
 use crate::lich::{self, Lich};

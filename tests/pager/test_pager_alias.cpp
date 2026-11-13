@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: the capcode alias CSV (#5): import with real-world spreadsheet quirks, lookup precedence per protocol, export and a round trip.
 #include "../../app/pager/pager_alias.h"
 #include <cstdio>

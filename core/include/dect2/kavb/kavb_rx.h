@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB receiver (spec: KAVB-SPEC-v0.1; frame layout in kavb_phy.h).
 //
 // Input: IQ at 4 samples per symbol of the profile's symbol rate (the caller resamples), any carrier offset up to about +-0.025 symbol rates (+-17 kHz at 700 ksym/s, +-35 kHz at 1.4 Msym/s; measured, the 16-symbol half-preamble correlation loses its peak beyond that),

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Gray code (adjacent values differ in one bit), as used by QAM/PSK/CSS symbol mappings.
 
 pub fn to_gray(v: u32) -> u32 {

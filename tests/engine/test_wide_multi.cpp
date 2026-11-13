@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wide multi-signal decode, part 2 (core/include/dect2/engine/wide_session.h): TETRA carriers beside digital voice in one capture, signals marked by
 // hand (addManual / remove), and an impairment sweep: carriers at the edge of the span, next to DC, off the raster, at 2.4 and 4 Msps. Synthetic IQ only.
 #include "dect2/dmr/dmr_gen.h"

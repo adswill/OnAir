@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog FPV video test signal: a video transmitter on one channel of the plans (fpv_chan.h), as it is on the air: the composite video of the analog
 // TV generator (test card or colour bars, PAL or NTSC, with the clock and a moving box) frequency modulated onto the carrier (sync tip the lowest
 // frequency, a swing of +-8 MHz), with a sound subcarrier of 6.0 or 6.5 MHz (FM, a 1 kHz tone with short interruptions) added to the composite.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Journaline decoder, see dab_journaline.h. Clause numbers are those of ETSI TS 102 979 V1.1.1 unless named otherwise.
 #include "dect2/dab/dab_journaline.h"
 #include "dect2/dab/dab.h"

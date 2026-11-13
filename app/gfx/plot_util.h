@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure helpers of the spectrum plots (no ImGui): the trace decimation and the frequency tick labels. Tested in tests/app/test_plot_util.cpp.
 #pragma once
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Position and clock solution from pseudoranges: iterative weighted least squares with one clock unknown per system (inter-system bias),
 // atmosphere corrections from the elevation of each satellite, and a residual check that drops a bad satellite.
 #pragma once

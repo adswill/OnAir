@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C ABI of the Rust crate rust/onair_uat (UAT 978 MHz message layer, RTCA DO-282B). Written by hand; the Rust test rust/onair/tests/headers.rs checks it against ffi.rs.
 // Flags are 0 / 1 bytes; the structs are plain C (no bit fields).
 #pragma once

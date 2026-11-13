@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto-record rules (docs/MODE-EXPERIENCE.md, 3.1 and 3.2): default OFF, matching, limits, encrypted never, persistence, and the store telling the
 // handlers when a matching session starts and ends (with the raw ids, before they are replaced by tags).
 #include "dect2/session/record_rules.h"

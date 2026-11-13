@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh session report (mesh_report.h)
 #include "dect2/mesh/mesh_report.h"
 #include <algorithm>

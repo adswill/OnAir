@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF beacons: a propagation monitor. No decoder: it watches the frequencies of the NCDXF/IARU International Beacon Project, the Long Dashes
 // and the Russian single-letter beacons (an editable list, hfbeacon_list.h) in a wide HF capture, tells each from a random carrier by its
 // keying and schedule, and keeps SNR and last-heard histories for 24 hours. The processing is in hfbeacon_dsp.h.

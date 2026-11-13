@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM frequency diversity: one programme on two frequencies with a delay between them and fades that come at different times. The output must beat either channel alone;
 // the delay must be found. FadeTracker must find a regular fade and its period.
 #include "dect2/general/am_diversity.h"

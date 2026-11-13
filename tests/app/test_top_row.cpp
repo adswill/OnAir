@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The classic top bar's right-hand buttons (app/ui/top_row.h, #139 #424): at every window width from 320 to 3840 px and every UI scale the
 // buttons stay inside the window, never overlap each other and never overlap the mode selector on its line. ImGui gives a click to the item
 // drawn first, so an overlapped button did nothing (the Pi at 640x480 in #139: Touch, New interface, Server and the language).

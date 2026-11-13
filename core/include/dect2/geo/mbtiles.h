@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Read-only MBTiles reader (a SQLite file with a `tiles` table of zoom_level, tile_column, tile_row, tile_data), written from the public
 // SQLite file-format description so no SQLite library is needed (it works the same on every platform).
 //

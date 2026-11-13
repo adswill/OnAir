@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tags and notes for recordings: kept in one small text file in the recordings folder (".onair-tags.tsv"), keyed by the recording's file
 // name, so a library moved with its folder keeps them. Pure (std only); the library window (app/panels/recording_library_ui.cpp) uses it.
 // docs/RECORDING-TAGS.md.

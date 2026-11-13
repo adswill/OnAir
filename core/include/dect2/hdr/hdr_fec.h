@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio (NRSC-5) channel coding shared by the receiver and the test signal generator: the check sums of the layers, the L1 scrambler,
 // the tail-biting convolutional codes with their soft Viterbi decoder, the Reed-Solomon code of the audio PDU header and the interleaver
 // position tables of the FM (MP1) and AM (MA1) waveforms.

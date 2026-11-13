@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum explorer: no decoder, only a spectrum of everything the radio sees (Blackman-Harris window, FFT of a chosen size, averaged
 // in power), for looking around, measuring carriers and sweeping a range. Engine standard 43 (active 42).
 // Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never blocks),

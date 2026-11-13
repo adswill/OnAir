@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR screens: the two time slots and the call log, the symbol plots, the receiver counters and the options of the test signal.
 #include "call_filter.h"
 #include "ui/kit/export.h"

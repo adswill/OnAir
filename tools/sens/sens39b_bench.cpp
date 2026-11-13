@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Threshold bench for SENSITIVITY-3.9-B (not built by CMake): build it by hand against dect2core; sens39b_bench navtex lo hi step trials [offHz driftHzPerMin], env LINES (message length), RATE (whole receiver at that input rate)
 #include "../../tests/marine/navtex_bench.h"
 #include "../../tests/psk/psk_bench.h"

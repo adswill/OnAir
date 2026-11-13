@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde landing prediction 4.0: see core/include/dect2/sonde/sonde_predict.h and docs/SONDE-PREDICT-4.0.md.
 #include "dect2/sonde/sonde_predict.h"
 #include <algorithm>

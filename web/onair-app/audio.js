@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web 3.9: audio playback through an AudioWorklet (worklet.js) with a small jitter buffer; a ScriptProcessor fallback where
  * worklets are missing. Also records what is heard to a WAV file in the browser (nothing is written on the server). */
 (function (root) {

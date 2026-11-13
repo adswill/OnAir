@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ALE link-quality memory (3.7, docs/SMART-maritime-3.7.md): every call or sounding the receiver hears from a station is a measurement of the path
 // station -> this receiver on that frequency at that time of day. The store keeps them per station x frequency x hour of the UTC day (with a half life of
 // two weeks, so the table follows the seasons and the sunspot cycle) and answers "which frequency reaches that station best now": the score blends what

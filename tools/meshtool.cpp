@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa: Meshtastic + MeshCore) command line tool.
 //   meshtool gen <secs> <file.cs8|.cf32> [--rate <sps>] [--snr <dB>] [--weak <dB>] [--cfo <Hz>] [--sro <ppm>] [--protocols 1|2|3] [--region 0|1] [--seed <n>]
 //       writes the test signal (mesh_gen.h): the user's frequency (Meshtastic LongFast) sits at -300 kHz in the samples

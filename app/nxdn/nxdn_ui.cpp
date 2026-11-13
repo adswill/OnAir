@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NXDN screens: the current call (unit id, talkgroup, call type, encryption, voice), the call log (voice, status and short data), the
 // decoded control messages, the site information, and a "?" about the mbelib library the voice needs (docs/CODECS.md).
 #include "../d40/d40_ui.h"

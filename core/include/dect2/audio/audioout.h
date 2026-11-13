@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Audio output (CoreAudio on macOS, miniaudio elsewhere) with a lock-free ring buffer; keeps count of frames written and played for A/V sync.
 #pragma once
 #include <cstdint>

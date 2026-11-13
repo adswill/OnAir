@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // L-band carrier quality log (3.9, docs/SMART5-sat-3.9.md item 19). For Inmarsat, Iridium, Thuraya and other L-band carriers:
 // per carrier, the SNR and decoded frames per minute over time, and each outage (no frames for a while after the carrier was
 // decoding) with its likely reason from the marks the caller gives: a sun outage in progress, the satellite low in the sky

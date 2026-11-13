@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW signal chain after the channel filter: the magnitude of the channel once a millisecond in, decoded text out.
 //
 // Envelope detector -> debounce -> decoder. Two decoders: the adaptive one (cw_decoder.h: learns the operator, reads hand keying, character
