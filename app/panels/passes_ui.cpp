@@ -1752,16 +1752,24 @@ void drawWindow(App& a) {
         ImGui::TextDisabled("%s", tr("Receiver position"));
         ImGui::SameLine();
         receiverPositionFields(a);
-        if (!receiverLocationSet()) { ImGui::SameLine(); ImGui::TextColored(pal::warnAmber(), "%s", tr("not set: the times are for a placeholder position")); }
+        // one row while it fits, else the parts wrap: at 150 % on a 1280 px window the orbit age, Show map, Advanced and full screen ran
+        // past the right edge, out of reach
+        const float fp2 = 2 * ImGui::GetStyle().FramePadding.x;
+        const auto bw = [&](const char* s) { return ImGui::CalcTextSize(s).x + fp2; };
+        if (!receiverLocationSet()) {
+            const char* ns = tr("not set: the times are for a placeholder position");
+            sameLineIf(ImGui::CalcTextSize(ns).x);
+            ImGui::TextColored(pal::warnAmber(), "%s", ns);
+        }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The same position as the ADS-B antenna position"));
-        ImGui::SameLine();
+        sameLineIf(ImGui::CalcTextSize(tr("Orbits: built-in set, %.0f days old")).x + ImGui::GetStyle().ItemSpacing.x + bw(tr("Update orbits")));
         orbitStatus();
-        ImGui::SameLine();
+        sameLineIf(bw(tr(S.bigMap ? "Hide map" : "Show map")));
         if (ImGui::SmallButton(tr(S.bigMap ? "Hide map" : "Show map"))) { S.bigMap = !S.bigMap; plat::prefs().setB("passBigMap", S.bigMap); }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The world map with the chosen satellites' orbits, footprints and day and night"));
-        ImGui::SameLine();
+        sameLineIf(bw(tr(S.advanced ? "Back" : "Advanced")));
         if (ImGui::SmallButton(tr(S.advanced ? "Back" : "Advanced"))) S.advanced = !S.advanced;
-        ImGui::SameLine();
+        sameLineIf(ImGui::GetFrameHeight() * 2);
         if (adsbmap::fullButton(full, "screen")) full = !full;
     }
     if (S.advanced) { advancedPage(a); ImGui::End(); return; }
