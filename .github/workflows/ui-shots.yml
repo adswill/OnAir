@@ -1,0 +1,84 @@
+# Screenshots of the interface for a layout review, without a Mac: the app is built once on Linux and run headless (xvfb, Mesa software
+# OpenGL) for every mode group, a sample of modes, the main tabs and the dialogs (tools/ui_shots.sh), at three window sizes and two UI
+# scales. Contact sheets (12 labelled shots each) and stacked header / footer strips come back as the artifact "ui-sheets"; the raw shots
+# as "ui-shots-<size>-<scale>".
+#   gh workflow run ui-shots.yml -R adswill/OnAir --ref <branch> [-f set=quick]
+name: UI shots
+on:
+  workflow_dispatch:
+    inputs:
+      set:
+        description: "full (every shot) or quick (the mode groups, three tabs, Settings, Light)"
+        type: choice
+        options: [full, quick]
+        default: full
+concurrency:
+  group: ui-shots-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: Build the app
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/linux-deps
+        with: { extra: "xvfb libgl1-mesa-dri", set-name: gl31 }
+      - uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-gl31-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+          restore-keys: ccache-gl31-
+      - name: Build the app only
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=OFF -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build -j 4 --target dect2
+          mkdir -p dist && cp build/dect2 dist/ && find build -maxdepth 2 -name '*.so*' -exec cp {} dist/ \; ; ls -la dist
+      - uses: actions/upload-artifact@v7
+        with: { name: dect2-bin, path: dist, retention-days: 3 }
+
+  shots:
+    name: Shots ${{ matrix.size }} at ${{ matrix.scale }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        size: [1280x720, 1600x900, 1920x1080]
+        scale: ["1.0", "1.5"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/linux-deps
+        with: { extra: "xvfb libgl1-mesa-dri imagemagick fonts-dejavu-core", set-name: uishots }
+      - uses: actions/download-artifact@v7
+        with: { name: dect2-bin, path: dist }
+      - name: Shots and contact sheets
+        run: |
+          chmod +x dist/dect2
+          export LD_LIBRARY_PATH="$PWD/dist${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+          W=${{ matrix.size }}; W=${W%x*}; H=${{ matrix.size }}; H=${H#*x}
+          xvfb-run -a -s "-screen 0 $((W + 64))x$((H + 64))x24" tools/ui_shots.sh dist/dect2 out ${{ matrix.size }} ${{ matrix.scale }} ${{ inputs.set }}
+          [ -f out/missing.txt ] && cat out/missing.txt || true
+          ls out/shots/*.png | wc -l
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: "ui-shots-${{ matrix.size }}-${{ matrix.scale }}", path: out/shots, if-no-files-found: ignore, retention-days: 7 }
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: "ui-sheets-${{ matrix.size }}-${{ matrix.scale }}", path: "out/*.png\nout/missing.txt", if-no-files-found: ignore, retention-days: 14 }
+
+  sheets:
+    name: Gather the sheets
+    needs: shots
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v7
+        with: { pattern: "ui-sheets-*", path: sheets, merge-multiple: true }
+      - run: ls -la sheets
+      - uses: actions/upload-artifact@v7
+        with: { name: ui-sheets, path: sheets, retention-days: 14 }

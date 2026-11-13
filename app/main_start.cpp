@@ -190,6 +190,7 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--tour") { app.wizOpen = true; app.wizStep = i + 1 < argc && argv[i + 1][0] != '-' ? atoi(argv[++i]) : -1; }   // dev: open the tour (at this step)
         if (std::string(argv[i]) == "--controls") inputmap::windowOpen() = true;   // dev: the View > Controls window open (screenshots)
         if (std::string(argv[i]) == "--credits") app.creditsOpen = true;   // dev: the Credits window open (screenshots)
+        if (std::string(argv[i]) == "--settings") settingsOpen() = true;   // dev: the Settings window open (screenshots, tools/ui_shots.sh)
         if (std::string(argv[i]) == "--ghost") app.specGhost = true;   // dev: the spectrum ghost overlay on (screenshots)
         if (std::string(argv[i]) == "--reclib") recordingLibraryDevOpen();   // dev: the Recording library window open (screenshots)
         if (std::string(argv[i]) == "--tgdir") tgdirui::devOpen();   // dev: the Talkgroup names blocks open (screenshots)
