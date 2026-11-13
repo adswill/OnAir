@@ -1,0 +1,14 @@
+# Good to know
+
+- Encrypted (scrambled) services cannot be decoded.
+> [!NOTE]
+> **Built codecs on Discord.** Don't want to build them yourself? Join the [OnAir Discord](https://discord.gg/ptxkzCuzR): the Dropbox link with the ready-built codec files (DMR / NXDN / dPMR, D-STAR, P25, Yaesu Fusion, TETRA, TETRAPOL, Iridium, Inmarsat Aero, HD Radio, CDR, AC-4; Windows, macOS, Linux) is posted there. Whether you install or use them is your own responsibility: follow the patent and radio-listening law where you live. Details: [docs/CODECS.md](CODECS.md).
+
+> **mbelib is not included from 0.2.6.** DMR, P25, NXDN, dPMR and D-STAR voice is silent until you install mbelib yourself, because the AMBE / IMBE vocoders are patented. Calls, IDs and data work without it. Put the library in the codecs folder (the **?** next to the sound has an **Open codecs folder** button), then press **Look again**. The build helper in **Help > Voice codecs** builds the plug-ins on your computer for you. Steps: **[docs/CODECS.md](CODECS.md)**.
+>
+> **HD Radio sound is not included.** HDC is a proprietary codec of Xperi, so OnAir shows the stations, program data and pictures but is silent until you build the HDC-patched FAAD2 (`libfaad_hdc`) yourself from the open-source nrsc5 patch and put it in the codecs folder, then press **Look again** (the **?** next to the sound). Steps and the legal note: **[docs/CODECS.md](CODECS.md#hd-radio-sound-hdc-build-it-yourself)**.
+
+- codec2 (FreeDV and M17 speech) comes with OnAir as a separate shared library, nothing to install. Some other voice and audio codecs are not shipped (AMBE and HDC are patented, DRA+ is of unclear status). **[docs/CODECS.md](CODECS.md)** says how to install the ones you can, and what to use for the others; the **?** button next to the sound of each such mode says the same.
+- **Saving DRA sound.** OnAir does not include a DRA decoder (CDR sound needs the optional add-on in [docs/CODECS.md](CODECS.md#dra-cdr-sound), TV DRA needs a patched FFmpeg), but it can save the raw sound. In the CDR *Radio* tab, and in the *Player* section of the TV tab for a DTMB service whose sound is DRA (or any service with MPEG audio), press **Save stream**. The raw audio goes to `audio-streams/<name>_<date>_<time>.dra` (`.mp2` for MPEG audio) in OnAir's data folder; press **Stop saving** to close the file. Play it with an FFmpeg that has DRA support (`ffplay stream.dra`, or `ffplay -f dra stream.dra` if it is not recognised); a normal FFmpeg cannot read `.dra`, while `.mp2` plays anywhere.
+- Reception depends heavily on your antenna and location. A weak or echo-filled signal is the usual cause of a broken picture; the quality score and echo detector help you improve it.
+- Receiving broadcasts is legal in most places, but laws differ. Check the rules where you live.
