@@ -197,8 +197,8 @@ void scadaTab(App& a) {
     ImGui::SameLine(); ImGui::Checkbox(tr("Hide not recognised"), &v.hideUnknown);
     if (!v.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", v.note.c_str()); }
     if (ImGui::BeginTabBar("##scadatabs")) {
-        if (ImGui::BeginTabItem(tr("Messages"))) { messagesTab(v); ImGui::EndTabItem(); }
-        if (ImGui::BeginTabItem(tr("Devices"))) { devicesTab(v); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem(trw("Messages"))) { messagesTab(v); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem(trw("Devices"))) { devicesTab(v); ImGui::EndTabItem(); }
         ImGui::EndTabBar();
     }
 }
