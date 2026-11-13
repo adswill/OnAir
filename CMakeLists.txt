@@ -2277,7 +2277,7 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_webapp PRIVATE onair_web dect2core)
   target_compile_definitions(test_webapp PRIVATE ONAIR_SERVER_VERSION="${PROJECT_VERSION}" ONAIR_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
   add_test(NAME webapp COMMAND test_webapp)
-  set_tests_properties(webapp PROPERTIES TIMEOUT 300)
+  set_tests_properties(webapp PROPERTIES TIMEOUT 1500)   # selects every mode in turn; the table grows each release, 300 s timed out on Linux and Windows shards
   if(TARGET onair-app-load)
     add_test(NAME web_app_load COMMAND onair-app-load --viewers 0,1,5,20 --seconds 6)   # the CPU per viewer count (docs/WEB-3.9.md); ctest's LastTest.log keeps the figures
     set_tests_properties(web_app_load PROPERTIES TIMEOUT 300 RUN_SERIAL TRUE LABELS "load")
