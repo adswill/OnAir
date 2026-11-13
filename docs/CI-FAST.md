@@ -13,6 +13,7 @@ Goal for 3.8: from "release" to published in about 2 hours instead of 7. This pa
 | web_policy classification | `gate_check.py web_policy`: Python reading of `tests/server/test_web_safety.cpp` section 4 | a new mode not classified in `server/web/web_policy.cpp` |
 | Android native link | `gate_check.py android`: every FFmpeg, libusb, HackRF call of the core has a stand-in in `stubs_ext.c` | the missing stand-in of 3.7 |
 | credits generator | `tools/gen_credits.py`, then `git diff --exit-code` | credits not regenerated |
+| diagnostic codes | `tools/lint/diag_check.py --self-test`, then `tools/lint/diag_check.py` (docs/DIAGNOSTICS.md) | an invalid, reused or vanished code, a message that is not one literal sentence, a duplicate message |
 | Android JNI table, generated mode list and results | the `android.yml` check step | stale generated files |
 | gui_rules, credits table, i18n | the real test programs, compiled alone (`tests/app/test_*.cpp`) | |
 

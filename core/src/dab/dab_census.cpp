@@ -6,6 +6,7 @@
 #include "dect2/dsp/carrierfind.h"
 #include "dect2/dsp/fftutil.h"
 #include "dect2/common/threadpool.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -98,6 +99,7 @@ struct DabCensus::Impl {
             if ((int)slots.size() >= cfg.maxEnsembles) {
                 auto w = std::min_element(slots.begin(), slots.end(), [&](const auto& x, const auto& y) { return ch[(size_t)x->idx].power < ch[(size_t)y->idx].power; });
                 if (ch[(size_t)(*w)->idx].power * 4 > ch[(size_t)idx].power) continue;     // 6 dB better to take a place
+                DIAG_DEBUG(424167, "The DAB census gives the receiver of channel %s to channel %s, which is over 6 dB stronger.", ch[(size_t)(*w)->idx].row.channel.c_str(), ch[(size_t)idx].row.channel.c_str());
                 ch[(size_t)(*w)->idx].row.active = false;
                 slots.erase(w);
             }
@@ -105,7 +107,11 @@ struct DabCensus::Impl {
             s->idx = idx; s->rx.reset(new DabReceiver());
             s->rx->configure(2048000.0);
             s->rx->audio().setSilent(true);
-            if (!s->ch.configure(rate, 2048000.0, ch[(size_t)idx].relHz, 1712000.0)) continue;
+            if (!s->ch.configure(rate, 2048000.0, ch[(size_t)idx].relHz, 1712000.0)) {
+                DIAG_DEBUG(518968, "The channelizer for DAB channel %s (%.0f Hz from the centre) did not configure at %.0f samples per second, so it is not decoded.",
+                           ch[(size_t)idx].row.channel.c_str(), ch[(size_t)idx].relHz, rate);
+                continue;
+            }
             ch[(size_t)idx].row.active = true;
             slots.push_back(std::move(s));
         }
@@ -162,14 +168,18 @@ bool DabCensus::configure(double rate, double centreHz, const DabCensusConfig& c
     std::lock_guard<std::mutex> g(p_->mu);
     auto& P = *p_;
     P.cfg = c; P.rate = rate; P.centre = centreHz; P.now = 0; P.slots.clear(); P.ch.clear(); P.ok = false; P.done = 0; P.fill = 0;
-    if (rate < 3.0e6) return false;
+    if (rate < 3.0e6) { DIAG_DEBUG(807841, "The DAB census needs at least 3 Msps for two channels, so it does not run at %.0f samples per second.", rate); return false; }
     for (const auto& pl : dabBandIII()) {
         const double rel = pl.mhz * 1e6 - centreHz;
         if (std::fabs(rel) + 900000.0 > 0.5 * rate) continue;
         Impl::Chan k; k.p = &pl; k.relHz = rel; k.row.channel = pl.name; k.row.mhz = pl.mhz;
         P.ch.push_back(k);
     }
-    if (P.ch.empty()) return false;
+    if (P.ch.empty()) {
+        DIAG_DEBUG(700237, "No Band III DAB channel fits within %.0f samples per second around %.3f MHz, so the census does not run.", rate, centreHz / 1e6);
+        return false;
+    }
+
     P.nfft = 4096; P.nAvg = std::max(4, (int)(0.2 * rate / P.nfft));
     P.fft.reset(new Fft(P.nfft));
     P.win.resize((size_t)P.nfft);

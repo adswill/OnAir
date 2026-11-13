@@ -8,6 +8,7 @@
 #include "dect2/audio/audioout.h"
 #include "dect2/dab/dab_pad.h"
 #include "dect2/dab/dab_playout.h"
+#include "dect2/common/diag.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -17,6 +18,7 @@ extern "C" {
 }
 #include <algorithm>
 #include <atomic>
+#include <cerrno>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -69,6 +71,7 @@ struct Faad {
         open = (Open)sym("NeAACDecOpen"); getConf = (GetConf)sym("NeAACDecGetCurrentConfiguration"); setConf = (SetConf)sym("NeAACDecSetConfiguration");
         init2 = (Init2)sym("NeAACDecInit2"); decode = (Decode)sym("NeAACDecDecode"); close = (Close)sym("NeAACDecClose");
         ok = open && getConf && setConf && init2 && decode && close;
+        if (!ok) DIAG_DEBUG(801409, "The faad2 library was not found or lacks a function (loaded: %s), so DAB+ audio with SBR is decoded by FFmpeg.", h ? "yes" : "no");
     }
     void* h = nullptr;
     static Faad& get() { static Faad f; return f; }
@@ -197,17 +200,21 @@ struct DabAudio::Impl {
                     return true;
                 }
                 F.close(faad); faad = nullptr;
-            }
+                DIAG_DEBUG(599639, "The faad2 decoder did not accept the AudioSpecificConfig of DAB+ header 0x%02X, so FFmpeg's AAC decoder is tried instead.", hdr);
+            } else DIAG_DEBUG(925166, "The faad2 decoder did not open for DAB+ header 0x%02X, so FFmpeg's AAC decoder is tried instead.", hdr);
         }
         st.decoder = "FFmpeg";
         codec = avcodec_find_decoder(AV_CODEC_ID_AAC);
-        if (!codec) return false;
+        if (!codec) { DIAG_DEBUG(468511, "This FFmpeg build has no AAC decoder, so the DAB+ service with header 0x%02X stays silent.", hdr); return false; }
         ctx = avcodec_alloc_context3(codec);
         const std::vector<uint8_t> asc = makeAsc(dac, sbr, stereo, ps);
         ctx->extradata = (uint8_t*)av_mallocz(asc.size() + AV_INPUT_BUFFER_PADDING_SIZE);
         std::memcpy(ctx->extradata, asc.data(), asc.size());
         ctx->extradata_size = (int)asc.size();
-        if (avcodec_open2(ctx, codec, nullptr) < 0) { avcodec_free_context(&ctx); return false; }
+        if (avcodec_open2(ctx, codec, nullptr) < 0) {
+            DIAG_DEBUG(112465, "The FFmpeg AAC decoder did not open for DAB+ header 0x%02X (SBR %d, PS %d), so this service stays silent.", hdr, sbr, ps);
+            avcodec_free_context(&ctx); return false;
+        }
         openHeader = hdr;
         st.codec = sbr && ps ? "HE-AAC v2" : sbr ? "HE-AAC" : "AAC-LC";
         st.channels = stereo ? 2 : 1;
@@ -217,9 +224,12 @@ struct DabAudio::Impl {
     bool openMp2() {
         closeDecoder();
         codec = avcodec_find_decoder(AV_CODEC_ID_MP2);
-        if (!codec) return false;
+        if (!codec) { DIAG_DEBUG(781924, "This FFmpeg build has no MPEG audio layer II decoder, so the DAB service at %d kbit/s stays silent.", bitrate); return false; }
         ctx = avcodec_alloc_context3(codec);
-        if (avcodec_open2(ctx, codec, nullptr) < 0) { avcodec_free_context(&ctx); return false; }
+        if (avcodec_open2(ctx, codec, nullptr) < 0) {
+            DIAG_DEBUG(544758, "The FFmpeg MP2 decoder did not open for the DAB service at %d kbit/s, so this service stays silent.", bitrate);
+            avcodec_free_context(&ctx); return false;
+        }
         st.codec = "MP2";
         return true;
     }
@@ -262,11 +272,11 @@ struct DabAudio::Impl {
         rec.active = false;
         rec.muxOpen = false;
     }
-    void recFail(const char* why) { rec.error = why; recStop(); }
+    void recFail(std::string why) { rec.error = std::move(why); recStop(); }
     void recWav(const float* stereo, int frames) {
         std::vector<int16_t> b((size_t)frames * 2);
         for (size_t i = 0; i < b.size(); i++) b[i] = (int16_t)std::lrintf(std::max(-1.f, std::min(1.f, stereo[i])) * 32767.f);
-        if (std::fwrite(b.data(), 2, b.size(), rec.f) != b.size()) { recFail("write error"); return; }
+        if (std::fwrite(b.data(), 2, b.size(), rec.f) != b.size()) { recFail(DIAG_TEXT(352413, "Writing the WAV recording %s failed (the disk may be full), so the recording stops.", rec.path.c_str())); return; }
         rec.pcmFrames += (uint64_t)frames;
         rec.bytes = rec.pcmFrames * 4 + 44;
     }
@@ -287,7 +297,7 @@ struct DabAudio::Impl {
     void recMp2(const uint8_t* frame, int n) {
         const int len = mp2FrameLen(frame, n, &rec.unitSec);
         if (len <= 0) return;
-        if (std::fwrite(frame, 1, (size_t)len, rec.f) != (size_t)len) { recFail("write error"); return; }
+        if (std::fwrite(frame, 1, (size_t)len, rec.f) != (size_t)len) { recFail(DIAG_TEXT(329618, "Writing the MP2 recording %s failed (the disk may be full), so the recording stops.", rec.path.c_str())); return; }
         rec.bytes += (uint64_t)len;
         rec.units++;
     }
@@ -295,9 +305,12 @@ struct DabAudio::Impl {
         const int dac = (hdr >> 6) & 1, sbr = (hdr >> 5) & 1, stereo = (hdr >> 4) & 1, ps = (hdr >> 3) & 1;
         const int coreRate = sbr ? (dac ? 24000 : 16000) : (dac ? 48000 : 32000), outRate = sbr ? coreRate * 2 : coreRate;
         const std::vector<uint8_t> asc = makeAsc(dac, sbr, stereo, ps);
-        if (avformat_alloc_output_context2(&rec.oc, nullptr, "mp4", rec.path.c_str()) < 0 || !rec.oc) { recFail("no MP4 muxer"); return false; }
+        if (avformat_alloc_output_context2(&rec.oc, nullptr, "mp4", rec.path.c_str()) < 0 || !rec.oc) {
+            recFail(DIAG_TEXT(489372, "This FFmpeg build cannot write MP4 files, so the DAB+ recording %s stops before it starts.", rec.path.c_str()));
+            return false;
+        }
         AVStream* s = avformat_new_stream(rec.oc, nullptr);
-        if (!s) { recFail("no stream"); return false; }
+        if (!s) { recFail(DIAG_TEXT(328217, "FFmpeg could not add an audio stream to the MP4 recording %s, so the recording stops.", rec.path.c_str())); return false; }
         AVCodecParameters* cp = s->codecpar;
         cp->codec_type = AVMEDIA_TYPE_AUDIO; cp->codec_id = AV_CODEC_ID_AAC; cp->sample_rate = outRate; cp->frame_size = 960 * (sbr ? 2 : 1);
         av_channel_layout_default(&cp->ch_layout, (stereo && !ps) ? 2 : 1);
@@ -307,25 +320,29 @@ struct DabAudio::Impl {
         s->time_base = AVRational{1, outRate};
         rec.auTicks = 960 * (sbr ? 2 : 1);
         rec.unitSec = 960.0 / coreRate;
-        if (avio_open(&rec.oc->pb, rec.path.c_str(), AVIO_FLAG_WRITE) < 0) { recFail("cannot create the file"); return false; }
+        if (avio_open(&rec.oc->pb, rec.path.c_str(), AVIO_FLAG_WRITE) < 0) { recFail(DIAG_TEXT(770349, "The DAB+ recording file %s could not be created, so the recording stops.", rec.path.c_str())); return false; }
         AVDictionary* o = nullptr;
         av_dict_set(&o, "movflags", "frag_keyframe+empty_moov+default_base_moof", 0);   // playable even if the program stops before the end
         const int r = avformat_write_header(rec.oc, &o);
         av_dict_free(&o);
-        if (r < 0) { recFail("cannot write the header"); return false; }
+        if (r < 0) { recFail(DIAG_TEXT(813704, "The MP4 header of the DAB+ recording %s could not be written, so the recording stops.", rec.path.c_str())); return false; }
         rec.muxOpen = true;
         return true;
     }
     void recAu(const uint8_t* au, int n, uint8_t hdr) {
         if (!rec.muxOpen && !recOpenAac(hdr & 0x7F)) return;
         AVPacket* pk = av_packet_alloc();
-        if (!pk || av_new_packet(pk, n) < 0) { if (pk) av_packet_free(&pk); return; }
+        if (!pk || av_new_packet(pk, n) < 0) {
+            DIAG_DEBUG_EVERY(452875, 10.0, "An FFmpeg packet of %d bytes could not be allocated, so one access unit is missing from the DAB+ recording.", n);
+            if (pk) av_packet_free(&pk);
+            return;
+        }
         std::memcpy(pk->data, au, (size_t)n);
         pk->stream_index = 0; pk->pts = pk->dts = rec.pts; pk->duration = rec.auTicks; pk->flags |= AV_PKT_FLAG_KEY;
         rec.pts += rec.auTicks;
         const int r = av_interleaved_write_frame(rec.oc, pk);
         av_packet_free(&pk);
-        if (r < 0) { recFail("write error"); return; }
+        if (r < 0) { recFail(DIAG_TEXT(812455, "Writing an access unit to the MP4 recording %s failed, so the recording stops.", rec.path.c_str())); return; }
         rec.bytes += (uint64_t)n;
         rec.units++;
     }
@@ -364,6 +381,7 @@ struct DabAudio::Impl {
         if (!outStarted) {
             out.setStartThreshold(DabAudio::kStartFrames);
             if (out.start(48000)) outStarted = true;
+            else DIAG_DEBUG_EVERY(313506, 10.0, "The audio output did not start at 48 kHz, so the DAB audio is decoded but not heard; it is tried again.");
             out.setVolume(volume); out.setMuted(muted);
         }
         if (outStarted) out.write(stereo, frames);
@@ -409,7 +427,11 @@ struct DabAudio::Impl {
             AVChannelLayout inL, outL = AV_CHANNEL_LAYOUT_STEREO;
             av_channel_layout_default(&inL, ch);
             swr_alloc_set_opts2(&swrF, &outL, AV_SAMPLE_FMT_FLT, 48000, &inL, AV_SAMPLE_FMT_FLT, rate, 0, nullptr);
-            if (!swrF || swr_init(swrF) < 0) { if (swrF) swr_free(&swrF); return 0; }
+            if (!swrF || swr_init(swrF) < 0) {
+                DIAG_DEBUG_EVERY(621014, 10.0, "The resampler from %d Hz with %d channels to 48 kHz stereo did not start, so this faad2 audio is dropped.", rate, ch);
+                if (swrF) swr_free(&swrF);
+                return 0;
+            }
             swrFRate = rate; swrFCh = ch;
             st.sampleRate = rate; st.channels = ch;
         }
@@ -433,16 +455,17 @@ struct DabAudio::Impl {
                 st.sbrDecoded = fi.sbr != 0; st.psDecoded = fi.ps != 0;
                 return emitFloat((const float*)out, (int)(fi.samples / fi.channels), fi.channels, (int)fi.samplerate);
             }
+            DIAG_DEBUG_EVERY(508571, 10.0, "The faad2 decoder rejected an access unit of %d bytes (error %d, %d channels), so it is concealed.", n, (int)fi.error, (int)fi.channels);
             return 0;
         }
         if (!ctx) return 0;
         if (!pkt) pkt = av_packet_alloc();
         if (!frame) frame = av_frame_alloc();
-        if (av_new_packet(pkt, n) < 0) return 0;
+        if (av_new_packet(pkt, n) < 0) { DIAG_DEBUG_EVERY(252037, 10.0, "An FFmpeg packet of %d bytes for the audio decoder could not be allocated, so the frame is concealed.", n); return 0; }
         std::memcpy(pkt->data, data, (size_t)n);
         const int s = avcodec_send_packet(ctx, pkt);
         av_packet_unref(pkt);
-        if (s < 0) return 0;
+        if (s < 0) { DIAG_DEBUG_EVERY(957546, 10.0, "The FFmpeg %s decoder refused a packet of %d bytes (error %d), so the frame is concealed.", st.codec.c_str(), n, s); return 0; }
         int put = 0;
         while (avcodec_receive_frame(ctx, frame) == 0) {
             const int nb = frame->nb_samples, ch = frame->ch_layout.nb_channels;
@@ -450,7 +473,12 @@ struct DabAudio::Impl {
                 if (swr) swr_free(&swr);
                 AVChannelLayout outL = AV_CHANNEL_LAYOUT_STEREO;
                 swr_alloc_set_opts2(&swr, &outL, AV_SAMPLE_FMT_FLT, 48000, &frame->ch_layout, (AVSampleFormat)frame->format, frame->sample_rate, 0, nullptr);
-                if (!swr || swr_init(swr) < 0) { if (swr) swr_free(&swr); av_frame_unref(frame); return put; }
+                if (!swr || swr_init(swr) < 0) {
+                    DIAG_DEBUG_EVERY(976067, 10.0, "The resampler from %d Hz with %d channels (sample format %d) to 48 kHz stereo did not start, so this FFmpeg audio is dropped.", frame->sample_rate, ch, frame->format);
+                    if (swr) swr_free(&swr);
+                    av_frame_unref(frame);
+                    return put;
+                }
                 swrRate = frame->sample_rate; swrFmt = frame->format; swrCh = ch;
                 st.sampleRate = frame->sample_rate; st.channels = ch;
             }
@@ -468,7 +496,10 @@ struct DabAudio::Impl {
     bool superframe(const std::deque<std::vector<uint8_t>>& frames) {
         const int fb = (int)frames.front().size();
         const int total = fb * 5, N = total / 120;
-        if (total % 120 || N < 1 || N > 24) return false;
+        if (total % 120 || N < 1 || N > 24) {
+            DIAG_DEBUG_EVERY(154499, 10.0, "A DAB+ superframe of 5 x %d bytes is not 1 to 24 Reed-Solomon code words of 120 bytes, so it cannot be decoded.", fb);
+            return false;
+        }
         std::vector<uint8_t> sf((size_t)total), payload((size_t)N * 110);
         for (int f = 0; f < 5; f++) std::memcpy(&sf[(size_t)f * fb], frames[(size_t)f].data(), (size_t)fb);
         // A code word beyond repair does not end the superframe: its bytes are spread over all of it (one in every N), and the access units it
@@ -495,7 +526,11 @@ struct DabAudio::Impl {
                                             : (((payload[(size_t)byte] & 0x0F) << 8) | payload[(size_t)byte + 1]));
         }
         starts.push_back((int)payload.size());
-        for (int k = 0; k < nAu; k++) if (starts[(size_t)k + 1] <= starts[(size_t)k] || starts[(size_t)k + 1] > (int)payload.size()) return false;
+        for (int k = 0; k < nAu; k++)
+            if (starts[(size_t)k + 1] <= starts[(size_t)k] || starts[(size_t)k + 1] > (int)payload.size()) {
+                DIAG_DEBUG_EVERY(418317, 10.0, "Access unit %d of a DAB+ superframe starts at byte %d, after the next one or past the %zu bytes, so the superframe is dropped.", k, starts[(size_t)k], payload.size());
+                return false;
+            }
         std::lock_guard<std::mutex> lk(mu);
         st.rsCorrected += (uint64_t)corrected;
         st.rsUncorrectable += (uint64_t)failed;
@@ -601,8 +636,12 @@ void DabAudio::push(const uint8_t* frame, int n, bool erased) {
         I.st.concealedFrames += (uint64_t)I.lastNau;
         I.st.auBad += (uint64_t)I.lastNau;   // the access units of a superframe that did not decode are lost too
         I.audioLost(5760);                    // 120 ms
+        DIAG_DEBUG_EVERY(776415, 10.0, "%llu DAB+ superframes of sub-channel %d failed their Fire code so far, each one concealed as 120 ms of audio.", (unsigned long long)I.st.superframesBad, I.st.sub);
         // the superframe phase is only searched again after a long run of bad ones: a fade or an erased stretch keeps it
-        if (++I.consecBad >= 8) { I.synced = false; I.consecBad = 0; }
+        if (++I.consecBad >= 8) {
+            I.synced = false; I.consecBad = 0;
+            DIAG_DEBUG(946274, "Eight DAB+ superframes in a row failed on sub-channel %d, so the superframe phase is searched again.", I.st.sub);
+        }
     }
 }
 
@@ -678,19 +717,23 @@ std::vector<DabDlpTag> DabAudio::dlPlus(bool* running) const {
 bool DabAudio::startRecording(const std::string& base, DabRecFormat fmt, bool dlLog, std::string* err) {
     std::lock_guard<std::mutex> lk(p_->mu);
     Impl& I = *p_;
-    auto fail = [&](const char* why) { if (err) *err = why; return false; };
+    auto fail = [&](std::string why) { if (err) *err = std::move(why); return false; };
     I.recStop();
-    if (I.st.sub < 0) return fail("no service is playing");
+    if (I.st.sub < 0) return fail(DIAG_TEXT(164881, "No DAB service is playing, so there is nothing to record yet; choose a service first."));
     I.rec = Impl::Rec();
     I.rec.fmt = fmt;
     const char* ext = fmt == DabRecFormat::Wav ? ".wav" : I.dabPlus ? ".m4a" : ".mp2";
     I.rec.path = base + ext;
     if (fmt == DabRecFormat::Wav || !I.dabPlus) {
         I.rec.f = std::fopen(I.rec.path.c_str(), "wb");
-        if (!I.rec.f) return fail("cannot create the file");
+        if (!I.rec.f) return fail(DIAG_TEXT(814769, "The recording file %s could not be created (%s), so nothing is recorded.", I.rec.path.c_str(), std::strerror(errno)));
         if (fmt == DabRecFormat::Wav) I.wavHeader(0);
     }
-    if (dlLog) I.rec.log = std::fopen((base + ".txt").c_str(), "wb");
+    if (dlLog) {
+        I.rec.log = std::fopen((base + ".txt").c_str(), "wb");
+        if (!I.rec.log) DIAG_DEBUG(763692, "The dynamic label log %s.txt could not be created (%s), so the recording goes on without it.", base.c_str(), std::strerror(errno));
+    }
+
     I.rec.active = true;
     return true;
 }

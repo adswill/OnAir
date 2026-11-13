@@ -6,6 +6,7 @@
 #include "dect2/dab/dab.h"
 #include "dect2/dab/dab_proto.h"
 #include "dect2/common/inflate.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include "dect2/common/endian.h"
 
@@ -156,8 +157,11 @@ bool jlDataGroup(const uint8_t* d, size_t n, int& type, const uint8_t*& field, s
 }
 
 bool jlParseObject(const uint8_t* d, size_t n, int extHeader, JlObject& o) {
-    if (extHeader < 0 || n < 3 + (size_t)extHeader) return false;
-    if (n > kMaxField) return false;
+    if (extHeader < 0 || n < 3 + (size_t)extHeader) {
+        DIAG_DEBUG_EVERY(390442, 30.0, "A Journaline object of %zu bytes is shorter than its 3 byte header and %d byte extended header, so it is dropped.", n, extHeader);
+        return false;
+    }
+    if (n > kMaxField) { DIAG_DEBUG_EVERY(375892, 30.0, "A Journaline object of %zu bytes is over the %zu byte limit of a data field, so it is dropped.", n, kMaxField); return false; }
     JlObject r;
     r.id = be16(d);
     r.type = d[2] >> 5;
@@ -165,18 +169,29 @@ bool jlParseObject(const uint8_t* d, size_t n, int extHeader, JlObject& o) {
     r.compressed = d[2] & 0x08;
     r.revision = d[2] & 7;
     r.size = n;
-    if (r.type < 1 || r.type > 4) return false;   // reserved types are ignored
+    if (r.type < 1 || r.type > 4) {   // reserved types are ignored
+        DIAG_DEBUG_EVERY(290622, 30.0, "Journaline object 0x%04X has the reserved type %d, so it is ignored.", (unsigned)r.id, r.type);
+        return false;
+    }
     size_t p = 3 + (size_t)extHeader;
     std::vector<uint8_t> content;
     if (r.compressed) {
-        if (p >= n || d[p] != 0x08) return false;   // 0x08 = deflate, the only method
+        if (p >= n || d[p] != 0x08) {   // 0x08 = deflate, the only method
+            DIAG_DEBUG_EVERY(104621, 30.0, "Journaline object 0x%04X is compressed with a method other than deflate, so it cannot be read.", (unsigned)r.id);
+            return false;
+        }
         p++;
-        if (!inflateRaw(d + p, n - p, content, 1u << 16)) return false;
+        if (!inflateRaw(d + p, n - p, content, 1u << 16)) {
+            DIAG_DEBUG_EVERY(210042, 30.0, "Journaline object 0x%04X (%zu bytes) did not inflate within 64 kB, so it is dropped.", (unsigned)r.id, n);
+            return false;
+        }
     } else content.assign(d + p, d + n);
     Parser ps{content.data(), content.size(), 0, r};
     ps.run();
-    if (r.type == 1 && r.links.empty()) return false;
-    if (r.type == 4 && r.items.empty()) return false;
+    if ((r.type == 1 && r.links.empty()) || (r.type == 4 && r.items.empty())) {
+        DIAG_DEBUG_EVERY(707532, 30.0, "Journaline %s 0x%04X has no entries, so it is not stored.", r.type == 1 ? "menu" : "list", (unsigned)r.id);
+        return false;
+    }
     o = std::move(r);
     return true;
 }
@@ -184,7 +199,10 @@ bool jlParseObject(const uint8_t* d, size_t n, int extHeader, JlObject& o) {
 bool jlParseToc(const uint8_t* d, size_t n, int& revision, int& blockCount, int& blockIndex, int& objectCount, int& timeoutMin, std::vector<JlTocEntry>& entries) {
     dabp::JlTocInfo info;
     std::vector<dabp::JlTocEntry> ents;
-    if (!dabp::jlParseToc(d, n, info, ents)) return false;
+    if (!dabp::jlParseToc(d, n, info, ents)) {
+        DIAG_DEBUG_EVERY(914361, 30.0, "A Journaline table of contents block of %zu bytes did not parse, so the object list waits for its next repetition.", n);
+        return false;
+    }
     revision = info.revision; blockCount = info.blockCount; blockIndex = info.blockIndex; objectCount = info.objectCount; timeoutMin = info.timeoutMin;
     entries.clear();
     for (const dabp::JlTocEntry& e : ents) entries.push_back({(uint16_t)e.id, (uint8_t)e.desc});
@@ -277,12 +295,19 @@ bool DabPacketDemux::packet(const uint8_t* p, size_t len, std::vector<uint8_t>& 
     const size_t ul = k.ul;
     if (addr != addr_ || cmd || ul > len - 5) return true;   // somebody else's packet, a command or padding: valid, not ours
     if (ci == lastCi_) return true;   // the continuity index counts every packet of the address: the same one again is a repetition
-    if (on_ && !first && ci != ((lastCi_ + 1) & 3)) { on_ = false; asm_.clear(); }   // a packet was lost: the group is gone
+    if (on_ && !first && ci != ((lastCi_ + 1) & 3)) {   // a packet was lost: the group is gone
+        DIAG_DEBUG_EVERY(509439, 30.0, "A packet of address %d was lost (continuity index %d after %d), so the data group being assembled is dropped.", addr, ci, lastCi_);
+        on_ = false; asm_.clear();
+    }
     lastCi_ = ci;
     if (first) { asm_.clear(); on_ = true; }
     else if (!on_) return true;
     asm_.insert(asm_.end(), p + 3, p + 3 + ul);
-    if (asm_.size() > (maxLen_ ? maxLen_ : (size_t)kMaxField + 4 + 8)) { on_ = false; asm_.clear(); return true; }
+    if (asm_.size() > (maxLen_ ? maxLen_ : (size_t)kMaxField + 4 + 8)) {
+        DIAG_DEBUG_EVERY(863655, 30.0, "A data group on packet address %d grew past %zu bytes without its last packet, so it is dropped.", addr, asm_.size());
+        on_ = false; asm_.clear(); return true;
+    }
+
     if (last) { out.swap(asm_); asm_.clear(); on_ = false; }
     return true;
 }

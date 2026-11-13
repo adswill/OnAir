@@ -3,6 +3,7 @@
 
 #include "dect2/dab/dab_pktfec.h"
 #include "dect2/dvbt/dvbt.h"
+#include "dect2/common/diag.h"
 #include <cstring>
 
 namespace dect2 {
@@ -40,12 +41,15 @@ void DabPacketFec::feed(const uint8_t* p, size_t n, std::vector<uint8_t>& out) {
         if (synced_) {
             if (isFecSet(buf_.data() + pos + kData)) { takeSet(buf_.data() + pos, buf_.data() + pos + kData, out); pos += kData + kFec; continue; }
             synced_ = false;
+            DIAG_DEBUG(312315, "The nine FEC packets of a packet mode set were not where expected after %llu sets, so the outer code searches for the next set.", (unsigned long long)sets_);
         }
         // look for a set of nine FEC packets; the packet set before it is whole only once a whole one has gone by
         bool found = false;
         for (size_t i = pos + kData; i + kFec <= buf_.size(); i++) if (isFecSet(buf_.data() + i)) { pos = i - kData; found = true; break; }
         if (!found) { if (buf_.size() > kFec) pos = buf_.size() - kFec - kData > pos ? buf_.size() - kFec - kData : pos; break; }
         synced_ = true;
+        DIAG_DEBUG(657389, "The FEC packets of packet mode were found %zu bytes into the buffer, so the Reed-Solomon outer code is applied from here.", pos);
+
     }
     buf_.erase(buf_.begin(), buf_.begin() + (ptrdiff_t)pos);
 }

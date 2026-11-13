@@ -5,6 +5,7 @@
 // SpiStore model built from the trees. See dab_spi.h.
 #include "dect2/dab/dab_spi.h"
 #include "dect2/common/inflate.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -71,7 +72,10 @@ bool spiParseTime(const std::string& s, int64_t& utc, int& offMin) {
         if (r.size() >= 5 && r[2] == ':') { oh = atoi(r.substr(0, 2).c_str()); om = atoi(r.substr(3, 2).c_str()); }
         else if (r.size() >= 4 && std::isdigit((unsigned char)r[2])) { oh = atoi(r.substr(0, 2).c_str()); om = atoi(r.substr(2, 2).c_str()); }
         else if (r.size() >= 2) oh = atoi(r.substr(0, 2).c_str());
-        if (oh > 15 || om > 59) return false;
+        if (oh > 15 || om > 59) {
+            DIAG_DEBUG(568733, "The SPI time %s has a time zone offset of %02d:%02d, beyond 15 hours, so it is not read as a time.", s.c_str(), oh, om);
+            return false;
+        }
         offMin = sign * (oh * 60 + om);
     }
     utc = daysFromCivil(y, (unsigned)mo, (unsigned)d) * 86400 + h * 3600 + mi * 60 + se - offMin * 60;
@@ -107,7 +111,12 @@ bool spiParseDuration(const std::string& s, int& seconds) {
         if (j == i || j >= s.size()) return false;
         const double v = atof(s.substr(i, j - i).c_str());
         const char u = s[j];
-        if (!timePart) { if (u == 'D') total += v * 86400; else if (u == 'W') total += v * 604800; else if (u == 'Y' || u == 'M') return false; else return false; }
+        if (!timePart) {
+            if (u == 'D') total += v * 86400;
+            else if (u == 'W') total += v * 604800;
+            else if (u == 'Y' || u == 'M') { DIAG_DEBUG(497363, "The SPI duration %s counts years or months, which have no fixed length, so it is not read.", s.c_str()); return false; }
+            else return false;
+        }
         else if (u == 'H') total += v * 3600;
         else if (u == 'M') total += v * 60;
         else if (u == 'S') total += v;
@@ -214,7 +223,10 @@ std::string timeValue(const uint8_t* d, size_t n, bool* ok) {
         if (b & 0x20) off = -off;
         need++;
     }
-    if (hour > 23 || minute > 59 || second > 59) return "";
+    if (hour > 23 || minute > 59 || second > 59) {
+        DIAG_DEBUG(172956, "A binary SPI time on MJD %d reads %02d:%02d:%02d, which is no time of day, so the attribute is dropped.", mjd, hour, minute, second);
+        return "";
+    }
     *ok = true;
     return spiFormatTime(spiMjdToUtc(mjd, hour, minute, second), off);
 }
@@ -261,8 +273,14 @@ bool readTL(const uint8_t* d, size_t end, size_t p, int& tag, size_t& len, size_
 
 bool parseElement(BinCtx& c, const uint8_t* d, size_t start, size_t end, int depth, bool top, SpiNode& out, size_t& next) {
     int tag; size_t len, hdr;
-    if (depth > kMaxDepth || ++c.nodes > kMaxNodes) return false;
-    if (!readTL(d, end, start, tag, len, hdr)) return false;
+    if (depth > kMaxDepth || ++c.nodes > kMaxNodes) {
+        DIAG_DEBUG(424337, "A binary SPI object nests deeper than %d elements or holds more than %zu nodes, so the whole object is rejected.", kMaxDepth, kMaxNodes);
+        return false;
+    }
+    if (!readTL(d, end, start, tag, len, hdr)) {
+        DIAG_DEBUG(799771, "A binary SPI element at byte %zu runs past the end of its parent at byte %zu, so the object is rejected.", start, end);
+        return false;
+    }
     const char* nm = elemName(tag);
     next = start + hdr + len;
     if (!nm) { out.name.clear(); return true; }       // an element the specification does not define: skipped
@@ -336,13 +354,16 @@ bool parseElement(BinCtx& c, const uint8_t* d, size_t start, size_t end, int dep
 
 bool spiParseBinary(const uint8_t* d, size_t n, SpiNode& top) {
     top = SpiNode();
-    if (n < 2 || n > (32u << 20)) return false;
-    if (d[0] != 0x02 && d[0] != 0x03) return false;
+    if (n < 2 || n > (32u << 20)) { DIAG_DEBUG(104077, "A binary SPI object of %zu bytes is outside the 2 byte to 32 MB range, so it is not parsed.", n); return false; }
+    if (d[0] != 0x02 && d[0] != 0x03) {
+        DIAG_DEBUG(194189, "A binary SPI object starts with tag 0x%02X, neither epg (0x02) nor serviceInformation (0x03), so it is not parsed.", d[0]);
+        return false;
+    }
     BinCtx c;
     size_t next;
     SpiNode t;
     if (!parseElement(c, d, 0, n, 0, true, t, next)) return false;
-    if (t.name.empty()) return false;
+    if (t.name.empty()) { DIAG_DEBUG(406178, "The top element of a binary SPI object (tag 0x%02X) is not defined by TS 102 371, so the object is dropped.", d[0]); return false; }
     top = std::move(t);
     return true;
 }
@@ -448,19 +469,24 @@ struct XmlParser {
 
 bool spiParseXml(const char* d, size_t n, SpiNode& top) {
     top = SpiNode();
-    if (n < 4 || n > (32u << 20)) return false;
+    if (n < 4 || n > (32u << 20)) { DIAG_DEBUG(630511, "An SPI XML object of %zu bytes is outside the 4 byte to 32 MB range, so it is not parsed.", n); return false; }
     XmlParser x{d, n};
     if (n >= 3 && (uint8_t)d[0] == 0xEF && (uint8_t)d[1] == 0xBB && (uint8_t)d[2] == 0xBF) x.p = 3;
     for (;;) {
         x.ws();
-        if (x.p >= n) return false;
-        if (d[x.p] != '<') return false;
+        if (x.p >= n || d[x.p] != '<') {
+            DIAG_DEBUG(712611, "An SPI XML object of %zu bytes has text instead of an element at byte %zu, so it is not parsed.", n, x.p);
+            return false;
+        }
         if (x.p + 3 < n && memcmp(d + x.p, "<!--", 4) == 0) { x.p += 4; x.skipTo("-->"); continue; }
         if (x.p + 1 < n && (d[x.p + 1] == '?' || d[x.p + 1] == '!')) { x.skipTo(">"); continue; }
         break;
     }
     SpiNode t;
-    if (!x.element(t, 0)) return false;
+    if (!x.element(t, 0)) {
+        DIAG_DEBUG(672453, "An SPI XML object of %zu bytes is not well formed near byte %zu (or nests too deep), so it is dropped.", n, x.p);
+        return false;
+    }
     top = std::move(t);
     return true;
 }
@@ -553,7 +579,10 @@ void SpiStore::handleSi(const SpiNode& top) {
     for (const SpiNode* s : svc) {
         std::vector<Bearer> bs;
         for (const SpiNode& k : s->kids) if (k.name == "bearer" || k.name == "serviceID") { Bearer b = parseBearer(k.get("id")); if (b.ok) bs.push_back(b); }
-        if (bs.empty()) continue;
+        if (bs.empty()) {
+            DIAG_DEBUG_EVERY(493523, 60.0, "An SPI service entry has no DAB bearer OnAir can read, so its names and logos are not stored.");
+            continue;
+        }
         SpiService sv;
         fillNames(*s, sv.shortName, sv.mediumName, sv.longName, sv.description, sv.description);
         collectMedia(*s, sv.media);
@@ -608,6 +637,7 @@ void SpiStore::handleEpg(const SpiNode& top) {
                 bool found = false;
                 for (SpiGroup& o : s_.groups) if (o.crid == gr.crid) { o = gr; found = true; }
                 if (!found && s_.groups.size() < 5000) s_.groups.push_back(gr);
+                else if (!found) DIAG_DEBUG_EVERY(418986, 60.0, "The programme guide holds 5000 programme groups already, so group %s is not stored.", gr.crid.c_str());
             }
             continue;
         }
@@ -622,6 +652,8 @@ void SpiStore::handleEpg(const SpiNode& top) {
             SpiProgramme pr;
             programmeFrom(p, pr, defLang);
             if (pr.key.empty()) continue;
+            if (s_.programmes.size() >= 20000 && !s_.programmes.count(pr.key))
+                DIAG_DEBUG_EVERY(372139, 60.0, "The programme guide holds 20000 programmes already, so programme %s is not stored.", pr.key.c_str());
             if (s_.programmes.size() < 20000 || s_.programmes.count(pr.key)) {
                 SpiProgramme& cur = s_.programmes[pr.key];
                 if (cur.key.empty()) cur = pr;
@@ -645,7 +677,10 @@ void SpiStore::handleEpg(const SpiNode& top) {
                 for (const SpiNode& t : loc.kids) {
                     if (t.name != "time") continue;
                     int64_t utc; int off;
-                    if (!spiParseTime(t.get("time"), utc, off)) continue;
+                    if (!spiParseTime(t.get("time"), utc, off)) {
+                        DIAG_DEBUG_EVERY(318262, 60.0, "The SPI programme %s has a time '%s' that does not read as ISO 8601, so that broadcast is not listed.", pr.key.c_str(), t.get("time").c_str());
+                        continue;
+                    }
                     int dur = 0;
                     spiParseDuration(t.get("duration"), dur);
                     for (uint32_t sid : sids) {
@@ -655,6 +690,7 @@ void SpiStore::handleEpg(const SpiNode& top) {
                         auto it = ev_.find(ev);
                         if (it != ev_.end()) ev_.erase(it);
                         if (ev_.size() < 60000) ev_.insert(ev);
+                        else DIAG_DEBUG_EVERY(471288, 60.0, "The programme guide holds 60000 broadcasts already, so the one of programme %s is not stored.", pr.key.c_str());
                     }
                 }
             }
@@ -666,7 +702,7 @@ bool SpiStore::addTree(const SpiNode& top, const MotObject*) {
     std::lock_guard<std::mutex> lk(mu_);
     if (top.name == "epg") { handleEpg(top); st_.piObjects++; }
     else if (top.name == "serviceInformation") { handleSi(top); st_.siObjects++; }
-    else return false;
+    else { DIAG_DEBUG(905035, "An SPI object with the top element <%s> is neither a guide nor service information, so it is ignored.", top.name.c_str()); return false; }
     s_.events.assign(ev_.begin(), ev_.end());
     st_.events = ev_.size();
     seq_++;
@@ -683,7 +719,10 @@ bool SpiStore::addObject(const MotObject& o) {
     for (const MotParam& p : o.params) if (p.id == 0x11 && !p.data.empty() && p.data[0] == 1) compressed = true;   // CompressionType: gzip
     if (!compressed && n > 2 && d[0] == 0x1F && d[1] == 0x8B) compressed = true;
     if (compressed) {
-        if (!gunzip(d, n, unz, 8u << 20)) { std::lock_guard<std::mutex> lk(mu_); st_.objectsBad++; return false; }
+        if (!gunzip(d, n, unz, 8u << 20)) {
+            DIAG_DEBUG(434592, "The gzip SPI object %s of %zu bytes did not inflate within 8 MB, so it is dropped.", o.name.c_str(), n);
+            std::lock_guard<std::mutex> lk(mu_); st_.objectsBad++; return false;
+        }
         d = unz.data(); n = unz.size();
     }
     SpiNode top;
@@ -694,13 +733,21 @@ bool SpiStore::addObject(const MotObject& o) {
     bool ok;
     if (xml) ok = spiParseXml((const char*)d, n, top);
     else {
-        if (o.contentType != 7 && !(d[0] == 0x02 || d[0] == 0x03)) return false;
+        if (o.contentType != 7 && !(d[0] == 0x02 || d[0] == 0x03)) {
+            DIAG_DEBUG(367525, "The MOT object %s (content type %d) is neither SPI XML nor binary SPI, so the guide ignores it.", o.name.c_str(), o.contentType);
+            return false;
+        }
         ok = spiParseBinary(d, n, top);
     }
     {
         std::lock_guard<std::mutex> lk(mu_);
         st_.objects++;
-        if (!ok) { st_.objectsBad++; return false; }
+        if (!ok) {
+            st_.objectsBad++;
+            DIAG_DEBUG(897013, "The SPI object %s (%zu bytes, %s) did not parse, so the programme guide keeps what it had.", o.name.c_str(), n, xml ? "XML" : "binary");
+            return false;
+        }
+
         if (compressed) st_.compressed++;
         if (xml) st_.xml++; else st_.binary++;
     }

@@ -5,6 +5,7 @@
 #include "dect2/dab/dab_dmb.h"
 #include "dect2/dvbt/dvbt.h"
 #include "dect2/tv/ts.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cstdint>
 #include <cstring>
@@ -115,7 +116,10 @@ bool parseEsDescr(const uint8_t* p, size_t n, EsInfo& e) {
     if (f & 0x80) p += 2;                    // dependsOn_ES_ID
     if (f & 0x40) { if (p >= end) return false; p += 1 + *p; }   // URL
     if (f & 0x20) p += 2;                    // OCR_ES_Id
-    if (p > end) return false;
+    if (p > end) {
+        DIAG_DEBUG_EVERY(848113, 30.0, "The MPEG-4 ES descriptor of stream %d (%zu bytes) ends inside its optional fields, so that stream is not described.", e.esId, n);
+        return false;
+    }
     int tag;
     size_t len;
     while (readDescr(p, end, tag, len)) {
@@ -137,7 +141,10 @@ struct Asc { int aot = 0, coreAot = 0, sfi = 15, rate = 0, channels = 0; bool sb
 Asc parseAsc(const std::vector<uint8_t>& d) {
     static const int rates[13] = {96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350};
     Asc a;
-    if (d.size() < 2) return a;
+    if (d.size() < 2) {
+        DIAG_DEBUG(485354, "The AudioSpecificConfig of the DMB sound has %zu bytes, too few to read, so the sound format stays unknown.", d.size());
+        return a;
+    }
     BitReader b(d.data(), d.size());
     auto aot = [&] { int t = (int)b.u(5); return t == 31 ? 32 + (int)b.u(6) : t; };
     auto rate = [&](int& sfi) { sfi = (int)b.u(4); return sfi == 15 ? (int)b.u(24) : sfi < 13 ? rates[sfi] : 0; };
@@ -278,7 +285,10 @@ struct DmbRemux::Impl {
                 size_t l = 0;
                 for (int k = 0; k < ls; k++) l = (l << 8) | au[i + (size_t)k];
                 i += (size_t)ls;
-                if (l > au.size() - i) break;
+                if (l > au.size() - i) {
+                    DIAG_DEBUG_EVERY(882602, 30.0, "A DMB video NAL unit of %zu bytes runs past its %zu byte access unit, so the rest of that picture is dropped.", l, au.size());
+                    break;
+                }
                 o.insert(o.end(), {0, 0, 0, 1});
                 o.insert(o.end(), au.begin() + (long)i, au.begin() + (long)(i + l));
                 i += l;
@@ -324,13 +334,19 @@ struct DmbRemux::Impl {
             if (it->second.streamType == 0x04 && v < 0) v = kv.first;
             if (it->second.streamType == 0x05 && a < 0) a = kv.first;
         }
-        if (v != videoPid) { videoPid = v; vEs = v >= 0 ? es[pidEs[v]] : EsInfo(); setVideoConfig(); }
+        if (v != videoPid) {
+            videoPid = v; vEs = v >= 0 ? es[pidEs[v]] : EsInfo(); setVideoConfig();
+            DIAG_DEBUG(857435, "The DMB video stream is now on PID %d (object type 0x%02X), taken from the object descriptors of the PMT.", v, vEs.oti);
+        }
         if (a != audioPid) {
             audioPid = a;
             aEs = a >= 0 ? es[pidEs[a]] : EsInfo();
             asc = aEs.oti == 0x40 ? parseAsc(aEs.dsi) : Asc();
             audioOut = aEs.oti == 0x40 && asc.coreAot >= 1 && asc.coreAot <= 4 && asc.sfi < 13;   // ADTS can say AAC main, LC, SSR and LTP
             lastAudioPts = -1;
+            if (a >= 0 && !audioOut)
+                DIAG_DEBUG(170384, "The DMB sound on PID %d (object type 0x%02X, core audio object type %d) cannot go out as ADTS, so the video plays without sound.", a, aEs.oti, asc.coreAot);
+            else if (a >= 0) DIAG_DEBUG(718772, "The DMB sound on PID %d is AAC (audio object type %d, %d Hz, %d channels) and goes out on the output stream.", a, asc.coreAot, asc.rate, asc.channels);
         }
         std::lock_guard<std::mutex> lk(mu);
         video = videoPid < 0 ? "" : vEs.oti == 0x21 ? "H.264" : vEs.oti == 0x20 ? "MPEG-4 Visual" : vEs.oti == 0x6C ? "JPEG" : "video";
@@ -366,12 +382,18 @@ struct DmbRemux::Impl {
         const uint8_t* end = p + n;
         int tag;
         size_t len;
-        if (!readDescr(p, end, tag, len) || (tag != 0x02 && tag != 0x10) || len < 2) return;
+        if (!readDescr(p, end, tag, len) || (tag != 0x02 && tag != 0x10) || len < 2) {
+            DIAG_DEBUG_EVERY(789506, 30.0, "The IOD descriptor of the DMB PMT (%zu bytes) holds no initial object descriptor, so its streams stay unknown.", n);
+            return;
+        }
         const uint8_t* q = p;
         const uint8_t* qe = p + len;
         const bool url = q[1] & 0x20;
         q += 2;
-        if (url) return;
+        if (url) {
+            DIAG_DEBUG_EVERY(217637, 30.0, "The DMB initial object descriptor points to a URL instead of carrying its streams, so they stay unknown.");
+            return;
+        }
         q += 5;   // the profile levels
         while (q < qe && readDescr(q, qe, tag, len)) {
             if (tag == 0x03) { EsInfo e; if (parseEsDescr(q, len, e)) es[e.esId] = e; }
@@ -418,7 +440,10 @@ struct DmbRemux::Impl {
     }
 
     void section(int pid, const uint8_t* s, size_t len) {
-        if (len < 12 || !(s[1] & 0x80) || mpegCrc32(s, (int)len) != 0) return;
+        if (len < 12 || !(s[1] & 0x80) || mpegCrc32(s, (int)len) != 0) {
+            DIAG_DEBUG_EVERY(335565, 30.0, "A DMB section of %zu bytes on PID %d is too short, has no syntax indicator or fails its CRC, so it is dropped.", len, pid);
+            return;
+        }
         const int tid = s[0];
         if (pid == 0 && tid == 0x00) {
             for (size_t i = 8; i + 4 <= len - 4; i += 4) {
@@ -431,7 +456,10 @@ struct DmbRemux::Impl {
             const size_t pil = rb16(s + 10) & 0xFFF;
             const uint8_t* end = s + len - 4;
             const uint8_t* d = s + 12;
-            if (d + pil > end) return;
+            if (d + pil > end) {
+                DIAG_DEBUG_EVERY(476715, 30.0, "The DMB PMT on PID %d says its program info has %zu bytes, past the end of the section, so it is not used.", pid, pil);
+                return;
+            }
             for (const uint8_t* q = d; q + 2 <= d + pil && q + 2 + q[1] <= d + pil; q += 2 + q[1])
                 if (q[0] == 0x1D && q[1] > 2) parseIod(q + 4, q[1] - 2);   // IOD_descriptor: scope and label, then the InitialObjectDescriptor
             std::map<int, int> types, ids;
@@ -494,10 +522,17 @@ struct DmbRemux::Impl {
         const size_t plen = rb16(&b[4]);
         if (plen && 6 + plen < b.size()) n = 6 + plen - 9 - hl;
         auto ei = pidEs.find(pid);
-        if (ei == pidEs.end() || !es.count(ei->second)) return;
+        if (ei == pidEs.end() || !es.count(ei->second)) {
+            DIAG_DEBUG_EVERY(516685, 30.0, "A DMB PES packet on PID %d has no ES descriptor yet, so it is dropped until the object descriptors arrive.", pid);
+            return;
+        }
         const EsInfo& info = es[ei->second];
         const SlHeader h = parseSl(info.sl, p, n, e.prevEnded);
-        if (!h.ok || h.len > n || h.idle) return;
+        if (!h.ok || h.len > n) {
+            DIAG_DEBUG_EVERY(704778, 30.0, "The SL packet header on DMB PID %d is %zu bytes for a %zu byte payload, so the packet is dropped.", pid, h.len, n);
+            return;
+        }
+        if (h.idle) return;
         p += h.len; n -= h.len;
         if (h.start) {
             if (e.auOn && !e.au.empty()) finishAu(pid, e);   // the start of the next access unit ends this one
@@ -539,7 +574,10 @@ struct DmbRemux::Impl {
         const int c = k[3] & 15;
         const bool lost = e.cc >= 0 && c != ((e.cc + 1) & 15) && c != e.cc;
         e.cc = c;
-        if (tei || lost) { e.on = false; e.buf.clear(); e.auOn = false; e.au.clear(); if (tei) return; }   // a damaged packet: drop what it belongs to
+        if (tei || lost) {   // a damaged packet: drop what it belongs to
+            DIAG_DEBUG_EVERY(780826, 30.0, "A DMB packet on PID %d is %s, so the access unit it belongs to is dropped.", pid, tei ? "marked as uncorrectable" : "missing (continuity counter jump)");
+            e.on = false; e.buf.clear(); e.auOn = false; e.au.clear(); if (tei) return;
+        }
         if (pusi) {
             if (e.on) pesPacket(pid, e);
             e.buf.assign(p, p + n);
@@ -601,6 +639,7 @@ struct DmbDecoder::Impl {
             in.erase(in.begin(), in.end() - (long)(204 * 4));   // nothing yet: keep looking in the newer bytes
             return false;
         }
+        DIAG_DEBUG(299075, "The DMB outer decoder found the packet sync at byte %d with %d of %d sync bytes in place, so it starts to de-interleave.", best, bestScore, blocks);
         in.erase(in.begin(), in.begin() + best);
         deint = dvbt::ConvInterleaver(true);
         outBuf.clear();
@@ -629,7 +668,11 @@ struct DmbDecoder::Impl {
             const int r = dvbt::rsDecode(b);
             if (r < 0) bad++; else { ok++; fixed += (uint64_t)r; }
             if (b[0] != 0x47) {
-                if (++badSync >= 8) { locked = false; in.clear(); pos = outBuf.size(); break; }   // lost the packet sync: search again
+                if (++badSync >= 8) {   // lost the packet sync: search again
+                    DIAG_DEBUG(653873, "Eight DMB packets in a row came without the 0x47 sync byte, so the outer decoder searches for the packet sync again.");
+                    locked = false; in.clear(); pos = outBuf.size(); break;
+                }
+
                 continue;
             }
             badSync = 0;
