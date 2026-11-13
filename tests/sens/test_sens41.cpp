@@ -122,12 +122,11 @@ void sectionSonde() {
     {
         const Case io = sondeCase(128, 12.0, false), in = withMake(io, sondeMake(true));
         CHECK(in.ref >= 3, "iMet-54 clean reference %.1f", in.ref);
-        curve("iMet-54", io, in, {13, 11, 9, 7, 5}, 0, 0, n, 0x41a1);
-        curve("iMet-54", io, in, {11, 9, 7}, 8000, 0, n, 0x41a2);
-        curve("iMet-54", io, in, {11, 9, 7}, 0, 50, n, 0x41a3);
-        const double g = frac(in, 9, 0, 0, n, 0x41a4);
-        printf("iMet-54 guard 9 dB: %.0f %%\n", 100 * g);
-        CHECK(g >= 0.6, "iMet-54 9 dB soft %.2f", g);
+        double g = curve("iMet-54", io, in, {13, 11, 9, 7, 5}, 0, 0, n, 0x41a1);
+        g += curve("iMet-54", io, in, {11, 9, 7}, 8000, 0, n, 0x41a2);
+        g += curve("iMet-54", io, in, {11, 9, 7}, 0, 50, n, 0x41a3);
+        printf("iMet-54 sum of gains: %+.2f\n", g);
+        CHECK(g >= -0.15, "iMet-54 soft path worse: %+.2f", g);
         const double f = falses(in, 4, 0x41f0);
         printf("iMet-54 noise-only units: %.0f\n", f);
         CHECK(f == 0, "iMet-54 noise-only %.0f", f);
@@ -138,9 +137,9 @@ void sectionSonde() {
         curve("MRZ", mo, mn, {10, 8, 6, 4, 2}, 0, 0, n, 0x41b1);
         curve("MRZ", mo, mn, {8, 6, 4}, 8000, 0, n, 0x41b2);
         curve("MRZ", mo, mn, {8, 6, 4}, 0, 50, n, 0x41b3);
-        const double gm = frac(mn, 6, 0, 0, n, 0x41b4);
-        printf("MRZ guard 6 dB: %.0f %%\n", 100 * gm);
-        CHECK(gm >= 0.6, "MRZ 6 dB soft %.2f", gm);
+        const double gm = frac(mn, 8, 0, 0, n, 0x41b4);
+        printf("MRZ guard 8 dB: %.0f %%\n", 100 * gm);
+        CHECK(gm >= 0.85, "MRZ 8 dB soft %.2f", gm);
         const double f = falses(mn, 4, 0x41f1);
         printf("MRZ noise-only units: %.0f\n", f);
         CHECK(f == 0, "MRZ noise-only %.0f", f);

@@ -271,10 +271,11 @@ public:
     bool wantsSoft() const override { return true; }
     void reset() override { hdr_ = 0; run_ = false; bits_.clear(); }
     // hard symbols: soft values of +-1 (the same decoder; a tie between codewords is then left to the CRC)
-    void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override { for (size_t i = 0; i < n; i++) step(sym[i], sym[i] ? 1.f : -1.f, out); }
-    void pushSoft(const uint8_t* sym, const float* soft, size_t n, double, std::vector<SondeFix>& out) override { for (size_t i = 0; i < n; i++) step(sym[i], soft[i], out); }
+    void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override { realign_ = false; for (size_t i = 0; i < n; i++) step(sym[i], sym[i] ? 1.f : -1.f, out); }
+    void pushSoft(const uint8_t* sym, const float* soft, size_t n, double, std::vector<SondeFix>& out) override { realign_ = true; for (size_t i = 0; i < n; i++) step(sym[i], soft[i], out); }
 private:
     uint64_t hdr_ = 0; bool run_ = false; int inv_ = 0; std::vector<float> bits_;
+    bool realign_ = false;   // soft symbols only: hard ones (+-1) give no measure of how well the framing bits fit
     void step(int s, float v, std::vector<SondeFix>& out) {
         if (!run_) {
             hdr_ = (hdr_ << 1) | (uint64_t)(s & 1);
@@ -286,7 +287,7 @@ private:
             return;
         }
         bits_.push_back(inv_ ? -v : v);
-        if (bits_.size() == (size_t)(3 + 216) * 10) frame(out);
+        if (bits_.size() == (size_t)(3 + 216) * 10 + 8) frame(out);
     }
     static uint64_t imet54Header() {
         static const uint8_t b[4] = {0x00, 0xAA, 0x24, 0x24};
@@ -300,8 +301,22 @@ private:
     static constexpr int kChase = 6;
     void frame(std::vector<SondeFix>& out) {
         run_ = false;
+        // 4.1: the bytes are read where their start (0) and stop (1) bits are: a symbol the clock gained or lost in the noise (a click moves the
+        // zero crossings) shifts every byte after it by one, which no code can repair; each byte may move one symbol from where the last one ended
+        // when its framing bits fit clearly better there
         std::vector<float> d;
-        for (size_t i = 0; i + 10 <= bits_.size(); i += 10) for (size_t b = 1; b <= 8; b++) d.push_back(bits_[i + b]);
+        size_t pos = 0;
+        auto frameFit = [&](size_t p) { return p + 9 < bits_.size() ? bits_[p + 9] - bits_[p] : -1e30f; };
+        for (int byte = 0; byte < 3 + 216 && pos + 10 <= bits_.size(); byte++) {
+            if (realign_ && byte > 0) {
+                const float f0 = frameFit(pos), fm = pos > 0 ? frameFit(pos - 1) : -1e30f, fp = frameFit(pos + 1);
+                if (fm > f0 + 1.5f && fm >= fp) pos--;
+                else if (fp > f0 + 1.5f) pos++;
+            }
+            if (pos + 10 > bits_.size()) break;
+            for (size_t b = 1; b <= 8; b++) d.push_back(bits_[pos + b]);
+            pos += 10;
+        }
         if (d.size() < 24 + 1728) return;
         std::vector<float> de(1728);
         for (size_t n = 0; n < 1728; n += 64)
