@@ -4,6 +4,7 @@
 // GLONASS L1OF navigation message and orbit (see gnss_glo.h). Bit positions: ICD edition 5.1 Tables 4.6 and 4.11; scale factors Tables 4.5 and 4.9;
 // the check: section 4.7 (Table 4.13); the orbit: Appendix A.3.1.2.
 #include "dect2/gnss/gnss_glo.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -72,10 +73,14 @@ int gloCheckString(uint8_t* s) {
         int v = 0;
         for (int c = 7; c >= 1; c--) v = (v << 1) | C[c];
         const int icor = v + 8 - K;
-        if (icor > 85) return -1;
+        if (icor > 85) {
+            DIAG_DEBUG_EVERY(209947, 5.0, "A GLONASS string's check pattern points at bit %d, beyond the 85 data bits, so the string is rejected.", icor);
+            return -1;
+        }
         s[icor] ^= 1;
         return 1;
     }
+    DIAG_DEBUG_EVERY(589503, 5.0, "A GLONASS string failed its Hamming check with more bit errors than one correction can fix, so the string is rejected.");
     return -1;                                                                  // rule c
 }
 

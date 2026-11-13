@@ -3,6 +3,7 @@
 
 // BeiDou B1I navigation messages (see gnss_bds.h). Field positions: BDS SIS ICD Figures 5-8 .. 5-11 (D1) and 5-14 (D2), scale factors Tables 5-7, 5-10, 5-17.
 #include "dect2/gnss/gnss_bds.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -197,7 +198,10 @@ bool bdsHandleSubframe(BdsNav& n, const uint8_t* b, bool geo, int prn, GpsEpheme
     // D2: the pages of subframe 1
     if (id != 1) return false;
     const int page = (int)bdsField(b, 43, 4);
-    if (page < 1 || page > 10) return false;
+    if (page < 1 || page > 10) {
+        DIAG_DEBUG_EVERY(936769, 5.0, "A BeiDou D2 subframe 1 on PRN %d carries page number %d, outside 1 to 10, so the page is dropped.", prn, page);
+        return false;
+    }
     static const int kPos[4][2] = {{47, 6}, {61, 22}, {91, 22}, {121, 22}};
     int k = 0;
     for (auto& pr : kPos) for (int j = 0; j < pr[1]; j++) n.d2[page][k++] = b[pr[0] - 1 + j];
@@ -218,7 +222,10 @@ bool bdsHandleSubframe(BdsNav& n, const uint8_t* b, bool geo, int prn, GpsEpheme
             at += fl[f].bits;
         }
     }
-    for (int f = 0; f < BfCount; f++) if (got[f] != kBdsFieldBits[f]) return false;
+    for (int f = 0; f < BfCount; f++) if (got[f] != kBdsFieldBits[f]) {
+        DIAG_DEBUG_EVERY(815174, 5.0, "The ten BeiDou D2 pages on PRN %d gave %d bits for ephemeris field %d where %d are needed, so no ephemeris is built from them.", prn, got[f], f, kBdsFieldBits[f]);
+        return false;
+    }
     bdsEphemerisFromRaw(r, prn, *eph);
     *week = (int)r[BfWn];
     // the next ephemeris needs ten new pages

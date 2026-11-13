@@ -3,6 +3,7 @@
 
 // GNSS receiver, the measurement epoch: pseudoranges, the position solution, the clock estimate and the sky prediction.
 #include "gnss_rx_impl.h"
+#include "dect2/common/diag.h"
 #include "dect2/automation/engine.h"
 
 namespace dect2 {
@@ -78,7 +79,10 @@ void GnssReceiver::Impl::applyFix(double S, bool solved, GnssSolution& sl, std::
                     double sm = 0;
                     for (float o : offWin) sm += o;
                     clkOff = offNow; clkAvg = sm / (double)offWin.size(); clkValid = true;
-                } else offNow = NAN;
+                } else {
+                    DIAG_DEBUG_EVERY(352685, 10.0, "The receiver clock comparison gave an offset of %.0f ms, which is not plausible, so this reading is ignored.", (double)offNow);
+                    offNow = NAN;
+                }
             }
         }
         fix.timeValid = week > 0;
@@ -104,6 +108,7 @@ void GnssReceiver::Impl::applyFix(double S, bool solved, GnssSolution& sl, std::
     } else if (fix.valid && S - lastFixSignal > 20.0) {
         fix.valid = false; fix.type = "no fix";
         logf("position fix lost");
+        DIAG(595353, "The position fix was lost because no new solution was computed for over 20 s, so the receiver reports no fix until it solves again.");
     }
 }
 
@@ -197,11 +202,15 @@ void GnssReceiver::Impl::measure(double S) {
         for (int k = 0; k < 3; k++) opt.prior[k] = prior[k];
         opt.maskDeg = elMask.load();
         solved = gnssSolve(obs, opt, sl);
+        if (!solved) DIAG_DEBUG_EVERY(674781, 10.0, "The position solver found no solution from %zu satellites with ephemerides, so no fix is updated this second.", obs.size());
         if (solved) {
             double lat, lon, h;
             ecefToLla(sl.x, &lat, &lon, &h);
             // sanity: on or near the earth, residuals not absurd
-            if (!(h > -1000 && h < 30000) || sl.rmsResidual > 200.0) solved = false;
+            if (!(h > -1000 && h < 30000) || sl.rmsResidual > 200.0) {
+                DIAG_DEBUG_EVERY(846892, 10.0, "A position solution at %.0f m height with %.0f m residual was refused as implausible, so the previous fix is kept.", h, sl.rmsResidual);
+                solved = false;
+            }
         }
     }
     for (size_t k = 0; k < obs.size(); k++) {

@@ -3,6 +3,7 @@
 
 // GNSS interference and spoofing monitor (see gnss_interf.h)
 #include "dect2/gnss/gnss_interf.h"
+#include "dect2/common/diag.h"
 #include "dect2/dsp/dsp_compat.h"
 #include <algorithm>
 #include <chrono>
@@ -69,6 +70,7 @@ void GnssInterfMonitor::event(int level, const std::string& text) {
     e.t = sigT_; e.unixS = now(); e.level = level; e.text = text;
     r_.events.push_back(e);
     if (r_.events.size() > kMaxEvents) r_.events.erase(r_.events.begin(), r_.events.begin() + (long)(r_.events.size() - kMaxEvents));
+    if (level >= 2) DIAG_EVERY(315879, 2.0, "The GNSS interference monitor raised an alarm: %s. The alarm is added to the interference report and the receiver keeps running.", text.c_str());
     if (log_) log_("Interference monitor: " + text);
 }
 

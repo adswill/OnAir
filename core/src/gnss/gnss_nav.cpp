@@ -3,6 +3,7 @@
 
 // GPS navigation message and the models of IS-GPS-200 (see gnss_nav.h).
 #include "dect2/gnss/gnss_nav.h"
+#include "dect2/common/diag.h"
 #include <cmath>
 
 namespace dect2 {
@@ -47,7 +48,10 @@ bool lnavCheckWord(const uint8_t* r, int prevD29, int prevD30, uint32_t* d24) {
 bool lnavDecodeSubframe(const uint8_t* bits, int prevD29, int prevD30, LnavSubframe& out) {
     int p29 = prevD29, p30 = prevD30;
     for (int w = 0; w < 10; w++) {
-        if (!lnavCheckWord(bits + 30 * w, p29, p30, &out.w[w])) return false;
+        if (!lnavCheckWord(bits + 30 * w, p29, p30, &out.w[w])) {
+            DIAG_DEBUG_EVERY(478192, 5.0, "Word %d of a GPS LNAV subframe failed its parity check, so the whole subframe is dropped.", w + 1);
+            return false;
+        }
         p29 = bits[30 * w + 28]; p30 = bits[30 * w + 29];
     }
     return true;
@@ -62,7 +66,10 @@ bool lnavDecodeSubframeAuto(const uint8_t* bits, LnavSubframe& out) {
             for (int i = 0; i < 30; i++) x[i] = (uint8_t)(bits[30 * w + i] ^ inv);
             ok = lnavCheckWord(x, p29, p30, &out.w[w]);
         }
-        if (!ok) return false;
+        if (!ok) {
+            DIAG_DEBUG_EVERY(570909, 5.0, "Word %d of a GPS LNAV subframe failed its parity check in both bit polarities, so the subframe is dropped.", w + 1);
+            return false;
+        }
         p29 = x[28]; p30 = x[29];
     }
     return true;

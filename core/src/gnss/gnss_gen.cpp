@@ -4,6 +4,7 @@
 // GNSS test signal: the simulated sky of gnss_sim.h as the engine's synthetic source (see gnss_gen.h for the options).
 #include "dect2/gnss/gnss_gen.h"
 #include "dect2/gnss/gnss_sim.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -38,7 +39,10 @@ GnssSimConfig gnssSimConfigFrom(const SynthConfig& cfg) {
 }
 
 std::unique_ptr<ModeSynth> makeGnssSynth(const SynthConfig& cfg, double sampleRate) {
-    if (sampleRate < 2.0e6 || sampleRate > 21e6) return nullptr;
+    if (sampleRate < 2.0e6 || sampleRate > 21e6) {
+        DIAG(947494, "The GNSS test signal needs a sample rate from 2 to 21 MS/s but %.3f MS/s was asked for, so no test signal is made.", sampleRate / 1e6);
+        return nullptr;
+    }
     return std::make_unique<GnssSynth>(gnssSimConfigFrom(cfg), sampleRate);
 }
 

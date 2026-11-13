@@ -3,6 +3,7 @@
 
 // Acquisition by FFT (see gnss_acq.h).
 #include "dect2/gnss/gnss_acq.h"
+#include "dect2/common/diag.h"
 #include "dect2/dsp/dsp_compat.h"
 #include <algorithm>
 #include <cmath>
@@ -150,7 +151,11 @@ void GnssAcq::captureSegment(const GnssBand& band) {
 bool GnssAcq::codeFft(size_t pi) {
     if (codeValid_[pi]) return codeValid_[pi] == 1;
     std::vector<cf32> rep(N_);
-    if (!cfg_.replica(cfg_.prns[pi], rep.data(), N_)) { codeValid_[pi] = 2; return false; }
+    if (!cfg_.replica(cfg_.prns[pi], rep.data(), N_)) {
+        DIAG_DEBUG_EVERY(112377, 10.0, "The spreading code replica for PRN %d could not be built, so that satellite is skipped in the acquisition.", cfg_.prns[pi]);
+        codeValid_[pi] = 2;
+        return false;
+    }
     std::vector<float>& cr = codeRe_[pi]; std::vector<float>& ci = codeIm_[pi];
     cr.resize(N_); ci.resize(N_);
     for (int n = 0; n < N_; n++) { cr[n] = rep[n].real(); ci[n] = rep[n].imag(); }
@@ -239,9 +244,15 @@ int GnssAcq::work(const GnssBand& band, int units, const std::function<bool(int)
 bool GnssAcq::confirm(const GnssBand& band, int prn, double fd, int hitBlocks, GnssAcqHit* out) {
     // as long as the search that found it (a weak signal needs it), at least 8 ms
     const int K2 = std::max(8, std::min(kMaxBlocks, hitBlocks & ~1));
-    if (band.end() - band.base() < (int64_t)K2 * N_) return false;
+    if (band.end() - band.base() < (int64_t)K2 * N_) {
+        DIAG_DEBUG_EVERY(738316, 10.0, "The sample buffer holds too little data to confirm an acquisition hit on PRN %d, so the hit is dropped.", prn);
+        return false;
+    }
     const size_t pi = (size_t)(std::find(cfg_.prns.begin(), cfg_.prns.end(), prn) - cfg_.prns.begin());
-    if (pi >= cfg_.prns.size()) return false;
+    if (pi >= cfg_.prns.size()) {
+        DIAG_DEBUG_EVERY(897936, 10.0, "An acquisition hit on PRN %d is not in this search's satellite list, so it is dropped.", prn);
+        return false;
+    }
     if (!codeFft(pi)) return false;
     const int64_t seg = band.end() - (int64_t)K2 * N_;
     const double dfs[3] = {-0.1 * binHz_, 0.0, 0.1 * binHz_};
