@@ -276,7 +276,7 @@ private:
         }
         if (std::getenv("GSC_DBG") && voiceOpen_ && ct >= 24 && !dbgDumped_ && acScore(st, voiceWord_) <= 14) {
             dbgDumped_ = true;
-            std::string line; for (int64_t k = st - 8; k < st + 110; k++) { const float v = b(k); line += v > 0 ? (v > 0.6f ? '#' : '+') : (v < -0.6f ? '=' : '-'); }
+            std::string line; for (int64_t k = st - 520; k < st + 110; k++) { const float v = b(k); line += v > 0 ? (v > 0.6f ? '#' : '+') : (v < -0.6f ? '=' : '-'); }
             fprintf(stderr, "GSCBITS st=%lld hi=%.0f lo=%.0f omega=%.5f pol=%d\n%s\n", (long long)st, hi_, lo_, omega_, pol_, line.c_str());
         }
         if (std::getenv("GSC_DBG") && voiceOpen_ && ct >= 10) { const int q = acScore(st, voiceWord_); if (q <= 14) fprintf(stderr, "GSCDBG hunt t=%.2f bi=%lld ct=%d sv=%d m1=%d p1=%d\n", now(), (long long)st, ct, q, acScore(st - 1, voiceWord_), acScore(st + 1, voiceWord_)); }
