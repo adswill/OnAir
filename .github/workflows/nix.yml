@@ -1,13 +1,41 @@
 name: nix
-# Disabled by default: runs only when started by hand (Actions tab, "Run workflow").
+# Disabled by default: runs only when started by hand (Actions tab, "Run workflow"; gh workflow run nix.yml --ref <branch>).
+# Part of the release checklist (docs/RELEASE-3.0-CHECKLIST.md): green on the release commit before publishing.
 on:
   workflow_dispatch:
+    inputs:
+      arm64:
+        description: "Also build on aarch64-linux (a native arm64 runner)"
+        type: boolean
+        default: true
 
 jobs:
-  build:
+  x86_64-linux:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v27
-      - run: nix flake check
-      - run: nix build .#onair .#onair-server
+      - uses: cachix/install-nix-action@v31
+      - run: nix flake check --print-build-logs
+      - run: nix build .#onair .#onair-server --print-build-logs --no-link --print-out-paths
+      - name: What the packages contain
+        run: |
+          set -eu
+          gui=$(nix build .#onair --no-link --print-out-paths)
+          srv=$(nix build .#onair-server --no-link --print-out-paths)
+          ls -l "$gui/bin" "$srv/bin" "$gui/lib/onair" "$srv/share/onair/web"
+          "$srv/bin/onair-server" --version
+          test -x "$gui/bin/onair" -a -x "$gui/bin/onair-server" -a -x "$gui/bin/onair-cli" -a -x "$gui/bin/onair-scan"
+          test -d "$srv/share/onair/web/onair-web" -a -d "$srv/share/onair/web/onair-app"
+          nix develop --command sh -c 'cargo --version && cmake --version'
+
+  aarch64-linux:
+    if: ${{ inputs.arm64 }}
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: cachix/install-nix-action@v31
+      - run: nix flake check --print-build-logs
+      - run: nix build .#onair .#onair-server --print-build-logs --no-link --print-out-paths
+      - run: $(nix build .#onair-server --no-link --print-out-paths)/bin/onair-server --version
+
+# macOS is not built here: the flake's systems are x86_64-linux and aarch64-linux (package.nix is Linux-only: LD_LIBRARY_PATH wrapper, udev rules).

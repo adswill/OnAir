@@ -18,6 +18,39 @@ Download the file for your system from the **[latest release](https://github.com
 > [!IMPORTANT]
 > **Windows USB drivers:** for a HackRF, RTL-SDR, Airspy, Airspy HF+, Fobos SDR or RX888 MkII (its boot loader 04b4:00f3 and its running firmware 04b4:00f1 both need it), install the WinUSB driver once with [Zadig](https://zadig.akeo.ie). A LimeSDR Mini needs FTDI's FT60x driver (see the README inside the download). A LimeSDR-USB (Cypress FX3) needs the Cypress/LimeSuite USB driver (CyUSB3, the one LimeGUI installs), not WinUSB: do not replace it with Zadig. OnAir's own LimeSuite has no FX3 support, so for a LimeSDR-USB also install [PothosSDR](https://downloads.myriadrf.org/builds/PothosSDR/) or LimeSuite; OnAir finds its LimeSuite.dll by itself and the log (onair.log) says which copy saw the radio ("LimeSuite ...: N radio(s)").
 
+### Nix / NixOS
+
+The repository is a flake (x86_64-linux and aarch64-linux). Details, the module options and what is verified: [docs/NIXOS.md](NIXOS.md).
+
+```
+nix run github:adswill/OnAir                    # the GUI
+nix run github:adswill/OnAir#onair-server       # the headless server
+```
+
+As a flake input with the NixOS module (udev rules, the TV-driver blacklist, an optional server service):
+
+```nix
+{
+  inputs.onair.url = "github:adswill/OnAir";
+  inputs.onair.inputs.nixpkgs.follows = "nixpkgs";
+  outputs = { nixpkgs, onair, ... }: {
+    nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        onair.nixosModules.default
+        {
+          programs.onair.enable = true;
+          programs.onair.users = [ "alice" ];
+          # services.onair-server = { enable = true; web.enable = true; openFirewall = true; };
+        }
+      ];
+    };
+  };
+}
+```
+
+Voice codecs are never part of the package: put them in `~/.local/share/onair/codecs/` ([docs/CODECS.md](CODECS.md)).
+
 ### Android app
 
 <details>

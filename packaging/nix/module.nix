@@ -1,4 +1,4 @@
-# NixOS module for OnAir. Untested on a real NixOS machine; see docs/NIXOS.md.
+# NixOS module for OnAir. Untested on a real NixOS machine (the flake check evaluates it); see docs/NIXOS.md.
 # The flake wraps this so that `package` and `serverPackage` default to the flake's own builds.
 { self }:
 { config, lib, pkgs, ... }:
@@ -51,12 +51,30 @@ in
     openFirewall = lib.mkOption {
       type = lib.types.bool;
       default = false;
-      description = "Open the server's TCP port (8765 by default, see docs/headless-server.md) in the firewall. Unverified: set `port` to match your settings file.";
+      description = "Open the server's TCP ports in the firewall: `port` (remote-control API and the web page of the whole receiver) and, with `web.enable`, `web.port`.";
     };
     port = lib.mkOption {
       type = lib.types.port;
       default = 8765;
-      description = "Port opened by openFirewall; it must match the port in the server settings file.";
+      description = "The server's own port (`--port`, 8765 by default, docs/headless-server.md). It is also the port opened by openFirewall.";
+    };
+    lan = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Listen on the local network, not only on this computer (`--lan`). Run `onair-server --config /var/lib/onair/server.conf --new-token` once as the onair user for the access token.";
+    };
+    web = {
+      enable = lib.mkEnableOption "OnAir Web, many listeners in a browser, each with an own receiver inside the host's capture (`--web`, docs/ONAIR-WEB.md)";
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 8073;
+        description = "Port of OnAir Web (`--web-port`, 8073 by default).";
+      };
+      lan = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "OnAir Web listens on the local network (`--web-lan`).";
+      };
     };
   };
 
@@ -77,7 +95,7 @@ in
 
     (lib.mkIf scfg.enable {
       environment.systemPackages = [ scfg.package ];
-      networking.firewall.allowedTCPPorts = lib.mkIf scfg.openFirewall [ scfg.port ];
+      networking.firewall.allowedTCPPorts = lib.mkIf scfg.openFirewall ([ scfg.port ] ++ lib.optional scfg.web.enable scfg.web.port);
       users.users.onair = {
         isSystemUser = true;
         group = "onair";
@@ -95,7 +113,12 @@ in
           Type = "simple";
           User = "onair";
           Group = cfg.group;
-          ExecStart = lib.escapeShellArgs ([ "${scfg.package}/bin/onair-server" "--config" "/var/lib/onair/server.conf" ] ++ scfg.extraArgs);
+          ExecStart = lib.escapeShellArgs (
+            [ "${scfg.package}/bin/onair-server" "--config" "/var/lib/onair/server.conf" "--port" (toString scfg.port) ]
+            ++ lib.optional scfg.lan "--lan"
+            ++ lib.optionals scfg.web.enable ([ "--web" "--web-port" (toString scfg.web.port) ] ++ lib.optional scfg.web.lan "--web-lan")
+            ++ scfg.extraArgs
+          );
           Restart = "on-failure";
           RestartSec = 5;
           StateDirectory = "onair";

@@ -7,6 +7,7 @@ action only the owner can take. Nothing here pushes main, pushes a tag or publis
 
 | What | Where |
 |---|---|
+| Nix flake | `gh workflow run nix.yml --ref <branch>` green on the release commit (x86_64 and aarch64; `release.sh` warns when there is no green run); version comes from CMake, nothing to bump |
 | Version and credits checks | `tools/release/check_versions.sh <version> [--final]` |
 | The release script | `tools/release/release.sh <version> [options]` (builds, collects, makes a DRAFT; `--publish` makes it public) |
 | macOS arm64 + x86_64, Linux x86_64 + arm64 | `.github/workflows/release.yml` in adswill/OnAir (started by hand on the branch, no tag needed); Linux has a smoke test |

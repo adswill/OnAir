@@ -2235,3 +2235,7 @@ Receiver::signalView() plus a Signal tab for custom modes: histogram (OOK, ASK, 
 - Not improved, measured and reverted: ATSC 1.0 TU6 (segment sync lost in every fade; LMS step, pilot loop and fade coasting tried),
   ISDB-T first-order ICI removal (never switched on; the limit at 50 to 70 Hz is the pilot time interpolation).
 - 0 false decodes in all noise-only runs. Simulated signals only. CI: quick runs listed in the doc.
+## 2026-11-13 (feat41-nix): Nix flake brought up to 4.1
+- Was missing since 3.2: web pages (share/onair/web) not installed so onair-server had no browser page; no onair-cli / onair-scan / onair-extcap; OpenSSL (IPTV https, server TLS) and the Vulkan loader not in the package; module had no flags for --port / --lan / --web*.
+- Now: GUI package ships onair, onair-server, onair-cli, onair-scan, extcap, web pages; server package ships onair-server and web pages; version read from CMake (4.0.0); flake check also evaluates a NixOS config with the module; dev shell adds python3, ccache, clippy, rustfmt, rust-analyzer. Cargo: rust/Cargo.lock still has no external crates, no vendoring. Codecs are not packaged.
+- nix.yml: x86_64-linux and aarch64-linux jobs, content checks; macOS is not a flake system. Added to docs/RELEASE-3.0-CHECKLIST.md and a warning in tools/release/release.sh. docs/INSTALL.md has a Nix / NixOS section.

@@ -45,9 +45,40 @@
         default = onair;
       };
 
-      checks = forAll (system: _pkgs: {
-        inherit (self.packages.${system}) onair onair-server;
-      });
+      checks = forAll (system: pkgs:
+        let
+          # a NixOS configuration with the module: its evaluation catches option and flag mistakes without building a system
+          eval = nixpkgs.lib.nixosSystem {
+            inherit system;
+            modules = [
+              self.nixosModules.default
+              {
+                programs.onair.enable = true;
+                services.onair-server = {
+                  enable = true;
+                  lan = true;
+                  openFirewall = true;
+                  web.enable = true;
+                  web.lan = true;
+                  extraArgs = [ "--mcp-stdio" ];
+                };
+                boot.loader.grub.enable = false;
+                fileSystems."/" = { device = "none"; fsType = "tmpfs"; };
+                system.stateVersion = "24.11";
+              }
+            ];
+          };
+          unit = eval.config.systemd.services.onair-server.serviceConfig.ExecStart;
+        in
+        {
+          inherit (self.packages.${system}) onair onair-server;
+          # the unit's command line, the firewall ports and the udev group, written to a file (store paths dropped: no package is built here)
+          module = pkgs.writeText "onair-module-eval" (builtins.unsafeDiscardStringContext ''
+            ${unit}
+            ports: ${builtins.toString eval.config.networking.firewall.allowedTCPPorts}
+            udev: ${builtins.toString (builtins.length eval.config.services.udev.packages)}
+          '');
+        });
 
       formatter = forAll (system: pkgs: pkgs.nixpkgs-fmt);
     };
