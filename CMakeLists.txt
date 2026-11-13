@@ -3019,6 +3019,9 @@ if(DECT2_BUILD_TESTS)
       target_link_libraries(${m}tool PRIVATE dect2core)
     endif()
   endforeach()
+  if(TEST dtmb_counters)   # a regression of the position overflow can leave feed() stuck
+    set_tests_properties(dtmb_counters PROPERTIES TIMEOUT 60)
+  endif()
   foreach(t test_sensors_families test_sensors_vectors test_sensors_views)   # read the repository's test tables
     if(TARGET ${t})
       target_compile_definitions(${t} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
