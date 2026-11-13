@@ -10,6 +10,7 @@
 #include "ui/kit/mode_frame.h"
 #include "../panels/photo_links_ui.h"
 #include "../adsb/adsb_map.h"
+#include "../adsb/ac_card.h"
 #include "app.h"
 #include "map/pos_predict.h"
 #include "map/derived_kin.h"
@@ -296,6 +297,7 @@ void mapCanvas(App& a, ImVec2 size) {
     const dect2::AcarsAircraft* hit = nullptr; float best = 18 * gUi;
     ImVec2 click; const bool clicked = adsbmap::clickedAt(click);
     int withPos = 0;
+    ImVec2 cardAt; adsbmap::AcCard card; bool haveCard = false;   // the picked aircraft's card (#394)
     std::vector<ImVec4> placed;              // label boxes already drawn (x0, y0, x1, y1), so labels do not cover each other
     if (on) {
         for (const auto& c : t.aircraft) {   // tracks and predicted routes first, so the planes sit on top
@@ -325,6 +327,12 @@ void mapCanvas(App& a, ImVec2 size) {
             const ImVec2 q = est ? adsbmap::project(pe.lat, pe.lon) : adsbmap::project(c.lat, c.lon);
             if (q.x < p0.x - 60 || q.y < p0.y - 60 || q.x > p0.x + size.x + 60 || q.y > p0.y + size.y + 60) continue;
             const bool sel = isSel(c);
+            if (sel) {
+                haveCard = true; cardAt = q;
+                card.icao = c.icao; card.reg = c.reg; card.flight = c.flight; card.lat = est ? pe.lat : c.lat; card.lon = est ? pe.lon : c.lon;
+                card.hasAlt = c.hasAlt; card.altFt = c.altFt;
+                card.source = (c.posKind.empty() ? std::string("position") : c.posKind) + (est ? " (estimated), " : ", ") + ago(t.nowSec, c.posTime) + " ago";
+            }
             if (est) { pospred::drawPredictionMarks(dl, pe, q, planeColour(c, t.nowSec), gPred.ellipses); pospred::hoverTooltip(pe, q); }
             if (c.hasTrack) drawPlane(dl, q, (float)c.trackDeg, (sel ? 12.f : 10.f) * gUi, planeColour(c, t.nowSec), sel);
             else {
@@ -355,6 +363,7 @@ void mapCanvas(App& a, ImVec2 size) {
     }
     if (clicked) S.selReg = hit ? hit->reg : "";
     dl->PopClipRect();
+    if (haveCard && !S.selReg.empty() && S.selReg == card.reg) adsbmap::aircraftCard("##accarscard", p0, size, cardAt, card);
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
     if (ImGui::Button("+", ImVec2(26 * gUi, 0))) { S.map.zoom = std::min(adsbmap::kMaxZoom, S.map.zoom + 1); S.mapFollow = false; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom in"));

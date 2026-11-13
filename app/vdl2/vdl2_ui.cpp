@@ -18,6 +18,7 @@
 #include <fstream>
 #include "dect2/adsb/adsb_tel.h"
 #include "dect2/vdl2/vdl2_tel.h"
+#include "../adsb/ac_card.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -349,6 +350,7 @@ void mapCanvas(App& a, ImVec2 size) {
     ImVec2 click; const bool clicked = adsbmap::clickedAt(click);
     float best = 18 * gUi; uint32_t hit = 0;
     int placed = 0, predicted = 0;
+    ImVec2 cardAt; adsbmap::AcCard card; bool haveCard = false;   // the picked aircraft's card (#394)
     if (on) {
         for (const auto& g : t.stations) {   // estimated stations: an open square; every station with a coverage: its reach
             if (!g.hasPos && !g.hasEstimate) continue;
@@ -393,6 +395,12 @@ void mapCanvas(App& a, ImVec2 size) {
             }
             const ImVec2 q = adsbmap::project(plat, plon);
             const bool sel = c.icao == S.selAir;
+            if (sel) {
+                haveCard = true; cardAt = q;
+                card.icao = c.icao; card.reg = c.reg; card.flight = c.flight; card.lat = plat; card.lon = plon;
+                card.hasAlt = c.hasAlt || altFt; card.altFt = pred && altFt ? altFt : c.altFt;
+                card.source = (c.posKind.empty() ? std::string("position") : c.posKind) + (pred ? " (predicted), " : ", ") + ago(t.nowSec, c.posTime) + " ago";
+            }
             const ImU32 drawCol = pred ? ((col & 0x00FFFFFF) | 0xB0000000) : col;
             if (gPred.predict && pe.valid) { pospred::drawPredictionMarks(dl, pe, q, col, gPred.ellipses); pospred::hoverTooltip(pe, q); }
             if (c.hasTrack) drawPlane(dl, q, (float)c.trackDeg, (sel ? 12.f : 10.f) * gUi, drawCol, sel);
@@ -414,6 +422,7 @@ void mapCanvas(App& a, ImVec2 size) {
     }
     if (clicked) S.selAir = hit;
     dl->PopClipRect();
+    if (haveCard && S.selAir == card.icao) adsbmap::aircraftCard("##vdcard", p0, size, cardAt, card);
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
     if (ImGui::Button("+", ImVec2(26 * gUi, 0))) { S.map.zoom = std::min(adsbmap::kMaxZoom, S.map.zoom + 1); S.mapFollow = false; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom in"));
