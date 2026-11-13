@@ -399,12 +399,12 @@ struct CubesatReceiver::Impl {
         }
         // AX100 Mode 6: an RS block in the HDLC frame. Not on a narrow path (variant 2): an HDLC frame that failed its CRC is decoded by the RS
         // code alone, and a second hunter adds miscorrected frames (seen: 9 bytes "corrected" in a 23 byte frame) for a gain of 0.2 dB
-        // 4.1: a differential detector path (variant 3) takes Mode 6 too, but only with at most a quarter of the code's 32 parity bytes used:
+        // 4.1: a differential detector path (variant 3) takes Mode 6 too, but only with at most 4 byte errors put right (an eighth of the 32 parity bytes):
         // a miscorrection of noise uses nearly all 16 it can correct
         if (framing == Ax25G3ruh && variant != 2) {
             std::vector<uint8_t> csp;
             int rsErr = -1;
-            if (ax100Mode6Decode(d, csp, rsErr) && (variant != 3 || rsErr <= 8)) {
+            if (ax100Mode6Decode(d, csp, rsErr) && (variant != 3 || rsErr <= 4)) {
                 CubeFrame f;
                 f.framing = Ax100Mode6; f.baud = baud; f.rsErrors = rsErr;
                 f.hasCsp = parseCsp(csp, f.csp);

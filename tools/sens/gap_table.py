@@ -53,7 +53,7 @@ PHY = {
     "dstar":      (4800, "gmsk", 96, "U", "GMSK 4800, 96-bit voice frame"),
     "tetrapol":   (8000, "gmsk", 160, "U", "GMSK 8000"),
     "dect":       (1152000, "gmsk", 80, "U", "GFSK 1.152 Mb/s, A-field + CRC"),
-    "vdl4":       (19200, "ncfsk", 250, "U", "GFSK 19.2 kb/s (h 0.5) on a discriminator, HDLC burst"),
+    "vdl4":       (19200, "ncfsk", 250, "U", "GFSK 19.2 kb/s (h 0.5, BT 0.28), HDLC burst; the orthogonal-FSK bound is optimistic for h 0.5 BT 0.28 (a 1-bit differential detector needs several dB more); the 'before' 20 dB counted neighbour-channel copies (18 frames for 11 bursts)"),
     "ble":        (1000000, "ncfsk", 300, "U", "GFSK 1 Mb/s (h 0.5) on a discriminator"),
     "ant":        (1000000, "ncfsk", 150, "U", "GFSK 1 Mb/s"),
     "nrf24":      (1000000, "ncfsk", 200, "U", "GFSK 1 Mb/s"),
@@ -66,7 +66,7 @@ PHY = {
     "sigfox":     (100, "dbpsk", 208, "U", "DBPSK 100 b/s"),
     "tetra":      (36000, "pi4dqpsk", 268, "U", "pi/4-DQPSK 36 kb/s, coded blocks (RCPC 2/3 + interleaving): the true limit is lower"),
     "vdl3":       (31500, "d8psk", 200, "U", "D8PSK 10.5 kBd"),
-    "eczas":      (50, "pcsk", 96, "U", "two phase states 36 degrees apart, 50 b/s, on a constant carrier (the carrier counts in the SNR); coherent bound (the step detector of the decoder: +2.9 dB)"),
+    "eczas":      (50, "pcsk", 96, "U", "two phase states 36 degrees apart, 50 b/s, on a constant carrier (the carrier counts in the SNR); coherent bound (the step detector: +2.9 dB; 4.1 sens3 adds a coherent detector; the 'after' figure is from 60 s trials, the 30 dB before was the latency of 8 s ones: 18 dB with 60 s)"),
     "pocsag":     (1200, "ncfsk", 544, "U", "FSK 1200, BCH(31,21) t=2 per word: the true limit is lower"),
     "rtty":       (45.45, "ncfsk", 8, "U", "FSK 45.45 Bd, characters"),
     "sitor":      (100, "ncfsk", 7, "U", "FSK 100 Bd, 7-bit characters"),
@@ -130,11 +130,12 @@ def main():
         if flags: cause += "; " + "; ".join(flags)
         out.append((m, d.get("name", m), meas, aft, th, gap, PHY[m][3] if m in PHY else "", cause, ref.get("m0"), d.get("false_units"), d.get("false_trials")))
     out.sort(key=lambda r: (-(r[5] if r[5] is not None else -99), r[0]))
-    print("| mode | measured (dB in B99) | after | theory | gap (dB) | basis | units per trial | false (units / trials) | model / class |")
-    print("|---|---|---|---|---|---|---|---|---|")
+    print("| mode | measured (dB in B99) | after | theory | gap (dB) | gap after | basis | units per trial | false (units / trials) | model / class |")
+    print("|---|---|---|---|---|---|---|---|---|---|")
     f = lambda v: "-" if v is None else ("%+.1f" % v if isinstance(v, float) and v < 0 else "%.1f" % v)
     for m, name, meas, aft, th, gap, basis, cause, m0, fu, ft in out:
-        print("| %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (m, f(meas), f(aft), f(th), "-" if gap is None else "%+.1f" % gap, basis or "-",
+        print("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (m, f(meas), f(aft), f(th), "-" if gap is None else "%+.1f" % gap,
+              "-" if (aft is None or th is None) else "%+.1f" % (aft - th), basis or "-",
               "-" if m0 is None else int(m0), "-" if ft is None else "%d / %d" % (fu, ft), cause))
 
 if __name__ == "__main__":
