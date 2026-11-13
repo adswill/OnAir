@@ -299,7 +299,7 @@ struct Demod::Impl {
             segmentRoles(mode, sgi, false, symIdx, iciRoles.data());
             const int mod = seg[sgi].layer >= 0 ? p.layer[seg[sgi].layer].mod : kQpsk;
             const int M = mod == k64Qam ? 8 : mod == k16Qam ? 4 : 2;
-            const float n = norm(mod);
+            const float n = mod == k64Qam ? 1.f / std::sqrt(42.f) : mod == k16Qam ? 1.f / std::sqrt(10.f) : 1.f / std::sqrt(2.f);   // the axis unit (isdbt.cpp norm())
             const auto& w = prbsW(mode, sgi);
             for (int i = 0; i < cps; i++) {
                 const int k = pos * cps + i;
