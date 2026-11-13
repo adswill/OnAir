@@ -69,6 +69,16 @@ static void testClusters() {
             if (d.mod == Mod::PSK) {
                 CHECKM(v.points.size() >= 100 && v.evmPct > 0 && v.evmPct < 30, "%s: %zu points, EVM %.1f %%", c.name, v.points.size(), v.evmPct);
                 CHECKM(v.hasEbn0 && std::fabs(v.ebn0Db - (v.snrDb - 10 * std::log10((double)d.bitsPerSymbol()))) < 1e-6, "%s: Eb/N0 %.2f", c.name, v.ebn0Db);
+                {   // diagnostics: how much of the scatter is amplitude and how much phase
+                    double r1 = 0, r2 = 0, a2 = 0;
+                    for (const cf& p : v.points) {
+                        const double r = std::abs(p), ang = std::arg(p), step = 2 * M_PI / M;
+                        const double e = ang - std::round(ang / step) * step;
+                        r1 += r; r2 += r * r; a2 += e * e;
+                    }
+                    const double np = (double)v.points.size();
+                    printf("   radius mean %.3f sd %.3f, phase error rms %.3f rad\n", r1 / np, std::sqrt(std::max(0.0, r2 / np - (r1 / np) * (r1 / np))), std::sqrt(a2 / np));
+                }
                 int near = 0;
                 for (const cf& p : v.points) {
                     double best = 1e9;

@@ -208,11 +208,19 @@ struct Receiver::Impl {
         v.have = true;
         const size_t n = sigCnt, first = (sigPos + kSigCap - n) % kSigCap;
         if (psk) {
+            // least-squares gain onto the ideal points: the displayed constellation and the EVM do not depend on the AGC's level
+            double num = 0;
+            for (size_t i = 0; i < n; i++) {
+                const size_t k = (first + i) % kSigCap;
+                const double ang = 2 * kPi * sigLvl[k] / M;
+                num += sigZ[k].real() * std::cos(ang) + sigZ[k].imag() * std::sin(ang);
+            }
+            const double gain = num > 1e-9 ? (double)n / num : 1.0;
             double e2 = 0;
             for (size_t i = 0; i < n; i++) {
                 const size_t k = (first + i) % kSigCap;
                 const double ang = 2 * kPi * sigLvl[k] / M;
-                const double dx = sigZ[k].real() - std::cos(ang), dy = sigZ[k].imag() - std::sin(ang);
+                const double dx = gain * sigZ[k].real() - std::cos(ang), dy = gain * sigZ[k].imag() - std::sin(ang);
                 e2 += dx * dx + dy * dy;
             }
             const double evm = std::sqrt(e2 / (double)n);
@@ -226,7 +234,7 @@ struct Receiver::Impl {
             v.resolved = v.separation >= 4;
             v.clusters = v.resolved ? M : 0;
             const size_t keep = std::min<size_t>(n, 512);
-            for (size_t i = n - keep; i < n; i++) v.points.push_back(sigZ[(first + i) % kSigCap]);
+            for (size_t i = n - keep; i < n; i++) v.points.push_back(sigZ[(first + i) % kSigCap] * (float)gain);
             return v;
         }
         const double sc = fsk ? dev : 1.0;
