@@ -3,6 +3,7 @@
 
 // Analog TV picture decoder: sync detection, the line phase-locked loop and the per-line processing.
 #include "atv_video_impl.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -238,7 +239,7 @@ void AtvVideo::Impl::weakBlock(int g, int pre, int post, int len) {
     } else {
         weakLock = false;
         syncQ *= 0.6f;
-        if (++weakLow >= 8) { weakLow = 0; loseLock(); }
+        if (++weakLow >= 8) { weakLow = 0; DIAG_DEBUG(726414, "The analog TV matched-filter line tracker lost lock after 8 weak lines, so line sync is searched for again."); loseLock(); }
     }
 }
 
@@ -594,6 +595,7 @@ void AtvVideo::Impl::processLines() {
         if (!weakMode && vsyncMiss >= 2 && levelsValid && noiseVar > 0 && (Tr - Br) < 1.6 * std::sqrt(noiseVar)) {
             weakMode = true; weakMidPending = false; weakQ = 0.6f; weakLow = 0; weakN = 0; weakLock = true; weakStrong = 0;
             pState = 0; bCount = 0; goodRun = std::max(goodRun, 8);
+            DIAG_DEBUG(353057, "Analog TV field syncs were missed %d times in a noisy signal, so the receiver switches to matched filters for line and field sync.", vsyncMiss);
             doLog("analog TV: noisy signal, line and field sync by matched filters");
         }
         if (vsyncMiss > 12) haveVsync = false;
