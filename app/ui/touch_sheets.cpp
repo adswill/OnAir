@@ -208,6 +208,16 @@ void menuSheet(App& a, ImVec2 disp) {
     ImGui::SetNextItemWidth(-1);
     if (ImGui::SliderInt("##ttxt", &pct, 100, 200, "%d%%")) a.touchScale = std::max(1.f, std::min(2.f, pct / 100.f));
     if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
+    ImGui::TextDisabled("%s", tr("Control size"));   // #139: button height, paddings, top bar and dock, applied at once (touch_logic.h)
+    {
+        const float cw = (w - sp * (kTouchSizes - 1)) / kTouchSizes;
+        for (int i = 0; i < kTouchSizes; i++) {
+            if (i) ImGui::SameLine();
+            ImGui::PushID(i);
+            if (bigButton(tr(touchSizeNames()[i]), ImVec2(cw, 0), a.touchSize == i)) { a.touchSize = i; savePrefs(a); }
+            ImGui::PopID();
+        }
+    }
     ui2::themeChoice(a, false);
     const float hw = (w - sp) / 2;
     if (bigButton(txViewFlag() ? tr("Receive view") : tr("Transmit view"), ImVec2(hw, 0))) { hamViewFlag() = false; txViewFlag() = !txViewFlag(); closeSheet(); }

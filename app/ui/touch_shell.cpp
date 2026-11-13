@@ -13,6 +13,7 @@ namespace {
 bool gOpenGain = false, gOpenVol = false, gOpenTuner = false, gOpenMore = false;
 bool gDevDone = false;
 int gMorePage = 0;   // 0 menu of pages, 1 status, 2 results list, 3 analysis
+ShellLayout gL;      // this frame's bars and dock (touch_logic.h shellLayout: control size, short screens)
 
 struct Item { const char* label; float weight; };
 
@@ -41,13 +42,13 @@ int dockRow(const Item* it, int n, float h, unsigned repeatMask, int startIdx, b
 }
 
 void topBar(App& a, ImVec2 disp) {
-    const float h = target() * 1.1f;
+    const float h = gL.topH;
     if (ImGui::Button("=", ImVec2(h, h))) openMenu();   // the menu bar, folded into one button
     ImGui::SameLine();
     const ModeDef* cur = &kModes[0];
     for (const auto& m : allModes()) if (modeSelected(a, m)) cur = &m;
     char chip[96]; snprintf(chip, sizeof chip, "%s  v##modechip", cur->name);
-    const float chipW = std::min(disp.x * 0.5f, 260.f * dpi());
+    const float chipW = std::min(disp.x * 0.5f, 260.f * dpi() * std::max(0.85f, sizeFactor()));
     ImGui::PushStyleColor(ImGuiCol_Button, ImGui::ColorConvertU32ToFloat4((cur->col & 0x00FFFFFF) | 0xFF000000));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::ColorConvertU32ToFloat4((cur->col & 0x00FFFFFF) | 0xFF000000));
     if (ImGui::Button(chip, ImVec2(chipW, h))) openModePicker();
@@ -58,11 +59,13 @@ void topBar(App& a, ImVec2 disp) {
     ImGui::TextColored(run ? pal::okGreen() : pal::grey(), "%s", run ? tr("Running") : tr("Stopped"));
 }
 
-// the dock: tuning on the first row (- frequency + step), the actions on the second; one row when the display is wide
+// the dock: tuning on the first row (- frequency + step), the actions on the second; one row when the display is wide, and on a short screen
+// one row without Step (it is in More then: shellLayout)
 void dock(App& a, ImVec2 disp, float dockH) {
+    (void)disp;
     ImGui::BeginChild("##tdock", ImVec2(0, dockH), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-    const float h = target() * 1.15f;
-    const bool wide = disp.x >= 1000.f * dpi();
+    const float h = gL.rowH;
+    const bool wide = gL.dockRows == 1;
     const bool running = a.engine.running();
     const std::string fq = mhzText(a.freqMhz) + " MHz";
     char step[32]; stepLabel(stepHz(), step, sizeof step);
@@ -72,7 +75,12 @@ void dock(App& a, ImVec2 disp, float dockH) {
     Item tune[4] = {{"-", 0.8f}, {fq.c_str(), 3.f}, {"+", 0.8f}, {stepBtn, 1.6f}};
     Item act[5] = {{startLbl, 1.4f}, {tr("Gain"), 1.f}, {tr("Volume"), 1.f}, {tr("Tuner"), 1.f}, {tr("More"), 1.f}};
     // dock ids: 0 -, 1 frequency, 2 +, 3 step, 10 start / stop, 11 gain, 12 volume, 13 tuner, 14 more
-    if (wide) {   // one row: start, - frequency + step, gain, volume, tuner, more
+    if (wide && gL.stepInMore) {   // a short screen: start, - frequency +, gain, volume, tuner, more
+        const Item all[8] = {act[0], tune[0], tune[1], tune[2], act[1], act[2], act[3], act[4]};
+        static const int map[8] = {10, 0, 1, 2, 11, 12, 13, 14};
+        const int r = dockRow(all, 8, h, (1u << 1) | (1u << 3), 0, running);
+        if (r >= 0) hit = map[r];
+    } else if (wide) {   // one row: start, - frequency + step, gain, volume, tuner, more
         const Item all[9] = {act[0], tune[0], tune[1], tune[2], tune[3], act[1], act[2], act[3], act[4]};
         static const int map[9] = {10, 0, 1, 2, 3, 11, 12, 13, 14};
         const int r = dockRow(all, 9, h, (1u << 1) | (1u << 3), 0, running);
@@ -135,6 +143,11 @@ void moreSheet(App& a) {
         const float w = ImGui::GetContentRegionAvail().x;
         const char* names[3] = {tr("Status"), tr("List"), tr("Analysis")};
         for (int i = 0; i < 3; i++) if (bigButton(names[i], ImVec2(w, target() * 1.3f))) gMorePage = i + 1;
+        if (gL.stepInMore) {   // the short one-row dock has no Step button
+            char step[32]; stepLabel(stepHz(), step, sizeof step);
+            char stepBtn[64]; snprintf(stepBtn, sizeof stepBtn, "%s: %s##tmorestep", tr("Step"), step);
+            if (bigButton(stepBtn, ImVec2(w, target() * 1.3f))) { closeSheet(); openStepPicker(); }
+        }
     } else {
         if (bigButton(tr("Back"), ImVec2(0, 0))) gMorePage = 0;
         ImGui::BeginChild("##tmore", ImVec2(0, 0), 0);
@@ -158,17 +171,18 @@ void shell(App& a, ImVec2 disp) {
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(disp);
     ImGui::Begin("##troot", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollbar);
+    const ImGuiStyle& sty = ImGui::GetStyle();
+    gL = shellLayout(disp.x, disp.y, dpi(), sizeFactor(), 7 * sty.ItemSpacing.x + 2 * sty.WindowPadding.x);
     topBar(a, disp);
-    const bool wide = disp.x >= 1000.f * dpi();
-    const float rowH = target() * 1.15f, sp = ImGui::GetStyle().ItemSpacing.y;
-    const float dockH = (wide ? 1 : 2) * rowH + (wide ? 0 : sp) + ImGui::GetStyle().WindowPadding.y * 2;
-    const float bodyH = ImGui::GetContentRegionAvail().y - dockH - sp;
+    const float sp = sty.ItemSpacing.y;
+    const float dockH = gL.dockRows * gL.rowH + (gL.dockRows - 1) * sp + sty.WindowPadding.y * 2;
+    const float bodyH = std::max(target(), ImGui::GetContentRegionAvail().y - dockH - sp);
     ImGui::BeginChild("##tbody", ImVec2(0, bodyH), 0);
     const ImVec2 bodyMin = ImGui::GetWindowPos(), bodyMax = ImVec2(bodyMin.x + ImGui::GetWindowSize().x, bodyMin.y + ImGui::GetWindowSize().y);
     if (hamViewFlag()) hamPanel(a);
     else if (txViewFlag()) txPanel(a);
     else {
-        if (disp.y >= disp.x) { statusBar(a); ImGui::Separator(); }   // portrait: the mode's status line on top; landscape keeps the height for the picture (More > Status)
+        if (gL.statusOnTop) { statusBar(a); ImGui::Separator(); }   // portrait: the mode's status line on top; landscape keeps the height for the picture (More > Status)
         mainTabs(a);
     }
     ImGui::EndChild();

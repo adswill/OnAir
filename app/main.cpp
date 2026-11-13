@@ -138,10 +138,13 @@ static void applyDisplayScale(GLFWwindow* window, App& app, const ImGuiStyle& ba
                     touch::setDisplayScale(s);   // 48 px targets are measured at the display scale, not the text scale
                     s *= app.uiTextScale;   // View > Text size
                     touch::setOn(app.touchUi);
+                    touch::setSizeFactor(touch::touchSizeFactor(app.touchSize));   // Settings > Touch control size (#139)
                     if (app.touchUi) s *= app.touchScale;   // the touch interface's larger text
                     static bool lastTouch = false;
-                    if (s != gUi || lastTouch != app.touchUi) {
+                    static int lastTouchSize = -1;
+                    if (s != gUi || lastTouch != app.touchUi || lastTouchSize != app.touchSize) {   // a smaller control size needs the style rebuilt (applyMetrics only raises)
                         lastTouch = app.touchUi;
+                        lastTouchSize = app.touchSize;
                         gStyleEpoch++;
                         gUi = s;
                         ImGuiStyle& st = ImGui::GetStyle();

@@ -4535,3 +4535,11 @@ HF MFSK, 40 Bd	KW-MFSK, 40 Bd
 HF FSK, 200 Bd 500 Hz	KW-FSK, 200 Bd 500 Hz
 HF FSK, 200 Bd 1000 Hz	KW-FSK, 200 Bd 1000 Hz
 HF FSK, 100 Bd 200 Hz	KW-FSK, 100 Bd 200 Hz
+Touch control size	Größe der Touch-Bedienelemente
+Control size	Bedienelementgröße
+Small	Klein
+Compact	Kompakt
+Large	Groß
+Extra large	Sehr groß
+Small|Compact|Default|Large|Extra large	Klein|Kompakt|Standard|Groß|Sehr groß
+Height and padding of the touch interface's buttons, top bar and dock. Smaller leaves more room for the panels on small screens.	Höhe und Abstände der Schaltflächen, der oberen Leiste und des Docks der Touch-Oberfläche. Kleiner lässt den Bereichen auf kleinen Bildschirmen mehr Platz.

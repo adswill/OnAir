@@ -16,6 +16,8 @@ object AppGraph {
     val repository: ReceiverRepository by lazy { ReceiverRepository(app, settings) }
     /** TV picture and sound with the phone's decoders (tv/, the Watch panel of the TV modes). */
     val tv: io.github.adswill.onair.tv.TvController by lazy { io.github.adswill.onair.tv.TvController() }
+    /** The pictures of the analogue TV modes (Analog TV, MAC, FPV video) on the same Watch panel. */
+    val analogTv: io.github.adswill.onair.tv.AnalogTvController by lazy { io.github.adswill.onair.tv.AnalogTvController() }
 
     fun init(application: Application) { app = application }
 }

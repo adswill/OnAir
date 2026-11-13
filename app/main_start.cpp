@@ -239,6 +239,7 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--light") app.lightUi = true;   // dev: View > Theme > Light
         if (std::string(argv[i]) == "--touch") app.touchUi = true;   // the touch interface (not saved)
         if (std::string(argv[i]) == "--touchsheet" && i + 1 < argc) { app.touchUi = true; touch::devOpen(argv[++i]); }   // dev: a touch sheet open at the start (keypad[:7.1], step, modes, menu, gain, vol, tuner, more[1-3])
+        if (std::string(argv[i]) == "--touchsize" && i + 1 < argc) app.touchSize = touch::clampTouchSize(atoi(argv[++i]));   // 0 Small .. 4 Extra large (not saved unless changed in the program)
         if (std::string(argv[i]) == "--touchscale" && i + 1 < argc) app.touchScale = std::max(1.f, std::min(2.f, (float)atof(argv[++i])));
         if (std::string(argv[i]) == "--hc") app.highContrast = true;   // dev: View > Theme > High contrast
         if (std::string(argv[i]) == "--variant" && i + 1 < argc) app.uiVariant = std::max(0, std::min(7, atoi(argv[++i])));

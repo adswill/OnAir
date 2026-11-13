@@ -1242,3 +1242,11 @@ HF MFSK, 40 Bd
 HF FSK, 200 Bd 500 Hz
 HF FSK, 200 Bd 1000 Hz
 HF FSK, 100 Bd 200 Hz
+Touch control size
+Control size
+Small
+Compact
+Large
+Extra large
+Small|Compact|Default|Large|Extra large
+Height and padding of the touch interface's buttons, top bar and dock. Smaller leaves more room for the panels on small screens.

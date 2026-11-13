@@ -3662,3 +3662,11 @@ Default	Numatytasis
 Custom	Pasirinktinis
 Join the Discord to get access to built codecs	Prisijunkite prie Discord, kad gautumėte paruoštus kodekus
 Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	Naršyklėje atidaro „OnAir“ Discord. Pati „OnAir“ niekada neatsisiunčia ir neįtraukia kodeko.
+Touch control size	Jutiklinių valdiklių dydis
+Control size	Valdiklių dydis
+Small	Maži
+Compact	Kompaktiški
+Large	Dideli
+Extra large	Labai dideli
+Small|Compact|Default|Large|Extra large	Maži|Kompaktiški|Numatytasis|Dideli|Labai dideli
+Height and padding of the touch interface's buttons, top bar and dock. Smaller leaves more room for the panels on small screens.	Jutiklinės sąsajos mygtukų, viršutinės juostos ir apatinio skydelio aukštis ir tarpai. Mažesni palieka daugiau vietos skydeliams mažuose ekranuose.

@@ -21,4 +21,10 @@ object TvNative {
     external fun nativeTvRead(buf: ByteArray, timeoutMs: Int): Int
     /** "seen\tkept\tdropped\tqueued\tstreamSeconds" */
     external fun nativeTvStats(): String
+    /**
+     * The newest picture of an analogue TV mode ([AnalogSource]: 0 Analog TV, 1 MAC, 2 FPV video), made by the core's receiver as on the desktop.
+     * meta (6): in meta[0] the picture number shown last; out {seq, width, height, colour, untuned, field rate}. RGBA (alpha 255) into [out].
+     * The bytes copied, 0 when nothing is newer, -(bytes needed) when [out] is too small.
+     */
+    external fun nativeAnalogFrame(which: Int, meta: DoubleArray, out: ByteArray): Int
 }

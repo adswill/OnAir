@@ -38,4 +38,9 @@
     <string name="tv_radio">radio</string>
     <string name="tv_scrambled">scrambled</string>
     <string name="tv_honesty">Picture and sound are decoded by this phone\'s own decoders (Android MediaCodec). OnAir ships no codec: a format the phone has no decoder for stays silent or dark, and the screen says which. Wideband TV demodulation is heavy for a phone: expect it to get warm, drain the battery quickly and, on slower phones, not keep up.</string>
+    <string name="tv_fullscreen">Full screen</string>
+    <string name="tv_exit_fullscreen">Exit full screen</string>
+    <string name="tv_fullscreen_on">Showing full screen. Back returns here.</string>
+    <string name="atv_waiting">Waiting for a picture. Start the receiver on an analogue channel; the picture appears once line and field sync lock.</string>
+    <string name="atv_honesty">This is the picture OnAir\'s own analogue receiver makes, the same as on the desktop; the sound comes from the receiver too. No codec is involved. A wide analogue channel is heavy for a phone: expect it to get warm and, on slower phones, not keep up.</string>
 </resources>

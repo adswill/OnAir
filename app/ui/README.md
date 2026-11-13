@@ -19,7 +19,7 @@ How the widgets pick it up without being copied: `third_party/imgui` has four sm
 
 Multi-touch: GLFW delivers one pointer (the touch is emulated as a mouse), so pinch needs a backend that calls `touch::feedPointer()` for each finger; until then a plot zooms with the wheel / trackpad and the Zoom, Max and Min sliders (now finger-sized) and pans with one finger. Everything else (long press, swipe, fling, keypad) works from the single pointer.
 
-Dev: `--touchsheet keypad[:7.1] | step | modes | menu | gain | vol | tuner | more[1-3]` opens a sheet at the start (for `--shot`), `--touchscale 1.0 .. 2.0`.
+Dev: `--touchsheet keypad[:7.1] | step | modes | menu | gain | vol | tuner | more[1-3]` opens a sheet at the start (for `--shot`), `--touchscale 1.0 .. 2.0`, `--touchsize 0 .. 4` (control size, Small .. Extra large; docs/TOUCH-SIZE-4.1.md).
 
 Screens converted: the shell (dock, top bar, mode picker, keypad, step, gain, volume, tuner, more, menu), the main tabs and the TX panel (through the scaled metrics and drag scrolling), settings and every popup (bottom sheets), results tables (drag scroll, 48 px rows). Left as scaled-up desktop layouts: the map and ADS-B full-screen windows (pan with one finger, buttons for zoom), the Signal workbench, per-mode panels with fixed pixel widths (they stay usable, some columns are tight in portrait), the scanner, passes and gallery windows (full screen on a narrow display, desktop layout inside).
 

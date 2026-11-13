@@ -2170,3 +2170,13 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - Real bug (since 0.2.7): a sample rate too wide for the Airspy HF+ stopped the stream instead of keeping it running. Fixed with resumeAfterConfigureFailure.
 - Outdated test: HF+ 192 kHz tone window (0.5 s transfer collection on restart), RTL-SDR V4 note with a stock-library fake, HF+ bias-tee with a frozen listing (open now refreshes it).
 - No 4.0.1 needed for this. quick run 43377142724: native, native_nobias, dxpatrol, native_lifecycle, usb_fd pass; Windows 43374750816 pass.
+
+2026-11-13 feat41-uiplay: two owner-approved requests.
+- #435 Android player (docs/ANDROID-PLAYER-4.1.md): the 4.0 Watch panel already played H.264/HEVC/MPEG-2 and AAC/AC-3/E-AC-3/MP2 through
+  MediaCodec with service and sound-track chips. Added: analogue TV pictures for Analog TV, MAC and FPV video (new JNI nativeAnalogFrame
+  hands over the core's AtvFrame; AnalogTvController polls at the frame rate into two alternating bitmaps), full screen for both (dialog,
+  bars hidden, landscape while open, Surface hand-over guarded by TvController.releaseSurface), and plain lines for AVS/AVS+/AVS2/AVS3 and
+  DRA (no Android decoder, none shipped, user-installed add-ons on the desktop). No VLC or Media3. Tests: AnalogTvTest (JVM). Not run on a phone.
+- #139 touch control size (docs/TOUCH-SIZE-4.1.md): Settings / View / touch Menu > Touch control size, Small .. Extra large (0.70 .. 1.40,
+  Default unchanged), applied live (style rebuilt on change). shellLayout() gives short screens tighter bars and a one-row dock (Step moves
+  to More): 640 x 480 panels 253 -> 330 px at Default. Tests: test_touch controlSize(); de/lt strings added (unreviewed).

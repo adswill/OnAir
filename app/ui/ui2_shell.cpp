@@ -13,6 +13,7 @@
 #include "../voice/voice_monitor_ui.h"
 #include "ui_common.h"
 #include "tour_logic.h"
+#include "touch_logic.h"   // the touch control sizes (View > Touch control size)
 #include "status_strip.h"
 #include "row_tint.h"
 #include "dect2/common/time_fmt.h"
@@ -668,6 +669,11 @@ static void viewMenu(App& a) {
             if (ImGui::MenuItem(tr("Touch interface"), nullptr, &a.touchUi)) savePrefs(a);   // the same flag as the side panel: big targets, bottom dock (ui/touch.h)
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
             uiprev::item(a, uiprev::Opt::Touch, a.touchUi ? 0 : 1);
+            if (ImGui::BeginMenu(tr("Touch control size"))) {   // #139: the touch interface's buttons and bars, applied at once
+                for (int i = 0; i < touch::kTouchSizes; i++)
+                    if (ImGui::MenuItem(tr(touch::touchSizeNames()[i]), nullptr, a.touchSize == i)) { a.touchSize = i; savePrefs(a); }
+                ImGui::EndMenu();
+            }
             dockMenu(a);   // Docking (ui2_dock.cpp)
             ImGui::Separator();
             if (ImGui::MenuItem(tr("Classic interface"))) { a.newUi = false; savePrefs(a); }   // keeps this menu bar; Ctrl+Shift+M or View > Reset view > Restore the default view comes back

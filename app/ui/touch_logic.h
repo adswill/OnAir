@@ -201,4 +201,54 @@ inline bool autoTouch(int workW, int workH, bool chosenBefore) {
     return workW <= 1100 || workH <= 560;   // 800 x 480, 1024 x 600, 720 x 720: yes; a 1280 x 720 laptop: no
 }
 
+// ------------------------------------------------------------------------------------------------ control size (#139)
+// Settings > Touch control size (App::touchSize): Small .. Extra large scale the touch interface's button height, paddings and the top bar and
+// dock together; Default (2) is the size the touch interface always had. The 48 px target never falls under 32 px at Small: still a finger.
+constexpr int kTouchSizes = 5, kTouchSizeDefault = 2;
+#ifndef N_
+#define N_(s) s   // i18n.h's marker: the names are translated where they are shown (tr())
+#endif
+inline const char* const* touchSizeNames() { static const char* const n[kTouchSizes] = {N_("Small"), N_("Compact"), N_("Default"), N_("Large"), N_("Extra large")}; return n; }
+inline int clampTouchSize(int level) { return level < 0 ? 0 : level >= kTouchSizes ? kTouchSizes - 1 : level; }
+inline float touchSizeFactor(int level) { static const float f[kTouchSizes] = {0.70f, 0.85f, 1.f, 1.2f, 1.4f}; return f[clampTouchSize(level)]; }
+
+// The touch shell's frame for a display (pixels), the display scale and the control size factor: the top bar and dock rows, how many dock rows,
+// and whether the mode's status line sits above the tabs. A short screen (under 600 px of display-scale height: 640 x 480, 800 x 480) gets
+// tighter bars and, when eight buttons fit across, a one-row dock without the Step button (Step moves to More), so the panels get the height
+// (#139). sideGaps: the item spacing and window padding of one row, in pixels (7 spacings + 2 paddings).
+struct ShellLayout {
+    float target = 48;        // the smallest hit target, px
+    float topH = 0;           // the top bar's buttons
+    float rowH = 0;           // one dock row's buttons
+    int dockRows = 2;
+    bool stepInMore = false;  // the short one-row dock: the Step button is in the More sheet
+    bool shortScreen = false;
+    bool statusOnTop = false; // portrait: the status line above the tabs
+};
+inline float touchTarget(float dpi, float factor) { return std::max(32.f * dpi, 48.f * dpi * factor); }
+// the dock's weights: - 0.8, frequency 3, + 0.8 and Step 1.6 on the tuning row; Start 1.4 and four of 1 on the action row
+constexpr float kDockOneRowWeightNoStep = 0.8f + 3.f + 0.8f + 1.4f + 4.f;
+inline ShellLayout shellLayout(float dispW, float dispH, float dpi, float factor, float sideGaps = 0) {
+    ShellLayout L;
+    if (!(dpi > 0)) dpi = 1;
+    L.target = touchTarget(dpi, factor);
+    L.shortScreen = dispH < 600.f * dpi;
+    L.topH = L.target * (L.shortScreen ? 0.95f : 1.1f);
+    L.rowH = L.target * (L.shortScreen ? 1.0f : 1.15f);
+    const bool wide = dispW >= 1000.f * dpi;
+    // the smallest buttons (- and +, weight 0.8) of a one-row dock without Step must keep 0.8 of a target across
+    const bool eightFit = (dispW - sideGaps) * 0.8f / kDockOneRowWeightNoStep >= 0.8f * L.target;
+    if (wide) L.dockRows = 1;
+    else if (L.shortScreen && eightFit) { L.dockRows = 1; L.stepInMore = true; }
+    else L.dockRows = 2;
+    L.statusOnTop = dispH >= dispW && !L.shortScreen;
+    return L;
+}
+// The height the shell leaves to the panels (the body), given the bars, item spacing and window padding: never negative.
+inline float shellBodyHeight(const ShellLayout& L, float dispH, float itemSpacingY, float windowPadY) {
+    const float dock = L.dockRows * L.rowH + (L.dockRows - 1) * itemSpacingY + 2 * windowPadY;
+    const float h = dispH - 2 * windowPadY - L.topH - itemSpacingY - dock - itemSpacingY;
+    return h > 0 ? h : 0;
+}
+
 }   // namespace touch

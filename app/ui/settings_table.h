@@ -54,6 +54,7 @@ inline const std::vector<Info>& table() {
         {"uiTypography", kAppearance, N_("Font look"), N_("Current (default), Clean or Compact."), "typography fonts cjk", K::Custom, 0, 0, 0, nullptr, nullptr, "", false, true},
         {"restoreView", kAppearance, N_("Restore the default view"), N_("Back to the new interface, Sidebar layout, no touch mode, no docking. Also Ctrl+Shift+M and View > Restore the default view."), "reset layout menu bar hidden compact classic", K::Custom},
         {"touchUi", kAppearance, N_("Touch interface"), N_("Big buttons, an on-screen keypad and a full-screen mode picker for tablets."), "tablet android large rows", K::Bool, 0},
+        {"touchSize", kAppearance, N_("Touch control size"), N_("Height and padding of the touch interface's buttons, top bar and dock. Smaller leaves more room for the panels on small screens."), "touch button size small compact large bar dock 640x480", K::Choice, 2, 0, 0, N_("Small|Compact|Default|Large|Extra large")},
         {"touchScale", kAppearance, N_("Touch text size"), N_("Extra text scale of the touch interface."), "touch large", K::Float, 1.35, 1, 2, nullptr, nullptr, "", true},
         // ---- Units
         {"timeDisplay", kUnits, N_("Time display"), N_("Show times in UTC or in this computer's local time, with or without the zone label."), "utc local clock 24h 12h date time zone", K::Custom},

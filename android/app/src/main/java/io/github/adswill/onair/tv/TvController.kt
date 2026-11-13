@@ -84,6 +84,12 @@ class TvController(private val catalog: DecoderCatalog = AndroidDecoderCatalog()
         player.setSurface(s)
     }
 
+    /**
+     * A SurfaceView going away. Only the one in use lets the player go: when the picture moves between the panel and full screen, the new
+     * Surface may arrive before the old one is destroyed.
+     */
+    fun releaseSurface(s: Surface?) { if (s == null || s === surface) setSurface(null) }
+
     fun setVolume(v: Float, mute: Boolean) { player.volume = v.coerceIn(0f, 1f); player.muted = mute }
 
     private fun stopPlayback() {
