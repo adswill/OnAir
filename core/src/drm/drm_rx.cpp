@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <map>
 #include <mutex>
@@ -160,6 +161,8 @@ struct DrmReceiver::Impl {
         int64_t idx = -1;
         std::vector<cf32> Y;
         std::vector<cf32> Hr;
+        std::vector<cf32> Hc;        // Hr turned back by the symbol's common phase (cpe): what the time interpolation works on
+        float cpe = 0;               // common phase of the symbol against the tracker's reference (rad)
         bool haveHr = false;
         float cp = 0;
     };
@@ -793,7 +796,50 @@ struct DrmReceiver::Impl {
             const int k = kG0 + j * gx;
             R.Hr[(size_t)j] = R.Y[(size_t)(k - kLoW)] / r;
         }
+        commonPhase(t);
         R.haveHr = true;
+    }
+
+    // Common phase error (4.1). The oscillators' phase noise turns every carrier of a symbol by the same angle; with a 26.7 ms symbol (mode B) a
+    // 1 Hz linewidth moves it by 0.4 rad (rms) from one symbol to the next, so the pilots of the neighbouring symbols that the time interpolation
+    // combines disagree. The common phase of symbol t is measured from its own gain references against those of t - gy (the same carriers, already
+    // turned back) and from the frequency reference tones against t - 1; the raw estimates are turned back by it (Hc) before the interpolation, and
+    // the interpolated channel of the symbol is turned forward again. It holds through a fade. DECT2_DRM_NOCPE=1: the 4.0 path (no correction).
+    const bool cpeOff = getenv("DECT2_DRM_NOCPE") != nullptr;
+    uint64_t cpeSyms = 0;
+    void commonPhase(int64_t t) {
+        SymRec& R = rec(t);
+        R.Hc = R.Hr;
+        R.cpe = 0;
+        if (cpeOff) return;
+        const SymRec* P = (t >= 1 && rec(t - 1).idx == t - 1 && rec(t - 1).haveHr) ? &rec(t - 1) : nullptr;
+        const SymRec* A = (t >= gy && rec(t - gy).idx == t - gy && rec(t - gy).haveHr) ? &rec(t - gy) : nullptr;
+        cf32 acc(0, 0);
+        if (A && A->Hc.size() == R.Hr.size())
+            for (size_t j = 0; j < R.Hr.size(); j++) {
+                const cf32 a = A->Hc[j], b = R.Hr[j];
+                if (a != cf32(0, 0) && b != cf32(0, 0)) acc += b * std::conj(a);
+            }
+        if (P && mode != kModeE) {
+            const RefTable& ft = kFreqRefs[mode];
+            const int sa = sOf(t - 1), sb = sOf(t);
+            const cf32 back1 = std::polar(1.0f, -P->cpe);
+            for (int i = 0; i < ft.n; i++) {
+                const int k = ft.data[i][0];
+                cf32 ra, rb;
+                if (k < kLoW || k > kHiW || !pilotRef(mode, -1, sa, k, ra) || !pilotRef(mode, -1, sb, k, rb)) continue;
+                const cf32 ya = P->Y[(size_t)(k - kLoW)] / ra * back1, yb = R.Y[(size_t)(k - kLoW)] / rb;
+                acc += yb * std::conj(ya);
+            }
+        }
+        float th = P ? P->cpe : 0.f;
+        if (!hold && std::abs(acc) > 0) th = std::arg(acc);
+        R.cpe = th;
+        if (th != 0) {
+            const cf32 rot = std::polar(1.0f, -th);
+            for (auto& v : R.Hc) v *= rot;
+        }
+        cpeSyms++;
     }
 
     // Weights of the Wiener filter in time for every offset d (0 .. gy - 1) of a symbol from the last pilot of a carrier: taps at the pilots
@@ -941,25 +987,25 @@ struct DrmReceiver::Impl {
                 for (int m = 0; m < kWT && all; m++) { tap[m] = recIf(t - d + (m - kWT / 2) * gy); all = tap[m] != nullptr; }
                 if (all) {
                     const float* wv = &wien[(size_t)d * kWT];
-                    for (int m = 0; m < kWT; m++) v += tap[m]->Hr[(size_t)j] * wv[m];
+                    for (int m = 0; m < kWT; m++) v += tap[m]->Hc[(size_t)j] * wv[m];
                     ok = true;
                 }
             }
             if (d == 0) {
-                if (a && !ok) { v = a->Hr[(size_t)j]; ok = true; }
+                if (a && !ok) { v = a->Hc[(size_t)j]; ok = true; }
                 const SymRec* p = recIf(t - gy);
                 if (a && p && b) {
-                    const cf32 pred = 0.5f * (p->Hr[(size_t)j] + b->Hr[(size_t)j]);
-                    accN += std::norm(a->Hr[(size_t)j] - pred); cntN++;
-                    const cf32 c = a->Hr[(size_t)j] * std::conj(p->Hr[(size_t)j]); sumRe += c.real(); sumIm += c.imag(); sumP += std::norm(a->Hr[(size_t)j]); cntD++;
-                    if (const SymRec* pp = recIf(t - 2 * gy)) { const cf32 c2 = a->Hr[(size_t)j] * std::conj(pp->Hr[(size_t)j]); sum2Re += c2.real(); sum2Im += c2.imag(); }
+                    const cf32 pred = 0.5f * (p->Hc[(size_t)j] + b->Hc[(size_t)j]);
+                    accN += std::norm(a->Hc[(size_t)j] - pred); cntN++;
+                    const cf32 c = a->Hc[(size_t)j] * std::conj(p->Hc[(size_t)j]); sumRe += c.real(); sumIm += c.imag(); sumP += std::norm(a->Hc[(size_t)j]); cntD++;
+                    if (const SymRec* pp = recIf(t - 2 * gy)) { const cf32 c2 = a->Hc[(size_t)j] * std::conj(pp->Hc[(size_t)j]); sum2Re += c2.real(); sum2Im += c2.imag(); }
                 }
             } else if (ok) {
             } else if (a && b) {
                 const float f = (float)d / gy;
-                v = a->Hr[(size_t)j] * (1 - f) + b->Hr[(size_t)j] * f; ok = true;
-            } else if (a) { v = a->Hr[(size_t)j]; ok = true; }
-            else if (b) { v = b->Hr[(size_t)j]; ok = true; }
+                v = a->Hc[(size_t)j] * (1 - f) + b->Hc[(size_t)j] * f; ok = true;
+            } else if (a) { v = a->Hc[(size_t)j]; ok = true; }
+            else if (b) { v = b->Hc[(size_t)j]; ok = true; }
             G1[(size_t)(j - jLo)] = v;
             Gvalid[(size_t)(j - jLo)] = ok ? 1 : 0;
         }
@@ -1023,7 +1069,7 @@ struct DrmReceiver::Impl {
                 jj = std::max(jLo, std::min(jHi, jj));
                 acc += G1[(size_t)(jj - jLo)] * kk[(size_t)(m + J - 1)];
             }
-            acc *= std::polar(1.0f, (float)(-ramp * k));
+            acc *= std::polar(1.0f, (float)(-ramp * k) + R.cpe);   // the symbol's own common phase back on (0 on the 4.0 path)
             Hhat[(size_t)(k - kEqLo)] = acc;
             hp += std::norm(acc);
         }
