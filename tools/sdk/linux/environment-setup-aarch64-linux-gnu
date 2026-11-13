@@ -1,0 +1,32 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Source this file (it sits in the SDK's top folder) to build for the Raspberry Pi 5 (Ubuntu 26.04 arm64) in this shell:
+#     . ~/onair-sdk/environment-setup-aarch64-linux-gnu
+# Then a plain `cmake -S . -B build -G Ninja` uses the SDK (CMake 3.21+ reads CMAKE_TOOLCHAIN_FILE from the environment).
+# Like a Yocto SDK's environment-setup-* script; nothing outside the SDK folder is changed.
+
+if [ -n "${BASH_SOURCE:-}" ]; then _rpi_sdk_self=${BASH_SOURCE[0]}; elif [ -n "${ZSH_VERSION:-}" ]; then _rpi_sdk_self=${(%):-%x}; else _rpi_sdk_self=$0; fi
+RPI_SDK=$(cd "$(dirname "$_rpi_sdk_self")" && pwd); unset _rpi_sdk_self
+export RPI_SDK
+export RPI_SYSROOT="$RPI_SDK/sysroots/aarch64-linux-gnu"         # the target sysroot (Ubuntu 26.04)
+export RPI_NATIVE_SYSROOT="$RPI_SDK/sysroots/x86_64-sdk-linux"  # the tools that run on this machine
+case ":$PATH:" in *":$RPI_NATIVE_SYSROOT/bin:"*) ;; *) export PATH="$RPI_NATIVE_SYSROOT/bin:$PATH";; esac
+export CMAKE_TOOLCHAIN_FILE="$RPI_SDK/toolchain-aarch64-linux-gnu.cmake"
+# for builds that do not use CMake (make, configure scripts)
+# (aarch64-linux-gnu-clang: clang with this SDK's target, sysroot and lld, from llvm/bin/aarch64-unknown-linux-gnu.cfg)
+export CC=aarch64-linux-gnu-clang CXX=aarch64-linux-gnu-clang++
+export AR=llvm-ar RANLIB=llvm-ranlib NM=llvm-nm STRIP=llvm-strip OBJDUMP=llvm-objdump OBJCOPY=llvm-objcopy
+export PKG_CONFIG_LIBDIR="$RPI_SYSROOT/usr/local/lib/pkgconfig:$RPI_SYSROOT/usr/lib/aarch64-linux-gnu/pkgconfig:$RPI_SYSROOT/usr/lib/pkgconfig:$RPI_SYSROOT/usr/share/pkgconfig"
+export PKG_CONFIG_PATH="" PKG_CONFIG_SYSROOT_DIR="$RPI_SYSROOT"
+export RUSTC="$RPI_NATIVE_SYSROOT/bin/rustc" CARGO="$RPI_NATIVE_SYSROOT/bin/cargo"
+export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-clang CARGO_BUILD_TARGET=aarch64-unknown-linux-gnu
+echo "Raspberry Pi 5 (Ubuntu 26.04 arm64) SDK: $RPI_SDK"
+# the parts of this SDK, their licences and where the licence texts are (LICENSES.txt); ONAIR_SDK_QUIET=1 leaves this out
+if [ -z "${ONAIR_SDK_QUIET:-}" ] && [ -f "$RPI_SDK/LICENSES.txt" ]; then
+  echo
+  cat "$RPI_SDK/LICENSES.txt"
+  echo
+  echo "Licence texts: in the folders above, relative to $RPI_SDK"
+  echo "  the standard texts (GPL, LGPL, Apache, MPL ...): $RPI_SDK/licenses/common-licenses/"
+  echo "  this list: $RPI_SDK/LICENSES.txt   (ONAIR_SDK_QUIET=1 before sourcing leaves it out)"
+fi

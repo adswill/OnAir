@@ -1,0 +1,4 @@
+# made when the scripts are run by hand (CMake keeps them in its build folder)
+/cache/
+/sdk/
+__pycache__/

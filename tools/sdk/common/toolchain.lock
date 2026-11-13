@@ -1,0 +1,12 @@
+# fetch_toolchain.sh lock file: the exact files of the SDK's native tools. Rewrite with: fetch_toolchain.sh --update
+# resolved 2026-11-07T21:32:11Z; LLVM signed by key FFB3368980F3E6BB5737145A316C56D064CACBA5, Rust by 108F66205EAEB0AAA8DD5E1C85AB96E6FA1BE5FE
+llvm LLVM 23.1.5 LLVM-23.1.5-Linux-X64.tar.zst c3107384835f788768f614db610e87fba7077f125ca950eb02a78bab0a308065
+deb binutils-mingw-w64-x86-64 2.45.90.20260125-1ubuntu1+13.3 binutils-mingw-w64-x86-64_2.45.90.20260125-1ubuntu1+13.3_amd64.deb f835050ed5b7fedf8f3242610fda1eb55b5472b72624f9a88de90c610b465552
+deb binutils-mingw-w64-base 2.45.90.20260125-1ubuntu1+13.3 binutils-mingw-w64-base_2.45.90.20260125-1ubuntu1+13.3_amd64.deb f3dbbe4aec206d7078987c9ba3286df20a5fab4ed8c63b0f0d31969c26bdfcbf
+rust rustc 1.99.1 rustc-1.99.1-x86_64-unknown-linux-gnu.tar.xz 2ff05ff9c08a90861e7f6e4065b40a8b87463b4576186fd613871c3e37f2091f
+rust cargo 1.99.1 cargo-1.99.1-x86_64-unknown-linux-gnu.tar.xz 53f3521949404d595efb06a55c12c5658d4ed1c75566f33d3d514eaebe70bd8a
+rust rust-std 1.99.1 rust-std-1.99.1-x86_64-unknown-linux-gnu.tar.xz 109b074225bf5b9ea3820890876bfdf4ed161adbfaf94b2b4b5984c85ee5d958
+rust rust-std 1.99.1 rust-std-1.99.1-x86_64-pc-windows-gnu.tar.xz b17e3bc962ff24b3bc47a750d838defed85b280746250e3a3ad029e6c1a29dd7
+rust rust-std 1.99.1 rust-std-1.99.1-aarch64-apple-darwin.tar.xz fe79d6ab5a0321de26463999d8c112b8ad3eafbcbcf822d66a2300b45dde1031
+rust rust-std 1.99.1 rust-std-1.99.1-x86_64-apple-darwin.tar.xz 484d5b88b424ddd29df196e1eb9420c8335bb5fac90a3c37140253345a8c65c4
+rust rust-std 1.99.1 rust-std-1.99.1-aarch64-unknown-linux-gnu.tar.xz e25668477083d6a9ddb87b9beb9c00742225f38233ccb4bfba3afa7a07427f52

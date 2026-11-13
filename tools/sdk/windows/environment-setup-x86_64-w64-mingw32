@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Source this file (it sits in the SDK's top folder) to cross-build for Windows x64 (UCRT) in this shell:
+#     . ~/onair-win-sdk/environment-setup-x86_64-w64-mingw32
+# Then a plain `cmake -S . -B build -G Ninja` uses the SDK (CMake 3.21+ reads CMAKE_TOOLCHAIN_FILE from the environment).
+# Like a Yocto SDK's environment-setup-* script; nothing outside the SDK folder is changed.
+
+if [ -n "${BASH_SOURCE:-}" ]; then _win_sdk_self=${BASH_SOURCE[0]}; elif [ -n "${ZSH_VERSION:-}" ]; then _win_sdk_self=${(%):-%x}; else _win_sdk_self=$0; fi
+WIN_SDK=$(cd "$(dirname "$_win_sdk_self")" && pwd); unset _win_sdk_self
+export WIN_SDK
+export WIN_SYSROOT="$WIN_SDK/sysroots/x86_64-w64-mingw32"           # the target sysroot (headers, libraries, DLLs)
+export WIN_NATIVE_SYSROOT="$WIN_SDK/sysroots/x86_64-sdk-linux"          # the tools that run on this machine
+case ":$PATH:" in *":$WIN_NATIVE_SYSROOT/bin:"*) ;; *) export PATH="$WIN_NATIVE_SYSROOT/bin:$PATH";; esac
+export CMAKE_TOOLCHAIN_FILE="$WIN_SDK/toolchain-x86_64-w64-mingw32.cmake"
+export TARGET_PREFIX=x86_64-w64-mingw32-
+# for builds that do not use CMake (make, configure scripts)
+export CC="clang --target=x86_64-w64-windows-gnu --sysroot=$WIN_SYSROOT --ld-path=$WIN_NATIVE_SYSROOT/bin/x86_64-w64-mingw32-ld"
+export CXX="clang++ --target=x86_64-w64-windows-gnu --sysroot=$WIN_SYSROOT --ld-path=$WIN_NATIVE_SYSROOT/bin/x86_64-w64-mingw32-ld"
+export AR=x86_64-w64-mingw32-ar RANLIB=x86_64-w64-mingw32-ranlib NM=x86_64-w64-mingw32-nm STRIP=x86_64-w64-mingw32-strip
+export OBJDUMP=x86_64-w64-mingw32-objdump DLLTOOL=x86_64-w64-mingw32-dlltool
+export RC="llvm-windres --target=pe-x86-64 --preprocessor-arg=--sysroot=$WIN_SYSROOT"
+export WINDRES="$RC"
+export PKG_CONFIG_LIBDIR="$WIN_SYSROOT/lib/pkgconfig:$WIN_SYSROOT/share/pkgconfig" PKG_CONFIG_PATH=""
+unset PKG_CONFIG_SYSROOT_DIR
+# Rust: the SDK's cargo uses the SDK's rustc (which has the x86_64-pc-windows-gnu standard library)
+export RUSTC="$WIN_NATIVE_SYSROOT/bin/rustc" CARGO="$WIN_NATIVE_SYSROOT/bin/cargo"
+echo "Windows x64 (UCRT) cross SDK: $WIN_SDK"
+# the parts of this SDK, their licences and where the licence texts are (LICENSES.txt); ONAIR_SDK_QUIET=1 leaves this out
+if [ -z "${ONAIR_SDK_QUIET:-}" ] && [ -f "$WIN_SDK/LICENSES.txt" ]; then
+  echo
+  cat "$WIN_SDK/LICENSES.txt"
+  echo
+  echo "Licence texts: in the folders above, relative to $WIN_SDK"
+  echo "  the standard texts (GPL, LGPL, Apache, MPL ...): $WIN_SDK/licenses/common-licenses/"
+  echo "  this list: $WIN_SDK/LICENSES.txt   (ONAIR_SDK_QUIET=1 before sourcing leaves it out)"
+fi

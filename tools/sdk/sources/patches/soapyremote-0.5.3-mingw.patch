@@ -1,0 +1,83 @@
+--- a/client/DiscoverServers.cpp
++++ b/client/DiscoverServers.cpp
+@@ -25,9 +25,9 @@
+     //On non-windows platforms the endpoint instance can last the
+     //duration of the process because it can be cleaned up safely.
+     //Windows has issues cleaning up threads and sockets on exit.
+-    #ifndef _MSC_VER
++    #ifndef _WIN32
+     static
+-    #endif //_MSC_VER
++    #endif //_WIN32
+     std::unique_ptr<SoapySSDPEndpoint> ssdpEndpoint(new SoapySSDPEndpoint());
+ 
+     //get all IPv4 and IPv6 URLs because we will fallback
+--- a/common/SoapyInfoUtils.in.cpp
++++ b/common/SoapyInfoUtils.in.cpp
+@@ -6,7 +6,7 @@
+ #include <cstdlib> //rand
+ #include <chrono>
+ 
+-#ifdef _MSC_VER
++#ifdef _WIN32
+ 
+ #define getpid() GetCurrentProcessId()
+ 
+@@ -24,7 +24,7 @@
+     return dwSerialNumber;
+ }
+ 
+-#endif //_MSC_VER
++#endif //_WIN32
+ 
+ std::string SoapyInfo::getHostName(void)
+ {
+--- a/common/SoapyRPCSocket.cpp
++++ b/common/SoapyRPCSocket.cpp
+@@ -20,7 +20,7 @@
+     sessionCount++;
+     if (sessionCount > 1) return;
+ 
+-    #ifdef _MSC_VER
++    #ifdef _WIN32
+     WORD wVersionRequested;
+     WSADATA wsaData;
+     wVersionRequested = MAKEWORD(2, 2);
+@@ -38,7 +38,7 @@
+     sessionCount--;
+     if (sessionCount > 0) return;
+ 
+-    #ifdef _MSC_VER
++    #ifdef _WIN32
+     WSACleanup();
+     #endif
+ }
+@@ -270,7 +270,7 @@
+ int SoapyRPCSocket::setNonBlocking(const bool nonblock)
+ {
+     int ret = 0;
+-    #ifdef _MSC_VER
++    #ifdef _WIN32
+     u_long mode = nonblock?1:0;  // 1 to enable non-blocking socket
+     ret = ioctlsocket(_sock, FIONBIO, &mode);
+     #else
+@@ -510,7 +510,7 @@
+ static std::string errToString(const int err)
+ {
+     char buff[1024];
+-    #ifdef _MSC_VER
++    #ifdef _WIN32
+     FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&buff, sizeof(buff), NULL);
+     return buff;
+     #else
+--- a/common/SoapySocketDefs.in.hpp
++++ b/common/SoapySocketDefs.in.hpp
+@@ -107,7 +107,7 @@
+ /***********************************************************************
+  * socket errno
+  **********************************************************************/
+-#ifdef _MSC_VER
++#ifdef _WIN32
+ #define SOCKET_ERRNO WSAGetLastError()
+ #define SOCKET_EINPROGRESS WSAEWOULDBLOCK
+ #define SOCKET_ETIMEDOUT WSAETIMEDOUT
