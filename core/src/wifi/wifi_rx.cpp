@@ -337,7 +337,7 @@ struct WifiReceiver::Impl {
                     if (e > pe) { pe = e; peak = winBest + o; }
                 }
                 pending = true; pd = Pend(); pd.at = peak; pd.alt = winBest; pd.shortPre = winShort;
-                pd.need = std::max(peak, winBest) + (int64_t)(winShort ? 25 : 49) * kSps + kMargin;   // the header: 48 bits at 1 Mbit/s, or at 2 Mbit/s after the short SFD
+                pd.need = std::max(peak, winBest) + (int64_t)(winShort ? 26 : 50) * kSps + kMargin;   // one symbol more: the peak may belong to the next   // the header: 48 bits at 1 Mbit/s, or at 2 Mbit/s after the short SFD
                 busyUntil = pd.need;
             }
         }
@@ -440,10 +440,14 @@ struct WifiReceiver::Impl {
                     for (int k = 0; k < 16; k++) crc = (uint16_t)(crc << 1 | dm.bits[(size_t)(32 + k)]);
                     return wifi::crc16(dm.bits.data(), 32) == crc;
                 };
-                if (!headerOk(pd.at)) {
-                    if (pd.alt == pd.at || !headerOk(pd.alt)) { tel.headersBad++; pending = false; busyUntil = 0; break; }
-                    pd.at = pd.alt;
+                // the peak, the first phase, and the peak a symbol either side (half a symbol from the first phase it may be the neighbour's)
+                bool ok = false;
+                const int64_t cands[4] = {pd.at, pd.alt, pd.at - kSps, pd.at + kSps};
+                for (int ci = 0; ci < 4 && !ok; ci++) {
+                    if (ci == 1 && pd.alt == pd.at) continue;
+                    if (headerOk(cands[ci])) { pd.at = cands[ci]; ok = true; }
                 }
+                if (!ok) { tel.headersBad++; pending = false; busyUntil = 0; break; }
                 uint8_t h[4] = {};
                 for (int i = 0; i < 32; i++) h[i / 8] |= (uint8_t)(dm.bits[(size_t)i] << (i % 8));
                 tel.headersOk++;
