@@ -1,0 +1,149 @@
+# CPU per second of signal for every mode (4.1, docs/CPU-4.1.md): test_qa_sweep --cpu in shards on Linux x86-64 and macOS arm64.
+# Each mode's test signal at its default sample rate, then noise alone, through the Engine; CPU s per s of signal for all threads and for
+# the busiest thread. With `compare`, the same measuring program is also built over that ref's sources and run after it on the same runner.
+#   gh workflow run cpu.yml -R adswill/OnAir --ref <branch> [-f modes=atsc3,t2] [-f compare=integ-41] [-f os=linux] [-f shards=6]
+# Until this file is on the default branch (workflow_dispatch needs it there), a branch asks for a run by pushing a change to
+# tools/perf/cpu-request.env (the same names in capitals: MODES=, COMPARE=, OS=, SHARDS=, SECONDS=, PERF=).
+name: CPU
+on:
+  push:
+    branches: ["feat*"]
+    paths: [tools/perf/cpu-request.env]
+  workflow_dispatch:
+    inputs:
+      modes:
+        description: "comma-separated mode ids (test_qa_sweep --list); empty = every mode"
+        default: ""
+      compare:
+        description: "another branch or tag: its receivers measured too, with this branch's measuring program (optional)"
+        default: ""
+      os:
+        description: "linux, macos or both"
+        type: choice
+        options: [both, linux, macos]
+        default: both
+      shards:
+        description: "runners per OS for the whole list (a mode list runs on one)"
+        default: "6"
+      seconds:
+        description: "seconds of signal per mode (capped at 160 M samples)"
+        default: "6"
+      perf:
+        description: "Linux: one mode id to run once more under perf record (the hottest functions are printed)"
+        default: ""
+concurrency:
+  group: cpu-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+      modes: ${{ steps.m.outputs.modes }}
+      compare: ${{ steps.m.outputs.compare }}
+      seconds: ${{ steps.m.outputs.seconds }}
+      perf: ${{ steps.m.outputs.perf }}
+    steps:
+      - uses: actions/checkout@v7
+        with: { sparse-checkout: tools/perf }
+      - id: m
+        env: { OSSEL: "${{ inputs.os }}", N: "${{ inputs.shards }}", MODES: "${{ inputs.modes }}", COMPARE: "${{ inputs.compare }}", SECSIN: "${{ inputs.seconds }}", PERF: "${{ inputs.perf }}", EV: "${{ github.event_name }}" }
+        run: |
+          if [ "$EV" = push ]; then
+            OSSEL=both; N=6; MODES=""; COMPARE=""; SECSIN=6; PERF=""
+            while IFS='=' read -r k v; do case "$k" in MODES) MODES="$v";; COMPARE) COMPARE="$v";; OS) OSSEL="$v";; SHARDS) N="$v";; SECONDS) SECSIN="$v";; PERF) PERF="$v";; esac; done < tools/perf/cpu-request.env
+          fi
+          { echo "modes=$MODES"; echo "compare=$COMPARE"; echo "seconds=${SECSIN:-6}"; echo "perf=$PERF"; } >> "$GITHUB_OUTPUT"
+          [ -n "$MODES" ] && N=1
+          OSL='"linux","macos"'; [ "$OSSEL" = linux ] && OSL='"linux"'; [ "$OSSEL" = macos ] && OSL='"macos"'
+          S=$(seq -s, 1 "$N")
+          echo "matrix={\"os\":[$OSL],\"shard\":[$S],\"n\":[$N]}" >> "$GITHUB_OUTPUT"
+  cpu:
+    needs: plan
+    name: CPU ${{ matrix.os }} ${{ matrix.shard }}/${{ matrix.n }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ${{ matrix.os == 'macos' && 'macos-15' || 'ubuntu-24.04' }}
+    timeout-minutes: 150
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPRESS: "true"
+      CCACHE_SLOPPINESS: "time_macros,pch_defines,include_file_mtime,include_file_ctime"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/linux-deps
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: tools/release/retry.sh brew install cmake ninja pkg-config ccache hackrf soapysdr libusb ffmpeg glfw
+      - name: Restore ccache
+        id: cc
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.os }}-quick-${{ github.ref_name }}
+          restore-keys: |
+            ccache-${{ matrix.os }}-quick-${{ github.ref_name }}
+            ccache-${{ matrix.os }}-warm-
+            ccache-${{ matrix.os }}-
+      - name: Build
+        run: |
+          LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD
+          cmake --build build -j 4 --target test_qa_sweep
+      - name: Build the comparison ref (its sources, this branch's measuring program)
+        if: needs.plan.outputs.compare != ''
+        env: { CMP: "${{ needs.plan.outputs.compare }}", CCACHE_BASEDIR: "${{ runner.temp }}/cmp" }
+        run: |
+          git fetch --depth=1 origin "$CMP"
+          git worktree add "$RUNNER_TEMP/cmp" FETCH_HEAD
+          cp tests/qa/test_qa_sweep.cpp "$RUNNER_TEMP/cmp/tests/qa/test_qa_sweep.cpp"
+          LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
+          cmake -S "$RUNNER_TEMP/cmp" -B build-cmp -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD
+          cmake --build build-cmp -j 4 --target test_qa_sweep
+      - name: Save ccache
+        uses: actions/cache/save@v6
+        if: always() && steps.cc.outputs.cache-hit != 'true' && matrix.shard == 1
+        with: { path: .ccache, key: "ccache-${{ matrix.os }}-quick-${{ github.ref_name }}" }
+      - name: Measure
+        env: { MODES: "${{ needs.plan.outputs.modes }}", SECS: "${{ needs.plan.outputs.seconds }}", K: "${{ matrix.shard }}", N: "${{ matrix.n }}", OSN: "${{ matrix.os }}" }
+        run: |
+          lscpu 2>/dev/null | grep -E 'Model name|^CPU\(s\)|Thread' || sysctl -n machdep.cpu.brand_string hw.ncpu
+          SEL="--shard $K/$N"; [ -n "$MODES" ] && SEL="--mode $MODES"
+          B=$(find build -type f -name test_qa_sweep | head -1)
+          "$B" --cpu $SEL --seconds "$SECS" --out "cpu-$OSN-$K" | tee "cpu-$OSN-$K.md"
+          if [ -d build-cmp ]; then
+            echo "===== the comparison ref ====="
+            C=$(find build-cmp -type f -name test_qa_sweep | head -1)
+            "$C" --cpu $SEL --seconds "$SECS" --out "cpu-$OSN-$K-cmp" | tee "cpu-$OSN-$K-cmp.md"
+          fi
+      - name: Profile
+        if: needs.plan.outputs.perf != '' && runner.os == 'Linux' && matrix.shard == 1
+        env: { PM: "${{ needs.plan.outputs.perf }}", SECS: "${{ needs.plan.outputs.seconds }}" }
+        run: |
+          sudo apt-get install -y -o Acquire::Retries=5 linux-tools-common "linux-tools-$(uname -r)" || sudo apt-get install -y linux-tools-azure || true
+          sudo sysctl -w kernel.perf_event_paranoid=-1 kernel.kptr_restrict=0
+          B=$(find build -type f -name test_qa_sweep | head -1)
+          perf record -F 1999 -o perf.data -- "$B" --cpu --mode "$PM" --seconds "$SECS" > /dev/null 2>&1 || true
+          perf report -i perf.data --stdio --no-children --percent-limit 0.4 --sort comm,symbol 2>/dev/null | grep -v "^$" | head -160 || true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: "cpu-${{ matrix.os }}-${{ matrix.shard }}", path: "cpu-*.tsv", if-no-files-found: ignore }
+  table:
+    needs: cpu
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with: { path: tsv, merge-multiple: true }
+      - name: Table
+        run: |
+          python3 tools/perf/cpu_table.py tsv | tee cpu-table.md
+          cat cpu-table.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        with: { name: cpu-table, path: "cpu-table.md" }

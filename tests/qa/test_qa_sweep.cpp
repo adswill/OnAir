@@ -19,6 +19,8 @@
 // Every mode runs in child processes (a crash or hang marks only that row). The ctest entries qa_sweep_1..N each take one shard of the modes.
 // Known failures with a reason live in qa_known.inc; anything else that fails, fails the test. POSIX only (fork, getrusage).
 //
+//   test_qa_sweep --cpu      CPU only (4.1, docs/CPU-4.1.md): each mode's test signal at its default rate, then noise alone, through the Engine;
+//                            CPU s per s of signal for the whole process and for its busiest thread (steady state: after the first quarter)
 //   test_qa_sweep --switch   one Engine, every mode in turn (start, 0.4 s, stop): no stale state, no hang, no thread or memory growth
 //   test_qa_sweep [--long] [--shard k/N] [--mode id[,id..]] [--seconds S] [--snr dB] [--out prefix] [--list] [--strict]
 #include "dect2/dsp/fftutil.h"
@@ -50,7 +52,9 @@
 #include <unistd.h>
 #ifdef __APPLE__
 #include <mach/mach.h>
+#include <mach/thread_info.h>
 #endif
+#include <dirent.h>
 using namespace dect2;
 using Clock = std::chrono::steady_clock;
 
@@ -149,6 +153,43 @@ double cpuSeconds() {
     return u.ru_utime.tv_sec + u.ru_stime.tv_sec + (u.ru_utime.tv_usec + u.ru_stime.tv_usec) * 1e-6;
 }
 
+// CPU seconds of every live thread of this process, by thread id (with its name): the busiest thread of a run
+struct ThreadCpu { std::string name; double secs = 0; };
+std::map<uint64_t, ThreadCpu> threadCpus() {
+    std::map<uint64_t, ThreadCpu> m;
+#ifdef __APPLE__
+    thread_act_array_t th; mach_msg_type_number_t nth = 0;
+    if (task_threads(mach_task_self(), &th, &nth) != KERN_SUCCESS) return m;
+    for (mach_msg_type_number_t i = 0; i < nth; i++) {
+        thread_identifier_info_data_t id; mach_msg_type_number_t c1 = THREAD_IDENTIFIER_INFO_COUNT;
+        thread_extended_info_data_t ex; mach_msg_type_number_t c2 = THREAD_EXTENDED_INFO_COUNT;
+        if (thread_info(th[i], THREAD_IDENTIFIER_INFO, (thread_info_t)&id, &c1) == KERN_SUCCESS &&
+            thread_info(th[i], THREAD_EXTENDED_INFO, (thread_info_t)&ex, &c2) == KERN_SUCCESS) {
+            ThreadCpu& t = m[id.thread_id];
+            t.name = ex.pth_name[0] ? ex.pth_name : "main";
+            t.secs = (double)(ex.pth_user_time + ex.pth_system_time) * 1e-9;
+        }
+        mach_port_deallocate(mach_task_self(), th[i]);
+    }
+    vm_deallocate(mach_task_self(), (vm_address_t)th, nth * sizeof(thread_t));
+#else
+    if (DIR* d = opendir("/proc/self/task")) {
+        while (dirent* de = readdir(d)) {
+            if (de->d_name[0] < '0' || de->d_name[0] > '9') continue;
+            const std::string base = std::string("/proc/self/task/") + de->d_name;
+            unsigned long long ns = 0;
+            if (FILE* f = fopen((base + "/schedstat").c_str(), "r")) { if (fscanf(f, "%llu", &ns) != 1) ns = 0; fclose(f); }   // time on the CPU, ns
+            char nm[64] = "";
+            if (FILE* f = fopen((base + "/comm").c_str(), "r")) { if (fgets(nm, sizeof nm, f)) nm[strcspn(nm, "\n")] = 0; fclose(f); }
+            ThreadCpu& t = m[strtoull(de->d_name, nullptr, 10)];
+            t.name = nm; t.secs = (double)ns * 1e-9;
+        }
+        closedir(d);
+    }
+#endif
+    return m;
+}
+
 // the receiver's count of checked blocks (see the top of the file)
 uint64_t goodOf(const RxTelemetry& r) {
     switch (r.standard) {
@@ -196,6 +237,7 @@ struct Writer {
     float gain = 1;
     uint64_t n = 0, clipped = 0;
     void put(const std::vector<cf32>& v) {
+        if (!f) return;   // a condition that is not written (--cpu: clean and noise only)
         buf.resize(v.size() * 2);
         for (size_t i = 0; i < v.size(); i++) {
             float re = v[i].real() * gain * 32767.f, im = v[i].imag() * gain * 32767.f;
@@ -356,6 +398,7 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
     const float g = (float)std::min(1.0, 0.25 / std::sqrt(std::max(1e-12, psig + pn)));   // the noisy files keep a total rms of 0.25 at most
     Writer w[kNC + 1];   // the conditions and silence (the baseline of the saved results)
     for (int c = 0; c <= kNC; c++) {
+        if (getenv("QA_CPUGEN") && c != 0 && c != 4) continue;   // --cpu: the clean file and noise alone
         if (c >= kCRate && c < kNC) continue;   // "rate" and its variants are their own generator run (below), not a resampled copy: a copy has no noise outside the old band and no image-free signal
         w[c].f = fopen((dir + "/" + (c < kNC ? kConds[c] : "zero") + ".ci16").c_str(), "wb");
         if (!w[c].f) return 4;
@@ -368,6 +411,7 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
     std::vector<cf32> o, tmp;
     auto emit = [&](const std::vector<cf32>& x) {
         w[0].put(x);
+        if (!w[1].f) { o.assign(x.size(), cf32(0, 0)); ns2.add(o.data(), o.size(), sigma); w[4].put(o); return; }
         tmp.clear(); rp.push(x.data(), x.size(), tmp);
         for (auto& s : tmp) { s *= cf32((float)cos(php), (float)sin(php)); php += dcp; if (php > M_PI) php -= 2 * M_PI; }
         w[1].put(tmp);
@@ -388,7 +432,7 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
     }
     for (auto& x : w) if (x.f) fclose(x.f);
     src->stop();
-    const double txRate = getenv("QA_NOTX") ? 0.0 : writeTx(en, secs, dir);
+    const double txRate = getenv("QA_NOTX") || getenv("QA_CPUGEN") ? 0.0 : writeTx(en, secs, dir);
     printf("RATE %.6f PSIG %.6g OBW %.1f ACTIVE %.3f CLIP %llu TXRATE %.4f\n", r, psig, obw, bp.empty() ? 0.0 : (double)act / bp.size(), (unsigned long long)(w[0].clipped + w[3].clipped), txRate);
     fflush(stdout);
     _exit(0);
@@ -476,10 +520,15 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
     int standard = -1;
     RxTelemetry rx;
     auto tStart = Clock::now(), lastMove = tStart;
+    // --cpu: the whole process and each thread at a quarter of the signal and at its end (the steady state between them)
+    const bool cpuMode = getenv("QA_CPUMODE") != nullptr;
+    std::map<uint64_t, ThreadCpu> thQ;
+    double cpuQ = -1, procQ = 0;
     for (;;) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        std::this_thread::sleep_for(std::chrono::milliseconds(cpuMode ? 5 : 20));
         proc = processed();
         pts.push_back({cpuSeconds() - cpu0, proc});
+        if (cpuMode && cpuQ < 0 && proc >= 0.25 * secs) { thQ = threadCpus(); cpuQ = cpuSeconds(); procQ = proc; }
         if (e.latestRx(rx, seq)) {
             seq = rx.seq;
             standard = rx.standard;
@@ -504,6 +553,34 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
             if (e.latestRx(rx, seq)) { seq = rx.seq; const uint64_t g = goodOf(rx); if (g > good) { good = g; if (firstGood < 0) firstGood = proc; } locked = locked || lockOf(rx); }
         }
+    std::string cpuJson;
+    if (cpuMode) {
+        const std::map<uint64_t, ThreadCpu> thE = threadCpus();
+        const double cpuE = cpuSeconds(), dp = proc - procQ;
+        if (cpuQ < 0 || dp < 0.05) { cpuQ = cpu0; procQ = 0; thQ.clear(); }   // too short for a steady state: the whole run
+        const double d = std::max(1e-6, proc - procQ);
+        std::vector<std::pair<double, std::string>> per;
+        std::map<std::string, double> byName;   // threads of the same name (a pool) summed
+        for (auto& [id, t] : thE) {
+            auto q = thQ.find(id);
+            const double c = (t.secs - (q != thQ.end() ? q->second.secs : 0)) / d;
+            if (c <= 0) continue;
+            per.push_back({c, t.name});
+            byName[t.name] += c;
+        }
+        std::sort(per.rbegin(), per.rend());
+        std::vector<std::pair<double, std::string>> grp;
+        for (auto& [n, c] : byName) grp.push_back({c, n});
+        std::sort(grp.rbegin(), grp.rend());
+        std::string top;
+        for (size_t i = 0; i < grp.size() && i < 4; i++) { char b[96]; snprintf(b, sizeof b, "%s%s %.3f", i ? ", " : "", grp[i].second.c_str(), grp[i].first); top += b; }
+        for (char& ch : top) if (ch == '"' || ch == '\\') ch = '_';
+        std::string bn = per.empty() ? "" : per[0].second;
+        for (char& ch : bn) if (ch == '"' || ch == '\\') ch = '_';
+        char b[640];
+        snprintf(b, sizeof b, ",\"scost\":%.6f,\"tcost\":%.6f,\"tname\":\"%s\",\"top\":\"%s\",\"nthreads\":%zu", (cpuE - cpuQ) / d, per.empty() ? 0.0 : per[0].first, bn.c_str(), top.c_str(), thE.size());
+        cpuJson = b;
+    }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));   // the last report
     if (e.latestRx(rx, seq)) { standard = rx.standard; const uint64_t g = goodOf(rx); if (g > good) { good = g; if (firstGood < 0) firstGood = proc; } locked = locked || lockOf(rx); bad = std::max<uint64_t>(bad, rx.blocksBad); }
     if (getenv("QA_SWEEP_VERBOSE")) {   // the engine's log and the last report, for a mode that does not decode
@@ -563,8 +640,8 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
     } else {
         wd.arm("stop", 30); e.stop(); wd.disarm();
     }
-    printf("{\"cost\":%.6f,\"cpu_total\":%.4f,\"processed\":%.4f,\"good\":%llu,\"bad\":%llu,\"locked\":%d,\"std\":%d,\"first\":%.3f,\"wall\":%.3f,\"dropped\":%llu,\"res\":%llu,\"life\":\"%s\"}\n",
-           cost, cpuEnd, proc, (unsigned long long)good, (unsigned long long)bad, locked ? 1 : 0, standard, firstGood, wall, (unsigned long long)e.droppedSamples(), (unsigned long long)resBytes, life.c_str());
+    printf("{\"cost\":%.6f,\"cpu_total\":%.4f,\"processed\":%.4f,\"good\":%llu,\"bad\":%llu,\"locked\":%d,\"std\":%d,\"first\":%.3f,\"wall\":%.3f,\"dropped\":%llu,\"res\":%llu,\"life\":\"%s\"%s}\n",
+           cost, cpuEnd, proc, (unsigned long long)good, (unsigned long long)bad, locked ? 1 : 0, standard, firstGood, wall, (unsigned long long)e.droppedSamples(), (unsigned long long)resBytes, life.c_str(), cpuJson.c_str());
     fflush(stdout);
     _exit(0);   // the engine's destructor adds nothing and some receivers are slow to tear down
 }
@@ -721,6 +798,92 @@ struct Row {
 
 std::string md(const std::string& s) { std::string o; for (char c : s) { if (c == '|') o += "\\|"; else o += c; } return o; }
 
+// ------------------------------------------------------------------ --cpu: CPU per second of signal, every selected mode (docs/CPU-4.1.md)
+// The mode's test signal at its default sample rate (60 dB, 16-bit file; a mode without a test signal: its transmitter's signal, if it has
+// one), then noise alone at the same rate, each through the Engine as fast as it goes. CPU seconds per second of signal after the first
+// quarter: the whole process (all threads: what the computer pays) and the busiest single thread (what one core must carry).
+struct CpuRow { std::string id, name, src, tname, top, ntname; int stdMode = 0; double rate = 0, secs = 0, scost = 0, tcost = 0, nscost = -1, ntcost = -1; uint64_t good = 0; bool locked = false; std::string err; };
+
+bool cpuRun(const std::string& self, const std::string& id, double rate, double s, const std::string& file, CpuRow& r, bool noise) {
+    char rs[64], ss[64];
+    snprintf(rs, sizeof rs, "%.4f", rate); snprintf(ss, sizeof ss, "%.3f", s);
+    setenv("QA_CPUMODE", "1", 1);
+    const ChildResult cr = spawn({self, "--run", id, rs, ss, file, noise ? "noise" : "cpu"}, std::max(300.0, s * 60), std::max(600.0, s * 60));
+    unsetenv("QA_CPUMODE");
+    const size_t jp = cr.out.rfind('{');
+    if (cr.timedOut || cr.out.find("HANG ") != std::string::npos) { r.err += noise ? " noise:HANG" : " HANG"; return false; }
+    if (cr.status != 0 || jp == std::string::npos) { r.err += (noise ? " noise:" : " ") + (cr.out.find("STARTFAIL") != std::string::npos ? std::string("NOSTART") : "CRASH(" + std::to_string(cr.status) + ")"); return false; }
+    const std::string j = cr.out.substr(jp);
+    if (noise) { r.nscost = jnum(j, "scost"); r.ntcost = jnum(j, "tcost"); r.ntname = jstrv(j, "tname"); }
+    else { r.scost = jnum(j, "scost"); r.tcost = jnum(j, "tcost"); r.tname = jstrv(j, "tname"); r.top = jstrv(j, "top"); r.good = (uint64_t)jnum(j, "good"); r.locked = jnum(j, "locked") > 0; }
+    return true;
+}
+
+int cpuSweep(const std::string& self, const std::vector<const Entry*>& sel, double secs, double maxSamples, const std::string& outPrefix) {
+    const std::string tmpDir = (std::filesystem::temp_directory_path() / ("qa_cpu_" + std::to_string(getpid()))).string();
+    std::filesystem::create_directories(tmpDir);
+    const bool withNoise = !getenv("QA_CPU_NONOISE");
+    std::vector<CpuRow> rows;
+    for (auto* e : sel) {
+        CpuRow r; r.id = e->id; r.name = e->name; r.stdMode = e->stdMode;
+        const double rr = e->rate > 0 ? e->rate : 9.142857e6;
+        const double s = std::min(secs, maxSamples / rr);
+        r.secs = s;
+        char rs[64], ss[64], sn[32];
+        snprintf(rs, sizeof rs, "%.4f", e->rate); snprintf(ss, sizeof ss, "%.3f", s); snprintf(sn, sizeof sn, "%.2f", 12.0);
+        setenv("QA_CPUGEN", "1", 1);
+        const ChildResult g = spawn({self, "--gen", e->id, rs, ss, sn, tmpDir}, 900, 1200);
+        unsetenv("QA_CPUGEN");
+        const size_t p0 = g.out.find("T0 ");
+        if (p0 != std::string::npos && (p0 == 0 || g.out[p0 - 1] == '\n')) setenv("QA_T0", std::to_string(atof(g.out.c_str() + p0 + 3)).c_str(), 1); else unsetenv("QA_T0");
+        if (g.out.find("NOGEN") != std::string::npos) {
+            const size_t tp = g.out.find("TXRATE "), np = g.out.find("NOISERATE ");
+            const double txr = tp == std::string::npos ? 0 : atof(g.out.c_str() + tp + 7), nr = np == std::string::npos ? rr : atof(g.out.c_str() + np + 10);
+            r.rate = txr > 0 ? txr : nr;
+            if (txr > 0) {
+                const size_t p1 = g.out.find("TXT0 ");
+                if (p1 != std::string::npos) setenv("QA_T0", std::to_string(atof(g.out.c_str() + p1 + 5)).c_str(), 1);
+                r.src = "tx"; cpuRun(self, e->id, txr, s, tmpDir + "/tx.ci16", r, false);
+            } else r.src = "noise only";
+            if (withNoise || txr <= 0) { cpuRun(self, e->id, nr, s, tmpDir + "/noise.ci16", r, true); if (txr <= 0) { r.scost = r.nscost; r.tcost = r.ntcost; r.tname = r.ntname; } }
+        } else {
+            const size_t rp = g.out.find("RATE ");
+            if (g.status != 0 || rp == std::string::npos) { r.err = g.timedOut ? " generator hang" : " generator failed"; }
+            else {
+                r.rate = atof(g.out.c_str() + rp + 5);
+                r.src = "test signal";
+                cpuRun(self, e->id, r.rate, s, tmpDir + "/clean.ci16", r, false);
+                if (withNoise) cpuRun(self, e->id, r.rate, s, tmpDir + "/noise.ci16", r, true);
+            }
+        }
+        std::error_code ec;
+        for (auto& f : std::filesystem::directory_iterator(tmpDir, ec)) std::filesystem::remove_all(f.path(), ec);
+        fprintf(stderr, "[%s] %.4g Msps %.2f s: all threads %.3f, busiest %.3f (%s), noise %.3f / %.3f, blocks %llu%s\n", r.id.c_str(), r.rate / 1e6, r.secs, r.scost, r.tcost, r.tname.c_str(), r.nscost, r.ntcost,
+                (unsigned long long)r.good, r.err.c_str());
+        rows.push_back(r);
+    }
+    std::error_code ec;
+    std::filesystem::remove_all(tmpDir, ec);
+    std::vector<CpuRow> srt = rows;
+    std::sort(srt.begin(), srt.end(), [](const CpuRow& a, const CpuRow& b) { return a.scost > b.scost; });
+    printf("\n| mode | name | Msps | s | signal | all threads | busiest thread | noise: all | noise: busiest | blocks | threads by CPU |\n|---|---|--:|--:|---|--:|--:|--:|--:|--:|---|\n");
+    for (auto& r : srt)
+        printf("| %s | %s | %.4g | %.2f | %s | %.3f | %.3f %s | %.3f | %.3f | %llu%s | %s%s |\n", r.id.c_str(), md(r.name).c_str(), r.rate / 1e6, r.secs, r.src.c_str(), r.scost, r.tcost, r.tname.c_str(), r.nscost, r.ntcost,
+               (unsigned long long)r.good, r.locked ? "" : " (no lock)", md(r.top).c_str(), r.err.c_str());
+    int over = 0;
+    for (auto& r : srt) if (r.scost > 1.0 || r.tcost > 1.0) over++;
+    printf("\n%zu modes, %d above 1.0 CPU s per s (all threads or busiest)\n", rows.size(), over);
+    if (!outPrefix.empty())
+        if (FILE* f = fopen((outPrefix + ".tsv").c_str(), "w")) {
+            fprintf(f, "id\tname\tstd\trate\tsecs\tsignal\tall\tbusiest\tbusiest_name\tnoise_all\tnoise_busiest\tblocks\tlocked\ttop\terr\n");
+            for (auto& r : rows)
+                fprintf(f, "%s\t%s\t%d\t%.0f\t%.3f\t%s\t%.4f\t%.4f\t%s\t%.4f\t%.4f\t%llu\t%d\t%s\t%s\n", r.id.c_str(), md(r.name).c_str(), r.stdMode, r.rate, r.secs, r.src.c_str(), r.scost, r.tcost, r.tname.c_str(), r.nscost, r.ntcost,
+                        (unsigned long long)r.good, r.locked ? 1 : 0, r.top.c_str(), r.err.c_str());
+            fclose(f);
+        }
+    return 0;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -733,7 +896,7 @@ int main(int argc, char** argv) {
     int shardK = 1, shardN = 1;
     std::string modes, outPrefix, stage, stId, stFile, stCond;
     double stRate = 0, stSecs = 0;
-    bool list = false, strict = false, doSwitch = false;
+    bool list = false, strict = false, doSwitch = false, doCpu = false, secsSet = false, maxSet = false;
     for (int i = 1; i < argc; i++) {
         const std::string a = argv[i];
         auto next = [&]() -> std::string { return i + 1 < argc ? argv[++i] : ""; };
@@ -741,11 +904,12 @@ int main(int argc, char** argv) {
         else if (a == "--long") {}
         else if (a == "--strict") strict = true;
         else if (a == "--switch") doSwitch = true;
+        else if (a == "--cpu") doCpu = true;
         else if (a == "--sel") { if (!getenv("QA_MODES")) { printf("qa_sweep_sel: set QA_MODES to the mode ids to run\n"); return 0; } }
         else if (a == "--mode") modes = next();
-        else if (a == "--seconds") secs = atof(next().c_str());
+        else if (a == "--seconds") { secs = atof(next().c_str()); secsSet = true; }
         else if (a == "--snr") snrDb = atof(next().c_str());
-        else if (a == "--max-samples") maxSamples = atof(next().c_str());
+        else if (a == "--max-samples") { maxSamples = atof(next().c_str()); maxSet = true; }
         else if (a == "--out") outPrefix = next();
         else if (a == "--shard") { const std::string s = next(); sscanf(s.c_str(), "%d/%d", &shardK, &shardN); }
         else if (a == "--gen") { stage = a; stId = next(); stRate = atof(next().c_str()); stSecs = atof(next().c_str()); snrDb = atof(next().c_str()); stFile = next(); }
@@ -780,6 +944,7 @@ int main(int argc, char** argv) {
         return 0;
     }
     if (doSwitch) return switchTest(sel);
+    if (doCpu) return cpuSweep(self, sel, secsSet ? secs : 6, maxSet ? maxSamples : 160e6, outPrefix);
     const std::string tmpDir = (std::filesystem::temp_directory_path() / ("qa_sweep_" + std::to_string(getpid()))).string();
     std::filesystem::create_directories(tmpDir);
     std::vector<Row> rows;
