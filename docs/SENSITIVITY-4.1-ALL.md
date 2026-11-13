@@ -43,7 +43,261 @@ Modes with no built-in test signal (the generator lives in their unit test only,
 the Rivet modes) cannot run here; their figures come from their unit tests' noise sweeps (docs/RIVET-MODES-4.0.md, DCR-4.0.md,
 FSKMODEM-4.0.md, SSRINT-4.0.md, MARKER-4.0.md) and are listed after the table.
 
-TABLE
+## The table (shards 1-4 of 6: 248 of the 372 engine entries; shards 5 and 6 were still running at the hand-over: sens-quick runs 43384879116 and 43393226477, artifact `sens-results`; add them with `tools/sens/qa_sens_table.py tests/sens/qa41/*.jsonl <new>.jsonl`)
+
+SNR in dB in B99. Raw results (every point and trial): tests/sens/qa41/qa-sens-*.jsonl. CI: sens-quick 43364063415 (shard 1), 43364067712 (2), 43374519331 (3), 43380233150 (4). "had a figure before" = the mode id appears in an earlier SENSITIVITY doc (a loose text match).
+
+| mode | name | measure | B99 (Hz) | awgn | +2 kHz +50 ppm | off-centre -50 ppm | false (units / noise trials) | theory | gap (dB) | had a figure before | note |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| acars | ACARS | blocks | 305664 | -6 | -6 | -6 | 0 / 10 | - | - | yes |  |
+| adsb | ADS-B | blocks | 2824219 | 14 | 14 | 14 | 0 / 2 | - | - | yes |  |
+| aeromacs | AeroMACS | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| afsk | AFSK (TNC) tone tuner | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| airband | Airband | blocks | 306152 | -10 | -10 | - | 0 / 12 | - | - | yes |  |
+| ais | AIS | blocks | 10742 | 8 | 8 | - | 0 / 4 | 8.7 | -0.7 | yes |  |
+| ale | HF ALE | blocks | 2930 | -6 | - | - | 0 / 10 | - | - | yes | units only at the end of the trial: latency-limited |
+| ammon | AM modulation monitor | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| ardop | ARDOP | blocks | 148926 | -22 | - | - | 0 / 18 | - | - | yes | units only at the end of the trial: latency-limited |
+| arktikaggak | Arktika-M GGAK | blocks | 6250 | 8 | 8 | - | 0 / 4 | - | - | no | units only at the end of the trial: latency-limited |
+| arktikardas | Arktika-M RDAS | blocks | 36507568 | -2 | 0 | 20 | 0 / 8 | - | - | no |  |
+| arqe | ARQ-E | blocks | 1953 | -2 | 0 | - | 0 / 8 | - | - | no |  |
+| asterix | ASTERIX | - | - | - | - | - | - | - | - | yes | no valid output on the clean test signal (8 and 32 s) |
+| astro | Radio astronomy | lock | 2147827 | -24 | -24 | -24 | 16 / 16 | - | - | yes | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| atis | ATIS (inland waterways) | blocks | 1709 | 12 | 12 | - | 0 / 2 | 9.6 | +2.4 | yes |  |
+| awsl | AWS L-band | blocks | 2211914 | 4 | 4 | 4 | 0 / 6 | - | - | no |  |
+| beacon | Beacon propagation monitor | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| beaconevents | Aurora / Es / TEP beacons | lock | 247559 | -24 | -24 | -24 | 16 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| beesat | BEESAT / Mobitex | blocks | 6348 | 12 | 12 | 12 | 0 / 2 | - | - | yes |  |
+| bgan | Inmarsat BGAN | blocks | 745606 | 2 | 6 | 2 | 0 / 8 | - | - | no |  |
+| birdie | Persistent carrier (birdie) finder | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| bletracker | BLE tracker detector | blocks | 1035156 | 6 | 6 | - | 0 / 4 | - | - | yes |  |
+| btc | Bluetooth Classic | blocks | 12709961 | -4 | -4 | -4 | 0 / 10 | - | - | no |  |
+| callisto | e-CALLISTO bursts | lock | 1979004 | -24 | -24 | -24 | 16 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| cb | CB radio | blocks | 732 | 16 | 16 | - | 0 / 2 | - | - | no |  |
+| cdma2000 | CDMA2000 cells | - | - | - | - | - | - | - | - | no | no valid output on the clean test signal (8 and 32 s) |
+| cdr | CDR | blocks | 96191 | 6 | 6 | 6 | 0 / 4 | - | - | yes |  |
+| cis12 | CIS-12 | blocks | 1465 | 6 | - | - | 0 / 4 | - | - | no | units only at the end of the trial: latency-limited |
+| cis14 | CIS-14 | blocks | 1465 | -4 | -2 | - | 0 / 12 | - | - | no | units only at the end of the trial: latency-limited |
+| cis3000 | CIS-3000 | lock | 4394 | 12 | 12 | - | 0 / 2 | - | - | no | lock flag only, no checked unit |
+| cis36 | CIS-36 | lock | 2441 | -4 | -4 | - | 0 / 10 | - | - | no | lock flag only, no checked unit |
+| cisbee | CIS-36-50 (BEE) | blocks | 1465 | -4 | -4 | - | 0 / 10 | - | - | no | units only at the end of the trial: latency-limited |
+| cp16 | CP16 | blocks | 77148 | -12 | -10 | - | 0 / 16 | - | - | no | units only at the end of the trial: latency-limited |
+| cquam | AM stereo (C-QUAM) | blocks | 2441 | 10 | - | - | 0 / 2 | - | - | yes |  |
+| css | Tiangong / Shenzhou carriers | lock | 92529 | -24 | -24 | -24 | 0 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| cubesat | CubeSat telemetry | blocks | 9277 | 12 | 12 | 12 | 0 / 2 | 12.4 | -0.4 | yes |  |
+| cv2x | C-V2X | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| cw | CW | blocks | 89356 | 4 | 4 | 16 | 0 / 6 | - | - | yes |  |
+| cwkeying | CW keying quality meter | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| datawell | Datawell Buoy HF Link | lock | 12634 | -4 | -2 | - | 0 / 12 | - | - | yes | lock flag only, no checked unit |
+| dcr | DCR (Japan digital convenience radio) | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| dect | DECT cordless phones | blocks | 1488037 | 2 | 2 | - | 0 / 6 | - | - | yes |  |
+| dectnrp | DECT NR+ | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| dfcw | DFCW grabber | - | - | - | - | - | - | - | - | no | no valid output on the clean test signal (8 and 32 s) |
+| dmr | DMR | blocks | 8789 | 6 | 6 | 6 | 0 / 4 | - | - | yes | units only at the end of the trial: latency-limited |
+| dominoex | DominoEX | blocks | 1465 | -8 | 10 | - | 0 / 12 | - | - | yes |  |
+| dopplerlog | Satellite Doppler curve logger | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| drm | DRM | blocks | 10254 | 16 | 16 | 16 | 0 / 2 | - | - | yes |  |
+| dsc | DSC | blocks | 1465 | -2 | - | - | 0 / 8 | 0.4 | -2.4 (theory assumption off: unit shorter or coded) | yes | units only at the end of the trial: latency-limited |
+| dstar | D-STAR | blocks | 5371 | 8 | 8 | 8 | 0 / 4 | - | - | yes |  |
+| eczas | e-Czas (225 kHz, Poland) | blocks | 188 | 30 | - | - | 0 / 2 | - | - | yes | units only at the end of the trial: latency-limited |
+| edacs | EDACS trunking | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| efr | EFR teleswitch | blocks | 1953 | 2 | 4 | - | 0 / 6 | - | - | no | units only at the end of the trial: latency-limited |
+| elektro | Elektro-L | blocks | 843164 | -2 | -2 | -2 | 0 / 8 | - | - | yes |  |
+| elektrordas | Elektro-L RDAS | blocks | 36507568 | -2 | 0 | 20 | 0 / 8 | - | - | no |  |
+| eloran | eLoran / Loran-C | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| elt121 | ELT 121.5 MHz | blocks | 3418 | 6 | 6 | 6 | 0 / 4 | - | - | no |  |
+| em4100 | EM4100 LF RFID (125 kHz) | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| eot | End of train | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| ermes | ERMES | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| erminaz | Erminaz | lock | 10559 | -24 | -24 | -24 | 16 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| esubghz | Flipper Zero Sub-GHz chat | blocks | 45410 | 12 | 10 | 24 | 0 / 2 | - | - | no |  |
+| evm | Modulation quality (MER) meter | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| f06 | FSK200/1000 (F06, F06a) | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| flarm | FLARM | blocks | 360596 | 2 | 2 | 6 | 0 / 8 | - | - | yes |  |
+| flysky | FlySky | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| fm | FM | blocks | 137695 | 18 | 18 | 18 | 0 / 2 | - | - | yes |  |
+| fmmon | FM modulation monitor | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| freqacc | Carrier frequency accuracy meter | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| frsky | FrSky | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| fsk441 | FSK441 | blocks | 594141 | -24 | - | - | 0 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; units only at the end of the trial: latency-limited |
+| fsq | FSQ | blocks | 1978516 | -24 | -24 | -14 | 0 / 18 | - | - | yes | SNR band too wide (test signal holds several carriers or spurs): not comparable; units only at the end of the trial: latency-limited |
+| fst4 | FST4 | - | - | - | - | - | - | - | - | yes | no valid output on the clean test signal (8 and 32 s) |
+| ft2 | FT2 | blocks | 2930 | 46 | - | - | 0 / 2 | - | - | yes |  |
+| ft4 | FT4 | - | - | - | - | - | - | - | - | yes | no valid output on the clean test signal (8 and 32 s) |
+| fusion | Yaesu Fusion | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| fy3ahrpt | FY-3 AHRPT | blocks | 3307617 | 2 | 2 | 2 | 0 / 6 | - | - | yes |  |
+| fy3mpt | FY-3 MPT | blocks | 19638672 | 6 | 12 | - | 0 / 4 | - | - | no |  |
+| fy4lrit | FY-4 LRIT | blocks | 100098 | 0 | 0 | 0 | 0 / 8 | - | - | no |  |
+| gbas | GBAS VDB | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| general | General receiver | blocks | 8301 | 8 | 8 | - | 0 / 4 | - | - | yes |  |
+| geonetcast | GeoNetCast | blocks | 32182617 | 10 | 10 | 10 | 0 / 2 | - | - | no |  |
+| geoscan | Geoscan | lock | 10559 | -24 | -24 | -24 | 16 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| gk2acdas | GK-2A CDAS | blocks | 3927734 | 8 | 8 | - | 0 / 4 | - | - | no |  |
+| gk2alrit | GK-2A LRIT | blocks | 162305 | -2 | -2 | -2 | 0 / 8 | - | - | yes |  |
+| gk2auhrit | GK-2A UHRIT | blocks | 17211914 | 14 | 16 | 18 | 0 / 2 | - | - | no |  |
+| glitch | SDR stream glitch detector | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| globalstar | Globalstar | blocks | 2331543 | -6 | -8 | -8 | 0 / 12 | - | - | yes |  |
+| gmr1 | Thuraya GMR-1 channels | blocks | 322266 | -12 | -10 | -10 | 0 / 16 | - | - | no |  |
+| goes | GOES HRIT | blocks | 1174805 | -2 | -2 | -2 | 0 / 8 | - | - | yes |  |
+| goesgrb | GOES GRB | blocks | 9550781 | 6 | 8 | 8 | 0 / 4 | - | - | no |  |
+| goesgvar | GOES GVAR | blocks | 2673340 | 0 | 0 | 0 | 0 / 8 | - | - | no |  |
+| gonets | Gonets | blocks | 750000 | 20 | 20 | 20 | 0 / 2 | - | - | no |  |
+| graves | GRAVES meteor echoes | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| gtor | G-TOR | blocks | 1465 | 14 | 14 | - | 0 / 2 | 4.6 | +9.4 | no | units only at the end of the trial: latency-limited |
+| gwfsk | GW FSK (100 Bd) | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| hamdrm | HamDRM | saved | 3418 | 14 | - | - | 0 / 2 | - | - | yes |  |
+| hamfm | Ham FM repeaters | blocks | 3418 | 22 | 22 | 22 | 0 / 2 | - | - | no |  |
+| hdr | HD Radio | blocks | 110840 | 22 | 24 | - | 0 / 2 | - | - | yes |  |
+| hell | Hellschreiber | blocks | 1465 | -4 | - | - | 0 / 10 | - | - | no |  |
+| hfbeacon | HF beacons | - | - | - | - | - | - | - | - | yes | no valid output on the clean test signal (8 and 32 s) |
+| hfdig | HF digital | blocks | 1953 | -8 | - | - | 0 / 12 | - | - | yes |  |
+| hfdl | HFDL | blocks | 52734 | -10 | - | - | 0 / 12 | - | - | yes |  |
+| hfpacket300 | HF packet 300 Bd | blocks | 1953 | 8 | - | - | 0 / 4 | 3.3 | +4.7 | no | units only at the end of the trial: latency-limited |
+| hfvoice | HFGCS / HF voice | blocks | 2686 | 12 | 12 | 12 | 0 / 2 | - | - | no | units only at the end of the trial: latency-limited |
+| hop | Frequency-hopper analyser | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| horus | Horus balloons | blocks | 1641 | -4 | -4 | 6 | 0 / 12 | - | - | yes | units only at the end of the trial: latency-limited |
+| ifkp | IFKP | blocks | 1978516 | -24 | -24 | 10 | 0 / 16 | - | - | yes | SNR band too wide (test signal holds several carriers or spurs): not comparable; units only at the end of the trial: latency-limited |
+| ils | ILS | blocks | 1465 | 16 | 16 | - | 0 / 2 | - | - | yes |  |
+| inmc | Inmarsat-C | blocks | 1412598 | -24 | -24 | -24 | 0 / 16 | - | - | yes | SNR band too wide (test signal holds several carriers or spurs): not comparable |
+| inputhealth | SDR input health meter | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| iono | Ionospheric sounders | lock | 19345703 | -24 | -24 | -24 | 0 / 16 | - | - | yes | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| iscat | ISCAT | blocks | 3955 | -10 | - | - | 0 / 12 | - | - | no |  |
+| isdbtsb | ISDB-TSB | blocks | 1275000 | 18 | 18 | - | 0 / 2 | - | - | yes |  |
+| ism | ISM sensors | blocks | 34668 | 10 | 10 | 8 | 0 / 2 | - | - | yes |  |
+| jove | Radio Jove bursts | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| js8 | JS8Call | blocks | 142090 | -18 | -18 | - | 0 / 16 | - | - | yes |  |
+| jt4 | JT4 | - | - | - | - | - | - | - | - | yes | no valid output on the clean test signal (8 and 32 s) |
+| jt6m | JT6M | blocks | 594727 | -24 | -24 | - | 0 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; units only at the end of the trial: latency-limited |
+| kaal | KAAL | blocks | 9727 | 14 | 14 | 12 | 0 / 2 | - | - | yes |  |
+| kaft | KAFT | blocks | 176367 | 2 | - | - | 0 / 6 | - | - | yes |  |
+| kait | KAIT | blocks | 168701 | 12 | 12 | - | 0 / 2 | - | - | yes |  |
+| klw | KLW | blocks | 7734 | 12 | 12 | 14 | 0 / 2 | - | - | yes | units only at the end of the trial: latency-limited |
+| lbj | LBJ | blocks | 10078 | 4 | 6 | - | 0 / 8 | 2.7 | +1.3 | yes | units only at the end of the trial: latency-limited |
+| ldacs | LDACS | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| link11 | Link 11 CLEW | blocks | 3906 | 6 | - | - | 0 / 4 | - | - | no |  |
+| loraaprs | LoRa APRS | blocks | 122559 | -22 | -22 | -22 | 0 / 18 | - | - | no |  |
+| lorawan | LoRaWAN | blocks | 130371 | -8 | -8 | -2 | 0 / 14 | - | - | yes |  |
+| ltpos | Lightning position (network) | lock | 79346 | 4 | 4 | 4 | 0 / 6 | - | - | no | lock flag only, no checked unit |
+| ltr | LTR trunking | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| mac | MAC | blocks | 13740234 | 6 | 6 | - | 0 / 4 | - | - | yes |  |
+| marine | Marine | - | - | - | - | - | - | - | - | yes | no valid output on the clean test signal (8 and 32 s) |
+| marinevhf | Marine VHF | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| mdc1200 | MDC-1200 | blocks | 3906 | 22 | 22 | 22 | 0 / 2 | - | - | no |  |
+| mesh | Mesh (LoRa) | blocks | 248047 | -16 | -16 | -16 | 0 / 16 | - | - | yes |  |
+| meshcom | MeshCom | blocks | 2000000 | -24 | -24 | -24 | 0 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable |
+| mfsk | MFSK | blocks | 1465 | 14 | - | - | 0 / 2 | - | - | yes |  |
+| milstd110 | MIL-STD-188-110 serial | blocks | 3906 | 2 | - | - | 0 / 6 | - | - | no | units only at the end of the trial: latency-limited |
+| mioty | mioty | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| modeac | Mode A/C | blocks | 2824219 | 18 | 18 | 20 | 0 / 2 | - | - | yes |  |
+| mpt1327 | MPT1327 trunking | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| mradar | Marine radar | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| mscatter | Meteor scatter | lock | 1465 | -14 | -10 | - | 0 / 16 | - | - | yes | lock flag only, no checked unit |
+| msk144 | MSK144 | - | - | - | - | - | - | - | - | no | no valid output on the clean test signal (8 and 32 s) |
+| mt63 | MT63 | blocks | 222168 | -20 | - | - | 0 / 18 | - | - | yes | units only at the end of the trial: latency-limited |
+| multitone | Multitone Paging | blocks | 1465 | 24 | 24 | 24 | 0 / 2 | - | - | yes | units only at the end of the trial: latency-limited |
+| nbiot | NB-IoT cells | - | - | - | - | - | - | - | - | yes | no valid output on the clean test signal (8 and 32 s) |
+| nfc | NFC / RFID 13.56 MHz | blocks | 1696289 | 18 | 20 | 20 | 798 / 2 | - | - | yes | FALSE DECODES on noise |
+| nfmdev | Narrowband FM deviation and CTCSS meter | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| ngham | NGHam | blocks | 6348 | 12 | 12 | 12 | 0 / 2 | 10.7 | +1.3 | yes |  |
+| noaaapt | NOAA APT | blocks | 24250 | -24 | -24 | -24 | 221 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; FALSE DECODES on noise; units only at the end of the trial: latency-limited |
+| noaagac | NOAA GAC | blocks | 3384766 | -4 | -4 | -4 | 1021 / 10 | - | - | no | FALSE DECODES on noise |
+| noaahrpt | NOAA HRPT | blocks | 3594727 | -8 | -8 | -8 | 0 / 12 | - | - | no |  |
+| noisefloor | Noise floor logger | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| nrf24 | nRF24L01 | blocks | 908203 | 10 | 10 | - | 0 / 2 | - | - | no |  |
+| nxdn | NXDN | blocks | 8789 | 8 | 8 | 8 | 0 / 4 | - | - | yes |  |
+| occbw | Occupied bandwidth meter | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| occupancy | Spectrum occupancy monitor | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| opensky | OpenSky identifier | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| p25p2 | P25 Phase 2 | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| pactor | PACTOR-I | blocks | 148926 | -18 | -18 | - | 0 / 16 | - | - | yes |  |
+| pactor4 | PACTOR-IV | lock | 3418 | -2 | - | - | 0 / 8 | - | - | no | lock flag only, no checked unit |
+| papr | Crest factor (PAPR / CCDF) meter | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| phasenoise | Phase noise meter | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| pi4 | PI4 | blocks | 2783 | -18 | - | - | 0 / 16 | - | - | no | units only at the end of the trial: latency-limited |
+| piccolo | Piccolo Mk VI | blocks | 1465 | -10 | -8 | - | 0 / 12 | - | - | no |  |
+| plnoise | Power-line noise locator | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| pocsag | POCSAG | blocks | 11230 | 0 | 2 | 4 | 0 / 10 | - | - | yes |  |
+| psk | PSK31 | blocks | 241211 | -24 | -24 | - | 0 / 16 | - | - | yes | SNR band too wide (test signal holds several carriers or spurs): not comparable |
+| pskd | PSK demodulator | lock | 2441 | 4 | 6 | 4 | 0 / 8 | - | - | no | lock flag only, no checked unit |
+| pulsar | Pulsar folding | - | - | - | - | - | - | - | - | no | no valid output on the clean test signal (8 and 32 s) |
+| q65 | Q65 | - | - | - | - | - | - | - | - | yes | no valid output on the clean test signal (8 and 32 s) |
+| qo100 | QO-100 | lock | 8012695 | -12 | -6 | - | 0 / 16 | - | - | yes | lock flag only, no checked unit |
+| radar | Radar pulse analyser | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| radiojove | Radio Jove | lock | 1975098 | -24 | -24 | -24 | 16 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| rclink | RC and mesh links | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| reticulum | Reticulum | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| riometer | Riometer | - | - | - | - | - | - | - | - | no | no valid output on the clean test signal (8 and 32 s) |
+| roshf | ROS (HF) | blocks | 2930 | -8 | - | - | 0 / 12 | - | - | no |  |
+| rtty | RTTY | blocks | 1953 | -8 | - | - | 0 / 12 | - | - | yes |  |
+| same | NOAA Weather Radio SAME | blocks | 9277 | 6 | 6 | 6 | 0 / 4 | - | - | yes |  |
+| satbeacon | TV sat beacon decoder | blocks | 643066 | -6 | -6 | -6 | 0 / 10 | - | - | yes |  |
+| sband | S-band CCSDS | blocks | 4064941 | 6 | 6 | 6 | 0 / 4 | - | - | no |  |
+| sbas | SBAS | blocks | 3955078 | -2 | - | - | 0 / 8 | - | - | yes |  |
+| schumann | Schumann resonances | lock | 2543 | -24 | -24 | -24 | 16 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| sensors | Sub-GHz sensors | blocks | 38879 | 10 | 10 | 10 | 0 / 2 | - | - | yes | units only at the end of the trial: latency-limited |
+| sferics | Sferics (lightning) | blocks | 1921387 | -6 | -4 | -4 | 0 / 10 | - | - | no | units only at the end of the trial: latency-limited |
+| sfhss | Futaba S-FHSS | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| shortwave | Shortwave | lock | 27832 | -24 | -24 | -24 | 16 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| sigfox | Sigfox | blocks | 1000 | -2 | 0 | 0 | 0 / 8 | -1.6 | -0.4 | yes |  |
+| sinad | FM SINAD meter | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| specan | Spectrum analyser | blocks | 15034180 | -24 | -24 | -24 | 624992 / 16 | - | - | yes | SNR band too wide (test signal holds several carriers or spurs): not comparable; FALSE DECODES on noise |
+| speckurt | Spectral kurtosis RFI finder | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| specx | Spectrum explorer | lock | 3864746 | -8 | -8 | -8 | 0 / 12 | - | - | yes | lock flag only, no checked unit |
+| spektrum | Spektrum DSM | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| spreadhf | SPREAD | - | - | - | - | - | - | - | - | no | no valid output on the clean test signal (8 and 32 s) |
+| spur | Spur and image finder | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| ssbtest | SSB transmitter test meter | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| ssdv | SSDV pictures | blocks | 3418 | 12 | 14 | - | 0 / 2 | - | - | yes |  |
+| ssrint | SSR interrogations (1030 MHz) | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| sstv | SSTV | blocks | 1953 | 4 | - | - | 0 / 6 | - | - | yes |  |
+| stanag4285 | STANAG 4285 | lock | 3906 | 14 | - | - | 0 / 2 | - | - | no | lock flag only, no checked unit |
+| stanag4481 | STANAG 4481 FSK | blocks | 2930 | -6 | -2 | 20 | 0 / 12 | - | - | no | units only at the end of the trial: latency-limited |
+| starlink | Starlink detector | blocks | 12949219 | -4 | -2 | -2 | 0 / 12 | - | - | no | units only at the end of the trial: latency-limited |
+| tdcs | TDCS | blocks | 7734 | 12 | 12 | 14 | 0 / 2 | - | - | yes |  |
+| tetra | TETRA | blocks | 21484 | 26 | 30 | 22 | 0 / 2 | - | - | yes | units only at the end of the trial: latency-limited |
+| tetradmo | TETRA DMO | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| tetrapol | TETRAPOL | blocks | 6897 | 10 | 12 | - | 0 / 2 | - | - | yes | units only at the end of the trial: latency-limited |
+| thor | THOR | blocks | 1465 | -8 | - | - | 0 / 12 | - | - | yes |  |
+| thread | Thread | blocks | 2237305 | -2 | 0 | - | 0 / 8 | - | - | yes |  |
+| tiantong | Tiantong signalling | blocks | 258789 | -10 | -10 | -10 | 0 / 12 | - | - | no |  |
+| time | Time signals | lock | 188 | -2 | - | - | 0 / 8 | - | - | yes | lock flag only, no checked unit |
+| tsikada | Tsikada / Parus | lock | 92529 | -24 | -24 | -24 | 0 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| u482c | U482C (GomX-1) | blocks | 11230 | 14 | 14 | 14 | 0 / 2 | - | - | yes |  |
+| uat | UAT (978 MHz) | blocks | 1120606 | 8 | 12 | - | 0 / 4 | - | - | yes | units only at the end of the trial: latency-limited |
+| uhfsatcom | UHF SATCOM skimmer | blocks | 58594 | -6 | -6 | -6 | 0 / 10 | - | - | no |  |
+| usp | USP (Sputnix) | blocks | 11230 | 10 | 10 | 10 | 0 / 2 | 11.6 | -1.6 | yes |  |
+| vdes | VDES | blocks | 250732 | -6 | -6 | - | 0 / 10 | - | - | yes |  |
+| vdl2 | VDL Mode 2 | blocks | 258789 | 2 | 2 | 4 | 0 / 6 | - | - | yes |  |
+| vdl3 | VDL Mode 3 | blocks | 12451 | 14 | 14 | - | 0 / 2 | - | - | no |  |
+| vlfmsk | VLF MSK transmitter monitor | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| voiceinv | Voice inversion scrambler | blocks | 5371 | 10 | 14 | 10 | 0 / 2 | - | - | no |  |
+| vor | VOR | blocks | 20996 | 4 | 4 | - | 0 / 6 | - | - | yes |  |
+| wb | Signal workbench | - | - | - | - | - | - | - | - | yes | no test signal or generator failed |
+| wefax | Weather fax | lock | 1953 | 4 | - | - | 0 / 6 | - | - | no | lock flag only, no checked unit |
+| whatsat | What satellite is this? | lock | 92529 | -24 | -24 | -24 | 0 / 16 | - | - | no | SNR band too wide (test signal holds several carriers or spurs): not comparable; lock flag only, no checked unit |
+| winmor | WINMOR | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| wisun | Wi-SUN FAN | blocks | 9711914 | -10 | -10 | - | 0 / 12 | - | - | yes |  |
+| wmbus | Wireless M-Bus (meters) | blocks | 756836 | 2 | 2 | - | 0 / 6 | - | - | yes |  |
+| wmic | Wireless mic finder | lock | 1494141 | 2 | 2 | 2 | 0 / 6 | - | - | no | lock flag only, no checked unit |
+| wradar | Weather radar | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| wspr | WSPR | - | - | - | - | - | - | - | - | yes | no valid output on the clean test signal (8 and 32 s) |
+| xb_gcomc | GCOM-C1 | blocks | 73806152 | 2 | 4 | - | 0 / 6 | - | - | no |  |
+| xb_gcomw | GCOM-W1 | blocks | 12724609 | 4 | 4 | - | 0 / 6 | - | - | no |  |
+| xb_kanopus | Kanopus-V | blocks | 65808106 | 8 | 10 | - | 0 / 4 | - | - | no |  |
+| xb_landsatx | Landsat 8/9 X-band | blocks | 229101562 | 2 | 2 | - | 0 / 6 | - | - | no |  |
+| xb_metopd | MetOp X-band dump | blocks | 36979980 | 10 | 12 | - | 0 / 2 | - | - | no |  |
+| xb_metopsg | MetOp-SG DDB | blocks | 112587891 | 4 | 4 | - | 0 / 6 | - | - | no |  |
+| xb_npp | JPSS HRD (NPP, NOAA-20) | blocks | 18988037 | 4 | 4 | - | 0 / 6 | - | - | no |  |
+| xb_oceansat3x | Oceansat-3 X-band dump | blocks | 93164062 | 10 | 10 | - | 0 / 2 | - | - | no |  |
+| xb_probav | Proba-V X-band dump | blocks | 37067871 | 6 | 10 | - | 0 / 4 | - | - | no |  |
+| xb_saral | Saral L-band | blocks | 509033 | 4 | 4 | 12 | 0 / 6 | - | - | no |  |
+| xb_saralx | Saral X-band dump | blocks | 19805908 | 4 | 4 | - | 0 / 6 | - | - | no |  |
+| xb_stereo | STEREO high rate | blocks | 1710205 | -2 | -2 | -2 | 0 / 8 | - | - | no |  |
+| xb_terra | EOS DB (Terra) | blocks | 16688232 | 0 | -2 | - | 0 / 8 | - | - | no |  |
+| xpa | XPA (10 / 20 Bd) | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| xpa2 | XPA2 | - | - | - | - | - | - | - | - | no | no test signal or generator failed |
+| zwave | Z-Wave | blocks | 1518555 | -6 | -2 | - | 0 / 12 | - | - | yes |  |
+
 
 ### Modes measured by their unit tests only (no engine test signal)
 
