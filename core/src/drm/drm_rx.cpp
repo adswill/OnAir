@@ -1065,7 +1065,8 @@ struct DrmReceiver::Impl {
                 // reads about 0.9 Hz against 2.6 Hz raw). Only in the first case are the noise, the Doppler spread (and with it the Wiener filter)
                 // taken from the corrected estimates; in a fading channel from the raw ones as in 4.0 (taken from the corrected ones, TU6 lost
                 // its 90 % point).
-                pnRegime = !cpeOff && dopplerC < 0.3 && dopplerR > 2.0 * dopplerC + 0.5;
+                // with hysteresis: in, when the corrected estimates read under 0.15 Hz and the raw ones over 1 Hz; out, over 0.3 Hz
+                pnRegime = !cpeOff && (pnRegime ? dopplerC < 0.3 && dopplerR > 0.8 : dopplerC < 0.15 && dopplerR > 1.0 && dopplerR > 4.0 * dopplerC);
                 if (pnRegime) { dopplerSm = dopplerC; pilotP = std::max(std::min(r1c / xc, accPC), 1e-12); sigma2 = sigma2C > 0 ? sigma2C : sigma2; }
                 else { dopplerSm = dopplerR; if (sigma2R > 0) sigma2 = sigma2R; }
             }

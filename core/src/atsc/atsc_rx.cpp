@@ -905,8 +905,6 @@ struct Core {
     int64_t fastSegs = getenv("ATSC_FAST") ? atoi(getenv("ATSC_FAST")) : 300;
     double kpT = getenv("ATSC_KP") ? atof(getenv("ATSC_KP")) : 0.003, kiT = getenv("ATSC_KI") ? atof(getenv("ATSC_KI")) : 1e-5;
     bool dbg = getenv("ATSC_DBG") != nullptr;
-    const bool old41 = getenv("DECT2_ATSC_NO41") != nullptr;   // A/B: the 4.0 behaviour in fades (see onSegment)
-    static constexpr int kFadeHoldSegs = 400;
     long dbgCnt = 0, stageCnt = 0;
 
     // ---------------------------------------------------------------- stage C: symbol clock
@@ -1028,21 +1026,12 @@ struct Core {
         // single measurement noisy and a wide loop would turn that into timing jitter
         const bool fastLoop = (int64_t)segAbs < fastSegs;
         const double kp = fastLoop ? 0.12 : kpT, ki = fastLoop ? 0.01 : kiT;
-        // Fades (4.1): in a Rayleigh channel (TU6, no direct path) the signal fades by 20 dB and more for a few milliseconds at 10 Hz Doppler.
-        // 4.0 gave the segment sync up after 12 weak segments (1 ms) and started over (symbol clock, field sync, equaliser): in TU6 that
-        // happened every 20 to 100 ms and no field decoded at any SNR. Once a field sync has been found the clock now coasts through up to
-        // kFadeHoldSegs weak segments (31 ms) on its learnt rate, without timing steps from the noise of the faded sync pattern.
-        // DECT2_ATSC_NO41=1: the 4.0 behaviour.
-        const bool weak = q < 0.3;
-        const bool coast = weak && !old41 && fieldLock;
-        if (!coast) {
-            tau += kp * (e / 16.8);
-            rr += ki * (e / 16.8) / kSegSyms;
-        }
+        tau += kp * (e / 16.8);
+        rr += ki * (e / 16.8) / kSegSyms;
         rr = std::max(-0.01, std::min(0.01, rr));
         rate = 2.0 + rr;
         (void)eps;
-        if (weak) { if (++lowQ > (old41 || !fieldLock ? 12 : kFadeHoldSegs)) { if (dbg) fprintf(stderr, "[atsc] segment sync lost at segment %llu\n", (unsigned long long)segAbs); seg = false; accIdx = dEnd(); lastSearch = accIdx; std::fill(acc.begin(), acc.end(), 0.f); lastPeak = -1; peakRun = 0; fieldLock = false; workerReset(); t.lockLosses++; return; } }
+        if (q < 0.3) { if (++lowQ > 12) { if (dbg) fprintf(stderr, "[atsc] segment sync lost at segment %llu\n", (unsigned long long)segAbs); seg = false; accIdx = dEnd(); lastSearch = accIdx; std::fill(acc.begin(), acc.end(), 0.f); lastPeak = -1; peakRun = 0; fieldLock = false; workerReset(); t.lockLosses++; return; } }
         else lowQ = 0;
         raw.insert(raw.end(), segSyms.begin(), segSyms.end());
         segAbs++;
