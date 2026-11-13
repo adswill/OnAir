@@ -584,6 +584,20 @@ void showFatalError(const char* title, const char* text) {
     MessageBoxA(nullptr, text, title, MB_OK | MB_ICONERROR);
 #else
     fprintf(stderr, "%s: %s\n", title, text);
+    // Started from the menu (Linux Mint report, docs/LINUX-MINT-4.0.md) stderr goes nowhere the user sees, so OnAir seemed to do nothing:
+    // the message is also kept in ~/.config/onair/startup-error.txt and shown in a dialog when there is a desktop and no terminal.
+    const std::string dir = configDir();
+    makeDirs(dir);
+    if (FILE* f = fopen((dir + "/startup-error.txt").c_str(), "w")) { fprintf(f, "%s: %s\n", title, text); fclose(f); }
+    const bool desktop = (getenv("DISPLAY") && *getenv("DISPLAY")) || (getenv("WAYLAND_DISPLAY") && *getenv("WAYLAND_DISPLAY"));
+    if (!desktop || isatty(STDERR_FILENO) || getenv("ONAIR_NO_DIALOG")) return;
+    const std::string t = shellQuote(title), m = shellQuote(text);
+    int rc = -1;   // each dialog closes by itself after 2 minutes, so a start without a user (a test) still ends
+    if (haveProgram("zenity")) rc = system(("zenity --error --no-markup --timeout=120 --title=" + t + " --text=" + m + " >/dev/null 2>&1").c_str());
+    else if (haveProgram("kdialog")) rc = system(("timeout 120 kdialog --title " + t + " --error " + m + " >/dev/null 2>&1").c_str());
+    else if (haveProgram("notify-send")) rc = system(("notify-send -u critical " + t + " " + m + " >/dev/null 2>&1").c_str());
+    else if (haveProgram("xmessage")) rc = system(("timeout 120 xmessage -center " + m + " >/dev/null 2>&1").c_str());
+    (void)rc;
 #endif
 }
 
