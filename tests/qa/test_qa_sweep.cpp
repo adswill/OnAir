@@ -354,25 +354,33 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
     const float sigma = (float)std::sqrt(pn / 2);
     const float clean0 = 1.0f;
     const float g = (float)std::min(1.0, 0.25 / std::sqrt(std::max(1e-12, psig + pn)));   // the noisy files keep a total rms of 0.25 at most
+    // tools/sens/qa_sens.py (4.1): QA_SEED varies the noise of one trial; QA_IMP_NOISE=1 puts the same noise on the pos / neg files too (impairment
+    // and noise together); without them the files are the same as before
+    const uint32_t seedAdd = getenv("QA_SEED") ? (uint32_t)atoi(getenv("QA_SEED")) * 101u : 0u;
+    const bool impNoise = getenv("QA_IMP_NOISE") != nullptr;
     Writer w[kNC + 1];   // the conditions and silence (the baseline of the saved results)
     for (int c = 0; c <= kNC; c++) {
         if (c >= kCRate && c < kNC) continue;   // "rate" and its variants are their own generator run (below), not a resampled copy: a copy has no noise outside the old band and no image-free signal
         w[c].f = fopen((dir + "/" + (c < kNC ? kConds[c] : "zero") + ".ci16").c_str(), "wb");
         if (!w[c].f) return 4;
-        w[c].gain = (c == 3 || c == 4) ? g : clean0;
+        w[c].gain = (c == 3 || c == 4 || (impNoise && (c == 1 || c == 2))) ? g : clean0;
     }
     Resampler rp, rn; rp.step = 1.0 + 50e-6; rn.step = 1.0 - 50e-6;
     double php = 0, phn = 0;
     const double dcp = 2 * M_PI * 2000.0 / r;
-    genutil::NoiseSource ns1(7), ns2(11);
+    // the neg file's carrier offset (QA_NEG_HZ, default 2 kHz): the 4.1 sensitivity driver (tools/sens/qa_sens.py) moves it off the channel centre
+    const double dcn = 2 * M_PI * (getenv("QA_NEG_HZ") ? atof(getenv("QA_NEG_HZ")) : 2000.0) / r;
+    genutil::NoiseSource ns1(7 + seedAdd), ns2(11 + seedAdd), ns3(13 + seedAdd), ns4(17 + seedAdd);
     std::vector<cf32> o, tmp;
     auto emit = [&](const std::vector<cf32>& x) {
         w[0].put(x);
         tmp.clear(); rp.push(x.data(), x.size(), tmp);
         for (auto& s : tmp) { s *= cf32((float)cos(php), (float)sin(php)); php += dcp; if (php > M_PI) php -= 2 * M_PI; }
+        if (impNoise) ns3.add(tmp.data(), tmp.size(), sigma);
         w[1].put(tmp);
         tmp.clear(); rn.push(x.data(), x.size(), tmp);
-        for (auto& s : tmp) { s *= cf32((float)cos(phn), (float)sin(phn)); phn -= dcp; if (phn < -M_PI) phn += 2 * M_PI; }
+        for (auto& s : tmp) { s *= cf32((float)cos(phn), (float)sin(phn)); phn -= dcn; if (phn < -M_PI) phn += 2 * M_PI; }
+        if (impNoise) ns4.add(tmp.data(), tmp.size(), sigma);
         w[2].put(tmp);
         o = x; ns1.add(o.data(), o.size(), sigma); w[3].put(o);
         o.assign(x.size(), cf32(0, 0)); ns2.add(o.data(), o.size(), sigma); w[4].put(o);
@@ -775,7 +783,7 @@ int main(int argc, char** argv) {
         }
     }
     if (list) {
-        for (auto* e : sel) printf("%-16s %-36s std %3d  %.4g Msps  %.4f MHz\n", e->id.c_str(), e->name.c_str(), e->stdMode, e->rate / 1e6, e->defMhz);
+        for (auto* e : sel) printf("%-16s %-36s std %3d  %.4g Msps  %.4f MHz  bw %.6g MHz\n", e->id.c_str(), e->name.c_str(), e->stdMode, e->rate / 1e6, e->defMhz, e->bwMhz);
         printf("%zu modes\n", sel.size());
         return 0;
     }
