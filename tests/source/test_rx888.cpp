@@ -824,6 +824,7 @@ static void wideRateChecks() {
         s.centerHz = 7.0e6; s.sampleRate = 135e6;
         err.clear();
         CHECK(src->start(s, ring, err) && fake.adc == 135000000 && err.find("overclocking") != std::string::npos, "135 Msps: ADC %u '%s'", fake.adc.load(), err.c_str());
+        sleepMs(200);   // (the stream thread hands its transfers to USB after start returns)
         CHECK(fake.lastQueued == rx888TransferPlan(135e6).queued, "135 MHz: %d transfers", fake.lastQueued.load());
         src->stop();
     }
