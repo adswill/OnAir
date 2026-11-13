@@ -40,12 +40,9 @@ collect() {
     case "$base" in
       api-ms-win-*|KERNEL32.dll|USER32.dll) continue ;;
     esac
-    local d="$OUT"
-    case "$base" in av*-[0-9]*.dll|sw*-[0-9]*.dll|postproc-[0-9]*.dll) d="$OUT/lib/ffmpeg" ;; esac   # FFmpeg: loaded only from lib\ffmpeg
-    if [ ! -f "$d/$base" ]; then
-      mkdir -p "$d"
-      cp "$dll" "$d/$base"
-      collect "$d/$base"
+    if [ ! -f "$OUT/$base" ]; then
+      cp "$dll" "$OUT/$base"
+      collect "$OUT/$base"
     fi
   done < <(ldd "$f" 2>/dev/null | awk -v prefix="$PREFIX/" 'index($3,prefix)==1 {print $3}')
 }
@@ -64,13 +61,7 @@ for folder in "$PREFIX"/lib/SoapySDR/modules*/; do
     collect "$OUT/lib/SoapySDR/modules0.8/$(basename "$dll")"
   done
 done
-# FFmpeg is delay-loaded from lib\ffmpeg (ldd does not list it): its DLLs from the FFmpeg the build used (DECT2_FFMPEG_PREFIX, or MSYS2's)
-FFP=$(sed -n 's/^DECT2_FFMPEG_PREFIX:PATH=//p' "$SRC/CMakeCache.txt" 2>/dev/null); [ -n "$FFP" ] || FFP=$PREFIX
-mkdir -p "$OUT/lib/ffmpeg"
-for n in avutil swresample swscale avcodec avformat avdevice; do
-  for f in "$FFP"/bin/$n-*.dll; do [ -f "$f" ] && { cp "$f" "$OUT/lib/ffmpeg/"; collect "$OUT/lib/ffmpeg/$(basename "$f")"; }; done
-done
-ls "$OUT"/lib/ffmpeg/avcodec-*.dll >/dev/null 2>&1 || { echo "ERROR: no avcodec-*.dll in $FFP/bin (FFmpeg must be the shared build)" >&2; exit 1; }
+ls "$OUT"/avcodec-*.dll >/dev/null 2>&1 || { echo "ERROR: no avcodec-*.dll next to OnAir.exe (FFmpeg must be the shared build)" >&2; exit 1; }
 # OnAir loads native radio libraries dynamically, so ldd of OnAir.exe alone
 # cannot discover them.
 for name in librtlsdr libairspy libairspyhf libbladeRF libLimeSuite libiio libuhd; do

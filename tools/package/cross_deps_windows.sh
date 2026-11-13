@@ -54,8 +54,7 @@ Cflags: -I\${includedir}/libhackrf -DLIBHACKRF_STATIC
 PC
 }
 
-# FFmpeg as DLLs (avcodec-62.dll ... in bin/): OnAir delay-loads them from lib\ffmpeg of its installation folder (cmake/FfmpegDelayLoad.cmake,
-# core/src/platform/ffmpeg_dll_hook_win.cpp); make_windows_cross.sh copies them there. A prefix with the former static FFmpeg is rebuilt.
+# FFmpeg as DLLs (avcodec-62.dll ... in bin/): make_windows_cross.sh puts them next to OnAir.exe. A prefix with the former static FFmpeg is rebuilt.
 # libavdevice with only the DirectShow input: the cameras and capture cards (core/src/audio/videoin_ffmpeg.cpp). Without it CMake builds the camera stub and
 # the program lists no camera at all.
 # Network: FFmpeg's own protocols (no TLS library), for the video generator's RTMP server input (core/src/tv/videogen_rtmp.cpp).

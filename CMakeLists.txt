@@ -55,8 +55,8 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(HACKRF REQUIRED libhackrf)   # plain variables: some package managers list include paths that do not exist
 pkg_check_modules(LIBUSB REQUIRED libusb-1.0)   # the own HackRF driver
 set(DECT2_FFMPEG_PREFIX "" CACHE PATH "Use the shared LGPL FFmpeg in this folder instead of the system's: tools/package/build_ffmpeg.sh (Linux packages, macOS app) or the FFmpeg of tools/package/cross_deps_windows.sh (Windows release; a Windows developer build with it behaves like the release)")
-# FFmpeg is always linked dynamically and shipped next to the program: Windows lib\ffmpeg of the installation folder (delay-loaded from there,
-# cmake/FfmpegDelayLoad.cmake), Linux lib/ffmpeg of the package (RUNPATH), macOS OnAir.app/Contents/Frameworks (tools/package/bundle_macos.py).
+# FFmpeg is always linked dynamically and shipped with the program: Windows next to OnAir.exe (like libSoapySDR.dll), Linux lib/ffmpeg of the
+# package (RUNPATH), macOS OnAir.app/Contents/Frameworks (tools/package/bundle_macos.py).
 if(DECT2_FFMPEG_PREFIX)
   # pkg-config's search list: ";" between the folders on a Windows host (MSYS2 hands PKG_CONFIG_PATH to native programs that way), ":" elsewhere
   if(CMAKE_HOST_WIN32)
@@ -65,11 +65,7 @@ if(DECT2_FFMPEG_PREFIX)
     set(ENV{PKG_CONFIG_PATH} "${DECT2_FFMPEG_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
   endif()
 endif()
-if(WIN32)
-  pkg_check_modules(FFMPEG REQUIRED libavformat libavcodec libavutil libswscale libswresample)
-else()
-  pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswscale libswresample)
-endif()
+pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswscale libswresample)
 if(DECT2_FFMPEG_PREFIX)
   # the local FFmpeg, never the host's that is also installed (MSYS2, Homebrew): a mix links or runs another FFmpeg than the package has
   get_filename_component(_ff_want "${DECT2_FFMPEG_PREFIX}" REALPATH)
@@ -79,26 +75,14 @@ if(DECT2_FFMPEG_PREFIX)
   endif()
   message(STATUS "FFmpeg: shared build in ${DECT2_FFMPEG_PREFIX}")
 endif()
-if(WIN32 AND NOT ANDROID)
-  # libavdevice (the DirectShow camera input, core/src/audio/videoin_ffmpeg.cpp) is delay-loaded with the rest when the FFmpeg has it
-  pkg_check_modules(AVDEVICE libavdevice)
-  set(_ff_dlls avutil swresample swscale avcodec avformat)
-  if(AVDEVICE_FOUND)
-    if(DECT2_FFMPEG_PREFIX)
-      get_filename_component(_ad_got "${AVDEVICE_PREFIX}" REALPATH)
-      if(NOT _ad_got STREQUAL _ff_want)
-        message(FATAL_ERROR "DECT2_FFMPEG_PREFIX=${DECT2_FFMPEG_PREFIX} has no libavdevice (pkg-config found it in ${AVDEVICE_PREFIX}): rebuild it with tools/package/cross_deps_windows.sh, it has the camera input")
-      endif()
-    endif()
-    list(APPEND _ff_dlls avdevice)
+if(WIN32 AND NOT ANDROID AND DECT2_FFMPEG_PREFIX)
+  # the FFmpeg DLLs (avcodec-62.dll ...) next to the programs in the build folder, as in the installation folder, so that the programs and
+  # tests start from there (MSYS2's FFmpeg is found on the PATH instead, or copied by DECT2_COPY_RUNTIME_DLLS)
+  file(GLOB _ff_dlls "${DECT2_FFMPEG_PREFIX}/bin/av*-[0-9]*.dll" "${DECT2_FFMPEG_PREFIX}/bin/sw*-[0-9]*.dll")
+  if(NOT _ff_dlls)
+    message(FATAL_ERROR "DECT2_FFMPEG_PREFIX=${DECT2_FFMPEG_PREFIX} has no FFmpeg DLLs in bin/: rebuild it with tools/package/cross_deps_windows.sh (FFmpeg is now the shared build)")
   endif()
-  set(_ff_libdirs ${FFMPEG_LIBRARY_DIRS})
-  if(NOT _ff_libdirs)
-    set(_ff_libdirs "${FFMPEG_libavcodec_LIBDIR}")
-  endif()
-  include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/FfmpegDelayLoad.cmake)
-  dect2_ffmpeg_delayload(dect2_ffmpeg "${_ff_libdirs}" "${FFMPEG_INCLUDE_DIRS};${AVDEVICE_INCLUDE_DIRS}" ${_ff_dlls})
-  add_library(PkgConfig::FFMPEG ALIAS dect2_ffmpeg)
+  file(COPY ${_ff_dlls} DESTINATION ${CMAKE_BINARY_DIR})
 endif()
 if(DECT2_BUILD_APP)
   pkg_check_modules(GLFW REQUIRED IMPORTED_TARGET glfw3)
@@ -651,8 +635,18 @@ else()
   # no GPU decoder yet (stub), audio through miniaudio
   if(WIN32)
     target_sources(dect2core PRIVATE core/src/dsp/gpu_ldpc_d3d11.cpp core/src/dsp/gpu_viterbi_d3d11.cpp core/src/tv/conceal_d3d11.cpp core/src/audio/audioout_native.cpp core/src/audio/bitstream_out.cpp core/src/audio/audioout_miniaudio.cpp core/src/audio/audioin_miniaudio.cpp)   # Direct3D 11 compute
-    if(AVDEVICE_FOUND)   # (found above, delay-loaded with the rest of FFmpeg)
+    pkg_check_modules(AVDEVICE libavdevice)
+    if(AVDEVICE_FOUND AND DECT2_FFMPEG_PREFIX)
+      # only the libavdevice of that FFmpeg (MSYS2's libavdevice.dll.a must not be picked)
+      get_filename_component(_ad_got "${AVDEVICE_PREFIX}" REALPATH)
+      if(NOT _ad_got STREQUAL _ff_want)
+        message(FATAL_ERROR "DECT2_FFMPEG_PREFIX=${DECT2_FFMPEG_PREFIX} has no libavdevice (pkg-config found it in ${AVDEVICE_PREFIX}): rebuild it with tools/package/cross_deps_windows.sh, it has the camera input")
+      endif()
+    endif()
+    if(AVDEVICE_FOUND)
       target_sources(dect2core PRIVATE core/src/audio/videoin_ffmpeg.cpp)
+      target_include_directories(dect2core PRIVATE ${AVDEVICE_INCLUDE_DIRS})
+      target_link_libraries(dect2core PUBLIC ${AVDEVICE_LINK_LIBRARIES})
     else()
       # the program then lists no camera at all (FFmpeg built with --disable-avdevice); tools/package/make_windows_cross.sh refuses such a build
       message(WARNING "libavdevice not found: this Windows build has no camera / capture-card support (FFmpeg needs the dshow input device)")
@@ -3310,18 +3304,6 @@ if(DECT2_BUILD_APP AND NOT APPLE)
   set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "zenity, soapysdr-module-remote")   # the SoapyRemote client module: SoapySDR over LAN (issue #84); Debian/Ubuntu package name
   set(CPACK_DEBIAN_PACKAGE_SUGGESTS "hackrf, librtlsdr0, libairspy0, libbladerf2, libiio0, soapysdr-module-all")
   include(CPack)
-endif()
-
-if(MINGW)
-  # the programs must delay-load FFmpeg, never import it normally: Windows would then load it before main() from the program's folder or the
-  # PATH, never from lib\ffmpeg (packaging/windows/check_no_ffmpeg_dll.cmake)
-  foreach(t dect2 dect2cli dect2scan onair-server)
-    if(TARGET ${t})
-      add_custom_command(TARGET ${t} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} "-DEXE=$<TARGET_FILE:${t}>" "-DOBJDUMP=${CMAKE_OBJDUMP}" -P ${ONAIR_ROOT}/packaging/windows/check_no_ffmpeg_dll.cmake
-        VERBATIM)
-    endif()
-  endforeach()
 endif()
 
 if(DECT2_COPY_RUNTIME_DLLS AND MINGW)

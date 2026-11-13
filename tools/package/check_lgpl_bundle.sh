@@ -2,10 +2,10 @@
 # Licence guard for the packages: fails if the FFmpeg OnAir ships is a GPL build, if the program uses another FFmpeg than the one shipped
 # in the given folders, or if a GPL-only library is bundled next to the program.
 #   tools/package/check_lgpl_bundle.sh <program> [library folder ...]
-# FFmpeg is linked dynamically and shipped in a library folder (Windows lib\ffmpeg, Linux lib/ffmpeg, macOS Contents/Frameworks): give that
-# folder. The FFmpeg configuration string that libavcodec embeds says --enable-gpl / --enable-nonfree when so; it is read from every
+# FFmpeg is linked dynamically and shipped in a library folder (Windows the program's own folder, Linux lib/ffmpeg, macOS Contents/Frameworks):
+# give that folder. The FFmpeg configuration string that libavcodec embeds says --enable-gpl / --enable-nonfree when so; it is read from every
 # libavcodec in the folders (and from the program itself, for an older static build). The libraries the program links come from otool -L
-# on macOS and readelf on Linux; a Windows .exe delay-loads FFmpeg, so there only the folders are checked.
+# on macOS and readelf on Linux; for a Windows .exe the FFmpeg DLLs in the folders are checked.
 set -u
 PROG=${1:?usage: check_lgpl_bundle.sh <program> [library folder ...]}; shift
 BAD='x264|x265|xvid|postproc|vidstab|rubberband|frei0r|cdio|davs2|xavs2|uavs3d|fdk-aac|fdk_aac|libsmbclient|libcaca|zimg'

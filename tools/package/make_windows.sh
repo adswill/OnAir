@@ -20,21 +20,12 @@ strip -o "$OUT/onair-cli.exe" $BUILD/dect2cli.exe
 strip -o "$OUT/onair-scan.exe" $BUILD/dect2scan.exe
 strip -o "$OUT/onair-extcap.exe" $BUILD/onair-extcap.exe   # Wireshark capture interface (docs/WIRESHARK-3.8.md)
 # every DLL the programs need from the MSYS2 tree (FFmpeg, GLFW, libhackrf, libusb, the C++ runtime ...), found recursively
-# (an FFmpeg DLL, also one that another FFmpeg DLL needs, goes to lib\ffmpeg: the programs load FFmpeg only from there)
 collect() {
   ldd "$1" | awk -v p="$PREFIX/" 'index($3, p) == 1 {print $3}' | while read -r dll; do
-    d=$OUT; case "$(basename "$dll")" in av*-[0-9]*.dll|sw*-[0-9]*.dll|postproc-[0-9]*.dll) d=$OUT/lib/ffmpeg;; esac
-    [ -f "$d/$(basename "$dll")" ] || { mkdir -p "$d"; cp "$dll" "$d/"; collect "$dll"; }
+    [ -f "$OUT/$(basename "$dll")" ] || { cp "$dll" "$OUT/"; collect "$dll"; }
   done
 }
 collect "$OUT/OnAir.exe"; collect "$OUT/onair-cli.exe"; collect "$OUT/onair-scan.exe"
-# FFmpeg is delay-loaded from lib\ffmpeg (ldd does not list it): its DLLs from the FFmpeg the build used (DECT2_FFMPEG_PREFIX, or MSYS2's),
-# what they need next to the program
-FFP=$(sed -n 's/^DECT2_FFMPEG_PREFIX:PATH=//p' $BUILD/CMakeCache.txt); [ -n "$FFP" ] || FFP=$PREFIX
-mkdir -p "$OUT/lib/ffmpeg"
-for n in avutil swresample swscale avcodec avformat avdevice; do
-  for f in "$FFP"/bin/$n-*.dll; do [ -f "$f" ] && { cp "$f" "$OUT/lib/ffmpeg/"; collect "$f"; }; done   # (MSYS2's avdevice also needs avfilter, postproc)
-done
 # the radios OnAir drives by itself load their libraries at run time (nothing links them), so they are copied here
 for d in librtlsdr libairspy libairspyhf libbladeRF libLimeSuite libiio libuhd; do
   [ -f "$PREFIX/bin/$d.dll" ] && { cp "$PREFIX/bin/$d.dll" "$OUT/"; collect "$OUT/$d.dll"; }
@@ -52,7 +43,7 @@ done
 tools/package/check_win_dlls.sh "$OUT" || { echo "error: the DLLs of $OUT do not fit together (see above)"; exit 1; }
 cp LICENSE "$OUT/LICENSE.txt"
 # MSYS2's mingw-w64-ffmpeg is built with --enable-gpl (x264, x265 ...): this check fails for it. The release zip comes from make_windows_cross.sh (LGPL FFmpeg).
-tools/package/check_lgpl_bundle.sh "$OUT/OnAir.exe" "$OUT/lib/ffmpeg" || { echo "Do not publish this build: use tools/package/make_windows_cross.sh"; exit 1; }
+tools/package/check_lgpl_bundle.sh "$OUT/OnAir.exe" "$OUT" || { echo "Do not publish this build: use tools/package/make_windows_cross.sh"; exit 1; }
 tools/package/add_license_files.sh "$OUT"   # THIRD_PARTY.md, LICENSES/, LICENSE-NOTICES-BINARIES.md (licence of every bundled DLL, source offer)
 cat > "$OUT/README.txt" <<'TXT'
 OnAir - DVB-T2 / DVB-T / ATSC / DAB receiver (Windows x64)

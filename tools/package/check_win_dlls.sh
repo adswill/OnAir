@@ -83,19 +83,5 @@ while read -r f; do
     done
 done < "$FILES"
 
-# FFmpeg is delay-loaded from lib\ffmpeg (cmake/FfmpegDelayLoad.cmake): the import list above does not show it. Its DLL names (with the
-# major version, e.g. avcodec-62.dll) are in the program as text: each one must be in lib\ffmpeg, and none in the top folder (there the
-# loader could take it instead of the one in lib\ffmpeg).
-FFRE='(avutil|swresample|swscale|avcodec|avformat|avdevice)-[0-9]+\.dll'
-while read -r f; do
-    case "$(basename "$f" | tr 'A-Z' 'a-z')" in *.exe) ;; *) continue;; esac
-    for d in $(LC_ALL=C grep -a -o -E "$FFRE" "$f" | sort -u); do
-        [ -f "$DIR/lib/ffmpeg/$d" ] || problem "${f#$DIR/} delay-loads $d (FFmpeg), which is not in lib/ffmpeg"
-    done
-done < "$FILES"
-for f in "$DIR"/*; do
-    [ -f "$f" ] && basename "$f" | grep -q -i -E "^$FFRE\$" && problem "$(basename "$f") (FFmpeg) is in the top folder: it belongs in lib/ffmpeg"
-done
-
 if [ $bad -gt 0 ]; then echo "$bad problem(s) in $n files of $DIR"; exit 1; fi
 echo "OK: $n .exe/.dll files in $DIR, all imported DLLs are present or part of Windows, all imported functions from the shipped DLLs exist"
