@@ -2125,3 +2125,7 @@ Added the scatter plot (on time against the following off time per pulse) with c
 
 ## 2026-11-13: contributor credit in the 7(b) attribution term (4.1)
 - ADDITIONAL-TERMS.md item 3: works using OnAir code also credit the OnAir contributors in their legal notices, by the CONTRIBUTORS.md list or a link to it. It applies from 4.1 on; earlier releases keep the terms they came with. README, NOTICE.md and AGENTS.md say the same.
+
+## 2026-11-13: README restructured
+
+README cut from 801 to about 150 lines: what it is, install, quick start, mode table, radios, highlights, documentation links, community, licence, credits. The "What is new" sections were dropped (0.2.6 to 0.2.8 moved to docs/CHANGELOG-0.2.md, later ones are in docs/CHANGELOG-*.md). Long sections moved to docs/INSTALL.md, MODES-DETAIL.md, KA-FAMILY.md, TOOLS-AND-NOTES.md, FEATURES.md, RADIOS.md, UPDATES.md, GOOD-TO-KNOW.md, TROUBLESHOOTING.md, BUILD.md, CREDITS.md. Markers for gen_changelog.py kept.
