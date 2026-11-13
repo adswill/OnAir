@@ -186,6 +186,7 @@ protected:
         return configureLocked(s, err, live);
     }
     bool configureLocked(const TuneSettings& s, std::string& err, bool live) {
+        refusedUnchanged_ = false;
         if (!dev_) return false;
         auto& api = airspyhf();
         if (!live) {
@@ -197,17 +198,18 @@ protected:
             std::sort(rates.begin(), rates.end());
             if (rates.empty()) { err = "Airspy HF+: the radio reports no sample rates"; return false; }
             const double top = rates.back();
-            requested_ = s.sampleRate;
             double pick = top;
             for (uint32_t r : rates) if (r >= s.sampleRate * 0.999) { pick = r; break; }
             if (s.sampleRate > top * 1.001) {
                 // a channel that fits in the radio's output (DRM, AIS, a single FM station, ...) is fine at the fastest rate; a wide one (TV, DAB) cannot be received
                 if (s.bandwidthMhz * 1e6 > top * 0.8) {
                     err = "Airspy HF+ gives at most " + rateText(top) + "; " + rateText(s.sampleRate) + " needs a faster radio";
+                    refusedUnchanged_ = true;   // nothing was sent to the radio: the stream that ran goes on (retune())
                     return false;
                 }
                 err = "Airspy HF+ runs at " + rateText(top) + " (" + rateText(s.sampleRate) + " was requested; the channel fits)";
             }
+            requested_ = s.sampleRate;
             if (api.set_samplerate(dev_, (uint32_t)pick) != 0) { err = "Airspy HF+: the radio does not accept " + rateText(pick); return false; }
             rate_ = pick;
         }
@@ -274,6 +276,8 @@ protected:
         gHfCooling[serial_] = std::chrono::steady_clock::now() + std::chrono::seconds(3);
         streaming_ = streamed_ = false;
     }
+    // a rate refused before anything reached the radio (too wide for it): the radio is as it was, so the stream resumes
+    bool resumeAfterConfigureFailure() const override { return refusedUnchanged_; }
     bool streamingLocked() const {   // (under api_) libairspyhf is not re-entrant: retune/configure must not overlap is_streaming
         return dev_ && airspyhf().is_streaming && airspyhf().is_streaming(dev_) != 0;
     }
@@ -351,6 +355,7 @@ private:
     bool calOk_ = false;           // the library can read and set it
     double ppm_ = 0;               // the user's correction in the library
     bool hasBias_ = false, bias_ = false;
+    bool refusedUnchanged_ = false;   // the last configure() refused a rate before changing anything
 };
 
 void listAirspyHf(std::vector<DeviceInfo>& out) {
