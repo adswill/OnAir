@@ -183,10 +183,14 @@ struct DrmReceiver::Impl {
     double tauSlope = 0;             // samples per symbol
     std::vector<double> tauHist;
     double sigma2 = 0;               // noise power of a raw channel estimate (pilot amplitude 1)
+    double sigma2R = 0;              // the same from the raw estimates (sigma2 is this or sigma2C)
     double snrSm = 0, hPow = 0;
     double dopplerSm = 0, delaySpreadMs = 0;
     double accR = 0, accP = 0;       // Doppler statistics, smoothed
     double accRr = 0, accRi = 0, acc2r = 0, acc2i = 0;
+    // the same statistics on the common-phase corrected estimates (4.1): which set the loops use depends on what the common phase is (see equalize)
+    double sigma2C = 0, accRrC = 0, accRiC = 0, acc2rC = 0, acc2iC = 0, accPC = 0, dopplerC = 0, dopplerR = 0;
+    bool pnRegime = false;
     double cpRho = 0;
     int kEqLo = 0, kEqHi = 0;        // carriers that are equalised
     int jLo = 0, jHi = 0;
@@ -613,7 +617,8 @@ struct DrmReceiver::Impl {
         lag = 2 * gy;                                    // the Wiener filter uses the pilots up to 2 gy symbols ahead
         framesSync = 0; facOkSince = 0; facBadRun = 0; cpBadRun = 0;
         tauRef = 0; tauMidRel = 0; tauSlope = 0; tauHist.clear();
-        sigma2 = 0; snrSm = 0; hPow = 0; dopplerSm = 0; delaySpreadMs = 0; accR = accP = accRr = accRi = acc2r = acc2i = 0;
+        sigma2 = 0; sigma2R = 0; snrSm = 0; hPow = 0; dopplerSm = 0; delaySpreadMs = 0; accR = accP = accRr = accRi = acc2r = acc2i = 0;
+        sigma2C = accRrC = accRiC = acc2rC = acc2iC = accPC = dopplerC = dopplerR = 0; pnRegime = false;
         wien.clear(); wienOk = false; wienMse = 0; statN = 0; pilotP = 0;
         hold = false; holdSnrDb = 30; holdStart = 0; holdEnd = -1; holdSymsAtFrame = holdSyms; fadedRun = 0;
         lastReacq = 0; offCal = false; off0 = 0; lastCal = 0; reacqVotes = 0;
@@ -970,6 +975,7 @@ struct DrmReceiver::Impl {
         Gvalid.assign((size_t)nJ, 0);
         double accN = 0; int cntN = 0;
         double sumRe = 0, sumIm = 0, sumP = 0, sum2Re = 0, sum2Im = 0; int cntD = 0;
+        double accNc = 0, sumReC = 0, sumImC = 0, sumPC = 0, sum2ReC = 0, sum2ImC = 0;
         if (s == 0 || wien.empty()) wienerWeights();
         for (int j = jLo; j <= jHi; j++) {
             const int qj = posMod(j + qOff, gy);
@@ -995,9 +1001,13 @@ struct DrmReceiver::Impl {
                 if (a && !ok) { v = a->Hc[(size_t)j]; ok = true; }
                 const SymRec* p = recIf(t - gy);
                 if (a && p && b) {
-                    // the noise and Doppler statistics stay on the raw estimates (as in 4.0): the common phase is the channel's too (a flat fade
-                    // turns every carrier), and read from the turned-back estimates a fading channel looked slow and clean (a noise figure without
-                    // the interpolation error, the Wiener filter on): TU6 lost its 90 % point
+                    // noise and Doppler statistics of both the raw and the common-phase corrected estimates (equalize picks one set below)
+                    {
+                        const cf32 pc = 0.5f * (p->Hc[(size_t)j] + b->Hc[(size_t)j]);
+                        accNc += std::norm(a->Hc[(size_t)j] - pc);
+                        const cf32 c = a->Hc[(size_t)j] * std::conj(p->Hc[(size_t)j]); sumReC += c.real(); sumImC += c.imag(); sumPC += std::norm(a->Hc[(size_t)j]);
+                        if (const SymRec* pp = recIf(t - 2 * gy)) { const cf32 c2 = a->Hc[(size_t)j] * std::conj(pp->Hc[(size_t)j]); sum2ReC += c2.real(); sum2ImC += c2.imag(); }
+                    }
                     const cf32 pred = 0.5f * (p->Hr[(size_t)j] + b->Hr[(size_t)j]);
                     accN += std::norm(a->Hr[(size_t)j] - pred); cntN++;
                     const cf32 c = a->Hr[(size_t)j] * std::conj(p->Hr[(size_t)j]); sumRe += c.real(); sumIm += c.imag(); sumP += std::norm(a->Hr[(size_t)j]); cntD++;
@@ -1024,8 +1034,10 @@ struct DrmReceiver::Impl {
         nearFade = hold ? t + gy >= holdStart - 3 : (holdEnd >= 0 && t - gy <= holdEnd + 1);
         if (!nearFade || (hold && si - holdStart > kHoldFreezeSyms)) {
             if (cntN >= 3) {
-                const double s2 = accN / (1.5 * cntN);
-                sigma2 = sigma2 > 0 ? sigma2 + (s2 - sigma2) * 0.12 : s2;
+                const double s2 = accN / (1.5 * cntN), s2c = accNc / (1.5 * cntN);
+                sigma2R = sigma2R > 0 ? sigma2R + (s2 - sigma2R) * 0.12 : s2;
+                sigma2C = sigma2C > 0 ? sigma2C + (s2c - sigma2C) * 0.12 : s2c;
+                sigma2 = pnRegime ? sigma2C : sigma2R;
                 statN++;
             }
             if (cntD >= 3) {
@@ -1037,7 +1049,20 @@ struct DrmReceiver::Impl {
                 const double x = r1 > 1e-30 ? std::max(0.02, std::min(1.0, std::cbrt(r2 / r1))) : 1.0;
                 pilotP = std::max(std::min(r1 / x, accP), 1e-12);
                 const double tauY = (double)gy * Ts / fs;
-                dopplerSm = x < 0.9999 ? std::min(20.0, std::sqrt(-std::log(x)) / (kPi * tauY)) : 0.0;
+                dopplerR = x < 0.9999 ? std::min(20.0, std::sqrt(-std::log(x)) / (kPi * tauY)) : 0.0;
+                accRrC += (sumReC / cntD - accRrC) * 0.05; accRiC += (sumImC / cntD - accRiC) * 0.05; accPC += (sumPC / cntD - accPC) * 0.05;
+                acc2rC += (sum2ReC / cntD - acc2rC) * 0.05; acc2iC += (sum2ImC / cntD - acc2iC) * 0.05;
+                const double r1c = std::hypot(accRrC, accRiC), r2c = std::hypot(acc2rC, acc2iC);
+                const double xc = r1c > 1e-30 ? std::max(0.02, std::min(1.0, std::cbrt(r2c / r1c))) : 1.0;
+                dopplerC = xc < 0.9999 ? std::min(20.0, std::sqrt(-std::log(xc)) / (kPi * tauY)) : 0.0;
+                // Oscillator phase noise turns all carriers alike: with the common phase taken out the channel is still (dopplerC near 0) while
+                // the raw estimates look fast. A fading channel moves the corrected estimates too (their amplitude: a flat Rayleigh fade at 2 Hz
+                // reads about 0.9 Hz against 2.6 Hz raw). Only in the first case are the noise, the Doppler spread (and with it the Wiener filter)
+                // taken from the corrected estimates; in a fading channel from the raw ones as in 4.0 (taken from the corrected ones, TU6 lost
+                // its 90 % point).
+                pnRegime = !cpeOff && dopplerC < 0.3 && dopplerR > 2.0 * dopplerC + 0.5;
+                if (pnRegime) { dopplerSm = dopplerC; pilotP = std::max(std::min(r1c / xc, accPC), 1e-12); sigma2 = sigma2C > 0 ? sigma2C : sigma2; }
+                else { dopplerSm = dopplerR; if (sigma2R > 0) sigma2 = sigma2R; }
             }
         }
         // Delay of the channel from the phase slope over the lattice. The estimates are referred to the nominal grid, so the slope is taken relative to the

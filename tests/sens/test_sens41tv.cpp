@@ -153,7 +153,7 @@ void sweep(const Mode& m0, const std::regex& scenRe, int n, int threads) {
     if (getenv(("S41_FD_" + m.id).c_str())) m.fdHz = atof(getenv(("S41_FD_" + m.id).c_str()));   // per mode: S41_FD_isdbt=70
     if (getenv("S41_PN")) m.pnHz = atof(getenv("S41_PN"));
     const auto sw = offSwitches(m.id);
-    const bool ab = !sw.empty() && !getenv("S41_NOAB");
+    const bool ab = !sw.empty() && !(getenv("S41_NOAB") && *getenv("S41_NOAB"));   // a configuration may give S41_NOAB= to keep the A/B pair
     double hi = m.snrHi, lo = m.snrHi - 20, st = 2;
     if (getenv("S41_SNR")) sscanf(getenv("S41_SNR"), "%lf:%lf:%lf", &hi, &lo, &st);
     const std::string own = "S41_SNR_" + m.id;
@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
             for (auto& ch : cfg) if (ch == ',') ch = ' ';
             printf("######## configuration: %s\n", cfg.c_str());
             fflush(stdout);
-            const std::string cmd = "env " + cfg + " S41_CHILD=1 S41_NOAB=1 '" + std::string(argv[0]) + "'";
+            const std::string cmd = "env S41_NOAB=1 " + cfg + " S41_CHILD=1 '" + std::string(argv[0]) + "'";
             if (std::system(cmd.c_str()) != 0) printf("(child failed)\n");
             if (b == std::string::npos) break;
             a = b + 1;
