@@ -454,12 +454,15 @@ bool addCustomModeRow(int family, const std::string& name, const std::string& bl
     return true;
 }
 const char* const kGroupNames[kNumGroups] = {N_("TV"), N_("BROADCAST RADIO"), N_("AVIATION"), N_("MARITIME"), N_("SATELLITE & NAVIGATION"), N_("TWO-WAY RADIO"), N_("CELLULAR & RAIL"), N_("PAGERS"), N_("IoT & SENSORS"), N_("WEATHER & SCIENCE"), N_("AMATEUR - DIGITAL"), N_("AMATEUR - VOICE & PACKET"), N_("HF UTILITY"), N_("GENERAL & TOOLS"), N_("PLUGINS"), "Kris custom modes", N_("CUSTOM MODES")};
-// a thin accent per group heading in the mode lists (UI only: nothing stores a group number)
+// a thin accent per group heading in the mode lists (UI only: nothing stores a group number). One family: every colour has the same OKLCH
+// lightness (0.77) and chroma 0.10, the hues about 26 degrees apart round the wheel so no two groups look alike (TV and Maritime, Aviation
+// and Weather, Cellular and Kris were near twins before 4.1); Plugins, General and Custom keep a low chroma. The Light theme turns them over
+// and darkens them for text (light_theme.cpp, row_tint.h), so the same table reads in both themes.
 const ImU32 kGroupCols[kNumGroups] = {
-    IM_COL32(92, 188, 220, 255), IM_COL32(92, 210, 148, 255), IM_COL32(132, 160, 240, 255), IM_COL32(80, 170, 210, 255),
-    IM_COL32(186, 150, 236, 255), IM_COL32(150, 206, 104, 255), IM_COL32(226, 168, 112, 255), IM_COL32(214, 206, 96, 255),
-    IM_COL32(110, 214, 196, 255), IM_COL32(120, 150, 230, 255), IM_COL32(218, 130, 214, 255), IM_COL32(236, 128, 140, 255),
-    IM_COL32(204, 176, 132, 255), IM_COL32(150, 162, 178, 255),
-    IM_COL32(150, 170, 210, 255),
-    IM_COL32(236, 160, 84, 255),
-    IM_COL32(120, 200, 170, 255)};
+    IM_COL32(95, 196, 221, 255), IM_COL32(115, 201, 163, 255), IM_COL32(152, 179, 245, 255), IM_COL32(119, 189, 238, 255),
+    IM_COL32(207, 160, 222, 255), IM_COL32(149, 196, 133, 255), IM_COL32(236, 157, 136, 255), IM_COL32(180, 187, 111, 255),
+    IM_COL32(99, 200, 194, 255), IM_COL32(182, 168, 239, 255), IM_COL32(226, 154, 196, 255), IM_COL32(236, 153, 166, 255),
+    IM_COL32(204, 177, 116, 255), IM_COL32(175, 181, 188, 255),
+    IM_COL32(169, 178, 219, 255),
+    IM_COL32(233, 163, 101, 255),
+    IM_COL32(147, 191, 179, 255)};
