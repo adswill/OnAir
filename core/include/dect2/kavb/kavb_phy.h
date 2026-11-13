@@ -105,6 +105,8 @@ std::vector<cf> assembleFrame(const Profile& p, const FrameHeader& h, const std:
 
 // Chirp of unit amplitude at position `symPos` (symbols) from the start of the chirp period; period = periodSyms symbols.
 cf chirpUnit(double symPos, double periodSyms);
+// n values chirpUnit(symPos0 + i * step, periodSyms), cheaper than n calls
+void chirpFill(double symPos0, double step, int n, double periodSyms, cf* out);
 
 class Transmitter {
 public:

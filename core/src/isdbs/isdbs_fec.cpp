@@ -3,6 +3,7 @@
 
 // ISDB-S: the coding of a frame, see isdbs_fec.h.
 #include "isdbs_fec.h"
+#include "dect2/dsp/simd.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -159,7 +160,7 @@ void FrameEncoder::encode(const Layout& L, const uint8_t* header, const std::vec
 }
 
 // ============================================================================ decoder
-float viterbi(const Branch* b, int n, int startState, int endState, const int8_t* forced, uint8_t* bits, uint8_t* states) {
+DECT2_SIMD_BODY float viterbiBody(const Branch* b, int n, int startState, int endState, const int8_t* forced, uint8_t* bits, uint8_t* states) {
     const float kNeg = -1e30f;
     alignas(64) float pm[64], npm[64];
     for (int s = 0; s < 64; s++) pm[s] = startState < 0 || s == startState ? 0.f : kNeg;
@@ -209,6 +210,9 @@ float viterbi(const Branch* b, int n, int startState, int endState, const int8_t
     }
     return metric;
 }
+
+// the same body compiled for AVX2 (adds and compares only: the results are identical) and picked at run time
+DECT2_AVX2_DISPATCH(float, viterbi, (const Branch* b, int n, int startState, int endState, const int8_t* forced, uint8_t* bits, uint8_t* states), (b, n, startState, endState, forced, bits, states))
 
 void headerBranches(const cf32* frame, Branch* out, int nbits) {
     for (int i = 0; i < nbits; i++) {

@@ -220,6 +220,47 @@ cf chirpUnit(double symPos, double periodSyms) {
 #endif
 }
 
+// out[i] = chirpUnit(symPos0 + i * step, periodSyms) for i < n. The phase is a quadratic in the position, so inside a stretch of 32 samples that lies in one
+// half of the period it is stepped by a rotor (three sine / cosine pairs a stretch instead of 32, the stretch's own phase computed in double: the values
+// agree with chirpUnit to about 1e-13, far below the float they are rounded to); a stretch that crosses the turn of the V or the end of the period is
+// done sample by sample.
+void chirpFill(double symPos0, double step, int n, double periodSyms, cf* out) {
+    constexpr int B = 32;
+    const double half = periodSyms / 2.0;
+    constexpr double w = 6.283185307179586 * kChirpSpan;
+    for (int i0 = 0; i0 < n; i0 += B) {
+        const int len = std::min(B, n - i0);
+        const double p0 = symPos0 + i0 * step;
+        double u = std::fmod(p0, periodSyms);
+        if (u < 0) u += periodSyms;
+        const double uEnd = u + (len - 1) * step;
+        const bool first = u >= 0 && uEnd < half, second = u >= half && uEnd < periodSyms;
+        if (len < 4 || (!first && !second)) {
+            for (int k = 0; k < len; k++) out[i0 + k] = chirpUnit(symPos0 + (i0 + k) * step, periodSyms);
+            continue;
+        }
+        double a0, c1, c2;   // phase a0 + c1 k + c2 k^2 at sample k of the stretch
+        if (first) {
+            a0 = w * (u - 2.0 * u * u / periodSyms);
+            c1 = w * step * (1.0 - 4.0 * u / periodSyms);
+            c2 = w * (-2.0 * step * step / periodSyms);
+        } else {
+            const double v = u - half;
+            a0 = w * (-v + 2.0 * v * v / periodSyms);
+            c1 = w * step * (-1.0 + 4.0 * v / periodSyms);
+            c2 = w * (2.0 * step * step / periodSyms);
+        }
+        std::complex<double> r(std::cos(a0), std::sin(a0));
+        std::complex<double> s(std::cos(c1 + c2), std::sin(c1 + c2));
+        const std::complex<double> q(std::cos(2 * c2), std::sin(2 * c2));
+        for (int k = 0; k < len; k++) {
+            out[i0 + k] = cf(static_cast<float>(r.real()), static_cast<float>(r.imag()));
+            r *= s;
+            s *= q;
+        }
+    }
+}
+
 // ---- transmitter -------------------------------------------------------------------------------------------------------------------------------------------------
 
 Transmitter::Transmitter(int profileId, bool robust, bool chirp) : p_(profileOf(profileId, robust)), chirp_(chirp) {}

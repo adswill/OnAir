@@ -499,24 +499,50 @@ struct WisunReceiver::Impl {
         const std::vector<float>& lp = d.r->lp;
         const size_t L = lp.size();
         const size_t D = (size_t)d.r->decim;
-        while (d.f.size() < toOut) {
-            const size_t i = d.f.size() * D;   // this output: the filter ending at input i
-            if (i >= buf.size()) break;
+        auto mixTo = [&](size_t i) {
             while (d.mixed.size() <= i) {
                 d.mixed.push_back(cf(std::complex<double>(buf[d.mixed.size()]) * d.lo));
                 d.lo *= d.step;
                 if ((d.mixed.size() & 1023) == 0) d.lo /= std::abs(d.lo);
             }
-            float re = 0, im = 0;
-            const size_t m = std::min(L, i + 1);
-            const cf* x = d.mixed.data() + i;
-            for (size_t k = 0; k < m; k++) { re += lp[k] * x[-(ptrdiff_t)k].real(); im += lp[k] * x[-(ptrdiff_t)k].imag(); }
+        };
+        auto push = [&](float re, float im) {
             const cf z(re, im);
             if (d.havePrev) {
                 const cf w = z * std::conj(d.zPrev);
                 d.f.push_back(fastAtan2(w.imag(), w.real()));
             } else d.f.push_back(0.f);
             d.zPrev = z; d.havePrev = true;
+        };
+        while (d.f.size() < toOut) {
+            const size_t i = d.f.size() * D;   // this output: the filter ending at input i
+            if (i >= buf.size()) break;
+            // four outputs per pass when all four are whole: each keeps its own sequential sum (every result is bit for bit the one computed alone),
+            // but the eight chains overlap in the CPU instead of each add waiting for the one before
+            if (d.f.size() + 4 <= toOut && i + 1 >= L && i + 3 * D < buf.size()) {
+                mixTo(i + 3 * D);
+                const cf* x0 = d.mixed.data() + i;
+                const cf* x1 = x0 + D;
+                const cf* x2 = x1 + D;
+                const cf* x3 = x2 + D;
+                float r0 = 0, i0 = 0, r1 = 0, i1 = 0, r2 = 0, i2 = 0, r3 = 0, i3 = 0;
+                for (size_t k = 0; k < L; k++) {
+                    const float h = lp[k];
+                    const ptrdiff_t o = -(ptrdiff_t)k;
+                    r0 += h * x0[o].real(); i0 += h * x0[o].imag();
+                    r1 += h * x1[o].real(); i1 += h * x1[o].imag();
+                    r2 += h * x2[o].real(); i2 += h * x2[o].imag();
+                    r3 += h * x3[o].real(); i3 += h * x3[o].imag();
+                }
+                push(r0, i0); push(r1, i1); push(r2, i2); push(r3, i3);
+                continue;
+            }
+            mixTo(i);
+            float re = 0, im = 0;
+            const size_t m = std::min(L, i + 1);
+            const cf* x = d.mixed.data() + i;
+            for (size_t k = 0; k < m; k++) { re += lp[k] * x[-(ptrdiff_t)k].real(); im += lp[k] * x[-(ptrdiff_t)k].imag(); }
+            push(re, im);
         }
     }
 

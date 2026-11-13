@@ -54,7 +54,11 @@ float cpMetric(const cf32* x, int n, int nfft, int cp) {
     std::vector<cf32> pre((size_t)len + 1, cf32(0, 0));
     std::vector<float> en((size_t)len + 1, 0.f);
     for (int i = 0; i < len; i++) {
-        pre[(size_t)i + 1] = pre[(size_t)i] + x[i] * std::conj(x[i + nfft]);
+        {   // x[i] * conj(x[i + nfft]) with the products apart as std::complex does them, without its NaN check (the same result for finite samples)
+            const cf32 a = x[i], b = x[i + nfft];
+            const float re = a.real() * b.real() - a.imag() * (-b.imag()), im = a.real() * (-b.imag()) + a.imag() * b.real();
+            pre[(size_t)i + 1] = pre[(size_t)i] + cf32(re, im);
+        }
         en[(size_t)i + 1] = en[(size_t)i] + 0.5f * (std::norm(x[i]) + std::norm(x[i + nfft]));
     }
     float best = 0;
