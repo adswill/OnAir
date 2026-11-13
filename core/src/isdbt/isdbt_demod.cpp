@@ -258,6 +258,7 @@ struct Demod::Impl {
     // the cells are equalised again. It runs only while the measured speed of the channel makes the leakage at least a tenth of the noise
     // (it costs two more interpolations and 2 kIciSpan multiplies per carrier). DECT2_ISDBT_NOICI=1: the 4.0 path.
     const bool iciOff = ofdm::envOn("DECT2_ISDBT_NOICI");
+    const bool diag41 = ofdm::envOn("DECT2_ISDBT_DIAG");   // prints the channel statistics every 204 symbols (tests)
     static constexpr int kIciSpan = 12;
     std::vector<cf32> iciY, iciX, iciHm, iciHp, iciC;
     std::vector<uint8_t> iciRoles;
@@ -801,6 +802,9 @@ struct Demod::Impl {
             for (auto& rr : runs) for (size_t i = 0; i < rr.H.size(); i += 7) { hp += std::norm(rr.H[i]); hn++; }
             if (hn) snr = 10 * std::log10(std::max(1e-9, hp / (double)hn / sigma2));
         }
+        if (diag41 && symbols % 204 == 0)
+            fprintf(stderr, "[isdbt] sym %llu snr %.1f dB sigma2 %.2e q %.2e alpha %.2f ici %d (%llu symbols)\n", (unsigned long long)symbols, snr, sigma2,
+                    std::max(0.0, (ceD2 - ceD1) / 3), ceAlpha, (int)ici, (unsigned long long)iciSyms);
         if (getenv("ISDBT_EVM")) {
             static double evm[13][8]; static long cnt[13][8];
             for (int pos = 0; pos < kSegments; pos++) {
