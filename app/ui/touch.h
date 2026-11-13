@@ -20,9 +20,11 @@ bool on();                       // the touch interface is active
 void setOn(bool v);              // main.cpp, every frame from App::touchUi: installs or removes the ImGui hooks
 void setDisplayScale(float dpi); // main.cpp: the display scale without the text scales (48 px targets are 48 * this)
 float dpi();
-inline float target() { return 48.f * dpi(); }   // the smallest hit target, in pixels
+void setSizeFactor(float f);     // main.cpp: Settings > Touch control size (touchSizeFactor(App::touchSize)); 1 = the default size
+float sizeFactor();
+inline float target() { return touchTarget(dpi(), sizeFactor()); }   // the smallest hit target, in pixels (48 * display scale at the default size)
 
-// Raise the style's paddings, spacings, scrollbar and grab sizes to touch size. Only ever raises, so repeating it every frame is harmless.
+// Raise the style's paddings (scaled by the control size), spacings, scrollbar and grab sizes to touch size. Only ever raises, so repeating it every frame is harmless.
 void applyMetrics(ImGuiStyle& st);
 
 // Once per frame at the start of the UI: feeds the recogniser from the pointer (and from feedPointer() where a backend has multi-touch),

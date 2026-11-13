@@ -182,3 +182,30 @@ TFN(jstring, nativeTvStats)(JNIEnv* e, jobject) {
     return mkAscii(e, std::to_string(gRing.seen) + "\t" + std::to_string(gRing.kept) + "\t" + std::to_string(gRing.dropped) + "\t" +
                           std::to_string(gRing.count) + "\t" + num(gRing.streamSecs));
 }
+
+// The newest picture of the analogue TV modes (docs/ANDROID-PLAYER-4.1.md): which = 0 Analog TV (AtvReceiver), 1 MAC (MacReceiver), 2 FPV video
+// (FpvReceiver). The receivers already make these pictures for the desktop; nothing is decoded here. meta (at least 6): in meta[0] the number of
+// the picture shown last; out: meta = {seq, width, height, colour 0/1, untuned (snow) 0/1, field rate}. The RGBA goes into out with alpha 255.
+// Returns the bytes copied, 0 when there is no newer picture, or -(bytes needed) when out is too small (meta is filled then).
+TFN(jint, nativeAnalogFrame)(JNIEnv* e, jobject, jint which, jdoubleArray meta, jbyteArray out) {
+    Engine* eng = onair::bridgeEngine();
+    if (!eng || !meta || !out || e->GetArrayLength(meta) < 6) return 0;
+    jdouble m[6] = {0, 0, 0, 0, 0, 0};
+    e->GetDoubleArrayRegion(meta, 0, 1, m);
+    uint64_t seq = m[0] > 0 ? (uint64_t)m[0] : 0;
+    std::shared_ptr<const AtvFrame> f;
+    if (which == 0) f = eng->atv().frame(seq);
+    else if (which == 1) f = eng->mac().frame(seq);
+    else if (which == 2) f = eng->fpv().frame(seq);
+    if (!f || f->width <= 0 || f->height <= 0 || f->rgba.size() < (size_t)f->width * (size_t)f->height * 4) return 0;
+    m[0] = (double)f->seq; m[1] = f->width; m[2] = f->height; m[3] = f->colour ? 1 : 0; m[4] = f->untuned ? 1 : 0; m[5] = f->fieldRate;
+    e->SetDoubleArrayRegion(meta, 0, 6, m);
+    const size_t bytes = (size_t)f->width * (size_t)f->height * 4;
+    if ((size_t)e->GetArrayLength(out) < bytes) return -(jint)bytes;
+    jbyte* dst = e->GetByteArrayElements(out, nullptr);
+    if (!dst) return 0;
+    const uint8_t* src = f->rgba.data();
+    for (size_t i = 0; i < bytes; i += 4) { dst[i] = (jbyte)src[i]; dst[i + 1] = (jbyte)src[i + 1]; dst[i + 2] = (jbyte)src[i + 2]; dst[i + 3] = (jbyte)0xFF; }
+    e->ReleaseByteArrayElements(out, dst, 0);
+    return (jint)bytes;
+}

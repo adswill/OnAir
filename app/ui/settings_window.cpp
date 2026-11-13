@@ -75,7 +75,7 @@ const std::map<std::string, Bind>& binds() {
         NB("powerLowMode", a.powerLowMode); NB("powerHidden", a.powerHidden); NB("reduceCpuHidden", a.reduceCpuHidden);
         NB("discordOn", a.discordOn); NB("discordFreq", a.discordFreq);
         NB("uiTheme", a.uiTheme); NB("uiVariant", a.uiVariant); NB("layoutUnified", a.layoutUnified); NB("uiTextScale", a.uiTextScale);
-        NB("touchUi", a.touchUi); NB("touchScale", a.touchScale); NB("perfOverlay", a.perfOverlay);
+        NB("touchUi", a.touchUi); NB("touchScale", a.touchScale); NB("touchSize", a.touchSize); NB("perfOverlay", a.perfOverlay);
         NB("wfMap3", a.wf.map); NB("wfAutoFloor", a.wf.autoTrack); NB("wfGamma", a.wf.gamma); NB("wfBright", a.wf.brightness); NB("wfSat", a.wf.sat);
         NB("wfContrast", a.wf.contrast); NB("wfClock", a.wf.clockLabels); NB("wfAvg", a.wf.rowAverage); NB("wfLowPass", a.wfLowPass);
         NB("specAutoDb", a.specAutoDb); NB("specPerHz", a.specPerHz); NB("specDbm", a.specDbm); NB("specFill", a.specFill);

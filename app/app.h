@@ -324,6 +324,7 @@ struct App {
     bool lookNotice = false;  // 3.2: moved from the old default look to Dev A: a one-time notice with a way back (not saved; "lookNoticeDone" is)
     bool touchUi = false;     // the touch interface (ui/touch.h): big targets, a bottom dock, full-screen picker and sheets; Settings > Touch interface, --touch
     float touchScale = 1.35f; // the touch interface's own text scale, on top of uiTextScale: 1.0 .. 2.0
+    int touchSize = 2;        // the touch interface's control size (#139): 0 Small .. 4 Extra large, 2 = the size it always had (ui/touch_logic.h)
     float uiTextScale = 1.f;  // View > Text size: 0.8 .. 2.0, on top of the display scale (Ctrl +, Ctrl -, Ctrl 0)
     float splitSide = 0, splitRight = 0, splitBottom = 0, splitDock = 0, splitBot2 = 0;   // dragged panel sizes in unscaled points (0 = automatic): sidebar, instruments, lower row; scope layout: instruments, lower row
     int uiTheme = 3;          // its palette: 0 terminal, 1 instrument, 2 mono, 3 Dev A (graphite), 4 Dev B (terminal green)

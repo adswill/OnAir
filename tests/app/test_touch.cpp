@@ -196,7 +196,52 @@ static void autoStart() {
     CHECK(touchChosen(true, false), "touch already on");
 }
 
+// #139: the control size and the shell's frame (touch_logic.h shellLayout)
+static void controlSize() {
+    CHECK(touchSizeFactor(kTouchSizeDefault) == 1.f, "Default is the size the touch interface always had");
+    for (int i = 1; i < kTouchSizes; i++) CHECK(touchSizeFactor(i) > touchSizeFactor(i - 1), "sizes grow from Small to Extra large (%d)", i);
+    CHECK(clampTouchSize(-3) == 0 && clampTouchSize(99) == kTouchSizes - 1 && touchSizeFactor(99) == touchSizeFactor(kTouchSizes - 1), "out of range is clamped");
+    CHECK(touchTarget(1, touchSizeFactor(0)) >= 32.f && nearBy(touchTarget(1, 1), 48) && nearBy(touchTarget(2, 1), 96), "targets: Small >= 32 px, Default 48 px per display scale");
+    for (int i = 0; i < kTouchSizes; i++) CHECK(touchSizeNames()[i] && *touchSizeNames()[i], "a name for size %d", i);
+
+    const float gaps = 7 * 10.f + 2 * 12.f;   // applyMetrics' item spacing and window padding at display scale 1
+    // a desktop-sized display at the default size: exactly the layout from before (top 1.1 targets, rows 1.15, one row when wide)
+    ShellLayout big = shellLayout(1920, 1080, 1, 1, gaps);
+    CHECK(nearBy(big.topH, 48 * 1.1f, 1e-3) && nearBy(big.rowH, 48 * 1.15f, 1e-3) && big.dockRows == 1 && !big.stepInMore && !big.shortScreen && !big.statusOnTop, "1920 x 1080 unchanged");
+    ShellLayout tab = shellLayout(800, 1280, 1, 1, gaps);
+    CHECK(tab.dockRows == 2 && tab.statusOnTop && !tab.shortScreen && nearBy(tab.rowH, 48 * 1.15f, 1e-3), "a portrait tablet: two rows, status on top");
+    ShellLayout tabHiDpi = shellLayout(1600, 2560, 2, 1, 2 * gaps);
+    CHECK(tabHiDpi.dockRows == 2 && nearBy(tabHiDpi.target, 96), "the same tablet at display scale 2");
+
+    // 640 x 480 (#139): before, two 55 px dock rows and a 53 px top bar; now one row without Step and tighter bars
+    const float sp = 8, pad = 10;
+    ShellLayout old; old.target = 48; old.topH = 48 * 1.1f; old.rowH = 48 * 1.15f; old.dockRows = 2;
+    const float before = shellBodyHeight(old, 480, sp, pad);
+    ShellLayout s640 = shellLayout(640, 480, 1, 1, gaps);
+    CHECK(s640.shortScreen && s640.dockRows == 1 && s640.stepInMore && !s640.statusOnTop, "640 x 480: a short screen, one dock row, Step in More");
+    const float now = shellBodyHeight(s640, 480, sp, pad);
+    CHECK(now >= before + 70, "640 x 480 default size: the panels get %.0f px instead of %.0f", now, before);
+    std::printf("640 x 480 body height: before %.0f px, Default %.0f px", before, now);
+    float prev = 1e9;
+    for (int i = 0; i < kTouchSizes; i++) {
+        ShellLayout L = shellLayout(640, 480, 1, touchSizeFactor(i), gaps);
+        const float h = shellBodyHeight(L, 480, sp, pad);
+        std::printf(", %s %.0f", touchSizeNames()[i], h);
+        CHECK(h <= prev + 1e-3, "a larger control size never gives the panels more room (%d)", i);
+        CHECK(h > 0, "the panels keep some room at %s", touchSizeNames()[i]);
+        prev = h;
+        // the smallest one-row buttons keep 0.8 of a target
+        if (L.dockRows == 1 && L.stepInMore) CHECK((640 - gaps) * 0.8f / kDockOneRowWeightNoStep >= 0.8f * L.target - 1e-3, "one-row buttons wide enough at %d", i);
+    }
+    std::printf("\n");
+    CHECK(shellLayout(640, 480, 1, touchSizeFactor(4), gaps).dockRows == 2, "Extra large on 640 x 480: the buttons no longer fit one row");
+    CHECK(shellLayout(800, 480, 1, 1, gaps).dockRows == 1 && shellLayout(320, 240, 1, 1, gaps).dockRows == 2, "800 x 480 one row; 320 x 240 two");
+    CHECK(shellLayout(640, 480, 0, 1, gaps).target == 48, "a zero display scale counts as 1");
+    CHECK(shellBodyHeight(shellLayout(200, 150, 1, 1.4f, gaps), 150, sp, pad) == 0, "a tiny display never gives a negative body");
+}
+
 int main() {
+    controlSize();
     autoStart();
     keypad();
     parse();

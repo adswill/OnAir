@@ -99,6 +99,7 @@ const std::vector<PrefKey>& keyTable() {
         flagB("agcOn", AT(a.agcOn), false),   // Auto gain: the Auto choice survives a restart (#342)
         shared(scaled("uiTextScale", AT(a.uiTextScale), 100, 100, 0.8, 2, true)),
         shared(flagI("touchUi", AT(a.touchUi), false)), shared(scaled("touchScale", AT(a.touchScale), 100, 135, 1.0, 2, true)),
+        shared(num("touchSize", AT(a.touchSize), 2, 0, 4, true)),
         num("tetraSlotMode", AT(a.tetraSlotMode), 0, 0, 3, true), num("tetraSlotNum", AT(a.tetraSlotNum), 1, 1, 4, true),
         num("tetraSlotId", AT(a.tetraSlotId), 0, 0, 16777215, true),
         num("tetraSingle", AT(a.tetraSingle), 0, 0, 1, true),

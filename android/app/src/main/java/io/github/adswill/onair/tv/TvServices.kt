@@ -137,7 +137,7 @@ fun playabilityNotes(service: TvService, audio: TvStream?, cat: DecoderCatalog):
     val v = service.video
     if (v != null) when (val p = videoPlayability(v, cat)) {
         is Playability.NoDecoder -> out += "This phone has no ${p.codecLabel} video decoder, so there is no picture. OnAir uses the phone's own decoders and ships none."
-        is Playability.NotHandled -> out += "${p.codecLabel} video is not handed to the phone's decoders (Android has no decoder for it): no picture."
+        is Playability.NotHandled -> out += notHandledNote(p.codecLabel, v.streamType, video = true)
         Playability.Scrambled -> out += "The video of ${service.title} is scrambled: no picture."
         is Playability.Plays -> {}
     }
@@ -146,11 +146,30 @@ fun playabilityNotes(service: TvService, audio: TvStream?, cat: DecoderCatalog):
     } else when (val p = audioPlayability(audio, cat)) {
         is Playability.NoDecoder -> out += "This phone has no ${p.codecLabel} sound decoder, so there is no sound." +
             (if (p.mime == "audio/ac3" || p.mime == "audio/eac3") " Dolby decoders come with some phones only." else "")
-        is Playability.NotHandled -> out += "${p.codecLabel} sound is not handed to the phone's decoders: no sound."
+        is Playability.NotHandled -> out += notHandledNote(p.codecLabel, audio.streamType, video = false)
         Playability.Scrambled -> out += "The sound of ${service.title} is scrambled: no sound."
         is Playability.Plays -> {}
     }
     return out
+}
+
+/**
+ * The line for a format the app does not hand to the phone's decoders. The Chinese DTMB formats (AVS, AVS+, AVS2, AVS3 video, DRA sound) get
+ * their own words: Android has no decoder for them and OnAir ships none (codecs are user-installed, docs/CODECS.md); on the desktop the
+ * user-installed AVS+ / DRA add-ons play them. Everything else (AC-4, MPEG-H ...) says the same in general terms.
+ */
+fun notHandledNote(codecLabel: String, streamType: Int, video: Boolean): String {
+    val c = codecLabel.uppercase()
+    val avs = c.startsWith("AVS") || streamType == 0x42 || streamType == 0xD2 || streamType == 0xD4
+    val dra = c.startsWith("DRA")
+    val what = if (video) "picture" else "sound"
+    return when {
+        avs && video -> "${if (c.startsWith("AVS")) codecLabel else "AVS/AVS+"} video: Android phones have no decoder for it and OnAir ships none, so there is no picture here. " +
+            "On the desktop, OnAir shows it with the AVS+ add-on you install yourself (docs/CODECS.md)."
+        dra && !video -> "DRA sound: Android phones have no decoder for it and OnAir ships none, so there is no sound here. " +
+            "On the desktop, OnAir plays it with the DRA add-on you install yourself (docs/CODECS.md)."
+        else -> "$codecLabel ${if (video) "video" else "sound"} is not handed to the phone's decoders (Android has no decoder for it): no $what."
+    }
 }
 
 /** The services worth listing: with a PMT and at least one sound or picture stream, by logical channel number, then service id. */

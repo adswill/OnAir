@@ -533,3 +533,11 @@ Custom remove-after time (minutes)
 Used by every Remove after row set to Custom.
 Join the Discord to get access to built codecs
 Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.
+Touch control size
+Control size
+Small
+Compact
+Large
+Extra large
+Small|Compact|Default|Large|Extra large
+Height and padding of the touch interface's buttons, top bar and dock. Smaller leaves more room for the panels on small screens.

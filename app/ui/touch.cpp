@@ -20,6 +20,7 @@ void kineticScrollWindow(ImGuiWindow* w);
 namespace {
 bool gOn = false;
 float gDpi = 1.f;
+float gSize = 1.f;                   // Settings > Touch control size (touch_logic.h touchSizeFactor)
 Gestures gRec;
 GestureFrame gFrame;
 bool gPressOnItem = false;
@@ -67,6 +68,8 @@ void placeWindow(ImGuiWindow* w) {
 bool on() { return gOn; }
 float dpi() { return gDpi; }
 void setDisplayScale(float d) { gDpi = std::max(0.5f, d); }
+void setSizeFactor(float f) { gSize = std::max(0.5f, std::min(2.f, f)); }
+float sizeFactor() { return gSize; }
 const GestureFrame& gesture() { return gFrame; }
 bool pressedOnItem() { return gPressOnItem; }
 
@@ -81,7 +84,7 @@ void setOn(bool v) {
 
 void applyMetrics(ImGuiStyle& st) {
     if (!gOn) return;
-    const float d = gDpi, tgt = 48.f * d, fs = ImGui::GetFontSize();
+    const float d = gDpi * gSize, tgt = target(), fs = ImGui::GetFontSize();   // paddings follow the control size; Small never under 32 px targets
     auto up = [](float& v, float m) { v = std::max(v, m); };
     up(st.FramePadding.x, 12 * d); up(st.FramePadding.y, std::max(0.f, (tgt - fs) * 0.5f));   // a frame (button, input, combo, checkbox square) is >= 48 px tall
     up(st.ItemSpacing.x, 10 * d); up(st.ItemSpacing.y, 8 * d); up(st.ItemInnerSpacing.x, 8 * d);
