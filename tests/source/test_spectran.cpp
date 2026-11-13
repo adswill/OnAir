@@ -220,6 +220,7 @@ int main(int argc, char** argv) {
         const double took = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
         CHECK(took > 0.15);                       // paced by the device clock, not taken all at once
         CHECK(num("tx_samples") == 300000);
+        std::cerr << "tx counters: gaps " << num("tx_gaps") << " late " << num("tx_late") << " bad_end " << num("tx_bad_end") << " bad_packet " << num("bad_packet") << " took " << took << " s\n";
         CHECK(num("tx_gaps") == 0 && num("tx_late") == 0 && num("tx_bad_end") == 0 && num("bad_packet") == 0);
         CHECK(num("tx_starts") == 1 && num("tx_ends") == 0);
         CHECK(approx(num("tx_peak"), std::sqrt(0.05), 1e-5));

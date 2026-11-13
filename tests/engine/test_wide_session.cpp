@@ -157,6 +157,7 @@ int main() {
 
     // ---- 3. the CPU guard: pinned DMR and the listened-to AM stay, the rest are dropped one by one, then come back
     const int amId = find(WsKind::Am).id;
+    { int pre = 0; for (const WsEntry& e : ws.entries()) pre += e.state == WsState::Dropped; if (pre) { printf("before the guard test, %d entries were already dropped by the measured load %.2f:\n", pre, ws.status().load); dump(); } }
     ws.setPinned(dmrId, true);
     ws.setListen(amId);
     ws.setLoadOverride(2.0);

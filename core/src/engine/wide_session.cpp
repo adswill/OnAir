@@ -617,6 +617,8 @@ struct WideSession::Impl {
         std::vector<WsEntry*> all;
         for (auto& n : nar) if (!n->hidden) all.push_back(&n->e);
         for (auto& t : tvs) all.push_back(&t->e);
+        // a pinned or listened-to entry is never left dropped (it can have been dropped before the user chose it)
+        for (WsEntry* e : all) if ((e->pinned || e->id == listen) && dropped.count(e->id)) { dropped.erase(e->id); lastChange = clock; }
         if (load > b && clock - lastChange >= 1.5) {
             WsEntry* v = nullptr;
             for (WsEntry* e : all) {
