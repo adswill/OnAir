@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Source this file (it sits in the SDK's top folder) to build for Linux x86-64 (Ubuntu 26.04) in this shell:
-#     . ~/onair-sdk/environment-setup-x86_64-linux-gnu
+#     . <sdk>/environment-setup-x86_64-linux-gnu
 # Then a plain `cmake -S . -B build -G Ninja` uses the SDK (CMake 3.21+ reads CMAKE_TOOLCHAIN_FILE from the environment).
 # Like a Yocto SDK's environment-setup-* script; nothing outside the SDK folder is changed.
 

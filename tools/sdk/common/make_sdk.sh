@@ -20,7 +20,7 @@
 #   <sdk>/sysroots/x86_64-linux-gnu/             Linux target: Ubuntu 26.04 packages (linux/fetch_sysroot.sh)
 #   <sdk>/sysroots/aarch64-linux-gnu/            Raspberry Pi 5 target: Ubuntu 26.04 arm64 packages (linux/fetch_sysroot.sh --arch arm64)
 #   <sdk>/sysroots/{arm64,x86_64}-apple-darwin/  macOS targets: Apple's SDK + conda-forge packages (macos/fetch_sysroot.sh)
-#   + in every target sysroot: OnAir's own libraries built from source (sources/build_sources.sh, owner 2026-11-08):
+#   + in every target sysroot: OnAir's own libraries built from source (sources/build_sources.sh):
 #     libusb, OpenSSL, GLFW, libhackrf, FFmpeg (LGPL), librtlsdr, libairspy, libxml2 (static), SoapySDR + SoapyRemote,
 #     libiio, libbladeRF, LimeSuite, Hamlib, libairspyhf (shared); the versions of OnAir's cross_deps_windows.sh
 #   <sdk>/locks/, SDK-MANIFEST.txt, LICENSE (the scripts' licence)

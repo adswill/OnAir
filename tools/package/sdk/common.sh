@@ -1,12 +1,13 @@
-# Shared by tools/package/sdk/*.sh: packaging OnAir with the clang cross SDK (onair_windows_sysroot, make_sdk.sh).
-#   SDK       the SDK folder (default: ~/onair/onair_windows_sysroot/sdk)
+# Shared by tools/package/sdk/*.sh: packaging OnAir with the clang cross SDK (tools/sdk).
+#   SDK       the SDK folder (the package target passes it; default: that of the environment script sourced in this shell)
 #   VERSION   default: the version in CMakeLists.txt
 #   JOBS      parallel jobs (default: all threads but two)
 #   OUT       where the packages go (default: <repo>/packages)
 #   ONAIR_BUILD  an existing build folder to package: the package target of CMake sets it. Without it, each script configures build-pkg-<platform>.
 set -euo pipefail
 REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
-SDK=${SDK:-$HOME/onair/onair_windows_sysroot/sdk}
+SDK=${SDK:-${WIN_SDK:-${LINUX_SDK:-${RPI_SDK:-${MAC_SDK:-}}}}}
+[ -n "$SDK" ] || { echo "error: no SDK: source an SDK's environment script first, or set SDK" >&2; exit 1; }
 VERSION=${VERSION:-$(grep -m1 'project(' "$REPO/CMakeLists.txt" | sed -E 's/.*VERSION ([0-9.]+).*/\1/')}
 JOBS=${JOBS:-$(( $(nproc) > 2 ? $(nproc) - 2 : 1 ))}
 OUT=${OUT:-$REPO/packages}

@@ -18,9 +18,9 @@ There is one target per SDK: `sdk_windows`, `sdk_linux_amd64`, `sdk_linux_arm64`
 - **A change** to any input makes that SDK again from scratch.
 - **No change:** nothing happens. An SDK made earlier with the same key (for example after switching branch and back) is taken from the cache in seconds.
 - **The cache** is `build-sdk/cache` (`-DONAIR_SDK_CACHE=<folder>` to keep it elsewhere): the downloads (about 3 GB), each library built once per version and options, and the two newest SDKs per platform. Deleting the build folder deletes it.
-- **Time:** from scratch with an empty cache, about 40 minutes for all five on 14 CPUs plus the downloads. With the libraries in the cache, 5 minutes per SDK.
+- **Time:** from scratch with an empty cache, about 40 minutes for all five, plus the downloads. With the libraries in the cache, 5 minutes per SDK.
 
-To limit the CPUs, run the build under `taskset`. One SDK is made at a time.
+One SDK is made at a time.
 
 `-DONAIR_SDK_KEEP_WORK=ON` keeps the unpacked SDK and the libraries' build folders, to see why a build failed.
 

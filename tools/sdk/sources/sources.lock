@@ -1,5 +1,5 @@
 # build_sources.sh lock file: the source archives of the libraries the SDK builds itself, for every target.
-# The versions are the ones OnAir's tools/package/cross_deps_windows.sh builds (owner, 2026-11-08).
+# The versions are the ones OnAir's tools/package/cross_deps_windows.sh builds.
 # src <name> <version> <file in cache/src> <url> <sha256>
 # Checked when first pinned: OpenSSL against openssl-3.6.5.tar.gz.sha256 (openssl.org), libxml2 against GNOME's
 # .sha256sum, FFmpeg's GPG signature (.asc, key FCF9 86EA 15E6 E293 A564 4F10 B432 2F04 D676 58D8), SoapyRemote against

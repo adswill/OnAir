@@ -37,7 +37,7 @@ PACKAGES=(
   libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev   # X11 and Wayland: what GLFW is built
   libwayland-dev libxkbcommon-dev                        # against (sources/build_sources.sh; it loads them at run time)
   # OnAir's other libraries (FFmpeg, GLFW, libusb, OpenSSL, HackRF, SoapySDR ...) are built from source for every
-  # target by sources/build_sources.sh (owner, 2026-11-08): not Ubuntu's
+  # target by sources/build_sources.sh: not Ubuntu's
 )
 # the libraries whose Ubuntu version is the SDK's minimum (recorded in the lock file; common/check_versions.py)
 MINIMUM=(zlib1g-dev)

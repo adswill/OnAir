@@ -36,7 +36,7 @@ PACKAGES=(
   libcxx libcxx-devel                                   # the C++ runtime and headers: LLVM libc++ (the same as clang)
   libzlib                                               # zlib (Ubuntu 26.04's version is the minimum)
   # OnAir's other libraries (FFmpeg, GLFW, libusb, OpenSSL, HackRF, SoapySDR ...) are built from source for every
-  # target by sources/build_sources.sh (owner, 2026-11-08): not conda-forge's
+  # target by sources/build_sources.sh: not conda-forge's
 )
 MACOS_MIN=12.0         # deployment target: macOS 12 Monterey (OnAir's minimum; 11.0 is arm64's first)
 # runtime-only dependencies a build does not need (globs)

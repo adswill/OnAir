@@ -27,7 +27,7 @@ PACKAGES=(
   gcc crt headers libwinpthread                          # the compiler runtime: UCRT, libgcc, libstdc++, winpthreads
   libiconv zlib                                          # iconv and zlib (Ubuntu 26.04's zlib is the minimum: common/check_versions.py)
   # OnAir's other libraries (FFmpeg, GLFW, libusb, OpenSSL, HackRF, SoapySDR ...) are built from source for every
-  # target by sources/build_sources.sh (owner, 2026-11-08): not from MSYS2
+  # target by sources/build_sources.sh: not from MSYS2
   # hamlib libuhd
 )
 # ----------------------------------------------------------------------------------------------------------------------

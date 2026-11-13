@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Source this file (it sits in the SDK's top folder) to cross-build for macOS x86_64 in this shell:
-#     . ~/onair-sdk/environment-setup-x86_64-apple-darwin
+#     . <sdk>/environment-setup-x86_64-apple-darwin
 # Then a plain `cmake -S . -B build -G Ninja` uses the SDK (CMake 3.21+ reads CMAKE_TOOLCHAIN_FILE from the environment).
 # Like a Yocto SDK's environment-setup-* script; nothing outside the SDK folder is changed.
 

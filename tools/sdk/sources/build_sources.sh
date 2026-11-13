@@ -4,8 +4,7 @@
 # build_sources.sh - build OnAir's own libraries from source for one target and add them to that target's sysroot.
 #
 # These are the libraries that OnAir's tools/package/cross_deps_windows.sh builds, at the same versions
-# (sources/sources.lock). Every target gets the same set, the same versions and the same static/shared split
-# (owner, 2026-11-08):
+# (sources/sources.lock). Every target gets the same set, the same versions and the same static/shared split:
 #   static (.a), linked into the program:  libusb, OpenSSL, GLFW, libhackrf, FFmpeg (LGPL: checked), librtlsdr,
 #                                          libairspy, libxml2
 #   shared (DLL / .so / .dylib):           SoapySDR (+ the SoapyRemote module), libiio, libbladeRF, LimeSuite, Hamlib,
