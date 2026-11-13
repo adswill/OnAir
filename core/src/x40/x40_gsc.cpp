@@ -82,14 +82,15 @@ private:
     }
     void bit(float raw, float mid) {
         have_ = true;
-        const double dc = 0.5 * (hi_ + lo_), amp = std::max(50.0, 0.5 * (hi_ - lo_));
+        const double dc = 0.5 * (hi_ + lo_), amp = std::max(400.0, 0.5 * (hi_ - lo_));
         const double a = locked_ ? 0.01 : 0.04;
         if (raw > dc) hi_ += a * (raw - hi_); else lo_ += a * (raw - lo_);
         float s = (float)((raw - dc) / amp), m = (float)((mid - dc) / amp);
         s = std::clamp(s, -2.f, 2.f); m = std::clamp(m, -2.f, 2.f);
-        const float e = std::clamp((s - sPrev_) * m, -2.f, 2.f);
+        const bool edge = (s > 0) != (sPrev_ > 0) && std::fabs(s - sPrev_) > 0.8f;
+        const float e = edge ? std::clamp((s - sPrev_) * m, -2.f, 2.f) : 0.f;
         sPrev_ = s;
-        omega_ = std::clamp(omega_ - 4e-5 * e, -0.03, 0.03);
+        omega_ = std::clamp(omega_ * (locked_ ? 1.0 : 0.9995) - 4e-5 * e, -0.004, 0.004);
         nextT_ += sps_ * (1 + omega_) - 0.04 * e * sps_;
         bi_++;
         bits_[(size_t)(bi_ & (kBitRing - 1))] = s;

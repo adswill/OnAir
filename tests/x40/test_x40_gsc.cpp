@@ -116,8 +116,12 @@ int main() {
             const auto t = run(x40::Gsc, x, 24000);
             for (auto& q : pg) {
                 char id[16]; snprintf(id, sizeof id, "%06d", q.code);
-                if (q.type == GscType::Tone) { okT += has(t, "Tone page", id, ""); nT++; }
-                else { ok += has(t, q.type == GscType::Numeric ? "Numeric page" : "Alpha page", id, q.text); n++; }
+                if (q.type == GscType::Tone) { const bool got = has(t, "Tone page", id, ""); okT += got; nT++; if (!got && snr >= 5) printf("    tone page %s missed at %.0f dB\n", id, snr); }
+                else {
+                    const bool got = has(t, q.type == GscType::Numeric ? "Numeric page" : "Alpha page", id, q.text);
+                    ok += got; n++;
+                    if (!got && snr >= 5) { printf("    missed at %.0f dB: %s '%s'\n", snr, id, q.text.c_str()); for (auto& rw : t.rows) printf("      [%s] %s %s\n", rw.kind.c_str(), rw.id.c_str(), rw.text.c_str()); }
+                }
             }
         }
         pts.push_back({snr, (double)ok / n}); ptsTone.push_back({snr, (double)okT / nT});
