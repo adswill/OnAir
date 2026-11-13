@@ -187,9 +187,28 @@ void sweep(const Mode& m0, const std::regex& scenRe, int n, int threads) {
 
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
+    (void)argc;
 #ifndef _WIN32
     setenv("DECT2_NOPACE", "1", 1);
+    // S41_ALTS="A=1,B=2/C=3": the same calibration once more in a child process per configuration (receivers read some switches once per
+    // process), each with those variables set and only the new path
+    if (getenv("ONAIR_SENS_CALIBRATE") && getenv("S41_ALTS") && !getenv("S41_CHILD")) {
+        std::string all = getenv("S41_ALTS");
+        size_t a = 0;
+        for (;;) {
+            const size_t b = all.find('/', a);
+            std::string cfg = all.substr(a, b == std::string::npos ? std::string::npos : b - a);
+            for (auto& ch : cfg) if (ch == ',') ch = ' ';
+            printf("######## configuration: %s\n", cfg.c_str());
+            fflush(stdout);
+            const std::string cmd = "env " + cfg + " S41_CHILD=1 S41_NOAB=1 '" + std::string(argv[0]) + "'";
+            if (std::system(cmd.c_str()) != 0) printf("(child failed)\n");
+            if (b == std::string::npos) break;
+            a = b + 1;
+        }
+        return 0;
+    }
 #endif
     const auto all = modes41();
     const int threads = std::max(1, (int)std::thread::hardware_concurrency());
