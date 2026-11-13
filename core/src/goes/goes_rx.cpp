@@ -1,6 +1,5 @@
 // GOES HRIT receiver (goes_rx.h).
 #include "dect2/common/bits.h"
-#include "dect2/dsp/fir_dot.h"
 #include "dect2/goes/goes_rx.h"
 #include "dect2/dsp/rrc.h"
 #include "dect2/results/results_io.h"
@@ -29,19 +28,20 @@ constexpr int kAcqFft = 4096, kAcqBlocks = 8, kAcqMaxBlocks = 64;
 
 using dect2::dsp::rrc;
 
-// complex FIR with the history kept twice over, so every output is one contiguous dot product (firDot: sixteen running sums that vectorise;
-// one running sum per part before 4.1, docs/CPU-4.1.md)
+// complex FIR with the history kept twice over, so every output is one contiguous dot product
 struct Fir {
-    std::vector<float> h, hr2;
+    std::vector<float> h;
     std::vector<cf32> buf;
     size_t pos = 0;
-    void set(std::vector<float> taps) {
-        h = std::move(taps); buf.assign(2 * h.size(), cf32(0, 0)); pos = 0;
-        std::vector<float> r(h.rbegin(), h.rend());   // oldest sample first: the taps reversed
-        hr2 = firDoubleTaps(r.data(), (int)r.size());
+    void set(std::vector<float> taps) { h = std::move(taps); buf.assign(2 * h.size(), cf32(0, 0)); pos = 0; }
+    void push(cf32 x) { buf[pos] = x; buf[pos + h.size()] = x; if (++pos == h.size()) pos = 0; }   // no modulo per sample (4.1)
+    cf32 out() const {
+        const cf32* b = buf.data() + pos;   // oldest first
+        float re = 0, im = 0;
+        const size_t n = h.size();
+        for (size_t i = 0; i < n; i++) { re += h[n - 1 - i] * b[i].real(); im += h[n - 1 - i] * b[i].imag(); }
+        return cf32(re, im);
     }
-    void push(cf32 x) { buf[pos] = x; buf[pos + h.size()] = x; if (++pos == h.size()) pos = 0; }
-    cf32 out() const { return firDot(hr2.data(), buf.data() + pos, (int)h.size()); }
     void clear() { std::fill(buf.begin(), buf.end(), cf32(0, 0)); pos = 0; }
 };
 
