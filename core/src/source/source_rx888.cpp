@@ -8,7 +8,9 @@
 //   looks for it in the OnAir codecs folders and in ONAIR_RX888_FIRMWARE (rx888FirmwarePaths()). Loading that image makes the chip drop off
 //   the bus and come back at a new address. On Windows the Cypress driver from the official RX-888 setup (HDSDR / ExtIO) binds 04b4:00f1;
 //   OnAir uses libusb and needs WinUSB for that device. OnAir does not ship a driver.
-// - The converter delivers REAL 16-bit samples at the ADC clock (64 Msps typically, 128 at most 130). HF (below half the clock): the wanted
+// - The converter delivers REAL 16-bit samples at the ADC clock (64 Msps typically, 128 usual maximum, 130 rated, up to 140 accepted as ExtIO_sddc
+//   does). Output rates up to half the clock are decimated by 2 or more; above that the output is not decimated (rate = the clock: the real
+//   band with its mirror image, see docs/RX888-RATES-4.1.md). HF (below half the clock): the wanted
 //   frequency is shifted to zero, filtered and decimated by RealDdc (native_realddc.h, the same code as the Fobos SDR's HF inputs).
 //   VHF (the R828D tuner, from half the clock up to 1.75 GHz): the tuner puts the channel on an IF of 4.57 MHz, spectrum inverted
 //   (SDDC's "sideband"), so the DDC is centred on the IF and its output conjugated.
@@ -390,17 +392,20 @@ Rx888Gains rx888Gains(double slider, double hfAtt) {
 namespace {
 
 constexpr double kHfMinHz = 10e3, kVhfMaxHz = 1.75e9;
-constexpr double kAdcMaxHz = 130e6, kAdcLowHz = 64e6, kAdcHighHz = 128e6;
+constexpr double kAdcLowHz = 64e6, kAdcHighHz = 128e6;
 constexpr double kIfHz = 4.57e6, kR828dRefHz = 16e6;   // the IF carrier of the R828D path and its reference clock (R828D_IF_CARRIER, R828D_FREQ)
-constexpr double kMinOutHz = 0.25e6, kMaxOutHz = 64e6;
+constexpr double kVhfIfBwHz = 8e6;   // about what the R828D's IF filter passes at most: the VHF input gives no more than this whatever the rate
 constexpr int kMaxDecim = 4096;
-constexpr size_t kTransferBytes = 131072;   // a multiple of 16 bursts of 1 KiB, as SDDC
-constexpr int kQueued = 32;
-constexpr size_t kMaxBlocks = 256;          // what the processing thread may fall behind by (32 MiB) before the oldest blocks are dropped
+constexpr size_t kTransferBytes = 131072;   // a multiple of 16 bursts of 1 KiB, as SDDC (transferSize)
 
 std::string mhzText(double hz) {
     char b[32];
     snprintf(b, sizeof b, "%.6g MHz", hz / 1e6);
+    return b;
+}
+std::string mText(double v) {   // a rate in millions without the unit
+    char b[32];
+    snprintf(b, sizeof b, "%.6g", v / 1e6);
     return b;
 }
 
@@ -412,8 +417,10 @@ std::vector<RadioSetting> rx888Settings() {
                       "HF or VHF: that input whatever the frequency.",
                       {"auto", "hf", "vhf"}, {"Auto", "HF", "VHF"}, "auto"),
         choiceSetting("adc", "ADC clock",
-                      "Auto: 64 Msps (128 Msps when a rate above 32 Msps is chosen); the output rate is the clock divided by a whole number, never\n"
-                      "below the rate asked for. 64 / 128: that clock always (128 Msps needs a fast USB 3 port and a fast computer).\n"
+                      "Auto: 64 Msps (128 Msps when a rate above 32 Msps is chosen, twice the rate up to 130 for 64 to 65 Msps, the rate itself\n"
+                      "from 128 to 140); the output rate is the clock divided by a whole number, never below the rate asked for. Above half the\n"
+                      "clock the output is not decimated: the HF span is still only half the clock (64 MHz at 128 Msps), with a mirror image.\n"
+                      "64 / 128: that clock always (128 Msps needs a fast USB 3 port and a fast computer: 256 MB/s).\n"
                       "Match the rate (experimental): the clock is set to the rate asked for times a whole number, so the output rate is exact;\n"
                       "the clock is then not one of the usual ones.",
                       {"auto", "64", "128", "exact"}, {"Auto", "64 Msps", "128 Msps", "Match the rate (experimental)"}, "auto", true),
@@ -525,12 +532,8 @@ protected:
                 err += " The Cypress driver from the official RX-888 setup is not usable by OnAir, and OnAir does not ship a driver. After the firmware loads, the radio is USB\\VID_04B4&PID_00F1 and needs the WinUSB driver: install it once with Zadig (zadig.akeo.ie), choosing that device and the driver WinUSB.";
             return false;
         }
-        if (!link_->superSpeed()) {
-            link_.reset();
-            err = "RX888 MkII: the radio is on a USB 2 connection; it needs a USB 3 (SuperSpeed) port and cable";
-            openFailure_ = OpenFailure::Final;
-            return false;
-        }
+        usb2_ = !link_->superSpeed();   // a warning, not a refusal (4.1): USB 2 carries ~40 MB/s, far less than the ADC delivers
+        if (usb2_) { fprintf(stderr, "RX888 MkII: on a USB 2 connection: most samples will be lost\n"); fflush(stderr); }
         std::this_thread::sleep_for(std::chrono::milliseconds(kOnWindows ? 25 : 5));
         setU8(kStopFx3, 0);   // as the SDDC driver: a stream left running by another program is stopped
         uint8_t info[4] = {0};
@@ -548,7 +551,11 @@ protected:
         fflush(stderr);
         gpios_ = 0; vhf_ = -1; adc_ = 0; dat31_ = ad8340_ = lna_ = vga_ = -1; tuneHz_ = 0;
         streamed_ = false;
-        return apply(s, err, false);
+        const bool ok = apply(s, err, false);
+        if (ok && usb2_)
+            addNote(err, "RX888 MkII: the radio is on a USB 2 connection, which carries about 40 MB/s; the ADC sends " + mText(adc_ * 2.0) +
+                         " MB/s, so most samples will be lost. Use a USB 3 (SuperSpeed) port and cable");
+        return ok;
     }
     // A retune that needs another clock or decimation stops the stream for it, as a change of the sample rate does (NativeSource::retune)
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
@@ -589,6 +596,9 @@ protected:
         std::vector<std::vector<int16_t>> pool;
         bool done = false;
         size_t dropped = 0;
+        const Rx888TransferPlan tp = rx888TransferPlan(adc_ ? (double)adc_ : kAdcLowHz);
+        auto lastReport = std::chrono::steady_clock::now();
+        size_t reported = 0;
         std::thread worker([&] {
             dect2::setThreadName("onair-rx888");
             for (;;) {
@@ -607,7 +617,7 @@ protected:
         });
         std::atomic<bool> startFailed{false};
         const int r = link->stream(
-            kTransferBytes, kQueued,
+            tp.bytes, tp.queued,
             [&](const uint8_t* p, size_t n) {
                 n &= ~(size_t)1;
                 std::vector<int16_t> b;
@@ -619,8 +629,20 @@ protected:
                 memcpy(b.data(), p, n);   // (little endian hosts)
                 {
                     std::lock_guard<std::mutex> lk(qMu);
-                    if (q.size() >= kMaxBlocks) { pool.push_back(std::move(q.front())); q.pop_front(); dropped++; }
+                    if (q.size() >= tp.maxBlocks) {
+                        droppedSamples_ += q.front().size();
+                        pool.push_back(std::move(q.front())); q.pop_front(); dropped++;
+                    }
                     q.push_back(std::move(b));
+                }
+                if (dropped != reported) {   // at most every 5 s: the computer cannot keep up with this clock
+                    const auto now = std::chrono::steady_clock::now();
+                    if (now - lastReport > std::chrono::seconds(5)) {
+                        fprintf(stderr, "RX888 MkII: the computer is falling behind at %s: %zu blocks (%llu samples) dropped so far (a lower ADC clock helps)\n",
+                                mhzText(adc_).c_str(), dropped, (unsigned long long)droppedSamples_.load());
+                        fflush(stderr);
+                        lastReport = now; reported = dropped;
+                    }
                 }
                 qCv.notify_one();
             },
@@ -634,11 +656,21 @@ protected:
         qCv.notify_all();
         worker.join();
         { std::lock_guard<std::mutex> lk(api_); if (link_) setU8(kStopFx3, 0); }
-        if (dropped) { fprintf(stderr, "RX888 MkII: the computer fell behind: %zu blocks of samples were dropped (a lower ADC clock helps)\n", dropped); fflush(stderr); }
+        if (dropped) { fprintf(stderr, "RX888 MkII: the computer fell behind: %zu blocks (%llu samples) were dropped (a lower ADC clock helps)\n", dropped, (unsigned long long)droppedSamples_.load()); fflush(stderr); }
         if (startFailed) { fprintf(stderr, "RX888 MkII: the radio did not take the start command\n"); fflush(stderr); }
         else if (run_) { fprintf(stderr, "RX888 MkII: the stream ended (%s)\n", r ? usbErrorName(r) : "stopped"); fflush(stderr); }
     }
     void interrupt() override { if (link_) link_->interrupt(); }
+
+public:
+    // the status line: samples lost because the computer (or a USB 2 link) could not keep up
+    std::string statusNote() const override {
+        const unsigned long long n = droppedSamples_.load();
+        std::string t;
+        if (n) t = "RX888: " + std::to_string(n) + " samples dropped (computer behind; try a lower ADC clock)";
+        if (usb2_) t += std::string(t.empty() ? "" : "; ") + "RX888 on USB 2: needs USB 3";
+        return t;
+    }
 
 private:
     struct Plan {
@@ -649,20 +681,8 @@ private:
     };
     Plan plan(const TuneSettings& s) const {
         Plan p;
-        const double want = std::clamp(s.sampleRate > 0 ? s.sampleRate : 8e6, kMinOutHz, kMaxOutHz);
-        const std::string mode = radioOption(s, "adc", "auto");
-        double adc;
-        if (mode == "exact") {
-            int d = std::max(2, (int)std::ceil(kAdcLowHz / want * (1 - 1e-9)));   // (64 MHz / 9.142857 MHz is 7 and a bit of rounding)
-            while (want * d > kAdcMaxHz && d > 2) d--;
-            p.decim = std::min(d, kMaxDecim);
-            adc = want * p.decim;
-        } else {
-            adc = mode == "64" ? kAdcLowHz : mode == "128" ? kAdcHighHz : (want <= 32e6 * 1.001 ? kAdcLowHz : kAdcHighHz);
-            p.decim = (int)std::clamp(std::floor(adc / want * 1.001), 2.0, (double)kMaxDecim);
-        }
-        p.adc = (uint32_t)std::lround(std::min(adc, kAdcMaxHz));
-        p.outHz = (double)p.adc / p.decim;
+        const Rx888RatePlan r = rx888RatePlan(s.sampleRate, radioOption(s, "adc", "auto"));
+        p.adc = r.adcHz; p.decim = r.decim; p.outHz = r.outHz;
         const std::string in = radioOption(s, "input", "auto");
         p.vhf = in == "vhf" || (in == "auto" && s.centerHz >= p.adc / 2.0);
         return p;
@@ -866,6 +886,11 @@ private:
             rate_ = p.outHz;
             requested_ = s.sampleRate;
             checkRate(s.sampleRate, err);
+            if (p.adc > kRx888AdcRatedHz * 1.0001)
+                addNote(err, "RX888 MkII: an ADC clock of " + mhzText(p.adc) + " is above the converter's rating of 130 Msps (overclocking): it may not work on every board");
+            if (p.decim == 1)
+                addNote(err, "RX888 MkII: " + mText(p.outHz) + " Msps is the ADC clock itself (no decimation): the HF input still covers only 0 to " +
+                             mhzText(p.adc / 2.0) + " (half the clock); the rest of the span is its mirror image");
         }
         if (vhf_ != (p.vhf ? 1 : 0) && !switchInput(s, p.vhf, err)) return false;
         const bool vhf = vhf_ == 1;
@@ -885,6 +910,9 @@ private:
                 if (!setU64(kTunerTune, hz)) { err = "RX888 MkII: the tuner was not told " + mhzText(f) + " (USB transfer failed)"; return false; }
                 tuneHz_ = hz;
             }
+            if (!live && rate_ > 32e6 * 1.001)   // (only the wide rates: a TV channel at 18 or 20 Msps fits)
+                addNote(err, "RX888 MkII: on the VHF input the R828D tuner passes only about " + mText(kVhfIfBwHz) + " MHz around its IF, whatever the sample rate (" +
+                             mText(rate_) + " Msps here); the rest of the span is empty");
             if (f < 24e6 || f > kVhfMaxHz)
                 addNote(err, "the VHF input (R828D tuner) of this RX888 MkII is specified for 24 MHz to 1750 MHz; the driver may not reach " + mhzText(f) + " or the signal may be weak or absent");
         } else if (f < kHfMinHz || f > adc_ / 2.0) {
@@ -926,6 +954,8 @@ private:
     std::mutex ddcMu_;               // the conversion state below: the stream against a retune
     RealDdc ddc_;
     bool vhfSpectrum_ = false, rand_ = false;
+    std::atomic<bool> usb2_{false};
+    std::atomic<unsigned long long> droppedSamples_{0};
 };
 
 void listRx888(std::vector<DeviceInfo>& out) {
@@ -947,13 +977,55 @@ void listRx888(std::vector<DeviceInfo>& out) {
 #ifdef _WIN32
         d.name += " — Zadig WinUSB 00F3+00F1, replug USB";
 #endif
-        d.minRateHz = kMinOutHz; d.maxRateHz = kMaxOutHz;   // any rate in between: the clock is divided by a whole number, never below what is asked
+        d.minRateHz = kRx888MinOutHz; d.maxRateHz = kRx888MaxOutHz;   // any rate in between (and custom ones above, up to the 140 MHz clock): the clock is divided by a whole number, never below what is asked
         d.gainMinDb = 0; d.gainMaxDb = kRx888GainMaxDb;
         d.minFreqHz = kHfMinHz; d.maxFreqHz = kVhfMaxHz;
         d.hasBiasTee = true;
         d.settings = rx888Settings();
         out.push_back(d);
     }
+}
+
+Rx888RatePlan rx888RatePlan(double wantHz, const std::string& mode) {
+    Rx888RatePlan p;
+    const double want = std::max(wantHz > 0 ? wantHz : 8e6, kRx888MinOutHz);   // (no upper clamp: above what the clock gives, checkRate says so)
+    double adc;
+    if (mode == "exact") {
+        int d = std::max(1, (int)std::ceil(kAdcLowHz / want * (1 - 1e-9)));   // (64 MHz / 9.142857 MHz is 7 and a bit of rounding)
+        while (want * d > kRx888AdcMaxHz && d > 1) d--;
+        p.decim = std::min(d, kMaxDecim);
+        adc = want * p.decim;
+    } else if (mode == "64" || mode == "128") {
+        adc = mode == "64" ? kAdcLowHz : kAdcHighHz;
+        p.decim = (int)std::clamp(std::floor(adc / want * 1.001), 1.0, (double)kMaxDecim);
+    } else if (want <= 32e6 * 1.001) {
+        adc = kAdcLowHz;
+        p.decim = (int)std::clamp(std::floor(adc / want * 1.001), 2.0, (double)kMaxDecim);
+    } else if (want <= 64e6 * 1.001) {
+        adc = kAdcHighHz;
+        p.decim = (int)std::clamp(std::floor(adc / want * 1.001), 2.0, (double)kMaxDecim);
+    } else if (want <= kRx888AdcRatedHz / 2) {   // 64 to 65 Msps: twice the rate, decimation 2 (the clock up to its rating)
+        adc = want * 2;
+        p.decim = 2;
+    } else if (want <= kAdcHighHz) {   // no decimation: the usual 128 MHz clock gives the most unique spectrum (64 MHz)
+        adc = kAdcHighHz;
+        p.decim = 1;
+    } else {                           // 128 to 140: the clock is the rate (above 130 is overclocking)
+        adc = want;
+        p.decim = 1;
+    }
+    p.adcHz = (uint32_t)std::lround(std::min(adc, kRx888AdcMaxHz));
+    p.outHz = (double)p.adcHz / p.decim;
+    return p;
+}
+
+Rx888TransferPlan rx888TransferPlan(double adcHz) {
+    Rx888TransferPlan t;
+    t.bytes = kTransferBytes;
+    const double bytesPerSec = std::max(adcHz, 1e6) * 2;   // 16-bit real samples
+    t.queued = (int)std::clamp(std::ceil(bytesPerSec * 0.032 / (double)t.bytes), 32.0, 128.0);
+    t.maxBlocks = (size_t)std::max(256.0, std::ceil(bytesPerSec * 0.25 / (double)t.bytes));
+    return t;
 }
 
 std::unique_ptr<IqSource> makeRx888(const DeviceInfo& d) { return std::make_unique<Rx888Source>(d.nativeArgs, d.serial); }

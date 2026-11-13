@@ -21,6 +21,13 @@ public:
     int decim() const { return D_; }
     void design(int decim) {
         D_ = std::max(1, decim);
+        if (D_ == 1) {   // no decimation (RX888 above half its clock): a plain mixer, one tap, the whole real band with its mirror image
+            N_ = 1;
+            h_.assign(1, 1.0);
+            in_.clear();
+            ph_ = {1, 0};
+            return;
+        }
         N_ = 16 * D_;
         h_.assign((size_t)N_, 0.0);
         const double beta = 7.5, cut = 0.5 / D_, mid = (N_ - 1) / 2.0, i0b = besselI0(beta);
@@ -44,6 +51,9 @@ public:
             gi_[(size_t)k] = (float)(-2 * gain * h_[(size_t)k] * std::sin(a));
         }
         step_ = std::polar(1.0, -std::fmod(w * D_, 2 * M_PI));
+        mixGain_ = (float)(2 * gain);
+        w_ = w;
+        stepBlock_ = std::polar(1.0, -std::fmod(w * (double)kMixBlock, 2 * M_PI));
     }
     // x: n samples, one every `stride` floats; the output is appended to out
     void process(const float* x, size_t n, size_t stride, std::vector<cf32>& out) {
@@ -55,6 +65,7 @@ public:
     // 16-bit samples as they come from a converter (RX888): the float values are the integers, so tune() gets gain / 32768 for a full scale of 1.
     // derand: the converter's output randomiser is on (LSB set: every other bit is inverted), undone here.
     void processS16(const int16_t* x, size_t n, bool derand, std::vector<cf32>& out) {
+        if (D_ == 1) { mixS16(x, n, derand, out); return; }
         const size_t have = in_.size();
         in_.resize(have + n);
         float* d = in_.data() + have;
@@ -64,6 +75,30 @@ public:
     }
 
 private:
+    // D = 1: no filter, y[n] = 2 gain x[n] exp(-jwn). The phasor runs in float within blocks of kMixBlock samples and is re-anchored from a
+    // double one at each block start, so its error does not grow (the RX888 at 128 Msps spends most of its time here).
+    static constexpr size_t kMixBlock = 1024;
+    void mixS16(const int16_t* x, size_t n, bool derand, std::vector<cf32>& out) {
+        const size_t at = out.size();
+        out.resize(at + n);
+        cf32* o = out.data() + at;
+        const float sr = (float)step_.real(), si = (float)step_.imag(), g = mixGain_;
+        for (size_t i = 0; i < n;) {
+            const size_t len = std::min(kMixBlock, n - i);
+            float pr = (float)ph_.real(), pi = (float)ph_.imag();
+            for (size_t k = 0; k < len; k++) {
+                const int16_t v = x[i + k];
+                const float s = g * (float)(derand && (v & 1) ? (int16_t)(v ^ -2) : v);
+                o[i + k] = cf32(s * pr, s * pi);
+                const float nr = pr * sr - pi * si;
+                pi = pr * si + pi * sr;
+                pr = nr;
+            }
+            ph_ *= len == kMixBlock ? stepBlock_ : std::polar(1.0, -std::fmod(w_ * (double)len, 2 * M_PI));
+            ph_ /= std::abs(ph_);
+            i += len;
+        }
+    }
     void filter(std::vector<cf32>& out) {
         if (in_.size() < (size_t)N_) return;
         const size_t m = (in_.size() - (size_t)N_) / (size_t)D_ + 1;
@@ -84,7 +119,9 @@ private:
     int D_ = 1, N_ = 16;
     std::vector<double> h_;
     std::vector<float> gr_, gi_, in_, yr_, yi_;
-    std::complex<double> ph_{1, 0}, step_{1, 0};
+    std::complex<double> ph_{1, 0}, step_{1, 0}, stepBlock_{1, 0};
+    double w_ = 0;
+    float mixGain_ = 2;
 };
 
 } // namespace native

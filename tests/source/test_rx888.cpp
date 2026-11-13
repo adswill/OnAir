@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -58,6 +59,8 @@ struct FakeUsb : Rx888Usb {
     std::atomic<double> toneHz{7.2e6};
     std::atomic<uint32_t> adc{0}, gpio{0};
     int blockSamples = 65536;
+    std::atomic<size_t> lastBytes{0};
+    std::atomic<int> lastQueued{0};
 
     std::vector<Rx888UsbDevice> list() override {
         std::lock_guard<std::mutex> g(mu);
@@ -80,7 +83,7 @@ struct FakeUsb : Rx888Usb {
         std::lock_guard<std::mutex> g(mu);
         devs.clear(); log.clear(); ram.clear(); entry = 0; jumps = 0; opens = 0; lists = 0; gone = false; adc = 0; gpio = 0; toneHz = 7.2e6;
         lastOpenBus = lastOpenAddr = 0; muteAfterJump = muteLeft = 0; nameErrorAfterJump = nameErrorsAfterJump = 0; dropOnJump = false;
-        standbyPipeLeft = 0; standbyPipeAlways = false; standbyAttempts = 0;
+        standbyPipeLeft = 0; standbyPipeAlways = false; standbyAttempts = 0; lastBytes = 0; lastQueued = 0;
     }
     Dev* find(int bus, int addr) { for (auto& d : devs) if (d.bus == bus && d.addr == addr) return &d; return nullptr; }
     size_t count(uint8_t req) { std::lock_guard<std::mutex> g(mu); size_t n = 0; for (const auto& e : log) n += e.req == req; return n; }
@@ -137,7 +140,7 @@ struct FakeLink : Rx888Link {
     void interrupt() override {}
     int stream(size_t bytes, int queued, const std::function<void(const uint8_t*, size_t)>& onData, const std::function<bool()>& keepGoing,
                const std::function<void()>& onStarted) override {
-        (void)queued;
+        f_->lastBytes = bytes; f_->lastQueued = queued;
         { std::lock_guard<std::mutex> g(f_->mu); f_->log.push_back(Ev{false, kMarkQueued, 0, 0, {}}); }
         onStarted();
         std::vector<int16_t> blk(bytes / 2);
@@ -287,7 +290,7 @@ static void discoveryChecks() {
     CHECK(d.board == "rx888" && d.kind == DeviceInfo::Native, "the RX888 is not listed (%s)", all.c_str());
     CHECK(d.serial == "0123456789ABCDEF" && d.nativeArgs == "1:5", "serial '%s' args '%s'", d.serial.c_str(), d.nativeArgs.c_str());
     CHECK(d.name.find("RX888 MkII") == 0 && d.name.find("89ABCDEF") != std::string::npos, "name '%s'", d.name.c_str());
-    CHECK(d.minRateHz == 0.25e6 && d.maxRateHz == 64e6 && d.rateRanges.empty(), "rates %g .. %g", d.minRateHz, d.maxRateHz);
+    CHECK(d.minRateHz == 0.25e6 && d.maxRateHz == 130e6 && d.rateRanges.empty(), "rates %g .. %g (want 0.25 .. 130 Msps: the rated ADC clock)", d.minRateHz, d.maxRateHz);
     CHECK(d.gainMaxDb == kRx888GainMaxDb && d.hasBiasTee && d.minFreqHz == 10e3 && d.maxFreqHz == 1.75e9, "gain, bias tee and tuning range");
     std::set<std::string> keys;
     for (const auto& s : d.settings) keys.insert(s.key);
@@ -452,14 +455,18 @@ static void refusalChecks() {
     TuneSettings s;
     s.centerHz = 7.0e6; s.sampleRate = 2e6;
     IqRing ring(1 << 20);
-    {   // USB 2
+    {   // USB 2: a warning, not a refusal (4.1): the radio opens and streams, the message and the status line say what is wrong
         fake.reset();
         addApp();
         fake.devs[0].super = false;
         auto src = makeNativeSource(findRx888());
         std::string err;
-        CHECK(!src->start(s, ring, err) && err.find("on a USB 2 connection") != std::string::npos, "USB 2: %s", err.c_str());
-        CHECK(fake.opens == 1, "a final error was retried (%d opens)", fake.opens);
+        CHECK(src->start(s, ring, err) && err.find("on a USB 2 connection") != std::string::npos && err.find("USB 3") != std::string::npos, "USB 2: %s", err.c_str());
+        CHECK(fake.opens == 1, "USB 2: %d opens (want 1)", fake.opens);
+        CHECK(collect(ring, 10000, 3000).size() >= 10000, "USB 2: no samples");
+        CHECK(src->statusNote().find("USB 2") != std::string::npos, "USB 2 status note: '%s'", src->statusNote().c_str());
+        src->stop();
+        drainRing(ring);
     }
     {   // another SDDC board (model 3 = RX888 first edition)
         fake.reset();
@@ -590,6 +597,20 @@ static void rateChecks() {
         {2.048e6, "exact", 65536000, 2.048e6},                 // the clock follows the rate: 32 x 2.048
         {9142857.142857, "exact", 64000000, 64e6 / 7},         // rounds to the nearest hertz of the clock: 7 x 9.142857
         {60e6, "auto", 128000000, 64e6},                       // D = 2
+        // 4.1: above 64 Msps (no cap at 64 any more)
+        {64.5e6, "auto", 129000000, 64.5e6},                   // twice the rate, D = 2
+        {65e6, "auto", 130000000, 65e6},                       // the rated clock, D = 2: 0 to 65 MHz of HF in one span
+        {100e6, "auto", 128000000, 128e6},                     // no decimation at the usual 128 MHz clock
+        {120e6, "auto", 128000000, 128e6},
+        {128e6, "auto", 128000000, 128e6},
+        {130e6, "auto", 130000000, 130e6},                     // the clock follows the rate above 128
+        {135e6, "auto", 135000000, 135e6},                     // overclocking (note), not refused
+        {140e6, "auto", 140000000, 140e6},                     // ExtIO_sddc's MAX_ADC_FREQ
+        {40e6, "64", 64000000, 64e6},                          // the fixed 64 clock: D = 1 rather than an output below the rate asked
+        {100e6, "128", 128000000, 128e6},
+        {100e6, "exact", 100000000, 100e6},                    // the clock is the rate
+        {120e6, "exact", 120000000, 120e6},
+        {50e6, "exact", 100000000, 50e6},                      // D = 2
     };
     for (const auto& c : cases) {
         fake.reset();
@@ -714,10 +735,134 @@ static void reconnectChecks() {
     src->stop();
 }
 
+// the rate plan without a radio: every rate from 0.25 to 140 Msps in every ADC mode
+static void ratePlanChecks() {
+    printf("rate plan (4.1):\n");
+    const Rx888RatePlan def = rx888RatePlan(0, "auto");
+    CHECK(def.adcHz == 64000000 && def.decim == 8 && def.outHz == 8e6, "the default (no rate): ADC %u D %d out %g (want 64 MHz / 8, unchanged)", def.adcHz, def.decim, def.outHz);
+    int bad = 0, badUnique = 0, badClock = 0;
+    for (const char* mode : {"auto", "64", "128", "exact"}) {
+        for (double want = 0.25e6; want <= 140e6 + 1; want *= 1.013) {
+            const Rx888RatePlan p = rx888RatePlan(want, mode);
+            const bool fixedClock = !strcmp(mode, "64") || !strcmp(mode, "128");
+            const double clock = !strcmp(mode, "64") ? 64e6 : 128e6;
+            // never below what is asked for (the fixed clocks cannot go above themselves), never past 140 MHz, out = clock / D
+            const bool ok = p.decim >= 1 && p.adcHz <= 140000000 && std::fabs(p.outHz - (double)p.adcHz / p.decim) < 1e-6 &&
+                            (fixedClock && want > clock ? p.outHz == clock : p.outHz >= want * 0.999 - 1);
+            if (!ok) { if (bad < 5) printf("  plan %s %.4g Msps: ADC %u D %d out %.6g\n", mode, want / 1e6, p.adcHz, p.decim, p.outHz / 1e6); bad++; }
+            // auto keeps the whole output unique (D >= 2) as long as the rated clock allows it: up to 65 Msps
+            if (!strcmp(mode, "auto") && want <= 65e6 && p.decim < 2) badUnique++;
+            if (!strcmp(mode, "auto") && want <= 32e6 && p.adcHz != 64000000) badClock++;   // (the default clock below 32 Msps is unchanged)
+        }
+    }
+    CHECK(bad == 0, "%d rate plans below the rate asked for, past 140 MHz or inconsistent", bad);
+    CHECK(badUnique == 0, "%d auto plans up to 65 Msps without decimation", badUnique);
+    CHECK(badClock == 0, "%d auto plans up to 32 Msps off the 64 MHz clock", badClock);
+    // above the clock the firmware takes: the most it gives (140), not a refusal; the start says the rate is lower
+    const Rx888RatePlan hi = rx888RatePlan(200e6, "auto");
+    CHECK(hi.adcHz == 140000000 && hi.decim == 1, "200 Msps asked: ADC %u D %d (want 140 MHz, D 1)", hi.adcHz, hi.decim);
+    // the USB transfers: 128 KiB each (SDDC), >= 30 ms in flight, ~250 ms of queue to the conversion thread
+    const Rx888TransferPlan t64 = rx888TransferPlan(64e6), t128 = rx888TransferPlan(128e6), t130 = rx888TransferPlan(130e6);
+    CHECK(t64.bytes == 131072 && t64.queued == 32 && t64.maxBlocks == 256, "64 MHz: %zu B x %d, queue %zu (want 131072 x 32, 256: as before)", t64.bytes, t64.queued, t64.maxBlocks);
+    CHECK(t128.queued == 63 && t128.maxBlocks == 489, "128 MHz: %d in flight, queue %zu (want 63, 489)", t128.queued, t128.maxBlocks);
+    CHECK(t130.queued == 64 && t130.maxBlocks == 496, "130 MHz: %d in flight, queue %zu (want 64, 496)", t130.queued, t130.maxBlocks);
+    int badXfer = 0;
+    for (double adc = 50e6; adc <= 140e6; adc += 1e6) {
+        const Rx888TransferPlan t = rx888TransferPlan(adc);
+        const double inflightS = (double)t.queued * (double)t.bytes / (adc * 2), queueS = (double)t.maxBlocks * (double)t.bytes / (adc * 2);
+        if (inflightS < 0.030 || queueS < 0.25 || t.queued > 128 || t.bytes % 1024) badXfer++;
+    }
+    CHECK(badXfer == 0, "%d ADC clocks with less than 30 ms in flight or 250 ms of queue", badXfer);
+}
+
+// 4.1: the wide rates on the fake radio: the clock, the transfers handed to USB, the notes, the tone through D = 1
+static void wideRateChecks() {
+    printf("wide rates (4.1):\n");
+    IqRing ring(1 << 23);
+    std::string err;
+    {   // 128 Msps on HF: no decimation; the 7.2 MHz tone comes out at +0.2 MHz with its full level, the mirror image at -14.2 MHz
+        fake.reset();
+        addApp();
+        auto src = makeNativeSource(findRx888());
+        TuneSettings s;
+        s.centerHz = 7.0e6; s.sampleRate = 128e6;
+        CHECK(src->start(s, ring, err), "start at 128 Msps: %s", err.c_str());
+        CHECK(fake.adc == 128000000 && src->sampleRate() == 128e6, "128 Msps: ADC %u rate %g", fake.adc.load(), src->sampleRate());
+        CHECK(err.find("no decimation") != std::string::npos && err.find("64 MHz") != std::string::npos, "no note on the mirror image at D = 1: '%s'", err.c_str());
+        const Rx888TransferPlan tp = rx888TransferPlan(128e6);
+        sleepMs(200);
+        CHECK(fake.lastBytes == tp.bytes && fake.lastQueued == tp.queued, "USB at 128 MHz: %zu B x %d (want %zu x %d)", fake.lastBytes.load(), fake.lastQueued.load(), tp.bytes, tp.queued);
+        const std::vector<cf32> y = settled(ring, 128e6, 60000);
+        CHECK(y.size() >= 60000, "128 Msps: %zu samples", y.size());
+        const double a = toneLevel(y, 128e6, 0.2e6, 100), m = toneLevel(y, 128e6, -14.2e6, 100), off = toneLevel(y, 128e6, 3e6, 100);
+        CHECK(std::fabs(a - 0.5) < 0.05 && std::fabs(m - 0.5) < 0.05 && off < 0.02, "D = 1 tone %.3f, mirror %.3f, elsewhere %.4f (want 0.5, 0.5, ~0)", a, m, off);
+        CHECK(src->statusNote().empty(), "status note with nothing dropped: '%s'", src->statusNote().c_str());
+        src->stop();
+    }
+    {   // 65 Msps: the rated clock with D = 2, centred at a quarter of the clock (32.5 MHz): the span is 0 to 65 MHz of HF. A 20 MHz tone comes
+        // out at -12.5 MHz; its mirror (-52.5 MHz at the input) is outside the filter, so nothing folds onto +12.5 MHz
+        fake.reset();
+        addApp();
+        fake.toneHz = 20e6;
+        auto src = makeNativeSource(findRx888());
+        TuneSettings s;
+        s.centerHz = 32.5e6; s.sampleRate = 65e6;
+        err.clear();
+        CHECK(src->start(s, ring, err), "start at 65 Msps: %s", err.c_str());
+        CHECK(fake.adc == 130000000 && src->sampleRate() == 65e6, "65 Msps: ADC %u rate %g", fake.adc.load(), src->sampleRate());
+        CHECK(err.find("no decimation") == std::string::npos && err.find("overclocking") == std::string::npos, "65 Msps notes: '%s'", err.c_str());
+        const std::vector<cf32> y = settled(ring, 65e6, 60000);
+        const double a = toneLevel(y, 65e6, -12.5e6, 2000), m = toneLevel(y, 65e6, 12.5e6, 2000);
+        CHECK(std::fabs(a - 0.5) < 0.05 && m < 0.01, "65 Msps tone %.3f, mirror %.4f (want 0.5, ~0)", a, m);
+        src->stop();
+    }
+    {   // 135 Msps: overclocked, said so, not refused
+        fake.reset();
+        addApp();
+        auto src = makeNativeSource(findRx888());
+        TuneSettings s;
+        s.centerHz = 7.0e6; s.sampleRate = 135e6;
+        err.clear();
+        CHECK(src->start(s, ring, err) && fake.adc == 135000000 && err.find("overclocking") != std::string::npos, "135 Msps: ADC %u '%s'", fake.adc.load(), err.c_str());
+        sleepMs(200);   // (the stream thread hands its transfers to USB after start returns)
+        CHECK(fake.lastQueued == rx888TransferPlan(135e6).queued, "135 MHz: %d transfers", fake.lastQueued.load());
+        src->stop();
+    }
+    {   // 200 Msps asked: 140 given, said so (no refusal, no silent clamp)
+        fake.reset();
+        addApp();
+        auto src = makeNativeSource(findRx888());
+        TuneSettings s;
+        s.centerHz = 7.0e6; s.sampleRate = 200e6;
+        err.clear();
+        CHECK(src->start(s, ring, err) && fake.adc == 140000000 && src->sampleRate() == 140e6 && err.find("only offers 140.00 Msps") != std::string::npos,
+              "200 Msps: ADC %u rate %g '%s'", fake.adc.load(), src->sampleRate(), err.c_str());
+        src->stop();
+    }
+    {   // VHF at 64 Msps: the R828D's IF bandwidth is said
+        fake.reset();
+        addApp();
+        auto src = makeNativeSource(findRx888());
+        TuneSettings s;
+        s.centerHz = 145e6; s.sampleRate = 64e6; s.gainDb = 40;
+        err.clear();
+        CHECK(src->start(s, ring, err) && err.find("R828D tuner passes only about 8 MHz") != std::string::npos, "VHF 64 Msps note: '%s'", err.c_str());
+        src->stop();
+        // and not at a TV channel's rate
+        fake.reset();
+        addApp();
+        src = makeNativeSource(findRx888());
+        s.sampleRate = 18285714.2857;
+        err.clear();
+        CHECK(src->start(s, ring, err) && err.find("R828D tuner passes only") == std::string::npos, "VHF 18.3 Msps got the IF note: '%s'", err.c_str());
+        src->stop();
+    }
+}
+
 static void benchmark() {
     printf("cost of the real-to-complex conversion (RealDdc, this computer, one thread; not a pass/fail check):\n");
     struct B { double fs; int decim; };
-    for (const B b : {B{64e6, 32}, B{64e6, 3}, B{128e6, 2}, B{128e6, 16}}) {
+    for (const B b : {B{64e6, 32}, B{64e6, 3}, B{128e6, 2}, B{128e6, 16}, B{130e6, 2}, B{128e6, 1}, B{130e6, 1}}) {
         RealDdc ddc;
         ddc.design(b.decim);
         ddc.tune(b.fs, 7e6, 1.0 / 32768);
@@ -740,6 +885,8 @@ int main() {
     refusalChecks();
     streamChecks();
     rateChecks();
+    ratePlanChecks();
+    wideRateChecks();
     tunerStandbyUsbChecks();
     reconnectChecks();
     benchmark();
