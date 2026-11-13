@@ -361,6 +361,14 @@ struct CubesatReceiver::Impl {
         for (auto it = fails.begin(); it != fails.end();) { if (std::llabs(it->t - tt) < (int64_t)(1.2 * kMidRate)) it = fails.erase(it); else ++it; }
         if (const uint32_t m = framingMask.load(std::memory_order_relaxed); m && !((m >> f.framing) & 1u)) return;   // a view onto one framing
         if (dup(f.data, tt)) return;
+        // 4.1: a Mobitex frame is reported with the blocks that passed their CRC, so two demodulators that lost different blocks of one frame gave
+        // two different frames (the hash differs). The same frame from another path within the duplicate window: keep the copy with more data
+        if (f.framing == Mobitex)
+            for (CubeFrame& o : frames) {
+                if (o.framing != Mobitex || std::fabs(o.timeSec - (double)tt / kMidRate) > (double)kDupWindow / kMidRate) continue;
+                if (f.data.size() > o.data.size()) { o.data = f.data; o.payload = f.payload; o.type = f.type; if (!f.from.empty()) o.from = f.from; }
+                return;
+            }
         f.timeSec = (double)tt / kMidRate;
         f.wallTime = wallClock ? (int64_t)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() : 0;
         f.snrDb = (float)fe.snrEma;

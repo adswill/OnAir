@@ -66,7 +66,7 @@ int main() {
         }
     }
     // 4.1 sensitivity: SNR in the 25 kHz channel (the generator's definition), 2 Msps, carrier offsets of 0 and +-2.5 kHz, a +50 ppm sample
-    // clock on the offset runs, two noise seeds. Before 4.1 about 24 dB here (the QA sweep's 20 dB in its 68 kHz band); 4.1: 20 to 22 dB.
+    // clock on the offset runs, two noise seeds. Before 4.1 about 24 dB here (the QA sweep's 20 dB in its 68 kHz band); 4.1: 20 to 22 dB, then 18 to 20 dB.
     // Then noise alone (10 s, two levels) must give no frame at all.
     {
         auto run = [](double snr, double cfo, int seed, double secs) {
@@ -103,7 +103,7 @@ int main() {
                 if (ok == 2) thr = snrs[k]; else break;
             }
             printf("  vdl4 threshold (25 kHz SNR), cfo %+.0f: %.0f dB\n", cfo, thr);
-            CHECK(thr <= 22, "cfo %+.0f: needs %.0f dB in 25 kHz (4.1 limit 22; 24 before)", cfo, thr);
+            CHECK(thr <= 20, "cfo %+.0f: needs %.0f dB in 25 kHz (4.1 limit 20: 18 to 20 with the differential detector; 20 to 22 before it, 24 before 4.1)", cfo, thr);
         }
     }
     {

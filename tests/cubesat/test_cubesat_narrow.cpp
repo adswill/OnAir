@@ -161,6 +161,17 @@ int main() {
         printf("%-22s 6 dB, +1.4 kHz: %5.1f %%\n", framingName(Ngham), pct(r));
         if (pct(r) < 75) { printf("FAIL: NGHam on the narrow path\n"); fails++; }
     }
+    // 4.1 differential detectors (calibration, 4 runs of 8 cycles; 4.0 without them in brackets): NGHam 4 dB +1.4 kHz 62 % (0), Mobitex 6 dB
+    // 94 % (38), AX100 Mode 5 6 dB 100 % (50), CCSDS RS 8 dB 88 % (34), USP 4 dB 53 % (3), AX.25 G3RUH 10 dB 91 % (44)
+    {
+        struct Lim { int fr; double cn; int sc; double minPct; };
+        const Lim lims[] = {{Ngham, 4, 1, 35}, {Mobitex, 6, 0, 70}, {Ax100Mode5, 6, 0, 80}, {CcsdsRs, 8, 0, 70}, {Usp, 4, 0, 25}, {Ax25G3ruh, 10, 0, 70}};
+        for (const Lim& l : lims) {
+            const Res r = runMany(l.fr + 1, l.cn, kScen[l.sc], 6, 2, false);
+            printf("%-22s %.0f dB, %s: %5.1f %% (wrong %.0f)\n", framingName(l.fr), l.cn, kScen[l.sc].name, pct(r), r.wrong);
+            if (pct(r) < l.minPct) { printf("FAIL: %s at %.0f dB under %.0f %%\n", framingName(l.fr), l.cn, l.minPct); fails++; }
+        }
+    }
     {   // U482C with a carrier error the AFC leaves (3.9: no frame even at 14 dB; the DC block of the audio FSK path)
         const Res r = runMany(U482c + 1, 12, kScen[2], 6, 2, false);
         printf("%-22s 12 dB, -1.4 kHz: %5.1f %%\n", framingName(U482c), pct(r));
