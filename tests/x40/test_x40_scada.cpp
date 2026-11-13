@@ -278,6 +278,14 @@ static Score airCase(const char* label, const Phy& p, Air a, Framing fm, const s
     Run r = runAir(x, a.fs);
     Score s = score(r, frames);
     if (print) printf("  %-44s %2d/%2d frames, %d wrong, %d unknown, %d CRC failed | %s\n", label, s.got, s.sent, s.wrong, s.unknown, s.crcBad, r.phy.c_str());
+    if (print && s.got < s.sent) {   // which frames were lost, and what came instead
+        for (size_t i = 0; i < frames.size(); i++) {
+            bool hit = false;
+            for (auto& m : r.msgs) if (m.crc == 1 && m.raw == frames[i]) hit = true;
+            if (!hit) printf("    lost frame %zu (%zu bytes)\n", i, frames[i].size());
+        }
+        for (auto& m : r.msgs) if (m.crc != 1) printf("    [%s] %.3f s %s: %s %s\n", m.link.c_str(), m.timeSec, m.func.c_str(), m.summary.c_str(), sc::hex(m.raw.data(), m.raw.size(), 40).c_str());
+    }
     if (keep) *keep = std::move(r);
     return s;
 }
