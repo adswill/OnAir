@@ -124,9 +124,9 @@ int main() {
     // ---- VHF wireless microphones (issue #487): three narrow FM carriers on 25 kHz channels in 173.8 - 175.0 MHz, two of them 50 kHz apart, and an AM one; both regions
     for (int rg = 0; rg < 2; rg++) {
         GenScene sc; sc.rate = 4e6; sc.centreMhz = 174.4; sc.durSec = 3.0; sc.noiseSigma = 0.01;
-        auto wm = [&](double mhz, double amp, double dev) { GenTx t; t.mhz = mhz; t.mod = Demod::Wfm; t.amp = amp; t.speech = false; t.devScale = dev; t.startSec = 0.2; t.durSec = 2.6; return t; };
+        auto wm = [&](double mhz, double amp, double dev) { GenTx t; t.mhz = mhz; t.mod = Demod::Nfm; t.amp = amp; t.speech = false; t.devScale = dev; t.startSec = 0.2; t.durSec = 2.6; return t; };
         GenTx am; am.mhz = 174.95; am.mod = Demod::Am; am.amp = 0.1; am.startSec = 0.2; am.durSec = 2.6;
-        sc.tx = {wm(173.850, 0.1, 1.0), wm(174.250, 0.1, 0.8), wm(174.300, 0.1, 0.6), am};   // same deviation scales as the UHF scene: the tone is 0.3 of full scale, so these read about 12, 10 and 7 kHz (the FM test needs more than 3 kHz)
+        sc.tx = {wm(173.850, 0.1, 2.4), wm(174.250, 0.1, 2.0), wm(174.300, 0.1, 1.6), am};   // Nfm: devScale x 5 kHz, so about +-12, 10 and 8 kHz as a real VHF mic (the Wfm generator is +-40 kHz, which is a UHF mic: it filled four 25 kHz cells and the finder rightly listed pieces)
         Run r = run(Service::Mic, rg, sc, [](ChanVoiceReceiver& rx) { rx.setCarrierLimit(8); });
         for (auto& m : r.tel.mics) printf("VHF region %d mic %.4f MHz width %.0f kHz snr %.1f dev %.2f kHz fm %d band %s\n", rg, m.mhz, m.widthKhz, m.snrDb, m.devKhz, (int)m.fmLike, m.band.c_str());
         int found = 0, fm = 0;
