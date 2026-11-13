@@ -150,7 +150,7 @@ static std::vector<Bytes> dnpTraffic() {
     add(dnpApp(true, 10, 1, {0xD3, 0x00}, 4));
     Bytes big{0xC4, 0x01, 30, 5, 0x06};                        // a large response over two transport segments
     add(dnpApp(true, 10, 1, big, 5));
-    Bytes br{0xC4, 0x81, 0x00, 0x00, 30, 5, 0x00, 0, 60};
+    Bytes br{0xC4, 0x81, 0x00, 0x00, 30, 5, 0x01, 100, 0, 160, 0};   // AI 100 - 160 (2-octet start and stop)
     for (int i = 0; i <= 60; i++) { br.push_back(0x01); float f = 0.5f * i; uint32_t u; std::memcpy(&u, &f, 4); br = cat(br, le32(u)); }
     add(dnpApp(false, 1, 10, br, 4));
     add(dnpApp(true, 10, 1, {0xC5, 0x20, 120, 1, 0x5B, 1, 8, 0, 0xDE, 0xAD, 0xBE, 0xEF, 1, 2, 3, 4}, 6));   // Secure Authentication
@@ -180,8 +180,8 @@ static void dnpTracker() {
     CHECK(ms[7].pair == ms[6].id && hasText(ms[7].summary, "confirm requested") && point(o, 14, 2) == "4242", "event response: %s", ms[7].summary.c_str());
     CHECK(ms[8].func == "confirm" && ms[8].pair == ms[7].id, "application confirm paired");
     CHECK(ms[9].func == "unsolicited response" && ms[9].dir == 3 && ms[10].pair == ms[9].id, "unsolicited and its confirm");
-    CHECK(ms[12].func == "transport segment" && ms[13].func == "response" && ms[13].pair == ms[11].id && point(o, 14, 60) == "30", "two segments: %s / %s, AI60 %s",
-          ms[12].summary.c_str(), ms[13].summary.c_str(), point(o, 14, 60).c_str());
+    CHECK(ms[12].func == "transport segment" && ms[13].func == "response" && ms[13].pair == ms[11].id && point(o, 14, 160) == "30", "two segments: %s / %s, AI160 %s",
+          ms[12].summary.c_str(), ms[13].summary.c_str(), point(o, 14, 160).c_str());
     CHECK(ms[14].encrypted && hasText(ms[14].summary, "not decoded"), "Secure Authentication shown, not decoded: %s", ms[14].summary.c_str());
     CHECK(t.counts.encrypted == 1, "encrypted count");
     // a damaged data block
@@ -202,7 +202,7 @@ static void dnpTracker() {
         if (c == '"') inStr = true; else if (c == '{' || c == '[') depth++; else if (c == '}' || c == ']') { depth--; minDepth = std::min(minDepth, depth); }
     }
     CHECK(depth == 0 && minDepth == 0 && !inStr && !ctrl, "json is balanced");
-    CHECK(hasText(js, "\"receive_only\":true") && hasText(js, "\"point\":\"AI 60\""), "json content");
+    CHECK(hasText(js, "\"receive_only\":true") && hasText(js, "\"point\":\"AI 160\""), "json content");
 }
 
 // ------------------------------------------------------------------ 2.- 4. through the air
@@ -226,6 +226,7 @@ static Run runAir(const std::vector<cf32>& x, double fs) {
 }
 
 struct Score { int sent = 0, got = 0, wrong = 0, unknown = 0, crcBad = 0; std::string link; };
+static void dumpMsgs(const Run& r) { for (const sc::Message& m : r.msgs) printf("    [%s] %s > %s %s: %s (%zu bytes)\n", m.link.c_str(), m.from.c_str(), m.to.c_str(), m.func.c_str(), m.summary.c_str(), m.raw.size()); }
 static Score score(const Run& r, const std::vector<Bytes>& sent) {
     Score s; s.sent = (int)sent.size();
     std::vector<bool> used(sent.size(), false);
@@ -395,11 +396,13 @@ static void falseAndOdd() {
         const auto x = render(p, a, {}, 4.0, 0.1);
         Run r = runAir(x, a.fs);
         printf("  noise alone: %zu messages\n", r.msgs.size());
+        dumpMsgs(r);
         CHECK(r.msgs.empty(), "noise alone gave %zu messages", r.msgs.size());
         Air c; c.cn0 = 70; c.continuousCarrier = true;
         auto y = render(p, c, {}, 4.0, 0.1);
         Run r2 = runAir(y, c.fs);
         printf("  idle carrier: %zu messages\n", r2.msgs.size());
+        dumpMsgs(r2);
         CHECK(r2.msgs.empty(), "an idle carrier gave %zu messages", r2.msgs.size());
     }
     {   // unknown framings: async bytes without a Modbus or DNP3 structure, and plain bit-synchronous bursts
@@ -425,6 +428,7 @@ static void falseAndOdd() {
         airCase("Bell 202 8N1 with damaged CRCs", afsk(true), a, F8N1, {bad, dbad}, true, &r);
         int mbBad = 0, dnpBad = 0;
         for (auto& m : r.msgs) { if (m.crc == 0 && m.proto == sc::Modbus) mbBad++; if (m.crc == 0 && m.proto == sc::Dnp3) dnpBad++; }
+        if (mbBad != 1 || dnpBad != 1) dumpMsgs(r);
         CHECK(mbBad == 1 && dnpBad == 1, "CRC failures through the air: Modbus %d, DNP3 %d", mbBad, dnpBad);
     }
     {   // pairing through the air: response time against the generator's timing

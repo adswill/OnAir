@@ -7,6 +7,7 @@
 #include "dect2/x40/scada_proto.h"
 #include "dect2/x40/x40_rx.h"
 #include "dect2/common/diag.h"
+#include <cctype>
 #include <cstdio>
 #include <ctime>
 #include <filesystem>
@@ -55,9 +56,10 @@ std::string clock(int64_t ms) {
     return b;
 }
 
+std::string lower(std::string v) { for (char& ch : v) ch = (char)std::tolower((unsigned char)ch); return v; }
 bool contains(const std::string& hay, const char* needle) {
     if (!needle[0]) return true;
-    return lowerStr(hay).find(lowerStr(needle)) != std::string::npos;
+    return lower(hay).find(lower(needle)) != std::string::npos;
 }
 
 void exportFile(ScadaView& v, bool json) {

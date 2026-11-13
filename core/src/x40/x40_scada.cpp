@@ -36,12 +36,12 @@ constexpr int kGapBits = 28;             // idle mark bits that end a burst (Mod
 constexpr size_t kMaxBurst = 1024;
 constexpr double kDupSec = 0.6;
 
-struct ByteRec { uint8_t b = 0; bool err = false, locked = false; double t = 0; };   // t: the end of its stop bit
+struct ByteRec { uint8_t b = 0; bool err = false, locked = false; double t = 0; int gap = 0; };   // t: the end of its stop bit; gap: idle bits before its start bit   // t: the end of its stop bit
 
 struct Uart {
     int parity = 0;                      // 0 none, 1 even, 2 odd
     bool inv = false;
-    int state = 0, nbit = 0, idle = 0, ones = 0;
+    int state = 0, nbit = 0, idle = 0, ones = 0, gap = 0;
     uint16_t data = 0;
     std::vector<ByteRec> buf;
     void reset() { state = nbit = idle = ones = 0; data = 0; buf.clear(); }
@@ -68,7 +68,11 @@ struct Chain {
     double ph = -0.5, step = 0;
     bool prevSide = false;
     double c = 0, h = 0, evm = 1;
-    double envHi = 0, envLo = 0;         // the eye's envelope at the symbol instants (4-FSK while unlocked: a decision-directed fit can settle on a wrong level with an offset)
+    std::array<float, 24> win{};         // the last symbol values: while unlocked, direct FSK takes its centre and deviation from their extremes
+    int winN = 0, winPos = 0;            // (a decision-directed fit alone can settle on a wrong level with an offset; noise in the gaps would hold a decaying envelope too wide)
+    double crossPh = 0;                  // 4-FSK: the clock phase at the last centre crossing, used once the symbols on both sides are known
+    bool crossPending = false;
+    double goodC = 0, goodH = 0, goodEvm = 1;   // the levels while the eye was clean (what the link line reports)
     bool locked = false;
     uint64_t nSym = 0, nSamp = 0, lockSym = 0;
     int lastSym = 0;
@@ -128,10 +132,11 @@ public:
         Chain& af = chains_[0];
         for (float v : discN_) {
             // carrier offset and FM deviation of the audio modem, measured while it is locked
-            if (af.locked) { afDc_ += 0.0005 * (v - afDc_); }
+            const bool afClean = af.locked && af.evm < 0.3;
+            if (afClean) { afDc_ += 0.0005 * (v - afDc_); }
             const double y = v - dcX_ + 0.995 * dcY_;     // DC block (the carrier offset) before the tone discriminator
             dcX_ = v; dcY_ = y;
-            if (af.locked) afPow_ += 0.0005 * (y * y - afPow_);
+            if (afClean) afPow_ += 0.0005 * (y * y - afPow_);
             const cf32 in((float)y, 0.f);
             audioDec_.process(&in, 1, [&](cf32 a) { audio(a.real()); });
             for (size_t k = 1; k < chains_.size(); k++) if (!chains_[k].wide) push(chains_[k], v);
@@ -179,7 +184,7 @@ private:
         Chain ch;
         ch.kind = kind; ch.wide = wide; ch.rate = rate; ch.sym = sym; ch.bitRate = sym * bps;
         ch.nomH = nomH; ch.hMin = hMin; ch.hMax = hMax;
-        ch.L = std::max(1, (int)std::lround(0.75 * rate / sym));
+        ch.L = std::max(1, (int)std::lround((kind == 2 ? 0.5 : 0.75) * rate / sym));   // 4-FSK: a shorter boxcar, less ISI between its four levels
         ch.step = sym / rate;
         for (int par = 0; par < 3; par++)
             for (int inv = 0; inv < (kind == 0 ? 1 : 2); inv++) { Uart u; u.parity = par == 0 ? 1 : par == 1 ? 2 : 0; u.inv = inv; ch.uart.push_back(u); }   // parity framers first: they win a tie
@@ -190,7 +195,7 @@ private:
     void resetChain(Chain& ch) {
         ch.box.assign((size_t)ch.L, 0.f); ch.bpos = 0; ch.bsum = 0;
         ch.ph = -0.5; ch.prevSide = false;
-        ch.c = 0; ch.h = ch.nomH; ch.evm = 1; ch.envHi = ch.nomH; ch.envLo = -ch.nomH; ch.locked = false; ch.nSym = ch.nSamp = ch.lockSym = 0;
+        ch.c = 0; ch.h = ch.nomH; ch.evm = 1; ch.winN = ch.winPos = 0; ch.crossPending = false; ch.goodC = 0; ch.goodH = ch.nomH; ch.goodEvm = 1; ch.locked = false; ch.nSym = ch.nSamp = ch.lockSym = 0;
         ch.lastSym = 0; ch.haveHi = ch.haveLo = false; ch.steadyHi = ch.steadyLo = 0;
         for (Uart& u : ch.uart) u.reset();
         for (Hdlc& hd : ch.hdlc) hd.reset();
@@ -230,10 +235,11 @@ private:
             if (ch.haveHi && ch.haveLo) s += fmt(", tones %.0f / %.0f Hz", kAfskCentre + ch.steadyLo, kAfskCentre + ch.steadyHi);
             s += fmt(", FM deviation about %.1f kHz, carrier offset %+.0f Hz", std::sqrt(2 * std::max(0.0, afPow_)) / 1000, afDc_);
         } else {
-            const double dev = ch.haveHi && ch.haveLo ? 0.5 * (ch.steadyHi - ch.steadyLo) : ch.h;
-            s += fmt(", deviation %s%.1f kHz, carrier offset %+.0f Hz", ch.kind == 2 ? "(outer) " : "", dev / 1000, ch.c);
+            const double dev = ch.haveHi && ch.haveLo ? 0.5 * (ch.steadyHi - ch.steadyLo) : ch.goodH;
+            const double cen = ch.haveHi && ch.haveLo ? 0.5 * (ch.steadyHi + ch.steadyLo) : ch.goodC;
+            s += fmt(", deviation %s%.1f kHz, carrier offset %+.0f Hz", ch.kind == 2 ? "(outer) " : "", dev / 1000, cen);
         }
-        s += fmt(", eye error %.2f", ch.evm);
+        s += fmt(", eye error %.2f", ch.goodEvm);
         return s;
     }
 
@@ -245,16 +251,23 @@ private:
         if ((ch.nSamp & 0xFFFFF) == 0) { double s = 0; for (float b : ch.box) s += b; ch.bsum = s; }
         const double y = ch.bsum / ch.L;
         const bool side = y > ch.c;
-        if (side != ch.prevSide) ch.ph *= ch.locked ? 0.85 : 0.6;
+        if (side != ch.prevSide) {
+            if (ch.kind == 2) { ch.crossPh = ch.ph; ch.crossPending = true; }
+            else ch.ph *= ch.locked ? 0.85 : 0.6;
+        }
         ch.prevSide = side;
         ch.ph += ch.step;
         if (ch.ph >= 0.5) { ch.ph -= 1.0; symbol(ch, y); }
     }
 
     void symbol(Chain& ch, double y) {
-        ch.envHi += (y > ch.envHi ? 0.3 : 0.02) * (y - ch.envHi);
-        ch.envLo += (y < ch.envLo ? 0.3 : 0.02) * (y - ch.envLo);
-        if (ch.kind == 2 && !ch.locked) { ch.c = 0.5 * (ch.envHi + ch.envLo); ch.h = std::min(ch.hMax, std::max(ch.hMin, 0.5 * (ch.envHi - ch.envLo))); }
+        const int wl = ch.kind == 2 ? 24 : 16;
+        ch.win[(size_t)ch.winPos] = (float)y; ch.winPos = (ch.winPos + 1) % wl; ch.winN = std::min(wl, ch.winN + 1);
+        if (ch.kind != 0 && !ch.locked && ch.winN == wl) {
+            float hi = ch.win[0], lo = ch.win[0];
+            for (int i = 1; i < wl; i++) { hi = std::max(hi, ch.win[(size_t)i]); lo = std::min(lo, ch.win[(size_t)i]); }
+            ch.c = 0.5 * (hi + lo); ch.h = std::min(ch.hMax, std::max(ch.hMin, 0.5 * ((double)hi - lo)));
+        }
         const double u = (y - ch.c) / ch.h;
         int s;
         double ideal;
@@ -268,8 +281,14 @@ private:
         ch.evm += (std::min(2.0, std::fabs(e) / half) - ch.evm) / 32;
         ch.nSym++;
         const int top = ch.kind == 2 ? 3 : 1;
-        if (s == ch.lastSym && s == top) { ch.steadyHi = ch.haveHi ? ch.steadyHi + 0.1 * (y - ch.steadyHi) : y; ch.haveHi = true; }
-        if (s == ch.lastSym && s == -top) { ch.steadyLo = ch.haveLo ? ch.steadyLo + 0.1 * (y - ch.steadyLo) : y; ch.haveLo = true; }
+        const bool clean = ch.locked && ch.evm < 0.3;
+        if (ch.kind == 2 && ch.crossPending) {   // 4-FSK: only a crossing between opposite symbols (+3/-3, +1/-1) sits at the symbol boundary
+            if (s == -ch.lastSym) ch.ph -= (1 - (ch.locked ? 0.85 : 0.6)) * ch.crossPh;
+            ch.crossPending = false;
+        }
+        if (clean) { ch.goodC = ch.c; ch.goodH = ch.h; ch.goodEvm = ch.evm; }
+        if (clean && s == ch.lastSym && s == top) { ch.steadyHi = ch.haveHi ? ch.steadyHi + 0.1 * (y - ch.steadyHi) : y; ch.haveHi = true; }
+        if (clean && s == ch.lastSym && s == -top) { ch.steadyLo = ch.haveLo ? ch.steadyLo + 0.1 * (y - ch.steadyLo) : y; ch.haveLo = true; }
         ch.lastSym = s;
         const double t = ch.t();
         if (!ch.locked && ch.nSym > 32 && ch.evm < 0.42) {
@@ -346,7 +365,7 @@ private:
         case 0: if (b) { u.state = 1; u.idle = 1; } break;
         case 1:
             if (b) { if (++u.idle == kGapBits && !u.buf.empty()) flushUart(ch, u, t); }
-            else { u.state = 2; u.nbit = 0; u.data = 0; u.ones = 0; }
+            else { u.state = 2; u.nbit = 0; u.data = 0; u.ones = 0; u.gap = u.idle; }
             break;
         default: {
             u.nbit++;
@@ -355,7 +374,7 @@ private:
             bool err = !b;
             if (u.parity == 1 && (u.ones & 1)) err = true;
             if (u.parity == 2 && !(u.ones & 1)) err = true;
-            u.buf.push_back(ByteRec{(uint8_t)u.data, err, ch.locked, t});
+            u.buf.push_back(ByteRec{(uint8_t)u.data, err, ch.locked, t, u.gap});
             if (b) { u.state = 1; u.idle = 0; } else u.state = 0;
             if (u.buf.size() >= kMaxBurst) flushUart(ch, u, t);
             break;
@@ -370,7 +389,18 @@ private:
         std::vector<uint8_t> by(u.buf.size());
         for (size_t i = 0; i < by.size(); i++) by[i] = u.buf[i].b;
         size_t used = 0;
-        for (const Found& f : findFrames(by.data(), by.size())) {
+        std::vector<Found> found = findFrames(by.data(), by.size());
+        if (found.empty()) {
+            // no valid frame: look for a damaged one in each stretch between idle gaps of 1.5 characters or more (the radio's tail or the
+            // noise after the carrier would otherwise make the burst longer than the frame)
+            size_t s0 = 0;
+            for (size_t i = 1; i <= by.size(); i++) {
+                if (i < by.size() && u.buf[i].gap < 14) continue;
+                for (Found f : findFrames(by.data() + s0, i - s0)) if (!f.crcOk && f.proto == Modbus) { f.start += s0; found.push_back(f); }
+                s0 = i;
+            }
+        }
+        for (const Found& f : found) {
             size_t errs = 0, lk = 0;
             for (size_t i = f.start; i < f.start + f.len; i++) { errs += u.buf[i].err; lk += u.buf[i].locked; }
             used = f.start + f.len;
