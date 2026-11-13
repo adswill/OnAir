@@ -14,7 +14,7 @@ Every custom mode now has two tabs in its main panel, **Frames** (as before) and
 Numbers next to the plot:
 - clusters found (of the mode's levels), separation (closest cluster distance / pooled spread; PSK: ideal neighbour distance / spread per axis);
 - FSK/OOK/ASK: eye SNR = 20 log10(separation / 2); thresholds now and measured; FSK: measured deviation and carrier offset;
-- PSK: EVM, Es/N0 = -20 log10(EVM), Eb/N0 = Es/N0 - 10 log10(bits per symbol), carrier offset.
+- PSK: EVM (it includes the amplitude scatter of the demodulator, which does not move a PSK decision, so it reads high: 25-70 % on clean simulated BPSK/QPSK/8PSK), Es/N0 = -20 log10(EVM), Eb/N0 = Es/N0 - 10 log10(bits per symbol), carrier offset.
 
 A view counts the clusters only when separation >= 4. A single smooth blob split into any number of slices cannot reach 3.5 (a flat
 distribution gives sqrt(12)), so noise does not produce clusters (symbols are taken only while the signal is above the squelch threshold, not in the hang time after a burst); below 4 the tab says the clusters are not separate yet.

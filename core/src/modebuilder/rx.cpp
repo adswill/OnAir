@@ -216,17 +216,21 @@ struct Receiver::Impl {
                 num += sigZ[k].real() * std::cos(ang) + sigZ[k].imag() * std::sin(ang);
             }
             const double gain = num > 1e-9 ? (double)n / num : 1.0;
-            double e2 = 0;
+            double e2 = 0, p2 = 0;
             for (size_t i = 0; i < n; i++) {
                 const size_t k = (first + i) % kSigCap;
                 const double ang = 2 * kPi * sigLvl[k] / M;
+                const double pe = wrap(std::atan2((double)sigZ[k].imag(), (double)sigZ[k].real()) - ang);
+                p2 += pe * pe;
                 const double dx = gain * sigZ[k].real() - std::cos(ang), dy = gain * sigZ[k].imag() - std::sin(ang);
                 e2 += dx * dx + dy * dy;
             }
             const double evm = std::sqrt(e2 / (double)n);
             v.evmPct = 100 * evm;
-            const double sa = std::max(1e-6, evm / std::sqrt(2.0));
-            v.separation = std::min(99.0, 2 * std::sin(kPi / M) / sa);
+            // the decision is made on the phase: separation = angle between neighbouring points / rms phase error (the amplitude scatter
+            // is in the EVM but does not move a PSK decision)
+            const double sa = std::max(1e-6, std::sqrt(p2 / (double)n));
+            v.separation = std::min(99.0, (2 * kPi / M) / sa);
             v.snrDb = -20 * std::log10(std::max(evm, 1e-6));
             v.hasEbn0 = true;
             v.ebn0Db = v.snrDb - 10 * std::log10((double)bps);
