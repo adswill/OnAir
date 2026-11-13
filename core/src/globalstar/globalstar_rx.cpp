@@ -76,6 +76,7 @@ struct GlobalstarReceiver::Impl {
     uint64_t eventsDone = 0;
     GlobalstarTelemetry pub;
     double lastDop = 0; float lastSnr = 0; int activeNow = 0;
+    bool localCap = true;                     // 4.1 setLocalFloorCap()
 
     void say(const std::string& s) { if (log) log(s); }
 
@@ -194,7 +195,24 @@ struct GlobalstarReceiver::Impl {
             C.occ += (kSlotSec / kOccTau) * ((C.active ? 1.0 : 0.0) - C.occ);
         }
         if (slots == kWarmSlots) {
-            for (auto& C : ch) if (C.inView) C.nf = std::min(C.warmSum / kWarmSlots, warmMin * 1.26);
+            // a channel already on during the first 0.2 s would take its signal for the floor: its floor is capped 1 dB over a quieter channel's.
+            // 4.1: over the quieter of its neighbours (and itself), not over the quietest channel of the whole band: the noise is not flat over the
+            // band (the radio's filter or a resampler rolls it off towards the edges), and a cap from an edge channel put the floor of the middle
+            // channels under their noise, so they went on and, the floor being frozen while on, never off again (QA-4.0: 0 events at 13.7 Msps with
+            // a clock error)
+            double wm[kGsChannels];
+            for (int c = 0; c < kGsChannels; c++) wm[c] = ch[c].inView ? ch[c].warmSum / kWarmSlots : 1e30;
+            for (int c = 0; c < kGsChannels; c++) {
+                Chan& C = ch[c];
+                if (!C.inView) continue;
+                double cap = warmMin;
+                if (localCap) {
+                    cap = wm[c];
+                    if (c > 0) cap = std::min(cap, wm[c - 1]);
+                    if (c + 1 < kGsChannels) cap = std::min(cap, wm[c + 1]);
+                }
+                C.nf = std::min(wm[c], cap * 1.26);
+            }
         }
         std::fill(acc.begin(), acc.end(), 0.0);
         framesAcc = 0; elapsed = 0;
@@ -291,6 +309,7 @@ GlobalstarReceiver::~GlobalstarReceiver() = default;
 void GlobalstarReceiver::configure(double inputRateHz) { std::lock_guard<std::mutex> lk(p_->procMu); p_->configure(inputRateHz); }
 void GlobalstarReceiver::setSignalOffset(double hz) { std::lock_guard<std::mutex> lk(p_->procMu); p_->offsetHz = hz; if (p_->isReady) { p_->plan(); } }
 void GlobalstarReceiver::setDialHz(double hz) { std::lock_guard<std::mutex> lk(p_->procMu); if (hz == p_->dialHz) return; p_->dialHz = hz; if (p_->isReady) { p_->plan(); p_->resetState(); } }
+void GlobalstarReceiver::setLocalFloorCap(bool on) { std::lock_guard<std::mutex> lk(p_->procMu); p_->localCap = on; }
 void GlobalstarReceiver::setWallClock(bool on) { std::lock_guard<std::mutex> lk(p_->procMu); p_->wallClock = on; }
 bool GlobalstarReceiver::ready() const { std::lock_guard<std::mutex> lk(p_->procMu); return p_->isReady; }
 void GlobalstarReceiver::reset() { std::lock_guard<std::mutex> lk(p_->procMu); if (p_->isReady) p_->resetState(); }

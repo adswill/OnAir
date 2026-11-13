@@ -92,6 +92,7 @@ struct Cfg {
     bool amAuto = false;        // AM: the Auto quality processor (am_proc.h)
     int amNr = -1, amBw = 0;    // its noise reduction (-1 auto, 0 off, 1 .. 100) and audio bandwidth (0 auto)
     bool amEnhance = false;
+    int fmPll = 0;              // 4.1 NFM: 0 discriminator, 1 phase-locked loop, 2 the loop when the carrier is under 8 dB over the noise
 };
 
 void put16(FILE* f, uint16_t v) { uint8_t b[2] = {(uint8_t)v, (uint8_t)(v >> 8)}; fwrite(b, 1, 2, f); }
@@ -255,6 +256,8 @@ struct GeneralReceiver::Impl {
     bool noiseImpossible = false;
     // demodulators
     cf32 prev{0, 0};
+    double pllPh = 0, pllW = 0;   // 4.1 FM phase-locked loop
+    bool pllWeak = false;         // the carrier is under 8 dB over the noise (fmPll 2)
     double gLin = 10, relEnv = 0, carK = 0;
     float deAl = 1;
     double car = 0, env = 0, bfoPh = 0;
@@ -465,7 +468,7 @@ struct GeneralReceiver::Impl {
         nco.reset(); dec.reset(); rs.reset();
         std::fill(hist.begin(), hist.end(), cf32(0, 0)); hpos = 0;
         acc.assign(kNoiseN, 0.0); accN = 0; fbuf.clear(); noisePsd = -1; noisePsdIn = -1;
-        prev = cf32(0, 0); car = 0; env = 0; carInit = false; bfoPh = 0; samReset(); nbMean = -1; nbHold = 0; nbG1 = nbG2 = nbFill = cf32(0, 0);
+        prev = cf32(0, 0); pllPh = 0; pllW = 0; pllWeak = false; car = 0; env = 0; carInit = false; bfoPh = 0; samReset(); nbMean = -1; nbHold = 0; nbG1 = nbG2 = nbFill = cf32(0, 0);
         dcX = dcY = deY = 0; audLp.reset(); dry.reset();
         blkPow = 0; blkN = 0; lvl = -1; open = false; hang = 0; ramp = 0;
         fmSum = 0; fmN = 0; cfo = 0;
@@ -528,6 +531,7 @@ struct GeneralReceiver::Impl {
             const double thr = std::pow(10.0, cfg.sqDb / 10.0);
             want = lvl >= (open ? thr / 1.26 : thr);
         }
+        if (noiseCh > 0 && lvl > 0) pllWeak = lvl < noiseCh * (pllWeak ? 7.9 : 6.3);   // 4.1 fmPll 2: under 8 dB C/N (9 dB to leave)
         if (want) { open = true; hang = generalIsCw(cfg.demod) ? kHangCwSec : kHangSec; }
         else if (open) { hang -= kBlockSec; if (hang <= 0) open = false; }
         (open ? blkOpen : blkShut)++;
@@ -542,7 +546,21 @@ struct GeneralReceiver::Impl {
         case GenNfm: case GenWfm: {
             const cf32 d = z * std::conj(prev);
             prev = z;
-            const double f = std::atan2((double)d.imag(), (double)d.real()) * demodRate / (2 * kPi);
+            double f = std::atan2((double)d.imag(), (double)d.real()) * demodRate / (2 * kPi);
+            // 4.1: a second-order phase-locked loop (natural frequency 4 kHz, damping 0.707) on the limited signal: its frequency is the audio
+            const bool pllUse = cfg.demod == GenNfm && (cfg.fmPll == 1 || (cfg.fmPll == 2 && pllWeak));
+            if (cfg.demod == GenNfm && cfg.fmPll) {
+                const double m = std::abs(z);
+                const double wn = 2 * kPi * 4000.0 / demodRate, kp = 2 * 0.707 * wn, ki = wn * wn;
+                double e = 0;
+                if (m > 0) { const cf32 r = z * cf32((float)std::cos(pllPh), (float)-std::sin(pllPh)); e = std::atan2((double)r.imag(), (double)r.real()); }
+                pllW += ki * e;
+                pllW = std::clamp(pllW, -kPi / 2, kPi / 2);
+                const double step = pllW + kp * e;
+                pllPh += step;
+                if (pllPh > kPi) pllPh -= 2 * kPi; else if (pllPh < -kPi) pllPh += 2 * kPi;
+                if (pllUse) f = step * demodRate / (2 * kPi);
+            }
             if (std::norm(z) > 0) { fmSum += f; fmN++; }
             const float s = (float)(f / (cfg.demod == GenNfm ? 5000.0 : 75000.0) * kOutLevel);
             float y;
@@ -901,6 +919,7 @@ void GeneralReceiver::setAgc(bool on, float g) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (p_->cfgSet.agc != on || p_->cfgSet.gainDb != g) { p_->cfgSet.agc = on; p_->cfgSet.gainDb = g; p_->cfgDirty = true; }
 }
+void GeneralReceiver::setFmPll(int mode) { std::lock_guard<std::mutex> lk(p_->mu); mode = std::clamp(mode, 0, 2); if (p_->cfgSet.fmPll != mode) { p_->cfgSet.fmPll = mode; p_->cfgDirty = true; } }
 void GeneralReceiver::setDeemphUs(double us) { std::lock_guard<std::mutex> lk(p_->mu); if (p_->cfgSet.deemphUs != us) { p_->cfgSet.deemphUs = std::max(0.0, us); p_->cfgDirty = true; } }
 void GeneralReceiver::setCwPitchHz(double hz) { std::lock_guard<std::mutex> lk(p_->mu); hz = std::clamp(hz, 200.0, 1500.0); if (p_->cfgSet.pitch != hz) { p_->cfgSet.pitch = hz; p_->cfgDirty = true; } }
 void GeneralReceiver::setAmDetector(int det) {

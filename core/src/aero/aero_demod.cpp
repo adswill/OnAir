@@ -255,7 +255,7 @@ struct AeroDemod::Impl {
     std::vector<cf32> acqBuf;
     std::vector<float> acqPow;
     std::unique_ptr<Fft> fft;
-    bool acq = false;
+    bool acq = false, everyBlock = false;
     float acqMetric = 0;
     uint64_t bitsSinceAcq = 0;
     // timing
@@ -413,7 +413,7 @@ struct AeroDemod::Impl {
                 fft->forward(acqBuf.data());
                 for (int i = 0; i < acqN; i++) acqPow[i] += std::norm(acqBuf[i]);
                 acqFill = 0;
-                if (++acqDone >= acqK && (acqDone & (acqDone - 1)) == 0) acqEvaluate();
+                if (++acqDone >= acqK && (everyBlock || (acqDone & (acqDone - 1)) == 0)) acqEvaluate();
             }
             return;
         }
@@ -514,6 +514,7 @@ void AeroDemod::feed(const cf32* x, size_t n) { p_->feed(x, n); }
 void AeroDemod::setCallback(std::function<void(AeroFrameEvent&)> cb) { p_->userCb = std::move(cb); }
 int AeroDemod::bitRate() const { return p_->rate; }
 bool AeroDemod::acquired() const { return p_->acq; }
+void AeroDemod::setEveryBlock(bool on) { p_->everyBlock = on; }
 bool AeroDemod::synced() const { return p_->acq && (p_->rate == 8400 ? (p_->syncProbe && p_->syncProbe()) : p_->framer.synced()); }
 bool AeroDemod::dataLock() const { return p_->acq && p_->framer.dataLock(); }
 void AeroDemod::setBitSink(std::function<void(float)> sink, std::function<bool()> synced) { p_->bitSink = std::move(sink); p_->syncProbe = std::move(synced); }

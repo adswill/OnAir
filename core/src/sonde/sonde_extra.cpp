@@ -178,13 +178,20 @@ public:
     void push(const uint8_t* sym, size_t n, double t, std::vector<SondeFix>& out) override {
         if (cfgC_ >= 0 && (t < cfgT_ || t - cfgT_ > 300.0)) cfgC_ = cfgD_ = -1;
         tPush_ = t;
-        for (size_t i = 0; i < n; i++) step(sym[i], out);
+        for (size_t i = 0; i < n; i++) step(sym[i], 0.f, false, out);
+    }
+    // 4.1: soft symbols: a bit is decided from both halves of its Manchester pair (soft first - soft second), not from the first half alone (about 3 dB)
+    bool wantsSoft() const override { return true; }
+    void pushSoft(const uint8_t* sym, const float* soft, size_t n, double t, std::vector<SondeFix>& out) override {
+        if (cfgC_ >= 0 && (t < cfgT_ || t - cfgT_ > 300.0)) cfgC_ = cfgD_ = -1;
+        tPush_ = t;
+        for (size_t i = 0; i < n; i++) step(sym[i], soft[i], true, out);
     }
 private:
     uint64_t sync_ = 0; std::vector<uint8_t> bits_; bool run_ = false; int inv_ = 0, phase_ = 0, cfgC_ = -1, cfgD_ = -1, last_ = -1;
     double cfgT_ = 0, tPush_ = 0;
     // on air: the preamble 1001... and then AA BF 35 Manchester coded, MSB first (Manchester: 1 -> 10, 0 -> 01 or the inverse)
-    void step(int s, std::vector<SondeFix>& out) {
+    void step(int s, float v, bool soft, std::vector<SondeFix>& out) {
         if (!run_) {
             sync_ = (sync_ << 1) | (uint64_t)(s & 1);
             const uint64_t pat = 0x99999999999AAULL & ((1ULL << 44) - 1);     // 9 x 1001 and 10101010
@@ -201,14 +208,16 @@ private:
         }
         // two symbols per bit: the header has just ended on a symbol boundary
         symPair_[phase_] = (uint8_t)(inv_ ? !s : s);
+        softPair_[phase_] = inv_ ? -v : v;
         if (++phase_ == 2) {
             phase_ = 0;
             // the header ends with ...1010: symbols 10 are one bit, keep the header's bit sense: "10" = 1
-            bits_.push_back(symPair_[0]);
+            bits_.push_back(soft ? (uint8_t)(softPair_[0] - softPair_[1] > 0) : symPair_[0]);
             if (bits_.size() == 394) frame(out);   // the header ends 6 bits into the BF: 2 bits of it, then the 49 bytes from 0x35 on
         }
     }
     uint8_t symPair_[2] = {0, 0};
+    float softPair_[2] = {0, 0};
     void frame(std::vector<SondeFix>& out) {
         run_ = false;
         uint8_t f[51];
@@ -235,24 +244,6 @@ uint8_t hamEncNib(uint8_t n) {
     const int c0 = m0 ^ m1 ^ m3, c1 = m0 ^ m2 ^ m3, c2 = m0, c3 = m1 ^ m2 ^ m3, c4 = m1, c5 = m2, c6 = m3, c7 = m0 ^ m1 ^ m2;
     return (uint8_t)(c0 | (c1 << 1) | (c2 << 2) | (c3 << 3) | (c4 << 4) | (c5 << 5) | (c6 << 6) | (c7 << 7));
 }
-// 0 clean, 1 corrected, -1 not correctable
-int hamDec(uint8_t c, uint8_t& n) {
-    const int b[8] = {c & 1, (c >> 1) & 1, (c >> 2) & 1, (c >> 3) & 1, (c >> 4) & 1, (c >> 5) & 1, (c >> 6) & 1, (c >> 7) & 1};
-    const int s0 = b[0] ^ b[2] ^ b[4] ^ b[6], s1 = b[1] ^ b[2] ^ b[5] ^ b[6], s2 = b[3] ^ b[4] ^ b[5] ^ b[6], s3 = (b[0] ^ b[1] ^ b[2] ^ b[3] ^ b[4] ^ b[5] ^ b[6] ^ b[7]);
-    const int s = s0 | (s1 << 1) | (s2 << 2) | (s3 << 3);
-    int rc = 0;
-    if (s) {
-        static const int he[8] = {9, 10, 11, 12, 13, 14, 15, 8};
-        int j = -1;
-        for (int i = 0; i < 8; i++) if (he[i] == s) j = i;
-        if (j < 0) return -1;
-        c = (uint8_t)(c ^ (1 << j));
-        rc = 1;
-    }
-    n = (uint8_t)(((c >> 2) & 1) | (((c >> 4) & 1) << 1) | (((c >> 5) & 1) << 2) | (((c >> 6) & 1) << 3));
-    return rc;
-}
-
 void imet54StdCrc(const uint8_t* f, uint32_t& a0, uint32_t& a1) {
     uint32_t c0 = 0x48EB, c1 = 0x1ACA;
     a0 = a1 = 0;
@@ -277,22 +268,26 @@ public:
     double symbolRate() const override { return 4800; }
     bool narrowChannel() const override { return true; }
     bool midpointSlicer() const override { return true; }
+    bool wantsSoft() const override { return true; }
     void reset() override { hdr_ = 0; run_ = false; bits_.clear(); }
-    void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override { for (size_t i = 0; i < n; i++) step(sym[i], out); }
+    // hard symbols: soft values of +-1 (the same decoder; a tie between codewords is then left to the CRC)
+    void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override { realign_ = false; for (size_t i = 0; i < n; i++) step(sym[i], sym[i] ? 1.f : -1.f, out); }
+    void pushSoft(const uint8_t* sym, const float* soft, size_t n, double, std::vector<SondeFix>& out) override { realign_ = true; for (size_t i = 0; i < n; i++) step(sym[i], soft[i], out); }
 private:
-    uint64_t hdr_ = 0; bool run_ = false; int inv_ = 0; std::vector<uint8_t> bits_;
-    void step(int s, std::vector<SondeFix>& out) {
+    uint64_t hdr_ = 0; bool run_ = false; int inv_ = 0; std::vector<float> bits_;
+    bool realign_ = false;   // soft symbols only: hard ones (+-1) give no measure of how well the framing bits fit
+    void step(int s, float v, std::vector<SondeFix>& out) {
         if (!run_) {
             hdr_ = (hdr_ << 1) | (uint64_t)(s & 1);
-            const uint64_t pat = imet54Header(), m = (1ULL << 40) - 1, v = hdr_ & m;
-            if (__builtin_popcountll(v ^ pat) <= 3) inv_ = 0;
-            else if (__builtin_popcountll(v ^ (pat ^ m)) <= 3) inv_ = 1;
+            const uint64_t pat = imet54Header(), m = (1ULL << 40) - 1, hv = hdr_ & m;
+            if (__builtin_popcountll(hv ^ pat) <= 3) inv_ = 0;
+            else if (__builtin_popcountll(hv ^ (pat ^ m)) <= 3) inv_ = 1;
             else return;
             run_ = true; bits_.clear();
             return;
         }
-        bits_.push_back(inv_ ? !s : s);
-        if (bits_.size() == (size_t)(3 + 216) * 10) frame(out);
+        bits_.push_back(inv_ ? -v : v);
+        if (bits_.size() == (size_t)(3 + 216) * 10 + (realign_ ? 8 : 0)) frame(out);
     }
     static uint64_t imet54Header() {
         static const uint8_t b[4] = {0x00, 0xAA, 0x24, 0x24};
@@ -300,28 +295,73 @@ private:
         for (uint8_t x : b) { v = (v << 1); for (int i = 0; i < 8; i++) v = (v << 1) | ((x >> i) & 1); v = (v << 1) | 1; }
         return v;
     }
+    // 4.1: soft decisions. Each Hamming(8,4) codeword is the one of the 16 with the largest correlation with the soft bits (3.9/4.0: hard syndrome decoding, and a
+    // codeword with two wrong bits threw the whole frame away). When the CRC fails, the kChase least sure codewords (smallest margin to their second choice)
+    // are tried with their second choice in every combination, each checked by the frame CRC (20 check bits: at most 2^kChase - 1 extra checks a frame).
+    static constexpr int kChase = 6;
     void frame(std::vector<SondeFix>& out) {
         run_ = false;
-        std::vector<uint8_t> d;
-        for (size_t i = 0; i + 10 <= bits_.size(); i += 10) for (size_t b = 1; b <= 8; b++) d.push_back(bits_[i + b]);
+        // 4.1: the bytes are read where their start (0) and stop (1) bits are: a symbol the clock gained or lost in the noise (a click moves the
+        // zero crossings) shifts every byte after it by one, which no code can repair; each byte may move one symbol from where the last one ended
+        // when its framing bits fit clearly better there
+        std::vector<float> d;
+        size_t pos = 0;
+        auto frameFit = [&](size_t p) { return p + 9 < bits_.size() ? bits_[p + 9] - bits_[p] : -1e30f; };
+        for (int byte = 0; byte < 3 + 216 && pos + 10 <= bits_.size(); byte++) {
+            if (realign_ && byte > 0) {
+                const float f0 = frameFit(pos), fm = pos > 0 ? frameFit(pos - 1) : -1e30f, fp = frameFit(pos + 1);
+                if (fm > f0 + 1.5f && fm >= fp) pos--;
+                else if (fp > f0 + 1.5f) pos++;
+            }
+            if (pos + 10 > bits_.size()) break;
+            for (size_t b = 1; b <= 8; b++) d.push_back(bits_[pos + b]);
+            pos += 10;
+        }
         if (d.size() < 24 + 1728) return;
-        std::vector<uint8_t> de(1728);
+        std::vector<float> de(1728);
         for (size_t n = 0; n < 1728; n += 64)
             for (size_t i = 0; i < 8; i++) for (size_t j = 0; j < 8; j++) de[n + 8 * j + i] = d[24 + n + 8 * i + j];
-        uint8_t f[108]; int corr = 0;
-        std::memset(f, 0, sizeof f);
+        static uint8_t cw[16];
+        static bool init = false;
+        if (!init) { for (int k = 0; k < 16; k++) cw[k] = hamEncNib((uint8_t)k); init = true; }
+        uint8_t best[216], second[216];
+        float margin[216];
+        int corr = 0;
         for (int i = 0; i < 216; i++) {
-            uint8_t c = 0;
-            for (int b = 0; b < 8; b++) c |= (uint8_t)(de[(size_t)i * 8 + (size_t)b] << b);
-            uint8_t nib = 0;
-            const int r = hamDec(c, nib);
-            if (r < 0) return;
-            corr += r;
-            f[i / 2] = (uint8_t)(f[i / 2] << 4) | nib;
+            const float* x = &de[(size_t)i * 8];
+            float m1 = -1e30f, m2 = -1e30f; int k1 = 0, k2 = 0;
+            uint8_t hard = 0;
+            for (int b = 0; b < 8; b++) if (x[b] > 0) hard |= (uint8_t)(1 << b);
+            for (int k = 0; k < 16; k++) {
+                float c = 0;
+                for (int b = 0; b < 8; b++) c += ((cw[k] >> b) & 1) ? x[b] : -x[b];
+                if (c > m1) { m2 = m1; k2 = k1; m1 = c; k1 = k; } else if (c > m2) { m2 = c; k2 = k; }
+            }
+            best[i] = (uint8_t)k1; second[i] = (uint8_t)k2; margin[i] = m1 - m2;
+            if (cw[k1] != hard) corr++;
         }
-        SondeFix o;
-        o.corrected = corr;
-        if (imet54ParseFrame(f, sizeof f, o)) out.push_back(o);
+        auto build = [&](uint8_t* f, uint32_t flips, const int* idx) {
+            std::memset(f, 0, 108);
+            for (int i = 0; i < 216; i++) {
+                uint8_t nib = best[i];
+                for (int k = 0; k < kChase; k++) if (((flips >> k) & 1) && idx[k] == i) nib = second[i];
+                f[i / 2] = (uint8_t)((f[i / 2] << 4) | nib);
+            }
+        };
+        int idx[kChase];
+        {
+            int order[216];
+            for (int i = 0; i < 216; i++) order[i] = i;
+            std::partial_sort(order, order + kChase, order + 216, [&](int a, int b) { return margin[a] < margin[b]; });
+            for (int k = 0; k < kChase; k++) idx[k] = order[k];
+        }
+        uint8_t f[108];
+        for (uint32_t flips = 0; flips < (1u << kChase); flips++) {
+            build(f, flips, idx);
+            SondeFix o;
+            o.corrected = corr + __builtin_popcount(flips);
+            if (imet54ParseFrame(f, sizeof f, o)) { out.push_back(o); return; }
+        }
     }
 };
 

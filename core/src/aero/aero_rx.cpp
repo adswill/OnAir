@@ -38,6 +38,7 @@ struct AeroReceiver::Impl {
     std::mutex snapMu;                 // the published report
     AeroTelemetry snap;
     std::atomic<uint64_t> seqA{0};
+    std::atomic<bool> fastStart{true};   // 4.1 setFastAcquisition()
     std::function<void(const std::string&)> log;
     std::function<void(double, const AeroFrameEvent&)> frameCb;
 
@@ -127,10 +128,17 @@ struct AeroReceiver::Impl {
         acc.assign(nfft, 0.f); accPrev.assign(nfft, 0.f);
         fbuf.resize(nfft);
         slices = 16;
-        periodLen = (uint64_t)rate;                     // one search a second
+        setPeriod();
+        periodPos = 0; fpos = 0; slicesDone = 0;
+    }
+
+    // one search a second; 4.1: the first kFastPeriods searches after a start or retune every quarter second (the same 16 spectra each), so a carrier
+    // is taken (two searches in a row) after half a second instead of two
+    static constexpr int kFastPeriods = 4;
+    void setPeriod() {
+        periodLen = (uint64_t)(fastStart.load(std::memory_order_relaxed) && period < kFastPeriods ? rate / 4 : rate);
         sliceGap = periodLen / (uint64_t)slices;
         if (sliceGap < (uint64_t)nfft) sliceGap = (uint64_t)nfft;
-        periodPos = 0; fpos = 0; slicesDone = 0;
     }
 
     // ---- band search ----
@@ -155,6 +163,7 @@ struct AeroReceiver::Impl {
             if (periodPos >= periodLen) {
                 if (slicesDone == slices) searchEvaluate();
                 periodPos = 0; fpos = 0; slicesDone = 0;
+                setPeriod();
             }
         }
     }
@@ -294,6 +303,7 @@ struct AeroReceiver::Impl {
     }
     void makeDemod(Channel& c, int k) {
         c.dem[k] = std::make_unique<AeroDemod>(kRates[k], c.fsCh, kRates[k] == 10500 ? 1500.0 : 700.0);
+        c.dem[k]->setEveryBlock(fastStart.load(std::memory_order_relaxed));
         Channel* cp = &c;
         c.dem[k]->setCallback([this, cp, k](AeroFrameEvent& e) { onFrame(*cp, k, e); });
     }
@@ -536,6 +546,11 @@ AeroReceiver::~AeroReceiver() = default;
 void AeroReceiver::configure(double inputRateHz) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->rate = inputRateHz;
+    p_->setup();
+}
+void AeroReceiver::setFastAcquisition(bool on) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    p_->fastStart = on;
     p_->setup();
 }
 void AeroReceiver::setSearchLimit(double hz) {

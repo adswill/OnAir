@@ -132,7 +132,7 @@ public:
         dcTau = 0.08 * fs2;
         afcLen = (int)(0.1 * fs2);
         // decoders
-        decs.clear(); chains.clear(); chainNarrow.clear(); syms.clear(); symT.clear();
+        decs.clear(); chains.clear(); chainNarrow.clear(); chainSoft.clear(); syms.clear(); softs.clear(); symT.clear();
         auto addDec = [&](std::unique_ptr<SondeBitDecoder> d, int kind, Rs41Decoder* r41, Rs92Decoder* r92 = nullptr) {
             if (!d) return;
             const double baud = d->symbolRate();
@@ -140,7 +140,8 @@ public:
             const bool mid = d->midpointSlicer();
             const bool nar = hasNarrow && d->narrowChannel();
             for (size_t i = 0; i < chains.size(); i++) if (std::fabs(chains[i].baud() - baud) < 1e-6 && chains[i].midpoint() == mid && chainNarrow[i] == nar) ci = (int)i;
-            if (ci < 0) { chains.emplace_back(); chains.back().init(fs2, baud, d->isAfsk(), mid, (toneChips && !mid) ? toneDevFor(baud) : 0.0, mid ? 2 : 0); chainNarrow.push_back(nar); ci = (int)chains.size() - 1; }   // 4.0 A4: midpoint chains (iMet-54, MRZ) slice at the middle of the smoothed extremes
+            if (ci < 0) { chains.emplace_back(); chains.back().init(fs2, baud, d->isAfsk(), mid, (toneChips && !mid) ? toneDevFor(baud) : 0.0, mid ? 2 : 0); chainNarrow.push_back(nar); chainSoft.push_back(false); ci = (int)chains.size() - 1; }   // 4.0 A4: midpoint chains (iMet-54, MRZ) slice at the middle of the smoothed extremes
+            if (d->wantsSoft() && softDecisions) chainSoft[(size_t)ci] = true;
             Dec e; e.d = std::move(d); e.kind = kind; e.chain = ci; e.rs41 = r41; e.rs92 = r92;
             decs.push_back(std::move(e));
         };
@@ -157,6 +158,7 @@ public:
             addDec(makeMeiseiDecoder(), SondeMeisei, nullptr);
         }
         syms.assign(chains.size(), {});
+        softs.assign(chains.size(), {});
         symT.assign(chains.size(), 0.0);
     }
 
@@ -167,6 +169,7 @@ public:
         return 0.0;
     }
     bool toneChips = true;
+    bool softDecisions = true;   // 4.1: iMet-54 / MRZ take soft symbols (setSoftDecisions(false): the 4.0 hard symbols)
 
     void release() { used = false; decs.clear(); chains.clear(); }
     void setNoise(double noiseVar, bool lband) {
@@ -225,8 +228,9 @@ public:
             for (size_t c = 0; c < chains.size(); c++) {
                 if (!chainActive(c)) continue;
                 const size_t before = syms[c].size();
-                if (chainNarrow[c]) { if (chains[c].toneOn()) chains[c].pushTone(yn, dcn); chains[c].step(dn, dcn, syms[c]); }
-                else { if (chains[c].toneOn()) chains[c].pushTone(y, dc); chains[c].step(d, dc, syms[c]); }
+                std::vector<float>* sv = chainSoft[c] ? &softs[c] : nullptr;   // 4.1: soft values for the decoders that take them
+                if (chainNarrow[c]) { if (chains[c].toneOn()) chains[c].pushTone(yn, dcn); chains[c].step(dn, dcn, syms[c], sv); }
+                else { if (chains[c].toneOn()) chains[c].pushTone(y, dc); chains[c].step(d, dc, syms[c], sv); }
                 if (before == 0 && !syms[c].empty()) symT[c] = tHere;
             }
             if (afcCnt >= afcLen) {
@@ -252,7 +256,8 @@ private:
     double pnN = 1e-9;
     float pAvgN = 0, dcn = 0;
     double dcnN = 0;
-    std::vector<bool> chainNarrow;
+    std::vector<bool> chainNarrow, chainSoft;
+    std::vector<std::vector<float>> softs;
     double pn = 1e-9;
     float pAvg = 0, aP = 0.01f;
     bool present = false;
@@ -277,7 +282,8 @@ private:
                 if ((size_t)e.chain != c) continue;
                 if (lockedKind >= 0 && e.kind != lockedKind) continue;
                 std::vector<SondeFix> out;
-                e.d->push(syms[c].data(), syms[c].size(), symT[c], out);
+                if (chainSoft[c] && e.d->wantsSoft() && softs[c].size() == syms[c].size()) e.d->pushSoft(syms[c].data(), softs[c].data(), syms[c].size(), symT[c], out);
+                else e.d->push(syms[c].data(), syms[c].size(), symT[c], out);
                 for (auto& f : out) {
                     if (f.serial.empty() && e.kind == SondeImet) { char sb[32]; snprintf(sb, sizeof sb, "iMet-%.0f", freq / 1000.0); f.serial = sb; }   // these packets carry no serial
                     Fix fx; fx.kind = e.kind; fx.fix = f; fx.announcedHz = e.rs41 ? e.rs41->announcedFreqHz() : e.rs92 ? e.rs92->announcedFreqHz() : 0;
@@ -286,6 +292,7 @@ private:
                 }
             }
             syms[c].clear();
+            softs[c].clear();
         }
         if (lockedKind >= 0 && lastFixT >= 0 && tNow - lastFixT > 20.0) lockedKind = -1;
     }
@@ -302,6 +309,7 @@ struct SondeReceiver::Impl {
     std::atomic<double> sigOff{0}, centerHz{0};      // set from the interface thread, read by the worker
     std::atomic<int> maxChan{kMaxChan};
     std::atomic<uint32_t> kindMask{0};               // setKindMask(): 0 every sonde type
+    std::atomic<bool> softOn{true};                   // 4.1 setSoftDecisions(): iMet-54 / MRZ soft symbols
     std::atomic<bool> toneChipsOn{true};              // setToneDetection(): symbols of RS41 / RS92 / DFM / M10 / M20 from tone energies
     std::function<void(const std::string&)> log;
     SondeTelemetry tel;
@@ -529,6 +537,7 @@ struct SondeReceiver::Impl {
             for (auto& ch : chans) { if (ch.used) usedN++; else if (!fr) fr = &ch; }
             if (!fr || usedN >= maxChan.load()) continue;
             fr->toneChips = toneChipsOn.load();
+            fr->softDecisions = softOn.load();
             fr->init((int)(fr - chans.data()), fs, car.offHz, tNow, noiseVar, lband);
             fr->snrDb = car.level;
             car.assigned = true; car.channel = fr->id;
@@ -743,6 +752,8 @@ void SondeReceiver::setSynchronous(bool on) { p_->syncMode = on; }
 void SondeReceiver::setCenterMhz(double mhz) { p_->centerHz = mhz * 1e6; }
 void SondeReceiver::setToneDetection(bool on) { p_->toneChipsOn = on; }
 bool SondeReceiver::toneDetection() const { return p_->toneChipsOn.load(); }
+void SondeReceiver::setSoftDecisions(bool on) { p_->softOn = on; }
+bool SondeReceiver::softDecisions() const { return p_->softOn.load(); }
 void SondeReceiver::setKindMask(uint32_t m) { p_->kindMask.store(m, std::memory_order_relaxed); }
 void SondeReceiver::setMaxChannels(int n) { p_->maxChan = std::clamp(n, 1, kMaxChan); }
 void SondeReceiver::clearSondes() {

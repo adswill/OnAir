@@ -39,6 +39,7 @@ constexpr size_t kQueueCap = 256;
 } // namespace
 
 struct IridiumReceiver::Impl {
+    std::atomic<bool> softOn{true};   // 4.1 setSoftDecisions()
     // configuration (mu)
     std::mutex mu;
     double rate = 0, offsetHz = 0, centerHz = 1622e6, thrDb = 13;
@@ -170,6 +171,7 @@ struct IridiumReceiver::Impl {
         }
         if (d.uwOk) {
             bb.bits = d.bits;
+            if (softOn.load(std::memory_order_relaxed)) bb.rel = d.rel;   // 4.1: soft repair of the BCH blocks
             bb.downlink = d.downlink;
             bb.freqHz = cHz + d.freqHz;
             bb.timeSec = tBurst + d.uwTime;
@@ -607,6 +609,7 @@ void IridiumReceiver::setThresholdDb(double db) {
     if (p_->rate > 0) p_->det.setThreshold(db);
 }
 IridiumVoice& IridiumReceiver::voice() { return p_->voice; }
+void IridiumReceiver::setSoftDecisions(bool on) { p_->softOn = on; }
 void IridiumReceiver::setBurstCallback(std::function<void(const IridiumBurstBits&, const IridiumFrame&)> cb) {
     std::lock_guard<std::mutex> wl(p_->wmu);
     p_->burstCb = std::move(cb);

@@ -357,6 +357,7 @@ static const int kFtxNudges = (int)envOr("HFDIG_FTX_NUDGES", 5);
 static const double kFtxNudgeStep = envOr("HFDIG_FTX_NUDGESTEP", 1.0 / 48);
 static const bool kOsdNudged = envOr("HFDIG_FTX_OSDNUDGE", 0) != 0;
 static const bool kFtxApCq = envOr("HFDIG_FTX_APCQ", 1) != 0;
+static const bool kFtxApCqShape = envOr("HFDIG_FTX_APCQSHAPE", 1) != 0;   // 4.1: the a-priori CQ stage keeps only words shaped like a real CQ
 static const bool kFtxXSlot = envOr("HFDIG_FTX_XSLOT", 1) != 0;       // soft bits of a repeated signal added across slots
 static const bool kFtxApQso = envOr("HFDIG_FTX_APQSO", 1) != 0;       // a-priori calls from the conversations heard on the band
 static const bool kFtxEarly = envOr("HFDIG_FTX_EARLY", 1) != 0;       // an early decode before the slot ends
@@ -966,6 +967,22 @@ private:
                 const std::string m = unpack77(b, &hash_);
                 return !m.empty() && m.find("<...>") == std::string::npos && (!cq || m.compare(0, 3, "CQ ") == 0);
             };
+            // 4.1: what a noise candidate decoded with the CQ bits assumed looks like, and a calling station never sends (the 48 bits it fills in are
+            // random): "CQ <call> R <grid>" (the R of a reply), a rover's /R, a report or RR73 where the grid goes, a call that starts with 0, 1 or Q
+            // (no ITU prefix does). A real CQ passes all of them; a noise word about one time in five.
+            auto cqShapeOk = [&](const uint8_t* w) {
+                uint8_t b[77];
+                for (int i = 0; i < 77; i++) b[i] = (uint8_t)(w[i] ^ (j_.mode == kFt8 ? 0 : kFt4Rvec[i]));
+                if (b[57] || b[58]) return false;                         // /R of the second call, R before the grid
+                int g15 = 0;
+                for (int i = 59; i < 74; i++) g15 = g15 << 1 | b[i];
+                if (g15 >= 32400) return false;                           // a report, RRR, RR73 or 73, not a grid
+                const std::string m = unpack77(b, &hash_);
+                if (m.size() < 4) return false;
+                const size_t sp = m.find(' ', 3);
+                const std::string call = m.substr(3, sp == std::string::npos ? std::string::npos : sp - 3);
+                return !call.empty() && call[0] != '0' && call[0] != '1' && call[0] != 'Q' && call.find('/') == std::string::npos;
+            };
             bool viaOsd = false;
             if (!got && !kFtxCoherent) { std::copy(llr, llr + kN, llrC[0]); std::copy(llr, llr + kN, llrC[1]); }
             const float* sets[3] = {llr, llrC[0], llrC[1]};
@@ -991,7 +1008,7 @@ private:
                     for (int i = 74; i < 77; i++) put(i);
                     got = ldpcDecode(a, 40, cw) == 0 && checkCrc(cw);
                     if (!got && kFtxOsd && c.score >= kOsdMinScore) { OsdStats os; got = osdDecode(a, kOsdPairs, cw, &os); }
-                    got = got && plausible(cw, true);
+                    got = got && plausible(cw, true) && (!kFtxApCqShape || cqShapeOk(cw));
                     viaOsd |= got;
                     if (got && kOsdDebug) fprintf(stderr, "ap set %d score %.2f\n", q, c.score);
                 }

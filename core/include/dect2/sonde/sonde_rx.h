@@ -36,6 +36,10 @@ public:
     void clearSondes();                                  // empty the list of sondes heard (channels keep following their carriers)
     void setToneDetection(bool on);                      // symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards
     bool toneDetection() const;
+    // 4.1: iMet-54 (soft Hamming(8,4) with a CRC-checked second choice) and MRZ (both halves of each Manchester bit) decide from soft symbols (default on;
+    // off: the 4.0 hard symbols); applies to channels opened afterwards
+    void setSoftDecisions(bool on);
+    bool softDecisions() const;
     // 4.0: a view onto one radiosonde type: bit k of the mask = SondeKind k; only sondes of those types are reported (telemetry()), 0 = every type. The receiver itself
     // still tries every type, and everything else (uploads, the saved results) is unchanged.
     void setKindMask(uint32_t mask);

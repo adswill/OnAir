@@ -64,6 +64,7 @@ struct ZigbeeReceiver::Impl {
     std::function<void(const std::string&)> log;
     double rateSet = 0, offsetSet = 0, centerSet = 0;
     std::atomic<bool> resetReq{true}, clearReq{false};
+    std::atomic<bool> softOn{true};   // 4.1 setSoftDecisions()
     std::atomic<double> centerHz{0};
 
     double rate = 0, offset = 0;
@@ -300,17 +301,19 @@ struct ZigbeeReceiver::Impl {
     // ---------------------------------------------------------------- frame decoder
 
     // the correlation of the 31 chips n = 1 .. 31 of a symbol ending (before it) at sample B with every sequence; the best symbol
-    int symbol(int64_t B, double w0, double& best, double* resid) const {
+    int symbol(int64_t B, double w0, double& best, double* resid, int* second = nullptr, double* secondSc = nullptr) const {
         const Tables& T = tables();
         float vv[32];
         for (int n = 1; n < 32; n++) vv[n] = at(B + (int64_t)kChipSamples * (n + 1)) - (float)w0;
-        int bs = 0; double bsc = -1e30;
+        int bs = 0, bs2 = 0; double bsc = -1e30, bsc2 = -1e30;
         for (int s = 0; s < 16; s++) {
             double sc = 0;
             for (int n = 1; n < 32; n++) sc += T.d[s][n] * vv[n];
-            if (sc > bsc) { bsc = sc; bs = s; }
+            if (sc > bsc) { bsc2 = bsc; bs2 = bs; bsc = sc; bs = s; } else if (sc > bsc2) { bsc2 = sc; bs2 = s; }
         }
         best = bsc;
+        if (second) *second = bs2;
+        if (secondSc) *secondSc = bsc2;
         if (resid) {
             double e = 0;
             for (int n = 1; n < 32; n++) { const double r = vv[n] - (kPi / 2) * T.d[bs][n]; e += r * r; }
@@ -342,13 +345,15 @@ struct ZigbeeReceiver::Impl {
         int zeros = 0, state = 0;   // state: 0 preamble, 1 SFD second symbol, 2 PHR first, 3 PHR second, 4 PSDU
         int len = 0, nibbles = 0, got = 0;
         std::vector<uint8_t> psdu;
+        struct Alt { int nib, sym; double margin; };
+        std::vector<Alt> alt;   // 4.1: the second choice of every PSDU symbol and how far behind it was
         double residSum = 0; int residN = 0;
         int phrLo = 0;
         for (int m = 0; m < kMaxSyms; m++) {
             // the symbol, tried with the timing a sample early and late: the clock of the sender is not the receiver's
-            double sc[3], rs[3];
-            int sy[3];
-            for (int k = 0; k < 3; k++) sy[k] = symbol(B + k - 1, w0, sc[k], &rs[k]);
+            double sc[3], rs[3], sc2[3];
+            int sy[3], sy2[3];
+            for (int k = 0; k < 3; k++) sy[k] = symbol(B + k - 1, w0, sc[k], &rs[k], &sy2[k], &sc2[k]);
             int pick = 1;
             if (sc[0] > sc[1] * 1.04 && sc[0] >= sc[2]) pick = 0;
             else if (sc[2] > sc[1] * 1.04) pick = 2;
@@ -378,14 +383,37 @@ struct ZigbeeReceiver::Impl {
             }
             const size_t bi = (size_t)(nibbles >> 1);
             if (nibbles & 1) psdu[bi] |= (uint8_t)(s << 4); else psdu[bi] = (uint8_t)s;
+            alt.push_back(Alt{nibbles, sy2[pick], (sc[pick] - sc2[pick]) / std::max(1e-9, std::fabs(sc[pick]))});
             nibbles++;
             if (nibbles >= 2 * len) { got = 1; break; }
         }
         if (!got) return;
         decodedUntil = B;
-        const uint16_t calc = zigbee::crc16(psdu.data(), psdu.size() - 2);
-        const uint16_t fcs = (uint16_t)(psdu[psdu.size() - 2] | psdu[psdu.size() - 1] << 8);
-        if (calc != fcs) { tel.blocksBad++; return; }
+        auto crcOk = [](const std::vector<uint8_t>& p) {
+            return zigbee::crc16(p.data(), p.size() - 2) == (uint16_t)(p[p.size() - 2] | p[p.size() - 1] << 8);
+        };
+        if (!crcOk(psdu)) {
+            // 4.1: the kChase PSDU symbols with the smallest lead over their second choice (and less than 30 % of the score) are tried with that second choice
+            // in every combination, each checked by the FCS (15 extra checks of a 16-bit CRC: a wrong frame passes about once in 4000 failed frames)
+            bool fixed = false;
+            if (softOn.load(std::memory_order_relaxed) && !alt.empty()) {
+                constexpr int kChase = 4;
+                std::vector<Alt> w = alt;
+                const size_t k = std::min<size_t>(kChase, w.size());
+                std::partial_sort(w.begin(), w.begin() + (ptrdiff_t)k, w.end(), [](const Alt& a, const Alt& b) { return a.margin < b.margin; });
+                size_t kk = 0;
+                while (kk < k && w[kk].margin < 0.3) kk++;
+                for (uint32_t m = 1; m < (1u << kk) && !fixed; m++) {
+                    std::vector<uint8_t> q = psdu;
+                    for (size_t j = 0; j < kk; j++) if ((m >> j) & 1) {
+                        const size_t bi = (size_t)(w[j].nib >> 1);
+                        if (w[j].nib & 1) q[bi] = (uint8_t)((q[bi] & 0x0F) | (w[j].sym << 4)); else q[bi] = (uint8_t)((q[bi] & 0xF0) | w[j].sym);
+                    }
+                    if (crcOk(q)) { psdu = q; fixed = true; }
+                }
+            }
+            if (!fixed) { tel.blocksBad++; return; }
+        }
         // the frame is good
         double pw = 0; int np = 0;
         for (int64_t k = std::max(base, B0 - 3 * kSymSamples); k < B0; k++) { pw += pb[(size_t)(k - base)]; np++; }
@@ -590,6 +618,7 @@ ZigbeeReceiver::~ZigbeeReceiver() = default;
 void ZigbeeReceiver::configure(double r) { std::lock_guard<std::mutex> lk(p_->mu); p_->rateSet = r; p_->resetReq = true; }
 void ZigbeeReceiver::setSignalOffset(double hz) { std::lock_guard<std::mutex> lk(p_->mu); if (hz != p_->offsetSet) { p_->offsetSet = hz; p_->resetReq = true; } }
 void ZigbeeReceiver::setThreadMode(bool on) { p_->thread = on; }
+void ZigbeeReceiver::setSoftDecisions(bool on) { p_->softOn = on; }
 void ZigbeeReceiver::setCenterHz(double hz) {
     // a move between the 2.4 GHz band and the sub-GHz bands changes the PHY and the front end: start the demodulator again
     const bool sub = hz > 0 && hz < 1e9, was = p_->centerHz.load() > 0 && p_->centerHz.load() < 1e9;
