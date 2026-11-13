@@ -190,6 +190,7 @@ struct ExtraPath {
     std::string why;
     AudioFsk af;
     DiffDet dd;           // 4.1: a differential detector path (runDiff) instead of a discriminator one
+    bool diff = false;
     dmr::Fir<float> lp;
     std::vector<float> a, f;
     pktdemod::FskSlicer g3, plain;
@@ -285,6 +286,7 @@ struct CubesatReceiver::Impl {
             setupPath(diff4800, 4800, 0.0, true, "4800 baud, differential detector");
             diff9600.dd.init(9600); diff4800.dd.init(4800);
             diff9600.quiet = diff4800.quiet = true;
+            diff9600.diff = diff4800.diff = true;
         } else diff9600.on = diff4800.on = false;
         setupTracked();
         isReady = true;
@@ -389,10 +391,12 @@ struct CubesatReceiver::Impl {
         }
         // AX100 Mode 6: an RS block in the HDLC frame. Not on a narrow path (variant 2): an HDLC frame that failed its CRC is decoded by the RS
         // code alone, and a second hunter adds miscorrected frames (seen: 9 bytes "corrected" in a 23 byte frame) for a gain of 0.2 dB
+        // 4.1: a differential detector path (variant 3) takes Mode 6 too, but only with at most a quarter of the code's 32 parity bytes used:
+        // a miscorrection of noise uses nearly all 16 it can correct
         if (framing == Ax25G3ruh && variant != 2) {
             std::vector<uint8_t> csp;
             int rsErr = -1;
-            if (ax100Mode6Decode(d, csp, rsErr)) {
+            if (ax100Mode6Decode(d, csp, rsErr) && (variant != 3 || rsErr <= 8)) {
                 CubeFrame f;
                 f.framing = Ax100Mode6; f.baud = baud; f.rsErrors = rsErr;
                 f.hasCsp = parseCsp(csp, f.csp);
@@ -441,7 +445,7 @@ struct CubesatReceiver::Impl {
         ep.plain.bitSink = [p](int b) { p->framer.bit(b); p->more.push(b ? 1.f : -1.f); p->plain.locked = p->framer.inFrame() || p->more.busy(); };
         ep.more.onFrame = [this, p](const MoreFrame& m) { onMore(m, p->baud, p->plain.pos, p->quiet); };
         ep.framer.done = [this, p](bool cc, std::vector<uint8_t>& body, int flags, bool gf) { onAsmAt(p->plain.pos, p->baud, cc, body, flags, gf, !p->quiet); };
-        ep.g3.hdlc.setCallback([this, p](const std::vector<uint8_t>& d, bool ok) { onHdlc(Ax25G3ruh, p->baud, p->quiet ? 2 : 1, d, ok, p->g3.pos); });
+        ep.g3.hdlc.setCallback([this, p](const std::vector<uint8_t>& d, bool ok) { onHdlc(Ax25G3ruh, p->baud, p->diff ? 3 : p->quiet ? 2 : 1, d, ok, p->g3.pos); });
     }
     // the satellite the pass planner follows: its transmitter from the gr-satellites table chooses the framing parameters and, when the fixed
     // demodulators do not cover its baud rate, an extra one
