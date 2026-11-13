@@ -556,7 +556,7 @@ void dabTransmittersTab(App& a) {
             else dl->AddCircleFilled(q, (4.f + 4.f * rel) * gUi, col);
             char lab[160];
             snprintf(lab, sizeof lab, "%s  %d/%d  %.3f", r.site->src == Src::Air || approx || r.site->name.empty() ? r.h->ens.c_str() : r.site->name.c_str(), r.h->mainId, r.h->subId, r.h->mhz);
-            dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(255, 255, 255, 230), lab);
+            if (adsbmap::labelsAt(S.map.zoom, false)) dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(255, 255, 255, 230), lab);
             const float dd = std::hypot(mouse.x - q.x, mouse.y - q.y);
             if (inMap && dd < hitD) { hitD = dd; hit = &r; }
         }

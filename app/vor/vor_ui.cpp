@@ -226,7 +226,7 @@ void fixMap(App& a, ImVec2 size, const dect2::NavStation* st[2], const dect2::Na
         if (!st[i]) continue;
         const ImVec2 q = adsbmap::project(st[i]->lat, st[i]->lon);
         dl->AddRect(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), col[i], 0, 0, 2 * gUi);
-        dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 8 * gUi), col[i], st[i]->ident.c_str());
+        if (adsbmap::labelsAt(S.map.zoom, false)) dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 8 * gUi), col[i], st[i]->ident.c_str());
         if (S.fix[i].valid) {
             double la, lo;
             dect2::navDestination(st[i]->lat, st[i]->lon, trueBearing(S.fix[i], st[i]), 400e3, la, lo);

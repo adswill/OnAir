@@ -268,10 +268,12 @@ void mapView(App& a) {
             dl->AddCircleFilled(q, r, v.cq ? IM_COL32(240, 180, 80, 255) : IM_COL32(90, 200, 220, 255));
             dl->AddCircle(q, r, IM_COL32(0, 0, 0, 160), 16, 1.f);
             contactlines::markSelected(dl, v.call, q);
+            if (adsbmap::labelsAt(S.map.zoom, false)) {
             const ImVec2 ts = ImGui::CalcTextSize(v.call.c_str());
             const ImVec2 lp(q.x + 10 * gUi, q.y - ts.y * 0.5f - 2 * gUi);
             dl->AddRectFilled(lp, ImVec2(lp.x + ts.x + 8 * gUi, lp.y + ts.y + 4 * gUi), IM_COL32(10, 12, 14, 210), 2.f);
             dl->AddText(ImVec2(lp.x + 4 * gUi, lp.y + 2 * gUi), IM_COL32(235, 238, 240, 255), v.call.c_str());
+            }
         }
     dl->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));

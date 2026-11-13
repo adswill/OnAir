@@ -499,7 +499,7 @@ void mapView(App& a) {
         dl->AddCircleFilled(q, 5 * gUi, opColour(c, 255));
         dl->AddCircle(q, 5 * gUi, IM_COL32(0, 0, 0, 200));
         char b[96]; snprintf(b, sizeof b, "%s eNB %u/%d PCI %d", c.op.empty() ? (c.plmns.empty() ? "?" : c.plmns[0].c_str()) : c.op.c_str(), c.enb, c.sector, c.pci);
-        dl->AddText(ImVec2(q.x + 7 * gUi, q.y - 7 * gUi), IM_COL32(240, 240, 240, 255), b);
+        if (adsbmap::labelsAt(S.map.zoom, false)) dl->AddText(ImVec2(q.x + 7 * gUi, q.y - 7 * gUi), IM_COL32(240, 240, 240, 255), b);
     }
     dl->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + sz.y - ImGui::GetTextLineHeight() - 6 * gUi));

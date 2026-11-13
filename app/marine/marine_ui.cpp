@@ -1353,7 +1353,7 @@ void mapView(App& a) {
         else dl->AddCircleFilled(q, r, col);
         if (e.heard) dl->AddCircle(q, r + 4 * gUi, col, 20, 1.6f);       // heard: a ring (and a full colour for a coast station)
         if (sel) dl->AddCircle(q, r + 8 * gUi, IM_COL32(255, 255, 255, 255), 24, 2.f);
-        if ((S.mapLabels && (S.map.zoom >= 8 || e.heard)) || sel) {
+        if ((S.mapLabels && adsbmap::labelsAt(S.map.zoom, false)) || sel) {
             const std::string lb = e.name.empty() ? e.mmsi : e.name;
             dl->AddText(ImVec2(q.x + r + 3 * gUi, q.y - 7 * gUi), IM_COL32(adsbmap::overlayText() >> 16 & 255, adsbmap::overlayText() >> 8 & 255, adsbmap::overlayText() & 255, e.heard ? 255 : 150), lb.c_str());
         }

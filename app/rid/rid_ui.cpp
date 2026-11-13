@@ -235,7 +235,7 @@ void mapView(App& a, ImVec2 size) {
                 const float rad = d.direction * 3.14159265f / 180.f;
                 dl->AddLine(q, ImVec2(q.x + std::sin(rad) * r * 2.2f, q.y - std::cos(rad) * r * 2.2f), col, 1.5f * gUi);
             }
-            if (S.map.zoom >= 13 || sel) {
+            if (adsbmap::labelsAt(S.map.zoom, sel)) {
                 const std::string s = idOf(d);
                 char b2[96]; snprintf(b2, sizeof b2, "%s", altText(d.height).c_str());
                 if (sel) { const std::string mine = mylocmap::distanceBearingText(d.lat, d.lon); if (!mine.empty()) snprintf(b2, sizeof b2, "%s  %s", altText(d.height).c_str(), mine.c_str()); }

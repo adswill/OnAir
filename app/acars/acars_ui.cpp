@@ -331,7 +331,7 @@ void mapCanvas(App& a, ImVec2 size) {
                 dl->AddCircleFilled(q, 5 * gUi, planeColour(c, t.nowSec));
                 dl->AddCircle(q, 5 * gUi, sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(0, 0, 0, 150), 16, sel ? 1.6f : 1.f);
             }
-            if (S.map.zoom >= 5 || sel || withPos <= 12) {
+            if (adsbmap::labelsAt(S.map.zoom, sel)) {
                 std::string s = nameOf(c);
                 if (c.hasAlt) { char b[24]; snprintf(b, sizeof b, "  FL%03d", (c.altFt + 50) / 100); s += b; }
                 const ImVec2 ts = ImGui::CalcTextSize(s.c_str());

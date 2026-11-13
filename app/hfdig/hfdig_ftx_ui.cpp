@@ -205,10 +205,12 @@ void mapView(App& a, const dect2::HfdigFtxTelemetry& f, ImVec2 size) {
         dl->AddCircleFilled(q, 4.5f * gUi, col);
         contactlines::markSelected(dl, p.call, q);
         dl->AddCircle(q, 4.5f * gUi, p.cq ? IM_COL32(120, 230, 140, 255) : IM_COL32(0, 0, 0, 150), 16, p.cq ? 1.8f : 1.f);
+        if (adsbmap::labelsAt(S.map.zoom, false)) {
         const ImVec2 ts = ImGui::CalcTextSize(p.call.c_str());
         const ImVec2 lp(q.x + 8 * gUi, q.y - ts.y * 0.5f - 2 * gUi);
         dl->AddRectFilled(lp, ImVec2(lp.x + ts.x + 8 * gUi, lp.y + ts.y + 4 * gUi), IM_COL32(10, 12, 14, 210), 2.f);
         dl->AddText(ImVec2(lp.x + 4 * gUi, lp.y + 2 * gUi), IM_COL32(235, 238, 240, 255), p.call.c_str());
+        }
     }
     dl->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));

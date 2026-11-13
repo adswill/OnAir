@@ -184,11 +184,13 @@ void mapView(App& a) {
             const float r = 5.f * gUi;
             dl->AddCircleFilled(q, r, v.dprs ? IM_COL32(110, 150, 240, 255) : IM_COL32(90, 200, 220, 255));
             dl->AddCircle(q, r, IM_COL32(0, 0, 0, 160), 16, 1.f);
+            if (adsbmap::labelsAt(S.map.zoom, false)) {
             const std::string lb = v.call.empty() ? std::string("?") : v.call;
             const ImVec2 ts = ImGui::CalcTextSize(lb.c_str());
             const ImVec2 lp(q.x + 10 * gUi, q.y - ts.y * 0.5f - 2 * gUi);
             dl->AddRectFilled(lp, ImVec2(lp.x + ts.x + 8 * gUi, lp.y + ts.y + 4 * gUi), IM_COL32(10, 12, 14, 210), 2.f);
             dl->AddText(ImVec2(lp.x + 4 * gUi, lp.y + 2 * gUi), IM_COL32(235, 238, 240, 255), lb.c_str());
+            }
         }
     }
     dl->PopClipRect();

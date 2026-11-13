@@ -381,7 +381,7 @@ void mapCanvas(App& a, ImVec2 size) {
             dl->AddCircleFilled(q, 5 * gUi, fill);
             dl->AddCircle(q, 5 * gUi, edge, 16, sel ? 2.f : 1.f);
         }
-        if (S.map.zoom >= 5 || sel || placed <= 30) {
+        if (adsbmap::labelsAt(S.map.zoom, sel)) {
             const std::string s = planeLabel(c, age);
             const ImVec2 ts = ImGui::CalcTextSize(s.c_str());
             dl->AddRectFilled(ImVec2(q.x + 11 * gUi, q.y - ts.y / 2 - 2), ImVec2(q.x + 19 * gUi + ts.x, q.y + ts.y / 2 + 2), IM_COL32(10, 12, 14, (int)(215 * std::max(fade, 0.55f))), 2.f);

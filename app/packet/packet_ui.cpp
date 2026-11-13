@@ -247,12 +247,14 @@ void mapView(App& a, ImVec2 size) {
             const float r = (sel ? 8.f : 7.f) * gUi * 0.7f;
             dl->AddCircleFilled(q, r, stationColour(v));
             dl->AddCircle(q, r, sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(0, 0, 0, 150), 16, sel ? 1.6f : 1.f);
+            if (adsbmap::labelsAt(S.map.zoom, sel)) {
             const std::string label = v.hasWx && v.wx.any() ? v.call + "  " + dect2::aprsWxLabel(v.wx) : v.call;   // weather stations: temperature and wind
             const ImVec2 ts = ImGui::CalcTextSize(label.c_str());
             const ImVec2 lp(q.x + 12 * gUi, q.y - ts.y * 0.5f - 2 * gUi);
             dl->AddRectFilled(lp, ImVec2(lp.x + ts.x + 8 * gUi, lp.y + ts.y + 4 * gUi), IM_COL32(10, 12, 14, 210), 2.f);
             dl->AddRect(lp, ImVec2(lp.x + ts.x + 8 * gUi, lp.y + ts.y + 4 * gUi), sel ? IM_COL32(255, 255, 255, 200) : IM_COL32(60, 64, 68, 255), 2.f);
             dl->AddText(ImVec2(lp.x + 4 * gUi, lp.y + 2 * gUi), IM_COL32(235, 238, 240, 255), label.c_str());
+            }
             const float d = std::hypot(q.x - click.x, q.y - click.y);
             if (clicked && d < best) { best = d; hit = &v; }
         }

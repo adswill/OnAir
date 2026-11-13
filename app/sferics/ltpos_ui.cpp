@@ -219,7 +219,7 @@ void mapPane(App& a) {
         const ImVec2 q = adsbmap::project(r.lat, r.lon);
         const ImU32 c = r.fine ? IM_COL32(110, 210, 230, 255) : IM_COL32(220, 170, 90, 255);
         dl->AddCircleFilled(q, 4 * gUi, c);
-        dl->AddText(ImVec2(q.x + 7 * gUi, q.y - 7 * gUi), c, r.name.c_str());
+        if (adsbmap::labelsAt(S.map.zoom, false)) dl->AddText(ImVec2(q.x + 7 * gUi, q.y - 7 * gUi), c, r.name.c_str());
     }
     dl->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));

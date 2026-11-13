@@ -89,7 +89,7 @@ void hamMapTab(App& a) {
         const ham::DecodeMarks m = o.worked.mark(s.call, s.grid, s.band, s.mode, hamDxccKey(s.call));
         const ImU32 c = spotColour(s, m);
         dl->AddCircleFilled(q, 3.5f * gUi, c);
-        if (M.labels && M.view.zoom >= 3) dl->AddText(ImVec2(q.x + 5 * gUi, q.y - 7 * gUi), c, s.call.c_str());
+        if (M.labels && adsbmap::labelsAt(M.view.zoom, false)) dl->AddText(ImVec2(q.x + 5 * gUi, q.y - 7 * gUi), c, s.call.c_str());
         hits.push_back({q, &s});
     }
     // lines: the running QSO (red), the picked station (white)

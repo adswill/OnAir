@@ -368,7 +368,7 @@ void mapCanvas(App& a, ImVec2 size) {
         const ImU32 col = heard ? IM_COL32(120, 170, 230, 255) : g ? IM_COL32(100, 120, 150, 220) : IM_COL32(90, 96, 104, 180);
         dl->AddRectFilled(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), col);
         dl->AddRect(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(0, 0, 0, 160));
-        dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), heard ? IM_COL32(200, 220, 245, 255) : IM_COL32(140, 146, 152, 220), (std::to_string(s.id) + " " + s.name).c_str());
+        if (adsbmap::labelsAt(S.map.zoom, false)) dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), heard ? IM_COL32(200, 220, 245, 255) : IM_COL32(140, 146, 152, 220), (std::to_string(s.id) + " " + s.name).c_str());
     }
     if (on) {
         for (const auto& c : t.aircraft) {

@@ -361,7 +361,7 @@ void mapCanvas(App& a, ImVec2 size) {
             if (g.hasPos) continue;
             dl->AddRect(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(120, 170, 230, 230));
             const std::string s = "~GS " + hex6(g.addr);
-            dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(200, 220, 245, 200), s.c_str());
+            if (adsbmap::labelsAt(S.map.zoom, false)) dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(200, 220, 245, 200), s.c_str());
         }
         for (const auto& g : t.stations) {   // ground stations: squares
             if (!g.hasPos) continue;
@@ -369,7 +369,7 @@ void mapCanvas(App& a, ImVec2 size) {
             dl->AddRectFilled(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(120, 170, 230, 255));
             dl->AddRect(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(0, 0, 0, 160));
             const std::string s = "GS " + hex6(g.addr) + (g.airports.empty() ? "" : " " + g.airports);
-            dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(200, 220, 245, 255), s.c_str());
+            if (adsbmap::labelsAt(S.map.zoom, false)) dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(200, 220, 245, 255), s.c_str());
         }
         for (const auto& c : t.aircraft) {
             double plat, plon;

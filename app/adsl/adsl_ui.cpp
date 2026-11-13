@@ -198,7 +198,7 @@ void mapView(App&, const std::vector<Row>& v) {
         dl->AddConcavePolyFilled(g, 12, col);
         dl->AddPolyline(g, 12, sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(0, 0, 0, 150), ImDrawFlags_Closed, sel ? 1.6f : 1.f);
         char b[96]; snprintf(b, sizeof b, "%s  %s  %d m", ac.id.c_str(), ac.cat.c_str(), ac.altM);
-        dl->AddText(ImVec2(q.x + 9 * gUi, q.y - 7 * gUi), IM_COL32(255, 255, 255, 230), b);
+        if (adsbmap::labelsAt(S.map.zoom, sel)) dl->AddText(ImVec2(q.x + 9 * gUi, q.y - 7 * gUi), IM_COL32(255, 255, 255, 230), b);
         if (clicked) { const float dd = std::hypot(click.x - q.x, click.y - q.y); if (dd < bestD) { bestD = dd; S.sel = ac.key; } }
     }
     dl->PopClipRect();

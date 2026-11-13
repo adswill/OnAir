@@ -427,7 +427,7 @@ void mapView(App& a, ImVec2 size) {
                 ImGui::SetTooltip("%s\n%s  %s\n%s", nameOf(v).c_str(), mmsiText(v.mmsi).c_str(), tr(dect2::aisMmsiKindText(dect2::aisMmsiInfo(v.mmsi).kind)), c.c_str());
             }
             const bool hovered = S.labels == 1 && mouseIn && std::hypot(q.x - mouse.x, q.y - mouse.y) < 14 * gUi;   // labels off: the vessel under the pointer still names itself
-            if (sel || hovered || S.labels == 2 || (S.labels == 0 && S.map.zoom >= 10)) {
+            if (sel || hovered || S.labels == 2 || (S.labels == 0 && adsbmap::labelsAt(S.map.zoom, false))) {
                 const std::string s = nameOf(v);
                 const ImVec2 ts = ImGui::CalcTextSize(s.c_str());
                 const ImVec2 lp(q.x + 12 * gUi, q.y - ts.y * 0.5f - 2 * gUi);

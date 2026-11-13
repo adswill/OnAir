@@ -67,7 +67,7 @@ private fun lastLocation(ctx: Context): Pair<Double, Double>? = try {
 
 // ---- OpenStreetMap raster tiles: on demand for the visible area only, disk cache >= 7 days, 2 downloads at a time ----
 
-private const val TILE_UA = "OnAir-Android/0.2.6 (https://github.com/adswill/OnAir)"
+private val TILE_UA = "OnAir-Android/" + io.github.adswill.onair.BuildConfig.VERSION_NAME + " (+https://github.com/adswill/OnAir)"
 private const val MIN_AGE_MS = 7L * 24 * 3600 * 1000
 
 private object TileStore {
@@ -123,6 +123,8 @@ private object TileStore {
 
     private fun fail(k: Long) { synchronized(lock) { failedAt[k] = System.currentTimeMillis() }; failures++; tick++ }
 
+    @Volatile private var blocked = false   // a 403 or 429 from the tile server: no more requests this session (OSM tile usage policy)
+
     private fun load(k: Long) {
         val z = kz(k); val x = kx(k); val y = ky(k)
         val f = dir?.let { File(it, "$z/$x/$y.png") }
@@ -135,11 +137,14 @@ private object TileStore {
                 if (!stale) return
             }
         }
+        if (blocked) { if (!stale) fail(k); return }
         val c = URL("https://tile.openstreetmap.org/$z/$x/$y.png").openConnection() as HttpURLConnection
         try {
             c.setRequestProperty("User-Agent", TILE_UA)
             c.connectTimeout = 8000; c.readTimeout = 8000
-            if (c.responseCode != 200) { if (!stale) fail(k); return }
+            val rc = c.responseCode
+            if (rc == 403 || rc == 429) blocked = true
+            if (rc != 200) { if (!stale) fail(k); return }
             val bytes = c.inputStream.use { it.readBytes() }
             val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
             if (bmp == null) { if (!stale) fail(k); return }
