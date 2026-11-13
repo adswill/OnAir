@@ -400,3 +400,18 @@ Linux signal / noise. Figures from different runners differ (processor lottery);
 | 391 | fading | Fading analyser | 0.048 | 0.001 | 0.001 | 0.015 | 0.015 |
 | 392 | pttlog | PTT and duty-cycle logger | 0.048 | 0.001 | 0.001 | 0.011 | 0.011 |
 | 393 | freqacc | Carrier frequency accuracy meter | 0.048 | 0.001 | 0.001 | 0.010 | 0.010 |
+
+## Second pass (lane cpu2): what was tried
+
+Profile of 25 modes under perf on the Linux runner (run 43485072910, job log): the X-band links (XbandReceiver::feed 57 %, flat), RDAS / MSG / AWS
+(wxsat Demod::feed 60-83 %, flat, already table-driven), FY-3 MPT (symbol 35 %, decimated 23 %), ISDB-S (Viterbi 41 %), Wi-SUN (extend 40 %),
+KAVB (chirpUnit 23 %), ISM (Sigfox demod 43 %), BGAN (search 45 %), DJI (resampler 17 %, hypotf 15 %), DTMB (LDPC 45 %).
+Before and after on the same runner (run 43491919372, AMD EPYC 7763, CPU s per s of signal, all threads, test signal):
+
+| mode | before | after | change |
+|---|--:|--:|---|
+| kavb | 1.971 | 1.186 | kept: V-sweep chirp stepped by a rotor, per-frame values once (chirpFill, kavb_phy.cpp) |
+| isdbs | 4.778 | 5.189 | taken back: AVX2 copy of the Viterbi was slower |
+| wisun | 1.858 | 1.924 | taken back: four-output filter, no gain |
+| xb_probav / xb_metopd / xb_npp / xb_gcomw / xb_aqua | | | taken back: complex product without NaN check, no gain |
+| dji | 0.982 | 0.992 | taken back: no gain |

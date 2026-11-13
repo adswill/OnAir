@@ -39,12 +39,6 @@ void loopGains(double bl, double zeta, double& a, double& b) {
     a = 4 * zeta * w / d; b = 4 * w * w / d;
 }
 
-// a * b for finite values, the products apart as std::complex does them (the same result, without its NaN check every sample)
-inline cfp cmulFinite(cfp a, cfp b) {
-    const float ac = a.real() * b.real(), bd = a.imag() * b.imag(), ad = a.real() * b.imag(), bc = a.imag() * b.real();
-    return {ac - bd, ad + bc};
-}
-
 // Decimating FIR, complex data, doubled ring; the dot product through firDot (sixteen accumulators the compiler vectorises)
 struct FirDec {
     std::vector<float> taps, h2;
@@ -152,9 +146,9 @@ public:
     template<class S> void feed(const cf32* x, size_t n, S&& sink) {
         for (size_t i = 0; i < n;) {
             if (skipLeft_ > 0) { const size_t k = (size_t)std::min<uint64_t>(skipLeft_, n - i); skipLeft_ -= k; skipped += k; i += k; continue; }
-            rot_ = cmulFinite(rot_, step_);
+            rot_ *= step_;
             if (((++renorm_) & 4095) == 0) rot_ /= std::abs(rot_);
-            cfp v = cmulFinite(cfp(x[i].real(), x[i].imag()), rot_);
+            cfp v = cfp(x[i].real(), x[i].imag()) * rot_;
             i++;
             cfp y;
             if (ratio_ == 1) y = v; else if (!fir_.push(v, y)) continue;
