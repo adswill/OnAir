@@ -55,8 +55,9 @@ CALLS = {
 LOGGING_CPP = {'DIAG', 'DIAG_ERROR', 'DIAG_DEBUG'}
 GENERIC = {'failed', 'error', 'invalid', 'cannot open', 'write error', 'read error', 'not supported', 'out of memory', 'cancelled', 'ok',
            'unknown error', 'timeout', 'no data'}
-HISTORY_RE = r'DIAG(_[A-Z]+)?\s*\(|Diag\.[a-z]+\s*\(|diag(_debug|_text)?!?\s*\(|diag(Debug|Text)\s*\('
-CODE_IN_LINE = re.compile(r'(?:\bDIAG(?:_[A-Z]+)?|\bDiag\.[a-z]+|\bdiag(?:_debug|_text)?!?|\bdiag(?:Debug|Text))\s*\(\s*([1-9]\d{5})\b')
+CACHE_VERSION = 2
+HISTORY_RE = r'DIAG(_[A-Z]+)*[[:space:]]*\(|Diag\.[a-z]+[[:space:]]*\(|diag(_debug|_text)?!?[[:space:]]*\(|diag(Debug|Text)[[:space:]]*\('
+CODE_IN_LINE = re.compile(r'(?:\bDIAG(?:_[A-Z]+)*|\bDiag\.[a-z]+|\bdiag(?:_debug|_text)?!?|\bdiag(?:Debug|Text))\s*\(\s*([1-9]\d{5})\b')
 
 
 def valid_code(c):
@@ -362,7 +363,7 @@ def read(path):
         return f.read()
 
 
-CPP_PRESCAN = re.compile(r'\bDIAG(_[A-Z]+)?\s*\(|' + re.escape(DIAG_HEADER))
+CPP_PRESCAN = re.compile(r'\bDIAG(_[A-Z]+)*\s*\(|' + re.escape(DIAG_HEADER))
 OTHER_PRESCAN = {'kt': re.compile(r'\bDiag\.'), 'rs': re.compile(r'\bdiag(_debug|_text)?!'),
                  'py': re.compile(r'\bdiag(_debug|_text)?\s*\('), 'js': re.compile(r'\bdiag(Debug|Text)?\s*\(')}
 
@@ -381,7 +382,7 @@ def scan(files, errors, warnings):
                                % (p, DIAG_HEADER, ', '.join(sorted(NO_DIAG_HEADER)))))
             if not includes:
                 # DIAG( in a file without the header is someone else's identifier, unless it carries a code
-                if re.search(r'\bDIAG(_[A-Z]+)?\s*\(\s*[1-9]\d{5}\b', src):
+                if re.search(r'\bDIAG(_[A-Z]+)*\s*\(\s*[1-9]\d{5}\b', src):
                     errors.append((p, 1, 'include', '%s: uses DIAG with a code but does not include %s' % (p, DIAG_HEADER)))
                 continue
         elif not OTHER_PRESCAN[lang].search(src):
@@ -447,6 +448,8 @@ def history_codes(quiet):
                 cache = json.load(f)
         except (OSError, ValueError):
             pass
+    if cache.get('version') != CACHE_VERSION:   # read by an older version of this tool: read the history again
+        cache = {'head': None, 'codes': {}}
     rng = 'HEAD'
     if cache.get('head'):
         if cache['head'] == head:
@@ -471,7 +474,7 @@ def history_codes(quiet):
     if cache_file:
         try:
             with open(cache_file, 'w', encoding='utf-8') as f:
-                json.dump({'head': head, 'codes': {str(k): v for k, v in codes.items()}}, f)
+                json.dump({'version': CACHE_VERSION, 'head': head, 'codes': {str(k): v for k, v in codes.items()}}, f)
         except OSError:
             pass
     shallow = git('rev-parse', '--is-shallow-repository', check=False).strip() == 'true'
