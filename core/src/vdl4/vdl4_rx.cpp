@@ -155,7 +155,10 @@ struct Vdl4Receiver::Impl {
         burst.reserve(kVdl4DataStartBit + kBurstBits);
         for (int i = 0; i < kVdl4RampBits; i++) burst.push_back(1);
         for (int i = 0; i < kVdl4SyncBits; i++) burst.push_back(kVdl4SyncPattern[i]);
-        for (long k = c.syncEnd + kOsr; k < (long)c.line.size() && (int)burst.size() < kVdl4DataStartBit + kBurstBits; k += kOsr) burst.push_back(c.line[(size_t)k] > c.thr ? 1 : 0);
+        // 4.1: each bit from three discriminator samples about its centre (half the noise of one sample; a whole bit takes in too much of
+        // the neighbours behind the partial-response GMSK pulse)
+        for (long k = c.syncEnd + kOsr; k + 1 < (long)c.line.size() && (int)burst.size() < kVdl4DataStartBit + kBurstBits; k += kOsr)
+            burst.push_back(c.line[(size_t)k - 1] + c.line[(size_t)k] + c.line[(size_t)k + 1] > c.thr ? 1 : 0);
         std::vector<uint8_t> data;
         if (vdl4BurstDataBits(burst, data)) {
             for (const auto& fr : vdl4HdlcFrames(data)) onFrame(c, fr, snr, 10.f * std::log10(std::max(pwr, 1e-12f)), c.offHz);
@@ -185,21 +188,24 @@ struct Vdl4Receiver::Impl {
                 c.cool = 0;
                 c.lockLeft = 0;
             }
-        } else if (c.cool++ > 2 * kOsr && n > (long)(kVdl4SyncBits + 4) * kOsr) {
+        } else if (c.cool++ > 2 * kOsr && n > (long)(kVdl4SyncBits + 5) * kOsr) {
             // 4 ramp ones then the 24-bit 0101 training sequence ending at the tail. The alternating pattern also matches
             // 2 or 4 bits early (the ramp ones count as only 1 or 2 errors), so after the first hit the best fit within
             // the next 5 bits is taken as the end of the sync. 4.1: up to kSyncErr errors (was 3): the 0101 sequence swings least of all
             // behind the GMSK pulse, so its bits fail first and the sync, not the data, set the threshold; the squelch and the FCS still
             // stand between noise and a frame.
+            // (the bits as the data's: three samples about each centre, the last centre one sample before the tail)
             int err = 0;
+            const double thr3 = 3.0 * c.sum96 / kSyncSamples;
             for (int j = 0; j < kVdl4SyncBits + 4 && err <= kSyncErr; j++) {
                 const uint8_t want = j < kVdl4SyncBits ? kVdl4SyncPattern[kVdl4SyncBits - 1 - j] : 1;
-                err += (c.line[(size_t)(n - 1 - (long)kOsr * j)] > c.sum96 / kSyncSamples ? 1 : 0) != want;
+                const size_t k = (size_t)(n - 2 - (long)kOsr * j);
+                err += (c.line[k - 1] + c.line[k] + c.line[k + 1] > thr3 ? 1 : 0) != want;
             }
             if (c.lockLeft == 0 && err <= kSyncErr && chp > 2.5f * c.floor) {   // squelch: noise alone must not start a lock
                 c.lockLeft = 5 * kOsr; c.bestErr = 99; }
             if (c.lockLeft > 0) {
-                if (err < c.bestErr) { c.bestErr = err; c.bestN = n; c.bestThr = c.sum96 / kSyncSamples; }
+                if (err < c.bestErr) { c.bestErr = err; c.bestN = n - 1; c.bestThr = 3.0 * c.sum96 / kSyncSamples; }
                 if (--c.lockLeft == 0) {
                     c.thr = c.bestThr;
                     c.syncEnd = c.bestN;               // one sample after the fitted bit centre
