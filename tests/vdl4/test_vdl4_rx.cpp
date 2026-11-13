@@ -91,7 +91,7 @@ int main() {
             rx.telemetry(t, ~0ull);
             return t;
         };
-        const double snrs[] = {8, 10, 12, 14, 16, 18, 20, 24};
+        const double snrs[] = {10, 12, 14, 16, 18, 20, 22, 24};
         for (double cfo : {0.0, 2500.0, -2500.0}) {
             double thr = 99;
             for (int k = 7; k >= 0; k--) {

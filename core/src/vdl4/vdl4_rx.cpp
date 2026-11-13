@@ -41,6 +41,7 @@ constexpr int kStageA = 16;
 const double kLpAlpha = [] { const char* e = std::getenv("DECT2_VDL4_LPA"); const double v = e ? std::atof(e) : 0.0; return v > 0.01 && v < 1.0 ? v : 0.36; }();
 constexpr int kBurstBits = 480;                 // line bits kept after the sync (a burst is at most a few hundred)
 constexpr int kSyncSamples = kOsr * kVdl4SyncBits;
+constexpr int kSyncErr = 6;
 constexpr size_t kLineMax = 4 * (size_t)kOsr * (kBurstBits + 64);
 
 struct Chan {
@@ -187,13 +188,15 @@ struct Vdl4Receiver::Impl {
         } else if (c.cool++ > 2 * kOsr && n > (long)(kVdl4SyncBits + 4) * kOsr) {
             // 4 ramp ones then the 24-bit 0101 training sequence ending at the tail. The alternating pattern also matches
             // 2 or 4 bits early (the ramp ones count as only 1 or 2 errors), so after the first hit the best fit within
-            // the next 5 bits is taken as the end of the sync.
+            // the next 5 bits is taken as the end of the sync. 4.1: up to kSyncErr errors (was 3): the 0101 sequence swings least of all
+            // behind the GMSK pulse, so its bits fail first and the sync, not the data, set the threshold; the squelch and the FCS still
+            // stand between noise and a frame.
             int err = 0;
-            for (int j = 0; j < kVdl4SyncBits + 4 && err <= 3; j++) {
+            for (int j = 0; j < kVdl4SyncBits + 4 && err <= kSyncErr; j++) {
                 const uint8_t want = j < kVdl4SyncBits ? kVdl4SyncPattern[kVdl4SyncBits - 1 - j] : 1;
                 err += (c.line[(size_t)(n - 1 - (long)kOsr * j)] > c.sum96 / kSyncSamples ? 1 : 0) != want;
             }
-            if (c.lockLeft == 0 && err <= 3 && chp > 2.5f * c.floor) {   // squelch: noise alone must not start a lock
+            if (c.lockLeft == 0 && err <= kSyncErr && chp > 2.5f * c.floor) {   // squelch: noise alone must not start a lock
                 c.lockLeft = 5 * kOsr; c.bestErr = 99; }
             if (c.lockLeft > 0) {
                 if (err < c.bestErr) { c.bestErr = err; c.bestN = n; c.bestThr = c.sum96 / kSyncSamples; }

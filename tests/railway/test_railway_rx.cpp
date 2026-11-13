@@ -61,7 +61,7 @@ int main() {
     // 4.1 sensitivity: SNR in 25 kHz (the generator's definition), 960 kHz, carrier offsets 0, +2 kHz and -6 kHz, two noise seeds; a trial passes
     // with 2 frames in 3.2 s (3 whole TDCS bursts; the first starts with the file, before the AFC has 200 ms of noise to set its floor on). Before 4.1 (the +-14 kHz path alone) about 7 dB here (12 dB in the QA sweep's 7.7 kHz).
     for (auto protocol : {Protocol::Klw, Protocol::Tdcs}) for (double cfo : {0.0, 2000.0, -6000.0}) {
-        const double snrs[] = {2, 3, 4, 5, 6, 8, 10, 12};
+        const double snrs[] = {0, 1, 2, 3, 4, 6, 8, 12};
         double thr = 99;
         for (int k = 7; k >= 0; k--) {
             int ok = 0;
@@ -79,7 +79,7 @@ int main() {
             if (ok == 2) thr = snrs[k]; else break;
         }
         printf("  railway threshold (25 kHz SNR) protocol %d cfo %+.0f: %.0f dB\n", int(protocol), cfo, thr);
-        CHECK(thr <= 6, "protocol %d cfo %+.0f: needs %.0f dB in 25 kHz (4.1 limit 6)", int(protocol), cfo, thr);
+        CHECK(thr <= 4, "protocol %d cfo %+.0f: needs %.0f dB in 25 kHz (4.1 limit 4)", int(protocol), cfo, thr);
     }
     // IQ noise alone (two seeds, 10 s each, with the CPU time): no frame
     for (auto protocol : {Protocol::Klw, Protocol::Tdcs}) {
