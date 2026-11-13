@@ -31,7 +31,7 @@ static void protoChecks() {
     CHECK(!wordsOfCode(10363).ok && !wordsOfCode(51292).ok && wordsOfCode(10362).ok, "illegal codes");
     for (int i = 0; i < 128; i++) { const uint16_t cw = bchWord(i); CHECK(bchInfo(cw) == i, "BCH info %d", i); }
     int dmin = 99, d23 = 99;
-    for (int i = 1; i < 128; i++) dmin = std::min(dmin, dect2::bits::popcount(bchWord(i)));
+    for (int i = 1; i < 128; i++) dmin = std::min(dmin, dect2::bits::popcount((uint32_t)bchWord(i)));
     for (int i = 1; i < 4096; i++) d23 = std::min(d23, dect2::bits::popcount(golayWord((uint32_t)i)));
     CHECK(dmin == 5, "BCH (15,7) minimum distance %d", dmin);
     CHECK(d23 == 7, "Golay (23,12) minimum distance %d", d23);
