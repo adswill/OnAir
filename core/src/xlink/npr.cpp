@@ -26,15 +26,21 @@ uint32_t syncWord(int net) { return 0x45u << 16 | 0xD2u << 8 | kHash[net & 15]; 
 int networkOfHash(uint8_t h) { for (int i = 0; i < 16; i++) if (kHash[i] == h) return i; return -1; }
 
 void SyncFinder::feed(const float* d, size_t n) {
-    static const std::vector<std::vector<float>> patterns = [] {
-        std::vector<std::vector<float>> p(16);
+    // the 16 patterns less their mean, and their energy: the same expressions as worked out per position before (bit for bit)
+    struct Pat { float q[12][16]; float ep[16]; };
+    static const Pat pat = [] {
+        Pat t{};
         for (int net = 0; net < 16; net++) {
             int lv[12];
             syncLevels(syncWord(net), lv);
-            p[(size_t)net].resize(12);
-            for (int i = 0; i < 12; i++) p[(size_t)net][(size_t)i] = (float)lv[i];
+            float p[12];
+            for (int i = 0; i < 12; i++) p[i] = (float)lv[i];
+            float pm = 0; for (int s = 0; s < 12; s++) pm += p[s]; pm /= 12;
+            float ep = 0;
+            for (int s = 0; s < 12; s++) { t.q[s][net] = p[s] - pm; ep += (p[s] - pm) * (p[s] - pm); }
+            t.ep[net] = ep;
         }
-        return p;
+        return t;
     }();
     h_.insert(h_.end(), d, d + n);
     n_ += (int64_t)n;
@@ -50,15 +56,18 @@ void SyncFinder::feed(const float* d, size_t n) {
         m /= 12;
         for (int s = 0; s < 12; s++) { v[s] -= m; en += v[s] * v[s]; }
         if (en < 1e-9f) continue;
+        // the 16 correlations side by side (each summed in the same order as one at a time: vectorises)
+        float c[16] = {};
+        for (int s = 0; s < 12; s++) for (int net = 0; net < 16; net++) c[net] += v[s] * pat.q[s][net];
+        // a frame needs a normalised correlation of 0.93: with none over 0.86 (squared, no root) the best one is not taken anyway
+        bool cand = false;
+        for (int net = 0; net < 16; net++) cand |= c[net] > 0 && c[net] * c[net] >= 0.86f * 0.86f * (en * pat.ep[net]);
         int bestN = -1; float bestC = 0;
-        for (int net = 0; net < 16; net++) {
-            float c = 0, ep = 0;
-            const auto& p = patterns[(size_t)net];
-            float pm = 0; for (int s = 0; s < 12; s++) pm += p[(size_t)s]; pm /= 12;
-            for (int s = 0; s < 12; s++) { c += v[s] * (p[(size_t)s] - pm); ep += (p[(size_t)s] - pm) * (p[(size_t)s] - pm); }
-            const float nc = c / std::sqrt(en * ep);
-            if (nc > bestC) { bestC = nc; bestN = net; }
-        }
+        if (cand)
+            for (int net = 0; net < 16; net++) {
+                const float nc = c[net] / std::sqrt(en * pat.ep[net]);
+                if (nc > bestC) { bestC = nc; bestN = net; }
+            }
         const int64_t at = base_ + (int64_t)i + kPre;
         if (pend_.network >= 0 && at > pend_.atSample + 8) { if (cb_) cb_(pend_); last_ = pend_.atSample; pend_ = Hit{}; }
         if (bestC < 0.93f || bestN < 0 || at - last_ < 12 * kSps) continue;

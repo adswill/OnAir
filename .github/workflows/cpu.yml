@@ -29,7 +29,7 @@ on:
         description: "seconds of signal per mode (capped at 160 M samples)"
         default: "6"
       perf:
-        description: "Linux: mode ids (id or id:seconds, comma-separated) to run once more under perf record (the hottest functions are printed)"
+        description: "Linux: mode ids (id, id:seconds or id:seconds:noise, comma-separated) to run once more under perf record (the hottest functions are printed)"
         default: ""
 concurrency:
   group: cpu-${{ github.ref }}
@@ -129,13 +129,15 @@ jobs:
           sudo sysctl -w kernel.perf_event_paranoid=-1 kernel.kptr_restrict=0
           B=$(find build -type f -name test_qa_sweep | head -1)
           for MS in $(echo "$PM" | tr ',' ' '); do   # the receive run only: the test signal is made first, outside perf; id or id:seconds
-            M=${MS%%:*}; T=$SECS; [ "$MS" != "$M" ] && T=${MS#*:}
+            IFS=: read -r M T W <<< "$MS"; T=${T:-$SECS}   # id[:seconds[:noise]]
             D=$(mktemp -d)
             R=$(QA_CPUGEN=1 "$B" --gen "$M" 0 "$T" 12 "$D" | sed -n 's/^RATE \([0-9.]*\).*/\1/p')
-            F="$D/clean.ci16"; [ -n "$R" ] || { R=$(QA_CPUGEN=1 "$B" --gen "$M" 0 "$T" 12 "$D" | sed -n 's/.*NOISERATE \([0-9.]*\).*/\1/p'); F="$D/noise.ci16"; }
+            F="$D/clean.ci16"; [ "$W" = noise ] && F="$D/noise.ci16"; [ -n "$R" ] || { R=$(QA_CPUGEN=1 "$B" --gen "$M" 0 "$T" 12 "$D" | sed -n 's/.*NOISERATE \([0-9.]*\).*/\1/p'); F="$D/noise.ci16"; }
             echo "===== $M at $R sps, $F ====="
             QA_CPUMODE=1 perf record -F 1999 -o perf.data -- "$B" --run "$M" "$R" "$T" "$F" cpu > /dev/null 2>&1 || true
             perf report -i perf.data --stdio --no-children --percent-limit 0.5 --sort comm,symbol 2>/dev/null | grep -v "^$" | grep -v "^#" | head -60 || true
+            echo "----- $M: the hottest function, by instruction -----"
+            perf annotate -i perf.data --stdio --no-source 2>/dev/null | awk '/Percent \|/ { if (++h > 1) exit } { if ($1 + 0 >= 0.4 || /Disassembly/) print }' | head -90 || true
             rm -rf "$D" perf.data
           done
       - uses: actions/upload-artifact@v7
