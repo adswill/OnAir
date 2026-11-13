@@ -504,11 +504,15 @@ struct WisunReceiver::Impl {
                 d.lo *= d.step;
                 if ((d.mixed.size() & 1023) == 0) d.lo /= std::abs(d.lo);
             }
-            float re = 0, im = 0;
+            // eight running sums per part (one running sum waited on every add: 4.1, docs/CPU-4.1.md; the last bits of z change)
+            float ar[8] = {}, ai[8] = {};
             const size_t m = std::min(L, i + 1);
             const cf* x = d.mixed.data() + i;
-            for (size_t k = 0; k < m; k++) { re += lp[k] * x[-(ptrdiff_t)k].real(); im += lp[k] * x[-(ptrdiff_t)k].imag(); }
-            const cf z(re, im);
+            size_t k = 0;
+            for (; k + 8 <= m; k += 8)
+                for (size_t j = 0; j < 8; j++) { ar[j] += lp[k + j] * x[-(ptrdiff_t)(k + j)].real(); ai[j] += lp[k + j] * x[-(ptrdiff_t)(k + j)].imag(); }
+            for (; k < m; k++) { ar[0] += lp[k] * x[-(ptrdiff_t)k].real(); ai[0] += lp[k] * x[-(ptrdiff_t)k].imag(); }
+            const cf z(((ar[0] + ar[1]) + (ar[2] + ar[3])) + ((ar[4] + ar[5]) + (ar[6] + ar[7])), ((ai[0] + ai[1]) + (ai[2] + ai[3])) + ((ai[4] + ai[5]) + (ai[6] + ai[7])));
             if (d.havePrev) {
                 const cf w = z * std::conj(d.zPrev);
                 d.f.push_back(fastAtan2(w.imag(), w.real()));
