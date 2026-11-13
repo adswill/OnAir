@@ -10,6 +10,7 @@
 #include <cmath>
 #include <complex>
 #include <cstdio>
+#include <cstdlib>
 #include <deque>
 #include <mutex>
 
@@ -96,6 +97,15 @@ struct EczasLiveReceiver::Impl {
     double snrDb = -50, levelDb = -200, noiseDens = 0;
     bool carrier = false;
     eczas::EczasReceiver slicer;
+    // 4.1 (docs/SENSITIVITY-GAPS.md): a coherent detector beside the phase-step one. The filtered carrier against a reference that follows the
+    // midpoint of the two keying phases (decision-directed, about 0.25 s, after the frequency loop's residual is turned out) gives the keying state
+    // itself, so a bit is decided from one phase estimate instead of the difference of two: about 3 dB less noise. Its own slicer; a time packet
+    // both find counts once. DECT2_ECZAS_NOCOH=1: off (as 4.0)
+    eczas::EczasReceiver cohSlicer;
+    bool cohOn = true;
+    double refRe = 0, refIm = 0, resPh = 0;
+    int64_t recentUtc[4] = {};
+    int recentPos = 0;
     EczasTelemetry pub;
     double nextReport = 0;
     double nextSecond = 1;
@@ -137,6 +147,12 @@ struct EczasLiveReceiver::Impl {
         pAll = pNar = 0; meanRe = 1; meanIm = 0; k500 = 0;
         snrDb = -50; levelDb = -200; carrier = false;
         slicer.configure(500.0, 0);
+        { const char* e = getenv("DECT2_ECZAS_NOCOH"); cohOn = !(e && *e && *e != '0'); }
+        cohSlicer.configure(500.0, 0);
+        cohSlicer.setCoherent(true);
+        refRe = refIm = resPh = 0;
+        for (auto& u : recentUtc) u = 0;
+        recentPos = 0;
         nextReport = 0; nextSecond = 1;
         traceQ.assign(kEczasTrace, 0); tracePos = 0; traceCount = 0;
         cI.assign(kEczasConstel, 0.f); cQ.assign(kEczasConstel, 0.f); constelPos = 0; constelCount = 0;
@@ -188,6 +204,8 @@ struct EczasLiveReceiver::Impl {
             if (carrier) { afcHz = std::max(-250.0, std::min(250.0, afcHz + 0.5 * resHz)); updateStep(); resHz *= 0.5; }
         }
         const double dp = d - 2 * kPi * resHz / kFs;
+        resPh += 2 * kPi * resHz / kFs;
+        if (resPh > kPi) resPh -= 2 * kPi; else if (resPh < -kPi) resPh += 2 * kPi;
         dpSum += dp - dphi[dpPos];
         dphi[dpPos] = dp;
         if (++dpPos >= (size_t)kBitSamples) dpPos = 0;
@@ -208,6 +226,21 @@ struct EczasLiveReceiver::Impl {
             const int16_t v = (int16_t)std::lround(std::max(-32768.0, std::min(32767.0, s)));
             traceQ[tracePos] = v; tracePos = (tracePos + 1) % kEczasTrace; if (traceCount < kEczasTrace) traceCount++;
             slicer.feed(&v, 1);
+            if (cohOn) {
+                // the carrier turned back by the residual the frequency loop has measured but not yet put into the mixer
+                const double c = std::cos(resPh), sn = std::sin(resPh);
+                const double yr = ar * c + ai * sn, yi = ai * c - ar * sn;
+                const double r2 = refRe * refRe + refIm * refIm;
+                double q = 0;
+                if (r2 > 1e-30) q = (yi * refRe - yr * refIm) / (r2 * std::sin(kRampRad / 2));   // +-1 at the two keying phases
+                if (!carrier) q = 0;
+                // the reference: the sample turned by the half step of the state it was decided as, slowly averaged
+                const double h = q >= 0 ? -kRampRad / 2 : kRampRad / 2, hc = std::cos(h), hs = std::sin(h);
+                refRe += ((yr * hc - yi * hs) - refRe) * (1.0 / 125);
+                refIm += ((yr * hs + yi * hc) - refIm) * (1.0 / 125);
+                const int16_t cv = (int16_t)std::lround(std::max(-32768.0, std::min(32767.0, q * kSymbolScale)));
+                cohSlicer.feed(&cv, 1);
+            }
             k500++;
             drainSlicer();
         }
@@ -237,14 +270,27 @@ struct EczasLiveReceiver::Impl {
         while (flog.size() > kEczasLogMax) flog.pop_back();
     }
 
+    // a time packet the other slicer already gave
+    bool seenUtc(int64_t u) const { for (int64_t v : recentUtc) if (v == u) return true; return false; }
     void drainSlicer() {
         eczas::EczasRxPacket p;
+        while (cohSlicer.pop(p)) {   // the coherent slicer adds time packets only: the frame counts and other packets stay the phase-step slicer's
+            if (p.time.status != eczas::DecodeStatus::CrcOk || seenUtc(p.time.utcSec)) continue;
+            takePacket(p);
+        }
         while (slicer.pop(p)) {
+            if (p.time.status == eczas::DecodeStatus::CrcOk && seenUtc(p.time.utcSec)) continue;
+            takePacket(p);
+        }
+    }
+    void takePacket(const eczas::EczasRxPacket& p) {
+        {
             // stream time of the first bit of the frame: the symbol of bit 0 is 964 samples (500 Hz) before the newest one the slicer had, and a symbol is
             // the phase change over the bit that ends there
             const double bit0End = ((double)p.endIdx - 963.0) / 500.0;
             if (p.time.status == eczas::DecodeStatus::CrcOk) {
                 okN++;
+                recentUtc[recentPos] = p.time.utcSec; recentPos = (recentPos + 1) % 4;
                 const double utcStart = (double)p.time.utcSec - kStampAfterFrameStartSec;
                 const double startSec = bit0End - 0.02 - kFrontEndDelaySec;
                 // a check byte of 8 bits lets about one in 256 damaged frames through: once the time is established (two packets agree with each other and
