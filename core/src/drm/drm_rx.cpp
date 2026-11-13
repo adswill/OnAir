@@ -997,8 +997,10 @@ struct DrmReceiver::Impl {
                 if (a && p && b) {
                     const cf32 pred = 0.5f * (p->Hc[(size_t)j] + b->Hc[(size_t)j]);
                     accN += std::norm(a->Hc[(size_t)j] - pred); cntN++;
-                    const cf32 c = a->Hc[(size_t)j] * std::conj(p->Hc[(size_t)j]); sumRe += c.real(); sumIm += c.imag(); sumP += std::norm(a->Hc[(size_t)j]); cntD++;
-                    if (const SymRec* pp = recIf(t - 2 * gy)) { const cf32 c2 = a->Hc[(size_t)j] * std::conj(pp->Hc[(size_t)j]); sum2Re += c2.real(); sum2Im += c2.imag(); }
+                    // the Doppler statistics on the raw estimates: the common phase is the channel's too (a flat fade turns every carrier), and a
+                    // Doppler spread read from the turned-back estimates would switch the Wiener filter on in a fading channel and smooth it away
+                    const cf32 c = a->Hr[(size_t)j] * std::conj(p->Hr[(size_t)j]); sumRe += c.real(); sumIm += c.imag(); sumP += std::norm(a->Hr[(size_t)j]); cntD++;
+                    if (const SymRec* pp = recIf(t - 2 * gy)) { const cf32 c2 = a->Hr[(size_t)j] * std::conj(pp->Hr[(size_t)j]); sum2Re += c2.real(); sum2Im += c2.imag(); }
                 }
             } else if (ok) {
             } else if (a && b) {
