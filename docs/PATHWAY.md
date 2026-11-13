@@ -2200,3 +2200,10 @@ Receiver::signalView() plus a Signal tab for custom modes: histogram (OOK, ASK, 
 - #488: the audio monitor ignored the decode shift of a click / in-band typed frequency; monitorShiftHz adds it.
 - #470: Linux falls back to OpenGL ES 3.0 through EGL when desktop GL is llvmpipe and a GPU node exists; diagnostics in the log.
 - docs/BUGS2-4.1.md. CI results in the final report.
+## 2026-11-13 4.1 sensitivity of every mode (feat41-sensAll)
+- tools/sens/qa_sens.py: every engine mode through the QA sweep's generator and Engine stages over an SNR descent (2 noise seeds a point,
+  awgn / +2 kHz +50 ppm / off-centre -50 ppm, noise-only false-decode runs); sens-quick.yml `modes=qa:REGEX@k/N`; test_qa_sweep gained
+  QA_SEED, QA_IMP_NOISE, QA_NEG_HZ (defaults unchanged). Table and theory gaps: docs/SENSITIVITY-4.1-ALL.md (tools/sens/qa_sens_table.py).
+- FSK modems: weak-signal gates on the power over the noise: Bell 103 90 % point 14 -> 6 dB in 3 kHz, Bell 202 14 -> 10 dB, no message
+  on 8 minutes of noise. A DCR sync relaxation was tried, lost calls, and was reverted.
+- All simulated. CI: sens-quick 43364063415, 43364067712, 43374519331, 43380233150 (+ shards 5, 6); quick 43376327883, 43383912499.

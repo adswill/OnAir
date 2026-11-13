@@ -45,9 +45,13 @@ int main() {
             if (!m.empty()) { const auto b = bytesOf(m[0].text); for (size_t i = 0; i < data.size() && i < b.size(); i++) good += b[i] == data[i]; } }
         printf("  %-18s %4.0f dB: %d messages, %d / %zu bytes right\n", modemStd(s).name, snr, nm, good, 3 * data.size());
         if (snr >= 14) CHECK(nm == 3 && good >= 3 * (int)data.size() - 3, "%s at %.0f dB: %d messages %d bytes right", modemStd(s).name, snr, nm, good);
+        // 4.1 (docs/SENSITIVITY-4.1-ALL.md): the gates on the power over the noise; Bell 103 read at 6 dB (3.9 / 4.0: nothing under 10 dB)
+        if (s == 1 && snr >= 6) CHECK(nm == 3 && good >= 3 * (int)data.size() - 3, "%s at %.0f dB: %d messages %d bytes right", modemStd(s).name, snr, nm, good);
     }
     // false reports: noise only, one tone, a tone pair that is not a standard, a 600 baud burst on the V.21 tones
     { std::vector<cf32> n((size_t)(fs * 20), cf32(0, 0)); addNoise(n, 0.01, 4); auto t = run(x40::FskModem, n, fs); CHECK(msgs(t).empty(), "noise: %zu messages", msgs(t).size()); }
+    // 4.1: the lower burst gate sees more noise bursts: 4 x 120 s of noise at two levels must still give no message
+    for (unsigned sd : {11u, 12u, 13u, 14u}) { std::vector<cf32> n((size_t)(fs * 120), cf32(0, 0)); addNoise(n, sd & 1 ? 0.01 : 0.2, sd); auto t = run(x40::FskModem, n, fs); CHECK(msgs(t).empty(), "noise 120 s (seed %u): %zu messages", sd, msgs(t).size()); }
     { std::vector<cf32> n((size_t)(fs * 10)); double ph = 0; for (auto& v : n) { ph += 2 * kPi * 1500.0 / fs; v = 0.5f * cf32((float)std::cos(ph), (float)std::sin(ph)); } addNoise(n, 0.001, 5); auto t = run(x40::FskModem, n, fs); CHECK(msgs(t).empty(), "one tone: %zu messages", msgs(t).size()); }
     { // two tones 700 Hz apart: not a standard
         std::vector<cf32> n((size_t)(fs * 6), cf32(0, 0)); double p1 = 0, p2 = 0; for (size_t i = (size_t)fs; i < (size_t)(5 * fs); i++) { p1 += 2 * kPi * 1000.0 / fs; p2 += 2 * kPi * 1700.0 / fs; n[i] = 0.3f * (cf32((float)std::cos(p1), (float)std::sin(p1)) + cf32((float)std::cos(p2), (float)std::sin(p2))); } addNoise(n, 0.001, 6);

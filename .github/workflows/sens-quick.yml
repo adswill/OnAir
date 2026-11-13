@@ -53,16 +53,29 @@ jobs:
             ccache-sens-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
             ccache-sens-
       - name: Build sens_sweep
+        env: { MODES: "${{ inputs.modes || '.*' }}" }
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          cmake --build build --target sens_sweep -j 4
+          case "$MODES" in qa:*) cmake --build build --target test_qa_sweep -j 4 ;; *) cmake --build build --target sens_sweep -j 4 ;; esac
+      # modes "qa:REGEX" or "qa:REGEX@k/N": every engine mode through the QA sweep's generator and Engine stages (tools/sens/qa_sens.py,
+      # docs/SENSITIVITY-4.1-ALL.md) instead of sens_sweep; trials 0 = 2 a point; @k/N runs one shard of the matching modes
+      - name: Sweep (QA stages, every engine mode)
+        if: startsWith(inputs.modes, 'qa:')
+        env: { MODES: "${{ inputs.modes }}", TRIALS: "${{ inputs.trials }}" }
+        run: |
+          spec="${MODES#qa:}"; re="${spec%@*}"; shard="1/1"; case "$spec" in *@*) shard="${spec##*@}" ;; esac
+          t="$TRIALS"; [ "$t" = 0 ] || [ -z "$t" ] && t=2
+          mkdir -p sens-out
+          python3 tools/sens/qa_sens.py --bin build/test_qa_sweep --out sens-out --re "$re" --shard "$shard" --trials "$t" --jobs 3 --budget-min 290 | tee sens-out.txt
       - name: Sweep
+        if: ${{ !startsWith(inputs.modes, 'qa:') }}
         run: |
           args=(--${{ inputs.tier || 'full' }} --mode '${{ inputs.modes || '.*' }}' --scenario '${{ inputs.scenarios || '.*' }}' --out sens-out)
           trials='${{ inputs.trials || '8' }}'
           if [ "$trials" != '0' ]; then args+=(--trials "$trials"); fi
           ./build/sens_sweep "${args[@]}" | tee sens-out.txt
       - name: Compare with the baseline
+        if: ${{ !startsWith(inputs.modes, 'qa:') }}
         continue-on-error: true
         run: |
           if [ -f tests/sens/baseline/sens-baseline.json ]; then python3 tools/sens/compare.py tests/sens/baseline/sens-baseline.json sens-out/sens-baseline.json | tee -a sens-out.txt; fi

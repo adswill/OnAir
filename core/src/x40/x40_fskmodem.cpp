@@ -56,7 +56,9 @@ private:
         double pb = 0; for (int k = 0; k < kFrame; k++) { const double f = std::fabs((k < kFrame / 2 ? k : k - kFrame) * binHz_); if (f >= 350 && f <= 2800) pb += std::norm(a[k]); }
         hist_.push_back((float)pb); if (hist_.size() > (size_t)(10 * rate_ / kFrame)) hist_.pop_front();
         std::vector<float> s(hist_.begin(), hist_.end()); std::nth_element(s.begin(), s.begin() + (long)(s.size() / 5), s.end()); const double floorP = std::max((double)s[s.size() / 5], 1e-12);
-        const bool on = pb > 8.0 * floorP, off = pb < 3.0 * floorP;
+        // 4.1: on at 3 x the floor (was 8 x: a burst under about 8 dB in the band was never analysed although its bytes decode down to about
+        // 2 dB); 32 ms of a 2.4 kHz band holds about 80 degrees of freedom, so noise alone stays far under 3 x. The byte checks below reject noise.
+        const bool on = pb > 3.0 * floorP, off = pb < 1.8 * floorP;
         if (!inBurst_) {
             if (on) { if (++onCnt_ >= 3) { inBurst_ = true; burst_.clear(); burst_.insert(burst_.end(), prevFr_.begin(), prevFr_.end()); startT_ = t_ - 4.0 * kFrame / rate_; offCnt_ = 0; } } else onCnt_ = 0;
         }
@@ -114,12 +116,17 @@ private:
         for (size_t o = 0; o + N <= b.size(); o += N / 2) { for (int i = 0; i < N; i++) a[i] = b[o + i] * (float)(0.5 - 0.5 * std::cos(2 * kPi * i / N)); fftx(a); for (int k = 0; k < N; k++) psd[k] += std::norm(a[k]); segs++; }
         if (segs < 2) return false;
         // power in the band of the standards (600 - 2700 Hz) per sideband, and the noise: the median bin power at 3050 - 3400 Hz
-        double pw[2] = {0, 0}; std::vector<double> nz;
-        for (int k = 0; k < N; k++) { const double f = (k < N / 2 ? k : k - N) * bh, af = std::fabs(f); if (af >= 600 && af <= 2700) pw[f > 0 ? 0 : 1] += psd[k]; if (af >= 3050 && af <= 3400) nz.push_back(psd[k]); }
+        double pw[2] = {0, 0}; int nbs[2] = {0, 0}; std::vector<double> nz;
+        for (int k = 0; k < N; k++) { const double f = (k < N / 2 ? k : k - N) * bh, af = std::fabs(f); if (af >= 600 && af <= 2700) { pw[f > 0 ? 0 : 1] += psd[k]; nbs[f > 0 ? 0 : 1]++; } if (af >= 3050 && af <= 3400) nz.push_back(psd[k]); }
         if (nz.size() < 8) return false;
-        std::nth_element(nz.begin(), nz.begin() + (long)(nz.size() / 2), nz.end()); const double noise = std::max(nz[nz.size() / 2], 1e-30);
-        const double inBand = pw[0] + pw[1]; if (inBand < 8.0 * noise * (2100.0 / bh)) return false;      // the band must hold 9 dB over the noise
-        const int pol = pw[0] >= pw[1] ? 0 : 1; if (pw[pol ? 0 : 1] > 0.25 * pw[pol]) return false;         // one sideband carries the signal
+        std::nth_element(nz.begin(), nz.begin() + (long)(nz.size() / 2), nz.end());
+        // the median of an average of `segs` periodograms is under its mean: corrected so the noise is not under-estimated on a short burst
+        const double kk = std::max(1.0, 0.7 * segs), noise = std::max(nz[nz.size() / 2] / std::max(0.5, std::pow(1.0 - 1.0 / (9.0 * kk), 3.0)), 1e-30);
+        // 4.1: the gates use the power over the noise (was the total: the 9 dB band gate and the noise in the empty sideband stopped every burst
+        // under about 8 dB in 3 kHz). The band must hold the signal at -3 dB or more against the noise in 2.1 kHz
+        const double ex[2] = {std::max(0.0, pw[0] - noise * nbs[0]), std::max(0.0, pw[1] - noise * nbs[1])};
+        const double inBand = pw[0] + pw[1]; if (ex[0] + ex[1] < 0.5 * noise * (2100.0 / bh)) return false;
+        const int pol = ex[0] >= ex[1] ? 0 : 1; if (ex[pol ? 0 : 1] > 0.25 * ex[pol]) return false;         // one sideband carries the signal
         const double sgn = pol == 0 ? 1.0 : -1.0;
         int pick = -1; double bestScore = 0, bestOff = 0; Trial bestT;
         for (int k = 0; k < kNumStd; k++) {
@@ -127,8 +134,9 @@ private:
             for (double off = -40; off <= 40; off += 10) {
                 const Std& st = kStd[k];
                 const double halfW = 0.5 * st.baud + 40;
-                double nm = 0, nsp = 0; for (int q = 0; q < N; q++) { const double f = sgn * (q < N / 2 ? q : q - N) * bh; if (f > 0) { if (std::fabs(f - (st.mark + off)) < halfW) nm += psd[q]; if (std::fabs(f - (st.space + off)) < halfW) nsp += psd[q]; } }
-                if (nm < 0.06 * pw[pol] || nsp < 0.06 * pw[pol] || nm + nsp < 0.6 * pw[pol]) continue;
+                double nm = 0, nsp = 0; int bm = 0, bsp = 0; for (int q = 0; q < N; q++) { const double f = sgn * (q < N / 2 ? q : q - N) * bh; if (f > 0) { if (std::fabs(f - (st.mark + off)) < halfW) { nm += psd[q]; bm++; } if (std::fabs(f - (st.space + off)) < halfW) { nsp += psd[q]; bsp++; } } }
+                nm = std::max(0.0, nm - noise * bm); nsp = std::max(0.0, nsp - noise * bsp);   // over the noise, as the sideband gate
+                if (nm < 0.06 * ex[pol] || nsp < 0.06 * ex[pol] || nm + nsp < 0.6 * ex[pol]) continue;
                 Trial t = trial(b, st, off, sgn);
                 if (t.bytes.size() >= 4 && t.ferr <= (int)(0.15 * (double)t.bytes.size()) && t.decisive >= 0.45 && t.cap > bestScore) { bestScore = t.cap; pick = k; bestOff = off; bestT = t; }
             }
