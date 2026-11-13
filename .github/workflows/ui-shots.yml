@@ -3,8 +3,12 @@
 # scales. Contact sheets (12 labelled shots each) and stacked header / footer strips come back as the artifact "ui-sheets"; the raw shots
 # as "ui-shots-<size>-<scale>".
 #   gh workflow run ui-shots.yml -R adswill/OnAir --ref <branch> [-f set=quick]
+# Until this file is on the default branch it cannot be dispatched: push the commit to a branch named ui-shots/<anything> instead (full set),
+# and delete that branch afterwards.
 name: UI shots
 on:
+  push:
+    branches: ["ui-shots/**"]
   workflow_dispatch:
     inputs:
       set:
@@ -61,7 +65,7 @@ jobs:
           chmod +x dist/dect2
           export LD_LIBRARY_PATH="$PWD/dist${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
           W=${{ matrix.size }}; W=${W%x*}; H=${{ matrix.size }}; H=${H#*x}
-          xvfb-run -a -s "-screen 0 $((W + 64))x$((H + 64))x24" tools/ui_shots.sh dist/dect2 out ${{ matrix.size }} ${{ matrix.scale }} ${{ inputs.set }}
+          xvfb-run -a -s "-screen 0 $((W + 64))x$((H + 64))x24" tools/ui_shots.sh dist/dect2 out ${{ matrix.size }} ${{ matrix.scale }} ${{ inputs.set || 'full' }}
           [ -f out/missing.txt ] && cat out/missing.txt || true
           ls out/shots/*.png | wc -l
       - uses: actions/upload-artifact@v7
