@@ -43,6 +43,9 @@ public:
     // deviation of about +-2.4 kHz: the receiver demodulates it through a second, tighter channel filter (4 dB less noise bandwidth)
     virtual bool narrowChannel() const { return false; }
     virtual bool isAfsk() const { return false; }           // symbols come from 1200 / 2200 Hz tones in the FM audio (iMet-1 / iMet-4)
+    // 4.1: decoders that use soft symbols (soft[i] > 0 means 1, the size says how sure; sym[i] is its hard decision). The default ignores the soft values.
+    virtual bool wantsSoft() const { return false; }
+    virtual void pushSoft(const uint8_t* sym, const float* soft, size_t n, double timeSec, std::vector<SondeFix>& out) { (void)soft; push(sym, n, timeSec, out); }
 };
 
 std::unique_ptr<SondeBitDecoder> makeDfmDecoder();

@@ -3,6 +3,7 @@
 #pragma once
 #include "dect2/common/ring.h"
 #include "dect2/sonde/sonde_bits.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <memory>
@@ -41,7 +42,9 @@ public:
     void init(double fs, double baud, bool afsk = false, bool midpoint = false, double devHz = 0, int thrMode = 0);
     void reset();
     // one discriminator sample (Hz), the slicing threshold; appends symbols to syms
-    inline void step(float d, float thr, std::vector<uint8_t>& syms);
+    inline void step(float d, float thr, std::vector<uint8_t>& syms, std::vector<float>* soft = nullptr);
+    // 4.1: with `soft`, every symbol also gets a soft value (positive = 1): midpoint chains the slicer value over half the smoothed extremes' span,
+    // tone chains the normalised energy difference, the others the slicer value in Hz
     // 4.0: with a deviation (init) the symbol is decided by the energy at centre + deviation against centre - deviation over the symbol (the
     // centre is the discriminator's mean `dc`), from the complex samples: call pushTone(y, dc) before every step(). The discriminator still
     // gives the symbol clock.
@@ -102,7 +105,7 @@ inline float SymbolChain::afskStep(float x) {
     return (float)((a - b) / (a + b + 1e-6));   // 1200 Hz (tone 0) -> positive -> symbol 1
 }
 
-inline void SymbolChain::step(float d, float thr, std::vector<uint8_t>& syms) {
+inline void SymbolChain::step(float d, float thr, std::vector<uint8_t>& syms, std::vector<float>* soft) {
     if (afsk_) { d = afskStep(d - thr); thr = 0; }
     else if (midpoint_) {
         // a frame with a short preamble in an unbalanced line code: slice at the middle of the recent extremes, not at the mean
@@ -139,7 +142,11 @@ inline void SymbolChain::step(float d, float thr, std::vector<uint8_t>& syms) {
     if (devHz_ > 0) {   // the symbol is over (the phase passed 1): the energies of the whole symbol
         (void)phAfterAdd;
         // the smoothed discriminator (a trailing window of 0.7 symbol) lags by 0.35 symbol, so the whole symbol ends at phase 0.65
-        if (phPrev < 0.65 && ph_ >= 0.65 && ph_ - phPrev < 0.5) { syms.push_back(std::norm(su_) > std::norm(sl_) ? 1 : 0); nOut_++; }
+        if (phPrev < 0.65 && ph_ >= 0.65 && ph_ - phPrev < 0.5) {
+            const double eu = std::norm(su_), el = std::norm(sl_);
+            syms.push_back(eu > el ? 1 : 0); nOut_++;
+            if (soft) soft->push_back((float)((eu - el) / (eu + el + 1e-30)));
+        }
         prev_ = s;
         havePrev_ = true;
         return;
@@ -150,6 +157,7 @@ inline void SymbolChain::step(float d, float thr, std::vector<uint8_t>& syms) {
         const float v = havePrev_ ? (float)(prev_ + fr * (s - prev_)) : s;
         syms.push_back(v > 0 ? 1 : 0);
         nOut_++;
+        if (soft) soft->push_back(midpoint_ ? v / std::max(1e-3f, 0.5f * (max_ - min_)) : v);
     }
     prev_ = s;
     havePrev_ = true;
