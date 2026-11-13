@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/atsc3/atsc3_subframe.h"
 #include "atsc3_tables.h"
 #include "dect2/dsp/fftutil.h"
@@ -178,7 +179,10 @@ bool receiveSymbol(const SubframeParams& s, int l, const cf32* x, SymbolRx& rx) 
         pk.push_back(k);
         ph.push_back(y[k] / (float)(2 * a * (0.5 - r[k])));
     }
-    if (pk.size() < 2) return false;
+    if (pk.size() < 2) {
+        DIAG_DEBUG_EVERY(712577, 10.0, "An ATSC 3.0 data symbol has %zu usable scattered pilots (at least 2 needed), so the frame cannot be equalised.", pk.size());
+        return false;
+    }
     std::vector<cf32>& hch = rx.hch;
     hch.resize(noc);
     size_t seg = 0;

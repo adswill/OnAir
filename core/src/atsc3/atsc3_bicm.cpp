@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/common/stage_prof.h"
 #include "dect2/atsc3/atsc3_bicm.h"
 #include "atsc3_data_tables.h"
@@ -188,15 +189,27 @@ std::vector<int> blockInterleaverMap(int n, int eta, int type) {
 
 Bicm::Bicm(const BicmConfig& c) : cfg_(c) {
     const int n = c.nInner, eta = c.bitsPerCell;
-    if ((n != 16200 && n != 64800) || c.rate15 < 2 || c.rate15 > 13 || eta < 2 || eta > 12 || eta % 2) return;
-    if (n == 16200 && eta > 8) return;
+    if ((n != 16200 && n != 64800) || c.rate15 < 2 || c.rate15 > 13 || eta < 2 || eta > 12 || eta % 2) {
+        DIAG_DEBUG_EVERY(437104, 10.0, "An ATSC 3.0 FEC block with %d inner bits, code rate %d/15 and %d bits per cell is not a valid combination, so its PLP cannot be decoded.", n, c.rate15, eta);
+        return;
+    }
+    if (n == 16200 && eta > 8) {
+        DIAG_DEBUG_EVERY(464614, 10.0, "An ATSC 3.0 16200-bit FEC block cannot use %d bits per cell (8 at most), so its PLP cannot be decoded.", eta);
+        return;
+    }
     const Ldpc& ldpc = ldpcCode(n, c.rate15);
-    if (!ldpc.ok()) return;
+    if (!ldpc.ok()) {
+        DIAG_DEBUG_EVERY(944753, 10.0, "The ATSC 3.0 LDPC code for %d bits at rate %d/15 could not be built, so its PLP cannot be decoded.", n, c.rate15);
+        return;
+    }
     kLdpc_ = ldpc.k();
     const int mouter = c.outer == 0 ? (n == 64800 ? 192 : 168) : c.outer == 1 ? 32 : 0;
     kPayload_ = kLdpc_ - mouter;
     points_ = buildPoints(eta, c.rate15);
-    if (points_.empty()) return;
+    if (points_.empty()) {
+        DIAG_DEBUG_EVERY(709268, 10.0, "No ATSC 3.0 constellation exists for %d bits per cell at rate %d/15, so its PLP cannot be decoded.", eta, c.rate15);
+        return;
+    }
     if (eta >= 2 && eta <= 8) {   // one quadrant and its reflections?
         const int B = 1 << (eta - 2);
         bool q = true;
@@ -208,7 +221,10 @@ Bicm::Bicm(const BicmConfig& c) : cfg_(c) {
     }
     int type = blockInterleaverType(n, eta, c.rate15);
     const unsigned short* pi = groupPermutation(n, eta, c.rate15);
-    if (type < 0 || !pi) return;
+    if (type < 0 || !pi) {
+        DIAG_DEBUG_EVERY(206413, 10.0, "No ATSC 3.0 bit interleaver is defined for %d bits, %d bits per cell and rate %d/15, so its PLP cannot be decoded.", n, eta, c.rate15);
+        return;
+    }
     auto m1 = parityMap(ldpc);
     auto m3 = blockInterleaverMap(n, eta, type);
     perm_.resize(n);
@@ -299,12 +315,18 @@ bool Bicm::finish(const std::vector<uint8_t>& hard, std::vector<uint8_t>& payloa
     std::vector<uint8_t> bits(hard.begin(), hard.begin() + kLdpc_);
     if (cfg_.outer == 0) {
         const BchCode bch(cfg_.nInner == 16200, 12);
-        if (bch.decode(bits) < 0) return false;
+        if (bch.decode(bits) < 0) {
+            DIAG_DEBUG_EVERY(104677, 5.0, "An ATSC 3.0 FEC block passed LDPC but failed its BCH check, so the block is lost.");
+            return false;
+        }
         bits.resize(kPayload_);
     } else if (cfg_.outer == 1) {
         uint32_t want = l1Crc32(bits.data(), kPayload_), got = 0;
         for (int i = kPayload_; i < kLdpc_; i++) got = (got << 1) | bits[i];
-        if (want != got) return false;
+        if (want != got) {
+            DIAG_DEBUG_EVERY(997927, 5.0, "An ATSC 3.0 FEC block passed LDPC but its CRC-32 does not match, so the block is lost.");
+            return false;
+        }
         bits.resize(kPayload_);
     }
     payload.swap(bits);
@@ -316,7 +338,10 @@ bool Bicm::decode(const cf32* cells, float noiseVar, std::vector<uint8_t>& paylo
     std::vector<float> llr;
     llrs(cells, noiseVar, llr);
     std::vector<uint8_t> hard;
-    if (!decodeLlr(llr, hard, iters)) return false;
+    if (!decodeLlr(llr, hard, iters)) {
+        DIAG_DEBUG_EVERY(929266, 5.0, "An ATSC 3.0 FEC block did not converge in LDPC decoding (rate %d/15), so the block is lost.", cfg_.rate15);
+        return false;
+    }
     return finish(hard, payload);
 }
 
@@ -363,7 +388,11 @@ void Bicm::decodeBatch(const std::vector<const cf32*>& cells, float noiseVar, st
             std::vector<int> it((size_t)nb);
             gHard.resize((size_t)nb * (size_t)cfg_.nInner); gOk.resize((size_t)nb);
             if (!all.empty() && GpuLdpc::instance().decode(*qc, all.data(), nb, 50, gHard.data(), gOk.data(), it.data(), qcAlpha(cfg_.nInner, cfg_.rate15), true)) gpupol::reportGpu(gpupol::Atsc3, true);
-            else { gOk.clear(); gpupol::reportGpu(gpupol::Atsc3, false); }
+            else {
+                gOk.clear();
+                gpupol::reportGpu(gpupol::Atsc3, false);
+                DIAG_DEBUG_EVERY(998925, 10.0, "The GPU LDPC decoder refused a batch of %d ATSC 3.0 FEC blocks, so the CPU decodes them instead.", nb);
+            }
         } else gpupol::reportGpu(gpupol::Atsc3, false);
         for (int b = 0; b < nb; b++) {
             if (!gOk.empty() && gOk[(size_t)b]) {

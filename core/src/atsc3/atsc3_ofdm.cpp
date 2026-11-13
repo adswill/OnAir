@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/atsc3/atsc3_ofdm.h"
 #include "atsc3_tables.h"
 #include "dect2/dsp/fftutil.h"
@@ -28,7 +29,10 @@ int cunit(int fftSize) { return fftSize == 8192 ? 96 : fftSize == 16384 ? 192 : 
 } // namespace
 
 bool preambleParams(int ps, PreambleParams& o) {
-    if (ps < 0 || ps > 159) return false;
+    if (ps < 0 || ps > 159) {
+        DIAG_DEBUG_EVERY(344935, 10.0, "ATSC 3.0 preamble structure %d is outside the defined range 0 to 159, so it is refused.", ps);
+        return false;
+    }
     int mode = ps % 5 + 1, row = ps / 5;
     if (row < 7) { o.fftSize = 8192; o.guard = k8k[row].gi; o.dx = k8k[row].dx; }
     else if (row < 18) { o.fftSize = 16384; o.guard = k16k[row - 7].gi; o.dx = k16k[row - 7].dx; }
@@ -252,7 +256,10 @@ bool cirDenoiseChannel(int N, int noc, int D, int k0, const std::vector<cf32>& e
     if (M < 16) return false;
     int nHave = 0;
     for (auto v : have) nHave += v;
-    if (nHave < M * 3 / 4) return false;
+    if (nHave < M * 3 / 4) {
+        DIAG_DEBUG_EVERY(470941, 10.0, "Only %d of %d pilots have a usable channel estimate, so the ATSC 3.0 channel estimate is not denoised and plain interpolation is used.", nHave, M);
+        return false;
+    }
     for (int i = 0; i < M; i++) {   // holes (the middle carriers): between the neighbours that exist
         if (have[i]) continue;
         int a = i - 1, b = i + 1;
@@ -281,7 +288,10 @@ bool cirDenoiseChannel(int N, int noc, int D, int k0, const std::vector<cf32>& e
         const int n = ((j - pre) % N + N) % N;
         c[n] = b[n]; kept++;
     }
-    if (kept == 0 || kept > W * 3 / 4) return false;
+    if (kept == 0 || kept > W * 3 / 4) {
+        DIAG_DEBUG_EVERY(162198, 10.0, "The ATSC 3.0 channel impulse response has %d significant taps out of %d, which is not a usable echo profile, so plain interpolation is used.", kept, W);
+        return false;
+    }
     fft.forward(c.data());
     hch.resize(noc);
     const float g = 1.f / (float)M;
@@ -305,7 +315,10 @@ bool demodulatePreambleSymbol(const PreambleParams& p, int cred, int l, const cf
     std::vector<cf32> ph;
     for (int k = 0; k < pl.noc; k++)
         if (pl.kind[k] != 0) { pk.push_back(k); ph.push_back(y[k] / pl.pilotVal[k]); }
-    if (pk.size() < 2) return false;
+    if (pk.size() < 2) {
+        DIAG_DEBUG_EVERY(629174, 10.0, "An ATSC 3.0 preamble symbol has %zu pilot carriers (at least 2 needed), so it cannot be equalised.", pk.size());
+        return false;
+    }
     std::vector<cf32> hch(pl.noc);
     size_t seg = 0;
     for (int k = 0; k < pl.noc; k++) {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/atsc3/atsc3_l1.h"
 #include "dect2/atsc3/atsc3_bb.h"
 #include "atsc3_constellations.h"
@@ -189,12 +190,18 @@ bool decodeBlock(const Prot& p, const cf32* cells, float noiseVar, int ksig, std
     for (int i = 0; i < p.nparity; i++) llr[p.kldpc + i] = x[i];
     std::vector<uint8_t> hard;
     // the two-minimum correction (dect2/dsp/minsum_corr.h), as for the data: Type B on the quasi-cyclic decoder
-    if (const dect2::LdpcCode* qc = qcCode(16200, p.rate15)) { int it = 0; const bool ok = qc->decodeFast(llr, 50, hard, &it, qcAlpha(16200, p.rate15), true); if (iters) *iters = it; if (!ok) return false; }
-    else if (!ldpc16200(p.rate15).decode(llr, 60, hard, iters, typeAAlpha(16200, p.rate15), true)) return false;
+    if (const dect2::LdpcCode* qc = qcCode(16200, p.rate15)) { int it = 0; const bool ok = qc->decodeFast(llr, 50, hard, &it, qcAlpha(16200, p.rate15), true); if (iters) *iters = it; if (!ok) { DIAG_DEBUG_EVERY(187562, 5.0, "An ATSC 3.0 L1 signalling block (code rate %d/15) did not converge in the quasi-cyclic LDPC decoder, so this frame's L1 is dropped.", p.rate15); return false; } }
+    else if (!ldpc16200(p.rate15).decode(llr, 60, hard, iters, typeAAlpha(16200, p.rate15), true)) {
+        DIAG_DEBUG_EVERY(990839, 5.0, "An ATSC 3.0 L1 signalling block (code rate %d/15) did not pass LDPC decoding, so this frame's L1 is dropped.", p.rate15);
+        return false;
+    }
     std::vector<uint8_t> bits(z.nouter);
     for (int i = 0; i < z.nouter; i++) bits[i] = hard[pos[i]];
     static const BchCode bch(true, 12);
-    if (bch.decode(bits) < 0) return false;
+    if (bch.decode(bits) < 0) {
+        DIAG_DEBUG_EVERY(547819, 5.0, "An ATSC 3.0 L1 signalling block passed LDPC but failed its BCH check, so this frame's L1 is dropped.");
+        return false;
+    }
     bits.resize(ksig);
     auto scr = scramblerBits(ksig);
     for (int i = 0; i < ksig; i++) bits[i] ^= scr[i];
@@ -234,7 +241,10 @@ std::vector<uint8_t> packL1Basic(const L1Basic& l) {
 }
 
 bool unpackL1Basic(const std::vector<uint8_t>& bits, L1Basic& l) {
-    if ((int)bits.size() != kL1BasicBits) return false;
+    if ((int)bits.size() != kL1BasicBits) {
+        DIAG_DEBUG_EVERY(264684, 5.0, "An ATSC 3.0 L1-Basic block has %zu bits instead of %d, so it is not parsed.", bits.size(), (int)kL1BasicBits);
+        return false;
+    }
     BitReader r(bits);
     l = L1Basic();
     l.version = r.get(3); l.mimoScatteredPilotEncoding = r.get(1); l.llsFlag = r.get(1); l.timeInfoFlag = r.get(2);
@@ -251,6 +261,7 @@ bool unpackL1Basic(const std::vector<uint8_t>& bits, L1Basic& l) {
     uint32_t crc = (uint32_t)r.get(16) << 16;
     crc |= (uint32_t)r.get(16);
     l.crcOk = crc == l1Crc32(bits.data(), 168);
+    if (!l.crcOk) DIAG_DEBUG_EVERY(438022, 5.0, "The ATSC 3.0 L1-Basic CRC-32 does not match, so this L1-Basic is rejected and the frame is not decoded.");
     return l.crcOk;
 }
 
@@ -265,7 +276,10 @@ std::vector<cf32> encodeL1Basic(const L1Basic& l1, int mode) {
 }
 
 bool decodeL1Basic(const cf32* cells, int nCells, float noiseVar, int mode, L1Basic& out, int* iters, const float* weights) {
-    if (mode < 1 || mode > 5 || nCells < l1BasicCells(mode)) return false;
+    if (mode < 1 || mode > 5 || nCells < l1BasicCells(mode)) {
+        DIAG_DEBUG_EVERY(147196, 5.0, "ATSC 3.0 L1-Basic decoding was refused: mode %d (valid 1 to 5) with %d cells (needs %d).", mode, nCells, mode >= 1 && mode <= 5 ? l1BasicCells(mode) : 0);
+        return false;
+    }
     std::vector<uint8_t> bits;
     if (!decodeBlock(protFor(false, mode), cells, noiseVar, kL1BasicBits, bits, iters, weights)) return false;
     return unpackL1Basic(bits, out);
@@ -310,14 +324,20 @@ std::vector<cf32> encodeL1Detail(const std::vector<uint8_t>& bits, int mode) {
 }
 
 bool decodeL1Detail(const cf32* cells, int nCells, float noiseVar, int mode, int sizeBytes, std::vector<uint8_t>& bits, int* iters, const float* weights) {
-    if (mode < 1 || mode > 7 || sizeBytes < 25 || nCells < l1DetailCells(sizeBytes, mode)) return false;
+    if (mode < 1 || mode > 7 || sizeBytes < 25 || nCells < l1DetailCells(sizeBytes, mode)) {
+        DIAG_DEBUG_EVERY(934844, 5.0, "ATSC 3.0 L1-Detail decoding was refused: mode %d (valid 1 to 7), %d bytes (at least 25) and %d cells.", mode, sizeBytes, nCells);
+        return false;
+    }
     Prot p = protFor(true, mode);
     Seg sg = segmentsFor(sizeBytes, mode);
     int rows = sizesFor(p, sg.ksig).rows;
     bits.clear();
     for (int i = 0; i < sg.n; i++) {
         std::vector<uint8_t> part;
-        if (!decodeBlock(p, cells + (size_t)i * rows, noiseVar, sg.ksig, part, iters, weights ? weights + (size_t)i * rows : nullptr)) return false;
+        if (!decodeBlock(p, cells + (size_t)i * rows, noiseVar, sg.ksig, part, iters, weights ? weights + (size_t)i * rows : nullptr)) {
+            DIAG_DEBUG_EVERY(467118, 5.0, "ATSC 3.0 L1-Detail segment %d of %d failed to decode, so the whole L1-Detail is dropped.", i + 1, sg.n);
+            return false;
+        }
         bits.insert(bits.end(), part.begin(), part.end());
     }
     bits.resize((size_t)sizeBytes * 8);
@@ -400,11 +420,18 @@ std::vector<uint8_t> packL1Detail(const L1Basic& b, const L1Detail& d, int sizeB
 
 bool unpackL1Detail(const L1Basic& b, const std::vector<uint8_t>& bits, L1Detail& d) {
     d = L1Detail();
-    if (bits.size() < 25 * 8 || bits.size() % 8) return false;
+    if (bits.size() < 25 * 8 || bits.size() % 8) {
+        DIAG_DEBUG_EVERY(958605, 5.0, "An ATSC 3.0 L1-Detail of %zu bits is shorter than 200 or not a whole number of bytes, so it is not parsed.", bits.size());
+        return false;
+    }
     // the reader must never run off the end: check before each group of fields
     BitReader r(bits);
     const size_t limit = bits.size() - 32;
-    auto need = [&](int n) { return r.pos + n <= limit; };
+    auto need = [&](int n) {
+        const bool fits = r.pos + n <= limit;
+        if (!fits) DIAG_DEBUG_EVERY(561579, 5.0, "The ATSC 3.0 L1-Detail ends at bit %zu while a field of %d bits is still expected, so it is rejected as truncated.", r.pos, n);
+        return fits;
+    };
     if (!need(7)) return false;
     d.version = r.get(4);
     int numRf = r.get(3);
@@ -484,6 +511,7 @@ bool unpackL1Detail(const L1Basic& b, const std::vector<uint8_t>& bits, L1Detail
     uint32_t want = l1Crc32(bits.data(), (int)limit), got = 0;
     for (size_t i = limit; i < bits.size(); i++) got = (got << 1) | bits[i];
     d.crcOk = want == got;
+    if (!d.crcOk) DIAG_DEBUG_EVERY(990095, 5.0, "The ATSC 3.0 L1-Detail CRC-32 does not match, so this L1-Detail is rejected and the frame is not decoded.");
     return d.crcOk;
 }
 

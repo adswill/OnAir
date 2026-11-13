@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/atsc3/atsc3_remux.h"
 #include "dect2/audio/ac4_dec.h"
@@ -96,7 +97,10 @@ struct Atsc3Remux::Impl {
         Impl* im = (Impl*)opaque;
         std::lock_guard<std::mutex> lk(im->omu);
         // a reader that is far behind loses the oldest bytes instead of growing without limit
-        if (im->out.size() > (64u << 20)) im->out.erase(im->out.begin(), im->out.begin() + (16u << 20));
+        if (im->out.size() > (64u << 20)) {
+            DIAG_EVERY(698131, 10.0, "The ATSC 3.0 transport stream output buffer holds 64 MB that nobody has read, so its oldest 16 MB are discarded and the picture will glitch.");
+            im->out.erase(im->out.begin(), im->out.begin() + (16u << 20));
+        }
         im->out.insert(im->out.end(), buf, buf + size);
         im->ocv.notify_all();
         return size;
@@ -110,6 +114,7 @@ struct Atsc3Remux::Impl {
         c->ic->pb = c->io;
         c->ic->flags |= AVFMT_FLAG_CUSTOM_IO;
         if (avformat_open_input(&c->ic, "", av_find_input_format("mov"), nullptr) < 0) {
+            DIAG(413547, "An ATSC 3.0 media component has an initialization segment that FFmpeg cannot open as MP4, so this component is left out of the output.");
             std::lock_guard<std::mutex> lk(pmu);
             c->failed = true; c->done = true;
             pcv.notify_all();
@@ -175,7 +180,12 @@ struct Atsc3Remux::Impl {
         }
         { std::lock_guard<std::mutex> l2(mu); for (auto& c : comps) if (c.second->opened) cs.push_back(c.second.get()); }
         AVFormatContext* oc = nullptr;
-        if (avformat_alloc_output_context2(&oc, nullptr, "mpegts", nullptr) < 0 || !oc) { fail("the transport stream muxer is not available"); finishOut(); return; }
+        if (avformat_alloc_output_context2(&oc, nullptr, "mpegts", nullptr) < 0 || !oc) {
+            DIAG_ERROR(689053, "FFmpeg has no MPEG transport stream muxer, so the ATSC 3.0 service cannot be remuxed for playback.");
+            fail("the transport stream muxer is not available");
+            finishOut();
+            return;
+        }
         uint8_t* obuf = (uint8_t*)av_malloc(1 << 16);
         AVIOContext* oio = avio_alloc_context(obuf, 1 << 16, 1, this, nullptr, &Impl::writeCb, nullptr);
         oc->pb = oio;
@@ -209,13 +219,17 @@ struct Atsc3Remux::Impl {
                         inStreams[ci].push_back(in);
                     } else {
                         ac4NoteDropped();
+                        DIAG_DEBUG_EVERY(683372, 10.0, "The AC-4 sound of an ATSC 3.0 component could not be opened (no AC-4 decoder library or no output stream), so that sound is left out.");
                         std::lock_guard<std::mutex> lk(mu);
                         if (std::find(dropped.begin(), dropped.end(), "AC-4") == dropped.end()) dropped.push_back("AC-4");
                     }
                     continue;
                 }
                 AVStream* os = avformat_new_stream(oc, nullptr);
-                if (!os || avcodec_parameters_copy(os->codecpar, cp) < 0) continue;
+                if (!os || avcodec_parameters_copy(os->codecpar, cp) < 0) {
+                    DIAG_DEBUG_EVERY(718926, 10.0, "FFmpeg could not create an output stream for track %u of an ATSC 3.0 component, so that track is left out.", si);
+                    continue;
+                }
                 os->codecpar->codec_tag = 0;
                 os->time_base = AVRational{1, 90000};
                 c->outStream[si] = os->index;
@@ -229,7 +243,10 @@ struct Atsc3Remux::Impl {
                         avcodec_parameters_copy(bsf->par_in, cp);
                         bsf->time_base_in = in->time_base;
                         if (av_bsf_init(bsf) >= 0) { avcodec_parameters_copy(os->codecpar, bsf->par_out); os->codecpar->codec_tag = 0; bsfs[os->index] = bsf; }
-                        else av_bsf_free(&bsf);
+                        else {
+                            DIAG_DEBUG_EVERY(273765, 10.0, "The %s bitstream filter did not initialise for an ATSC 3.0 video track, so its parameter sets are not repeated in front of every picture.", chain);
+                            av_bsf_free(&bsf);
+                        }
                     }
                 }
                 inStreams[ci].push_back(in);
@@ -237,8 +254,20 @@ struct Atsc3Remux::Impl {
         }
         // a component that has nothing to put in the output (timed metadata, captions) never delivers a packet: it must not be waited for
         cs.erase(std::remove_if(cs.begin(), cs.end(), [](Comp* c) { for (int o : c->outStream) if (o >= 0) return false; return true; }), cs.end());
-        if (oc->nb_streams == 0) { fail(!dropped.empty() ? "only AC-4 sound in the stream, and no AC-4 decoder library is installed" : "no picture or sound in the stream"); finishOut(); avformat_free_context(oc); return; }
-        if (avformat_write_header(oc, nullptr) < 0) { fail("cannot start the transport stream"); finishOut(); avformat_free_context(oc); return; }
+        if (oc->nb_streams == 0) {
+            DIAG_ERROR(410006, "None of the ATSC 3.0 media components holds a picture or sound track that can be remuxed (%zu components, %zu dropped), so nothing is played.", cs.size(), dropped.size());
+            fail(!dropped.empty() ? "only AC-4 sound in the stream, and no AC-4 decoder library is installed" : "no picture or sound in the stream");
+            finishOut();
+            avformat_free_context(oc);
+            return;
+        }
+        if (avformat_write_header(oc, nullptr) < 0) {
+            DIAG_ERROR(406134, "FFmpeg could not write the transport stream header for the ATSC 3.0 service, so nothing is played.");
+            fail("cannot start the transport stream");
+            finishOut();
+            avformat_free_context(oc);
+            return;
+        }
         nStreams = (int)oc->nb_streams;
         hdr = true;
         int64_t base = INT64_MIN;
