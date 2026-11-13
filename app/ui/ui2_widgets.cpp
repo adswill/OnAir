@@ -48,7 +48,11 @@ void endPane() {
     const PaneH p = gPanes.back();
     gPanes.pop_back();
     // the height of what was drawn: down to the last line, and the padding below it
-    const float need = p.autoH ? ImGui::GetCursorPosY() - ImGui::GetStyle().ItemSpacing.y + ImGui::GetStyle().WindowPadding.y : 0.f;
+    // A row that ends with SameLine (flowNext() with nothing after it: VDL4's "synthetic" with no options) leaves the cursor at the top of
+    // that row, so the bottom of the drawn items counts too: else the pane shrank to its padding and the row was cut off.
+    const ImGuiWindow* w = ImGui::GetCurrentWindow();
+    const float bottom = std::max(ImGui::GetCursorPosY() - ImGui::GetStyle().ItemSpacing.y, w->DC.CursorMaxPos.y - w->Pos.y + w->Scroll.y);
+    const float need = p.autoH ? bottom + ImGui::GetStyle().WindowPadding.y : 0.f;
     ui::closeCursorMove();   // a mode body that ends with SetCursorPos and no item: grow the pane instead of the Debug-build assert (#104)
     ImGui::EndChild();
     if (p.autoH) {
