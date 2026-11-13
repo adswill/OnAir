@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**388 modes.**
+**389 modes.**
 
 ## TV (17)
 
@@ -180,11 +180,12 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **TD-SCDMA cells** - TD-SCDMA: cells by SYNC-DL code and cell parameter
 - **EBICab / Eurobalise (needs a user test)** - Balise up-link: Eurobalise telegrams (SUBSET-036); EBICab bursts listed only (needs a user test)
 
-## Pagers (4)
+## Pagers (5)
 
 - **ERMES paging** - ERMES: European paging on 169 MHz
 - **POCSAG** - POCSAG pager messages
 - **FLEX** - FLEX pager messages
+- **Golay paging (GSC)** - GSC pager messages (simulated only)
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
 ## IoT & Sensors (43)

@@ -57,6 +57,7 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case F01: return makeF01();
     case F06: return makeF06();
     case Gw: return makeGw();
+    case Gsc: return makeGsc();
     default: return nullptr;
     }
 }
@@ -119,6 +120,7 @@ ModeTuning x40Tuning(int v) {
         {"f01", 1.6, 30, 9.000, 48000, 8000, 0.004, false},
         {"f06", 1.6, 30, 6.000, 48000, 8000, 0.004, false},
         {"gwfsk", 1.6, 30, 8.400, 48000, 8000, 0.004, false},
+        {"gsc", 26, 1000, 929.6125, 250000, 24000, 0.0125, false},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

@@ -4543,3 +4543,4 @@ Large	Groß
 Extra large	Sehr groß
 Small|Compact|Default|Large|Extra large	Klein|Kompakt|Standard|Groß|Sehr groß
 Height and padding of the touch interface's buttons, top bar and dock. Smaller leaves more room for the panels on small screens.	Höhe und Abstände der Schaltflächen, der oberen Leiste und des Docks der Touch-Oberfläche. Kleiner lässt den Bereichen auf kleinen Bildschirmen mehr Platz.
+Pagers, 300 / 600 bit/s	Pager, 300 / 600 bit/s

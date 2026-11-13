@@ -809,6 +809,12 @@ static bool set_321(Engine& e, const std::string& n, double v) {
     if (n == "setVoiceSlots") { call(r, &Rx<decltype(r)>::setVoiceSlots, v); return true; }
     return false;
 }
+static const char kOpt_331[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_331(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
 static const char kOpt_361[] = R"JSON([{"n":"setProtocols","k":"int","l":"Protocols","h":"rclink::Proto bits","t":"s"},{"n":"setElrsDomain","k":"int","l":"Elrs Domain","h":"index into elrsDomains()","t":"s"}])JSON";
 static bool set_361(Engine& e, const std::string& n, double v) {
     auto& r = e.rclink();
@@ -1428,6 +1434,7 @@ const OptEntry kOpt[] = {
     {245, kOpt_245, set_245},
     {301, kOpt_301, set_301},
     {321, kOpt_321, set_321},
+    {331, kOpt_331, set_331},
     {361, kOpt_361, set_361},
     {371, kOpt_371, set_371},
     {372, kOpt_372, set_372},
