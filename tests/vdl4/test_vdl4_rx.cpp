@@ -8,6 +8,8 @@
 #include "dect2/vdl4/vdl4_gen.h"
 #include "dect2/vdl4/vdl4_rx.h"
 #include <chrono>
+#include <cstdlib>
+#include <string>
 #include <cmath>
 #include <cstdio>
 #include <vector>
@@ -63,6 +65,76 @@ int main() {
             printf("  %5.2f Msps cfo %+5.0f: %llu ok %llu bad, %.2f s CPU\n", rate / 1e6, cfo, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, cpu);
         }
     }
+    // 4.1 sensitivity: SNR in the 25 kHz channel (the generator's definition), 2 Msps, carrier offsets of 0 and +-2.5 kHz, a +50 ppm sample
+    // clock on the offset runs, two noise seeds. Before 4.1 about 24 dB here (the QA sweep's 20 dB in its 68 kHz band); 4.1: 20 to 22 dB.
+    // Then noise alone (10 s, two levels) must give no frame at all.
+    {
+        auto run = [](double snr, double cfo, int seed, double secs) {
+            SynthConfig sc;
+            sc.snrDb = snr;
+            sc.cfoHz = cfo;
+            sc.mode = 84;
+            sc.modeOpt[1] = seed;
+            const double rate = 2e6, clk = cfo != 0 ? 1.0 + 50e-6 : 1.0;
+            auto syn = makeVdl4Synth(sc, rate * clk);
+            Vdl4Receiver rx;
+            rx.configure(rate);
+            rx.setCenterHz(136.85e6);
+            rx.setSignalOffset(0);
+            std::vector<cf32> buf(65536);
+            const size_t total = (size_t)(rate * secs);
+            for (size_t done = 0; done < total;) {
+                const size_t n = std::min(buf.size(), total - done);
+                syn->generate(buf.data(), n);
+                rx.feed(buf.data(), n);
+                done += n;
+            }
+            Vdl4Telemetry t;
+            rx.telemetry(t, ~0ull);
+            return t;
+        };
+        const double snrs[] = {10, 12, 14, 16, 18, 20, 22, 24};
+        for (double cfo : {0.0, 2500.0, -2500.0}) {
+            double thr = 99;
+            for (int k = 7; k >= 0; k--) {
+                int ok = 0;
+                for (int seed = 1; seed <= 2; seed++) ok += run(snrs[k], cfo, seed, 1.8).blocksOk >= 2 ? 1 : 0;
+                printf("  sens cfo %+5.0f snr %4.1f dB: %d of 2 trials with 2+ of 4 bursts\n", cfo, snrs[k], ok);
+                if (ok == 2) thr = snrs[k]; else break;
+            }
+            printf("  vdl4 threshold (25 kHz SNR), cfo %+.0f: %.0f dB\n", cfo, thr);
+            CHECK(thr <= 22, "cfo %+.0f: needs %.0f dB in 25 kHz (4.1 limit 22; 24 before)", cfo, thr);
+        }
+    }
+    {
+        // noise alone: the bursts 40 dB under the noise in their 25 kHz channel stand in for no signal
+        uint64_t bad = 0, good = 0;
+        for (int seed = 1; seed <= 2; seed++) {
+            SynthConfig sc;
+            sc.snrDb = -40;
+            sc.mode = 84;
+            sc.modeOpt[1] = seed;
+            auto syn = makeVdl4Synth(sc, 2e6);
+            Vdl4Receiver rx;
+            rx.configure(2e6);
+            rx.setCenterHz(136.85e6);
+            rx.setSignalOffset(0);
+            std::vector<cf32> buf(65536);
+            const size_t total = (size_t)(2e6 * 10);
+            for (size_t done = 0; done < total;) {
+                const size_t n = std::min(buf.size(), total - done);
+                syn->generate(buf.data(), n);
+                rx.feed(buf.data(), n);
+                done += n;
+            }
+            Vdl4Telemetry t;
+            rx.telemetry(t, ~0ull);
+            good += t.blocksOk; bad += t.blocksBad;
+        }
+        printf("  noise only (2 x 10 s): %llu frames, %llu failed the FCS\n", (unsigned long long)good, (unsigned long long)bad);
+        CHECK(good == 0, "noise alone gave %llu frames", (unsigned long long)good);
+    }
+
     // zero / absurd rates and a null-length feed must not crash or divide by zero
     for (double r : {0.0, -5.0, 1.0, 1e-3, 1e12, std::nan("")}) {
         Vdl4Receiver rx;

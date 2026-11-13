@@ -10,6 +10,8 @@
 #include <complex>
 #include <ctime>
 #include <mutex>
+#include <cstdio>
+#include <cstdlib>
 #include "dect2/common/mathconst.h"
 
 namespace dect2 {
@@ -30,12 +32,17 @@ bool syncAt(const std::vector<uint8_t>& bits, size_t i) {
 // decimation factor is needed, so any input rate from 0.1 to 20+ Msps works), takes the FM discriminator at 4x
 // oversampling and looks for the training sequence at the tail of that stream only (O(1) per sample, never a rescan
 // of the whole history: that rescan was the CPU spin seen with an RSP1B at 2 and 4 Msps).
-constexpr int kOsr = 4;
+constexpr int kOsr = 8;   // 4.1: 8 samples per bit (was 4): the timing is chosen to an eighth of a bit
 // Stage A: integrate-and-dump to 16 samples per bit, stage B: four one-pole low-passes (12 kHz) and take every 4th sample.
 constexpr int kStageA = 16;
-constexpr double kLpAlpha = 0.2;
+// 4.1: alpha 0.2 put the four poles' -3 dB point at 4.8 kHz, the deviation itself (h 0.5 at 19.2 kb/s is +-4.8 kHz): the 0101 training sequence
+// and every short run lost most of its swing, so bursts failed their FCS even at 30 dB and the threshold sat near 24 dB in 25 kHz. 0.36 puts
+// it at 9.5 kHz (about the bit rate across both sides, the usual pre-detection width for GMSK on a discriminator).
+constexpr double kLpAlpha = 0.36;
+constexpr int kHalf = 2;   // each bit: the sum of 2 kHalf + 1 discriminator samples about its centre
 constexpr int kBurstBits = 480;                 // line bits kept after the sync (a burst is at most a few hundred)
 constexpr int kSyncSamples = kOsr * kVdl4SyncBits;
+constexpr int kSyncErr = 6;
 constexpr size_t kLineMax = 4 * (size_t)kOsr * (kBurstBits + 64);
 
 struct Chan {
@@ -45,6 +52,10 @@ struct Chan {
     float floor = 0;
     Vdl4ChannelInfo info;
     std::vector<float> line;                    // discriminator output (rad per sample), kOsr samples per bit; sliced against the sync's mean (= the carrier offset)
+    // 4.1: the squelch's power: in the channel, after the channel filter, smoothed over about one training sequence; floor: the mean of the quiet
+    // stretches (floorN counts the first 50 ms, whose mean starts it)
+    float chPwr = 0;
+    int floorN = 0;
     cd acc = 0, prev = 0, lp[4] = {0, 0, 0, 0};   // lp: four one-pole low-passes at 307.2 kHz (channel filter, 25 kHz spacing)
     int dec4 = 0;
     double accN = 0, phase = 0;
@@ -74,6 +85,7 @@ struct Vdl4Receiver::Impl {
 
     void log(const std::string& s) { if (logCb) logCb(s); }
 
+    static constexpr int half = kHalf;
     void rebuildCh() {
         ch.clear();
         rebuild = false;
@@ -139,13 +151,38 @@ struct Vdl4Receiver::Impl {
         }
     }
 
+    double sumAt(const Chan& c, long k) const {
+        double v = 0;
+        for (long i = k - half; i <= k + half; i++) v += c.line[(size_t)i];
+        return v;
+    }
+
     // Decode the burst whose sync ended at c.syncEnd (index in c.line of the sync's last bit sample).
     void decodeBurst(Chan& c, float pwr, float snr) {
         std::vector<uint8_t> burst;
         burst.reserve(kVdl4DataStartBit + kBurstBits);
         for (int i = 0; i < kVdl4RampBits; i++) burst.push_back(1);
         for (int i = 0; i < kVdl4SyncBits; i++) burst.push_back(kVdl4SyncPattern[i]);
-        for (long k = c.syncEnd + kOsr; k < (long)c.line.size() && (int)burst.size() < kVdl4DataStartBit + kBurstBits; k += kOsr) burst.push_back(c.line[(size_t)k] > c.thr ? 1 : 0);
+        // 4.1: the sampling phase: the one (to an eighth of a bit, within half a bit of the sync fit) at which the 24 training bits correlate
+        // best with their pattern, the threshold their mean there. Each bit is then the sum of 2 half + 1 discriminator samples about its
+        // centre (less noise than one sample; a whole bit takes in too much of the neighbours behind the partial-response GMSK pulse).
+        long centre = c.syncEnd;
+        double thr = c.thr, best = -1e300;
+        for (int p = -kOsr / 2; p < kOsr / 2; p++) {
+            double v[kVdl4SyncBits], mean = 0, corr = 0;
+            bool okRange = true;
+            for (int j = 0; j < kVdl4SyncBits; j++) {
+                const long q = c.syncEnd + p - (long)kOsr * j;
+                if (q - half < 0 || q + half >= (long)c.line.size()) { okRange = false; break; }
+                v[j] = sumAt(c, q); mean += v[j];
+            }
+            if (!okRange) continue;
+            mean /= kVdl4SyncBits;
+            for (int j = 0; j < kVdl4SyncBits; j++) corr += kVdl4SyncPattern[kVdl4SyncBits - 1 - j] ? v[j] - mean : mean - v[j];
+            if (corr > best) { best = corr; centre = c.syncEnd + p; thr = mean; }
+        }
+        for (long k = centre + kOsr; k + half < (long)c.line.size() && (int)burst.size() < kVdl4DataStartBit + kBurstBits; k += kOsr)
+            burst.push_back(sumAt(c, k) > thr ? 1 : 0);
         std::vector<uint8_t> data;
         if (vdl4BurstDataBits(burst, data)) {
             for (const auto& fr : vdl4HdlcFrames(data)) onFrame(c, fr, snr, 10.f * std::log10(std::max(pwr, 1e-12f)), c.offHz);
@@ -156,34 +193,43 @@ struct Vdl4Receiver::Impl {
         c.info.levelDb = 10.f * std::log10(std::max(pwr, 1e-12f));
     }
 
-    // One discriminator sample at 4 samples per bit.
-    void demodSample(Chan& c, cd d, float pwr) {
+    // One discriminator sample at 4 samples per bit. pwr: the power of the whole input band (the level shown); chp: the in-channel power.
+    void demodSample(Chan& c, cd d, float pwr, float chp) {
         const double w = std::arg(d * std::conj(c.prev));
         c.prev = d;
         c.line.push_back((float)w);
         c.sum96 += w - (c.line.size() > (size_t)kSyncSamples ? c.line[c.line.size() - 1 - kSyncSamples] : 0.f);
-        c.floor = c.floor ? (pwr < c.floor ? 0.99f : 0.99995f) * c.floor + (pwr < c.floor ? 0.01f : 0.00005f) * pwr : pwr;   // fast down, slow up: the noise floor, not the bursts
+        // 4.1: the squelch and the noise floor on the in-channel power. They were on the power of the whole input band (2 MHz and more), where a
+        // burst 20 dB over the noise in its own 25 kHz channel is only 1.7 dB over the floor: the squelch, not the demodulator, set the threshold
+        // (20 dB in the QA sweep, 21 dB in 25 kHz). The floor is the mean of the quiet stretches (slow, and only while the power is under twice it).
+        if (c.floorN < 4096) c.floor += (chp - c.floor) / (float)(++c.floorN);
+        else c.floor += (chp < c.floor ? 0.002f : chp < 2.f * c.floor ? 0.0005f : 0.00001f) * (chp - c.floor);
         const long n = (long)c.line.size();
         if (c.pending >= 0) {
             if (n >= c.pending) {
-                decodeBurst(c, pwr, 10.f * std::log10(std::max(pwr / std::max(c.floor, 1e-12f), 1e-6f)));
+                decodeBurst(c, pwr, 10.f * std::log10(std::max(chp / std::max(c.floor, 1e-12f), 1e-6f)));
                 c.pending = -1;
                 c.cool = 0;
                 c.lockLeft = 0;
             }
-        } else if (c.cool++ > 2 * kOsr && n > (long)(kVdl4SyncBits + 4) * kOsr) {
+        } else if (c.cool++ > 2 * kOsr && n > (long)(kVdl4SyncBits + 5) * kOsr) {
             // 4 ramp ones then the 24-bit 0101 training sequence ending at the tail. The alternating pattern also matches
             // 2 or 4 bits early (the ramp ones count as only 1 or 2 errors), so after the first hit the best fit within
-            // the next 5 bits is taken as the end of the sync.
+            // the next 5 bits is taken as the end of the sync. 4.1: up to kSyncErr errors (was 3): the 0101 sequence swings least of all
+            // behind the GMSK pulse, so its bits fail first and the sync, not the data, set the threshold; the squelch and the FCS still
+            // stand between noise and a frame.
+            // (the bits as the data's: three samples about each centre, the last centre one sample before the tail)
             int err = 0;
-            for (int j = 0; j < kVdl4SyncBits + 4 && err <= 3; j++) {
+            const double thr3 = (2 * half + 1) * c.sum96 / kSyncSamples;
+            for (int j = 0; j < kVdl4SyncBits + 4 && err <= kSyncErr; j++) {
                 const uint8_t want = j < kVdl4SyncBits ? kVdl4SyncPattern[kVdl4SyncBits - 1 - j] : 1;
-                err += (c.line[(size_t)(n - 1 - (long)kOsr * j)] > c.sum96 / kSyncSamples ? 1 : 0) != want;
+                const size_t k = (size_t)(n - 1 - half - (long)kOsr * j);
+                err += (sumAt(c, (long)k) > thr3 ? 1 : 0) != want;
             }
-            if (c.lockLeft == 0 && err <= 3 && pwr > 2.5f * c.floor) {   // squelch: noise alone must not start a lock
+            if (c.lockLeft == 0 && err <= kSyncErr && chp > 2.5f * c.floor) {   // squelch: noise alone must not start a lock
                 c.lockLeft = 5 * kOsr; c.bestErr = 99; }
             if (c.lockLeft > 0) {
-                if (err < c.bestErr) { c.bestErr = err; c.bestN = n; c.bestThr = c.sum96 / kSyncSamples; }
+                if (err < c.bestErr) { c.bestErr = err; c.bestN = n - 1 - half; c.bestThr = (2 * half + 1) * c.sum96 / kSyncSamples; }
                 if (--c.lockLeft == 0) {
                     c.thr = c.bestThr;
                     c.syncEnd = c.bestN;               // one sample after the fitted bit centre
@@ -225,7 +271,11 @@ struct Vdl4Receiver::Impl {
         const float pwr = c.accPwr / (float)std::max(c.accN, 1.0);
         c.acc = 0; c.accPwr = 0; c.accN = 0;
         for (auto& st : c.lp) { st += kLpAlpha * (d - st); d = st; }
-        if (++c.dec4 >= kStageA / kOsr) { c.dec4 = 0; demodSample(c, d, pwr); }
+        if (++c.dec4 >= kStageA / kOsr) {
+            c.dec4 = 0;
+            c.chPwr += (float)((std::norm(d) - c.chPwr) * (1.0 / (kOsr * kVdl4SyncBits)));
+            demodSample(c, d, pwr, c.chPwr);
+        }
     }
 };
 
@@ -241,7 +291,7 @@ void Vdl4Receiver::setChannels(const std::vector<double>& hz) { std::lock_guard<
 
 void Vdl4Receiver::reset() {
     std::lock_guard<std::mutex> lk(p_->mu);
-    for (auto& c : p_->ch) { c.line.clear(); c.pending = -1; c.lockLeft = 0; c.sum96 = 0; c.info = Vdl4ChannelInfo(); c.info.freqHz = c.freqHz; c.info.inBand = c.inBand; }
+    for (auto& c : p_->ch) { c.line.clear(); c.pending = -1; c.lockLeft = 0; c.sum96 = 0; c.floor = 0; c.chPwr = 0; c.floorN = 0; c.info = Vdl4ChannelInfo(); c.info.freqHz = c.freqHz; c.info.inBand = c.inBand; }
     p_->tel.state = 0;
 }
 
