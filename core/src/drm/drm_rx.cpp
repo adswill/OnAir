@@ -683,6 +683,7 @@ struct DrmReceiver::Impl {
 
     SymRec& rec(int64_t idx) { return ring[(size_t)(idx % kRing)]; }
     const SymRec* recIf(int64_t idx) const {
+        if (idx < 0) return nullptr;   // before the first symbol (the Wiener taps reach 2 gy back; a negative index wrapped out of the ring)
         const SymRec& r = ring[(size_t)(idx % kRing)];
         return (r.idx == idx && r.haveHr) ? &r : nullptr;
     }
