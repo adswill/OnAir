@@ -1258,6 +1258,11 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_sens40x3 PRIVATE dect2core)
     add_test(NAME sens40x3 COMMAND test_sens40x3)
     set_tests_properties(sens40x3 PROPERTIES TIMEOUT 7000)
+    add_executable(test_sens41tv tests/sens/test_sens41tv.cpp)   # 4.1 TV pass (docs/SENSITIVITY-4.1-TV.md): clock error, fading, phase noise, Doppler; 4.0 and 4.1 paths side by side
+    target_include_directories(test_sens41tv PRIVATE tools/sens)
+    target_link_libraries(test_sens41tv PRIVATE dect2core)
+    add_test(NAME sens41tv COMMAND test_sens41tv)
+    set_tests_properties(sens41tv PROPERTIES TIMEOUT 7000)
     add_executable(test_sens40x1 tests/sens/test_sens40x1.cpp)   # 4.0 pass X1 (docs/SENSITIVITY-4.0-X1.md): repeat combining and weak-burst paths
     target_link_libraries(test_sens40x1 PRIVATE dect2core)
     add_test(NAME sens40x1 COMMAND test_sens40x1)
