@@ -55,6 +55,10 @@ struct AtvGenConfig {
     std::function<int(float* stereo, int frames)> pullAudio;
     // Live camera / file: full-frame analog YUV at picW x picH (Y 0..1). Empty: the test card / bars of `pattern`.
     std::function<bool(double t, int w, int h, float* y, float* u, float* v)> pullVideo;   // t: the time in the signal of this field (s)
+    // the picture format (atv_aspect.h): 0 Auto, 1 4:3, 2 16:9. The source (live picture or test card) is fitted into the frame without distortion and the WSS
+    // of line 23 is sent to match (625 lines). pullAspect: the live source's width / height (empty or <= 0: 4:3, as the card). A source of the frame's own aspect is not changed.
+    int aspect = 0;
+    std::function<double()> pullAspect;
     bool groupDelay = true;
     bool nyquistTx = false;
     bool setup = true;            // 7.5 IRE black level in M

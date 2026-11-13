@@ -31,6 +31,8 @@ public:
 private:
     bool tryTeletext(const Level& v);
     bool tryWss(const Level& v);
+    static constexpr uint32_t kWssExpireLines = 6000;   // data lines tried without finding WSS (about 7 s of a 625-line signal): the last picture format is dropped
+    uint32_t wssMiss_ = 0;
     AtvVbiStatus st_;
     std::shared_ptr<TeletextDecoder> ttx_;
 };
