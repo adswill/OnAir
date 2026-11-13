@@ -317,8 +317,7 @@ Receiver::St Receiver::tryFrame(double t0, double f0, RxFrame& rf, double& endSa
         const long i0 = static_cast<long>(std::ceil(off)), i1 = i0 + static_cast<long>(F) * kSps;
         std::vector<cf> ch(segLen, cf(0, 0));
         auto fillChirp = [&](double dSamples) {
-            for (long i = i0; i < i1 && i < segLen; i++)
-                ch[i] = chirpUnit(static_cast<double>(hdr.sweepIdx) * F + (static_cast<double>(i) - off - dSamples) / kSps, period);
+            if (i1 > i0) chirpFill(static_cast<double>(hdr.sweepIdx) * F + (static_cast<double>(i0) - off - dSamples) / kSps, 1.0 / kSps, static_cast<int>(std::min(i1, segLen) - i0), period, ch.data() + i0);
         };
         // The chirp is sampled at the same instants as the data, but the timing estimate has an error of a fraction of a sample and the chirp sweeps up to 0.45 cycles per
         // symbol, so a small timing error is a large phase error of the chirp: a grid around the estimate picks the shift that matches best.
@@ -408,15 +407,17 @@ Receiver::St Receiver::tryFrame(double t0, double f0, RxFrame& rf, double& endSa
     rf.chirpCancelled = false;
     if (o_.removeChirp && rf.chirpRemoved) {
         const double period = static_cast<double>(p.sweepFrames) * F;
+        std::vector<cf> chU(static_cast<size_t>(F));   // the chirp at the frame's symbols, worked out once (the same values the loops below asked for each time)
+        for (int k = 0; k < F; k++) chU[static_cast<size_t>(k)] = chirpUnit(static_cast<double>(hdr.sweepIdx) * F + k, period);
         for (int iter = 0; iter < 2; iter++) {
             const std::vector<cf> d = hardTargets(zall, nv);
             constexpr int nq = 2;
             for (int q = 0; q < nq; q++) {
                 const int qa = F * q / nq, qb = F * (q + 1) / nq;
                 cf num(0, 0);
-                for (int k = qa; k < qb; k++) num += (zall[k] - d[k]) * std::conj(chirpUnit(static_cast<double>(hdr.sweepIdx) * F + k, period));
+                for (int k = qa; k < qb; k++) num += (zall[k] - d[k]) * std::conj(chU[static_cast<size_t>(k)]);
                 const cf c = num / static_cast<float>(qb - qa);
-                for (int k = qa; k < qb; k++) zall[k] -= c * chirpUnit(static_cast<double>(hdr.sweepIdx) * F + k, period);
+                for (int k = qa; k < qb; k++) zall[k] -= c * chU[static_cast<size_t>(k)];
             }
         }
         double pr = 0;
@@ -445,15 +446,17 @@ Receiver::St Receiver::tryFrame(double t0, double f0, RxFrame& rf, double& endSa
     // is a tone-like sequence in (equalised symbols - known symbols); estimated per quarter frame against the decoder's own re-encoded output and subtracted.
     if (okCount < kBlocksPerFrame && o_.removeChirp) {
         const double period = static_cast<double>(p.sweepFrames) * F;
+        std::vector<cf> chU(static_cast<size_t>(F));
+        for (int k = 0; k < F; k++) chU[static_cast<size_t>(k)] = chirpUnit(static_cast<double>(hdr.sweepIdx) * F + k, period);
         const std::vector<cf> d = buildTargets();
         std::vector<cf> zn = zall;
         constexpr int nq = 4;
         for (int q = 0; q < nq; q++) {
             const int qa = F * q / nq, qb = F * (q + 1) / nq;
             cf num(0, 0);
-            for (int k = qa; k < qb; k++) num += (zall[k] - d[k]) * std::conj(chirpUnit(static_cast<double>(hdr.sweepIdx) * F + k, period));
+            for (int k = qa; k < qb; k++) num += (zall[k] - d[k]) * std::conj(chU[static_cast<size_t>(k)]);
             const cf c = num / static_cast<float>(qb - qa);
-            for (int k = qa; k < qb; k++) zn[k] -= c * chirpUnit(static_cast<double>(hdr.sweepIdx) * F + k, period);
+            for (int k = qa; k < qb; k++) zn[k] -= c * chU[static_cast<size_t>(k)];
         }
         double err = 0;
         for (int k = 0; k < F; k++) err += std::norm(zn[k] - d[k]);

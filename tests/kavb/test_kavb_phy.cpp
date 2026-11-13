@@ -96,6 +96,20 @@ static void testChirp() {
     CHECK(std::abs(f(P / 4)) < 0.01, "mid freq %.3f", f(P / 4));
     CHECK(std::abs(f(P / 2 - 10) + kChirpSpan) < 0.01, "low freq %.3f", f(P / 2 - 10));
     CHECK(f(3 * P / 4 - 100) < 0 && f(3 * P / 4 + 100) > 0, "V shape");
+    // chirpFill = chirpUnit at every position: starts inside the first half, across the turn of the V, across the end of the period, negative, steps 1 and 1/4
+    {
+        double worst = 0;
+        for (double per : {4096.0, 100000.0, 2.0 * 260 * 17})
+            for (double st : {1.0, 0.25, 0.1}) {
+                for (double s0 : {0.0, 3.3, per / 2 - 40.0, per / 2 - 7.5, per - 90.0, per - 0.5, -50.0, per * 1.5 + 11.0}) {
+                    std::vector<cf> v(997);
+                    chirpFill(s0, st, (int)v.size(), per, v.data());
+                    for (size_t i = 0; i < v.size(); i++) worst = std::max(worst, (double)std::abs(v[i] - chirpUnit(s0 + (double)i * st, per)));
+                }
+            }
+        CHECK(worst < 2e-6, "chirpFill worst difference %.3g", worst);
+        printf("KAVB_INFO chirpFill worst difference %.3g\n", worst);
+    }
     // power of the transmitted signal with chirp = 1.1 x without
     Rng r(1);
     const Profile p = profileOf(0, false);
