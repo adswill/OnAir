@@ -19,7 +19,7 @@ struct Tnc {
             double m = 0;
             if (on) { if (t >= tNextBit) { bit ^= (g() & 1); tNextBit = t + 1.0 / (baud * (1 + ppm * 1e-6)); } const double f = bit ? 2200.0 : 1200.0; aph += 2 * kPi * f / fs; m = (bit ? aSpace : aMark) / norm * std::sin(aph); }
             ph += 2 * kPi * (lo + dev * m) / fs;
-            x[i] = cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * rng.g(), sg * rng.g());
+            x[i] = cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(rng, sg, sg);
         }
         return x;
     }

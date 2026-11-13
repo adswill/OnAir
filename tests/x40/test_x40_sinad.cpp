@@ -17,7 +17,7 @@ struct FmSrc {
             const double t = t0 + i / fs, w = 2 * kPi * tone * t;
             const double m = std::sin(w) + h2 * std::sin(2 * w + 0.4) + h3 * std::sin(3 * w + 1.1);              // the audio, with its distortion
             ph += 2 * kPi * (lo + drift * t + dev * m) / fs;
-            x[i] = cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * rng.g(), sg * rng.g());
+            x[i] = cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(rng, sg, sg);
         }
         return x;
     }

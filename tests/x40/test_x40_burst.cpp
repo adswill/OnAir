@@ -14,7 +14,7 @@ struct Scene {
     double fs, noise; std::vector<B> bursts; Rng rng{4}; std::vector<double> ph;
     std::vector<cf32> operator()(double t0, size_t n) {
         std::vector<cf32> x(n); const float sg = (float)std::sqrt(noise / 2);
-        for (auto& v : x) v = cf32(sg * rng.g(), sg * rng.g());
+        for (auto& v : x) v = cg(rng, sg, sg);
         if (ph.size() < bursts.size()) ph.assign(bursts.size(), 0.0);
         for (size_t k = 0; k < bursts.size(); k++) {
             const B& b = bursts[k]; if (b.t + b.dur < t0 || b.t > t0 + n / fs) continue;

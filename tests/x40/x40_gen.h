@@ -34,10 +34,16 @@ struct Rng {
     }
 };
 
+// One complex Gaussian sample with the given scales. The two draws are made in a fixed order: cf32(s * r.g(), s * r.g()) is not, because the
+// order in which the arguments are evaluated is unspecified (GCC draws the second first, clang the first), so the real and the imaginary part
+// were swapped between Linux and macOS and the marginal tests saw another noise. The order here is GCC's, in which the sensitivity tests were
+// tuned on the CI runners: the imaginary part is drawn first.
+template <class R> inline cf32 cg(R& r, double sre, double sim) { const float im = (float)(sim * (double)r.g()); const float re = (float)(sre * (double)r.g()); return cf32(re, im); }
+
 // Complex Gaussian noise with the given power per sample (added in place)
 inline void addNoise(std::vector<cf32>& x, double power, unsigned seed) {
     Rng r(seed); const float s = (float)std::sqrt(power / 2);
-    for (auto& v : x) v += cf32(s * r.g(), s * r.g());
+    for (auto& v : x) v += cg(r, s, s);
 }
 // Carrier offset with a linear drift (Hz and Hz per second)
 inline void mix(std::vector<cf32>& x, double hz, double driftHzPerSec, double fs) {
@@ -114,7 +120,7 @@ inline std::vector<cf32> jove(double fs, double seconds, const std::vector<Burst
         const double t = i / fs; double pw = 1;
         for (auto& e : b) if (t >= e.start && t < e.start + e.len) pw += e.extra;
         const float s = (float)std::sqrt(pw / 2);
-        x[i] = cf32(s * r.g(), s * r.g());
+        x[i] = cg(r, s, s);
     }
     return x;
 }

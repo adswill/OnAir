@@ -14,7 +14,7 @@ struct Tx {
     double audio(double t) const { return (0.45 * std::sin(2 * kPi * 523.0 * t) + 0.3 * std::sin(2 * kPi * 1117.0 * t + 1.0) + 0.2 * std::sin(2 * kPi * 1931.0 * t + 2.0) + 0.1 * std::sin(2 * kPi * 2707.0 * t + 0.3)) * voiceDev; }
     std::vector<cf32> operator()(double t0, size_t n) {
         std::vector<cf32> x(n); const float sg = (float)std::sqrt(noise / 2);
-        for (size_t i = 0; i < n; i++) { const double t = t0 + i / fs; const double dev = audio(t) + ctcssDev * std::sin(2 * kPi * ctcss * t + 0.5); ph += 2 * kPi * (lo + drift * t + dev) / fs; x[i] = cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * rng.g(), sg * rng.g()); }
+        for (size_t i = 0; i < n; i++) { const double t = t0 + i / fs; const double dev = audio(t) + ctcssDev * std::sin(2 * kPi * ctcss * t + 0.5); ph += 2 * kPi * (lo + drift * t + dev) / fs; x[i] = cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(rng, sg, sg); }
         return x;
     }
 };

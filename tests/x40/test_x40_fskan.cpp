@@ -20,7 +20,7 @@ static std::vector<cf32> fsk(int levels, double baud, double dev, double bt, dou
         const double t = i / fs; const long k0 = (long)std::floor(t / T); double f = 0, wsum = 0;
         for (long k = k0 - 3; k <= k0 + 3; k++) { if (k < 0 || k >= nsym) continue; const double tc = (k + 0.5) * T; const double w = 0.5 * (std::erf((t - tc + T / 2) / (std::sqrt(2.0) * sigma)) - std::erf((t - tc - T / 2) / (std::sqrt(2.0) * sigma))); f += a[(size_t)k] * w; wsum += w; }
         ph += 2 * kPi * (off + dev * f) / fs;
-        x[i] = cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * r.g(), sg * r.g());
+        x[i] = cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(r, sg, sg);
     }
     return x;
 }

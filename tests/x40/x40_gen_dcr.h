@@ -199,7 +199,7 @@ inline void addNoise(std::vector<cf32>& x, const Imp& m) {
     const double nb = m.amp * m.amp / std::pow(10.0, m.snrDb / 10);   // noise power in 6.25 kHz
     const float sg = (float)std::sqrt(nb * m.fs / 6250.0 / 2);
     Rng r(m.seed * 7919u + 3);
-    for (auto& v : x) v += cf32(sg * r.g(), sg * r.g());
+    for (auto& v : x) v += cg(r, sg, sg);
 }
 inline std::vector<cf32> capture(const std::vector<Seg>& segs, const Imp& m, double leadSec = 0.3, double tailSec = 2.0) {
     const std::vector<double> f = shape(segs, leadSec, m.devScale, m.invert);

@@ -19,7 +19,7 @@ struct Osc {
             const double total = phi + sfl * rng.g() + spurAmp * std::sin(ps);
             ph += 2 * kPi * (hz + drift * t) / fs;
             const double a = ph + total;
-            x[i] = cf32((float)std::cos(a), (float)std::sin(a)) + cf32(sg * rng.g(), sg * rng.g());
+            x[i] = cf32((float)std::cos(a), (float)std::sin(a)) + cg(rng, sg, sg);
         }
         return x;
     }

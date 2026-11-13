@@ -47,7 +47,7 @@ int main() {
     {
         const double fs = 48000; Rng r(5); std::vector<double> fq; for (int i = 0; i < 400; i++) fq.push_back(100 + 0.2 * r.g());
         double ph = 0; Rng nz(9); const float sg = (float)std::sqrt(48000.0 / std::pow(10.0, 7.0) / 2);
-        auto gen = [&](double t0, size_t n) { std::vector<cf32> x(n); for (size_t i = 0; i < n; i++) { const double t = t0 + i / fs; const int k = std::max(0, std::min(399, (int)((t - 0.2) / (16384 / 16000.0))));   /* the readings' windows start 0.2 s in */ ph += 2 * kPi * fq[k] / fs; x[i] = cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * nz.g(), sg * nz.g()); } return x; };
+        auto gen = [&](double t0, size_t n) { std::vector<cf32> x(n); for (size_t i = 0; i < n; i++) { const double t = t0 + i / fs; const int k = std::max(0, std::min(399, (int)((t - 0.2) / (16384 / 16000.0))));   /* the readings' windows start 0.2 s in */ ph += 2 * kPi * fq[k] / fs; x[i] = cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(nz, sg, sg); } return x; };
         auto t = runChunks(x40::FreqAcc, fs, 800.0, gen, 0, 10e6, 1.0);
         const std::string av = factStr(t, "Allan deviation"); double a2 = 0; sscanf(av.c_str(), "1.0 s: %lf", &a2);
         CHECK(a2 > 1.4e-8 && a2 < 2.6e-8, "Allan 2 s %.2e (%s)", a2, av.c_str());

@@ -24,7 +24,7 @@ struct Ook { double fs, lo, noise; std::vector<Seg> segs; double start = 0.2; Rn
     void prep() { double t = start; edges.clear(); for (auto& s : segs) { edges.push_back(t); t += s.dur; } edges.push_back(t); }
     bool level(double t) const { if (t < start || t >= edges.back()) return false; const size_t i = (size_t)(std::upper_bound(edges.begin(), edges.end(), t) - edges.begin()) - 1; return segs[i].hi; }
     std::vector<cf32> operator()(double t0, size_t n) { if (edges.empty()) prep(); std::vector<cf32> x(n); const float sg = (float)std::sqrt(noise / 2);
-        for (size_t i = 0; i < n; i++) { const double t = t0 + i / fs; ph += 2 * kPi * lo / fs; x[i] = (level(t) ? cf32((float)std::cos(ph), (float)std::sin(ph)) : cf32(0, 0)) + cf32(sg * rng.g(), sg * rng.g()); }
+        for (size_t i = 0; i < n; i++) { const double t = t0 + i / fs; ph += 2 * kPi * lo / fs; x[i] = (level(t) ? cf32((float)std::cos(ph), (float)std::sin(ph)) : cf32(0, 0)) + cg(rng, sg, sg); }
         return x; } };
 static std::string cleanBits(const std::string& s) { return s.substr(0, s.find_first_of(" ")); }
 static std::vector<std::pair<std::string, std::string>> frames(const X40Telemetry& t) { std::vector<std::pair<std::string, std::string>> v; for (auto& r : t.rows) if (r.kind == "Frame") { const size_t b = r.text.find(' '); v.push_back({r.id, r.text.substr(0, b)}); } return v; }

@@ -32,7 +32,7 @@ struct Src {
     double chirpAt(double t) const { for (auto& v : iv) if (t >= v.a && t <= v.b + 0.02) return chirpHz * std::exp(-(t - v.a) / chirpTau); return 0; }
     std::vector<cf32> operator()(double t0, size_t n) {
         std::vector<cf32> x(n); const float sg = (float)std::sqrt(noise / 2);
-        for (size_t i = 0; i < n; i++) { const double t = t0 + i / fs; const double f = hz + drift * t + chirpAt(t); ph += 2 * kPi * f / fs; const double a = amp(t) * std::pow(10.0, fadeDb * std::sin(2 * kPi * 0.2 * t) / 20); x[i] = (float)a * cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * rng.g(), sg * rng.g()); }
+        for (size_t i = 0; i < n; i++) { const double t = t0 + i / fs; const double f = hz + drift * t + chirpAt(t); ph += 2 * kPi * f / fs; const double a = amp(t) * std::pow(10.0, fadeDb * std::sin(2 * kPi * 0.2 * t) / 20); x[i] = (float)a * cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(rng, sg, sg); }
         return x;
     }
 };

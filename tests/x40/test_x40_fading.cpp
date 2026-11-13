@@ -22,7 +22,7 @@ struct Chan {
             if ((i & 1023) == 0) for (int k = 0; k < N; k++) ph[k] /= std::abs(ph[k]);      // keep the rotators on the unit circle
             ph0 += 2 * kPi * (lo + drift * t) / fs; const cf32 car((float)std::cos(ph0), (float)std::sin(ph0));
             const bool on = t >= from && t < to;
-            x[i] = (on ? (los + sc * s) * car : cf32(0, 0)) + cf32(sg * rng.g(), sg * rng.g());
+            x[i] = (on ? (los + sc * s) * car : cf32(0, 0)) + cg(rng, sg, sg);
         }
         return x;
     }

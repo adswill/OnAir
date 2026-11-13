@@ -44,7 +44,7 @@ int main() {
     printf("noise sweep (tone power to noise in 3 kHz): messages / bytes right of %zu\n", data.size());
     for (int s : {1, 5}) for (double snr : {30.0, 20.0, 14.0, 10.0, 6.0, 3.0}) {
         int nm = 0, good = 0;
-        for (unsigned seed : {1u, 2u, 3u}) { auto x = modemBurst(s, data, fs, 1.0, 1.0, 0.4, 0, false, noiseFor(snr, 3000, fs) * 0.25, seed); if (s == 1 && snr == 6.0) { double sm = 0; for (auto& v : x) sm += std::abs(v); fprintf(stderr, "SIGSUM seed %u n %zu sum %.6f x[1000] %.7f %.7f x[50000] %.7f %.7f\n", seed, x.size(), sm, x[1000].real(), x[1000].imag(), x[50000].real(), x[50000].imag()); } auto t = run(x40::FskModem, x, fs); const auto m = msgs(t); nm += (int)m.size();
+        for (unsigned seed : {1u, 2u, 3u}) { auto x = modemBurst(s, data, fs, 1.0, 1.0, 0.4, 0, false, noiseFor(snr, 3000, fs) * 0.25, seed); auto t = run(x40::FskModem, x, fs); const auto m = msgs(t); nm += (int)m.size();
             if (!m.empty()) { const auto b = bytesOf(m[0].text); for (size_t i = 0; i < data.size() && i < b.size(); i++) good += b[i] == data[i]; } }
         printf("  %-18s %4.0f dB: %d messages, %d / %zu bytes right\n", modemStd(s).name, snr, nm, good, 3 * data.size());
         if (snr >= 14) CHECK(nm == 3 && good >= 3 * (int)data.size() - 3, "%s at %.0f dB: %d messages %d bytes right", modemStd(s).name, snr, nm, good);
