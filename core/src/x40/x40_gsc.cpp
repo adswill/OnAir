@@ -222,23 +222,43 @@ private:
             }
         }
     }
+    int scScore(int64_t st, int& rawPol) const {
+        const Slow s1 = slow(st + kCommaBits, 1), s2 = slow(st + kCommaBits + 47, 1);
+        const int dn = pc(s1.hard ^ scTx_) + pc(s2.hard ^ scTx_ ^ 0x7FFFFFu);
+        const int di = pc(s1.hard ^ scTx_ ^ 0x7FFFFFu) + pc(s2.hard ^ scTx_);
+        rawPol = dn <= di ? 1 : -1;
+        return std::min(dn, di);
+    }
+    int addrScore(int64_t st) const {
+        const Slow s1 = slow(st + kCommaBits, pol_), s2 = slow(st + kCommaBits + 47, pol_);
+        return bestW1(s1.hard).dist + soft23(s2).flips;
+    }
+    int acScore(int64_t st, int word) const {
+        const Slow s1 = slow(st + kCommaBits, pol_), s2 = slow(st + kCommaBits + 47, pol_);
+        const uint32_t tx = txMask(golayWord((uint32_t)word));
+        return pc(s1.hard ^ tx) + pc(s2.hard ^ tx ^ 0x7FFFFFu);
+    }
     void hunt() {
-        const int64_t st = bi_ - (kBlockBits - 1);
+        const int64_t st = bi_ - kBlockBits;
         const int ct = commaTransitions(st);
         if (ct < 14) return;
-        int rawPol = 1;
-        if (scMatch(st, 1, 6, rawPol)) {
+        int rawPol = 1, rp = 1;
+        const int sc = scScore(st, rawPol);
+        if (sc <= 6 && sc <= scScore(st - 1, rp) && sc <= scScore(st + 1, rp)) {
             pol_ = rawPol; lock(st); nSc_++;
             onStart();
             return;
         }
         if (ct >= 24) {
             const Addr a = address(st, pol_, 2, 2, true);
-            if (a.ok) { lock(st); nAddrHunt_++; group_ = -1; batch_ = false; onAddress(a); return; }
+            if (a.ok) {
+                const int sa = addrScore(st);
+                if (sa <= addrScore(st - 1) && sa <= addrScore(st + 1)) { lock(st); nAddrHunt_++; group_ = -1; batch_ = false; onAddress(a); return; }
+            }
         }
         if (voiceOpen_ && ct >= 20) {
-            int word = 0;
-            if (activation(st, pol_, 6, word)) { lock(st); nAcHunt_++; onActivation(word); }
+            const int sv = acScore(st, voiceWord_);
+            if (sv <= 6 && sv <= acScore(st - 1, voiceWord_) && sv <= acScore(st + 1, voiceWord_)) { lock(st); nAcHunt_++; onActivation(voiceWord_); }
         }
     }
     void lock(int64_t st) { locked_ = true; blockEnd_ = st + (kBlockBits - 1) + kBlockBits; misses_ = 0; blockQuality(st); }
