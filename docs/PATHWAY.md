@@ -2145,3 +2145,6 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - Tests: spectran (fake RTSA API: listing, both modes, rate plan, scaling, I/Q order, retunes, unplug, busy, TX pacing / flags) and
   spectran_missing (no library, Init failing). GitHub quick run 43363137455: spectran, spectran_missing, fixit, sdrplay passed, dect2 built;
   native fails 4 RTL-SDR V4 / HF+ checks, the same 4 on integ-40 (run 43368500233), not from this branch. Untested on a device.
+
+## 2026-11-13: Mode Builder Signal view (feat41-mbplots)
+Receiver::signalView() plus a Signal tab for custom modes: histogram (OOK, ASK, FSK, GFSK, GMSK) or constellation with EVM (PSK), clusters, thresholds, SNR, measured deviation and offset, Advanced button to write them to the definition. Test mb_signal; docs/MODEBUILDER-PLOTS-4.1.md.

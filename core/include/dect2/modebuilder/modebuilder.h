@@ -223,6 +223,33 @@ struct RxStats {
     double fs1 = 0;                // the working rate after decimation
 };
 
+// What the demodulator sees at the symbol times of the last ~2000 symbols while the squelch was open (the "Signal" view of the app).
+// FSK / GFSK / GMSK: the discriminator output in Hz; OOK / ASK: the envelope after the matched filter; PSK: the constellation after
+// carrier recovery. A level cluster counts only when the clusters are further apart than a single smooth blob can be split (separation >= 4).
+struct SignalView {
+    bool have = false;             // enough symbols (64) to say anything
+    bool resolved = false;         // the level clusters (PSK: the points) are separate: separation >= 4
+    Mod mod = Mod::FSK;
+    int levels = 2;
+    int clusters = 0;              // levels when resolved, else 0
+    uint64_t samples = 0;          // symbols in the view
+    // histogram (not PSK): 64 bins of the symbol-timed values, x in `unit`
+    std::vector<float> hist;
+    double histMin = 0, histMax = 1;
+    const char* unit = "";         // "Hz" or "" (amplitude, 1 = full scale)
+    std::vector<double> centres;           // measured level centres, ascending (empty until resolved)
+    std::vector<double> thresholds;        // the slicer's decision thresholds now (same unit)
+    std::vector<double> measuredThresholds;   // midpoints between the measured centres
+    double separation = 0;         // distance of the closest clusters / their spread (PSK: ideal neighbour distance / spread per axis)
+    double snrDb = 0;              // eye SNR from the cluster spread; PSK: Es/N0 from the EVM
+    double ebn0Db = 0;             // PSK only
+    bool hasEbn0 = false;
+    double evmPct = 0;             // PSK
+    double deviationHz = 0;        // FSK: measured deviation of the outer tones
+    double offsetHz = 0;           // FSK / PSK: measured carrier offset still left after modulation.offset_hz
+    std::vector<cf> points;        // PSK: the last symbol points, unit radius ideal
+};
+
 class Receiver {
 public:
     explicit Receiver(const Definition& d);
@@ -235,6 +262,7 @@ public:
     void flush();                  // end of the recording: decode what is left
     std::vector<Frame> take();     // frames since the last call
     RxStats stats() const;
+    SignalView signalView() const;
     const Definition& definition() const;
 private:
     struct Impl;
