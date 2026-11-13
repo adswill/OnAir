@@ -96,6 +96,7 @@ void Channelizer::reset() {
 
 void Channelizer::process(const cf32* x, size_t n, ChanBuf& buf) {
     const double w = -2 * kPi * offsetHz_ / inRate_;
+    lastOut_ = 0;
     size_t i = 0;
     while (i < n) {
         // the mixer's phase restarts exactly at every block of kMixBlock input samples, so chunking does not matter
@@ -145,6 +146,7 @@ void Channelizer::process(const cf32* x, size_t n, ChanBuf& buf) {
         tmp_.resize(n2);
         for (int k = 0; k < n2; k++) tmp_[k] = cf32(ore_[k], oim_[k]);
         buf.append(tmp_.data(), (size_t)n2);
+        lastOut_ = (size_t)n2;
         re2_.erase(re2_.begin(), re2_.begin() + n2);
         im2_.erase(im2_.begin(), im2_.begin() + n2);
     }

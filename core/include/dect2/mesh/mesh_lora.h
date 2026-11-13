@@ -214,8 +214,12 @@ public:
     void reset();
     // input samples numbered from 0 at reset(); appends the output to buf
     void process(const cf32* x, size_t n, ChanBuf& buf);
+    // what the last process() appended to its buf (lastOutCount() samples; valid until the next call)
+    const cf32* lastOut() const { return tmp_.data(); }
+    size_t lastOutCount() const { return lastOut_; }
 private:
     double inRate_, offsetHz_, bwHz_, outRate_;
+    size_t lastOut_ = 0;
     int decim_ = 1;
     std::vector<float> taps_, taps2_;
     std::vector<float> re_, im_, ore_, oim_, re2_, im2_;

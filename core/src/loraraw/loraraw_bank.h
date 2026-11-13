@@ -53,6 +53,25 @@ struct Bank {
 
     void feed(const cf32* x, size_t n) {
         ch->process(x, n, buf);
+        demodNew(n);
+    }
+
+    // The bank for conj(x) at -offset of a bank `src` fed x at +offset (same rate, bandwidth and decimation): its channel output is
+    // conj of src's, bit for bit (the mixer phasors are conjugate: cos is even and sin odd; the filter taps are real), so it is taken
+    // from src's last output instead of a second channel filter. ELRS listens to both IQ polarities of each channel.
+    void feedConjOf(const Bank& src, size_t n) {
+        const size_t k = src.ch->lastOutCount();
+        if (k > 0) {
+            conjTmp.resize(k);
+            const cf32* y = src.ch->lastOut();
+            for (size_t i = 0; i < k; i++) conjTmp[i] = std::conj(y[i]);
+            buf.append(conjTmp.data(), k);
+        }
+        demodNew(n);
+    }
+    std::vector<cf32> conjTmp;
+
+    void demodNew(size_t n) {
         cs->extend(buf);
         int64_t keep = buf.end();
         for (One& o : decs) {

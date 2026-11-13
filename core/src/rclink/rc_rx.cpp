@@ -413,14 +413,11 @@ void RcLinkReceiver::feed(const cf32* x, size_t n) {
     if (s.fs <= 0) return;
     if (!s.defs.empty() || (s.protocols & Dsm)) s.finder.feed(x, n, [&](const Burst& b) { s.onBurst(b); });
     if (!s.dsmPend.empty()) s.dsmDrain(false);
-    bool anyInv = false;
-    for (LoraChain& c : s.chains) if (c.inverted) anyInv = true;
-    if (anyInv) { s.conj.resize(n); for (size_t i = 0; i < n; i++) s.conj[i] = std::conj(x[i]); }
     for (LoraChain& c : s.chains) {
         c.normal->feed(x, n);
         s.drainLora(c, *c.normal);
-        if (c.inverted) {
-            c.inverted->feed(s.conj.data(), n);
+        if (c.inverted) {   // conj(x) at -offset: the conjugate of the normal bank's channel, bit for bit (Bank::feedConjOf)
+            c.inverted->feedConjOf(*c.normal, n);
             s.drainLora(c, *c.inverted);
         }
     }
