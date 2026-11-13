@@ -2120,3 +2120,40 @@ Mode count fix: tools/gen_modes_list.py, gen_web_schema.py, android/tools/gen_mo
   nothing. showFatalError now also writes ~/.config/onair/startup-error.txt and shows a dialog (zenity / kdialog / notify-send / xmessage,
   2 min timeout, ONAIR_NO_DIALOG=1 turns it off) when there is a desktop and no terminal. README Linux row: Mint, terminal start, the file.
   Packaging unchanged.
+  Packaging unchanged. dect2 built on GitHub quick run 43266619099 (pass).
+## 2026-11-13: my location on every map (feat41-mypos)
+
+- Request from a Discord user: AIS, APRS and other maps did not show the user's own position.
+- `adsbmap::draw()` now draws the station position (and optional range rings) on every map screen, with distance and bearing from it to the pointer; AIS panel, mesh and APRS tooltips, DMR list and Remote ID selection show distance and bearing too. No position set: a small hint that opens Settings > Location.
+- New: `core/include/dect2/geo/mylocation.h`, `app/map/my_location.{h,cpp}`, three settings (`mapMyLoc`, `mapMyLocRings`, `mapMyLocRingList`), test `mylocation`. Details in docs/MY-LOCATION-MAPS-4.1.md.
+- Not compiled or run; tests not yet run.
+
+## 2026-11-12 - OOK on / off-time scatter (feat41-ookxy)
+Added the scatter plot (on time against the following off time per pulse) with cluster centres, an encoding guess (PWM, PPM, Manchester, unknown), burst selection, log or linear axes and CSV copy to the OOK analyser (x40) and the ISM Unknown view. Logic in core/include/dect2/ism/ook_scatter.h, test `ook_scatter`, notes in docs/OOK-SCATTER-4.1.md. Simulated pulse trains only.
+
+## 2026-11-13: contributor credit in the 7(b) attribution term (4.1)
+- ADDITIONAL-TERMS.md item 3: works using OnAir code also credit the OnAir contributors in their legal notices, by the CONTRIBUTORS.md list or a link to it. It applies from 4.1 on; earlier releases keep the terms they came with. README, NOTICE.md and AGENTS.md say the same.
+
+## 2026-11-13: README restructured
+
+README cut from 801 to about 150 lines: what it is, install, quick start, mode table, radios, highlights, documentation links, community, licence, credits. The "What is new" sections were dropped (0.2.6 to 0.2.8 moved to docs/CHANGELOG-0.2.md, later ones are in docs/CHANGELOG-*.md). Long sections moved to docs/INSTALL.md, MODES-DETAIL.md, KA-FAMILY.md, TOOLS-AND-NOTES.md, FEATURES.md, RADIOS.md, UPDATES.md, GOOD-TO-KNOW.md, TROUBLESHOOTING.md, BUILD.md, CREDITS.md. Markers for gen_changelog.py kept.
+
+## 2026-11-13: licence enforcement note (ARGUS)
+- README (License) and NOTICE.md say OnAir is protected by ARGUS, the project's code-provenance system: public code is scanned for OnAir-derived code, the author is asked first, then a takedown if it isn't fixed.
+
+## 2026-11-12 (feat41-spectran): Aaronia SPECTRAN V6 / V6 ECO (#482, docs/SPECTRAN-V6.md)
+- New native driver core/src/source/source_spectran.cpp through Aaronia's RTSA API (AaroniaRTSAAPI from the RTSA-Suite PRO, loaded at run
+  time, not shipped). Interface declared in aartsa_min.h from Aaronia's public RTSA-API-Samples README and samples; result codes checked
+  against SatDump's and two other wrappers' lists; SDR++ spectran_source read as a reference. No Aaronia header is bundled (not public, the
+  samples repository states no licence).
+- Receive: iqreceiver (any rate, span = rate / 1.5) or raw (clock / 2^k); gain = reference level (+10 dBm at 0 dB), scale follows the level
+  the device took; live frequency / level / amplifier; rate changes stop and restart the device; unplug and reopen. Transmit: iqtransmitter,
+  timed packets a lead time ahead of the stream clock, 1.0 = 0 dBm before main/transgain, end flags on close; warn-only.
+- Missing SDK: plain message, Fix it entry, radio-list hint for USB vendor 2f72. Credits rows added (gen_credits.py).
+- Tests: spectran (fake RTSA API: listing, both modes, rate plan, scaling, I/Q order, retunes, unplug, busy, TX pacing / flags) and
+  spectran_missing (no library, Init failing). GitHub quick run 43363137455: spectran, spectran_missing, fixit, sdrplay passed, dect2 built;
+  native fails 4 RTL-SDR V4 / HF+ checks, the same 4 on integ-40 (run 43368500233), not from this branch. Untested on a device.
+
+2026-11-13 feat41-footerfix: investigated Discord report "this text is stuck at the bottom" (chasyxx, 4.0.0; strip: by-credit | Credits | Support | Discord | v4.0.0 | Clear all). Findings: that strip exists exactly once, as menuBarRight() in app/ui/ui2_shell.cpp, drawn inside ImGui::BeginMainMenuBar() (top of the window, never at a fixed bottom position); the classic interface uses its own row (classicTopBar in draw_ui.cpp) with the same buttons but without the credit text. The 4.0 bottom bar (bottomBar/statusLine, kit::statusBarBegin) does not draw credits, version or Clear all, so there is no duplicate footer in the source. "Clear all" empties decoded lists of every mode (not notifications). No code changed: cause not reproducible from source, needs the reporter's screenshot or window size/OS. No screenshots taken (an app build needs ci.yml, not dispatched by workers).
+
+2026-11-13 feat41-footerfix (follow-up, owner confirmed): the menu bar's right-hand strip sat too low and touched the bar's bottom line. Cause: ImGui::SmallButton (Credits, Support, version, Clear all, the credit text) uses ImGuiButtonFlags_AlignTextBaseLine, which moves the button down by the line's CurrLineTextBaseOffset; in the menu bar that is the bar's frame padding (pushed +3 gUi in menuBar()), re-applied by every SameLine. The Discord InvisibleButton and the thin rules were at the centred y, the text buttons FP.y below it. Fix: menuBarRight zeroes CurrLineTextBaseOffset after each SetCursorPosY (noBaseShift), so every item is at the same centred y as the menu titles, at any scale or typography (the offset was proportional to the padding). New rule ruleMenuBarCentre in tests/app/test_gui_rules.cpp. Checked in CI by compiling dect2 and running gui_rules and i18n; no screenshot (no screenshot test of the menu bar exists).
