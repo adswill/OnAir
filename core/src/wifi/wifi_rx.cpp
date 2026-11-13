@@ -18,7 +18,6 @@
 #include <cmath>
 #include <complex>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <mutex>
@@ -103,7 +102,7 @@ struct WifiReceiver::Impl {
     Chain ch[kSps];
     bool winOpen = false, winShort = false; int64_t winStart = 0, winBest = 0; float winE = 0;
     // the packet being decoded; shortPre: the short preamble (header at 2 Mbit/s); rate: the MPDU's (1 or 2 Mbit/s)
-    struct Pend { int64_t at = 0; int stage = 0; int64_t need = 0; int bytes = 0; bool shortPre = false; int rate = 1; };
+    struct Pend { int64_t at = 0, alt = 0; int stage = 0; int64_t need = 0; int bytes = 0; bool shortPre = false; int rate = 1; };
     bool pending = false;
     Pend pd;
     int64_t busyUntil = 0;
@@ -329,8 +328,16 @@ struct WifiReceiver::Impl {
             winOpen = false;
             tel.sfdHits++;
             if (!pending && winBest >= busyUntil) {
-                pending = true; pd = Pend(); pd.at = winBest; pd.shortPre = winShort;
-                pd.need = winBest + (int64_t)(winShort ? 25 : 49) * kSps + kMargin;   // the header: 48 bits at 1 Mbit/s, or at 2 Mbit/s after the short SFD
+                // The phase whose SFD came first is not always the correlation peak: a radio rate resampled to 20 Msps (24 or 26 Msps) lets a weak
+                // phase on the Barker sidelobes decode the preamble first while the peak's own detector misses the window. The header is read at
+                // the phase with the most energy within half a symbol, and at the first phase when that fails.
+                int64_t peak = winBest; float pe = -1;
+                for (int o = -kSps / 2; o < kSps / 2; o++) {
+                    const float e = ch[(size_t)(((winBest + o) % kSps + kSps) % kSps)].e;
+                    if (e > pe) { pe = e; peak = winBest + o; }
+                }
+                pending = true; pd = Pend(); pd.at = peak; pd.alt = winBest; pd.shortPre = winShort;
+                pd.need = std::max(peak, winBest) + (int64_t)(winShort ? 25 : 49) * kSps + kMargin;   // the header: 48 bits at 1 Mbit/s, or at 2 Mbit/s after the short SFD
                 busyUntil = pd.need;
             }
         }
@@ -359,7 +366,6 @@ struct WifiReceiver::Impl {
         return {cr[j], ci[j]};
     }
 
-    int dbgSteps = 0, dbgMember = 0;   // TEMPORARY diagnostic
     struct Demod { std::vector<uint8_t> bits; double angSum = 0, angSq = 0; int nAng = 0; int64_t end = 0; };
 
     // nBits descrambled bits after the SFD, with an early / late timing tracker. Bits from qpskFrom on come two to a symbol (DQPSK, clause
@@ -375,10 +381,10 @@ struct WifiReceiver::Impl {
         const int nsym = symbolsFor(nBits, qpskFrom);
         for (int j = -kBack + 1; j <= nsym; j++) {
             t += kSps;
-            const double e = (mag(t + 1) - mag(t - 1)) / (mag(t) + 1e-12);
+            const float m0 = mag(t - 1), mc = mag(t), m1 = mag(t + 1);
+            const double e = (m1 - m0) / (std::max({m0, mc, m1}) + 1e-12);   // normalised by the largest: a small mag(t) off the peak does not throw the tracker
             acc = 0.9 * acc + e;
-            static const bool dbgNoTrack = std::getenv("ONAIR_WIFI_NOTRACK") != nullptr;   // TEMPORARY diagnostic
-            if (!dbgNoTrack) { if (acc > 2.5) { t++; acc = 0; dbgSteps++; } else if (acc < -2.5) { t--; acc = 0; dbgSteps--; } }
+            if (acc > 2.5) { t++; acc = 0; } else if (acc < -2.5) { t--; acc = 0; }
             const std::complex<float> c = cAt(t);
             const std::complex<float> d = c * std::conj(prev);
             prev = c;
@@ -423,36 +429,17 @@ struct WifiReceiver::Impl {
         const int64_t end = std::min(base + (int64_t)cr.size(), doneTo) - kSps;   // the last symbol start with its correlation in (and searched)
         while (pending && end >= pd.need) {
             if (pd.stage == 0) {
-                dbgSteps = 0;
                 Demod dm;
-                demod(pd.at, 48, pd.shortPre ? 0 : kAllOne, dm);
-                if (dm.bits.size() < 48) { tel.headersBad++; pending = false; busyUntil = 0; break; }
-                {
-                    int& dbgM = dbgMember;   // TEMPORARY diagnostic
-                    if (std::getenv("ONAIR_WIFI_DEBUG") && dbgM++ < 2) {
-                        std::printf("WDBG rate %.2f at %lld base %lld size %zu winE %.4f e-phases:", rate / 1e6, (long long)pd.at, (long long)base, cr.size(), winE);
-                        for (int q = 0; q < kSps; q++) std::printf(" %.4f", ch[q].e);
-                        std::printf(" | mags -10..10:");
-                        for (int o = -10; o <= 10; o++) std::printf(" %.3f", mag(pd.at + o));
-                        std::printf(" | 5 symbols earlier:");
-                        for (int o = -10; o <= 10; o++) std::printf(" %.3f", mag(pd.at - 5 * kSps + o));
-                        std::printf("\n");
-                    }
-                }
-                uint16_t crc = 0;
-                for (int k = 0; k < 16; k++) crc = (uint16_t)(crc << 1 | dm.bits[(size_t)(32 + k)]);
-                if (wifi::crc16(dm.bits.data(), 32) != crc) {
-                    static int dbgN = 0;   // TEMPORARY diagnostic
-                    if (std::getenv("ONAIR_WIFI_DEBUG") && dbgN++ < 3) {
-                        std::printf("WDBG hdr bad at %lld steps %d mags:", (long long)pd.at, dbgSteps);
-                        for (int o = -6; o <= 6; o++) std::printf(" %.3f", mag(pd.at + o));
-                        std::printf(" | next-symbol mags:");
-                        for (int o = -6; o <= 6; o++) std::printf(" %.3f", mag(pd.at + kSps + o));
-                        std::printf(" | bits:");
-                        for (int k = 0; k < 48; k++) std::printf("%d", dm.bits[(size_t)k]);
-                        std::printf("\n");
-                    }
-                    tel.headersBad++; pending = false; busyUntil = 0; break;
+                auto headerOk = [&](int64_t at) {
+                    demod(at, 48, pd.shortPre ? 0 : kAllOne, dm);
+                    if (dm.bits.size() < 48) return false;
+                    uint16_t crc = 0;
+                    for (int k = 0; k < 16; k++) crc = (uint16_t)(crc << 1 | dm.bits[(size_t)(32 + k)]);
+                    return wifi::crc16(dm.bits.data(), 32) == crc;
+                };
+                if (!headerOk(pd.at)) {
+                    if (pd.alt == pd.at || !headerOk(pd.alt)) { tel.headersBad++; pending = false; busyUntil = 0; break; }
+                    pd.at = pd.alt;
                 }
                 uint8_t h[4] = {};
                 for (int i = 0; i < 32; i++) h[i / 8] |= (uint8_t)(dm.bits[(size_t)i] << (i % 8));
