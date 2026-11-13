@@ -149,11 +149,13 @@ void mapView(App& a, ImVec2 size) {
             const ImVec2 d[4] = {{q.x, q.y - r}, {q.x + r, q.y}, {q.x, q.y + r}, {q.x - r, q.y}};
             dl->AddConvexPolyFilled(d, 4, satColour(s.id));
             dl->AddPolyline(d, 4, sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(0, 0, 0, 160), ImDrawFlags_Closed, sel ? 1.6f : 1.f);
+            if (adsbmap::labelsAt(S.map.zoom, sel)) {
             char b[16]; snprintf(b, sizeof b, "SV%03d", s.id);
             const ImVec2 lp(q.x + 10 * gUi, q.y - ImGui::GetTextLineHeight() * 0.5f);
             const ImVec2 ts = ImGui::CalcTextSize(b);
             dl->AddRectFilled(ImVec2(lp.x - 3 * gUi, lp.y - 1), ImVec2(lp.x + ts.x + 3 * gUi, lp.y + ts.y + 1), IM_COL32(10, 12, 14, 200), 2.f);
             dl->AddText(lp, IM_COL32(235, 238, 240, 255), b);
+            }
             const float dd = std::hypot(q.x - click.x, q.y - click.y);
             if (clicked && dd < best) { best = dd; hit = s.id; }
         }

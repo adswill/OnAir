@@ -188,7 +188,7 @@ void mapView(App& a, const dect2::FlarmTelemetry& t) {
             dl->AddCircleFilled(q, 9 * gUi, IM_COL32(255, 150, 40, al / 2));
             dl->AddCircle(q, 9 * gUi, IM_COL32(255, 150, 40, al), 0, 1.5f);
             char b[48]; snprintf(b, sizeof b, "%.1f m/s", th.climbMs);
-            dl->AddText(ImVec2(q.x + 10 * gUi, q.y + 2 * gUi), IM_COL32(255, 200, 120, 230), b);
+            if (adsbmap::labelsAt(S.map.zoom, false)) dl->AddText(ImVec2(q.x + 10 * gUi, q.y + 2 * gUi), IM_COL32(255, 200, 120, 230), b);
         }
     });
     ImVec2 click;
@@ -214,7 +214,7 @@ void mapView(App& a, const dect2::FlarmTelemetry& t) {
         dl->AddConcavePolyFilled(g, 12, col);
         dl->AddPolyline(g, 12, sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(0, 0, 0, 150), ImDrawFlags_Closed, sel ? 1.6f : 1.f);
         char b[80]; snprintf(b, sizeof b, "%s  %s  %dm", idText(ac.id).c_str(), dect2::flarm::aircraftTypeName(ac.acType), ac.altM);
-        dl->AddText(ImVec2(q.x + 9 * gUi, q.y - 7 * gUi), IM_COL32(255, 255, 255, 230), b);
+        if (adsbmap::labelsAt(S.map.zoom, sel)) dl->AddText(ImVec2(q.x + 9 * gUi, q.y - 7 * gUi), IM_COL32(255, 255, 255, 230), b);
         if (clicked) { const float dd = std::hypot(click.x - q.x, click.y - q.y); if (dd < bestD) { bestD = dd; S.sel = ac.id; } }
     }
     dl->PopClipRect();

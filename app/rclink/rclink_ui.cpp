@@ -117,7 +117,7 @@ void mapTab(App& a) {
         const ImVec2 q = adsbmap::project(d.lat, d.lon);
         dl->AddCircleFilled(q, 6 * gUi, IM_COL32(230, 150, 60, 255), 20);
         dl->AddCircle(q, 6 * gUi, IM_COL32(20, 24, 26, 220), 20, 1.2f);
-        dl->AddText(ImVec2(q.x + 10 * gUi, q.y - 7 * gUi), IM_COL32(230, 233, 236, 255), d.id.c_str());
+        if (adsbmap::labelsAt(S.map.zoom, false)) dl->AddText(ImVec2(q.x + 10 * gUi, q.y - 7 * gUi), IM_COL32(230, 233, 236, 255), d.id.c_str());
     }
     dl->PopClipRect();
 }

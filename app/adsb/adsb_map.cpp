@@ -44,6 +44,20 @@ std::mutex mu;
 std::condition_variable cv;
 std::map<uint64_t, Tile> tiles;
 std::deque<uint64_t> queue;
+std::atomic<int> blockedCode{0};   // 403 or 429 from the tile server: no more requests this session (OSM tile usage policy), the map says so
+const std::string kUserAgent = std::string("OnAir/") + ONAIR_VERSION + " (+https://github.com/adswill/OnAir)";   // the app, its version and a contact URL
+// one tile into `part`; false on any failure. A 403/429 is remembered in blockedCode and never retried.
+bool fetchTile(const std::string& url, const std::string& part) {
+    if (blockedCode) return false;
+    const plat::HttpResult r = plat::httpCall("GET", url, "", "", {}, kUserAgent, 12, 4u << 20);
+    if (r.status == 403 || r.status == 429) { blockedCode = r.status; return false; }
+    if (r.status != 200 || r.body.size() < 100) return false;
+    FILE* f = fopen(part.c_str(), "wb");
+    if (!f) return false;
+    const bool ok = fwrite(r.body.data(), 1, r.body.size(), f) == r.body.size();
+    fclose(f);
+    return ok;
+}
 int failStreak = 0;   // tiles failed in a row (mu): a server that says no is asked again only every 10 minutes
 std::thread worker;
 std::atomic<bool> stopping{false};
@@ -181,7 +195,7 @@ void run() {
             fs::create_directories(fsPath(path).parent_path(), ec);
             const std::string url = tileurl::expand(tileTpl, z, x, y);
             const std::string part = path + ".part";
-            if (!ec && plat::fetchUrl(url, part, std::string("OnAir/") + ONAIR_VERSION + " (+https://github.com/adswill/OnAir; ADS-B map)")) {
+            if (!ec && fetchTile(url, part)) {
                 fs::rename(fsPath(part), fsPath(path), ec);
                 ok = !ec && exists(path);
             }
@@ -284,7 +298,7 @@ ImTextureID tileTexture(int z, int x, int y, bool online, bool& failed) {
     }
     if (t.state == 4) {
         failed = true;
-        if (online && glfwGetTime() - t.failedAt > (failStreak >= 8 ? 600 : 30)) { t.state = 0; t.failedAt = 1e18; queue.push_back(k); cv.notify_one(); }   // try again later
+        if (online && !blockedCode && glfwGetTime() - t.failedAt > (failStreak >= 8 ? 600 : 30)) { t.state = 0; t.failedAt = 1e18; queue.push_back(k); cv.notify_one(); }   // try again later
         return 0;
     }
     return t.state == 3 && t.img ? t.img->texture() : (ImTextureID)0;
@@ -484,7 +498,12 @@ bool draw(View& v, ImVec2 size) {
         }
     dl->PopClipRect();
     { std::lock_guard<std::mutex> lk(mu); dropStale(ImGui::GetFrameCount()); evict(ImGui::GetFrameCount()); }
-    if (gAny) { const ImVec2 ts = ImGui::CalcTextSize(kCredit); dl->AddText(ImVec2(p0.x + size.x - ts.x - 6, p0.y + size.y - ts.y - 3), u32(gScheme.label, 220), kCredit); }
+    if (onlineMap && blockedCode) {
+        char m[200];
+        snprintf(m, sizeof m, "Map server refused (%d): change the map tile server in Settings > Network and updates.", (int)blockedCode);
+        dl->AddText(ImVec2(p0.x + 8, p0.y + size.y - 3 * ImGui::GetTextLineHeightWithSpacing() - 6), IM_COL32(255, 200, 90, 255), ellipsize(m, size.x - 16).c_str());
+    }
+    if (onlineMap || gAny) { const ImVec2 ts = ImGui::CalcTextSize(kCredit); dl->AddText(ImVec2(p0.x + size.x - ts.x - 6, p0.y + size.y - ts.y - 3), u32(gScheme.label, 220), kCredit); }
     else {   // a line above the caption the screens put along the bottom (legend()), cut short in a narrow map
         const char* m = !onlineMap ? "map switched off: rough outline only" : missing ? "loading the map..." : "no map tiles (no network, or no picture decoder on this system): rough outline only";
         dl->AddText(ImVec2(p0.x + 8, p0.y + size.y - 2 * ImGui::GetTextLineHeightWithSpacing() - 6), u32(gScheme.label), ellipsize(m, size.x - 16).c_str());
@@ -496,7 +515,7 @@ bool draw(View& v, ImVec2 size) {
 void legend(float mapWidth, const char* fmt, ...) {
     char b[256];
     va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap);
-    const float room = mapWidth - 16 * gUi - (gAny ? ImGui::CalcTextSize(kCredit).x + 12 * gUi : 0.f);
+    const float room = mapWidth - 16 * gUi - ((onlineMap || gAny) ? ImGui::CalcTextSize(kCredit).x + 12 * gUi : 0.f);
     ImGui::TextDisabled("%s", ellipsize(b, std::max(0.f, room)).c_str());
 }
 
@@ -528,7 +547,7 @@ void dlStart(std::vector<dect2::TileKey> list) {
             const std::string url = tileurl::expand(tileTpl, t.z, t.x, t.y);
             const std::string part = path + ".part";
             bool ok = false;
-            if (!ec && plat::fetchUrl(url, part, std::string("OnAir/") + ONAIR_VERSION + " (+https://github.com/adswill/OnAir; offline area)")) {
+            if (!ec && fetchTile(url, part)) {
                 fs::rename(fsPath(part), fsPath(path), ec);
                 ok = !ec && exists(path);
             }
@@ -570,11 +589,13 @@ void areaDownload() {
         ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.4f, 1), "Too many tiles (over %d): zoom in or lower the deepest zoom.", dect2::kMaxDownloadTiles);
     } else {
         ImGui::Text("Zoom %d to %d: %ld tiles, about %s. Tiles you already have are skipped.", z0, toZoom, plan.count, sizeText(plan.estBytes).c_str());
-        const bool can = onlineMap && plan.count > 0;
+        const bool osm = tileTpl == tileurl::kDefault;   // the OpenStreetMap tile usage policy forbids bulk downloading
+        const bool can = onlineMap && plan.count > 0 && !osm;
         if (!can) ImGui::BeginDisabled();
         if (ImGui::Button("Download")) dlStart(plan.tiles);
         if (!can) ImGui::EndDisabled();
-        if (!onlineMap && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Switch on \"online map\" first.");
+        if (osm && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("OpenStreetMap's tile servers do not allow bulk downloads. Choose another tile server in Settings, or use an MBTiles file.");
+        else if (!onlineMap && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("Switch on \"online map\" first.");
         ImGui::SameLine();
         ImGui::TextDisabled("one tile every 0.4 s, at most %d per download", dect2::kMaxDownloadTiles);
     }

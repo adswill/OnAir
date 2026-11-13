@@ -82,7 +82,7 @@ void sondeSitesDraw(App& a, ImDrawList* dl, ImVec2 p0, ImVec2 size, int zoom) {
             break;
         case dect2::SondeMapMark::KnownSite:   // a launch site OnAir has not heard yet: an outline, the name once zoomed in
             dl->AddTriangle(ImVec2(c.x, c.y - 6 * gUi), ImVec2(c.x - 5 * gUi, c.y + 4 * gUi), ImVec2(c.x + 5 * gUi, c.y + 4 * gUi), IM_COL32(150, 190, 230, 200), 1.4f * gUi);
-            if (zoom >= 6) dl->AddText(ImVec2(c.x + 7 * gUi, c.y - 7 * gUi), IM_COL32(190, 210, 230, 190), m.label.c_str());
+            if (adsbmap::labelsAt(zoom, false)) dl->AddText(ImVec2(c.x + 7 * gUi, c.y - 7 * gUi), IM_COL32(190, 210, 230, 190), m.label.c_str());
             break;
         case dect2::SondeMapMark::Station:     // the receiver: a small house
             dl->AddRectFilled(ImVec2(c.x - 5 * gUi, c.y - 2 * gUi), ImVec2(c.x + 5 * gUi, c.y + 6 * gUi), IM_COL32(110, 220, 130, 240));

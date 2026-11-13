@@ -251,7 +251,7 @@ void mapView(App& a, ImVec2 size) {
         const bool cur = (int)m.idx == S.sel;
         dl->AddCircleFilled(q, r, (m.col & 0x00FFFFFF) | ((cur ? 170u : 80u) << 24));
         dl->AddCircle(q, r, m.col, 24, cur ? 2.5f : 1.f);
-        dl->AddText(ImVec2(q.x + r + 2 * gUi, q.y - ImGui::GetTextLineHeight() * 0.5f), IM_COL32(235, 238, 240, 255), m.label.c_str());
+        if (adsbmap::labelsAt(S.map.zoom, cur)) dl->AddText(ImVec2(q.x + r + 2 * gUi, q.y - ImGui::GetTextLineHeight() * 0.5f), IM_COL32(235, 238, 240, 255), m.label.c_str());
         const float d = std::hypot(q.x - click.x, q.y - click.y);
         if (clicked && d < best) { best = d; S.sel = (int)m.idx; }
     }

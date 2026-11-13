@@ -181,7 +181,7 @@ void mapView(App& a) {
             dl->AddCircleFilled(q, (sel ? 6.f : 4.5f) * gUi, col);
             dl->AddCircle(q, (sel ? 6.f : 4.5f) * gUi, sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(0, 0, 0, 150), 0, 1.2f);
         }
-        if (S.labels) {
+        if (S.labels && adsbmap::labelsAt(S.map.zoom, false)) {
             char b[96];
             if (k.hasLevel) snprintf(b, sizeof b, "%s  FL%03.0f", label(k).c_str(), k.flightLevel); else snprintf(b, sizeof b, "%s", label(k).c_str());
             dl->AddText(ImVec2(q.x + 9 * gUi, q.y - 7 * gUi), IM_COL32(255, 255, 255, 230), b);

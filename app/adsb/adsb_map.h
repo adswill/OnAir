@@ -13,6 +13,10 @@ namespace adsbmap {
 
 constexpr int kMinZoom = 2, kMaxZoom = 19;   // continent to single buildings (the deepest the OpenStreetMap tile server draws)
 
+// The one rule for text labels on every map: hidden when zoomed out (a block of text otherwise), shown from this zoom on and always for the
+// selected item. The ADS-B map's rule, shared by all the other maps.
+constexpr int kLabelMinZoom = 6;
+inline bool labelsAt(int zoom, bool selected) { return selected || zoom >= kLabelMinZoom; }
 struct View {
     double lat = 25.25, lon = 55.36;   // the centre of the map
     int zoom = 7;                      // kMinZoom to kMaxZoom

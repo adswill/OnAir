@@ -4,6 +4,7 @@
 // VDL Mode 4 screens: message log and aircraft list.
 #include "../adsb/adsb_map.h"
 #include "app.h"
+#include "ui/kit/mode_frame.h"
 #include "dect2/vdl4/vdl4_tel.h"
 #include <cstdio>
 #include <cstring>
@@ -28,6 +29,7 @@ void tab(App& a) {
     const dect2::Vdl4Telemetry& t = a.rx.vdl4;
     if (!live(a)) ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("Start the receiver."));
     else if (t.aircraft.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("No VDL Mode 4 burst yet. It is used in only a few places, on VHF airband channels; bursts are short and need a line of sight to the transmitter.")); ImGui::PopTextWrapPos(); }
+    if (live(a)) kit::modeNav("vdl4v", S.view, {{tr("Messages"), 0}, {tr("Map"), 1}, {tr("Aircraft"), 2}});   // the view selector is part of the tab (as VDL2 and ACARS)
     if (S.view == 0) {
         if (ImGui::BeginTable("vdl4m", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY, ImVec2(0, 220 * gUi))) {
             ImGui::TableSetupColumn("Time");
@@ -91,11 +93,6 @@ void tab(App& a) {
 
 void receiver(App& a) {
     if (!live(a)) return;
-    if (ImGui::RadioButton("Messages", S.view == 0)) S.view = 0;
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Map", S.view == 1)) S.view = 1;
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Aircraft", S.view == 2)) S.view = 2;
     if (resultsClearButton("vdl4")) a.engine.vdl4().clearResults();
 }
 

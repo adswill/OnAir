@@ -40,10 +40,12 @@ void mapView(App& a, ImVec2 size) {
             const ImU32 col = ImGui::ColorConvertFloat4ToU32(c);
             dl->AddCircleFilled(q, 6 * gUi, col, 20);
             dl->AddCircle(q, 6 * gUi, sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(20, 24, 26, 220), 20, sel ? 2.f : 1.2f);
+            if (adsbmap::labelsAt(S.map.zoom, sel)) {
             const std::string lb = !n.shortName.empty() ? n.shortName : !n.longName.empty() ? n.longName : n.id;
             const ImVec2 ts = ImGui::CalcTextSize(lb.c_str());
             dl->AddRectFilled(ImVec2(q.x + 8 * gUi, q.y - ts.y * 0.5f - 1), ImVec2(q.x + 12 * gUi + ts.x, q.y + ts.y * 0.5f + 1), IM_COL32(10, 12, 14, 190), 2.f);
             dl->AddText(ImVec2(q.x + 10 * gUi, q.y - ts.y * 0.5f), IM_COL32(230, 233, 236, 255), lb.c_str());
+            }
             const float d = std::hypot(q.x - mouse.x, q.y - mouse.y);
             if (d < tipD) { tipD = d; tip = &n; }
             if (clicked && std::hypot(q.x - click.x, q.y - click.y) < 14 * gUi) S.sel = nodeKey(n);
@@ -61,9 +63,11 @@ void mapView(App& a, ImVec2 size) {
             // a diamond: APRS stations and objects, apart from the round mesh nodes
             dl->AddQuadFilled(ImVec2(q.x, q.y - r), ImVec2(q.x + r, q.y), ImVec2(q.x, q.y + r), ImVec2(q.x - r, q.y), col);
             dl->AddQuad(ImVec2(q.x, q.y - r), ImVec2(q.x + r, q.y), ImVec2(q.x, q.y + r), ImVec2(q.x - r, q.y), sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(20, 24, 26, 220), sel ? 2.f : 1.2f);
+            if (adsbmap::labelsAt(S.map.zoom, sel)) {
             const ImVec2 ts = ImGui::CalcTextSize(s.st.call.c_str());
             dl->AddRectFilled(ImVec2(q.x + 8 * gUi, q.y - ts.y * 0.5f - 1), ImVec2(q.x + 12 * gUi + ts.x, q.y + ts.y * 0.5f + 1), IM_COL32(10, 12, 14, 190), 2.f);
             dl->AddText(ImVec2(q.x + 10 * gUi, q.y - ts.y * 0.5f), IM_COL32(230, 233, 236, 255), s.st.call.c_str());
+            }
             const float d = std::hypot(q.x - mouse.x, q.y - mouse.y);
             if (d < tipD) { tipD = d; tipA = &s; tip = nullptr; }
             if (clicked && std::hypot(q.x - click.x, q.y - click.y) < 14 * gUi) S.sel = aprsKey(s);

@@ -123,7 +123,7 @@ void mapView(App& a, ImVec2 size) {
         }
         if (isSel) dl->AddCircle(q, 10 * gUi, IM_COL32(255, 255, 255, 230), 28, 1.6f);
         char b[64]; snprintf(b, sizeof b, "%s  %.1f km", p.callsign.c_str(), last.altM / 1000.0);
-        dl->AddText(ImVec2(q.x + 9 * gUi, q.y - 8 * gUi), IM_COL32(235, 238, 240, p.active ? 255 : 150), b);
+        if (adsbmap::labelsAt(S.map.zoom, isSel)) dl->AddText(ImVec2(q.x + 9 * gUi, q.y - 8 * gUi), IM_COL32(235, 238, 240, p.active ? 255 : 150), b);
         const float d = std::hypot(q.x - click.x, q.y - click.y);
         if (clicked && d < hitD) { hitD = d; hit = &p; }
     }
