@@ -300,7 +300,8 @@ static void applyUiThemeBase(App& a) {
     c[ImGuiCol_Header] = ImVec4(1, 0.95f, 0.85f, 0.06f); c[ImGuiCol_HeaderHovered] = ImVec4(1, 0.95f, 0.85f, 0.10f); c[ImGuiCol_HeaderActive] = ImVec4(0.86f, 0.65f, 0.30f, 0.30f);
     c[ImGuiCol_Tab] = ImVec4(0, 0, 0, 0); c[ImGuiCol_TabHovered] = ImVec4(1, 0.95f, 0.85f, 0.06f); c[ImGuiCol_TabSelected] = ImVec4(1, 0.95f, 0.85f, 0.05f);
     c[ImGuiCol_TabDimmed] = ImVec4(0, 0, 0, 0); c[ImGuiCol_TabDimmedSelected] = ImVec4(1, 0.95f, 0.85f, 0.04f); c[ImGuiCol_TabSelectedOverline] = kAccent;
-    c[ImGuiCol_SliderGrab] = ImVec4(0.58f, 0.56f, 0.52f, 1); c[ImGuiCol_SliderGrabActive] = kAccent; c[ImGuiCol_CheckMark] = kAccent;
+    c[ImGuiCol_SliderGrab] = ImVec4(T.frame.x + (T.dim.x - T.frame.x) * 0.7f, T.frame.y + (T.dim.y - T.frame.y) * 0.7f, T.frame.z + (T.dim.z - T.frame.z) * 0.7f, 1);   // darker than the value text drawn over it
+    c[ImGuiCol_SliderGrabActive] = kAccent; c[ImGuiCol_CheckMark] = kAccent;
     c[ImGuiCol_Text] = kText; c[ImGuiCol_TextDisabled] = kDim; c[ImGuiCol_MenuBarBg] = kRail;
     c[ImGuiCol_TableRowBgAlt] = ImVec4(1, 0.95f, 0.85f, 0.02f); c[ImGuiCol_TableHeaderBg] = ImVec4(0, 0, 0, 0); c[ImGuiCol_TableBorderLight] = kEdge; c[ImGuiCol_TableBorderStrong] = kEdge;
     c[ImGuiCol_TextSelectedBg] = ImVec4(0.86f, 0.65f, 0.30f, 0.30f);
@@ -317,7 +318,7 @@ static void applyUiThemeBase(App& a) {
         c[ImGuiCol_Header] = fade(T.accent, 0.20f); c[ImGuiCol_HeaderHovered] = fade(T.bright, 0.08f); c[ImGuiCol_HeaderActive] = fade(T.accent, 0.35f);
         c[ImGuiCol_Tab] = T.rail; c[ImGuiCol_TabHovered] = hov; c[ImGuiCol_TabSelected] = sel;   // editor tabs: flat, the selected one filled
         c[ImGuiCol_TabDimmed] = T.rail; c[ImGuiCol_TabDimmedSelected] = sel; c[ImGuiCol_TabSelectedOverline] = T.accent; c[ImGuiCol_TabDimmedSelectedOverline] = T.edge;
-        c[ImGuiCol_SliderGrab] = mixc(T.dim, T.text, 0.4f); c[ImGuiCol_SliderGrabActive] = T.accent; c[ImGuiCol_CheckMark] = T.accent;
+        c[ImGuiCol_SliderGrab] = mixc(T.frame, T.dim, 0.7f);   // the value text is drawn over the grab: a grab near the text colour hid it ("6|aircraft", "0.00|kHz") c[ImGuiCol_SliderGrabActive] = T.accent; c[ImGuiCol_CheckMark] = T.accent;
         c[ImGuiCol_ScrollbarBg] = T.bg; c[ImGuiCol_ScrollbarGrab] = T.button; c[ImGuiCol_ScrollbarGrabHovered] = hov; c[ImGuiCol_ScrollbarGrabActive] = T.accent;
         c[ImGuiCol_SeparatorHovered] = T.accent; c[ImGuiCol_SeparatorActive] = T.accent;
         c[ImGuiCol_TextSelectedBg] = fade(T.accent, 0.35f); c[ImGuiCol_TableRowBgAlt] = ImVec4(0, 0, 0, 0); c[ImGuiCol_TableHeaderBg] = T.rail;
