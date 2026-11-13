@@ -17,6 +17,8 @@ If you convey OnAir, or a work that contains part of its code, keep:
 
    > Based on OnAir by Kristijonas Adomaitis - https://on-air.dev
 
+   and, from OnAir 4.1 on, a credit for the OnAir contributors in the same place: the people in [CONTRIBUTORS.md](CONTRIBUTORS.md), or the line "OnAir contributors: https://github.com/adswill/OnAir/blob/main/CONTRIBUTORS.md".
+
 The GPL also asks you to offer the corresponding source of what you convey, under the same licence.
 
 ## A request, not a requirement
