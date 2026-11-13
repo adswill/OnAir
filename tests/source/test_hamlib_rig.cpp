@@ -4,6 +4,7 @@
 #include "dect2/audio/audioin.h"
 #include "dect2/source/hamlib_link.h"
 #include "dect2/source/hamlib_rig.h"
+#include "dect2/source/rig_setup.h"
 #include "dect2/common/ring.h"
 #include "dect2/source/source.h"
 #include <atomic>
