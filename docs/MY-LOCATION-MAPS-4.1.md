@@ -17,7 +17,7 @@ Request: AIS, APRS and some other maps did not show the user's own position, so 
 - `core/include/dect2/geo/mylocation.h`: distance (haversine, mean Earth radius), initial bearing, destination point, ring polyline, ring list parsing, number and bearing formatting. Header only, no dependencies.
 - `app/map/my_location.{h,cpp}`: the drawing and the settings. One call, `mylocmap::overlay()`, is made at the end of `adsbmap::draw()`, which every map screen already calls, so a new map gets the marker without extra code. `mylocmap::infoLine()` and `mylocmap::distanceBearingText()` give the text for cards and tooltips.
 - Rings are drawn as polylines of points at the ring distance, so they stay correct at any zoom and latitude, across the antimeridian (segments that would cross the whole map are skipped) and near the poles.
-- Where a screen draws its own home marker as well, the two sit at the same spot.
+- The home markers some screens drew themselves ("me" / "home" on the HF beacon, HFDL, FT8/FT4 digital, ham, lightning and general maps, the antenna cross on the DAB TII map) were removed, so each map shows one. The range line from the marker to the picked aircraft on the HFDL map stays.
 
 ## Tests (not yet run)
 

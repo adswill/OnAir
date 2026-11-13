@@ -104,11 +104,6 @@ void hamMapTab(App& a) {
     };
     if (!o.selGrid.empty() && o.selCall != o.dxCall) pathTo(o.selGrid, IM_COL32(255, 255, 255, 230), o.selCall);
     if (!o.dxGrid.empty()) pathTo(o.dxGrid, IM_COL32(255, 90, 80, 240), o.dxCall);
-    if (haveMe) {
-        const ImVec2 h = adsbmap::project(la, lo);
-        dl->AddCircleFilled(h, 4 * gUi, IM_COL32(110, 210, 230, 255));
-        dl->AddCircle(h, 8 * gUi, IM_COL32(110, 210, 230, 220), 24, 1.5f * gUi);
-    }
     dl->PopClipRect();
     // hover and click on a station
     const ImVec2 mp = ImGui::GetIO().MousePos;

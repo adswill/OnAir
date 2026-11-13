@@ -218,13 +218,6 @@ void mapPane(App& a) {
         dl->AddCircleFilled(q, 4 * gUi, c);
         dl->AddText(ImVec2(q.x + 7 * gUi, q.y - 7 * gUi), c, r.name.c_str());
     }
-    if (t.stations.empty()) {
-        double rl, ro;
-        receiverLocation(rl, ro);
-        const ImVec2 h = adsbmap::project(rl, ro);
-        dl->AddCircleFilled(h, 4 * gUi, IM_COL32(110, 210, 230, 255));
-        dl->AddText(ImVec2(h.x + 10 * gUi, h.y - 7 * gUi), IM_COL32(110, 210, 230, 255), receiverLocationSet() ? tr("me") : tr("me (placeholder: set it in View > Map)"));
-    }
     dl->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));

@@ -114,6 +114,8 @@ static void sources(const fs::path& root) {
         const std::string s = readFile(e.path());
         if (rel != "adsb/adsb_map.cpp" && rel != "adsb/adsb_map.h" && rel != "map/my_location.cpp" && s.find("adsbmap::draw(") != std::string::npos) callers++;
         const bool ownProjection = s.find("mercX(") != std::string::npos || s.find("worldSize(") != std::string::npos;
+        if (rel != "map/my_location.cpp" && (s.find("receiverLocationSet() ? \"me\"") != std::string::npos || s.find("IM_COL32(110, 210, 230, 255), \"me\"") != std::string::npos || s.find("tr(\"home\")") != std::string::npos))
+            own.push_back(rel + " (its own home marker)");
         if (ownProjection && rel != "adsb/adsb_map.cpp" && rel != "map/wx_overlay.cpp") own.push_back(rel);
     }
     CHECK(callers >= 38, "only %d map screens found that draw through adsbmap::draw", callers);

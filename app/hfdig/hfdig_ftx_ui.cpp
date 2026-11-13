@@ -207,13 +207,6 @@ void mapView(App& a, const dect2::HfdigFtxTelemetry& f, ImVec2 size) {
         dl->AddRectFilled(lp, ImVec2(lp.x + ts.x + 8 * gUi, lp.y + ts.y + 4 * gUi), IM_COL32(10, 12, 14, 210), 2.f);
         dl->AddText(ImVec2(lp.x + 4 * gUi, lp.y + 2 * gUi), IM_COL32(235, 238, 240, 255), p.call.c_str());
     }
-    if (receiverLocationSet()) {   // home
-        double rl, ro; receiverLocation(rl, ro);
-        const ImVec2 q = adsbmap::project(rl, ro);
-        dl->AddRectFilled(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(240, 200, 60, 255));
-        dl->AddRect(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(0, 0, 0, 200));
-        dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(240, 200, 60, 255), tr("home"));
-    }
     dl->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));

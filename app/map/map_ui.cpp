@@ -277,11 +277,6 @@ void mapView(App& a) {
     const ImVec2 h = adsbmap::project(rl, ro);   // the receiver: a ringed dot
     wxoverlay::draw(dl);   // a weather-satellite picture being received lies on the ground, under every marker
     drawLayers(dl, p0, size);
-    if (S.layerOn[dect2::LayerCount]) {
-        dl->AddCircleFilled(h, 4 * gUi, IM_COL32(110, 210, 230, 255));
-        dl->AddCircle(h, 8 * gUi, IM_COL32(110, 210, 230, 220), 24, 1.5f * gUi);
-        dl->AddText(ImVec2(h.x + 10 * gUi, h.y - 7 * gUi), IM_COL32(110, 210, 230, 255), "me");
-    }
     if (S.marker) {   // the marker: a pin with its point on the position
         const ImVec2 q = adsbmap::project(S.mLat, S.mLon);
         const ImU32 c = IM_COL32(240, 90, 80, 255);
