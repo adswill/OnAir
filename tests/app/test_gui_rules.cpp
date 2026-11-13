@@ -236,6 +236,24 @@ static void ruleTranslationBudget(const fs::path& root) {
 }
 
 // ---------------------------------------------------------------- 7
+// the menu bar's right-hand items sit at the bar's vertical centre: a SmallButton lowers itself by the line's text-baseline offset (the bar's
+// extra frame padding), so every placement there zeroes it (noBaseShift) right after SetCursorPosY(y); else the text touches the bar's bottom line
+static void ruleMenuBarCentre(const std::vector<Src>& srcs) {
+    for (const Src& s : srcs) {
+        if (s.rel != "app/ui/ui2_shell.cpp") continue;
+        const size_t a = s.text.find("static void menuBarRight("), b = s.text.find("void restoreDefaultView", a);
+        CHECK(a != std::string::npos && b != std::string::npos, "menuBarRight not found");
+        if (a == std::string::npos || b == std::string::npos) return;
+        const std::string body = s.text.substr(a, b - a);
+        size_t at = 0; int n = 0;
+        while ((at = body.find("SetCursorPosY(y);", at)) != std::string::npos) {
+            at += 17; n++;
+            CHECK(body.compare(at, 15, " noBaseShift();") == 0, "ui2_shell.cpp menuBarRight: SetCursorPosY(y) not followed by noBaseShift() (text sits below the bar's centre)");
+        }
+        CHECK(n >= 3, "menuBarRight: expected 3 placements, found %d", n);
+    }
+}
+
 static void windowFit() {
     using winfit::V2;
     const V2 disp{1280, 720};
@@ -275,6 +293,7 @@ int main() {
     ruleDuplicateIds(srcs);
     ruleModalsOpened(srcs);
     ruleTranslationBudget(root);
+    ruleMenuBarCentre(srcs);
     windowFit();
     if (!failures) std::printf("ok: %zu sources\n", srcs.size());
     return failures ? 1 : 0;
