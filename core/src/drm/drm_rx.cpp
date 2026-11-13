@@ -163,6 +163,7 @@ struct DrmReceiver::Impl {
         std::vector<cf32> Hr;
         std::vector<cf32> Hc;        // Hr turned back by the symbol's common phase (cpe): what the time interpolation works on
         float cpe = 0;               // common phase of the symbol against the tracker's reference (rad)
+        const std::vector<cf32>& sel(bool c) const { return c ? Hc : Hr; }
         bool haveHr = false;
         float cp = 0;
     };
@@ -191,6 +192,7 @@ struct DrmReceiver::Impl {
     // the same statistics on the common-phase corrected estimates (4.1): which set the loops use depends on what the common phase is (see equalize)
     double sigma2C = 0, accRrC = 0, accRiC = 0, acc2rC = 0, acc2iC = 0, accPC = 0, dopplerC = 0, dopplerR = 0;
     bool pnRegime = false;
+    bool useHc = false;
     double cpRho = 0;
     int kEqLo = 0, kEqHi = 0;        // carriers that are equalised
     int jLo = 0, jHi = 0;
@@ -977,6 +979,9 @@ struct DrmReceiver::Impl {
         double sumRe = 0, sumIm = 0, sumP = 0, sum2Re = 0, sum2Im = 0; int cntD = 0;
         double accNc = 0, sumReC = 0, sumImC = 0, sumPC = 0, sum2ReC = 0, sum2ImC = 0;
         if (s == 0 || wien.empty()) wienerWeights();
+        // the time interpolation works on the common-phase corrected estimates only while the common phase is oscillator phase noise
+        // (pnRegime); in a fading channel it stays on the raw ones as in 4.0 (on the corrected ones DRM 64-QAM in TU6 lost 4 dB)
+        useHc = pnRegime;
         for (int j = jLo; j <= jHi; j++) {
             const int qj = posMod(j + qOff, gy);
             const int d = posMod(s % gy - qj, gy);
@@ -993,12 +998,12 @@ struct DrmReceiver::Impl {
                 for (int m = 0; m < kWT && all; m++) { tap[m] = recIf(t - d + (m - kWT / 2) * gy); all = tap[m] != nullptr; }
                 if (all) {
                     const float* wv = &wien[(size_t)d * kWT];
-                    for (int m = 0; m < kWT; m++) v += tap[m]->Hc[(size_t)j] * wv[m];
+                    for (int m = 0; m < kWT; m++) v += tap[m]->sel(useHc)[(size_t)j] * wv[m];
                     ok = true;
                 }
             }
             if (d == 0) {
-                if (a && !ok) { v = a->Hc[(size_t)j]; ok = true; }
+                if (a && !ok) { v = a->sel(useHc)[(size_t)j]; ok = true; }
                 const SymRec* p = recIf(t - gy);
                 if (a && p && b) {
                     // noise and Doppler statistics of both the raw and the common-phase corrected estimates (equalize picks one set below)
@@ -1016,9 +1021,9 @@ struct DrmReceiver::Impl {
             } else if (ok) {
             } else if (a && b) {
                 const float f = (float)d / gy;
-                v = a->Hc[(size_t)j] * (1 - f) + b->Hc[(size_t)j] * f; ok = true;
-            } else if (a) { v = a->Hc[(size_t)j]; ok = true; }
-            else if (b) { v = b->Hc[(size_t)j]; ok = true; }
+                v = a->sel(useHc)[(size_t)j] * (1 - f) + b->sel(useHc)[(size_t)j] * f; ok = true;
+            } else if (a) { v = a->sel(useHc)[(size_t)j]; ok = true; }
+            else if (b) { v = b->sel(useHc)[(size_t)j]; ok = true; }
             G1[(size_t)(j - jLo)] = v;
             Gvalid[(size_t)(j - jLo)] = ok ? 1 : 0;
         }
@@ -1097,7 +1102,7 @@ struct DrmReceiver::Impl {
                 jj = std::max(jLo, std::min(jHi, jj));
                 acc += G1[(size_t)(jj - jLo)] * kk[(size_t)(m + J - 1)];
             }
-            acc *= std::polar(1.0f, (float)(-ramp * k) + R.cpe);   // the symbol's own common phase back on (0 on the 4.0 path)
+            acc *= std::polar(1.0f, (float)(-ramp * k) + (useHc ? R.cpe : 0.f));   // the symbol's own common phase back on
             Hhat[(size_t)(k - kEqLo)] = acc;
             hp += std::norm(acc);
         }
