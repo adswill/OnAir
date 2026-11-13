@@ -143,6 +143,44 @@ struct AudioFsk {
     }
 };
 
+// 4.1 (docs/SENSITIVITY-GAPS.md): 1-bit differential detection on the complex channel samples. The phase turned over one bit, arg(y[n] y*[n-T]),
+// is the discriminator integrated over the bit without its FM clicks (a click is a 2 pi slip, which the product does not see) and weighted by the
+// signal's own amplitude, so it has no FM threshold. The products are averaged over half a bit before the angle. The carrier error the AFC
+// leaves (up to 1.5 kHz, more than a 4800 baud bit's phase turn) is taken out first: `offHz`, the midpoint of the discriminator path's slicer,
+// set by the caller each block. Output in Hz (the mean frequency over the bit), for the same FSK slicer as the discriminator paths.
+struct DiffDet {
+    int sps = 20, w = 10;
+    double baud = 4800;
+    std::vector<cf32> ring, zr;
+    size_t ri = 0, zi = 0;
+    cf32 zsum{0.f, 0.f};
+    void init(double b) {
+        baud = b;
+        sps = std::max(2, (int)std::lround(kMidRate / b));
+        w = std::max(1, sps / 2);
+        reset();
+    }
+    void reset() { ring.assign((size_t)sps, cf32(0.f, 0.f)); zr.assign((size_t)w, cf32(0.f, 0.f)); ri = zi = 0; zsum = cf32(0.f, 0.f); }
+    void run(const cf32* y, size_t n, double offHz, std::vector<float>& out) {
+        out.resize(n);
+        const double th = -2 * dect2::math::kPi * offHz * (double)sps / kMidRate;
+        const cf32 rot((float)std::cos(th), (float)std::sin(th));
+        const float k = (float)(kMidRate / (2 * dect2::math::kPi * (double)sps));
+        for (size_t i = 0; i < n; i++) {
+            const cf32 z = y[i] * std::conj(ring[ri]) * rot;
+            ring[ri] = y[i];
+            if (++ri == (size_t)sps) ri = 0;
+            zsum += z - zr[zi];
+            zr[zi] = z;
+            if (++zi == (size_t)w) zi = 0;
+            out[i] = (zsum.real() == 0.f && zsum.imag() == 0.f) ? 0.f : std::atan2(zsum.imag(), zsum.real()) * k + (float)offHz;
+        }
+        cf32 s(0.f, 0.f);   // the running sum again from its terms: no float drift over hours
+        for (const cf32& v : zr) s += v;
+        zsum = s;
+    }
+};
+
 // One extra demodulator: a baud rate (and, for AFSK, an audio carrier) the fixed 9600 / 4800 slicers do not cover. Feeds the sync word
 // framings (AX100 Mode 5, CCSDS, and every cubesat_more.h framing) and, for G3RUH / NRZI AX.25, an HDLC slicer.
 struct ExtraPath {
@@ -151,6 +189,7 @@ struct ExtraPath {
     int baud = 0;
     std::string why;
     AudioFsk af;
+    DiffDet dd;           // 4.1: a differential detector path (runDiff) instead of a discriminator one
     dmr::Fir<float> lp;
     std::vector<float> a, f;
     pktdemod::FskSlicer g3, plain;
@@ -181,6 +220,9 @@ struct CubesatReceiver::Impl {
     // +-4.5 kHz Bell 202 channel (disc2). A frame from both is reported once (the duplicate check). DECT2_CUBESAT_NONARROW=1: off (as 3.9)
     ExtraPath narrow9600, narrow4800, narrowU482c;
     bool narrowOn = true;
+    // 4.1: differential detectors on the narrow channels (DiffDet), beside the discriminator paths. DECT2_CUBESAT_NODIFF=1: off (as 4.0)
+    ExtraPath diff9600, diff4800;
+    bool diffOn = true;
     std::vector<std::unique_ptr<ExtraPath>> trackPaths;   // one per baud rate / audio carrier of the tracked satellite the fixed ones miss
     const GrTx* trackTx = nullptr;
     MoreConfig moreCfg;
@@ -212,6 +254,7 @@ struct CubesatReceiver::Impl {
         fe.chanPass = 12000.0; fe.chanStop = 20000.0; fe.clipHz = 10000.f; fe.afcMaxHz = 15000.0;
         fe.chanPass2 = 4500.0; fe.chanStop2 = fe.chanPass2 * 1.8;   // 4.0: the 1200 baud Bell 202 tones get a channel of their own (docs/SENSITIVITY-4.0-A3.md)
         { const char* e = getenv("DECT2_CUBESAT_NONARROW"); narrowOn = !(e && *e && *e != '0'); }
+        { const char* e = getenv("DECT2_CUBESAT_NODIFF"); diffOn = narrowOn && !(e && *e && *e != '0'); }
         fe.chanPass3 = narrowOn ? 8500.0 : 0.0; fe.chanStop3 = 13500.0;
         if (!fe.configure(fs, cubesatTuning().minSampleRate)) return;
         audio48.design(dmr::lowpassTaps(3300.0, 8000.0, kMidRate, 50, 9), 2);
@@ -237,6 +280,12 @@ struct CubesatReceiver::Impl {
             setupPath(narrowU482c, 4800, 3600.0, false, "GOMspace AFSK 4800, narrow channel");
             narrow9600.quiet = narrow4800.quiet = narrowU482c.quiet = true;
         } else narrow9600.on = narrow4800.on = narrowU482c.on = false;
+        if (diffOn) {
+            setupPath(diff9600, 9600, 0.0, true, "9600 baud, differential detector");
+            setupPath(diff4800, 4800, 0.0, true, "4800 baud, differential detector");
+            diff9600.dd.init(9600); diff4800.dd.init(4800);
+            diff9600.quiet = diff4800.quiet = true;
+        } else diff9600.on = diff4800.on = false;
         setupTracked();
         isReady = true;
         resetState();
@@ -249,7 +298,8 @@ struct CubesatReceiver::Impl {
         audio48.reset(); lpG[0].reset(); lpG[1].reset();
         for (auto& a : afsk) a.reset();
         for (int i = 0; i < 2; i++) { g3[i].reset(); plain[i].reset(); framer[i].reset(); framer[i].ccsdsLen = ccsdsLen; more[i].reset(); }
-        std::vector<ExtraPath*> eps{&afskPath, &narrow9600, &narrow4800, &narrowU482c};
+        std::vector<ExtraPath*> eps{&afskPath, &narrow9600, &narrow4800, &narrowU482c, &diff9600, &diff4800};
+        diff9600.dd.reset(); diff4800.dd.reset();
         for (auto& tp : trackPaths) eps.push_back(tp.get());
         for (ExtraPath* ep : eps) { ep->af.reset(); ep->lp.reset(); ep->g3.reset(); ep->plain.reset(); ep->framer.reset(); ep->more.reset(); }
         nextReport = 0;
@@ -407,6 +457,7 @@ struct CubesatReceiver::Impl {
         for (auto& m : more) m.configure(c);
         afskPath.more.configure(c);
         narrow9600.more.configure(c); narrow4800.more.configure(c); narrowU482c.more.configure(c);
+        diff9600.more.configure(c); diff4800.more.configure(c);
         trackPaths.clear();
         if (!trackTx || !isReadyFs()) return;
         // every decodable transmitter of the satellite on this dial (SPUTNIX satellites send 1200 .. 9600 baud on one frequency)
@@ -436,6 +487,14 @@ struct CubesatReceiver::Impl {
         ep.lp.process(src->data(), src->size(), ep.f);
         if (ep.f.empty()) return;
         if (ep.hdlc) ep.g3.process(ep.f.data(), ep.f.size());
+        ep.plain.process(ep.f.data(), ep.f.size());
+    }
+    // a differential detector path on the complex channel `y`; offHz: the carrier error the discriminator path `ref` sees (its slicer's midpoint)
+    void runDiff(ExtraPath& ep, const std::vector<cf32>& y, const ExtraPath& ref) {
+        if (!ep.on || y.empty()) return;
+        const double off = ref.on ? 0.5 * ((double)ref.plain.hi + (double)ref.plain.lo) : 0.0;
+        ep.dd.run(y.data(), y.size(), off, ep.f);
+        ep.g3.process(ep.f.data(), ep.f.size());
         ep.plain.process(ep.f.data(), ep.f.size());
     }
     // strict: a narrow path (a second hunter beside a wide one). A Mobitex frame needs two data blocks with a good CRC there: the BEESAT-1 form
@@ -531,6 +590,7 @@ struct CubesatReceiver::Impl {
                 runPath(narrow9600, fe.thirdDisc());
                 runPath(narrowU482c, fe.thirdDisc());
                 runPath(narrow4800, fe.narrowDisc());
+                if (diffOn) { runDiff(diff9600, fe.ch3, narrow9600); runDiff(diff4800, fe.ch2, narrow4800); }
             }
         }
         fe.commit();

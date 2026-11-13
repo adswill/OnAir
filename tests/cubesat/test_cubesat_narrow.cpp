@@ -31,12 +31,19 @@ const Scen kScen[] = {{"still", 0, 0}, {"+1.4 kHz", 1400, 1400}, {"-1.4 kHz", -1
 
 struct Res { double sent = 0, got = 0, wrong = 0, cpu = 0; int by[kNumFramings] = {}; };   // by: wrong (or noise) frames per framing
 
-void setNarrow(bool on) {
+void setEnvFlag(const char* name, bool set) {
 #ifndef _WIN32
-    if (on) unsetenv("DECT2_CUBESAT_NONARROW"); else setenv("DECT2_CUBESAT_NONARROW", "1", 1);
+    if (!set) unsetenv(name); else setenv(name, "1", 1);
 #else
-    _putenv_s("DECT2_CUBESAT_NONARROW", on ? "" : "1");
+    _putenv_s(name, set ? "1" : "");
 #endif
+}
+// the comparison receiver: 3.9 (no narrow paths), or with X3_OLD_NODIFF=1 the 4.0 one (narrow paths, no 4.1 differential detectors)
+bool gOldNoDiff = false;
+void setNarrow(bool on) {
+    if (gOldNoDiff) { setEnvFlag("DECT2_CUBESAT_NONARROW", false); setEnvFlag("DECT2_CUBESAT_NODIFF", !on); return; }
+    setEnvFlag("DECT2_CUBESAT_NODIFF", false);
+    setEnvFlag("DECT2_CUBESAT_NONARROW", !on);
 }
 
 // one run: `cycles` cycles of framing mode `mode` (0: all) at C/N `cn`; noiseOnly: the receiver gets the noise alone
@@ -111,6 +118,7 @@ int main() {
     for (int m = 0; m <= kNumFramings; m++) (void)cubesatGenCycle(m);   // build the signal caches before any thread runs
     const int framingsOfInterest[] = {Ax25G3ruh, Ax100Mode5, Ax100Mode6, CcsdsRs, U482c, CcsdsConcat, Usp, Ngham, Mobitex};
     if (getenv("ONAIR_SENS_CALIBRATE")) {
+        gOldNoDiff = getenv("X3_OLD_NODIFF") != nullptr;
         double hi = 14, lo = 4, st = 1;
         if (getenv("X3_CN")) sscanf(getenv("X3_CN"), "%lf:%lf:%lf", &hi, &lo, &st);
         const int cycles = getenv("X3_CYCLES") ? atoi(getenv("X3_CYCLES")) : 16;
