@@ -297,9 +297,9 @@ private:
         if (clean && s == ch.lastSym && s == -top) { ch.steadyLo = ch.haveLo ? ch.steadyLo + 0.1 * (y - ch.steadyLo) : y; ch.haveLo = true; }
         ch.lastSym = s;
         const double t = ch.t();
-        if (!ch.locked && ch.nSym > 32 && ch.evm < 0.42) {
+        if (!ch.locked && ch.nSym > 32 && ch.evm < 0.3) {   // noise alone sits near 0.5 against the extremes of its own window
             ch.locked = true; ch.lockSym = ch.nSym; ch.lockStart = t; ch.bitLog.clear(); ch.evmSum = 0; ch.evmN = 0;
-        } else if (ch.locked && ch.evm > 0.6) {
+        } else if (ch.locked && ch.evm > 0.5) {
             ch.locked = false;
             unlocked(ch, t);
         }
