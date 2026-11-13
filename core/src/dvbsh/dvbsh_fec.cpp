@@ -2,6 +2,7 @@
 // code with the puncturing and tail tables 5.2 / 5.3, the turbo interleaver (5.3.3), the bit-wise interleaver with the 126-of-128 rate
 // adaptation (5.4.2) and the time interleaver's branch delays (5.4.3 with TS 102 584 clause 7.2.3.3).
 #include "dect2/dvbsh/dvbsh.h"
+#include <array>
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -231,7 +232,7 @@ inline float maxs(float a, float b) {   // max* with a linear correction of ln(1
 
 // One constituent decoder. ls: systematic channel LLR (K + 3, the tail included), la: a-priori (K), lp0/lp1: parities (K + 3).
 // le: extrinsic out (K), app: a-posteriori out (K).
-void siso(const float* ls, const float* la, const float* lp0, const float* lp1, int K, std::vector<float>& alpha, float* le, float* app) {
+void sisoGeneral(const float* ls, const float* la, const float* lp0, const float* lp1, int K, std::vector<float>& alpha, float* le, float* app) {
     const Trellis& T = trellis();
     const int N = K + 3;
     const float NEG = -1e30f;
@@ -288,6 +289,100 @@ void siso(const float* ls, const float* la, const float* lp0, const float* lp1, 
 }
 }
 
+// The same recursions as sisoGeneral, with the branch metrics of each period worked out once (the same expression) and, where every state
+// is reachable (all but the first three and the tail periods), each new state metric taken from its two predecessors directly. max* is
+// symmetric (max and |a - b|), so the result is the same bit for bit; the per-state checks were most of the time (4.1, docs/CPU-4.1.md).
+void siso(const float* ls, const float* la, const float* lp0, const float* lp1, int K, std::vector<float>& alpha, float* le, float* app) {
+    const Trellis& T = trellis();
+    const int N = K + 3;
+    if (K < 8) { sisoGeneral(ls, la, lp0, lp1, K, alpha, le, app); return; }
+    struct Pred { int s[2], u[2]; };
+    static const auto pred = [] {
+        const Trellis& t = trellis();
+        std::array<Pred, 8> p{};
+        int cnt[8] = {};
+        for (int s = 0; s < 8; s++) for (int u = 0; u < 2; u++) { const int ns = t.next[s][u]; p[(size_t)ns].s[cnt[ns]] = s; p[(size_t)ns].u[cnt[ns]] = u; cnt[ns]++; }
+        return p;
+    }();
+    const float NEG = -1e30f;
+    alpha.assign((size_t)(N + 1) * 8, NEG);
+    alpha[0] = 0;
+    auto gam = [&](int k, float* G) {   // G[u * 4 + p0 * 2 + p1]
+        const float lu = ls[k] + (k < K ? la[k] : 0.f);
+        for (int u = 0; u < 2; u++) for (int a = 0; a < 2; a++) for (int b = 0; b < 2; b++) G[u * 4 + a * 2 + b] = 0.5f * ((u ? -lu : lu) + (a ? -lp0[k] : lp0[k]) + (b ? -lp1[k] : lp1[k]));
+    };
+    float G[8];
+    for (int k = 0; k < N; k++) {
+        float* an = &alpha[(size_t)(k + 1) * 8];
+        const float* ac = &alpha[(size_t)k * 8];
+        gam(k, G);
+        if (k >= 3 && k < K) {
+            for (int ns = 0; ns < 8; ns++) {
+                const Pred& q = pred[(size_t)ns];
+                const int s0 = q.s[0], u0 = q.u[0], s1 = q.s[1], u1 = q.u[1];
+                const float v0 = ac[s0] + G[u0 * 4 + T.p0[s0][u0] * 2 + T.p1[s0][u0]];
+                const float v1 = ac[s1] + G[u1 * 4 + T.p0[s1][u1] * 2 + T.p1[s1][u1]];
+                an[ns] = maxs(v0, v1);
+            }
+            const float ref = an[0];
+            for (int st = 0; st < 8; st++) an[st] -= ref;
+            continue;
+        }
+        for (int st = 0; st < 8; st++) {
+            if (ac[st] <= NEG * 0.5f) continue;
+            for (int u = 0; u < 2; u++) {
+                if (k >= K && u != T.tailU[st]) continue;
+                const int ns = T.next[st][u];
+                const float v = ac[st] + G[u * 4 + T.p0[st][u] * 2 + T.p1[st][u]];
+                an[ns] = an[ns] <= NEG * 0.5f ? v : maxs(an[ns], v);
+            }
+        }
+        const float ref = an[0] > NEG * 0.5f ? an[0] : *std::max_element(an, an + 8);
+        for (int st = 0; st < 8; st++) if (an[st] > NEG * 0.5f) an[st] -= ref;
+    }
+    float beta[8], bn[8];
+    for (int st = 0; st < 8; st++) beta[st] = st == 0 ? 0.f : NEG;
+    for (int k = N - 1; k >= 0; k--) {
+        const float* ac = &alpha[(size_t)k * 8];
+        gam(k, G);
+        float m0 = NEG, m1 = NEG;
+        bool full = k >= 3 && k < K;
+        for (int st = 0; st < 8 && full; st++) full = beta[st] > NEG * 0.5f;
+        if (full) {
+            float b0[8], b1[8];
+            for (int st = 0; st < 8; st++) {
+                b0[st] = beta[T.next[st][0]] + G[0 * 4 + T.p0[st][0] * 2 + T.p1[st][0]];
+                b1[st] = beta[T.next[st][1]] + G[1 * 4 + T.p0[st][1] * 2 + T.p1[st][1]];
+                bn[st] = maxs(b0[st], b1[st]);
+            }
+            m0 = ac[0] + b0[0]; m1 = ac[0] + b1[0];
+            for (int st = 1; st < 8; st++) { m0 = maxs(m0, ac[st] + b0[st]); m1 = maxs(m1, ac[st] + b1[st]); }
+        } else {
+            for (int st = 0; st < 8; st++) bn[st] = NEG;
+            for (int st = 0; st < 8; st++) {
+                for (int u = 0; u < 2; u++) {
+                    if (k >= K && u != T.tailU[st]) continue;
+                    const int ns = T.next[st][u];
+                    if (beta[ns] <= NEG * 0.5f) continue;
+                    const float b = beta[ns] + G[u * 4 + T.p0[st][u] * 2 + T.p1[st][u]];
+                    bn[st] = bn[st] <= NEG * 0.5f ? b : maxs(bn[st], b);
+                    if (k < K && ac[st] > NEG * 0.5f) {
+                        const float m = ac[st] + b;
+                        if (u) m1 = m1 <= NEG * 0.5f ? m : maxs(m1, m);
+                        else m0 = m0 <= NEG * 0.5f ? m : maxs(m0, m);
+                    }
+                }
+            }
+        }
+        const float ref = bn[0] > NEG * 0.5f ? bn[0] : *std::max_element(bn, bn + 8);
+        for (int st = 0; st < 8; st++) beta[st] = bn[st] > NEG * 0.5f ? bn[st] - ref : NEG;
+        if (k < K) {
+            const float L = std::max(-80.f, std::min(80.f, m0 - m1));
+            app[k] = L;
+            le[k] = L - ls[k] - la[k];
+        }
+    }
+}
 void turboEncode(const uint8_t* info, int K, int pat, std::vector<uint8_t>& coded) {
     const Trellis& T = trellis();
     const auto& addr = turboInterleaver(K);

@@ -1,4 +1,5 @@
 // HRPT / AHRPT receiver (see hrpt_rx.h). The demodulator follows the Meteor LRPT one; the code layers are meteor_proto.h's.
+#include "dect2/common/bits.h"
 #include "dect2/hrpt/hrpt_rx.h"
 #include "dect2/results/results_io.h"
 #include "dect2/hrpt/hrpt_tel.h"
@@ -459,7 +460,7 @@ struct HrptReceiver::Impl {
         }
         uint64_t& r = nsr[p];
         r = (r << 1 | (d > 0 ? 1u : 0u)) & kMask60;
-        const int e = __builtin_popcountll(r ^ hrpt::noaaSync60());
+        const int e = ::dect2::bits::popcount((uint64_t)(r ^ hrpt::noaaSync60()));
         if (e > 5 && 60 - e > 5) return;
         nInv = 60 - e < e; nPhase = p; noaaLock = true; nMiss = 0;
         nBits = 0; nAcc = 0;
@@ -522,7 +523,7 @@ struct HrptReceiver::Impl {
             int oa, ob;
             xform(t, a, b, oa, ob);
             aw[t] = aw[t] << 2 | (uint64_t)(oa > 0) << 1 | (uint64_t)(ob > 0);
-            if (i < 31 || __builtin_popcountll((aw[t] ^ pat) & mask) > 7) continue;
+            if (i < 31 || ::dect2::bits::popcount((uint64_t)((aw[t] ^ pat) & mask)) > 7) continue;
             std::deque<int64_t>& h = ahits[t];
             while (!h.empty() && h.front() < i - 8192) h.pop_front();
             const bool pair = !h.empty() && h.front() == i - 8192;
@@ -571,7 +572,7 @@ struct HrptReceiver::Impl {
             if (++frameBits == meteor::kCodedBytes * 8) { inFrame = false; gotFrame(); sinceFrame = 0; }
             return;
         }
-        const int e = __builtin_popcount(sr ^ meteor::kAsm), ei = __builtin_popcount(~sr ^ meteor::kAsm);
+        const int e = ::dect2::bits::popcount((uint32_t)(sr ^ meteor::kAsm)), ei = ::dect2::bits::popcount((uint32_t)(~sr ^ meteor::kAsm));
         if (frameLock) {
             if (sinceFrame < 32) return;
             if (std::min(e, ei) <= 10) misses = 0; else misses++;

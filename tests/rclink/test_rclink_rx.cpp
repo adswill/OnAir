@@ -2,6 +2,8 @@
 // rates; ExpressLRS channels only with the phrase.
 #include "dect2/rclink/rc_rx.h"
 #include "rc_test_gen.h"
+#include "dect2/mesh/mesh_lora.h"
+#include <random>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -29,6 +31,32 @@ static int count(const RcTelemetry& t, const char* type) {
 static std::vector<uint8_t> frameBytes(std::vector<uint8_t> head, const std::vector<uint8_t>& body) { head.insert(head.end(), body.begin(), body.end()); head.push_back(0x55); head.push_back(0x55); return head; }
 
 int main() {
+    // ---- 4.1: the inverted ELRS bank takes conj of the normal bank's channel (Bank::feedConjOf). Check that it is the same, bit for bit, as
+    // a second channel filter at -offset fed conj(x), over chunk sizes, offsets and rates (the mixer phasors must be exact conjugates)
+    for (double fs : {2.4e6, 8e6, 10e6})
+        for (double off : {-3.1e6, -1.25e6, -0.4e6, 0.0, 0.73e6, 2.9e6}) {
+            if (std::fabs(off) > 0.5 * fs - 300e3) continue;
+            lora::Channelizer a(fs, off, 500000), b(fs, -off, 500000);
+            lora::ChanBuf ba, bb; ba.clear(0); bb.clear(0);
+            std::mt19937 rng(7);
+            std::normal_distribution<float> g(0.f, 0.3f);
+            std::uniform_int_distribution<int> len(1, 20000);
+            size_t diff = 0, total = 0;
+            for (int blk = 0; blk < 60; blk++) {
+                std::vector<cf32> x((size_t)len(rng)), xc;
+                for (auto& v : x) v = cf32(g(rng), g(rng));
+                for (auto& v : x) xc.push_back(std::conj(v));
+                a.process(x.data(), x.size(), ba);
+                b.process(xc.data(), xc.size(), bb);
+                CHECK(a.lastOutCount() == b.lastOutCount(), "conj bank: same output count (%zu, %zu)", a.lastOutCount(), b.lastOutCount());
+                for (size_t i = 0; i < std::min(a.lastOutCount(), b.lastOutCount()); i++) {
+                    const cf32 p = std::conj(a.lastOut()[i]), q = b.lastOut()[i];
+                    if (std::memcmp(&p, &q, sizeof p) != 0) diff++;
+                    total++;
+                }
+            }
+            CHECK(total > 0 && diff == 0, "conj bank at %.1f Msps, offset %.2f MHz: %zu of %zu samples differ", fs / 1e6, off / 1e6, diff, total);
+        }
     // ---- SiK / MAVLink: every air rate needed, hopping channels inside the capture, carrier offset, noise
     std::vector<uint8_t> pos(28, 0);
     const int32_t lat = 546872000, lon = 252797000, alt = 180000;

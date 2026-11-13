@@ -1,6 +1,7 @@
 // FY-3 AHRPT and MPT receivers (see fy3_rx.h). The demodulator follows hrpt_rx.cpp (itself the Meteor LRPT one) with the changes for this signal:
 // a symbol rate search, a soft-decision carrier detector with a narrowing loop, soft symbols scaled by a slow level, and the two-rail code.
 // The channel coding and the instrument frame layouts follow the open FY-3 decoders (SatDump's fengyun3 plug-in, GPL-3.0-or-later); see THIRD_PARTY.md.
+#include "dect2/common/bits.h"
 #include "dect2/fy3/fy3_rx.h"
 #include "dect2/fy3/fy3_proto.h"
 #include "dect2/meteor/meteor_proto.h"
@@ -767,7 +768,7 @@ struct Fy3Receiver::Impl {
             for (size_t i = 0; i < out.size(); i++) {
                 w = w << 1 | out[i];
                 if (i < 31) continue;
-                const int e = __builtin_popcount(w ^ kAsm);
+                const int e = ::dect2::bits::popcount((uint32_t)(w ^ kAsm));
                 if (e <= 4 || 32 - e <= 4) hits.push_back(i);
             }
             int pairs = 0;
@@ -829,7 +830,7 @@ struct Fy3Receiver::Impl {
     void watchBit(int h, int bit) {
         srW[h] = srW[h] << 1 | (uint32_t)bit;
         const int64_t at = bitCnt + (int64_t)0;
-        const int e = __builtin_popcount(srW[h] ^ kAsm), ei = __builtin_popcount(~srW[h] ^ kAsm);
+        const int e = ::dect2::bits::popcount((uint32_t)(srW[h] ^ kAsm)), ei = ::dect2::bits::popcount((uint32_t)(~srW[h] ^ kAsm));
         if (std::min(e, ei) > 4) return;
         if (lastHit[h] > 0 && at - lastHit[h] > 8192 + 4) confirm[h] = 0;
         if (lastHit[h] > 0 && std::llabs(at - lastHit[h] - 8192) <= 1) confirm[h]++;
@@ -858,7 +859,7 @@ struct Fy3Receiver::Impl {
             if (++frameBits == meteor::kCodedBytes * 8) { inFrame = false; gotFrame(); sinceFrame = 0; }
             return;
         }
-        const int e = __builtin_popcount(sr ^ kAsm), ei = __builtin_popcount(~sr ^ kAsm);
+        const int e = ::dect2::bits::popcount((uint32_t)(sr ^ kAsm)), ei = ::dect2::bits::popcount((uint32_t)(~sr ^ kAsm));
         if (frameLock) {
             if (sinceFrame < 32) return;
             if (std::min(e, ei) <= 10) misses = 0; else misses++;

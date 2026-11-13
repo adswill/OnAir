@@ -3,6 +3,7 @@
 #pragma once
 #include "dect2/common/mathconst.h"
 #include "dect2/common/ring.h"
+#include "dect2/dsp/simd.h"
 #include <cmath>
 #include <vector>
 
@@ -14,7 +15,7 @@ public:
     // amp * e^(j ph) for any finite ph (radians)
     cf32 polar(float amp, double ph) const {
         double u = ph * (1.0 / (2 * dect2::math::kPi));
-        u -= std::floor(u);   // [0, 1)
+        u -= std::fabs(u) < 4.5e15 ? (double)ifloor(u) : std::floor(u);   // [0, 1); ifloor: the same value without a libm call on x86 (SSE2)
         return cf32(amp * at(u + 0.25), amp * at(u));
     }
 private:

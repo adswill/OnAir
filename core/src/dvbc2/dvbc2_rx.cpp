@@ -405,6 +405,10 @@ struct Dvbc2Receiver::Impl {
             if (den <= 0) return false;
             std::vector<int8_t> wsign(2047);
             for (int i = 0; i < 2047; i++) wsign[(size_t)i] = dataScramble(i) ? -1 : 1;
+            std::vector<int8_t> wsign2(2 * 2047 + 16);   // wsign twice over (and a few more), so (n + b) mod 2047 needs no division
+            for (size_t i = 0; i < wsign2.size(); i++) wsign2[i] = wsign[i % 2047];
+            std::vector<int> bmod(bins.size());
+            for (size_t i = 0; i < bins.size(); i++) bmod[i] = bins[i] % 2047;
             // scan c = kb mod 3408 over the 568 values with (c + p) % 6 == 0 and n = kb mod 2047 over its 2047 values (about a second once)
             std::vector<float> u(bins.size());
             float bestFull = 0; int bestC = 0, bestN = 0;
@@ -413,10 +417,16 @@ struct Dvbc2Receiver::Impl {
                     const int kk = (int)((c + bins[i]) % kL1Carriers);
                     u[i] = kk == 0 ? 0.f : (pilotPrbs(kk / 6) ? -t[i] : t[i]);
                 }
-                for (int n = 0; n < 2047; n++) {
-                    double acc = 0;
-                    for (size_t i = 0; i < bins.size(); i++) acc += u[i] * wsign[(size_t)((n + bins[i]) % 2047)];
-                    if (acc > bestFull) { bestFull = (float)acc; bestC = c; bestN = n; }
+                // eight n at a time, each sum over i in the same order as one n at a time (bit for bit), the index from a doubled sign table
+                // instead of a modulo per term: the same result, about a second of CPU before 4.1
+                for (int n0 = 0; n0 < 2047; n0 += 8) {
+                    double acc[8] = {};
+                    for (size_t i = 0; i < bins.size(); i++) {
+                        const int8_t* w = &wsign2[(size_t)(n0 + bmod[i])];
+                        for (int j = 0; j < 8; j++) acc[j] += u[i] * w[j];
+                    }
+                    for (int j = 0; j < 8 && n0 + j < 2047; j++)
+                        if (acc[j] > bestFull) { bestFull = (float)acc[j]; bestC = c; bestN = n0 + j; }
                 }
             }
             best = (float)(bestFull / den);

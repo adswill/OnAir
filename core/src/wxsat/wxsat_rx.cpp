@@ -1,4 +1,5 @@
 // See wxsat_rx.h. Link parameters from SatDump's pipelines (GPL-3.0, Copyright Aang23 and contributors); code written for OnAir.
+#include "dect2/common/bits.h"
 #include "dect2/wxsat/wxsat_rx.h"
 #include "dect2/wxsat/wxsat_proto.h"
 #include "dect2/wxsat/filecast.h"
@@ -526,7 +527,7 @@ struct WxsatReceiver::Impl {
             for (int i = 0; i < np; i++) {
                 int oa, ob; xform(t, pairs[(size_t)i * 2], pairs[(size_t)i * 2 + 1], oa, ob);
                 w = w << 2 | (uint64_t)(oa > 0) << 1 | (uint64_t)(ob > 0);
-                if (i >= 31 && __builtin_popcountll((w ^ pat) & mask) <= 7) hits.push_back(i);
+                if (i >= 31 && ::dect2::bits::popcount((uint64_t)((w ^ pat) & mask)) <= 7) hits.push_back(i);
             }
             int at = -1;
             for (size_t x = 0; x < hits.size() && at < 0; x++)

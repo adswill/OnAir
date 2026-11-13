@@ -1,4 +1,5 @@
 // GOES HRIT receiver (goes_rx.h).
+#include "dect2/common/bits.h"
 #include "dect2/goes/goes_rx.h"
 #include "dect2/dsp/rrc.h"
 #include "dect2/results/results_io.h"
@@ -33,7 +34,7 @@ struct Fir {
     std::vector<cf32> buf;
     size_t pos = 0;
     void set(std::vector<float> taps) { h = std::move(taps); buf.assign(2 * h.size(), cf32(0, 0)); pos = 0; }
-    void push(cf32 x) { buf[pos] = x; buf[pos + h.size()] = x; pos = (pos + 1) % h.size(); }
+    void push(cf32 x) { buf[pos] = x; buf[pos + h.size()] = x; if (++pos == h.size()) pos = 0; }   // no modulo per sample (4.1)
     cf32 out() const {
         const cf32* b = buf.data() + pos;   // oldest first
         float re = 0, im = 0;
@@ -495,7 +496,7 @@ struct GoesReceiver::Impl {
         if (fstate == 0) {
             reg = reg << 1 | bit;
             if (++regBits < 32) return;
-            const int e = __builtin_popcount(reg ^ meteor::kAsm), ei = __builtin_popcount(reg ^ ~meteor::kAsm);
+            const int e = ::dect2::bits::popcount((uint32_t)(reg ^ meteor::kAsm)), ei = ::dect2::bits::popcount((uint32_t)(reg ^ ~meteor::kAsm));
             if (e <= 3 || ei <= 3) { invBits = ei < e; fstate = 1; collected = 0; misses = 0; memset(frame, 0, sizeof frame); }
             return;
         }
@@ -506,8 +507,8 @@ struct GoesReceiver::Impl {
         }
         reg = reg << 1 | bit;
         if (++regBits < 32) return;
-        const int e = __builtin_popcount(reg ^ (invBits ? ~meteor::kAsm : meteor::kAsm));
-        const int ei = __builtin_popcount(reg ^ (invBits ? meteor::kAsm : ~meteor::kAsm));
+        const int e = ::dect2::bits::popcount((uint32_t)(reg ^ (invBits ? ~meteor::kAsm : meteor::kAsm)));
+        const int ei = ::dect2::bits::popcount((uint32_t)(reg ^ (invBits ? meteor::kAsm : ~meteor::kAsm)));
         if (ei <= 3) { invBits = !invBits; misses = 0; }       // a 180 degree slip of the carrier loop
         else if (e <= 6) misses = 0;
         else if (++misses > 3) { fstate = 0; regBits = 0; reg = 0; return; }

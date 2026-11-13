@@ -1,4 +1,5 @@
 // Meteor-M LRPT receiver (see meteor_rx.h).
+#include "dect2/common/bits.h"
 #include "dect2/meteor/meteor_rx.h"
 #include "dect2/results/results_io.h"
 #include "dect2/meteor/meteor_tel.h"
@@ -628,7 +629,7 @@ struct MeteorReceiver::Impl {
                     xform(t, D[(size_t)i * 2], D[(size_t)i * 2 + 1], oa, ob);
                     w = w << 2 | (uint64_t)(oa > 0) << 1 | (uint64_t)(ob > 0);
                     if (i < 31) { eAt[(size_t)i] = 99; continue; }
-                    const int e = __builtin_popcountll((w ^ pat) & mask);
+                    const int e = ::dect2::bits::popcount((uint64_t)((w ^ pat) & mask));
                     eAt[(size_t)i] = (int8_t)std::min(e, 99);
                     if (e > kAsmErr || i < 8192 + 31) continue;
                     const int e0 = eAt[(size_t)(i - 8192)];
@@ -690,7 +691,7 @@ struct MeteorReceiver::Impl {
             if (++frameBits == meteor::kCodedBytes * 8) { inFrame = false; gotFrame(); sinceFrame = 0; }
             return;
         }
-        const int e = __builtin_popcount(sr ^ meteor::kAsm), ei = __builtin_popcount(~sr ^ meteor::kAsm);
+        const int e = ::dect2::bits::popcount((uint32_t)(sr ^ meteor::kAsm)), ei = ::dect2::bits::popcount((uint32_t)(~sr ^ meteor::kAsm));
         if (frameLock) {
             if (sinceFrame < 32) return;
             // the next sync word is due now
