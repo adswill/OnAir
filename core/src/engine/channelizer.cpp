@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/engine/channelizer.h"
+#include "dect2/common/diag.h"
 #include "dect2/dsp/fftutil.h"
 #include <algorithm>
 #include <cmath>
@@ -10,9 +11,15 @@
 namespace dect2 {
 
 bool ChannelFilter::configure(double inRate, double offsetHz, double outRate) {
-    if (inRate <= 0 || outRate <= 0) return false;
+    if (inRate <= 0 || outRate <= 0) {
+        DIAG_DEBUG(813231, "A channel filter was asked for the input rate %.0f Hz and the output rate %.0f Hz, and a rate must be above zero, so it is not set up.", inRate, outRate);
+        return false;
+    }
     inRate_ = inRate; outRate_ = outRate; shift_ = offsetHz;
-    if (!rs_.configure(inRate, outRate, 8)) return false;
+    if (!rs_.configure(inRate, outRate, 8)) {
+        DIAG_DEBUG(624691, "The channel filter resampler refused the rates %.0f Hz to %.0f Hz, so the channel is not set up.", inRate, outRate);
+        return false;
+    }
     const double w = -2 * M_PI * offsetHz / inRate;
     tre_.resize(L); tim_.resize(L);
     for (size_t k = 0; k < L; k++) { tre_[k] = (float)std::cos(w * (double)k); tim_[k] = (float)std::sin(w * (double)k); }

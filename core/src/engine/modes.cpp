@@ -3,6 +3,7 @@
 
 // The modes added after FM, seen together: tuning table, test signals, status lines.
 #include "dect2/source/source.h"
+#include "dect2/common/diag.h"
 #include <map>
 #include <mutex>
 #include "dect2/engine/mode_tuning.h"
@@ -658,7 +659,7 @@ double minSampleRateFor(int stdMode, double bandwidthMhz) {
 std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, double sampleRate) {
     switch (stdMode) {
     case 4: return makeDabSynth(cfg, sampleRate);
-    case 3: if (sampleRate < 6.5e6 || sampleRate > 2 * atsc::kSymbolRate) return nullptr; return std::make_unique<AtscSynth>(cfg, sampleRate);
+    case 3: if (sampleRate < 6.5e6 || sampleRate > 2 * atsc::kSymbolRate) { DIAG_DEBUG(699551, "The ATSC test signal was asked for at %.0f Hz, outside the range it supports, so none is made.", sampleRate); return nullptr; } return std::make_unique<AtscSynth>(cfg, sampleRate);
     case 5: return makeAtsc3Synth(cfg, sampleRate);
     case 6: return std::make_unique<IsdbtSynth>(cfg, sampleRate);
     case 732: return std::make_unique<IsdbtSynth>(cfg, sampleRate, true);   // ISDB-TSB
@@ -888,7 +889,9 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 44: return makeSpecanSynth(cfg, sampleRate);
     case 50: return makeAstroSynth(cfg, sampleRate);
     case 54: return makeIonoSynth(cfg, sampleRate);
-    default: return nullptr;
+    default:
+        DIAG_DEBUG(376331, "The mode number %d has no built-in test signal, so no synthetic signal is made for it.", stdMode);
+        return nullptr;
     }
 }
 

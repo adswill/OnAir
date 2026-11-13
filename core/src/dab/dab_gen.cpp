@@ -3,6 +3,7 @@
 
 // DAB test transmitter (see dab_gen.h): the ensemble, the FIC, the CIF multiplex, the OFDM frame and the synthetic source around it.
 #include "dect2/dab/dab_gen.h"
+#include "dect2/common/diag.h"
 #include "dect2/dab/dab.h"
 #include "dect2/dsp/fftutil.h"
 #include "dect2/dsp/gen_util.h"
@@ -246,14 +247,21 @@ struct Transmitter::Impl {
     bool buildMp2(Sub& s) {
         const TxService& sv = s.svc;
         const AVCodec* codec = avcodec_find_encoder_by_name("mp2");
-        if (!codec) return false;
+        if (!codec) {
+            DIAG_DEBUG(551287, "The libavcodec build has no MP2 encoder, so the DAB test transmitter has no sound for the MP2 service %u.", (unsigned)sv.bitrate);
+            return false;
+        }
         AVCodecContext* ctx = avcodec_alloc_context3(codec);
         ctx->sample_fmt = AV_SAMPLE_FMT_S16;
         ctx->sample_rate = sv.sampleRate;
         ctx->bit_rate = (int64_t)sv.bitrate * 1000;
         const int nch = sv.channels == 1 ? 1 : 2;
         av_channel_layout_default(&ctx->ch_layout, nch);
-        if (avcodec_open2(ctx, codec, nullptr) < 0) { avcodec_free_context(&ctx); return false; }
+        if (avcodec_open2(ctx, codec, nullptr) < 0) {
+            DIAG_DEBUG(181021, "The MP2 encoder did not open at %d kHz and %d kbit/s, so the DAB test transmitter has no sound for that service.", sv.sampleRate / 1000, sv.bitrate);
+            avcodec_free_context(&ctx);
+            return false;
+        }
         const int fl = ctx->frame_size;                   // 1152
         AVFrame* fr = av_frame_alloc();
         fr->nb_samples = fl; fr->format = AV_SAMPLE_FMT_S16; fr->sample_rate = sv.sampleRate;
@@ -272,14 +280,20 @@ struct Transmitter::Impl {
             while (avcodec_receive_packet(ctx, pk) == 0) { out.emplace_back(pk->data, pk->data + pk->size); av_packet_unref(pk); }
         }
         av_packet_free(&pk); av_frame_free(&fr); avcodec_free_context(&ctx);
-        if ((int)out.size() < loopFrames + 2) return false;
+        if ((int)out.size() < loopFrames + 2) {
+            DIAG_DEBUG(122465, "The MP2 encoder produced %d frames but %d are needed for the looped test sound, so the DAB test transmitter has no sound for that service.", (int)out.size(), loopFrames + 2);
+            return false;
+        }
         // the packets lag the input by the encoder delay; take loopFrames consecutive ones from the second pass
         s.mp2.assign(out.end() - loopFrames, out.end());
         s.frames.clear();
         // at 48 kHz an MP2 frame is one logical frame (24 ms); at 24 kHz (MPEG-2 half sampling rate) it is 48 ms and spans two of them
         const int per = sv.sampleRate == 24000 ? 2 : 1;
         for (auto& p : s.mp2) {
-            if ((int)p.size() != sv.bitrate * 3 * per) return false;
+            if ((int)p.size() != sv.bitrate * 3 * per) {
+                DIAG_DEBUG(399722, "An MP2 frame has %d bytes instead of the expected %d, so the DAB test transmitter has no sound for that service.", (int)p.size(), sv.bitrate * 3 * per);
+                return false;
+            }
             if (p.size() >= 2) { p[p.size() - 2] = 0; p[p.size() - 1] = 0; }       // F-PAD: no X-PAD
             for (int h = 0; h < per; h++) s.frames.emplace_back(p.begin() + (long)h * sv.bitrate * 3, p.begin() + (long)(h + 1) * sv.bitrate * 3);
         }
@@ -686,7 +700,10 @@ private:
 } // namespace
 
 std::unique_ptr<ModeSynth> makeDabSynth(const dabgen::TxConfig& tx, const SynthConfig& cfg, double sampleRate) {
-    if (sampleRate < 2e6 || sampleRate > 21e6) return nullptr;
+    if (sampleRate < 2e6 || sampleRate > 21e6) {
+        DIAG_DEBUG(315703, "The DAB test transmitter was asked for the sample rate %.0f Hz, outside 2 to 21 MHz, so no test signal is made.", sampleRate);
+        return nullptr;
+    }
     return std::make_unique<DabSynth>(tx, cfg, sampleRate);
 }
 

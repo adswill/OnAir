@@ -4,6 +4,7 @@
 // Retuning a running engine: the radio and hardware tune settings (radioTune/hwTune), retune, retune with receiver reset, and the
 // restart when the sample rate has to change.
 #include "dect2/engine/engine.h"
+#include "dect2/common/diag.h"
 #include "engine_internal.h"
 #include "engine_ctl.h"
 #include "dect2/source/converter.h"
@@ -66,10 +67,14 @@ TuneSettings Engine::hwTune(const TuneSettings& t) const {
 
 bool Engine::retune(const TuneSettings& tune) {
     std::lock_guard<std::recursive_mutex> ctl(engineControlMutex());   // the tuning thread and the UI's start / stop take turns
-    if (!src_) return false;
+    if (!src_) { DIAG_DEBUG(913103, "A retune was requested while no radio is open, so it is ignored."); return false; }
     std::string err;
     holdDelivery(300);
-    if (!src_->retune(hwTune(tune), err)) { log("retune failed: " + err); return false; }
+    if (!src_->retune(hwTune(tune), err)) {
+        log("retune failed: " + err);
+        DIAG(903454, "The radio refused the new tuning (%s), so it stays on the previous frequency and rate.", err.c_str());
+        return false;
+    }
     setNote(err, true);
     if (restartIfRateChanged(tune)) return running_;
     double oldCentre = 0;
@@ -134,10 +139,14 @@ bool Engine::restartIfRateChanged(const TuneSettings& tune) {
 
 bool Engine::retuneReset(const TuneSettings& tune) {
     std::lock_guard<std::recursive_mutex> ctl(engineControlMutex());
-    if (!src_) return false;
+    if (!src_) { DIAG_DEBUG(354074, "A retune with a receiver reset was requested while no radio is open, so it is ignored."); return false; }
     std::string err;
     holdDelivery(300);
-    if (!src_->retune(hwTune(tune), err)) { log("retune failed: " + err); return false; }
+    if (!src_->retune(hwTune(tune), err)) {
+        log("retune failed: " + err);
+        DIAG(876774, "The radio refused the new tuning of a retune with a receiver reset (%s), so it stays on the previous frequency and rate.", err.c_str());
+        return false;
+    }
     setNote(err, true);
     if (restartIfRateChanged(tune)) return running_;
     double oldCentre = 0;

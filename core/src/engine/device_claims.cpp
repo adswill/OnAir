@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/engine/device_claims.h"
+#include "dect2/common/diag.h"
 #include "dect2/source/synth_group.h"
 #include <map>
 #include <mutex>
@@ -29,7 +30,11 @@ bool claimDevice(const DeviceInfo& d, int owner, int* holder) {
     std::lock_guard<std::mutex> lk(gMu);
     for (const auto& kk : keys) {
         auto it = gHeld.find(kk);
-        if (it != gHeld.end() && it->second != owner) { if (holder) *holder = it->second; return false; }
+        if (it != gHeld.end() && it->second != owner) {
+            DIAG_DEBUG(229859, "A receiver asked for a device that receiver %d already holds, so the claim is refused.", it->second);
+            if (holder) *holder = it->second;
+            return false;
+        }
     }
     for (const auto& kk : keys) gHeld[kk] = owner;
     return true;

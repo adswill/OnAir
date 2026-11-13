@@ -4,6 +4,7 @@
 // The Engine core: sample ingest (cleaning, offset tuning), stop, recording, applyReset, and the per-receiver feed,
 // reset and auto-select switches. Other Engine members live in engine_*.cpp next to this file.
 #include "dect2/engine/engine.h"
+#include "dect2/common/diag.h"
 #include "dect2/source/hw_time.h"
 #include "dect2/tv/dvb_text.h"
 #include "dect2/automation/engine.h"
@@ -209,8 +210,8 @@ bool Engine::syntheticSource() const {
 bool Engine::startRecording(const std::string& path, FileFormat fmt, std::string& err) {
     DeviceInfo::Kind kind;
     { std::lock_guard<std::mutex> lk(tuneMu_); kind = lastDev_.kind; }
-    if (!running_ || !src_) { err = "start the radio first"; return false; }
-    if (kind == DeviceInfo::File) { err = "recording a file playback is not needed: the file is already there"; return false; }
+    if (!running_ || !src_) { DIAG_DEBUG(402703, "A raw IQ recording was requested while no radio is running, so it is refused."); err = "start the radio first"; return false; }
+    if (kind == DeviceInfo::File) { DIAG_DEBUG(990557, "A raw IQ recording was requested while a file is playing, so it is refused."); err = "recording a file playback is not needed: the file is already there"; return false; }
     TuneSettings t;
     { std::lock_guard<std::mutex> lk(tuneMu_); t = lastTune_; }
     rec_.setSigmf(recSigmf_, kind == DeviceInfo::Synthetic ? 0.0 : radioTune(t).centerHz, recordingModeId(stdMode_.load()));

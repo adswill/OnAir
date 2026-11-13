@@ -3,6 +3,7 @@
 
 // Multi-VFO: see vfo.h.
 #include "dect2/engine/vfo.h"
+#include "dect2/common/diag.h"
 #include "dect2/engine/channelizer.h"
 #include "dect2/dsp/exact_resampler.h"
 #include "dect2/fm/fm_rx.h"
@@ -121,7 +122,7 @@ struct Chan {
         const double need = c.mode == VfoMode::Wfm ? 500e3 : vfoIsDecoder(c.mode) ? 200e3 : 0;
         if (span < need) warn = std::string(vfoModeName(c.mode)) + " needs a capture of at least " + std::to_string((int)(need / 1000)) + " kHz";
         if (std::fabs(c.offsetHz) + bw / 2 > span / 2) warn = "the channel reaches outside the capture";
-        if (!cf.configure(span, c.offsetHz, chRate)) { warn = "capture rate too low"; return false; }
+        if (!cf.configure(span, c.offsetHz, chRate)) { DIAG_DEBUG(107043, "A VFO channel at the offset %.0f Hz could not be set up for the capture rate %.0f Hz, so it is not decoded.", c.offsetHz, span); warn = "capture rate too low"; return false; }
         ph = 0; prev = cf32(1, 0); dc = 0; lp = 0; agc = 0.1f; hang = 0; fifo.clear();
         if (c.mode == VfoMode::Wfm) {
             fm.reset(new FmReceiver());

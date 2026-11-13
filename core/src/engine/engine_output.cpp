@@ -4,6 +4,7 @@
 // What the engine hands out after decoding: the per-frame PLP callback (onPlp, with its lock-timing counters), the EPG and
 // BB statistics getters, and the latest receiver telemetry and spectrum frame.
 #include "dect2/engine/engine.h"
+#include "dect2/common/diag.h"
 #include "engine_internal.h"
 #include "dect2/source/converter.h"
 #include "dect2/net/share.h"
@@ -83,7 +84,9 @@ void Engine::onPlp(const PlpResult& r) {
 std::string Engine::setT2Export(const T2ExportConfig& c) {
     std::lock_guard<std::mutex> lk(t2ExportMu_);
     if (!t2Export_) t2Export_ = std::make_unique<T2Export>();
-    return t2Export_->configure(c) ? std::string() : t2Export_->error();
+    if (t2Export_->configure(c)) return std::string();
+    DIAG(423365, "The DVB-T2 export could not be configured (%s), so no export is written.", t2Export_->error().c_str());
+    return t2Export_->error();
 }
 
 void Engine::setPacketTap(std::function<void(const uint8_t*, size_t, const TsSnapshot*, double)> f) { std::lock_guard<std::mutex> lk(tsMu_); tap_ = std::move(f); }
