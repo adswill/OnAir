@@ -3,15 +3,23 @@
 
 // GNSS receiver, starting channels from acquisition hits and running the per-system acquisitions.
 #include "gnss_rx_impl.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
 void GnssReceiver::Impl::startFromHit(const GnssAcqHit& found) {
-    if (trackers.size() >= (size_t)kMaxChannels || tracked(found.prn)) return;
+    if (trackers.size() >= (size_t)kMaxChannels) {
+        DIAG_DEBUG_EVERY(191602, 10.0, "All %d tracking channels are in use, so a new GPS acquisition hit on PRN %d is ignored.", kMaxChannels, found.prn);
+        return;
+    }
+    if (tracked(found.prn)) return;
     // the hit is old: look again in the newest samples
     GnssAcqHit h;
     units += (uint64_t)(6 * std::max(8, found.blocks));
-    if (!(found.prn > 32 && !l1Standalone ? auxAcq : gpsAcq).confirm(gpsBand, found.prn, found.dopplerHz, found.blocks, &h)) return;
+    if (!(found.prn > 32 && !l1Standalone ? auxAcq : gpsAcq).confirm(gpsBand, found.prn, found.dopplerHz, found.blocks, &h)) {
+        DIAG_DEBUG_EVERY(595975, 10.0, "A GPS acquisition hit on PRN %d at %+.0f Hz was not confirmed by a second look, so it is dropped as a false alarm.", found.prn, found.dopplerHz);
+        return;
+    }
     auto t = std::make_unique<GnssTracker>();
     const double rc = (kGpsCaChipRate + h.dopplerHz * kGpsCaChipRate / kGpsL1Hz) / kGpsFsOut;
     int64_t idx = gpsBand.end() - 3 * kGpsN;
@@ -27,10 +35,17 @@ void GnssReceiver::Impl::startFromHit(const GnssAcqHit& found) {
 }
 
 void GnssReceiver::Impl::startGalFromHit(const GnssAcqHit& found) {
-    if (trackers.size() >= (size_t)kMaxChannels || trackedGal(found.prn)) return;
+    if (trackers.size() >= (size_t)kMaxChannels) {
+        DIAG_DEBUG_EVERY(809077, 10.0, "All %d tracking channels are in use, so a new Galileo acquisition hit on PRN %d is ignored.", kMaxChannels, found.prn);
+        return;
+    }
+    if (trackedGal(found.prn)) return;
     GnssAcqHit h;
     units += (uint64_t)(4 * 6 * std::max(8, found.blocks));
-    if (!galAcq.confirm(gpsBand, found.prn, found.dopplerHz, found.blocks, &h)) return;
+    if (!galAcq.confirm(gpsBand, found.prn, found.dopplerHz, found.blocks, &h)) {
+        DIAG_DEBUG_EVERY(607479, 10.0, "A Galileo acquisition hit on PRN %d at %+.0f Hz was not confirmed by a second look, so it is dropped as a false alarm.", found.prn, found.dopplerHz);
+        return;
+    }
     auto t = std::make_unique<GnssTracker>();
     const double rc = galSpec.chipRate * (1.0 + h.dopplerHz / kGpsL1Hz + codeRateFrac) / kGpsFsOut;
     int64_t idx = gpsBand.end() - 2 * kGalN;
@@ -46,10 +61,17 @@ void GnssReceiver::Impl::startGalFromHit(const GnssAcqHit& found) {
 }
 
 void GnssReceiver::Impl::startBdsFromHit(const GnssAcqHit& found) {
-    if (trackers.size() >= (size_t)kMaxChannels || trackedSys(GnssBeidou, found.prn)) return;
+    if (trackers.size() >= (size_t)kMaxChannels) {
+        DIAG_DEBUG_EVERY(247185, 10.0, "All %d tracking channels are in use, so a new BeiDou acquisition hit on PRN %d is ignored.", kMaxChannels, found.prn);
+        return;
+    }
+    if (trackedSys(GnssBeidou, found.prn)) return;
     GnssAcqHit h;
     units += (uint64_t)(6 * std::max(8, found.blocks));
-    if (!bdsAcq.confirm(bdsBand, found.prn, found.dopplerHz, found.blocks, &h)) return;
+    if (!bdsAcq.confirm(bdsBand, found.prn, found.dopplerHz, found.blocks, &h)) {
+        DIAG_DEBUG_EVERY(403091, 10.0, "A BeiDou acquisition hit on PRN %d at %+.0f Hz was not confirmed by a second look, so it is dropped as a false alarm.", found.prn, found.dopplerHz);
+        return;
+    }
     auto t = std::make_unique<GnssTracker>();
     // A sample clock that does not follow the oscillator moves the 2.046 Mcps code by 41 chips a second at 20 ppm: more than the code loop
     // pulls in. The hit and its confirmation are two code phase readings far apart: the code periods between them give the code rate.
@@ -78,11 +100,18 @@ void GnssReceiver::Impl::startBdsFromHit(const GnssAcqHit& found) {
 }
 
 void GnssReceiver::Impl::startGloFromHit(int slot, const GnssAcqHit& found) {
-    if (trackers.size() >= (size_t)kMaxChannels || trackedGlo(slot)) return;
+    if (trackers.size() >= (size_t)kMaxChannels) {
+        DIAG_DEBUG_EVERY(501515, 10.0, "All %d tracking channels are in use, so a new GLONASS acquisition hit on PRN %d is ignored.", kMaxChannels, found.prn);
+        return;
+    }
+    if (trackedGlo(slot)) return;
     GnssAcqHit h;
     units += (uint64_t)(2 * std::max(8, found.blocks));
     GnssBand& band = gloBand[slot];
-    if (!gloAcq[slot].confirm(band, found.prn, found.dopplerHz, found.blocks, &h)) return;
+    if (!gloAcq[slot].confirm(band, found.prn, found.dopplerHz, found.blocks, &h)) {
+        DIAG_DEBUG_EVERY(767767, 10.0, "A GLONASS acquisition hit on PRN %d at %+.0f Hz was not confirmed by a second look, so it is dropped as a false alarm.", found.prn, found.dopplerHz);
+        return;
+    }
     const int k = slot + kGloMinK;
     const double f = gloL1Hz(k);
     // the code rate from the hit and its confirmation (see startBdsFromHit)

@@ -3,6 +3,7 @@
 
 // GNSS receiver, planning the channels and the search: replan for the tuning and rate, reset, and the acquisition plans.
 #include "gnss_rx_impl.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -298,7 +299,10 @@ void GnssReceiver::Impl::planSearch() {
                 stage = nextStage(stage);
                 static const char* what[6] = {"", "+-45 kHz (a radio without a TCXO, such as a HackRF)", "+-170 kHz (a dongle without a TCXO)",
                                                "with a 64 ms integration for weak signals", "+-45 kHz with a 64 ms integration", "+-170 kHz with a 64 ms integration"};
-                if (stage > 0) logf(std::string("nothing found yet: searching ") + what[stage]);
+                if (stage > 0) {
+                    logf(std::string("nothing found yet: searching ") + what[stage]);
+                    DIAG_DEBUG(992213, "A full GPS acquisition round found no satellite, so the search moves to stage %d with a wider Doppler window or longer integration.", (int)stage);
+                }
             }
         }
         const int st = stage % 3;
@@ -339,7 +343,10 @@ void GnssReceiver::Impl::planOwn(GnssAcq& acq, SearchPlan& pl, int sys, double r
             if (nPull == 0) {
                 pl.stage = nextStage(pl.stage);
                 static const char* what[6] = {"", "+-45 kHz", "+-170 kHz", "with a 64 ms integration", "+-45 kHz with a 64 ms integration", "+-170 kHz with a 64 ms integration"};
-                if (pl.stage > 0) logf(std::string(name) + ": nothing found yet, searching " + what[pl.stage]);
+                if (pl.stage > 0) {
+                    logf(std::string(name) + ": nothing found yet, searching " + what[pl.stage]);
+                    DIAG_DEBUG(593053, "A full %s acquisition round found no satellite, so the search moves to stage %d with a wider Doppler window or longer integration.", name, (int)pl.stage);
+                }
             }
         }
         const int st = pl.stage % 3;

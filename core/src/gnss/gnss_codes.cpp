@@ -3,6 +3,7 @@
 
 // Spreading codes of the satellite navigation signals (see gnss_codes.h).
 #include "dect2/gnss/gnss_codes.h"
+#include "dect2/common/diag.h"
 #include "dect2/gnss/gnss_tel.h"
 #include <cstring>
 
@@ -14,7 +15,10 @@ static const uint8_t kCaTaps[33][2] = {
     {1, 4}, {2, 5}, {3, 6}, {4, 7}, {5, 8}, {6, 9}, {1, 3}, {4, 6}, {5, 7}, {6, 8}, {7, 9}, {8, 10}, {1, 6}, {2, 7}, {3, 8}, {4, 9}};
 
 bool gpsCaChips(int prn, uint8_t* chips) {
-    if (prn < 1 || prn > 32) return false;
+    if (prn < 1 || prn > 32) {
+        DIAG_DEBUG_EVERY(890771, 5.0, "The GPS C/A code was asked for PRN %d, outside 1 to 32, so no code is made for it.", prn);
+        return false;
+    }
     // G1 = 1 + x^3 + x^10 (feedback from stages 3 and 10), G2 = 1 + x^2 + x^3 + x^6 + x^8 + x^9 + x^10 (stages 2, 3, 6, 8, 9, 10); both start all ones;
     // the output is G1 stage 10 xor the two chosen G2 stages
     int g1[11], g2[11];
@@ -88,9 +92,15 @@ static const char* const kE1b[50] = {
 };
 
 bool galE1bChips(int prn, uint8_t* chips) {
-    if (prn < 1 || prn > 50) return false;
+    if (prn < 1 || prn > 50) {
+        DIAG_DEBUG_EVERY(949628, 5.0, "The Galileo E1-B code was asked for PRN %d, outside 1 to 50, so no code is made for it.", prn);
+        return false;
+    }
     const char* h = kE1b[prn - 1];
-    if (std::strlen(h) != kGalE1Len / 4) return false;
+    if (std::strlen(h) != kGalE1Len / 4) {
+        DIAG_DEBUG_EVERY(135328, 5.0, "The stored Galileo E1-B code for PRN %d has the wrong length, so no code is made for it.", prn);
+        return false;
+    }
     // ICD Annex C.2: one hexadecimal symbol is four chips, the first chip in time is its most significant bit
     for (int i = 0; i < kGalE1Len / 4; i++) {
         const char c = h[i];
@@ -108,7 +118,10 @@ static const uint8_t kBdsTaps[64][3] = {
     {1, 5, 10}, {1, 5, 11}, {1, 6, 9}, {1, 8, 9}, {1, 9, 10}, {1, 9, 11}, {2, 3, 7}, {2, 5, 7}, {2, 7, 9}, {3, 4, 5}, {3, 4, 9}, {3, 5, 6}, {3, 5, 8}, {3, 5, 10}, {3, 5, 11}, {3, 6, 9}};
 
 bool bdsB1iChips(int prn, uint8_t* chips) {
-    if (prn < 1 || prn > kBdsMaxPrn) return false;
+    if (prn < 1 || prn > kBdsMaxPrn) {
+        DIAG_DEBUG_EVERY(541367, 5.0, "The BeiDou B1I code was asked for PRN %d, outside 1 to %d, so no code is made for it.", prn, (int)kBdsMaxPrn);
+        return false;
+    }
     int g1[12], g2[12];
     g2[0] = 0;
     for (int i = 1; i <= 11; i++) g1[i] = g2[i] = (i % 2 == 0) ? 1 : 0;      // 01010101010, stage 1 first
