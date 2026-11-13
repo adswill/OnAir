@@ -6,6 +6,8 @@
 #include "dect2/railway/railway_rx.h"
 #include "../common/test_util.h"
 #include <algorithm>
+#include <chrono>
+#include <cstdio>
 #include <cmath>
 using namespace dect2;
 using namespace dect2::railway;
@@ -55,6 +57,47 @@ int main() {
         CHECK(!other.loadResults(saved), "reject another protocol's results");
         rx.clearMessages(); rx.telemetry(t, 0); CHECK(t.messages.empty() && !t.dataValid, "clear");
         rx.reset(); rx.telemetry(t, 0); CHECK(t.blocksOk == 0, "reset counters");
+    }
+    // 4.1 sensitivity: SNR in 25 kHz (the generator's definition), 960 kHz, carrier offsets 0, +2 kHz and -6 kHz, two noise seeds; a trial passes
+    // with 2 frames in 2.2 s (3 bursts are sent). Before 4.1 (the +-14 kHz path alone) about 7 dB here (12 dB in the QA sweep's 7.7 kHz).
+    for (auto protocol : {Protocol::Klw, Protocol::Tdcs}) for (double cfo : {0.0, 2000.0, -6000.0}) {
+        const double snrs[] = {2, 3, 4, 5, 6, 8, 10, 12};
+        double thr = 99;
+        for (int k = 7; k >= 0; k--) {
+            int ok = 0;
+            for (int seed = 1; seed <= 2; seed++) {
+                SynthConfig cfg; cfg.snrDb = snrs[k]; cfg.cfoHz = cfo; cfg.modeOpt[3] = seed + 10;
+                auto synth = makeRailwaySynth(cfg, 960000, protocol); RailwayReceiver rx(protocol); rx.configure(960000); rx.setSignalOffset(-50000);
+                std::vector<cf32> samples(size_t(960000 * 2.2)); synth->generate(samples.data(), samples.size());
+                for (size_t i = 0; i < samples.size(); i += 32768) rx.feed(samples.data() + i, std::min(size_t(32768), samples.size() - i));
+                RailwayTelemetry t; rx.telemetry(t, 0);
+                bool good = t.messages.size() >= 2;
+                for (const auto& m : t.messages) good = good && m.raw == demoFrame(protocol);
+                ok += good;
+            }
+            printf("  sens protocol %d cfo %+5.0f snr %4.1f dB: %d of 2\n", int(protocol), cfo, snrs[k], ok);
+            if (ok == 2) thr = snrs[k]; else break;
+        }
+        printf("  railway threshold (25 kHz SNR) protocol %d cfo %+.0f: %.0f dB\n", int(protocol), cfo, thr);
+        CHECK(thr <= 6, "protocol %d cfo %+.0f: needs %.0f dB in 25 kHz (4.1 limit 6)", int(protocol), cfo, thr);
+    }
+    // IQ noise alone (two seeds, 10 s each, with the CPU time): no frame
+    for (auto protocol : {Protocol::Klw, Protocol::Tdcs}) {
+        size_t frames = 0; double cpu = 0;
+        for (int seed = 1; seed <= 2; seed++) {
+            SynthConfig cfg; cfg.snrDb = -40; cfg.modeOpt[3] = seed + 20;
+            auto synth = makeRailwaySynth(cfg, 960000, protocol); RailwayReceiver rx(protocol); rx.configure(960000); rx.setSignalOffset(-50000);
+            std::vector<cf32> samples(32768);
+            for (size_t done = 0; done < size_t(960000 * 10); done += samples.size()) {
+                synth->generate(samples.data(), samples.size());
+                const auto t0 = std::chrono::steady_clock::now();
+                rx.feed(samples.data(), samples.size());
+                cpu += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+            }
+            RailwayTelemetry t; rx.telemetry(t, 0); frames += t.messages.size();
+        }
+        printf("  noise only protocol %d: %zu frames in 2 x 10 s, %.3f s CPU per s of 960 kHz input\n", int(protocol), frames, cpu / 20);
+        CHECK(frames == 0, "IQ noise protocol %d: %zu frames", int(protocol), frames);
     }
     // Noise must not produce a decoded application frame.
     AudioDecoder decoder; std::vector<float> noise(48000 * 2); unsigned seed = 77;
