@@ -113,7 +113,7 @@ int main() {
     }
 
     // ---- the real list ----
-    if (hamlibSupported()) {
+    if (hamlibSupported() && hamlibLibraryReady()) {   // a run-time Hamlib build without the library (Windows CI) skips it
         const auto list = hamlibModelList();
         CHECK(list.size() > 200, "hamlib lists hundreds of models");
         const int d = findRigModel(list, 1), n = findRigModel(list, 2), r = findRigModel(list, 3079);

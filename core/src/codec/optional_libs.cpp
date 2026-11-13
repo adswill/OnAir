@@ -71,6 +71,8 @@ const Def kDefs[] = {
      "libiio.dll|iio.dll", "libiio*.dylib", "libiio.so*", "https://github.com/analogdevicesinc/libiio"},
     {"uhd", "UHD (Ettus USRP)", G2, "USRP radios; not shipped",
      "uhd.dll|libuhd.dll", "libuhd*.dylib", "libuhd.so*", "https://github.com/EttusResearch/uhd (Windows installer: https://files.ettus.com)"},
+    {"hamlib", "Hamlib (CAT rig control)", G2, "Source > Add Hamlib rig: a transceiver or receiver controlled over CAT or rigctld. The Windows package loads it at run time; the Linux and macOS packages include it",
+     "libhamlib-4.dll|hamlib-4.dll|libhamlib.dll|hamlib.dll", "libhamlib*.dylib", "libhamlib.so*", "https://github.com/Hamlib/Hamlib/releases (Windows: hamlib-w64-<version>.zip, the DLLs of its bin folder)"},
     {"sdrplay", "SDRplay API (RSP radios)", G2, "RSP1, RSP2, RSPdx, RSPduo: install the SDRplay API; its own installer puts the library where OnAir finds it",
      "sdrplay_api.dll", "libsdrplay_api.so*", "libsdrplay_api.so*", "https://www.sdrplay.com/api/"},
 };

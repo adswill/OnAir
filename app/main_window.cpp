@@ -17,7 +17,12 @@
 #include <chrono>
 #include <cstdlib>
 #if defined(__linux__)
+#include <cstring>
+#include <dirent.h>
+#include <functional>
+#include <unistd.h>
 #include <dlfcn.h>
+#include "gfx/render_caps.h"
 #endif
 #include "main_internal.h"
 
@@ -61,6 +66,75 @@ static bool glfwOnWayland() {
     if (auto getPlatform = (int (*)())dlsym(RTLD_DEFAULT, "glfwGetPlatform")) return getPlatform() == kGlfwPlatformWayland;
     auto display = (void* (*)())dlsym(RTLD_DEFAULT, "glfwGetWaylandDisplay");   // GLFW 3.3 built for Wayland
     return display && display();
+}
+#endif
+
+
+#if defined(__linux__)
+// #470: the renderer a window's context got (glGetString(GL_RENDERER)), read before the back end exists; "" when it cannot be read
+static std::string contextRenderer(GLFWwindow* w) {
+    glfwMakeContextCurrent(w);
+    auto gs = (const unsigned char* (*)(unsigned))glfwGetProcAddress("glGetString");
+    const unsigned char* r = gs ? gs(0x1F01) : nullptr;   // GL_RENDERER
+    std::string out = r ? (const char*)r : "";
+    glfwMakeContextCurrent(nullptr);
+    return out;
+}
+// The GPU render nodes (/dev/dri/renderD*) with their kernel driver, and whether this user may open them. Empty: no GPU node at all.
+struct GpuNode { std::string path, driver; bool access = false; };
+static std::vector<GpuNode> gpuNodes() {
+    std::vector<GpuNode> v;
+    DIR* d = opendir("/dev/dri");
+    if (!d) return v;
+    while (dirent* e = readdir(d)) {
+        if (strncmp(e->d_name, "renderD", 7) != 0) continue;
+        GpuNode n;
+        n.path = std::string("/dev/dri/") + e->d_name;
+        n.access = access(n.path.c_str(), R_OK | W_OK) == 0;
+        char link[512] = {0};
+        const std::string sys = std::string("/sys/class/drm/") + e->d_name + "/device/driver";
+        const ssize_t k = readlink(sys.c_str(), link, sizeof link - 1);
+        if (k > 0) { link[k] = 0; const char* b = strrchr(link, '/'); n.driver = b ? b + 1 : link; }
+        v.push_back(n);
+    }
+    closedir(d);
+    return v;
+}
+// A desktop OpenGL context that came back as a software renderer (llvmpipe) while a GPU is there: OpenGL ES 3.0 through EGL reaches the GPU's
+// own driver where GLX does not (a Raspberry Pi 5's V3D: GLES 3.1, desktop GL only 3.1 and often llvmpipe through XWayland's GLX, #470).
+// ONAIR_GL=desktop keeps desktop OpenGL; ONAIR_GL=gles asks for OpenGL ES first. Returns the window to use (the old one, or the ES one).
+static GLFWwindow* preferGpuContext(GLFWwindow* window, const std::function<GLFWwindow*()>& makeEs) {
+    const char* want = getenv("ONAIR_GL");
+    const bool forceDesktop = want && !strcmp(want, "desktop"), forceEs = want && !strcmp(want, "gles");
+    if (forceDesktop) return window;
+    const std::string r = contextRenderer(window);
+    if (!forceEs && !rcaps::isSoftwareRenderer(r.c_str())) return window;
+    const std::vector<GpuNode> nodes = gpuNodes();
+    for (const char* e : {"LIBGL_ALWAYS_SOFTWARE", "GALLIUM_DRIVER", "MESA_LOADER_DRIVER_OVERRIDE"})
+        if (const char* v = getenv(e)) if (*v) fprintf(stderr, "renderer: %s=%s is set: it can keep Mesa on the processor\n", e, v);
+    if (nodes.empty() && !forceEs) {
+        fprintf(stderr, "renderer: desktop OpenGL is %s and there is no GPU render node (/dev/dri/renderD*): no GPU driver is loaded\n", r.c_str());
+        return window;
+    }
+    bool anyAccess = forceEs;
+    for (const GpuNode& n : nodes) {
+        fprintf(stderr, "renderer: GPU %s (%s)%s\n", n.path.c_str(), n.driver.empty() ? "driver unknown" : n.driver.c_str(),
+                n.access ? "" : ": no permission; add yourself to the render group (sudo usermod -aG render $USER) and log in again");
+        anyAccess = anyAccess || n.access;
+    }
+    if (!anyAccess) return window;
+    fprintf(stderr, "renderer: desktop OpenGL gave %s; trying OpenGL ES 3.0 through EGL for the GPU\n", r.empty() ? "no renderer name" : r.c_str());
+    GLFWwindow* es = makeEs();
+    if (!es) { fprintf(stderr, "renderer: no OpenGL ES 3.0 context through EGL; staying on %s\n", r.c_str()); return window; }
+    const std::string er = contextRenderer(es);
+    if (rcaps::isSoftwareRenderer(er.c_str()) && !forceEs) {
+        fprintf(stderr, "renderer: OpenGL ES is %s too; staying on desktop OpenGL (check that Mesa's driver for this GPU is installed: eglinfo -B)\n", er.c_str());
+        glfwDestroyWindow(es);
+        return window;
+    }
+    fprintf(stderr, "renderer: using OpenGL ES 3.0 through EGL on %s (ONAIR_GL=desktop goes back to desktop OpenGL)\n", er.c_str());
+    glfwDestroyWindow(window);
+    return es;
 }
 #endif
 
@@ -108,6 +182,25 @@ GLFWwindow* createMainWindow(int argc, char** argv) {
             "(over SSH or without a display there is no window; set DISPLAY or use a local session).").c_str());
         return nullptr;
     }
+#if defined(__linux__)
+    {   // #470: llvmpipe from desktop OpenGL while a GPU is there: OpenGL ES through EGL
+        const int keep = gfx::level();
+        GLFWwindow* chosen = preferGpuContext(window, [&]() -> GLFWwindow* {
+            gfx::setLevel(gfx::glesLevel());
+            glfwDefaultWindowHints();
+            gfx::windowHints();
+            glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
+            if (hidden) glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+            int winW = 1500, winH = 900;
+            if (const char* ws = getenv("ONAIR_WINSIZE")) sscanf(ws, "%dx%d", &winW, &winH);
+            GLFWwindow* w = glfwCreateWindow(winW, winH, "OnAir", nullptr, nullptr);
+            glfwDefaultWindowHints();
+            return w;
+        });
+        if (chosen == window) gfx::setLevel(keep);
+        window = chosen;
+    }
+#endif
     if (gfx::level() > 0) fprintf(stderr, "graphics: %s\n", gfx::levelName());
     if (const char* sz = std::getenv("ONAIR_WINDOW_SIZE")) { int w = 0, h = 0; if (sscanf(sz, "%dx%d", &w, &h) == 2 && w >= 200 && h >= 200) glfwSetWindowSize(window, w, h); }   // dev: window size for screenshots, e.g. 700x800
 #ifndef __APPLE__

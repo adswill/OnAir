@@ -145,4 +145,12 @@ inline const char* prefKeyStep() { return "guidedStep"; }
 // Whether the tour opens by itself at start-up: first start only (not after an update), not with command-line arguments, and after the setup
 inline bool autoStart(bool noArgs, bool done, bool setupPending) { return noArgs && !done && !setupPending; }
 
+// The first-run guides are shown one at a time (#491): a fresh install with no radio opened the tour and "Get me listening" together; the
+// wizard sat over the tour and the tour's Next and Skip did nothing. Order: the setup, then the tour, then "Get me listening", then a lesson
+// card; the others wait (they stay open and appear when the one in front closes).
+enum class Guide { None, Setup, Tour, Listen, Lesson };
+inline Guide guideInFront(bool setupOpen, bool tourOpen, bool listenOpen, bool lessonOn) {
+    return setupOpen ? Guide::Setup : tourOpen ? Guide::Tour : listenOpen ? Guide::Listen : lessonOn ? Guide::Lesson : Guide::None;
+}
+
 }  // namespace tour

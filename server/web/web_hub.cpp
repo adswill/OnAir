@@ -146,7 +146,10 @@ struct WebHub::Pool {
 WebHub::WebHub() {
     cores_ = std::max(1u, std::thread::hardware_concurrency());
 }
-WebHub::~WebHub() { stop(); }
+WebHub::~WebHub() {
+    stop();
+    if (startThr_.joinable()) startThr_.join();
+}
 
 void WebHub::setLimits(const HubLimits& l) { std::lock_guard<std::mutex> g(mu_); lim_ = l; qCap_ = l.queueBytes; }
 HubLimits WebHub::limits() const { std::lock_guard<std::mutex> g(mu_); return lim_; }
@@ -656,9 +659,11 @@ void WebHub::handle(int id, const ClientMsg& m) {
     s.lastAction = wallSeconds();
     if (m.type == ClientMsg::Tune) {
         if (!canTune(s, L)) {
+            if (!(rate > 0)) { receiverStopped(s, false); return; }
             fail(err::NotAllowed, L.controlMode == HubLimits::CtlSlot ? "you need the control slot to tune: press Take control" : L.controlMode == HubLimits::CtlMembers ? "only people with the password or an invite can tune this radio" : "the owner of this radio has switched tuning off");
             return;
         }
+        if (!(rate > 0)) { receiverStopped(s, true); return; }   // no samples: nothing to tune in yet (#496)
         RxSettings r = s.rx;
         if (m.hasDemod) {
             bool ok;
@@ -691,7 +696,6 @@ void WebHub::handle(int id, const ClientMsg& m) {
             }
         }
         if (m.hasFreq) {
-            if (!(rate > 0)) { fail(err::OutOfRange, "the receiver is not running"); return; }
             if (std::fabs(m.freqHz - centre) > rate * 0.48) { fail(err::OutOfRange, "outside the capture (" + jsonNumber(centre - rate * 0.48) + " .. " + jsonNumber(centre + rate * 0.48) + " Hz)"); return; }
             s.freqHz = m.freqHz; s.haveFreq = true;
         }
@@ -922,6 +926,35 @@ std::string WebHub::statsJson() const {
     for (auto& kv : decs_) { o << (first ? "" : ",") << "{\"key\":\"" << jsonEsc(kv.first) << "\",\"listeners\":" << kv.second->subs.size() << "}"; first = false; }
     o << "]}";
     return o.str();
+}
+
+// A listener tuned while the host's receiver delivers no samples (onair-server without --autostart and nobody pressed Start in /app, #496): with
+// tuning allowed and web_listener_start on, the hub asks the host to start it on a thread of its own and says so; a failed start reaches every
+// listener as an error with the host's reason. The client tunes again when the "capture" message comes.
+void WebHub::receiverStopped(Session& s, bool mayTune) {
+    const HubLimits L = limits();
+    const std::string last = rxError_ ? rxError_() : std::string();
+    if (!mayTune || !L.listenerStart || !startRx_) {
+        sendError(s, err::NotRunning, last.empty() ? "the receiver on this server is stopped: its owner starts it from the browser app (/app, Start) or runs onair-server with --autostart"
+                                                    : "the receiver on this server could not start: " + last);
+        return;
+    }
+    if (wallSeconds() - startOkAt_.load() < 15 || starting_.exchange(true)) { sendError(s, err::NotRunning, "the receiver on this server is starting..."); return; }   // started, first samples not here yet
+    if (startThr_.joinable()) startThr_.join();   // the previous start, finished (starting_ was false)
+    sendError(s, err::NotRunning, "the receiver on this server was stopped: starting it now...");
+    if (log_) log_("web: a listener started the receiver");
+    startThr_ = std::thread([this] {
+        std::string e;
+        const bool ok = startRx_(e);
+        if (ok) startOkAt_ = wallSeconds();
+        if (!ok) {
+            const std::string why = "the receiver on this server could not start: " + (e.empty() ? std::string("no reason given") : e);
+            if (log_) log_("web: " + why);
+            std::lock_guard<std::mutex> g(mu_);
+            for (auto& kv : sessions_) sendError(*kv.second, err::NotRunning, why);
+        }
+        starting_ = false;
+    });
 }
 
 bool WebHub::canTune(const Session& s, const HubLimits& L) const {

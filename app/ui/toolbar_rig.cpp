@@ -429,6 +429,21 @@ void hamlibRigWindow(App& a) {
         ImGui::End();
         return;
     }
+    {   // the Windows packages load libhamlib-4.dll at run time (#495): without it, say what to put where (looked for again every 5 s)
+        static bool missing = false;
+        if (!a.hamlibWasOpen || missing) {
+            std::string why;
+            missing = !hamlibLibraryReady(&why);
+            if (missing) {
+                a.hamlibWasOpen = false;
+                ImGui::PushTextWrapPos(440 * gUi);
+                ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.25f, 1), "%s", why.c_str());
+                ImGui::PopTextWrapPos();
+                ImGui::End();
+                return;
+            }
+        }
+    }
     if (!a.hamlibWasOpen) {   // just opened: load the model list once and look for the serial ports
         a.hamlibWasOpen = true;
         if (a.hamlibModels.empty()) a.hamlibModels = hamlibModelList();

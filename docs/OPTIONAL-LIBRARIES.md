@@ -75,6 +75,18 @@ the program folder and the system). Some OnAir packages already include the libr
 HackRF, RX888 and several others are used over USB directly and need no library. A Windows driver (WinUSB / Zadig) is a separate matter and is
 not a file in this folder.
 
+## Rig control (Hamlib)
+
+**Source > Add Hamlib rig…** controls a transceiver or receiver over CAT (a serial port) or a `rigctld` on the network. The Linux and macOS packages
+include Hamlib. The Windows package loads it at run time (since 4.1, #495): without it the entry is there and its window says that the library is missing.
+
+| Library | File names OnAir looks for | Official source |
+|---|---|---|
+| **Hamlib 4** | Win `libhamlib-4.dll` (also `hamlib-4.dll`, `libhamlib.dll`, `hamlib.dll`); macOS `libhamlib.4.dylib`; Linux `libhamlib.so.4` | <https://github.com/Hamlib/Hamlib/releases>. Windows: take `hamlib-w64-<version>.zip` (64-bit) and copy **every DLL of its `bin` folder** (`libhamlib-4.dll` and the `libusb-1.0.dll`, `libgcc_s_seh-1.dll`, `libwinpthread-1.dll` it needs) into the codecs folder, or put Hamlib's `bin` folder on the `PATH`. MSYS2 `mingw-w64-ucrt-x86_64-hamlib`. macOS `brew install hamlib`, Linux `apt install libhamlib4` |
+
+The log (`onair.log` on Windows) says `Hamlib: <path> loaded at run time` when it was found. The Hamlib window looks for it again every few seconds,
+so no restart is needed after copying it.
+
 ## Plug-ins (not libraries)
 
 OnAir plug-ins (decoders you add as a native library plus a manifest) go in the **plugins** folder of OnAir's data folder (**View > Plugins > Open

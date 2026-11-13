@@ -13,6 +13,12 @@
 #include <cstring>
 #include <vector>
 
+// ImGui's OpenGL loader (third_party/imgui/backends/imgui_impl_opengl3_loader.h), filled from GLFW for an OpenGL ES context (#470)
+extern "C" {
+typedef void (*GL3WglProc)(void);
+typedef GL3WglProc (*GL3WGetProcAddressProc)(const char* proc);
+int imgl3wInit2(GL3WGetProcAddressProc proc);
+}
 namespace gfx {
 namespace {
 
@@ -311,16 +317,23 @@ struct GlBackend : Backend {
 
 int levelCount() { return kGlLevelCount; }
 int level() { return gLevel; }
-void setLevel(int l) { gLevel = l < 0 ? 0 : l >= kGlLevelCount ? kGlLevelCount - 1 : l; }
+void setLevel(int l) { gLevel = l < 0 ? 0 : l >= kGlLevelAll ? kGlLevelAll - 1 : l; }
 const char* levelName() {
-    static const char* n[] = {"OpenGL 3.2 core", "OpenGL 3.1", "OpenGL 3.0"};
+    static const char* n[] = {"OpenGL 3.2 core", "OpenGL 3.1", "OpenGL 3.0", "OpenGL ES 3.0 (EGL)"};
+    static_assert(sizeof n / sizeof n[0] == kGlLevelAll, "a name per level");
     return n[gLevel];
 }
+int glesLevel() { return kGlesLevel; }
 
 void windowHints() {
     const GlLevel& l = glLevel(gLevel);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, l.major);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, l.minor);
+    if (l.es) {   // #470: OpenGL ES through EGL (on X11 too): Mesa picks the GPU's driver for it where GLX gave llvmpipe
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+        glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_EGL_CONTEXT_API);
+        return;
+    }
     glfwWindowHint(GLFW_OPENGL_PROFILE, l.core ? GLFW_OPENGL_CORE_PROFILE : GLFW_OPENGL_ANY_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, l.core ? GLFW_TRUE : GLFW_FALSE);
 }
@@ -350,6 +363,9 @@ Backend* create(GLFWwindow* window) {
         const int m = atoi(e);
         if (m >= 256 && m < gMaxTex) gMaxTex = m;
     }
+    // OpenGL ES (#470): ImGui's loader takes its functions from this context's own GetProcAddress (it would otherwise go to libGL / libOpenGL,
+    // which may belong to another driver); ImGui finds the ES context by its version string and uses its ES shaders
+    if (glLevel(gLevel).es && imgl3wInit2([](const char* n) { return (GL3WglProc)glfwGetProcAddress(n); }) != 0) { fprintf(stderr, "OpenGL ES: the function loader failed\n"); return nullptr; }
     if (!ImGui_ImplOpenGL3_Init(glLevel(gLevel).glsl)) return nullptr;
     return new GlBackend(window);
 }

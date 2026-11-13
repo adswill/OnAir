@@ -75,6 +75,7 @@ WebSettings loadWebSettings(onair_server::ConfigFile& c, bool& madeAdminToken) {
     }
     L.maxBins = clampi("web_max_bins", L.maxBins, 64, 4096);
     L.spectrum = c.flag("web_spectrum", true);
+    L.listenerStart = c.flag("web_listener_start", true);
     L.threads = clampi("web_threads", L.threads, 0, 64);
     s.maxConnections = std::max(16, L.maxUsers * 3 + 8);
     w.logIp = c.flag("web_log_ip", false);

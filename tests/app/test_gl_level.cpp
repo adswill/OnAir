@@ -14,7 +14,19 @@ int main() {
     CHECK(glLevel(2).major == 3 && glLevel(2).minor == 0 && !glLevel(2).core && !std::strcmp(glLevel(2).glsl, "#version 130"), "level 2 is 3.0 / GLSL 130");
     for (int i = 1; i < kGlLevelCount; i++)
         CHECK(glLevel(i).major * 10 + glLevel(i).minor < glLevel(i - 1).major * 10 + glLevel(i - 1).minor, "levels go down");
-    CHECK(&glLevel(-5) == &glLevel(0) && &glLevel(99) == &glLevel(kGlLevelCount - 1), "indices clamp");
+    CHECK(&glLevel(-5) == &glLevel(0) && &glLevel(99) == &glLevel(kGlLevelAll - 1), "indices clamp");
+    // #470: OpenGL ES 3.0 through EGL, outside the desktop chain, with default precisions in its shaders
+    CHECK(kGlesLevel == kGlLevelCount && glLevel(kGlesLevel).es && glLevel(kGlesLevel).major == 3 && glLevel(kGlesLevel).minor == 0 &&
+          !std::strcmp(glLevel(kGlesLevel).glsl, "#version 300 es"), "the GLES level follows the desktop chain");
+    for (int i = 0; i < kGlLevelCount; i++) CHECK(!glLevel(i).es, "desktop level %d is not ES", i);
+    {
+        char es[128];
+        glShaderText(es, sizeof es, kGlesLevel, "void main() {}");
+        CHECK(!std::strcmp(es, "#version 300 es\nprecision highp float;\nprecision highp int;\nvoid main() {}"), "GLES shader text: '%s'", es);
+        char small[30];
+        glShaderText(small, sizeof small, kGlesLevel, "void main() {}");
+        CHECK(small[0] == 0, "the precision lines count against the buffer");
+    }
     char buf[64];
     glShaderText(buf, sizeof buf, 1, "void main() {}");
     CHECK(!std::strcmp(buf, "#version 140\nvoid main() {}"), "version line first, then the body: '%s'", buf);

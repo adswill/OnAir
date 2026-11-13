@@ -7,6 +7,9 @@
 #include "server_config.h"
 #include <cmath>
 #include <cstdio>
+#include <atomic>
+#include <chrono>
+#include <mutex>
 #include <thread>
 using namespace onair_web;
 #include "../common/test_util.h"
@@ -315,7 +318,91 @@ static void testAudioOnly() {
     CHECK(hasText(d, "audio only"), "the listener is told why");
 }
 
+
+// #496: onair-server without --autostart, nobody pressed Start in /app: the page's tune came back "the receiver is not running" and nothing more
+// happened. Now a listener who may tune starts it (web_listener_start), a failed start shows the radio's reason to every listener, and a
+// listener who may not tune (or with web_listener_start=0) is told how the owner starts it.
+static Drained waitFor(WebHub& h, int id, const std::string& sub) {
+    Drained all;
+    for (int i = 0; i < 300; i++) {
+        Drained d = drainAll(h, id);
+        all.text.insert(all.text.end(), d.text.begin(), d.text.end());
+        if (hasText(all, sub)) break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    return all;
+}
+static void testStoppedReceiver() {
+    std::string c, w;
+    AdmitRequest a; a.ip = "10.0.0.1";
+    {   // no host control plugged in: explained
+        WebHub h;
+        const int u = h.admit(a, c, w);
+        CHECK(h.welcomeJson(u).find("\"rate_hz\":0") != std::string::npos, "stopped receiver: rate 0 in the welcome");
+        h.handle(u, msg("{\"type\":\"tune\",\"freq_hz\":0,\"mode\":\"nfm\"}"));
+        Drained d = drainAll(h, u);
+        CHECK(hasText(d, "\"code\":\"not_running\"") && hasText(d, "--autostart"), "stopped, no starter: how to start it");
+    }
+    {   // a start that fails: every listener sees the radio's reason, and lastError is shown on the next try
+        WebHub h;
+        std::atomic<int> calls{0};
+        std::string last;
+        std::mutex lm;
+        h.setReceiverControl([&](std::string& e) { calls++; e = "SDRplay: sdrplay_api_Init failed (Fail)"; std::lock_guard<std::mutex> g(lm); last = e; return false; },
+                             [&] { std::lock_guard<std::mutex> g(lm); return last; });
+        const int u1 = h.admit(a, c, w);
+        a.ip = "10.0.0.2";
+        const int u2 = h.admit(a, c, w);
+        h.handle(u1, msg("{\"type\":\"tune\",\"freq_hz\":0,\"mode\":\"nfm\"}"));
+        Drained d1 = waitFor(h, u1, "could not start");
+        CHECK(hasText(d1, "starting it now") && hasText(d1, "sdrplay_api_Init failed"), "failed start: the reason reaches the listener who pressed Play");
+        CHECK(hasText(waitFor(h, u2, "could not start"), "sdrplay_api_Init failed"), "and the other listener");
+        CHECK(calls == 1, "one start for one press: %d", calls.load());
+    }
+    {   // a start that works: the capture arrives, the tune is accepted, audio flows
+        WebHub h;
+        std::atomic<int> calls{0};
+        h.setReceiverControl([&](std::string&) { calls++; return true; }, [] { return std::string(); });
+        a.ip = "10.0.0.3";
+        const int u = h.admit(a, c, w);
+        h.handle(u, msg("{\"type\":\"tune\",\"freq_hz\":0,\"mode\":\"usb\"}"));
+        h.handle(u, msg("{\"type\":\"tune\",\"freq_hz\":0,\"mode\":\"usb\"}"));   // a second press while it starts: no second start
+        for (int i = 0; i < 300 && calls == 0; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        CHECK(calls == 1, "started once: %d", calls.load());
+        size_t pos = 0;
+        pushTones(h, {}, 0.05, pos);   // the radio's first samples
+        Drained d = drainAll(h, u);
+        CHECK(hasText(d, "\"type\":\"capture\"") && hasText(d, "\"rate_hz\":2400000"), "the capture message tells the page to tune again");
+        h.handle(u, msg("{\"type\":\"tune\",\"freq_hz\":100299000,\"mode\":\"usb\"}"));
+        h.handle(u, msg("{\"type\":\"audio\",\"on\":true,\"codec\":\"pcm16\",\"rate\":12000}"));
+        pushTones(h, {300000}, 0.4, pos);
+        d = drainAll(h, u);
+        std::vector<int16_t> au, tmp; AudioCodec cc; int rate; bool sq;
+        for (auto& b : d.bin) if (parseAudioFrame(b, cc, rate, sq, tmp)) au.insert(au.end(), tmp.begin(), tmp.end());
+        CHECK(!hasText(d, "not_running") && au.size() > 3000, "after the start: tuned, %zu audio samples", au.size());
+        if (au.size() > 3000) { std::vector<int16_t> t(au.begin() + 2400, au.end()); CHECK(tonePower(t, 12000, 1000) > 0.7, "the 1 kHz tone (%.2f)", tonePower(t, 12000, 1000)); }
+    }
+    {   // tuning switched off, or web_listener_start=0: no start, the owner is named
+        for (int mode = 0; mode < 2; mode++) {
+            WebHub h;
+            HubLimits L;
+            if (mode == 0) L.controlMode = HubLimits::CtlNobody; else L.listenerStart = false;
+            h.setLimits(L);
+            std::atomic<int> calls{0};
+            h.setReceiverControl([&](std::string&) { calls++; return true; }, [] { return std::string(); });
+            a.ip = "10.0.0.4";
+            const int u = h.admit(a, c, w);
+            h.handle(u, msg("{\"type\":\"tune\",\"freq_hz\":0,\"mode\":\"nfm\"}"));
+            Drained d = drainAll(h, u);
+            std::this_thread::sleep_for(std::chrono::milliseconds(30));
+            CHECK(calls == 0 && hasText(d, "not_running") && hasText(d, "its owner starts it"), "%s: not started, explained", mode == 0 ? "web_control=nobody" : "web_listener_start=0");
+        }
+    }
+}
+
 int main() {
+    testStoppedReceiver();
     testAudioOnly();
     testAdmission();
     testTwoListeners();
