@@ -120,6 +120,7 @@ ModeTuning x40Tuning(int v) {
         {"f01", 1.6, 30, 9.000, 48000, 8000, 0.004, false},
         {"f06", 1.6, 30, 6.000, 48000, 8000, 0.004, false},
         {"gwfsk", 1.6, 30, 8.400, 48000, 8000, 0.004, false},
+        {"gscreserved", 100, 6000, 145.000, 48000, 8000, 0.004, false},   // reserved: GSC (feat41-gsc)
         {"stl", 100, 6000, 947.500, 1000000, 500000, 0.28, false},   // US STL band 944 - 952 MHz; 500 kHz is the lowest rate FmReceiver takes
     };
     if (v < 0 || v >= kNumVariants) return t;

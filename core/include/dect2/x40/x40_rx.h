@@ -25,6 +25,7 @@ enum Variant : int { RcPpm, Uvb76, Graves, Jove, Beacon, Em4100, UhfRfid, Qi, Fm
                SsrInt,   // feat40-modes4: families 781 and up
                Dcr,      // feat40-dcr: family 782 (Japan digital convenience radio, ARIB STD-T98 vol. 3), docs/DCR-4.0.md
                Xpa, Xpa2, Crowd36, F01, F06, Gw,   // feat40-rivet: the HF modes taken over from Rivet, families 370 - 375 (docs/RIVET-MODES-4.0.md)
+               GscReserved,   // reserved: GSC (feat41-gsc) takes this slot (variant 52); keep it so that Stl is 53 on either merge order
                Stl,      // feat41-stl: STL link (analogue studio-to-transmitter links), family 785, docs/STL-4.1.md
                kNumVariants };
 // variants 0 - 14: family 881 + v, active standard 882 + v, engine standard 883 + v, poll slot 881 + v.
@@ -36,7 +37,7 @@ constexpr int activeOfVariant(int v) { return familyOfVariant(v) + 1; }
 constexpr int variantOfActive(int active) {
     return active >= kFamilyBase + 2 && active <= kFamilyBase + 1 + kFirstBlock ? active - kFamilyBase - 2
          : active >= kThirdFamily + 1 && active <= kThirdFamily + (int)kRivetFirst - kFirstBlock ? kFirstBlock + active - kThirdFamily - 1
-         : active >= kRivetFamily + 1 && active <= kRivetFamily + (int)kStlFirst - kRivetFirst ? kRivetFirst + active - kRivetFamily - 1
+         : active >= kRivetFamily + 1 && active <= kRivetFamily + (int)GscReserved - kRivetFirst ? kRivetFirst + active - kRivetFamily - 1
          : active >= kStlFamily + 1 && active <= kStlFamily + (int)kNumVariants - kStlFirst ? kStlFirst + active - kStlFamily - 1 : -1;
 }
 const char* variantName(int v);
