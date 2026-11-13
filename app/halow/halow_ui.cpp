@@ -449,6 +449,8 @@ void tuner(App& a, bool& retune) {
                 const auto& ws = regionInfo(r).widths;
                 if (std::find(ws.begin(), ws.end(), S.width) == ws.end()) S.width = ws.front();
                 saveState();
+                const auto first = plan();   // a new region retunes to its first channel of this width (live or stopped), like a channel pick
+                if (!first.empty()) { tuneFreq(a, first.front().mhz); retune = true; }
             }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", regionInfo(r).name);
         }

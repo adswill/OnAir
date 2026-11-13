@@ -135,6 +135,7 @@ void pick(App& a, const mv::Channel& c) {
     if (c.voice()) {
         S.listen = c.label();
         if (live(a) && !covered(a.rx.marinevhf, listenMhz(c))) tuneDialTo(a, listenMhz(c));
+        else if (!a.engine.running()) tuneFreq(a, listenMhz(c));   // stopped: the channel sets the frequency too
     }
     save();
 }

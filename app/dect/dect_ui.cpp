@@ -225,7 +225,7 @@ void tuner(App& a, bool& retune) {
     ImGui::SetNextItemWidth(std::min(300 * gUi, ImGui::GetContentRegionAvail().x));
     if (ImGui::BeginCombo("##dectband", bandName(S.band))) {
         for (int b = 0; b < dect::kBands; b++) {
-            if (ImGui::Selectable(bandName(b), b == S.band)) { S.band = b; S.scan = false; }
+            if (ImGui::Selectable(bandName(b), b == S.band)) { S.band = b; S.scan = false; tuneFreq(a, dect::carrierMhz(b, 0)); retune = true; }   // a new band retunes to its first carrier
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", bandWhere(b));
         }
         ImGui::EndCombo();

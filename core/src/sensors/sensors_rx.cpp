@@ -212,6 +212,8 @@ struct SensorsReceiver::Impl {
     std::vector<SensorDevice> devices;
     std::vector<SensorUnknown> unknown;
     std::vector<std::string> recent;
+    uint64_t pubSeq = 0, seenSeq = ~0ull, announcedIn = 0;   // the number telemetry() reports: it moves with the content, and at least twice a second of signal
+    bool announced = false;
     uint64_t seq = 0, okMsgs = 0, badPk = 0, pk = 0, pkOok = 0, pkFsk = 0;
     float lastSnr = 0, lastRssi = -200;
     uint64_t nIn = 0;
@@ -489,7 +491,10 @@ struct SensorsReceiver::Impl {
         std::lock_guard<std::mutex> lk(telMu);
         const int64_t now = clock();
         if (now != lastPrune) { lastPrune = now; prune(now); }
-        pub.seq = seq;
+        // telemetry() hands out only a newer seq. The content counter alone stays 0 until the first sensor is heard, so the screen said
+        // "starting" until then: the first block of a run, a change, and every half second of signal are announced too
+        if (!announced || seq != seenSeq || (rate && nIn - announcedIn >= rate / 2)) { announced = true; seenSeq = seq; announcedIn = nIn; ++pubSeq; }
+        pub.seq = pubSeq;
         pub.state = okMsgs ? 2 : (pk ? 1 : 0);
         pub.snrDb = lastSnr; pub.levelDb = lastRssi;
         pub.dataValid = okMsgs > 0;
@@ -536,6 +541,7 @@ void SensorsReceiver::configure(double inputRateHz) {
     s.decim = std::max(1, (int)std::lround(inputRateHz / 1.024e6));
     s.rate = (uint32_t)std::lround(inputRateHz / s.decim);
     s.u8.clear(); s.u8.reserve(1 << 17);
+    s.announced = false;
     s.accI = s.accQ = 0; s.accN = 0;
     const double w = -2 * math::kPi * s.offsetHz / inputRateHz;
     s.rotStep = cf32((float)std::cos(w), (float)std::sin(w)); s.rot = cf32(1, 0);
@@ -558,6 +564,7 @@ void SensorsReceiver::reset() {
     pulse_detect_reset(s.pd);
     s.u8.clear(); s.accI = s.accQ = 0; s.accN = 0; s.inputPos = 0; s.nIn = 0;
     s.minLevelAuto = s.noiseLevel = 0;
+    s.announced = false;   // the first block of the new run is reported at once
     pulse_detect_set_levels(s.pd, 0, s.fixedLevel, s.minLevel, s.minSnr, 0);
 }
 

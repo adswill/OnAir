@@ -221,7 +221,7 @@ void tuner(App& a, bool& retune) {
         for (const zw::Region& r : zw::regions()) {
             char e[128];
             snprintf(e, sizeof e, "%-4s %s", r.id, r.name);
-            if (ImGui::Selectable(e, S.region == r.id)) { S.region = r.id; plat::prefs().setS("zwRegion", S.region); plat::prefs().flush(); applyRegion(a); }
+            if (ImGui::Selectable(e, S.region == r.id)) { S.region = r.id; plat::prefs().setS("zwRegion", S.region); plat::prefs().flush(); applyRegion(a); tuneFreq(a, r.centreMhz); }   // the region's centre, as "Centre on region"
             if (ImGui::IsItemHovered()) {
                 std::string tip;
                 for (const auto& c : r.chans) { char b[48]; snprintf(b, sizeof b, "%s%.2f MHz %s", tip.empty() ? "" : "\n", c.mhz, zw::rateName(c.rate)); tip += b; }

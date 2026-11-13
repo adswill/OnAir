@@ -421,7 +421,7 @@ void tuner(App& a, bool& retune) {
         for (const ws::BandPlan& b : ws::bandPlans()) {
             char e[128];
             snprintf(e, sizeof e, "%-6s %s  %.1f - %.1f MHz", b.id, b.name, b.loMhz, b.hiMhz);
-            if (ImGui::Selectable(e, S.band == b.id)) { S.band = b.id; plat::prefs().setS("wsBand", S.band); plat::prefs().flush(); applyBand(a); }
+            if (ImGui::Selectable(e, S.band == b.id)) { S.band = b.id; plat::prefs().setS("wsBand", S.band); plat::prefs().flush(); applyBand(a); tuneFreq(a, (b.loMhz + b.hiMhz) / 2); }   // the plan's centre, as "Centre on band"
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", plansText(b).c_str());
         }
         ImGui::EndCombo();

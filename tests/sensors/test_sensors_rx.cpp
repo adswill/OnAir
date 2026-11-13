@@ -220,5 +220,22 @@ int main() {
         rx.telemetry(t, 0);
         CHECK(t.devices.empty(), "noise and a carrier decode nothing (%zu)", t.devices.size());
     }
+    {   // the first telemetry comes with the first block, not with the first sensor heard (the screen stayed on "starting" until then)
+        SensorsReceiver r;
+        r.configure(250e3);
+        r.reset();
+        SensorsTelemetry tel;
+        CHECK(!r.telemetry(tel, 0), "nothing before the first block");
+        std::vector<cf32> quiet(40000, cf32(0.001f, 0.f));
+        r.feed(quiet.data(), quiet.size());
+        uint64_t last = 0;
+        const bool first = r.telemetry(tel, last);
+        CHECK(first && tel.seq > 0 && tel.devices.empty(), "first block reported with no sensor heard (seq %llu)", (unsigned long long)tel.seq);
+        last = tel.seq;
+        CHECK(!r.telemetry(tel, last), "nothing new until half a second of signal or a change");
+        std::vector<cf32> more(140000, cf32(0.001f, 0.f));
+        r.feed(more.data(), more.size());
+        CHECK(r.telemetry(tel, last) && tel.timeSec > 0.5, "time moves on while nothing is heard (%.2f s)", tel.timeSec);
+    }
     return testSummary("sensors rx");
 }

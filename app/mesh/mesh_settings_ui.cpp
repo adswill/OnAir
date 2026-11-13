@@ -49,19 +49,31 @@ int effRegion(const App& a) {   // the selected plan, or the entry's first when 
 
 bool planCombo(App& a, const char* id, int& r, bool shortNames) {   // the band plans this entry can use
     bool ch = false;
-    if (ImGui::BeginCombo(id, shortNames ? kPlans[r].shortName : kPlans[r].name)) {
-        for (int i = 0; i < kNumPlans; i++) if (planFits(a, i) && ImGui::Selectable(shortNames ? kPlans[i].shortName : kPlans[i].name, i == r)) { r = i; ch = true; }
+    auto label = [&](int i) {   // the plan's name, with the frequency this entry really tunes to when that differs (MeshCore's channel is not the Meshtastic one)
+        static char buf[8][128]; static int n = 0; char* b = buf[n++ & 7];
+        const double mhz = planMhz(a, i);
+        if (std::fabs(mhz - kPlans[i].mhz) < 1e-6) snprintf(b, 128, "%s", shortNames ? kPlans[i].shortName : kPlans[i].name);
+        else snprintf(b, 128, "%s  (%s %.3f MHz)", shortNames ? kPlans[i].shortName : kPlans[i].name, subMask(a) == 2 ? "MeshCore" : "channel", mhz);
+        return (const char*)b;
+    };
+    if (ImGui::BeginCombo(id, label(r))) {
+        for (int i = 0; i < kNumPlans; i++) if (planFits(a, i) && ImGui::Selectable(label(i), i == r)) { r = i; ch = true; }
         ImGui::EndCombo();
     }
     return ch;
 }
 
+// The frequency a plan tunes to for this mode entry: the plan's channel (Meshtastic LongFast, LoRa APRS, MeshCom), MeshCore's own channel for MeshCore
+double planMhz(const App& a, int region) {
+    if (subMask(a) == 2) return region == 1 ? 910.525 : region == 8 ? 915.8 : region == 9 ? 915.075 : 869.618;   // MeshCore's own channel (AU or Mid in ANZ)
+    return kPlans[region].mhz;
+}
+
 void applyRegion(App& a, int region) {
     S.region = region;
     plat::prefs().setI("meshRegion", region);
-    a.freqMhz = kPlans[region].mhz;                    // the plan's channel (Meshtastic LongFast, LoRa APRS, MeshCom)
-    if (subMask(a) == 2) a.freqMhz = region == 1 ? 910.525 : region == 8 ? 915.8 : region == 9 ? 915.075 : 869.618;   // MeshCore's own channel (AU or Mid in ANZ)
     a.tune.synth.modeOpt[1] = kPlans[region].synthRegion;
+    tuneFreq(a, planMhz(a, region));   // an explicit plan choice retunes now (live or stopped), like a channel pick
 }
 
 // ---------------------------------------------------------------- custom LoRa setting, Meshtastic region

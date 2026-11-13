@@ -41,7 +41,7 @@ void banner(App& a) {
             const auto& doms = dect2::rcElrsDomains();
             ImGui::SetNextItemWidth(120 * gUi);
             if (ImGui::BeginCombo(tr("Domain"), doms[S.domain].name)) {
-                for (int i = 0; i < (int)doms.size(); i++) if (ImGui::Selectable(doms[i].name, i == S.domain)) { S.domain = i; a.engine.rclink().setElrsDomain(i); }
+                for (int i = 0; i < (int)doms.size(); i++) if (ImGui::Selectable(doms[i].name, i == S.domain)) { S.domain = i; a.engine.rclink().setElrsDomain(i); if (doms[i].startHz > 0 && doms[i].stopHz > doms[i].startHz) tuneFreq(a, (doms[i].startHz + doms[i].stopHz) / 2e6); }   // a new domain retunes to the middle of its band
                 ImGui::EndCombo();
             }
         }
