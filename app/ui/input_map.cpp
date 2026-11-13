@@ -228,9 +228,11 @@ void editor() {
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Reads a file written by Export (one action per line). Without a file dialog, onair-keys.txt in the data folder is used."));
         if (ImGui::BeginTable("##keys", 4, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn(tr("Action"));
-            ImGui::TableSetupColumn(tr("Key"), ImGuiTableColumnFlags_WidthFixed, 170 * gUi);
-            ImGui::TableSetupColumn(tr("Second key"), ImGuiTableColumnFlags_WidthFixed, 150 * gUi);
+            // the key columns share the width with the action instead of a fixed 170 + 150 px: at 150 % the action and its "(over the
+            // spectrum)" note were cut off next to two mostly empty key columns
+            ImGui::TableSetupColumn(tr("Action"), ImGuiTableColumnFlags_WidthStretch, 2.2f);
+            ImGui::TableSetupColumn(tr("Key"), ImGuiTableColumnFlags_WidthStretch, 1.f);
+            ImGui::TableSetupColumn(tr("Second key"), ImGuiTableColumnFlags_WidthStretch, 1.f);
             ImGui::TableSetupColumn("##b", ImGuiTableColumnFlags_WidthFixed, 230 * gUi);
             ImGui::TableHeadersRow();
             const char* lastGroup = "";

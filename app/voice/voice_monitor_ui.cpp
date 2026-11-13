@@ -22,6 +22,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include "../ui/font_size.h"
 
 namespace voiceui {
 
@@ -211,7 +212,7 @@ void strip(App& a, const char* mode, const char* title, const Link& l) {
     ImGui::BeginChild("##vmcard", ImVec2(0, cardH), ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar);
     if (talking || haveOther) {
         const vm::CallEntry& e = talking ? now : other;
-        ImGui::PushFont(a.ui, ImGui::GetFontSize() * 1.45f);
+        ImGui::PushFont(a.ui, fontBase() * 1.45f);
         ImGui::TextColored(talking ? pal::okGreen() : pal::grey(0.75f), "%s", ellipsize(target(e), ImGui::GetContentRegionAvail().x * 0.62f).c_str());
         ImGui::SameLine();
         ImGui::TextColored(pal::grey(0.85f), "from %s", ellipsize(source(e), ImGui::GetContentRegionAvail().x).c_str());
@@ -236,7 +237,7 @@ void strip(App& a, const char* mode, const char* title, const Link& l) {
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("Never play %s again (the Voice monitor's mute list)", tok.c_str());
         }
     } else {
-        ImGui::PushFont(a.ui, ImGui::GetFontSize() * 1.3f);
+        ImGui::PushFont(a.ui, fontBase() * 1.3f);
         ImGui::TextDisabled("%s", !l.live ? "Start the receiver to listen" : !l.locked ? "Looking for a signal" : "Nobody is talking");
         ImGui::PopFont();
         if (l.live) {

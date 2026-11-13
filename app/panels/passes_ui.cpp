@@ -38,6 +38,7 @@
 #include <sstream>
 #include <thread>
 #include <vector>
+#include "../ui/font_size.h"
 
 void rotatorPassStep(const dect2::MountPlan& m);   // rotator_ui.cpp
 void hfdigSetDemod(const App& a, int d);           // hfdig_ui.cpp
@@ -1495,7 +1496,7 @@ void passPanel(App& a, const Row* r, double now, float w, float h) {
         const ImVec2 dp = ImGui::GetCursorScreenPos();
         ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(dp.x + 4 * gUi, dp.y + ImGui::GetTextLineHeight() * 0.5f), 4 * gUi, ImGui::GetColorU32(groupColour(s.group)));
         ImGui::Dummy(ImVec2(10 * gUi, 1)); ImGui::SameLine(0, 2 * gUi);
-        if (ImFont* sb = typo::fonts().semibold) { ImGui::PushFont(sb, ImGui::GetFontSize()); ImGui::TextUnformatted(s.name.c_str()); ImGui::PopFont(); }
+        if (ImFont* sb = typo::fonts().semibold) { ImGui::PushFont(sb, fontBase()); ImGui::TextUnformatted(s.name.c_str()); ImGui::PopFont(); }
         else ImGui::TextUnformatted(s.name.c_str());
     }
     {   // the countdown, large and monospaced
@@ -1505,7 +1506,7 @@ void passPanel(App& a, const Row* r, double now, float w, float h) {
         ImGui::TextDisabled("%s", tr(on ? "LOS in" : "AOS in"));
         ImGui::SameLine();
         ImFont* mono = typo::fonts().mono ? typo::fonts().mono : a.mono;
-        ImGui::PushFont(mono, ImGui::GetFontSize() * 1.5f);
+        ImGui::PushFont(mono, fontBase() * 1.5f);
         ImGui::TextColored(on ? pal::okGreen() : ImGui::GetStyleColorVec4(ImGuiCol_Text), "%s", b);
         ImGui::PopFont();
     }
@@ -1751,16 +1752,24 @@ void drawWindow(App& a) {
         ImGui::TextDisabled("%s", tr("Receiver position"));
         ImGui::SameLine();
         receiverPositionFields(a);
-        if (!receiverLocationSet()) { ImGui::SameLine(); ImGui::TextColored(pal::warnAmber(), "%s", tr("not set: the times are for a placeholder position")); }
+        // one row while it fits, else the parts wrap: at 150 % on a 1280 px window the orbit age, Show map, Advanced and full screen ran
+        // past the right edge, out of reach
+        const float fp2 = 2 * ImGui::GetStyle().FramePadding.x;
+        const auto bw = [&](const char* s) { return ImGui::CalcTextSize(s).x + fp2; };
+        if (!receiverLocationSet()) {
+            const char* ns = tr("not set: the times are for a placeholder position");
+            sameLineIf(ImGui::CalcTextSize(ns).x);
+            ImGui::TextColored(pal::warnAmber(), "%s", ns);
+        }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The same position as the ADS-B antenna position"));
-        ImGui::SameLine();
+        sameLineIf(ImGui::CalcTextSize(tr("Orbits: built-in set, %.0f days old")).x + ImGui::GetStyle().ItemSpacing.x + bw(tr("Update orbits")));
         orbitStatus();
-        ImGui::SameLine();
+        sameLineIf(bw(tr(S.bigMap ? "Hide map" : "Show map")));
         if (ImGui::SmallButton(tr(S.bigMap ? "Hide map" : "Show map"))) { S.bigMap = !S.bigMap; plat::prefs().setB("passBigMap", S.bigMap); }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The world map with the chosen satellites' orbits, footprints and day and night"));
-        ImGui::SameLine();
+        sameLineIf(bw(tr(S.advanced ? "Back" : "Advanced")));
         if (ImGui::SmallButton(tr(S.advanced ? "Back" : "Advanced"))) S.advanced = !S.advanced;
-        ImGui::SameLine();
+        sameLineIf(ImGui::GetFrameHeight() * 2);
         if (adsbmap::fullButton(full, "screen")) full = !full;
     }
     if (S.advanced) { advancedPage(a); ImGui::End(); return; }

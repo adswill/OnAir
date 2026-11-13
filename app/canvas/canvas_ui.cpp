@@ -29,6 +29,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include "../ui/font_size.h"
 
 namespace ui2 {   // ui2_widgets.cpp / ui2_shell.cpp (ui2_internal.h is for the ui2 files only)
 float freqDigits(App& a, float fontSize);
@@ -473,7 +474,7 @@ void clockBody(Block& b) {
     char u[32] = "", l[32] = "", d[32] = "";
     if (const std::tm* g = std::gmtime(&t)) { std::strftime(u, sizeof u, "%H:%M:%S", g); std::strftime(d, sizeof d, "%Y-%m-%d", g); }
     if (const std::tm* lt = std::localtime(&t)) std::strftime(l, sizeof l, "%H:%M:%S", lt);
-    ImGui::PushFont(nullptr, ImGui::GetFontSize() * 2.2f);
+    ImGui::PushFont(nullptr, fontBase() * 2.2f);
     ImGui::Text("%s", u);
     ImGui::PopFont();
     ImGui::SameLine();

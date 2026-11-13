@@ -134,7 +134,13 @@ void table(float h) {
     ImGui::TableSetupColumn(tr("Source"), ImGuiTableColumnFlags_WidthStretch, 2.f);
     ImGui::TableSetupColumn(tr("Licence"), ImGuiTableColumnFlags_WidthStretch, 2.f);
     ImGui::TableSetupColumn(tr("Last updated"), ImGuiTableColumnFlags_WidthFixed, 100 * gUi);
-    ImGui::TableSetupColumn(tr("Action"), ImGuiTableColumnFlags_WidthFixed, 250 * gUi);
+    {   // as wide as the most it ever holds (Update, Check, Really delete, Keep), in this language: a fixed 250 px left most of it empty
+        // at 150 % while the Pack column was cut off
+        const ImGuiStyle& st = ImGui::GetStyle();
+        float w = 0;
+        for (const char* l : {tr("Update"), tr("Check"), tr("Really delete"), tr("Keep")}) w += ImGui::CalcTextSize(l).x + 2 * st.FramePadding.x;
+        ImGui::TableSetupColumn(tr("Action"), ImGuiTableColumnFlags_WidthFixed, w + 3 * st.ItemSpacing.x + 4 * gUi);
+    }
     ImGui::TableHeadersRow();
     std::string lastCat;
     for (const Pack& p : cat) {
@@ -228,8 +234,13 @@ void body() {
     }
     if (!u.userNote.empty()) ImGui::TextColored(pal::badRed(), "%s", u.userNote.c_str());
     if (!u.note.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(u.noteBad ? pal::badRed() : pal::okGreen(), "%s", u.note.c_str()); ImGui::PopTextWrapPos(); }
-    table(-ImGui::GetFrameHeightWithSpacing() * 1.2f);
-    ImGui::TextDisabled("%s", tr("Map data (c) OpenStreetMap contributors. Satellite elements: CelesTrak. Airports: OurAirports (public domain). Details: Help > Credits."));
+    // the credit line wraps in a narrow window (it ran off the right edge at 150 %): the table leaves room for as many lines as it takes
+    const char* credit = tr("Map data (c) OpenStreetMap contributors. Satellite elements: CelesTrak. Airports: OurAirports (public domain). Details: Help > Credits.");
+    const float creditH = ImGui::CalcTextSize(credit, nullptr, false, ImGui::GetContentRegionAvail().x).y;
+    table(-(creditH + ImGui::GetStyle().ItemSpacing.y + 2 * gUi));
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("%s", credit);
+    ImGui::PopTextWrapPos();
 }
 
 }  // namespace

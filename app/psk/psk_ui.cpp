@@ -14,6 +14,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include "../ui/font_size.h"
 
 namespace {
 
@@ -238,7 +239,7 @@ void focusView(App& a) {
         ImGui::SameLine();
     }
     if (ImGui::BeginChild("##pskbig", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
-        ImGui::PushFont(a.mono, ImGui::GetFontSize() * 1.6f);
+        ImGui::PushFont(a.mono, fontBase() * 1.6f);
         richText(f->text, ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x);
         if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 4) ImGui::SetScrollHereY(1.0f);
         ImGui::PopFont();

@@ -98,9 +98,14 @@ void levelBar(App& a, bool rightAlign) {
     const float w = levelBarWidth();
     if (rightAlign) ImGui::SetCursorPosX(std::max(ImGui::GetCursorPosX(), ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - w));
     ImGui::PushID("##modelevel");
+    // a pill is 3 px shorter than a frame and sits at the line's top; the action row's SmallButtons (Auto setup, Reset this mode) are centred
+    // on the frame line, so the pills are lowered by half the difference to share their centre
+    const auto centre = []() { ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.5f * gUi); };
+    centre();
     if (pillButton(l1, s)) setSimple(a, true);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Simple: the spectrum and one view with the summary, the live data and the key controls of this mode"));
     ImGui::SameLine(0, 4 * gUi);
+    centre();
     if (pillButton(l2, !s)) setSimple(a, false);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Advanced: every tab of this mode with all the detail"));
     ImGui::PopID();

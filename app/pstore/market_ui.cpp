@@ -18,6 +18,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include "../ui/font_size.h"
 
 namespace ps = dect2::pstore;
 namespace dp = dect2::plugin;
@@ -178,7 +179,7 @@ void signInBlock() {
     if (signingIn) {
         if (ds.userCode.empty()) { ImGui::TextDisabled("%s", tr("Asking GitHub for a code...")); return; }
         ImGui::TextWrapped("%s", tr("Open GitHub, sign in there and enter this code:"));
-        ImGui::PushFont(nullptr, ImGui::GetFontSize() * 1.6f);
+        ImGui::PushFont(nullptr, fontBase() * 1.6f);
         ImGui::TextUnformatted(ds.userCode.c_str());
         ImGui::PopFont();
         if (ImGui::Button(tr("Open GitHub"))) dect2::openUrl(ds.verificationUri);

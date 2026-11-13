@@ -443,11 +443,13 @@ void statusLine(App& a) {
     const SampleLoss sl = a.engine.sampleLoss();
     const ImVec2 o = ImGui::GetCursorScreenPos();
     const float R = o.x + ImGui::GetContentRegionAvail().x;
-    const float rowH = statusStripBlockHeight(), lh = ImGui::GetTextLineHeight(), ty = o.y + (rowH - lh) * 0.5f;
-    const float fs = ImGui::GetFontSize(), pad = 8 * gUi, divW = 2 * pad + 1, lamp = 10 * gUi, sparkW = 28 * gUi;
+    // #502 (m6c7l): the text is measured and drawn at fs directly. PushFont(f, fs) took fs (GetFontSize(), already scaled) as the unscaled
+    // size, so ImGui scaled it again by the interface scale: at 150 % or more (GNOME / Wayland at 2x) the text outgrew the bar and was cut off.
+    const float rowH = statusStripBlockHeight(), fs = ImGui::GetFontSize(), ty = o.y + (rowH - fs) * 0.5f;
+    const float pad = 8 * gUi, divW = 2 * pad + 1, lamp = 10 * gUi, sparkW = 28 * gUi;
     ImFont* mono = typo::fonts().mono ? typo::fonts().mono : a.mono;
-    const auto textW = [&](const std::string& t, ImFont* f) { ImGui::PushFont(f, fs); const float w = ImGui::CalcTextSize(t.c_str()).x; ImGui::PopFont(); return w; };
-    const auto put = [&](float x, ImFont* f, ImU32 c, const std::string& t) { ImGui::PushFont(f, fs); dl->AddText(ImVec2(x, ty), c, t.c_str()); const float w = ImGui::CalcTextSize(t.c_str()).x; ImGui::PopFont(); return x + w; };
+    const auto textW = [&](const std::string& t, ImFont* f) { if (!f) f = ImGui::GetFont(); return f->CalcTextSizeA(fs, FLT_MAX, 0.f, t.c_str()).x; };
+    const auto put = [&](float x, ImFont* f, ImU32 c, const std::string& t) { if (!f) f = ImGui::GetFont(); dl->AddText(f, fs, ImVec2(x, ty), c, t.c_str()); return x + textW(t, f); };
     // the state word: Locked / Searching / Running while the receiver runs (from the mode's own summary line), else Stopped or Channel scan
     std::string stateTxt = tr(scanning ? "Channel scan" : "Stopped");
     ImVec4 stateCol = scanning ? pal::warnAmber() : pal::grey();
@@ -554,7 +556,7 @@ void statusLine(App& a) {
         if (!lines.empty() && room > 60 * gUi) {
             divider(x + pad);
             const std::string t = ellipsize(lines.back(), room, fs);
-            dl->AddText(ImVec2(x + divW, ty), u32(T.dim), t.c_str());
+            dl->AddText(ImGui::GetFont(), fs, ImVec2(x + divW, ty), u32(T.dim), t.c_str());
         }
     }
     if (showClock) {
@@ -1001,7 +1003,7 @@ static void quickStrip(App& a, float x0, float x1, float y, float h) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     ImFont* mono = typo::fonts().mono ? typo::fonts().mono : a.mono;
     const float fs = ImGui::GetFontSize(), pad = 8 * gUi, divW = 2 * pad + 1, fh = ImGui::GetFrameHeight(), ty = y + (h - ImGui::GetTextLineHeight()) * 0.5f, by = y + (h - fh) * 0.5f;
-    const auto textW = [&](const std::string& t, ImFont* f) { ImGui::PushFont(f, fs); const float w = ImGui::CalcTextSize(t.c_str()).x; ImGui::PopFont(); return w; };
+    const auto textW = [&](const std::string& t, ImFont* f) { if (!f) f = ImGui::GetFont(); return f->CalcTextSizeA(fs, FLT_MAX, 0.f, t.c_str()).x; };   // at fs, not PushFont(f, fs): see statusLine
     char off[48], bwv[48];
     const double offKhz = (a.freqMhz - radioCenterMhz(a)) * 1e3;
     snprintf(off, sizeof off, "%+.3f kHz", std::fabs(offKhz) < 0.0005 ? 0.0 : offKhz);
@@ -1041,8 +1043,8 @@ static void quickStrip(App& a, float x0, float x1, float y, float h) {
             ImGui::PopStyleVar();
             ImGui::PopStyleColor();
         } else {
-            ImGui::PushFont(nullptr, fs); dl->AddText(ImVec2(x, ty), u32(T.dim), q.label.c_str()); const float lw = ImGui::CalcTextSize(q.label.c_str()).x; ImGui::PopFont();
-            ImGui::PushFont(mono, fs); dl->AddText(ImVec2(x + lw + 5 * gUi, ty), u32(T.text), q.value.c_str()); ImGui::PopFont();
+            dl->AddText(ImGui::GetFont(), fs, ImVec2(x, ty), u32(T.dim), q.label.c_str()); const float lw = textW(q.label, nullptr);
+            dl->AddText(mono ? mono : ImGui::GetFont(), fs, ImVec2(x + lw + 5 * gUi, ty), u32(T.text), q.value.c_str());
             ImGui::SetCursorScreenPos(ImVec2(x, by));
             ImGui::PushID(i);
             ImGui::InvisibleButton("##qs", ImVec2(std::max(1.f, segs[(size_t)i].w), fh));

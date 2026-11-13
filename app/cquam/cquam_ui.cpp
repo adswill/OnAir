@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <deque>
 #include <string>
+#include "../ui/font_size.h"
 
 namespace {
 
@@ -90,7 +91,7 @@ void indicator(App& a, float h) {
     dl->AddRectFilled(p0, ImVec2(p0.x + w, p0.y + h), IM_COL32(12, 14, 16, 255), 4 * gUi);
     const char* txt = !on ? (a.engine.running() ? tr("starting") : tr("stopped")) : t.state == 2 ? tr("STEREO") : t.state == 1 ? tr("MONO") : tr("NO CARRIER");
     const ImU32 col = !on || t.state == 0 ? IM_COL32(120, 124, 128, 255) : t.state == 2 ? IM_COL32(110, 220, 130, 255) : IM_COL32(230, 190, 90, 255);
-    ImGui::PushFont(a.mono, ImGui::GetFontSize() * 2.6f);
+    ImGui::PushFont(a.mono, fontBase() * 2.6f);
     const ImVec2 sz = ImGui::CalcTextSize(txt);
     dl->AddText(ImVec2(p0.x + 16 * gUi, p0.y + (h - sz.y) * 0.5f), col, txt);
     ImGui::PopFont();

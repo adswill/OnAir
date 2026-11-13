@@ -257,6 +257,16 @@ static void ruleMenuBarCentre(const std::vector<Src>& srcs) {
     }
 }
 
+// ---------------------------------------------------------------- 8
+// ImGui 1.92 PushFont(font, size) takes the size before the interface scale (FontScaleDpi = gUi) and applies it itself: a size from
+// GetFontSize() (already scaled) or a pixel size times gUi is scaled twice, 1.5x too large at 150 %, and outgrows its row (#502)
+static void ruleFontSizeOnce(const std::vector<Src>& srcs) {
+    const std::regex re(R"(PushFont\([^;,]*,[^;]*(GetFontSize\(\)|\bgUi\b))");
+    for (const Src& s : srcs)
+        for (auto it = std::sregex_iterator(s.text.begin(), s.text.end(), re); it != std::sregex_iterator(); ++it)
+            CHECK(false, "%s:%d: PushFont size scaled twice (use fontBase() * k or a bare pixel size, ui/font_size.h): %s", s.rel.c_str(), lineOf(s.text, (size_t)it->position()), it->str().c_str());
+}
+
 static void windowFit() {
     using winfit::V2;
     const V2 disp{1280, 720};
@@ -297,6 +307,7 @@ int main() {
     ruleModalsOpened(srcs);
     ruleTranslationBudget(root);
     ruleMenuBarCentre(srcs);
+    ruleFontSizeOnce(srcs);
     windowFit();
     if (!failures) std::printf("ok: %zu sources\n", srcs.size());
     return failures ? 1 : 0;
