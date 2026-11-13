@@ -2102,3 +2102,10 @@ Mode count fix: tools/gen_modes_list.py, gen_web_schema.py, android/tools/gen_mo
   Windows window icon (GLFW_ICON). Zoom limits were already in 3.7. Feature ideas listed in docs/ISSUES2-4.0.md.
 - CI: android.yml 43198580494, 43207001215; quick 43215392986 (Linux), 43218158764 (Windows): pass. No phone, radio or Windows desktop used.
 
+## 2026-11-13 (feat41-bugs2): #496 web Play, #495 Windows Hamlib, #491 tour skip, #488 monitor retune, #470 Pi 5 GPU
+- #496: the server's receiver was never started (no --autostart); a listener who may tune now starts it (web_listener_start), failures reach the page, the page tunes again on the first capture.
+- #495: Hamlib loaded at run time on Windows (libhamlib-4.dll, DECT2_HAMLIB_DYNAMIC), entry always shown, docs/OPTIONAL-LIBRARIES.md.
+- #491: tour and "Get me listening" opened together on a fresh install; one guide at a time now.
+- #488: the audio monitor ignored the decode shift of a click / in-band typed frequency; monitorShiftHz adds it.
+- #470: Linux falls back to OpenGL ES 3.0 through EGL when desktop GL is llvmpipe and a GPU node exists; diagnostics in the log.
+- docs/BUGS2-4.1.md. CI results in the final report.

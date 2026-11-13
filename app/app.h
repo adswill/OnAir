@@ -1568,6 +1568,7 @@ void lessonsUi(App& a, ImVec2 disp);                 // learn.cpp: the running l
 void selectModeById(App& a, const std::string& id);  // learn.cpp: "fm", "tv" (the region's TV standard), a protocol entry or a mode id; restarts a running receiver
 bool tourAnchor(const char* id, ImVec2& lo, ImVec2& hi);   // tour.cpp: where a part of the window was reported this frame or the last; false when it is not on screen
 void listenWizardOpen(App& a);                       // listen_wizard.cpp: "Get me listening" (Help menu, or a start with no source configured)
+bool listenWizardShown();                              // listen_wizard.cpp: "Get me listening" is open (it waits behind the setup and the tour, #491)
 void listenWizard(App& a, ImVec2 disp);              // listen_wizard.cpp: the window, each frame
 #include "dect2/engine/device_claims.h"
 #include "state/receivers.h"

@@ -4,6 +4,7 @@
 #include "dect2/audio/audioin.h"
 #include "dect2/source/hamlib_link.h"
 #include "dect2/source/hamlib_rig.h"
+#include "dect2/source/rig_setup.h"
 #include "dect2/common/ring.h"
 #include "dect2/source/source.h"
 #include <atomic>
@@ -374,6 +375,25 @@ int main() {
     testPure();
     testSoundCardName();
 #ifdef DECT2_HAVE_HAMLIB
+#ifdef DECT2_HAMLIB_DYNAMIC
+    {   // #495: the library is loaded at run time (the Windows packages); without it the rig entry still shows and says what is missing
+        CHECK(hamlibSupported(), "a run-time Hamlib build offers the Hamlib rig entry");
+        std::string why;
+        if (!hamlibLibraryReady(&why)) {
+            CHECK(why.find("libhamlib") != std::string::npos, "the missing library is named");
+            HamlibLink l;
+            HamlibConn c; c.model = 1;
+            std::string err;
+            CHECK(!l.open(c, err) && err.find("libhamlib") != std::string::npos, "open without the library fails with that reason");
+            CHECK(hamlibModelList().empty() && !hamlibModeKnown("USB"), "no models, no modes, no crash");
+            printf("note: %s; the dummy rig tests are skipped\n", why.c_str());
+            if (!fails) printf("hamlib rig: all ok\n");
+            return fails ? 1 : 0;
+        }
+        printf("Hamlib loaded at run time\n");
+        CHECK(hamlibModelList().size() > 100, "the model list through the loaded library");
+    }
+#endif
     testModes();
     testDummy();
     testSourceDummy();

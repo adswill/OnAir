@@ -330,6 +330,7 @@ int main(int argc, char** argv) {
         hub->setLogIp(webCfg.logIp);
         hub->setServerInfo(webCfg.name, webCfg.location, webCfg.antenna);
         hub->setLog([](const std::string& l) { printf("onair-server: %s\n", l.c_str()); });
+        hub->setReceiverControl([&host](std::string& e) { return host.start(-1, e) || e == "already running"; }, [&host] { return host.lastError(); });   // Play on a stopped receiver starts it (#496)
         hub->registerDecoder(onair_web::DecoderFactory{"host", "This server's receiver (its mode's results)", 0, false,
                                                        [&host](double) { return std::unique_ptr<onair_web::WebDecoder>(new HostDecoder(host)); }});
         onair_web::registerWebDecoders(*hub);   // ADS-B, AIS, APRS, FT8 / FT4 / WSPR, SSTV, fax, Meteor, RDS, CW, RTTY (server/web/web_decoders.h)

@@ -56,7 +56,62 @@ static std::vector<float> run(int demod, int kind, double offHz, double shift) {
     return out;
 }
 
+
+// #488: a click (or a frequency typed inside the captured band) moves only the decode (Engine::setDecodeShiftHz); the monitor took its channel from
+// the radio's dial alone and kept playing the old station until a stop and start. Two NFM stations: the old one on the dial (400 Hz tone), the new
+// one where the user clicked (1 kHz tone, 250 Hz off its nominal frequency), with noise; every combination of the mode's tune offset, the click
+// side and a recording.
+static std::vector<cf32> twoStations(double oldOffHz, double newOffHz, double sec, unsigned seed) {
+    std::vector<cf32> x((size_t)(kRate * sec));
+    double p1 = 0, p2 = 0;
+    unsigned r = seed;
+    auto noise = [&] { r = r * 1103515245u + 12345u; return ((r >> 9) & 0xffff) / 65536.0 - 0.5; };
+    for (size_t i = 0; i < x.size(); i++) {
+        const double t = i / kRate;
+        p1 += 2 * M_PI * 3000 * std::sin(2 * M_PI * 400 * t) / kRate;
+        p2 += 2 * M_PI * 3000 * std::sin(2 * M_PI * 1000 * t) / kRate;
+        std::complex<double> v = std::polar(0.3, p1 + 2 * M_PI * oldOffHz * t) + std::polar(0.3, p2 + 2 * M_PI * newOffHz * t);
+        v += std::complex<double>(0.05 * noise(), 0.05 * noise());
+        x[i] = cf32((float)v.real(), (float)v.imag());
+    }
+    return x;
+}
+static std::vector<float> runShift(const std::vector<cf32>& x, double shift) {
+    AudioMonitor m;
+    std::vector<float> out;
+    m.setSink([&](const float* s, int n) { out.insert(out.end(), s, s + 2 * n); });
+    MonitorConfig c; c.on = true; c.demod = HfDemodNfm; c.yield = false;
+    m.configure(c);
+    for (size_t i = 0; i < x.size(); i += 24000) m.processBlock(x.data() + i, std::min<size_t>(24000, x.size() - i), kRate, shift);
+    out.erase(out.begin(), out.begin() + std::min<size_t>(out.size(), 48000));
+    return out;
+}
+static void testDecodeShift() {
+    int checked = 0;
+    for (double tuneOff : {0.0, 20000.0, -15000.0})
+        for (double click : {37500.0, -52500.0, 25000.0}) {
+            const double dial = 145.0e6, centre = dial + tuneOff;         // a mode with a tune offset puts the radio beside the dial
+            const double oldOff = dial - centre, newOff = dial + click + 250 - centre;   // the new station 250 Hz off its nominal frequency
+            const auto x = twoStations(oldOff, newOff, 1.0, (unsigned)(click + tuneOff));
+            const auto o = runShift(x, monitorShiftHz(dial, centre, click, 0, false));
+            const double pNew = goertzel(o, 1000, 48000), pOld = goertzel(o, 400, 48000);
+            CHECK(pNew > 1e-4 && pNew > 20 * pOld, "offset %.0f, click %+.0f: the clicked station (%g) over the old one (%g)", tuneOff, click, pNew, pOld);
+            const auto b = runShift(x, dial - centre);   // what 4.0 did: the dial alone
+            CHECK(goertzel(b, 400, 48000) > goertzel(b, 1000, 48000), "offset %.0f, click %+.0f: the old shift reproduces the bug", tuneOff, click);
+            checked++;
+        }
+    {   // a recording: the dial is the VFO, the decode shift is that VFO's distance from the file's centre; it must not be counted twice
+        const double centre = 100.0e6, vfo = centre + 40000;
+        const auto x = twoStations(0, 40000 + 150, 1.0, 7);
+        const auto o = runShift(x, monitorShiftHz(vfo, centre, vfo - centre, 0, true));
+        CHECK(goertzel(o, 1000, 48000) > 20 * goertzel(o, 400, 48000), "a recording's VFO is heard (no double shift)");
+    }
+    CHECK(std::fabs(monitorShiftHz(145e6, 145e6, 0, 500, false) - 500) < 1e-6, "the user's monitor offset is kept");
+    printf("decode shift: %d tune offset / click combinations\n", checked);
+}
+
 int main() {
+    testDecodeShift();
     const char* names[] = {"USB", "LSB", "NFM", "AM"};
     for (int d = 0; d < 4; d++) {
         const auto o = run(d, d, 30000, 30000);

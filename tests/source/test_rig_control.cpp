@@ -194,7 +194,7 @@ int main() {
         CHECK(old.size() == 1 && old[0].pttType == 0 && !old[0].split && old[0].baud == 19200, "an older entry reads with defaults");
     }
     // ---- the Hamlib transmit sink warns outside the amateur bands and keys (dummy rig, no radio) ----
-    if (hamlibSupported()) {
+    if (hamlibSupported() && hamlibLibraryReady()) {   // a run-time Hamlib build without the library (Windows CI) skips it
         HamlibRig r; r.model = 1; r.path = "dummy";
         auto devs = hamlibRigDevices({r});
         auto s = makeTxSink(devs[0]);

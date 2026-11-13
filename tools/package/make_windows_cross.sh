@@ -23,8 +23,11 @@ if [ -z "$ONAIR_WIN_PARTIAL" ]; then
 fi
 # The RTL-SDR Blog V4 Lite needs librtlsdr 1.4.0 or later (#340): never package a prefix from before it
 if [ -f "$P/bin/librtlsdr.dll" ] && ! grep -aq "Blog V4L" "$P/bin/librtlsdr.dll"; then echo "error: $P/bin/librtlsdr.dll has no RTL-SDR Blog V4 Lite support: run tools/package/cross_deps_windows.sh"; exit 1; fi
-HAMLIB_CMAKE=OFF
-for f in "$P/bin"/libhamlib*.dll "$P/bin"/hamlib.dll; do [ -f "$f" ] && HAMLIB_CMAKE=ON && break; done
+# Hamlib: always on. Without Hamlib in the prefix (the usual case) OnAir loads the user's libhamlib-4.dll at run time (DECT2_HAMLIB_DYNAMIC, #495);
+# a prefix that has it is linked or loaded the same way and its DLL is shipped below.
+HAMLIB_CMAKE=ON
+HAMLIB_DLL=""
+for f in "$P/bin"/libhamlib*.dll "$P/bin"/hamlib.dll; do [ -f "$f" ] && HAMLIB_DLL="$f" && break; done
 TLS_CMAKE=OFF; [ -f "$P/lib/libssl.a" ] && TLS_CMAKE=ON || echo "warning: no OpenSSL in $P: onair-server is built without TLS (ONAIR_WIN_PARTIAL)"
 GEN=""; command -v ninja >/dev/null 2>&1 && GEN="-G Ninja"   # Ninja plus ccache (CMake picks it up) make a repeat build several times faster
 cmake --fresh $GEN -S . -B $BUILD "-DCMAKE_TOOLCHAIN_FILE=$PWD/packaging/windows/mingw-toolchain.cmake" -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DDECT2_HAVE_HAMLIB=$HAMLIB_CMAKE -DDECT2_WITH_SOAPY=ON -DDECT2_WITH_TLS=$TLS_CMAKE -DOPENSSL_ROOT_DIR=$P -DOPENSSL_USE_STATIC_LIBS=TRUE -DONAIR_WIN_SOAPY=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 >/dev/null
@@ -47,8 +50,8 @@ cp "$P/bin/libSoapySDR.dll" "$OUT/"
 # the radios OnAir drives by itself: their libraries next to the program (nothing to install). FTD3XX.dll is FTDI's USB 3 driver library that the
 # LimeSDR Mini needs; it is signed by FTDI, so it is copied as it is (not stripped).
 for d in librtlsdr libairspy libairspyhf libbladeRF libLimeSuite libiio FTD3XX; do if [ -f "$P/bin/$d.dll" ]; then cp "$P/bin/$d.dll" "$OUT/"; else echo "warning: $d.dll is missing in $P/bin (run cross_deps_windows.sh)"; fi; done
-for f in "$P/bin"/libhamlib*.dll "$P/bin"/hamlib.dll; do if [ -f "$f" ]; then cp "$f" "$OUT/"; break; fi; done
-if [ "$HAMLIB_CMAKE" = ON ]; then
+[ -n "$HAMLIB_DLL" ] && cp "$HAMLIB_DLL" "$OUT/"
+if [ -n "$HAMLIB_DLL" ]; then
   mkdir -p "$OUT/licenses/hamlib"
   cp packaging/licenses/hamlib/README-OnAir.md "$OUT/licenses/hamlib/NOTICE.md"
   [ -f "$P/licenses/hamlib-COPYING.txt" ] && cp "$P/licenses/hamlib-COPYING.txt" "$OUT/licenses/hamlib/COPYING"

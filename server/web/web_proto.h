@@ -70,6 +70,7 @@ constexpr const char* NotAllowed = "not_allowed";       // the host has not enab
 constexpr const char* RateLimited = "rate_limited";
 constexpr const char* Busy = "busy";
 constexpr const char* Auth = "auth";
+constexpr const char* NotRunning = "not_running";     // the host's receiver delivers no samples (stopped, starting, or its start failed: the text says which)
 }
 
 // The message types a web session may not use unless the host allows them (transmit / arm: web_allow_tx=1; keys / decryption / recording never): answered with err::Forbidden.

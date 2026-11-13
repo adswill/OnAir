@@ -26,6 +26,10 @@ int main() {
     { DeviceInfo d; d.kind = DeviceInfo::Audio; CHECK(d.tunesAtDial(), "a sound card tunes at the dial"); }
     { DeviceInfo d; d.kind = DeviceInfo::Hamlib; CHECK(d.tunesAtDial(), "a Hamlib rig tunes at the dial"); }
 #ifdef DECT2_HAVE_HAMLIB
+    if (std::string why; !hamlibLibraryReady(&why)) {   // a run-time Hamlib build (Windows) without the library on this computer
+        std::printf("note: %s; the rig part is skipped\n", why.c_str());
+        return fails ? 1 : 0;
+    }
     HamlibRig r; r.model = 1; r.path = "dummy";
     const DeviceInfo dev = hamlibRigDevices({r})[0];   // no audio device named: the rig's audio is "silence"
     CHECK(dev.kind == DeviceInfo::Hamlib, "dummy rig entry");
