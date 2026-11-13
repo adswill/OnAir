@@ -7,6 +7,7 @@
 // dispatches (about a millisecond each, so the GPU's other user, the LDPC decoder, is not kept waiting) and read back once.
 // d3d11.dll and d3dcompiler_47.dll are loaded at run time: a computer without a usable GPU simply reports the backend as unavailable.
 #include "conceal_internal.h"
+#include "dect2/common/diag.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -225,7 +226,7 @@ Gpu::Gpu() {
         }
     }
     if (FAILED(create(best.p, best ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, levels, 2, D3D11_SDK_VERSION, dev.put(), &got, ctx.put()))) { dev.reset(); ctx.reset(); return; }
-    if (got < D3D_FEATURE_LEVEL_11_0) { dev.reset(); ctx.reset(); return; }
+    if (got < D3D_FEATURE_LEVEL_11_0) { DIAG_DEBUG(249173, "The graphics adapter supports only Direct3D feature level 0x%X, below 11.0, so picture repair runs on the CPU instead.", (unsigned)got); dev.reset(); ctx.reset(); return; }
     {
         Com<IDXGIDevice> dxgi;
         if (SUCCEEDED(dev->QueryInterface(__uuidof(IDXGIDevice), (void**)dxgi.put()))) {
@@ -245,10 +246,11 @@ Gpu::Gpu() {
     const HRESULT hr = compile(kHlsl, strlen(kHlsl), "conceal.hlsl", nullptr, nullptr, "main", "cs_5_0", D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, code.put(), err.put());
     if (FAILED(hr) || !code) {
         fprintf(stderr, "Conceal: shader compile failed: %s\n", err ? (const char*)err->GetBufferPointer() : "?");
+        DIAG(287284, "The Direct3D 11 picture repair shader did not compile, so picture repair runs on the CPU instead.");
         dev.reset(); ctx.reset();
         return;
     }
-    if (FAILED(dev->CreateComputeShader(code->GetBufferPointer(), code->GetBufferSize(), nullptr, cs.put()))) { dev.reset(); ctx.reset(); return; }
+    if (FAILED(dev->CreateComputeShader(code->GetBufferPointer(), code->GetBufferSize(), nullptr, cs.put()))) { DIAG_DEBUG(190699, "Direct3D 11 could not create the picture repair compute shader, so picture repair runs on the CPU instead."); dev.reset(); ctx.reset(); return; }
     D3D11_BUFFER_DESC cd{};
     cd.ByteWidth = sizeof(CBuf);
     cd.Usage = D3D11_USAGE_DEFAULT;
@@ -323,7 +325,7 @@ bool d3d11Synthesize(const VideoFrame& A, const VideoFrame& B, int count, const 
         d.Usage = D3D11_USAGE_DEFAULT;
         d.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
         d.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_ALLOW_RAW_VIEWS;
-        if (FAILED(g.dev->CreateBuffer(&d, nullptr, g.outBuf.put()))) return false;
+        if (FAILED(g.dev->CreateBuffer(&d, nullptr, g.outBuf.put()))) { DIAG_DEBUG_EVERY(333009, 30.0, "Direct3D 11 could not allocate a %zu byte picture repair output buffer, so this gap is repaired on the CPU.", (size_t)used); return false; }
         D3D11_UNORDERED_ACCESS_VIEW_DESC u{};
         u.Format = DXGI_FORMAT_R32_TYPELESS;
         u.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
@@ -362,7 +364,7 @@ bool d3d11Synthesize(const VideoFrame& A, const VideoFrame& B, int count, const 
     D3D11_BOX box{0, 0, 0, (UINT)used, 1, 1};
     g.ctx->CopySubresourceRegion(g.stage.p, 0, 0, 0, 0, g.outBuf.p, 0, &box);
     D3D11_MAPPED_SUBRESOURCE mp{};
-    if (FAILED(g.ctx->Map(g.stage.p, 0, D3D11_MAP_READ, 0, &mp))) return false;
+    if (FAILED(g.ctx->Map(g.stage.p, 0, D3D11_MAP_READ, 0, &mp))) { DIAG_DEBUG_EVERY(550974, 30.0, "Direct3D 11 could not read back the repaired pictures, so this gap is repaired on the CPU."); return false; }
     const uint8_t* src = static_cast<const uint8_t*>(mp.pData);
     for (int k = 0; k < count; k++) {
         auto f = std::make_shared<VideoFrame>();

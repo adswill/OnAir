@@ -15,6 +15,7 @@
 #include "dect2/common/u8file.h"
 #include "dect2/tv/tsout.h"
 #include "dect2/tv/videogen_rtmp.h"
+#include "dect2/common/diag.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -405,7 +406,7 @@ struct VideoGenerator::Impl {
     int prevW = 0, prevH = 0;
     uint64_t prevSerial = 0;
 
-    void fail(const std::string& e) { std::lock_guard<std::mutex> lk(mu); if (st.error.empty()) st.error = e; }
+    void fail(const std::string& e) { DIAG_ERROR(753702, "The video generator stopped with an error: %s.", e.c_str()); std::lock_guard<std::mutex> lk(mu); if (st.error.empty()) st.error = e; }
     void run(GenConfig c);
 };
 
@@ -879,23 +880,24 @@ VideoGenerator::VideoGenerator() : p_(new Impl) {}
 VideoGenerator::~VideoGenerator() { stop(); }
 
 bool VideoGenerator::start(const GenConfig& c, std::string& err) {
-    if (running()) { err = "already running"; return false; }
+    auto refuse = [&](std::string m) { err = std::move(m); DIAG(763812, "The video generator was not started because of its settings: %s.", err.c_str()); return false; };
+    if (running()) return refuse("already running");
     if (p_->th.joinable()) p_->th.join();
-    if (c.output == Output::File && !c.previewOnly && c.tsPath.empty()) { err = "choose a .ts file to write"; return false; }
-    if ((c.source == Source::Picture || c.source == Source::VideoFile) && c.path.empty()) { err = "choose a picture or video file (or a folder)"; return false; }
-    if ((c.source == Source::Picture || c.source == Source::VideoFile) && listMedia(c.path, c.source == Source::Picture ? MediaKind::Picture : MediaKind::Video).empty()) { err = "there is nothing to play in " + c.path; return false; }
-    if (c.audio == AudioSource::AudioFile && !c.previewOnly && listMedia(c.audioPath, MediaKind::Audio).empty()) { err = "choose a sound file (or a folder of them)"; return false; }
+    if (c.output == Output::File && !c.previewOnly && c.tsPath.empty()) return refuse("choose a .ts file to write");
+    if ((c.source == Source::Picture || c.source == Source::VideoFile) && c.path.empty()) return refuse("choose a picture or video file (or a folder)");
+    if ((c.source == Source::Picture || c.source == Source::VideoFile) && listMedia(c.path, c.source == Source::Picture ? MediaKind::Picture : MediaKind::Video).empty()) return refuse("there is nothing to play in " + c.path);
+    if (c.audio == AudioSource::AudioFile && !c.previewOnly && listMedia(c.audioPath, MediaKind::Audio).empty()) return refuse("choose a sound file (or a folder of them)");
     if (c.source == Source::Rtmp) {
         std::string lu, why;
         int port = 0;
-        if (!rtmpSupported(why)) { err = "RTMP input: " + why; return false; }
-        if (!parseRtmpListenUrl(c.rtmpUrl, lu, port, why)) { err = "RTMP address: " + why; return false; }
+        if (!rtmpSupported(why)) return refuse("RTMP input: " + why);
+        if (!parseRtmpListenUrl(c.rtmpUrl, lu, port, why)) return refuse("RTMP address: " + why);
     }
-    if (c.source == Source::Generator && (c.pattern < 0 || c.pattern > 2)) { err = "the test pattern must be 0 to 2"; return false; }
-    if (c.output == Output::Transmitter && !c.previewOnly && (c.instanceId < 1 || c.instanceId > kMaxInstances)) { err = "the generator number must be 1 to " + std::to_string(kMaxInstances); return false; }
-    { std::vector<ArgOpt> uo; std::string aerr; if (!parseEncoderArgs(c.ffmpegArgs, uo, aerr)) { err = "FFmpeg arguments: " + aerr; return false; } }
-    if ((c.output == Output::Udp || c.output == Output::Rtp) && !c.previewOnly && (c.port <= 0 || c.port > 65535)) { err = "the port must be 1 to 65535"; return false; }
-    if (c.enc.width < 16 || c.enc.height < 16) { err = "the picture is too small"; return false; }
+    if (c.source == Source::Generator && (c.pattern < 0 || c.pattern > 2)) return refuse("the test pattern must be 0 to 2");
+    if (c.output == Output::Transmitter && !c.previewOnly && (c.instanceId < 1 || c.instanceId > kMaxInstances)) return refuse("the generator number must be 1 to " + std::to_string(kMaxInstances));
+    { std::vector<ArgOpt> uo; std::string aerr; if (!parseEncoderArgs(c.ffmpegArgs, uo, aerr)) return refuse("FFmpeg arguments: " + aerr); }
+    if ((c.output == Output::Udp || c.output == Output::Rtp) && !c.previewOnly && (c.port <= 0 || c.port > 65535)) return refuse("the port must be 1 to 65535");
+    if (c.enc.width < 16 || c.enc.height < 16) return refuse("the picture is too small");
     {
         std::lock_guard<std::mutex> lk(p_->mu);
         p_->st = GenStats();

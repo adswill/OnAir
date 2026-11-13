@@ -7,6 +7,7 @@
 #include "dect2/common/u8file.h"
 #include <cmath>
 #include <cstdio>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -43,7 +44,7 @@ std::string formatVtt(const std::vector<SubCue>& cues) {
 
 bool writeTextFile(const std::string& path, const std::string& text) {
     FILE* f = u8fopen(path, "wb");
-    if (!f) return false;
+    if (!f) { DIAG_DEBUG(919964, "The file %s could not be created for writing, so it is not saved.", path.c_str()); return false; }
     const bool ok = fwrite(text.data(), 1, text.size(), f) == text.size();
     return fclose(f) == 0 && ok;
 }

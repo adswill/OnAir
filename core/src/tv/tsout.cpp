@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
+#include "dect2/common/diag.h"
 #ifndef _WIN32
 #include <fcntl.h>
 #endif
@@ -134,14 +135,14 @@ struct OutputManager::Impl {
     void startHttp(const OutputConfig& c) {
         netInit();
         sock_t l = socket(AF_INET, SOCK_STREAM, 0);
-        if (l == kBadSock) { st.error = "HTTP server: socket failed"; return; }
+        if (l == kBadSock) { st.error = "HTTP server: socket failed"; DIAG_ERROR(447978, "The built-in HTTP stream server could not create its listening socket, so the stream is not served."); return; }
         int one = 1;
         setsockopt(l, SOL_SOCKET, SO_REUSEADDR, (const char*)&one, sizeof one);
         sockaddr_in a{};
         a.sin_family = AF_INET;
         a.sin_addr.s_addr = htonl(c.httpLan ? INADDR_ANY : INADDR_LOOPBACK);
         a.sin_port = htons((uint16_t)c.httpPort);
-        if (bind(l, (sockaddr*)&a, sizeof a) != 0 || ::listen(l, 8) != 0) { st.error = "HTTP server: cannot listen on port " + std::to_string(c.httpPort); sockClose(l); return; }
+        if (bind(l, (sockaddr*)&a, sizeof a) != 0 || ::listen(l, 8) != 0) { st.error = "HTTP server: cannot listen on port " + std::to_string(c.httpPort); DIAG_ERROR(100458, "The built-in HTTP stream server could not listen on port %d (it may be in use), so the stream is not served.", c.httpPort); sockClose(l); return; }
         socklen_t al = sizeof a;
         getsockname(l, (sockaddr*)&a, &al);
         hsock = l;
@@ -302,19 +303,19 @@ void OutputManager::configure(const OutputConfig& c) {
     if (c.file && !I.file && c.path.empty()) I.st.error = "choose a file to record to first";
     if (c.file && !I.file && !c.path.empty()) {
         I.file = openForWriting(c.path);
-        if (!I.file) I.st.error = "cannot write " + c.path + ": " + strerror(errno);
+        if (!I.file) { DIAG_ERROR(501834, "The transport stream output file %s could not be created (%s), so nothing is written to it.", c.path.c_str(), strerror(errno)); I.st.error = "cannot write " + c.path + ": " + strerror(errno); }
         else { I.st.fileOpen = true; I.st.fileBytes = I.st.filePackets = 0; }
     }
     if (I.sock != kBadSock && (!c.udp || c.host != old.host || c.port != old.port || c.iface != old.iface)) { sockClose(I.sock); I.sock = kBadSock; I.st.udpOpen = false; I.queue.clear(); }
     if (c.udp && I.sock == kBadSock) {
         netInit();
         I.sock = socket(AF_INET, SOCK_DGRAM, 0);
-        if (I.sock == kBadSock) I.st.error = "socket failed";
+        if (I.sock == kBadSock) { I.st.error = "socket failed"; DIAG_ERROR(587873, "The UDP output socket could not be created, so the transport stream is not sent."); }
         else {
             memset(&I.dst, 0, sizeof I.dst);
             I.dst.sin_family = AF_INET;
             I.dst.sin_port = htons((uint16_t)c.port);
-            if (inet_pton(AF_INET, c.host.c_str(), &I.dst.sin_addr) != 1) { I.st.error = "bad UDP address " + c.host; sockClose(I.sock); I.sock = kBadSock; }
+            if (inet_pton(AF_INET, c.host.c_str(), &I.dst.sin_addr) != 1) { I.st.error = "bad UDP address " + c.host; DIAG_ERROR(295862, "The UDP output address %s is not a valid IPv4 address, so the transport stream is not sent.", c.host.c_str()); sockClose(I.sock); I.sock = kBadSock; }
             else {
                 int ttl = c.ttl;
                 setsockopt(I.sock, IPPROTO_IP, IP_MULTICAST_TTL, (const char*)&ttl, sizeof ttl);

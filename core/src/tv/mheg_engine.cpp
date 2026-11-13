@@ -7,6 +7,7 @@
 #include <deque>
 #include <map>
 #include <set>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 namespace {
@@ -107,10 +108,10 @@ struct MhegEngine::Impl {
     // ---- groups
     std::unique_ptr<Group> loadGroup(const std::string& path, bool scene) {
         std::vector<uint8_t> d;
-        if (!getFile(path, d)) { st.fetchFailures++; note("missing file " + path); return nullptr; }
+        if (!getFile(path, d)) { st.fetchFailures++; DIAG_DEBUG(923238, "The MHEG-5 file %s could not be fetched from the carousel, so the application cannot use it.", path.c_str()); note("missing file " + path); return nullptr; }
         auto g = std::make_unique<Group>();
         g->parse = mhegParse(d.data(), d.size());
-        if (!g->parse.error.empty() || g->parse.roots.size() != 1) { note("damaged file " + path + ": " + g->parse.error); return nullptr; }
+        if (!g->parse.error.empty() || g->parse.roots.size() != 1) { DIAG_DEBUG(801978, "The MHEG-5 file %s is damaged (%s), so the application cannot use it.", path.c_str(), g->parse.error.c_str()); note("damaged file " + path + ": " + g->parse.error); return nullptr; }
         const MhegNode& root = g->parse.roots[0];
         if (root.cls != 2 || root.tag != (scene ? 1u : 0u)) { note("wrong object type in " + path); return nullptr; }
         g->gid = nextGid++;

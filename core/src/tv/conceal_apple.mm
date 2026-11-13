@@ -4,6 +4,7 @@
 // Frame interpolation with Apple's machine-learning frame rate conversion (VideoToolbox VTFrameProcessor, macOS 15.4 and later).
 // It runs on the GPU / Neural Engine and needs no model download: the model ships with the system.
 #include "dect2/tv/conceal.h"
+#include "dect2/common/diag.h"
 #import <CoreMedia/CoreMedia.h>
 #import <CoreVideo/CoreVideo.h>
 #import <Foundation/Foundation.h>
@@ -90,10 +91,10 @@ bool interpolateGapApple(const VideoFrame& A, const VideoFrame& B, int count, st
                 gCfg = [[VTFrameRateConversionConfiguration alloc] initWithFrameWidth:w frameHeight:h usePrecomputedFlow:NO
                                                               qualityPrioritization:VTFrameRateConversionConfigurationQualityPrioritizationNormal
                                                                            revision:VTFrameRateConversionConfiguration.defaultRevision];
-                if (!gCfg) { gFailed = true; return false; }
+                if (!gCfg) { DIAG(935882, "Apple frame interpolation could not be configured for %dx%d pictures, so picture repair uses the built-in method instead.", w, h); gFailed = true; return false; }
                 gProc = [[VTFrameProcessor alloc] init];
                 NSError* err = nil;
-                if (![gProc startSessionWithConfiguration:gCfg error:&err]) { gProc = nil; gCfg = nil; gFailed = true; return false; }
+                if (![gProc startSessionWithConfiguration:gCfg error:&err]) { DIAG(971312, "Apple frame interpolation did not start (%s), so picture repair uses the built-in method instead.", err ? err.localizedDescription.UTF8String : "no reason given"); gProc = nil; gCfg = nil; gFailed = true; return false; }
                 gW = w; gH = h;
             }
             const OSType fmt = A.fullRange ? kCVPixelFormatType_420YpCbCr8BiPlanarFullRange : kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange;

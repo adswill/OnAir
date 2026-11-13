@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstring>
 #include <filesystem>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -21,7 +22,7 @@ static double wallNow() { return std::chrono::duration<double>(Clock::now().time
 bool TsFileSource::open(const std::string& path) {
     close();
     FILE* f = u8fopen(path, "rb");
-    if (!f) return false;
+    if (!f) { DIAG_ERROR(153077, "The transport stream file %s could not be opened for playback, so nothing is played.", path.c_str()); return false; }
     {   // T2-MI: a modulator feed in the first 64k packets (12 MB) is played as the transport stream of one of its PLPs
         T2miIngest probe;
         std::vector<uint8_t> pb(188 * 4096);
@@ -41,6 +42,7 @@ bool TsFileSource::open(const std::string& path) {
                 path_ = path; t2miPid_ = probe.pid(); plps_ = probe.plps();
             }
             if (best >= 0 && buildInner(best)) return true;
+            DIAG_ERROR(502085, "The T2-MI file %s has no PLP that could be extracted into a transport stream, so it cannot be played.", path.c_str());
             close();
             return false;
         }
@@ -98,7 +100,7 @@ bool TsFileSource::buildInner(int plp) {
         src = path_; dir = scratch_;
     }
     FILE* in = u8fopen(src, "rb");
-    if (!in) return false;
+    if (!in) { DIAG_DEBUG(863626, "The T2-MI file %s could not be reopened to extract PLP %d, so the PLP is not played.", src.c_str(), plp); return false; }
     std::error_code ec;
     const std::filesystem::path d = dir.empty() ? std::filesystem::temp_directory_path(ec) : u8file(dir);
     static std::atomic<unsigned> seq{0};
@@ -107,7 +109,7 @@ bool TsFileSource::buildInner(int plp) {
     const auto u8p = (d / name).u8string();
     const std::string outPath(u8p.begin(), u8p.end());
     FILE* out = u8fopen(outPath, "wb+");
-    if (!out) { fclose(in); return false; }
+    if (!out) { DIAG_ERROR(160427, "The temporary file %s for T2-MI PLP %d could not be created, so the PLP is not played.", outPath.c_str(), plp); fclose(in); return false; }
     T2miIngest ing;
     PcrTimeline tl;
     uint64_t idx = 0;
@@ -125,7 +127,7 @@ bool TsFileSource::buildInner(int plp) {
     size_t got;
     while ((got = fread(buf.data(), 188, 4096, in)) > 0) for (size_t i = 0; i < got; i++) ing.feed(&buf[i * 188]);
     fclose(in);
-    if (werr || idx == 0 || fflush(out) != 0) { fclose(out); std::filesystem::remove(u8file(outPath), ec); return false; }
+    if (werr || idx == 0 || fflush(out) != 0) { DIAG_ERROR(316224, "Extracting T2-MI PLP %d failed (%s), so the PLP is not played.", plp, werr ? "writing the temporary file failed" : idx == 0 ? "the PLP has no packets" : "the temporary file could not be flushed"); fclose(out); std::filesystem::remove(u8file(outPath), ec); return false; }
     fseek(out, 0, SEEK_SET);
     std::lock_guard<std::mutex> lk(mu_);
     if (f_) fclose(f_);

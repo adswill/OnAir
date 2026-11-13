@@ -9,6 +9,7 @@
 #include <cstring>
 #include <ctime>
 #include <set>
+#include "dect2/common/diag.h"
 
 namespace dect2::iptv {
 
@@ -501,7 +502,7 @@ HlsPlaylist parseHls(const std::string& textIn, const std::string& base) {
     if (text.size() >= 3 && (uint8_t)text[0] == 0xEF && (uint8_t)text[1] == 0xBB && (uint8_t)text[2] == 0xBF) text.erase(0, 3);
     size_t i = 0;
     while (i < text.size() && std::isspace((unsigned char)text[i])) i++;
-    if (text.compare(i, 7, "#EXTM3U") != 0) { pl.error = "this is not an HLS playlist (no #EXTM3U)"; return pl; }
+    if (text.compare(i, 7, "#EXTM3U") != 0) { pl.error = "this is not an HLS playlist (no #EXTM3U)"; DIAG_DEBUG(489689, "The downloaded text does not start with #EXTM3U, so it is not treated as an HLS playlist."); return pl; }
     pl.ok = true;
     HlsVariant pendingV; bool haveV = false;
     double pendDur = 0; bool pendDisc = false, haveInf = false;
@@ -562,7 +563,7 @@ HlsPlaylist parseHls(const std::string& textIn, const std::string& base) {
     (void)seqSet;
     pl.mediaSequence = pl.segments.empty() ? seq : pl.segments.front().seq;
     pl.live = !pl.endList && playlistType != "VOD";
-    if (pl.master && pl.variants.empty() && pl.segments.empty() && pl.media.empty()) { pl.ok = false; pl.error = "the playlist lists no streams"; }
+    if (pl.master && pl.variants.empty() && pl.segments.empty() && pl.media.empty()) { pl.ok = false; pl.error = "the playlist lists no streams"; DIAG_DEBUG(758092, "The HLS master playlist lists no variant streams or renditions, so there is nothing to play from it."); }
     return pl;
 }
 
@@ -622,7 +623,7 @@ bool rtpPayload(const uint8_t* d, size_t n, const uint8_t*& payload, size_t& len
     if (off >= end) return false;
     // payload type 33 is MP2T; dynamic types are accepted when the payload looks like transport stream
     const int pt = d[1] & 0x7F;
-    if (pt != 33 && end - off >= 188 && d[off] != 0x47) return false;
+    if (pt != 33 && end - off >= 188 && d[off] != 0x47) { DIAG_DEBUG_EVERY(160391, 10.0, "An RTP packet of payload type %d does not carry a transport stream, so it is dropped.", pt); return false; }
     payload = d + off; len = end - off;
     if (seq) *seq = (uint16_t)((d[2] << 8) | d[3]);
     return true;

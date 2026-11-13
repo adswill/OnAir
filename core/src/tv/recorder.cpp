@@ -10,6 +10,7 @@
 #include <ctime>
 #include <filesystem>
 #include <set>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -180,9 +181,10 @@ bool RecSchedule::fromJson(const std::string& json) {
 
 bool RecSchedule::save(const std::string& path) const {
     const std::string tmp = path + ".tmp";
-    if (!writeTextFile(tmp, toJson())) return false;
+    if (!writeTextFile(tmp, toJson())) { DIAG_ERROR(175766, "The recording schedule file %s could not be written, so scheduled recordings are not saved.", path.c_str()); return false; }
     std::error_code ec;
     fs::rename(u8file(tmp), u8file(path), ec);
+    if (ec) DIAG_ERROR(116972, "The recording schedule file %s could not be put in place (%s), so scheduled recordings are not saved.", path.c_str(), ec.message().c_str());
     return !ec;
 }
 bool RecSchedule::load(const std::string& path) {
@@ -191,7 +193,8 @@ bool RecSchedule::load(const std::string& path) {
     std::string j; char buf[65536]; size_t n;
     while ((n = fread(buf, 1, sizeof buf, f)) > 0 && j.size() < (32u << 20)) j.append(buf, n);
     fclose(f);
-    return fromJson(j);
+    if (!fromJson(j)) { DIAG_ERROR(952183, "The recording schedule file %s could not be understood, so the saved recording schedule is not loaded.", path.c_str()); return false; }
+    return true;
 }
 
 // ---- file names --------------------------------------------------------------------------------------------------------------------------------
@@ -274,21 +277,22 @@ bool writeSidecar(const RecordingEntry& e) {
     x.set("epg", epgItemToValue(e.epg));
     const std::string path = e.tsPath + ".json";
     const std::string tmp = path + ".tmp";
-    if (!writeTextFile(tmp, dump(x))) return false;
+    if (!writeTextFile(tmp, dump(x))) { DIAG_ERROR(857067, "The recording information file %s could not be written, so the recording has no details file.", path.c_str()); return false; }
     std::error_code ec;
     fs::rename(u8file(tmp), u8file(path), ec);
+    if (ec) DIAG_ERROR(687835, "The recording information file %s could not be put in place (%s), so the recording has no details file.", path.c_str(), ec.message().c_str());
     return !ec;
 }
 
 bool readSidecar(const std::string& path, RecordingEntry& e) {
     using namespace tvjson;
     FILE* f = u8fopen(path, "rb");
-    if (!f) return false;
+    if (!f) { DIAG_DEBUG(633597, "The recording information file %s could not be opened, so that recording is not listed.", path.c_str()); return false; }
     std::string j; char buf[16384]; size_t n;
     while ((n = fread(buf, 1, sizeof buf, f)) > 0 && j.size() < (8u << 20)) j.append(buf, n);
     fclose(f);
     Value x;
-    if (!parse(j, x) || x.type != Value::Obj) return false;
+    if (!parse(j, x) || x.type != Value::Obj) { DIAG_DEBUG(882362, "The recording information file %s is not valid JSON, so that recording is not listed.", path.c_str()); return false; }
     e = RecordingEntry();
     e.sidecarPath = path;
     e.tsPath = path.size() > 5 && path.compare(path.size() - 5, 5, ".json") == 0 ? path.substr(0, path.size() - 5) : path;
@@ -367,7 +371,7 @@ bool exportRecording(const RecordingEntry& e, const std::string& destDir, std::s
     fs::create_directories(u8file(destDir), ec);
     const std::string dst = destDir + "/" + baseName(e.tsPath);
     fs::copy_file(u8file(e.tsPath), u8file(dst), fs::copy_options::overwrite_existing, ec);
-    if (ec) return false;
+    if (ec) { DIAG_ERROR(483287, "Copying the recording %s to %s failed (%s), so it was not exported.", e.tsPath.c_str(), dst.c_str(), ec.message().c_str()); return false; }
     for (auto& s : e.subtitleFiles) fs::copy_file(u8file(s), u8file(destDir + "/" + baseName(s)), fs::copy_options::overwrite_existing, ec);
     if (outPath) *outPath = dst;
     return true;
@@ -450,6 +454,7 @@ void Recorder::startLocked(RecJob& j, int64_t now) {
     s->filter.setStrict(true);
     s->filter.select(j.svc.sid);
     if (!s->writer.open(s->path)) {
+        DIAG_ERROR(207057, "The recording file %s could not be created, so the scheduled recording of %s failed.", s->path.c_str(), j.title.c_str());
         sched_.setState(j.id, RecJob::Failed, "cannot write " + s->path);
         j.state = RecJob::Failed;
         return;
@@ -514,12 +519,12 @@ bool Recorder::tick(int64_t now) {
         std::string err;
         if (!have || j.state == RecJob::Cancelled) { st = RecJob::Cancelled; }
         else if (now >= j.effEnd()) st = RecJob::Done;
-        else if (s.writer.failed()) { st = RecJob::Failed; err = "writing to the disk failed"; }
-        else if (cfg_.lossStopSec > 0 && wall - s.lastData > cfg_.lossStopSec) { st = RecJob::Failed; err = "signal lost"; }
+        else if (s.writer.failed()) { st = RecJob::Failed; err = "writing to the disk failed"; DIAG_ERROR(211642, "The recording %s stopped because writing to the disk failed.", s.path.c_str()); }
+        else if (cfg_.lossStopSec > 0 && wall - s.lastData > cfg_.lossStopSec) { st = RecJob::Failed; err = "signal lost"; DIAG(980213, "The recording %s stopped because no data arrived for %.0f seconds.", s.path.c_str(), cfg_.lossStopSec); }
         else {
             std::error_code ec;
             const auto sp = fs::space(u8file(cfg_.dir), ec);
-            if (!ec && sp.available < cfg_.minFreeBytes) { st = RecJob::Failed; err = "the disk is nearly full"; }
+            if (!ec && sp.available < cfg_.minFreeBytes) { st = RecJob::Failed; err = "the disk is nearly full"; DIAG_ERROR(494391, "The recording %s stopped because the disk has less free space than the configured minimum.", s.path.c_str()); }
         }
         if (st != RecJob::Recording) {
             finishLocked(s, st == RecJob::Cancelled ? RecJob::Done : st, err);
@@ -534,6 +539,7 @@ bool Recorder::tick(int64_t now) {
         if (j.state != RecJob::Scheduled || j.reminder || j.series) continue;
         if (now < j.effStart() || now >= j.effEnd()) continue;
         if (std::any_of(conf.begin(), conf.end(), [&](const RecConflict& c) { return c.id == j.id; })) {
+            DIAG(260755, "The scheduled recording of %s cannot start because another multiplex is already being recorded and there are not enough tuners.", j.title.c_str());
             sched_.setState(j.id, RecJob::Failed, "not enough tuners: another multiplex is being recorded at the same time");
             changed = true;
             continue;
