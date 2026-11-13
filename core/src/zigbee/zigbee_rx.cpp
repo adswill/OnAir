@@ -128,31 +128,9 @@ struct ZigbeeReceiver::Impl {
     }
     void bpskFrame(const Bpsk154Demod::Result& r) {
         const std::vector<uint8_t>& psdu = r.psdu;
-        auto crcOk = [](const std::vector<uint8_t>& p) {
-            return zigbee::crc16(p.data(), p.size() - 2) == (uint16_t)(p[p.size() - 2] | p[p.size() - 1] << 8);
-        };
-        if (!crcOk(psdu)) {
-            // 4.1: the kChase PSDU symbols with the smallest lead over their second choice (and less than 30 % of the score) are tried with that second choice
-            // in every combination, each checked by the FCS (15 extra checks of a 16-bit CRC: a wrong frame passes about once in 4000 failed frames)
-            bool fixed = false;
-            if (softOn.load(std::memory_order_relaxed) && !alt.empty()) {
-                constexpr int kChase = 4;
-                std::vector<Alt> w = alt;
-                const size_t k = std::min<size_t>(kChase, w.size());
-                std::partial_sort(w.begin(), w.begin() + (ptrdiff_t)k, w.end(), [](const Alt& a, const Alt& b) { return a.margin < b.margin; });
-                size_t kk = 0;
-                while (kk < k && w[kk].margin < 0.3) kk++;
-                for (uint32_t m = 1; m < (1u << kk) && !fixed; m++) {
-                    std::vector<uint8_t> q = psdu;
-                    for (size_t j = 0; j < kk; j++) if ((m >> j) & 1) {
-                        const size_t bi = (size_t)(w[j].nib >> 1);
-                        if (w[j].nib & 1) q[bi] = (uint8_t)((q[bi] & 0x0F) | (w[j].sym << 4)); else q[bi] = (uint8_t)((q[bi] & 0xF0) | w[j].sym);
-                    }
-                    if (crcOk(q)) { psdu = q; fixed = true; }
-                }
-            }
-            if (!fixed) { tel.blocksBad++; return; }
-        }
+        const uint16_t calc = zigbee::crc16(psdu.data(), psdu.size() - 2);
+        const uint16_t fcs = (uint16_t)(psdu[psdu.size() - 2] | psdu[psdu.size() - 1] << 8);
+        if (calc != fcs) { tel.blocksBad++; return; }
         snrAvg = tel.blocksOk == 0 ? r.snrDb : 0.8 * snrAvg + 0.2 * r.snrDb;
         tel.cfoHz = r.cfoHz;
         accept(psdu, r.rssiDb, r.endSample / outRate);
