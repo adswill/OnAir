@@ -56,7 +56,7 @@ def main():
         for o in oses:
             line += [cell(o, i, "all"), cell(o, i, "busiest"), cell(o, i, "noise_all"), cell(o, i, "noise_busiest")]
             r = now[o].get(i)
-            if r and ((num(r, "all") or 0) > 1.0 or (num(r, "busiest") or 0) > 1.0):
+            if r and any((num(r, k) or 0) > 1.0 for k in ("all", "busiest", "noise_all", "noise_busiest")):
                 hi = True
         line += [any_r["blocks"] + ("" if any_r["locked"] == "1" else " (no lock)") + (" " + any_r["err"].strip() if any_r["err"].strip() else ""),
                  any_r["busiest_name"], any_r["top"]]
@@ -64,7 +64,7 @@ def main():
             over.append(i)
         print("| " + " | ".join(s.replace("|", "\\|") for s in line) + " |")
     print()
-    print(f"{len(ids)} modes; above 1.0 CPU s per s of signal (all threads or busiest, either OS): {len(over)}")
+    print(f"{len(ids)} modes; above 1.0 CPU s per s of signal (all threads or busiest, signal or noise alone, either OS): {len(over)}")
     print(", ".join(over))
 
 if __name__ == "__main__":

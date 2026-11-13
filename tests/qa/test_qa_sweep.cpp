@@ -923,6 +923,7 @@ int main(int argc, char** argv) {
     if (!stage.empty()) {
         const Entry* en = find(stId);
         if (!en) return 2;
+        if (stage == "--gen" && stRate <= 0) stRate = en->rate;   // 0: the mode's default rate
         if (stage == "--gentx") { printf("TXRATE %.4f\n", writeTx(*en, stSecs, stFile)); fflush(stdout); _exit(0); }
         return stage == "--gen" ? genChild(*en, stRate, stSecs, snrDb, stFile) : runChild(*en, stRate, stSecs, stFile, stCond == "clean", stCond == "rate" || stCond == "rpos" || stCond == "rnoise");
     }
