@@ -11,7 +11,7 @@ class ModeDef(val index: Int, val family: Int, val group: Int, val accent: Long,
 }
 
 object Modes {
-    val groupColors = longArrayOf(0xFF5CBCDC, 0xFF5CD294, 0xFF84A0F0, 0xFF50AAD2, 0xFFBA96EC, 0xFF96CE68, 0xFFE2A870, 0xFFD6CE60, 0xFF6ED6C4, 0xFF7896E6, 0xFFDA82D6, 0xFFEC808C, 0xFFCCB084, 0xFF96A2B2, 0xFF96AAD2, 0xFFECA054, 0xFF78C8AA)
+    val groupColors = longArrayOf(0xFF5FC4DD, 0xFF73C9A3, 0xFF98B3F5, 0xFF77BDEE, 0xFFCFA0DE, 0xFF95C485, 0xFFEC9D88, 0xFFB4BB6F, 0xFF63C8C2, 0xFFB6A8EF, 0xFFE29AC4, 0xFFEC99A6, 0xFFCCB174, 0xFFAFB5BC, 0xFFA9B2DB, 0xFFE9A365, 0xFF93BFB3)
     const val GROUPS = 17
     /** Every mode, by [ModeDef.index]. Lists shown to the user go through [shown]. */
     val all: List<ModeDef> = listOf(
