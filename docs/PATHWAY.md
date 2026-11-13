@@ -2102,3 +2102,16 @@ Mode count fix: tools/gen_modes_list.py, gen_web_schema.py, android/tools/gen_mo
   Windows window icon (GLFW_ICON). Zoom limits were already in 3.7. Feature ideas listed in docs/ISSUES2-4.0.md.
 - CI: android.yml 43198580494, 43207001215; quick 43215392986 (Linux), 43218158764 (Windows): pass. No phone, radio or Windows desktop used.
 
+
+## 2026-11-13 (feat41-sensTV): TV and DRM sensitivity gaps left by 4.0 (docs/SENSITIVITY-4.1-TV.md)
+- New harness test sens41tv (lock time per trial, 4.0 / 4.1 paths side by side, child processes per receiver setting) and atsc3_cticsi.
+- 50 ppm clock penalty (DVB-T, DVB-T2, DTMB, ATSC): a harness artefact (baseline rows older than the windowed-sinc clock error).
+  sens_sweep now reads 50 ppm = AWGN: 15/15, 14/14, 18/18, 15/15 dB, same lock time (runs 43363616797, 43370655669); baseline rows refreshed.
+- ATSC 3.0 CTI: per-cell channel state through the convolutional de-interleaver; about 1 to 2 dB in a Rayleigh test channel (7 dB: 63/63
+  blocks against 0). Not on a real CTI broadcast (the synthetic transmitter has no CTI).
+- DRM: common-phase-error correction, opt-in (DECT2_DRM_CPE=1): 1 Hz phase noise 64-QAM none -> 24 dB, 16-QAM combined 18 -> 12 dB;
+  off by default because drm_smooth fails with it (mode E, ITU channels 5/6). Harness 1 Hz linewidth is about 25 dB worse than an SDR
+  oscillator. recIf no longer reads outside the ring for negative symbol indices (ASan).
+- Not improved, measured and reverted: ATSC 1.0 TU6 (segment sync lost in every fade; LMS step, pilot loop and fade coasting tried),
+  ISDB-T first-order ICI removal (never switched on; the limit at 50 to 70 Hz is the pilot time interpolation).
+- 0 false decodes in all noise-only runs. Simulated signals only. CI: quick runs listed in the doc.
