@@ -6,7 +6,7 @@
 # ---------- full: the Selkies desktop with OnAir installed, minus what no OnAir user needs ----------
 FROM ghcr.io/linuxserver/baseimage-selkies:ubuntunoble AS full
 
-ARG ONAIR_VERSION=4.0.0
+ARG ONAIR_VERSION=4.0.1
 ARG TARGETARCH
 
 # The release .deb: it carries its own FFmpeg and the libraries of the radios OnAir drives itself; the SoapySDR modules add the rest.

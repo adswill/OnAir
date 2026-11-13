@@ -99,6 +99,11 @@ bool rtmpSupported(std::string& why) {
     void* it = nullptr;
     while (const char* p = avio_enum_protocols(&it, 0)) proto = proto || std::string_view(p) == "rtmp";
     if (!proto) { why = "this FFmpeg was built without the RTMP protocol (network support)"; return false; }
+    // an FFmpeg built with librtmp (MSYS2's, for one) uses it for rtmp://, and librtmp cannot listen: no server, every sender is refused
+    if (const char* cfg = avformat_configuration(); cfg && std::string_view(cfg).find("--enable-librtmp") != std::string_view::npos) {
+        why = "this FFmpeg uses librtmp for RTMP, which cannot act as a server (OnAir's own FFmpeg builds use FFmpeg's RTMP)";
+        return false;
+    }
     if (!av_find_input_format("flv")) { why = "this FFmpeg was built without the FLV demuxer"; return false; }
     return true;
 }
