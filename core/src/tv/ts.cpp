@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -30,13 +31,49 @@ const char* TsService::typeName() const {
 
 static void buildPatPacket(int tsid, int sid, int pmtPid, int& cc, uint8_t* out) { tsp::patPacket(tsid, sid, pmtPid, cc, out); cc++; }
 
+// A PMT whose PIDs the demuxer found on other PIDs (TsStream::declaredPid): written again with the PIDs the packets use, so a player that reads
+// the PMT itself (FFmpeg, a recording opened elsewhere) finds the streams. Only a section that fits in this packet is changed. The version number
+// moves on by 16 so that a demuxer that already read the declared table reads this one.
+static void patchPmtPids(uint8_t* p, const std::vector<std::pair<int, int>>& remap) {
+    if (remap.empty() || !(p[1] & 0x40) || !(p[3] & 0x10)) return;
+    int off = 4;
+    if (p[3] & 0x20) off += 1 + p[4];
+    if (off >= 188) return;
+    off += 1 + p[off];
+    if (off + 16 > 188) return;
+    uint8_t* s = p + off;
+    if (s[0] != 0x02) return;
+    const int sl = ((s[1] & 0x0F) << 8) | s[2];
+    if (sl < 13 || off + 3 + sl > 188) return;
+    const int end = 3 + sl - 4;
+    const uint32_t have = ((uint32_t)s[end] << 24) | ((uint32_t)s[end + 1] << 16) | ((uint32_t)s[end + 2] << 8) | s[end + 3];
+    if (mpegCrc32(s, end) != have) return;
+    auto map = [&](uint8_t* hi) {
+        const int pid = ((hi[0] & 0x1F) << 8) | hi[1];
+        for (auto& r : remap) if (r.first == pid) { hi[0] = (uint8_t)((hi[0] & 0xE0) | ((r.second >> 8) & 0x1F)); hi[1] = (uint8_t)(r.second & 0xFF); return true; }
+        return false;
+    };
+    bool changed = map(s + 8);   // PCR_PID
+    const int pil = ((s[10] & 0x0F) << 8) | s[11];
+    for (int i = 12 + pil; i + 5 <= end;) {
+        changed = map(s + i + 1) || changed;
+        i += 5 + (((s[i + 3] & 0x0F) << 8) | s[i + 4]);
+    }
+    if (!changed) return;
+    s[5] = (uint8_t)((s[5] & 0xC1) | (((((s[5] >> 1) & 31) + 16) & 31) << 1));
+    const uint32_t c = mpegCrc32(s, end);
+    s[end] = (uint8_t)(c >> 24); s[end + 1] = (uint8_t)(c >> 16); s[end + 2] = (uint8_t)(c >> 8); s[end + 3] = (uint8_t)c;
+}
+
 bool ServiceFilter::process(const uint8_t* in, const TsSnapshot* snap, uint8_t* out) {
     if (sid_ < 0) { memcpy(out, in, 188); return true; }
-    if (snap && (patSid_ != sid_ || pass_.empty())) {
+    if (snap) {   // every time: the PIDs of a service can change (a new PMT, or a PID the demuxer found on another PID than declared)
         for (auto& sv : snap->services) if (sv.id == sid_ && sv.havePmt) {
-            pass_ = {sv.pmtPid, sv.pcrPid};
+            pass_.clear(); remap_.clear();
+            pass_.push_back(sv.pmtPid); pass_.push_back(sv.pcrPid);
+            if (sv.declaredPcrPid >= 0) remap_.push_back({sv.declaredPcrPid, sv.pcrPid});
             if (!strict_) { pass_.push_back(0x11); pass_.push_back(0x12); pass_.push_back(0x14); }
-            for (auto& st : sv.streams) pass_.push_back(st.pid);
+            for (auto& st : sv.streams) { pass_.push_back(st.pid); if (st.declaredPid >= 0) remap_.push_back({st.declaredPid, st.pid}); }
             patSid_ = sv.id; patPmt_ = sv.pmtPid; patTsid_ = snap->tsid;
         }
     }
@@ -47,7 +84,11 @@ bool ServiceFilter::process(const uint8_t* in, const TsSnapshot* snap, uint8_t* 
         buildPatPacket(patTsid_, patSid_, patPmt_, patCc_, out);
         return true;
     }
-    for (int p : pass_) if (p == pid) { memcpy(out, in, 188); return true; }
+    for (int p : pass_) if (p == pid) {
+        memcpy(out, in, 188);
+        if (pid == patPmt_) patchPmtPids(out, remap_);
+        return true;
+    }
     return false;
 }
 
@@ -382,8 +423,21 @@ TsSnapshot TsDemux::snapshot() const {
     if (rcs_.active()) sn.rcs = std::make_shared<const RcsView>(rcs_.view());
     { SiSnapshot si = si_.snapshot(); if (!si.empty()) sn.si = std::make_shared<const SiSnapshot>(std::move(si)); }
     std::map<int, std::string> label;
+    // DPRK DVB-T2 (issue 498): the PMTs give every elementary stream PID inverted (XOR 0x1FFF): video 0x1F37 for packets on 0x00C8. A declared
+    // PID that carries next to nothing while its inverse carries a stream (and is not declared itself) is read as the inverse.
+    std::set<int> declared;
+    for (auto& kv : services_) for (auto& st : kv.second.streams) declared.insert(st.pid);   // (not the PCR PIDs: on those muxes the PCR PID is the real video PID)
+    auto packetsOn = [&](int pid) -> uint64_t { auto it = pids_.find(pid); return it == pids_.end() ? 0 : it->second.packets; };
+    auto inverse = [&](int pid) -> int {
+        const int inv = pid ^ 0x1FFF;
+        if (pid < 0x20 || pid >= 0x1FFF || inv < 0x20 || inv >= 0x1FFF || declared.count(inv)) return -1;
+        const uint64_t have = packetsOn(pid), there = packetsOn(inv);
+        return there >= 16 && have * 20 < there ? inv : -1;
+    };
     for (auto& kv : services_) {
         TsService sv = kv.second;
+        for (auto& st : sv.streams) { const int inv = inverse(st.pid); if (inv >= 0) { st.declaredPid = st.pid; st.pid = inv; } }
+        { const int inv = inverse(sv.pcrPid); if (inv >= 0) { sv.declaredPcrPid = sv.pcrPid; sv.pcrPid = inv; } }
         // scrambled: what the streams' packets say, not the CA signalling (a free channel can carry CA descriptors or free_CA_mode)
         sv.scrambled = false;
         CaEvidence ev; ev.flagged = sv.caFlag;
@@ -392,6 +446,7 @@ TsSnapshot TsDemux::snapshot() const {
             if (it != pids_.end()) { st.kbps = it->second.kbps; st.scrambled = it->second.scrambled; st.scrPackets = it->second.scrWin; st.clrPackets = it->second.clrWin; }
             if (st.kind == "video" || st.kind == "audio") { CaStreamEvidence se; se.video = st.kind == "video"; se.scrambledPackets = st.scrPackets; se.clearPackets = st.clrPackets; ev.streams.push_back(se); }
             label[st.pid] = (sv.name.empty() ? "service " + std::to_string(sv.id) : sv.name) + " " + st.kind + " (" + st.codec + ")";
+            if (st.declaredPid >= 0) { char b[40]; snprintf(b, sizeof b, " [PMT says 0x%04X]", st.declaredPid); label[st.pid] += b; }
         }
         sv.caState = classifyCa(ev);
         sv.scrambled = sv.caState == CaState::Scrambled;

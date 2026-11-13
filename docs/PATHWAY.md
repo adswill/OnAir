@@ -2182,3 +2182,8 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
   to More): 640 x 480 panels 253 -> 330 px at Default. Tests: test_touch controlSize(); de/lt strings added (unreviewed).
 ## 2026-11-13: Mode Builder Signal view (feat41-mbplots)
 Receiver::signalView() plus a Signal tab for custom modes: histogram (OOK, ASK, FSK, GFSK, GMSK) or constellation with EVM (PSK), clusters, thresholds, SNR, measured deviation and offset, Advanced button to write them to the definition. Test mb_signal; docs/MODEBUILDER-PLOTS-4.1.md.
+
+## 2026-11-13 (feat41-t2special): DPRK DVB-T2 and T2-MI recordings (#498, docs/T2-SPECIAL-4.1.md)
+- DPRK 554 MHz mux: clear H.264 + MPEG-1 Layer II, but every ES PID in the PMTs is inverted (XOR 0x1FFF), plus a 101-byte tag 0x54 program descriptor of unknown meaning. TsDemux::snapshot now maps a silent declared PID to its busy, undeclared inverse (TsStream::declaredPid keeps the PMT value); ServiceFilter passes the real PIDs and rewrites the PMT (new CRC, version +16) for FFmpeg and recordings.
+- Malaysia 602 MHz feed: T2-MI on PID 0x1000, no outer PCR, PLP 0 in HEM + ISSY carrying Channel 5 + Suria. TsFileSource::open now detects T2-MI, rebuilds the busiest PLP into a temporary file with its own PCR map, and the playback bar has a PLP menu.
+- Tests ts_pid_invert and t2mi_file (simulated). Samples kept out of git.

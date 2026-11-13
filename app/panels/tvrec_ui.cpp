@@ -296,8 +296,26 @@ void startFile(App& a, const RecordingEntry& e) {
             a.engine.player().select(-1);
             t.pSel = false;
             a.engine.teletext().reset();
+            if (t.file.t2mi()) { char b[96]; snprintf(b, sizeof b, "playback: T2-MI on PID 0x%X, playing PLP %d of %zu", t.file.t2miPid(), t.file.t2miPlp(), t.file.t2miPlps().size()); a.engine.log(b); }
             t.feeder.start(&t.file, 0, playSink);
         } else t.msg = "cannot open " + path;
+        t.loading = false;
+    });
+}
+
+// a T2-MI recording: play another PLP (the file source rebuilds its transport stream, one pass over the recording)
+void switchT2miPlp(int plp) {
+    TvRec& s = S();
+    if (s.loading) return;
+    s.loading = true;
+    if (s.loader.joinable()) s.loader.join();
+    s.loader = dect2::namedThread("onair-tvload", [plp] {
+        TvRec& t = S();
+        t.feeder.stop();
+        if (!t.file.selectT2miPlp(plp)) t.msg = "cannot rebuild PLP " + std::to_string(plp);
+        { std::lock_guard<std::mutex> lk(t.pmu); t.pdemux.reset(); t.psnap = TsSnapshot(); t.psnapT = 0; }
+        resetPlayerLocked();
+        t.feeder.start(&t.file, 0, playSink);
         t.loading = false;
     });
 }
@@ -655,6 +673,17 @@ void tvPlaybackBar(App& a) {
         ImGui::TextDisabled("%d:%02d / %d:%02d%s", (int)(pos - t0) / 60, (int)(pos - t0) % 60, (int)dur / 60, (int)dur % 60, s.feeder.atEnd() ? "  (end)" : "");
         ImGui::SameLine();
         if (ImGui::Button(tr("Stop"))) stopPlayback(a, true);
+        if (s.file.t2mi()) {   // a modulator feed (T2-MI): the PLP whose transport stream plays
+            ImGui::SameLine();
+            const int cur = s.file.t2miPlp();
+            char lb[32]; snprintf(lb, sizeof lb, "PLP %d", cur);
+            ImGui::SetNextItemWidth(110 * gUi);
+            if (ImGui::BeginCombo("##t2miplp", lb)) {
+                for (int p : s.file.t2miPlps()) { char b[24]; snprintf(b, sizeof b, "PLP %d", p); if (ImGui::Selectable(b, p == cur) && p != cur) switchT2miPlp(p); }
+                ImGui::EndCombo();
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("T2-MI on PID 0x%X: the transport stream of this PLP plays", s.file.t2miPid());
+        }
         // sidecar subtitles: show the current cue under the controls
     }
     (void)pl;

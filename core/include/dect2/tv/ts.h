@@ -10,6 +10,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace dect2 {
@@ -25,6 +26,7 @@ struct TsSubEntry {
 
 struct TsStream {
     int pid = 0, streamType = 0;
+    int declaredPid = -1;  // the PID the PMT gave, when the packets come on another one (DPRK DVB-T2, issue 498: every PID inverted, XOR 0x1FFF); -1: as declared
     std::vector<TsSubEntry> subs;
     std::string codec;     // "H.264", "HEVC", "AAC", "AC-3", ...
     std::string kind;      // "video", "audio", "subtitles", "teletext", "data"
@@ -39,6 +41,7 @@ struct TsService {
     std::string name, provider;
     int type = 0;            // DVB service type
     int pmtPid = 0, pcrPid = 0;
+    int declaredPcrPid = -1;  // as TsStream::declaredPid, for the PCR PID
     bool caFlag = false;     // free_CA_mode or CA descriptors present (signalling only: many free channels carry them, e.g. on DTMB in China)
     bool scrambled = false;  // its elementary streams arrive scrambled (transport_scrambling_control of their payload packets): what to show
     CaState caState = CaState::Unknown;   // from the packets of its streams (classifyCa); the app adds the player's decode result
@@ -134,8 +137,8 @@ private:
 // Selects one service from a multiplex: passes its PMT/ES/PCR PIDs and SI, and replaces the PAT with a single-program one.
 class ServiceFilter {
 public:
-    void select(int serviceId) { sid_ = serviceId; pass_.clear(); patSid_ = -1; }
-    void setStrict(bool on) { strict_ = on; pass_.clear(); patSid_ = -1; }   // on: only the service's own PIDs (PAT, PMT, PCR, streams), no SDT/NIT/EIT (for recordings)
+    void select(int serviceId) { sid_ = serviceId; pass_.clear(); remap_.clear(); patSid_ = -1; }
+    void setStrict(bool on) { strict_ = on; pass_.clear(); remap_.clear(); patSid_ = -1; }   // on: only the service's own PIDs (PAT, PMT, PCR, streams), no SDT/NIT/EIT (for recordings)
     int selected() const { return sid_; }
     // Returns true if the packet should be forwarded; `out` receives the (possibly rewritten) packet.
     bool process(const uint8_t* in, const TsSnapshot* snap, uint8_t* out);
@@ -143,6 +146,7 @@ public:
 private:
     int sid_ = -1;
     std::vector<int> pass_;
+    std::vector<std::pair<int, int>> remap_;   // declared PID -> the PID the packets use (patched into the PMT)
     bool strict_ = false;
     int patCc_ = 0, patSid_ = -1, patPmt_ = 0, patTsid_ = 0;
 };

@@ -2,9 +2,12 @@
 #include "dect2/tv/playback.h"
 #include "dect2/tv/ts_record.h"
 #include "dect2/common/u8file.h"
+#include "dect2/t2/t2mi_in.h"
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstring>
+#include <filesystem>
 
 namespace dect2 {
 
@@ -16,6 +19,30 @@ bool TsFileSource::open(const std::string& path) {
     close();
     FILE* f = u8fopen(path, "rb");
     if (!f) return false;
+    {   // T2-MI: a modulator feed in the first 64k packets (12 MB) is played as the transport stream of one of its PLPs
+        T2miIngest probe;
+        std::vector<uint8_t> pb(188 * 4096);
+        uint64_t seen = 0;
+        size_t got;
+        while (seen < 65536 && (got = fread(pb.data(), 188, 4096, f)) > 0) {
+            for (size_t i = 0; i < got; i++) probe.feed(&pb[i * 188]);
+            seen += got;
+        }
+        if (probe.found()) {
+            fclose(f);
+            int best = -1;
+            uint64_t most = 0;
+            for (int p : probe.plps()) if (best < 0 || probe.packets(p) > most) { best = p; most = probe.packets(p); }
+            {
+                std::lock_guard<std::mutex> lk(mu_);
+                path_ = path; t2miPid_ = probe.pid(); plps_ = probe.plps();
+            }
+            if (best >= 0 && buildInner(best)) return true;
+            close();
+            return false;
+        }
+        fseek(f, 0, SEEK_SET);
+    }
     fseek(f, 0, SEEK_END);
 #ifdef _WIN32
     const long long sz = _ftelli64(f);
@@ -46,6 +73,62 @@ void TsFileSource::close() {
     std::lock_guard<std::mutex> lk(mu_);
     if (f_) { fclose(f_); f_ = nullptr; }
     n_ = 0; tl_.clear();
+    if (!inner_.empty()) { std::error_code ec; std::filesystem::remove(u8file(inner_), ec); inner_.clear(); }
+    path_.clear(); t2miPid_ = t2miPlp_ = -1; plps_.clear();
+}
+
+bool TsFileSource::selectT2miPlp(int plp) {
+    {
+        std::lock_guard<std::mutex> lk(mu_);
+        if (t2miPid_ < 0) return false;
+        if (plp == t2miPlp_) return true;
+    }
+    return buildInner(plp);
+}
+
+// One pass over the outer file: the T2-MI packets of the PID found by open() become the transport stream of `plp`, written to a temporary file
+// with its own PCR time map. The file in use is swapped only when the new one is complete.
+bool TsFileSource::buildInner(int plp) {
+    std::string src, dir;
+    {
+        std::lock_guard<std::mutex> lk(mu_);
+        src = path_; dir = scratch_;
+    }
+    FILE* in = u8fopen(src, "rb");
+    if (!in) return false;
+    std::error_code ec;
+    const std::filesystem::path d = dir.empty() ? std::filesystem::temp_directory_path(ec) : u8file(dir);
+    static std::atomic<unsigned> seq{0};
+    const unsigned long long stamp = (unsigned long long)std::chrono::steady_clock::now().time_since_epoch().count();
+    const std::string name = "onair_t2mi_" + std::to_string(stamp % 1000000007ULL) + "_" + std::to_string(seq++) + "_plp" + std::to_string(plp) + ".ts";
+    const auto u8p = (d / name).u8string();
+    const std::string outPath(u8p.begin(), u8p.end());
+    FILE* out = u8fopen(outPath, "wb+");
+    if (!out) { fclose(in); return false; }
+    T2miIngest ing;
+    PcrTimeline tl;
+    uint64_t idx = 0;
+    int pcrPid = -1;
+    bool werr = false;
+    ing.setSink([&](int p, const uint8_t* pk) {
+        if (p != plp || werr) return;
+        double pcr;
+        const int pid = ((pk[1] & 0x1F) << 8) | pk[2];
+        if ((pcrPid < 0 || pid == pcrPid) && tsPcrSeconds(pk, pcr)) { pcrPid = pid; tl.add(idx, pcr); }
+        if (fwrite(pk, 188, 1, out) != 1) werr = true;
+        idx++;
+    });
+    std::vector<uint8_t> buf(188 * 4096);
+    size_t got;
+    while ((got = fread(buf.data(), 188, 4096, in)) > 0) for (size_t i = 0; i < got; i++) ing.feed(&buf[i * 188]);
+    fclose(in);
+    if (werr || idx == 0 || fflush(out) != 0) { fclose(out); std::filesystem::remove(u8file(outPath), ec); return false; }
+    fseek(out, 0, SEEK_SET);
+    std::lock_guard<std::mutex> lk(mu_);
+    if (f_) fclose(f_);
+    if (!inner_.empty()) std::filesystem::remove(u8file(inner_), ec);
+    f_ = out; n_ = idx; tl_ = std::move(tl); inner_ = outPath; t2miPlp_ = plp; plps_ = ing.plps();
+    return true;
 }
 double TsFileSource::duration() const { std::lock_guard<std::mutex> lk(mu_); return tl_.empty() ? 0 : tl_.lastTime() - tl_.firstTime(); }
 size_t TsFileSource::read(uint64_t idx, uint8_t* out, size_t n) const {
