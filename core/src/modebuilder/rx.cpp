@@ -466,8 +466,8 @@ struct Receiver::Impl {
     }
 
     // the Signal view takes a symbol only while the signal is really there: not in the squelch hang time after a burst, where the
-    // strobes sit on noise (it would smear every cluster), and not while the burst starts
-    bool present() const { return open && sinceOpen > 8 && pwS > noise * std::max(thrLin, 4.0); }
+    // strobes sit on noise (it would smear every cluster), and not while the levels / the carrier loop settle at the start of a burst (24 symbols, PSK 48)
+    bool present() const { return open && sinceOpen > (psk ? 48 : 24) && pwS > noise * std::max(thrLin, 4.0); }
 
     void strobe() {
         const cf y = interp(tNext), ym = interp(tNext - sps / 2);

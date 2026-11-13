@@ -62,6 +62,7 @@ static void testClusters() {
         for (double cfo : {0.0, 400.0}) {
             if (cfo != 0 && !isFsk(d.mod)) continue;   // the PSK loop and the envelope do not care; the FSK offset is measured below
             const SignalView v = viewOf(d, d.mod == Mod::ASK || M == 8 ? 32 : 28, cfo, 12, 5);
+            printf("%s cfo %.0f: %llu symbols, clusters %d, separation %.2f, SNR %.1f dB, EVM %.1f %%, dev %.0f, off %.0f\n", c.name, cfo, (unsigned long long)v.samples, v.clusters, v.separation, v.snrDb, v.evmPct, v.deviationHz, v.offsetHz);
             CHECKM(v.have && v.samples >= 64, "%s cfo %.0f: no view (%llu symbols)", c.name, cfo, (unsigned long long)v.samples);
             CHECKM(v.resolved && v.clusters == M, "%s cfo %.0f: %d clusters, separation %.1f, want %d", c.name, cfo, v.clusters, v.separation, M);
             CHECKM(v.separation >= 4 && v.snrDb > 6, "%s: separation %.1f, SNR %.1f dB", c.name, v.separation, v.snrDb);
