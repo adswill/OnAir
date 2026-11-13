@@ -5,6 +5,7 @@
 // the selected carrier, its neighbour cells, the carriers seen in the spectrum, a scan over a span, and the log. Only what base stations
 // broadcast in the clear to every terminal is shown: nothing is decrypted, no voice, no short data, no subscriber identities.
 #include "../d40/d40_ui.h"
+#include "tetra_map.h"
 #include "../ui/typography.h"
 #include "app.h"
 #include "ui/voice_why_ui.h"
@@ -697,11 +698,12 @@ void tab(App& a) {
     voiceStrip(a);
     if (kit::collapsingSection(tr("Listen"), false)) slotPanel(a);
     kit::modeHeader({46, "TETRA", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("tetrav", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Neighbours"), 1, true}, {tr("Carriers"), 2, true}, {tr("Log"), 3, true}, {tr("Messages"), 5, true}, {tr("Talkgroups"), 6, true}, {tr("Watch"), 90, true}});
+    kit::modeNav("tetrav", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Neighbours"), 1, true}, {tr("Carriers"), 2, true}, {tr("Log"), 3, true}, {tr("Messages"), 5, true}, {tr("Talkgroups"), 6, true}, {tr("Map"), 7, true}, {tr("Watch"), 90, true}});
     if (S.view == 90) { watchui::watchView(a, "tetra"); return; }
     if (S.view == 4) { kit::sessionItems(46, 1, "tetra"); return; }
     if (S.view == 5) { messageView(a); return; }
     if (S.view == 6) { talkgroupView(a); return; }
+    if (S.view == 7) { tetraMap(a); return; }
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to find the TETRA base stations around you"); return; }
     if (S.view == 0) {
         const float h = ImGui::GetContentRegionAvail().y;
