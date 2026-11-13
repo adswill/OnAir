@@ -5,7 +5,7 @@
 #   tools/ui_shots.sh <dect2 binary> <out dir> <WxH> <scale> [quick]
 # Needs an X display (xvfb-run) and Mesa. Each shot runs the app once with its own empty HOME, so no choice leaks into the next shot.
 set -u
-BIN=$(readlink -f "$1"); OUT=$2; SIZE=$3; SCALE=$4; SET=${5:-full}
+BIN=$(readlink -f "$1"); mkdir -p "$2"; OUT=$(cd "$2" && pwd); SIZE=$3; SCALE=$4; SET=${5:-full}
 mkdir -p "$OUT/shots"
 TAG="${SIZE}@${SCALE}"
 
@@ -47,7 +47,7 @@ SHOTS=(
   "t-dvb-history|--pick DVB --tab History"
   "t-dab-ensemble|--pick DAB / DAB+ --tab Ensemble"
   "t-dab-map|--pick DAB / DAB+ --tab Map"
-  "t-vdl4-mode|--pick VDL4 --tab Mode"
+  "t-vdl4-mode|--pick VDL4 --tab Messages"
   "t-adsb-map|--pick ADS-B --tab Map"
   "d-settings|--settings"
   "d-credits|--credits"
@@ -71,6 +71,8 @@ SHOTS=(
 shoot() {   # name, args string
   local name=$1 args=$2 home png
   home=$(mktemp -d); png="$OUT/shots/$name.png"
+  # "keep full drawing" answered, so the software-OpenGL hint does not cover the bottom right of every shot
+  mkdir -p "$home/.config/onair"; echo "lowPowerDraw=2" > "$home/.config/onair/settings.conf"
   # the arguments are one string: split it on " --" so a mode name with spaces stays one argument
   local -a argv=()
   local rest=" $args" part
