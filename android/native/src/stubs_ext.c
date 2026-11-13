@@ -83,6 +83,7 @@ KEEP long avio_close_dyn_buf(void) { return -1; }
 KEEP long avio_closep(void) { return -1; }
 KEEP long avio_context_free(void) { return -1; }
 KEEP void* avio_enum_protocols(void) { return NULL; }
+KEEP const char* avformat_configuration(void) { return ""; }
 KEEP long avio_flush(void) { return -1; }
 KEEP long avio_open(void) { return -1; }
 KEEP long avio_open_dyn_buf(void) { return -1; }
