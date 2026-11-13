@@ -10,6 +10,7 @@
 #include <complex>
 #include <ctime>
 #include <mutex>
+#include <cstdio>
 #include <cstdlib>
 #include "dect2/common/mathconst.h"
 
@@ -42,6 +43,7 @@ const double kLpAlpha = [] { const char* e = std::getenv("DECT2_VDL4_LPA"); cons
 constexpr int kBurstBits = 480;                 // line bits kept after the sync (a burst is at most a few hundred)
 constexpr int kSyncSamples = kOsr * kVdl4SyncBits;
 constexpr int kSyncErr = 6;
+const bool kDebug = std::getenv("DECT2_VDL4_DEBUG") != nullptr;
 constexpr size_t kLineMax = 4 * (size_t)kOsr * (kBurstBits + 64);
 
 struct Chan {
@@ -103,6 +105,7 @@ struct Vdl4Receiver::Impl {
     }
 
     void onFrame(Chan& c, const std::vector<uint8_t>& fr, float snr, float lvl, double cfo) {
+        if (kDebug) std::fprintf(stderr, "vdl4dbg frame f=%.0f len=%zu fcs=%d\n", c.freqHz, fr.size(), (int)vdl4FcsOk(fr.data(), fr.size()));
         if (!vdl4FcsOk(fr.data(), fr.size())) { c.info.bad++; tel.blocksBad++; return; }
         Vdl4BurstFields bf;
         if (!vdl4ParseBurst(fr.data(), fr.size() - 2, bf)) { c.info.bad++; tel.blocksBad++; return; }
@@ -159,6 +162,7 @@ struct Vdl4Receiver::Impl {
         // the neighbours behind the partial-response GMSK pulse)
         for (long k = c.syncEnd + kOsr; k + 1 < (long)c.line.size() && (int)burst.size() < kVdl4DataStartBit + kBurstBits; k += kOsr)
             burst.push_back(c.line[(size_t)k - 1] + c.line[(size_t)k] + c.line[(size_t)k + 1] > c.thr ? 1 : 0);
+        if (kDebug) std::fprintf(stderr, "vdl4dbg burst f=%.0f err=%d thr=%.3f\n", c.freqHz, c.bestErr, c.thr);
         std::vector<uint8_t> data;
         if (vdl4BurstDataBits(burst, data)) {
             for (const auto& fr : vdl4HdlcFrames(data)) onFrame(c, fr, snr, 10.f * std::log10(std::max(pwr, 1e-12f)), c.offHz);
@@ -202,6 +206,7 @@ struct Vdl4Receiver::Impl {
                 const size_t k = (size_t)(n - 2 - (long)kOsr * j);
                 err += (c.line[k - 1] + c.line[k] + c.line[k + 1] > thr3 ? 1 : 0) != want;
             }
+            if (kDebug && err <= kSyncErr && c.lockLeft == 0) std::fprintf(stderr, "vdl4dbg sync f=%.0f n=%ld err=%d chp/floor=%.1f\n", c.freqHz, n, err, chp / std::max(c.floor, 1e-12f));
             if (c.lockLeft == 0 && err <= kSyncErr && chp > 2.5f * c.floor) {   // squelch: noise alone must not start a lock
                 c.lockLeft = 5 * kOsr; c.bestErr = 99; }
             if (c.lockLeft > 0) {
