@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "atsc3_synth_resampler.h"
 #include "dect2/dsp/gen_util.h"
 #include <algorithm>
@@ -15,7 +16,10 @@ double besselI0(double x) { return dect2::window::besselI0(x, 40, 0.0); }
 }
 
 bool FastResampler::configure(double inRate, double outRate) {
-    if (inRate <= 0 || outRate < 0.9 * inRate || outRate > 4 * inRate) return false;
+    if (inRate <= 0 || outRate < 0.9 * inRate || outRate > 4 * inRate) {
+        DIAG_DEBUG(970625, "The ATSC 3.0 transmit resampler refused %.0f to %.0f samples per second (the output must be 0.9 to 4 times the input), so the rate is not converted.", inRate, outRate);
+        return false;
+    }
     step_ = inRate / outRate;
     pass_ = std::fabs(outRate / inRate - 1.0) < 1e-12;
     constexpr int half = kTaps / 2;

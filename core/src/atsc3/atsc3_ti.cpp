@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/atsc3/atsc3_ti.h"
 #include "dect2/atsc3/atsc3_bb.h"
 #include <algorithm>
@@ -11,8 +12,9 @@ namespace atsc3 {
 
 int ctiRows(int code, bool extended) {
     static const int rows[4] = {512, 724, 887, 1024};   // Table 9.24: 50, 100, 150 and 200 ms
-    if (extended) return code == 2 ? 1254 : code == 3 ? 1448 : 0;
-    return code >= 0 && code < 4 ? rows[code] : 0;
+    const int r = extended ? (code == 2 ? 1254 : code == 3 ? 1448 : 0) : (code >= 0 && code < 4 ? rows[code] : 0);
+    if (r == 0) DIAG_DEBUG_EVERY(234863, 10.0, "ATSC 3.0 convolutional time interleaver depth code %d%s is not defined, so the PLP that uses it is not de-interleaved.", code, extended ? " (extended)" : "");
+    return r;
 }
 
 CtiInterleaver::CtiInterleaver(int rows, int eta, const std::vector<cf32>& cons, int startRow) : rows_(rows), row_(startRow % rows), lines_(rows) {

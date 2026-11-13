@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/atsc3/atsc3_alp.h"
 #include <algorithm>
 #include "dect2/common/endian.h"
@@ -191,7 +192,10 @@ bool alpParse(const std::vector<uint8_t>& a, std::vector<AlpPacket>& out, bool* 
     const int n = (int)a.size();
     if (isSeg) *isSeg = false;
     Hdr h = readHeader(b, n);
-    if (!h.ok) return false;
+    if (!h.ok) {
+        DIAG_DEBUG_EVERY(622596, 5.0, "An ATSC 3.0 ALP packet of %d bytes has an invalid header, so it is dropped.", n);
+        return false;
+    }
     const int type = b[0] >> 5;
     if (type == 7) {
         int numts = (b[0] >> 1) & 15;
@@ -201,7 +205,10 @@ bool alpParse(const std::vector<uint8_t>& a, std::vector<AlpPacket>& out, bool* 
         const bool hdm = (b[0] & 1) && (b[1] & 0x80);
         // null packets (DNP) are not re-inserted here
         const uint8_t* t = b + h.header;
-        if (n < h.header + h.payload) return false;
+        if (n < h.header + h.payload) {
+            DIAG_DEBUG_EVERY(290864, 5.0, "An ATSC 3.0 ALP transport stream packet is shorter (%d bytes) than its header says (%d bytes), so it is dropped.", n, h.header + h.payload);
+            return false;
+        }
         uint8_t h1 = 0, h2 = 0, h3 = 0;   // the first packet's header, repeated by the others when header deletion is on
         for (int i = 0; i < numts; i++) {
             p.data.push_back(0x47);
@@ -229,15 +236,38 @@ bool alpParse(const std::vector<uint8_t>& a, std::vector<AlpPacket>& out, bool* 
     AlpPacket p;
     p.type = type;
     if (type == AlpSignaling && first) {
-        if (pos + 5 > n) return false;
+        if (pos + 5 > n) {
+            DIAG_DEBUG_EVERY(311803, 5.0, "An ATSC 3.0 ALP signalling packet is too short for its signalling header, so it is dropped.");
+            return false;
+        }
         p.signalingType = b[pos]; p.signalingExt = (b[pos + 1] << 8) | b[pos + 2]; p.signalingVersion = b[pos + 3];
         p.signalingFormat = b[pos + 4] >> 6; p.signalingEncoding = (b[pos + 4] >> 4) & 3;
         pos += 5;
     }
-    if (type == AlpTypeExt && first) { if (pos + 2 > n) return false; p.extendedType = (b[pos] << 8) | b[pos + 1]; pos += 2; }
-    if (sif) { if (pos + 1 > n) return false; p.sid = b[pos++]; }
-    if (hef) { if (pos + 2 > n) return false; pos += 2 + b[pos + 1] + 1; }
-    if (pos > n) return false;
+    if (type == AlpTypeExt && first) {
+        if (pos + 2 > n) {
+            DIAG_DEBUG_EVERY(113063, 5.0, "An ATSC 3.0 ALP extension packet is too short for its extended type, so it is dropped.");
+            return false;
+        }
+        p.extendedType = (b[pos] << 8) | b[pos + 1]; pos += 2; }
+    if (sif) {
+        if (pos + 1 > n) {
+            DIAG_DEBUG_EVERY(966691, 5.0, "An ATSC 3.0 ALP packet is too short for its sub-stream identifier, so it is dropped.");
+            return false;
+        }
+        p.sid = b[pos++];
+    }
+    if (hef) {
+        if (pos + 2 > n) {
+            DIAG_DEBUG_EVERY(562858, 5.0, "An ATSC 3.0 ALP packet is too short for its header extension, so it is dropped.");
+            return false;
+        }
+        pos += 2 + b[pos + 1] + 1;
+    }
+    if (pos > n) {
+        DIAG_DEBUG_EVERY(176007, 5.0, "The header extension of an ATSC 3.0 ALP packet runs past its end, so the packet is dropped.");
+        return false;
+    }
     const uint8_t* payload = b + pos;
     const int plen = n - pos;
     if (pc == 1 && hm == 0) {   // a segment
@@ -261,7 +291,10 @@ bool alpParse(const std::vector<uint8_t>& a, std::vector<AlpPacket>& out, bool* 
         int at = 0;
         for (size_t i = 0; i <= comp.size(); i++) {
             int l = i < comp.size() ? comp[i] : plen - at;
-            if (l <= 0 || at + l > plen) return false;
+            if (l <= 0 || at + l > plen) {
+                DIAG_DEBUG_EVERY(858566, 5.0, "A concatenated ATSC 3.0 ALP packet announces a component of %d bytes that does not fit in its %d byte payload, so the packet is dropped.", l, plen);
+                return false;
+            }
             AlpPacket q = p;
             q.data.assign(payload + at, payload + at + l);
             out.push_back(q);
@@ -280,12 +313,20 @@ void AlpReassembler::emit(const std::vector<uint8_t>& a, std::vector<AlpPacket>&
     std::vector<AlpPacket> parts;
     bool seg = false, last = false;
     int sn = 0;
-    if (!alpParse(a, parts, &seg, &sn, &last)) { errors_++; return; }
+    if (!alpParse(a, parts, &seg, &sn, &last)) {
+        errors_++;
+        return;
+    }
     if (!seg) { for (auto& p : parts) { out.push_back(p); packets_++; } return; }
     const AlpPacket& s = parts[0];
     if (sn == 0) { inSegments_ = true; segNext_ = 1; segPacket_ = s; }
     else if (inSegments_ && sn == segNext_) { segPacket_.data.insert(segPacket_.data.end(), s.data.begin(), s.data.end()); segNext_++; }
-    else { inSegments_ = false; errors_++; return; }
+    else {
+        DIAG_DEBUG_EVERY(396091, 5.0, "An ATSC 3.0 ALP segment arrived out of order (number %d, expected %d), so the segmented packet it belongs to is dropped.", sn, inSegments_ ? segNext_ : 0);
+        inSegments_ = false;
+        errors_++;
+        return;
+    }
     if (last && inSegments_) { out.push_back(segPacket_); packets_++; inSegments_ = false; }
 }
 

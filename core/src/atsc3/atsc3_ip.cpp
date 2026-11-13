@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/atsc3/atsc3_ip.h"
 #include "dect2/common/inflate.h"
 #include "dect2/common/xmlmini.h"
@@ -37,11 +38,23 @@ uint16_t checksum(const uint8_t* d, int n) {
 
 bool IpReceiver::push(const uint8_t* p, size_t n, UdpDatagram& out) {
     counter_++;
-    if (n < 20 || (p[0] >> 4) != 4) { dropped_++; return false; }
+    if (n < 20 || (p[0] >> 4) != 4) {
+        DIAG_DEBUG_EVERY(913369, 10.0, "An ATSC 3.0 IP packet of %zu bytes is not IPv4, so it is dropped.", n);
+        dropped_++;
+        return false;
+    }
     const int ihl = (p[0] & 15) * 4;
     const int total = (p[2] << 8) | p[3];
-    if (ihl < 20 || (size_t)ihl > n || total < ihl || (size_t)total > n) { dropped_++; return false; }
-    if (p[9] != 17) { dropped_++; return false; }   // UDP only
+    if (ihl < 20 || (size_t)ihl > n || total < ihl || (size_t)total > n) {
+        DIAG_DEBUG_EVERY(595119, 10.0, "An ATSC 3.0 IPv4 packet has an inconsistent header length (%d) or total length (%d of %zu bytes), so it is dropped.", ihl, total, n);
+        dropped_++;
+        return false;
+    }
+    if (p[9] != 17) {   // UDP only
+        DIAG_DEBUG_EVERY(502789, 10.0, "An ATSC 3.0 IPv4 packet carries protocol %d instead of UDP, so it is dropped.", (int)p[9]);
+        dropped_++;
+        return false;
+    }
     const int fragField = (p[6] << 8) | p[7];
     const bool more = fragField & 0x2000;
     const int off = (fragField & 0x1FFF) * 8;
@@ -69,9 +82,17 @@ bool IpReceiver::push(const uint8_t* p, size_t n, UdpDatagram& out) {
         for (auto it = frags_.begin(); it != frags_.end();) { if (counter_ - it->second.age > 2000) it = frags_.erase(it); else ++it; }   // lost fragments
         if (whole.empty()) return false;
     }
-    if (whole.size() < 8) { dropped_++; return false; }
+    if (whole.size() < 8) {
+        DIAG_DEBUG_EVERY(836372, 10.0, "An ATSC 3.0 UDP datagram of %zu bytes is shorter than its 8 byte header, so it is dropped.", whole.size());
+        dropped_++;
+        return false;
+    }
     const int ulen = (whole[4] << 8) | whole[5];
-    if (ulen < 8 || (size_t)ulen > whole.size()) { dropped_++; return false; }
+    if (ulen < 8 || (size_t)ulen > whole.size()) {
+        DIAG_DEBUG_EVERY(607412, 10.0, "An ATSC 3.0 UDP datagram announces a length of %d bytes but only %zu arrived, so it is dropped.", ulen, whole.size());
+        dropped_++;
+        return false;
+    }
     out.srcIp = src; out.dstIp = dst;
     out.srcPort = (whole[0] << 8) | whole[1];
     out.dstPort = (whole[2] << 8) | whole[3];
@@ -162,13 +183,22 @@ std::vector<AeatAlert> parseAeat(const std::string& xml) {
 namespace {
 // one LLS table body (gzip compressed XML for the ids 1 to 5)
 bool llsBody(int tableId, const uint8_t* p, size_t n, LlsTable& t) {
-    if (tableId < 1 || tableId > 5) return false;
+    if (tableId < 1 || tableId > 5) {
+        DIAG_DEBUG_EVERY(804564, 10.0, "An ATSC 3.0 low level signalling table has the unknown id %d, so it is ignored.", tableId);
+        return false;
+    }
     std::vector<uint8_t> x;
-    if (!gunzip(p, n, x, 8u << 20)) return false;
+    if (!gunzip(p, n, x, 8u << 20)) {
+        DIAG_DEBUG_EVERY(530415, 10.0, "The gzip data of ATSC 3.0 low level signalling table %d (%zu bytes) could not be decompressed, so the table is ignored.", tableId, n);
+        return false;
+    }
     t.xml.assign(x.begin(), x.end());
     if (tableId == 1) {
         auto root = parseXml(t.xml);
-        if (!root || root->local() != "SLT") return false;
+        if (!root || root->local() != "SLT") {
+            DIAG_DEBUG_EVERY(314962, 10.0, "An ATSC 3.0 service list table is not valid XML or has another root element, so the service list is not updated.");
+            return false;
+        }
         parseSlt(root, t.slt);
     }
     t.ok = true;

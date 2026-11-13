@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/common/stage_prof.h"
 #include "dect2/atsc3/atsc3_frame.h"
 #include "dect2/atsc3/atsc3_ti.h"
@@ -67,7 +68,10 @@ std::vector<cf32> buildFrame(const FrameSetup& fs, const std::vector<FramePlp>& 
     l1.l1DetailSizeBytes = sizeBytes;
     l1.l1DetailTotalCells = l1DetailCells(sizeBytes, fs.l1DetailMode);
     const int prefix = preambleLeftoverCells(fs.bs, l1);
-    if (prefix < 0) return {};
+    if (prefix < 0) {
+        DIAG_DEBUG(524624, "An ATSC 3.0 frame cannot be built: the preamble leaves no room for the L1 signalling, so no frame is produced.");
+        return {};
+    }
     SubframeParams sp = subframeFrom(l1, d);
     sp.freqInterleaver = fs.freqInterleaver; sp.sbsNullCells = fs.sbsNullCells;
     const long total = subframeTotalCells(sp, prefix);
@@ -77,10 +81,16 @@ std::vector<cf32> buildFrame(const FrameSetup& fs, const std::vector<FramePlp>& 
     for (size_t i = 0; i < plps.size(); i++) {
         BicmConfig bc = plpBicm(plps[i]);
         Bicm bicm(bc);
-        if (!bicm.ok()) return {};
+        if (!bicm.ok()) {
+            DIAG_DEBUG_EVERY(185531, 10.0, "An ATSC 3.0 frame cannot be built: PLP %d uses a modulation and code rate combination that is not supported, so no frame is produced.", plps[i].id);
+            return {};
+        }
         std::vector<cf32> cells;
         for (auto& pk : plps[i].bbPackets) {
-            if ((int)pk.size() * 8 != bicm.kPayload()) return {};
+            if ((int)pk.size() * 8 != bicm.kPayload()) {
+                DIAG_DEBUG_EVERY(752567, 10.0, "An ATSC 3.0 frame cannot be built: a baseband packet of PLP %d has %zu bytes but its FEC block carries %d bits, so no frame is produced.", plps[i].id, pk.size(), bicm.kPayload());
+                return {};
+            }
             auto bits = bytesToBits(pk);
             bbScramble(bits);
             auto c = bicm.encode(bits);
@@ -92,13 +102,19 @@ std::vector<cf32> buildFrame(const FrameSetup& fs, const std::vector<FramePlp>& 
         pos += a.size;
         placed.push_back({a, cells});
     }
-    if (pos > total) return {};
+    if (pos > total) {
+        DIAG_DEBUG(839353, "An ATSC 3.0 frame cannot be built: the PLPs need %ld cells but the subframe has room for %ld, so no frame is produced.", pos, total);
+        return {};
+    }
     if (freeOut) *freeOut = (int)(total - pos);
     auto all = multiplexSubframe(sp, prefix, placed);
     std::vector<cf32> leftover(all.begin(), all.begin() + prefix), active(all.begin() + prefix, all.end());
     int got = 0;
     auto pre = buildPreamble(fs.bs, l1, d, 1, &got, &leftover);
-    if (pre.empty() || got != prefix) return {};
+    if (pre.empty() || got != prefix) {
+        DIAG_DEBUG(660212, "An ATSC 3.0 frame cannot be built: the preamble could not be generated (%d of %d leftover cells fitted), so no frame is produced.", got, prefix);
+        return {};
+    }
     auto body = modulateSubframe(sp, active);
     pre.insert(pre.end(), body.begin(), body.end());
     if (l1Out) *l1Out = l1;
@@ -166,23 +182,36 @@ FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
     FrameResult r;
     { DECT2_STAGE("a3.preamble"); r.preamble = decodePreamble(x, n, bs); }
     DECT2_STAGE("a3.cells");
-    if (!r.preamble.basicOk || !r.preamble.detailOk || r.preamble.detail.subframes.empty()) return r;
+    if (!r.preamble.basicOk || !r.preamble.detailOk || r.preamble.detail.subframes.empty()) {
+        DIAG_DEBUG_EVERY(401568, 5.0, "The preamble of an ATSC 3.0 frame could not be read (L1-Basic %s, L1-Detail %s), so the frame is not decoded.", r.preamble.basicOk ? "ok" : "failed", r.preamble.detailOk ? "ok" : "failed");
+        return r;
+    }
     const L1Basic& l1 = r.preamble.basic;
     const L1Detail& d = r.preamble.detail;
     size_t pos = r.preamble.samples;   // the first sample of the subframe being read
     const int nSub = std::min<int>(l1.numSubframes + 1, (int)d.subframes.size());
     for (int si = 0; si < nSub; si++) {
         SubframeParams s;
-        if (!subframeParams(l1, d, si, s)) return r;
+        if (!subframeParams(l1, d, si, s)) {
+            DIAG_DEBUG_EVERY(889278, 5.0, "Subframe %d of an ATSC 3.0 frame has no valid FFT size or guard interval in its L1 signalling, so the rest of the frame is not decoded.", si);
+            return r;
+        }
         if (si == 0) r.subframe = s;
         const size_t symLen = (size_t)s.fftSize + s.guard;
-        if (n < pos + symLen * s.numSymbols) { if (si == 0) return r; break; }   // a later subframe that is cut off: what was read before it is still good
+        if (n < pos + symLen * s.numSymbols) {
+            DIAG_DEBUG_EVERY(220786, 5.0, "Subframe %d of an ATSC 3.0 frame is cut off (%zu samples present, %zu needed), so %s.", si, n - std::min(n, pos), symLen * (size_t)s.numSymbols, si == 0 ? "the frame is not decoded" : "only the earlier subframes are decoded");
+            if (si == 0) return r;
+            break;
+        }   // a later subframe that is cut off: what was read before it is still good
         std::vector<cf32> active;
         std::vector<float> nv, wv;
         // 4.0 (docs/SENSITIVITY-4.0-X3.md): the channel state of each cell goes to the soft bits (DECT2_ATSC3_NOCSI=1: one noise for every cell, as 3.9)
         const char* noCsiEnv = getenv("DECT2_ATSC3_NOCSI");
         const bool csi = !(noCsiEnv && *noCsiEnv && *noCsiEnv != '0');
-        if (!demodulateSubframe(s, x + pos, n - pos, active, &nv, csi ? &wv : nullptr)) return r;
+        if (!demodulateSubframe(s, x + pos, n - pos, active, &nv, csi ? &wv : nullptr)) {
+            DIAG_DEBUG_EVERY(612319, 5.0, "Subframe %d of an ATSC 3.0 frame could not be demodulated, so the rest of the frame is not decoded.", si);
+            return r;
+        }
         pos += symLen * s.numSymbols;
         // the data cells of the first subframe start in the last Preamble symbol
         std::vector<cf32> all;

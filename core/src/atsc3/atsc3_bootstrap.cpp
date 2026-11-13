@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/common/stage_prof.h"
 #include "dect2/atsc3/atsc3_bootstrap.h"
 #include "dect2/dsp/fftutil.h"
@@ -254,7 +255,10 @@ Detection detectBootstrap(const cf32* x, size_t n, int seedOnly) {
         prevShift = pk;
         prevPeak = peak;
     }
-    if (!ok || nsym < 4) return d;
+    if (!ok || nsym < 4) {
+        DIAG_DEBUG_EVERY(129921, 5.0, "An ATSC 3.0 bootstrap candidate was found but %s, so it is rejected and the search goes on.", !ok ? "the capture ends before its symbols do" : "it has fewer than 4 symbols");
+        return d;
+    }
     d.info.numSymbols = nsym;
     d.valid = true;
     int fields[4][8] = {};
@@ -274,6 +278,7 @@ Detection detectBootstrap(const cf32* x, size_t n, int seedOnly) {
     d.info.bsrCoefficient = bitsToInt(&fields[2][1], 7);
     d.info.preambleStructure = bitsToInt(fields[3], 8);
     if (d.info.bsrCoefficient > 80) d.valid = false;
+    if (!d.valid) DIAG_DEBUG_EVERY(763177, 5.0, "An ATSC 3.0 bootstrap candidate has signalling fields that are out of range (sample rate coefficient %d, at most 80), so it is rejected and the search goes on.", d.info.bsrCoefficient);
     return d;
 }
 

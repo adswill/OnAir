@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/common/stage_prof.h"
 #include "dect2/common/thread_name.h"
 #include <chrono>
@@ -51,9 +52,16 @@ PlpResult Atsc3Receiver::runCti(const PlpResult& in) {
         up.reset(new CtiPlp());
         c = up.get();
         c->rows = in.ctiRows; c->fec = in.cfg.fecType; c->mod = in.cfg.mod; c->cod = in.cfg.cod;
-        if (c->rows <= 1) return out;
+        if (c->rows <= 1) {
+            DIAG_DEBUG_EVERY(266505, 10.0, "ATSC 3.0 PLP %d announces a convolutional time interleaver with %d rows (at least 2 needed), so its data is skipped.", in.id, c->rows);
+            return out;
+        }
         c->bicm.reset(new Bicm(plpBicm(in.cfg)));
-        if (!c->bicm->ok()) { c->bicm.reset(); return out; }
+        if (!c->bicm->ok()) {
+            DIAG_DEBUG_EVERY(759567, 10.0, "ATSC 3.0 PLP %d announces a modulation and code rate the receiver cannot set up, so its data is skipped.", in.id);
+            c->bicm.reset();
+            return out;
+        }
         c->deint.reset(new CtiDeinterleaver(c->rows, in.ctiStartRow));
         if (haveW) c->deintW.reset(new CtiDeinterleaver(c->rows, in.ctiStartRow));
     }
@@ -178,7 +186,13 @@ bool Atsc3Receiver::commitFrame(const FrameResult& fr, const Bootstrap& bs) {
     {
         std::lock_guard<std::mutex> lk(mu_);
         st_.frames++;
-        if (!fr.ok) { st_.framesFailed++; cti_.clear(); straddle_.clear(); return false; }
+        if (!fr.ok) {
+            st_.framesFailed++;
+            cti_.clear();
+            straddle_.clear();
+            DIAG_DEBUG_EVERY(209186, 5.0, "An ATSC 3.0 frame could not be decoded (%llu failed of %llu so far), so its data is dropped and the time interleavers restart.", (unsigned long long)st_.framesFailed, (unsigned long long)st_.frames);
+            return false;
+        }
         FrameInfo fi;
         fi.valid = true;
         fi.fftSize = fr.subframe.fftSize; fi.guard = fr.subframe.guard;
@@ -227,7 +241,12 @@ void Atsc3Receiver::pushBbPackets(int plpId, const std::vector<std::vector<uint8
         for (auto& pk : packets) {
             st_.bbPackets++;
             BbHeader h;
-            if (!parseBbHeader(pk.data(), (int)pk.size(), h)) { st_.bbBad++; r.reset(); continue; }
+            if (!parseBbHeader(pk.data(), (int)pk.size(), h)) {
+                DIAG_DEBUG_EVERY(442689, 5.0, "An ATSC 3.0 baseband packet of %zu bytes on PLP %d has an invalid header, so it is dropped and ALP reassembly restarts.", pk.size(), plpId);
+                st_.bbBad++;
+                r.reset();
+                continue;
+            }
             r.push(pk.data() + h.headerBytes, (int)pk.size() - h.headerBytes, h.pointer, out);
         }
     }
@@ -249,6 +268,7 @@ void Atsc3Receiver::onAlp(const AlpPacket& a) {
         std::lock_guard<std::mutex> lk(tsMu_);
         sawTs_ = true;
         if (tsDirect_.size() < (size_t)64 << 20) tsDirect_.insert(tsDirect_.end(), a.data.begin(), a.data.end());
+        else DIAG_DEBUG_EVERY(546455, 10.0, "The ATSC 3.0 transport stream buffer holds 64 MB that nobody has read, so incoming transport stream data is dropped.");
         tsCv_.notify_all();
     }
 }
@@ -346,7 +366,10 @@ void Atsc3Receiver::startRoute() {
     if (routeStarted_) return;
     for (auto& s : services_) {
         if (s.serviceId != selected_) continue;
-        if (s.slsProtocol != 1) return;   // ROUTE only; MMTP services are not supported
+        if (s.slsProtocol != 1) {   // ROUTE only; MMTP services are not supported
+            DIAG_EVERY(923174, 30.0, "ATSC 3.0 service %d uses MMTP signalling (protocol %d), which this receiver does not support, so it cannot be played.", s.serviceId, (int)s.slsProtocol);
+            return;
+        }
         route_.reset(new RouteService(s.slsSrcIp, s.slsDstIp, s.slsDstPort));
         route_->onObject = [this](const RouteComponent& c, const RouteObject& o) { onObject(c, o); };
         routeStarted_ = true;
@@ -374,6 +397,7 @@ void Atsc3Receiver::onObject(const RouteComponent& c, const RouteObject& o) {
             if (lastInit_.count(id) && lastInit_[id] == o.data) return;
             lastInit_[id] = o.data;
         } else if (!lastInit_.count(id)) {
+            DIAG_DEBUG_EVERY(772844, 10.0, "An ATSC 3.0 media segment arrived on component %d before its initialization segment, so it is dropped until the initialization segment is received.", id);
             return;   // media before the init segment cannot be played
         }
         st_.objectsDelivered++;

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/common/diag.h"
 #include "dect2/atsc3/atsc3_bb.h"
 #include <algorithm>
 #include "dect2/common/bits.h"
@@ -24,6 +25,7 @@ std::vector<uint8_t> makeBbHeader(const BbHeader& h) {
         out.push_back((uint8_t)((h.extType & 7) << 5 | (h.extLen & 31)));           // EXT_TYPE, EXT_LEN LSB
         out.push_back((uint8_t)((h.extLen >> 5) & 0xFF));                            // EXT_LEN MSB
     } else if (h.ofi == 3) {
+        DIAG_DEBUG(805991, "An ATSC 3.0 baseband header was asked for in mixed extension mode, which is not generated, so no header is written.");
         return {};   // mixed extension mode is not generated
     }
     if (h.ofi == 1 || h.ofi == 2) {
