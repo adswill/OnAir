@@ -3,6 +3,7 @@
 #include "dect2/echolink/el_proto.h"
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <cstring>
 
 namespace dect2 {
