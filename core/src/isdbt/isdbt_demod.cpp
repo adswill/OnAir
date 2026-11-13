@@ -249,6 +249,85 @@ struct Demod::Impl {
     double sigma2 = 1e-3, snr = 0;
     ofdm::CarrierInterference carrierErase;   // erases carriers hit by a narrowband interferer (coherent segments)
     const bool flatN0 = ofdm::envOn("DECT2_OFDM_FLAT_N0");   // A/B tests only: no channel-state weighting
+    // ---- inter-carrier interference (4.1). A channel that changes inside the FFT window (a car at UHF: 70 Hz Doppler is 0.07 of the carrier
+    // spacing in mode 3) leaks every carrier into its neighbours: about -21 dB at 70 Hz, under what 64-QAM 3/4 needs in fading. To first
+    // order the channel of carrier k moves linearly through the window, H_k + s_k (n - centre), and carrier m picks up
+    // sum_k s_k X_k / (exp(j 2 pi (k - m) / N) - 1) from the others. The slope s_k comes from the time-interpolated channel of the symbols
+    // before and after (the pilots are there: the symbol is equalised kTiDelay symbols late), X_k from a first hard decision of every carrier
+    // of the run (the known value for the scattered pilots); the estimated leakage of the kIciSpan neighbours on either side is taken off before
+    // the cells are equalised again. It runs only while the measured speed of the channel makes the leakage at least a tenth of the noise
+    // (it costs two more interpolations and 2 kIciSpan multiplies per carrier). DECT2_ISDBT_NOICI=1: the 4.0 path.
+    const bool iciOff = ofdm::envOn("DECT2_ISDBT_NOICI");
+    static constexpr int kIciSpan = 12;
+    std::vector<cf32> iciY, iciX, iciHm, iciHp, iciC;
+    std::vector<uint8_t> iciRoles;
+    uint64_t iciSyms = 0;
+    // the estimated leakage power against the noise of a cell, from the channel's change between two pilots of a grid point (4 symbols)
+    bool iciWanted() const {
+        if (iciOff || ceNoTi || ceStats < 8 || sigma2 <= 0) return false;
+        const double q = std::max(0.0, (ceD2 - ceD1) / 3);   // |H change|^2 over 4 symbols, pilot units
+        const double Ts = (double)N + (double)(N >> (5 - p.guard));
+        const double pIci = q / 16.0 / (Ts * Ts) * (double)N * (double)N / 12.0;
+        return pIci > 0.1 * sigma2;
+    }
+    static float qamAxis(float x, int M, float n) {   // nearest of the M levels +-1, +-3, .. (times n) of one axis
+        float l = 2.f * std::floor(x / n * 0.5f) + 1.f;
+        l = std::max(-(float)(M - 1), std::min((float)(M - 1), l));
+        return l * n;
+    }
+    // first-order ICI removal over the carriers of run r (symbol t, channel H of this symbol): writes iciY[k] for the run's carriers
+    void iciCancel(const Run& r, const cf32* Y, int64_t t, int symIdx, int carriers, int top, double tauRun) {
+        const int k0 = r.p0 * cps;
+        // channel of the symbols before and after, interpolated as for this one
+        std::vector<cf32>& g = scrG;
+        auto chan = [&](int64_t m, std::vector<cf32>& out) {
+            g.resize(r.grid.size());
+            for (size_t i = 0; i < g.size(); i++) g[i] = timeInterp(r, i, m);
+            if (top) g[(size_t)(carriers - 1) / 3] = edgeAt(r, m, r.grid[(size_t)(carriers - 1) / 3]);
+            if (r.dlyKnown) interpN.run(g, 3, carriers, N, tauRun + r.dlyRel, out, std::min(1.0, r.dlyHalf / ((double)N / 6.0)));
+            else interp.run(g, 3, carriers, N, tauRun, out, 1.0);
+        };
+        chan(t - 1, iciHm);
+        chan(t + 1, iciHp);
+        const double Ts = (double)N + (double)(N >> (5 - p.guard));
+        const float sc = (float)(1.0 / (2.0 * Ts));
+        // first decisions
+        iciX.assign((size_t)carriers, cf32(0, 0));
+        iciRoles.resize((size_t)cps);
+        for (int pos = r.p0; pos <= r.p1; pos++) {
+            const int sgi = kSegmentAtPosition[pos];
+            segmentRoles(mode, sgi, false, symIdx, iciRoles.data());
+            const int mod = seg[sgi].layer >= 0 ? p.layer[seg[sgi].layer].mod : kQpsk;
+            const int M = mod == k64Qam ? 8 : mod == k16Qam ? 4 : 2;
+            const float n = norm(mod);
+            const auto& w = prbsW(mode, sgi);
+            for (int i = 0; i < cps; i++) {
+                const int k = pos * cps + i;
+                const cf32 h = r.H[(size_t)(k - k0)];
+                const float g2 = std::norm(h);
+                if (g2 < 1e-12f) continue;
+                const cf32 z = Y[k] * std::conj(h) / g2;
+                cf32 x;
+                if (iciRoles[(size_t)i] == kData) x = cf32(qamAxis(z.real(), M, n), qamAxis(z.imag(), M, n));
+                else if (iciRoles[(size_t)i] == kSP) x = cf32(pilotValue(w[(size_t)i]), 0);
+                else x = cf32(z.real() >= 0 ? kPilotAmp : -kPilotAmp, 0);
+                iciX[(size_t)(k - k0)] = x;
+            }
+        }
+        if (top) iciX[(size_t)(carriers - 1)] = cpPilot(top);
+        // slope times decision, then the leakage into each carrier from its neighbours
+        for (int c = 0; c < carriers; c++) iciX[(size_t)c] *= (iciHp[(size_t)c] - iciHm[(size_t)c]) * sc;
+        if ((int)iciC.size() != 2 * kIciSpan + 1) {
+            iciC.assign((size_t)(2 * kIciSpan + 1), cf32(0, 0));
+            for (int d = -kIciSpan; d <= kIciSpan; d++) if (d) iciC[(size_t)(d + kIciSpan)] = cf32(1, 0) / (std::polar(1.0f, (float)(2 * M_PI * d / N)) - cf32(1, 0));
+        }
+        for (int c = 0; c < carriers; c++) {
+            cf32 acc(0, 0);
+            const int lo = std::max(0, c - kIciSpan), hi = std::min(carriers - 1, c + kIciSpan);
+            for (int j = lo; j <= hi; j++) if (j != c) acc += iciX[(size_t)j] * iciC[(size_t)(j - c + kIciSpan)];
+            iciY[(size_t)(k0 + c)] = Y[k0 + c] - acc;
+        }
+    }
     std::vector<int> ceK;
     // common phase and phase ramp (timing) of the symbols against the pilots, as running totals so that nothing has to be unwrapped
     double accPhi = 0, accSlope = 0;
@@ -656,6 +735,9 @@ struct Demod::Impl {
         std::vector<std::vector<cf32>> val(kSegments);
         std::vector<std::vector<float>> nv(kSegments);
         const int sp = symIdx % 4;
+        const bool ici = iciWanted();
+        const cf32* Yq = Y;   // the values that are equalised: Y, or Y with the inter-carrier interference taken off
+        if (ici) { iciY.assign(Y, Y + K); Yq = iciY.data(); iciSyms++; }
         // ---- synchronous segments: channel estimate from the scattered pilots
         for (auto& r : runs) {
             const int k0 = r.p0 * cps;
@@ -685,6 +767,7 @@ struct Demod::Impl {
                     r.dlyRel = (double)c + centre - tauRun; r.dlyHalf = half;
                 } else r.dlyKnown = false;
             }
+            if (ici) iciCancel(r, Y, pq.t, symIdx, carriers, top, tauRun);
             if (outCount % 4 == 0) {
                 if (&r == &runs.front()) pilotShow.clear();
                 for (int pos = r.p0; pos <= r.p1; pos++) {
@@ -703,7 +786,7 @@ struct Demod::Impl {
                     const int k = pos * cps + i;
                     const cf32 h = r.H[(size_t)(k - k0)];
                     const float g2 = std::max(1e-9f, std::norm(h));
-                    val[(size_t)s][(size_t)di] = Y[k] * std::conj(h) / g2;
+                    val[(size_t)s][(size_t)di] = Yq[k] * std::conj(h) / g2;
                     nv[(size_t)s][(size_t)di] = (float)(sigma2 / g2);
                     ceK[(size_t)di] = k;
                     di++;
