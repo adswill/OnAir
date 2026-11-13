@@ -374,18 +374,21 @@ struct WifiReceiver::Impl {
     void demod(int64_t at, int nBits, int qpskFrom, Demod& out) {
         out.bits.clear();
         int64_t t = at - (int64_t)kBack * kSps;
-        std::complex<float> prev = cAt(t);
+        std::complex<float> prev = cAt(t - 1) + cAt(t) + cAt(t + 1);
         uint8_t scr = 0;
-        double acc = 0;
+        // Timing: the correlation magnitudes one sample early, on time and late, each smoothed over the symbols; the timing moves one sample
+        // when a neighbour stands 15 % above the one in use (it follows a sample clock error, and a resampled radio rate whose peak shape changes
+        // from symbol to symbol does not push it off the peak). Decisions use the sum of the three correlations: the Barker peak is under two
+        // samples wide at 20 Msps, and the sum keeps a symbol whose peak fell between samples.
+        float sm[3] = {mag(t - 1), mag(t), mag(t + 1)};
         auto descr = [&](uint8_t bit) { const uint8_t desc = (uint8_t)(bit ^ (scr >> 3 & 1) ^ (scr >> 6 & 1)); scr = (uint8_t)(((scr << 1) | bit) & 0x7F); return desc; };
         const int nsym = symbolsFor(nBits, qpskFrom);
         for (int j = -kBack + 1; j <= nsym; j++) {
             t += kSps;
-            const float m0 = mag(t - 1), mc = mag(t), m1 = mag(t + 1);
-            const double e = (m1 - m0) / (std::max({m0, mc, m1}) + 1e-12);   // normalised by the largest: a small mag(t) off the peak does not throw the tracker
-            acc = 0.9 * acc + e;
-            if (acc > 2.5) { t++; acc = 0; } else if (acc < -2.5) { t--; acc = 0; }
-            const std::complex<float> c = cAt(t);
+            for (int o = 0; o < 3; o++) sm[o] = 0.8f * sm[o] + 0.2f * mag(t + o - 1);
+            if (sm[2] > 1.15f * sm[1] && sm[2] >= sm[0]) { t++; sm[0] = sm[1]; sm[1] = sm[2]; }
+            else if (sm[0] > 1.15f * sm[1]) { t--; sm[2] = sm[1]; sm[1] = sm[0]; }
+            const std::complex<float> c = cAt(t - 1) + cAt(t) + cAt(t + 1);
             const std::complex<float> d = c * std::conj(prev);
             prev = c;
             const bool two = j >= 1 && (int)out.bits.size() >= qpskFrom;
