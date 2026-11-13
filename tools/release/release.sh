@@ -50,6 +50,9 @@ if [ $SKIPCI = 0 ]; then
   c=$(gh run list --repo $REPO --workflow ci.yml --commit "$SHA" --json conclusion,status --jq '[.[]|select(.status=="completed")|.conclusion]|join(",")')
   case ",$c," in *,success,*) echo "ci.yml green on $SHA";; *) die "no successful ci.yml run on $SHA (found: '${c:-none}'). Run it (gh workflow run ci.yml --repo $REPO --ref $REF), or the laptop worker with the full test list, then use --skip-ci-check if you accept that";; esac
 fi
+# the Nix flake (nix.yml, started by hand): a warning only, the flake is not a release asset
+n=$(gh run list --repo $REPO --workflow nix.yml --commit "$SHA" --json conclusion,status --jq '[.[]|select(.status=="completed")|.conclusion]|join(",")' 2>/dev/null || true)
+case ",$n," in *,success,*) echo "nix.yml green on $SHA";; *) echo "WARNING: no successful nix.yml run on $SHA (found: '${n:-none}'): gh workflow run nix.yml --repo $REPO --ref $REF";; esac
 if gh release view "$TAG" --repo $REPO >/dev/null 2>&1; then
   d=$(gh release view "$TAG" --repo $REPO --json isDraft --jq .isDraft)
   [ "$d" = true ] || die "release $TAG already exists and is public"

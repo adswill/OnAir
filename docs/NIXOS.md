@@ -1,6 +1,6 @@
 # OnAir on NixOS and Nix
 
-> **Status.** There is no Nix on the maintainer's machine. The `nix` GitHub workflow (`.github/workflows/nix.yml`, started by hand from the Actions tab) runs `nix flake check` and `nix build .#onair .#onair-server` on x86_64-linux; only what that run covers is verified. Running the program with a real radio on NixOS is not.
+> **Status.** There is no Nix on the maintainer's machine. The `nix` GitHub workflow (`.github/workflows/nix.yml`, started by hand from the Actions tab; part of the release checklist) runs `nix flake check` (builds both packages and evaluates a NixOS configuration with the module) and `nix build .#onair .#onair-server` on x86_64-linux and aarch64-linux, then checks the installed files. Only what that run covers is verified. Running the program with a real radio on NixOS is not. macOS is not a flake system (the package is Linux-only).
 
 The repository has a `flake.nix` (packages `onair` and `onair-server`, a NixOS module, a dev shell). The files are in `packaging/nix/`.
 
@@ -21,7 +21,7 @@ nixpkgs.overlays = [ onair.overlays.default ];   # then pkgs.onair and pkgs.onai
 
 ## What the flake provides
 
-- `packages.<system>.onair`, `.onair-server`, `checks.<system>` (the same two packages, for `nix flake check`), `overlays.default`, `nixosModules.default`, `devShells.default`.
+- `packages.<system>.onair` (the GUI `onair`, plus `onair-server`, `onair-cli`, `onair-scan`, the web pages and the Wireshark extcap helper, like the .deb) and `.onair-server` (the server and the web pages only), `checks.<system>` (the two packages and `module`, an evaluated NixOS configuration, for `nix flake check`), `overlays.default`, `nixosModules.default`, `devShells.default`.
 - The package version is read from `project(OnAir VERSION ...)` in `CMakeLists.txt`.
 - Radio libraries that a nixpkgs revision lacks (`airspy`, `airspyhf`, `libbladeRF`, `libiio`) are skipped instead of failing the evaluation.
 - The module's `package` option falls back to building the package itself when the flake has no package for the host's system.
@@ -59,7 +59,7 @@ What the module does:
 - installs `onair` in the system profile;
 - `services.udev.packages`: `60-onair-sdr.rules` (HackRF, RTL-SDR, Airspy, bladeRF, LimeSDR, PlutoSDR, USRP, SDRplay ...). The rules use `GROUP="plugdev"` with mode 0660 and also `TAG+="uaccess"`, so the user at the desk gets access without any group. `programs.onair.users` adds users (for example over ssh) to the group `programs.onair.group` (default `plugdev`; the module creates it);
 - `boot.blacklistedKernelModules`: the kernel's DVB-T stick drivers (`dvb_usb_rtl28xxu`, `rtl2832`, ...) and the Mirics drivers, the same lists as `packaging/linux/onair-*-blacklist.conf` (turn off with `programs.onair.blacklistTvDrivers = false`; reboot or `modprobe -r` once);
-- `services.onair-server`: a hardened systemd unit, a system user `onair`, settings in `/var/lib/onair/server.conf`. For access from other computers run `sudo -u onair onair-server --config /var/lib/onair/server.conf --lan --new-token` once.
+- `services.onair-server`: a hardened systemd unit, a system user `onair`, settings in `/var/lib/onair/server.conf`. Options: `port` (`--port`), `lan` (`--lan`), `web.enable` / `web.port` / `web.lan` (`--web`, `--web-port`, `--web-lan`: OnAir Web), `openFirewall` (opens `port` and the web port), `extraArgs` (any other flag, for example `--mcp-stdio`). For access from other computers run `sudo -u onair onair-server --config /var/lib/onair/server.conf --lan --new-token` once.
 
 More radios (SoapySDR modules) and libraries:
 
@@ -86,7 +86,7 @@ cmake -S . -B build -G Ninja -DDECT2_BUILD_APP=ON
 cmake --build build
 ```
 
-The Rust workspace (`rust/`) is built by CMake with `cargo build --offline`; `rust/Cargo.lock` lists no external crates, so no vendoring (`cargoLock`) is needed.
+The Rust workspace (`rust/`) is built by CMake with `cargo build --offline`; `rust/Cargo.lock` lists no external crates (checked for 4.1), so no vendoring (`cargoLock`) is needed. If a crate from crates.io is ever added, the package needs `cargoDeps` / `cargoSetupHook` and this paragraph changes.
 
 ## Not verified yet
 
@@ -96,6 +96,6 @@ The Rust workspace (`rust/`) is built by CMake with `cargo build --offline`; `ru
 - the plug-in examples folder path (`build/plugins`) and `libonair_codec2.so*` location in the build tree;
 - librfnm (RFNM) is switched off: it is not in nixpkgs;
 - the licence field (`gpl3Only`) follows `LICENSE`; check `THIRD_PARTY.md` for the bundled code;
-- `services.onair-server.port` / `openFirewall` assume the default port 8765.
+- 
 
-`.github/workflows/nix.yml` is started by hand only (`workflow_dispatch`).
+`.github/workflows/nix.yml` is started by hand only (`workflow_dispatch`): `gh workflow run nix.yml --ref <branch>`.
