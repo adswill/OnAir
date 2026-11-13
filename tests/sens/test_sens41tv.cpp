@@ -150,6 +150,7 @@ void sweep(const Mode& m0, const std::regex& scenRe, int n, int threads) {
     Mode m = m0;
     if (getenv("S41_SECS")) m.secs = atof(getenv("S41_SECS"));
     if (getenv("S41_FD")) m.fdHz = atof(getenv("S41_FD"));
+    if (getenv(("S41_FD_" + m.id).c_str())) m.fdHz = atof(getenv(("S41_FD_" + m.id).c_str()));   // per mode: S41_FD_isdbt=70
     if (getenv("S41_PN")) m.pnHz = atof(getenv("S41_PN"));
     const auto sw = offSwitches(m.id);
     const bool ab = !sw.empty() && !getenv("S41_NOAB");
