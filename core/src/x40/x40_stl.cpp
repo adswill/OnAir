@@ -177,9 +177,8 @@ private:
         else if (need < autoW_ * 0.8) { if (++shrinkN_ >= 6) { autoW_ = need; shrinkN_ = 0; } }
         else shrinkN_ = 0;
         // the centre: the occupied region's centroid first, then the carrier's own offset after the shift
-        const double want = hasRegion_ ? centroidHz_ : shift_;
-        if (hasRegion_ && std::fabs(want - shift_) > 3000) shift_ = want;
-        else if (std::fabs(t.cfoHz) > 150) shift_ += 0.5 * t.cfoHz;
+        // (no feedback from the receiver's own offset reading: that loop hunted and put steps into the sound; the readout adds the receiver's residual to the shift)
+        if (hasRegion_ && std::fabs(centroidHz_ - shift_) > 4000) shift_ = centroidHz_;
         rot_ = cf64(std::cos(-2 * kPi * shift_ / fs_), std::sin(-2 * kPi * shift_ / fs_));
     }
     void report() {
