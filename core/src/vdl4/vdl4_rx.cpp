@@ -10,6 +10,9 @@
 #include <complex>
 #include <ctime>
 #include <mutex>
+#include <cstdio>
+#include <cstdlib>
+#include <string>
 #include "dect2/common/mathconst.h"
 
 namespace dect2 {
@@ -153,6 +156,10 @@ struct Vdl4Receiver::Impl {
         for (int i = 0; i < kVdl4RampBits; i++) burst.push_back(1);
         for (int i = 0; i < kVdl4SyncBits; i++) burst.push_back(kVdl4SyncPattern[i]);
         for (long k = c.syncEnd + kOsr; k < (long)c.lin4.size() && (int)burst.size() < kVdl4DataStartBit + kBurstBits; k += kOsr) burst.push_back(c.lin4[(size_t)k] > c.thr ? 1 : 0);
+        if (std::getenv("DECT2_VDL4_DEBUG")) {
+            std::string b; for (size_t i = 0; i < burst.size() && i < 120; i++) b += (char)('0' + burst[i]);
+            std::fprintf(stderr, "vdl4dbg burst syncEnd=%ld thr=%g err=%d bits=%s\n", c.syncEnd, c.thr, c.bestErr, b.c_str());
+        }
         std::vector<uint8_t> data;
         if (vdl4BurstDataBits(burst, data)) {
             for (const auto& fr : vdl4HdlcFrames(data)) onFrame(c, fr, snr, 10.f * std::log10(std::max(pwr, 1e-12f)), c.offHz);
@@ -200,6 +207,7 @@ struct Vdl4Receiver::Impl {
                 err += (v > 0 ? 1 : 0) != want;
                 corr += want ? v : -v;
             }
+            if (std::getenv("DECT2_VDL4_DEBUG") && err <= 3 && c.lockLeft == 0) std::fprintf(stderr, "vdl4dbg sync n=%ld err=%d chp=%g floor=%g mean=%g corr=%g\n", n, err, chp, c.floor, mean, corr);
             if (c.lockLeft == 0 && err <= 3 && chp > 2.5f * c.floor) {   // squelch: noise alone must not start a lock
                 c.lockLeft = 5 * kOsr; c.bestErr = 99; c.bestCorr = -1e30; }
             if (c.lockLeft > 0) {

@@ -141,7 +141,7 @@ def sweep(a, md):
     hi = a.hi
     while not ok(hi, "awgn") and hi < 44: hi += 8
     if not ok(hi, "awgn"):
-        out.update(thresholds(pts, scen, None)); out["note"] = "no 90 % point up to %d dB" % hi
+        out.update(thresholds(pts, scen, None)); out["note"] = "no 90 %% point up to %d dB" % hi
     else:
         s = hi
         while s - 4 >= a.lo and ok(s - 4, "awgn"): s -= 4
