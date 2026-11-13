@@ -1,12 +1,36 @@
 // Broadcast text profiles and ARIB STD-B24 designations and shifts (simulated strings).
 #include "dect2/tv/dvb_text.h"
+#include "dect2/rs/dvbsi.h"
+#include <array>
 #include <cstdio>
+#include <limits>
 #include <string>
 using namespace dect2::dvbsi;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL: " __VA_ARGS__); printf("\n"); fails++; } } while (0)
 static std::string t(std::initializer_list<int> v) { std::string s; for (int x : v) s += (char)x; return aribText((const uint8_t*)s.data(), (int)s.size()); }
+static void testTextAbi() {
+    // Exercise the public C boundary from its C++ consumer, including the registered platform converter.
+    const uint8_t raw[] = {'T', 'V', ' ', 0xD6, 0xD0};
+    for (uint32_t legacy : {0u, 1u, 17u}) {
+        std::array<uint8_t, 4 * sizeof(raw) + 16> a{}, b{}; // documented output capacity
+        const size_t n = onair_dvbsi_dvb_text(raw, sizeof(raw), legacy, a.data(), a.size());
+        const size_t m = onair_dvbsi_dvb_text_with_encoding(raw, sizeof(raw), legacy ? 1 : 0, b.data(), b.size());
+        CHECK(n <= a.size() && m <= b.size(), "text ABI output bounds");
+        if (n <= a.size() && m <= b.size()) {
+            const std::string oldText((const char*)a.data(), n), newText((const char*)b.data(), m);
+            CHECK(oldText == newText, "legacy text ABI maps every nonzero flag to GB");
+            if (legacy) CHECK(newText == "TV 中", "text ABI uses the platform converter");
+        }
+        CHECK(onair_dvbsi_dvb_text_with_encoding(raw, sizeof(raw), 0, nullptr, 0) == std::numeric_limits<size_t>::max(), "empty ABI output reports overflow");
+        CHECK(onair_dvbsi_dvb_text_with_encoding(nullptr, 10, 0, b.data(), b.size()) == 0, "null ABI input is empty");
+    }
+    std::array<uint8_t, 2> bounded = {0xA5, 0xA5};
+    CHECK(onair_dvbsi_dvb_text_with_encoding(raw, sizeof(raw), 0, bounded.data(), 1) == std::numeric_limits<size_t>::max(), "short ABI output reports overflow");
+    CHECK(bounded.at(1) == 0xA5, "text ABI respects the supplied output capacity");
+}
 int main() {
+    testTextAbi();
     // alphanumeric through G1 (LS1), then G0 kanji (LS0): "NHK" + the kanji for "day" (JIS 0x467C)
     CHECK(t({0x0E, 'N', 'H', 'K'}) == "NHK", "LS1 alnum");
     CHECK(t({0x0E, 'A', 0x0F, 0x46, 0x7C}) == "A\xE6\x97\xA5", "kanji '%s'", t({0x0E, 'A', 0x0F, 0x46, 0x7C}).c_str());

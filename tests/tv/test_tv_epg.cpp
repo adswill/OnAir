@@ -8,6 +8,7 @@
 #include <cstring>
 #include <filesystem>
 #include <random>
+#include <string_view>
 using namespace dect2;
 #include "../common/test_util.h"
 
@@ -26,8 +27,9 @@ static Bytes shortEv(const char* lang, const Bytes& name, const Bytes& text) {
     Bytes d = {0x4D, 0}; d.insert(d.end(), lang, lang + 3); d.push_back((uint8_t)name.size()); d.insert(d.end(), name.begin(), name.end());
     d.push_back((uint8_t)text.size()); d.insert(d.end(), text.begin(), text.end()); d[1] = (uint8_t)(d.size() - 2); return d;
 }
-static Bytes extEv(int num, int last, const Bytes& text) {
-    Bytes d = {0x4E, 0, (uint8_t)((num << 4) | last), 'e', 'n', 'g', 0, (uint8_t)text.size()}; d.insert(d.end(), text.begin(), text.end()); d[1] = (uint8_t)(d.size() - 2); return d;
+static Bytes extEv(int num, int last, const Bytes& text, std::string_view lang = "eng") {
+    Bytes d = {0x4E, 0, (uint8_t)((num << 4) | last), (uint8_t)lang.at(0), (uint8_t)lang.at(1), (uint8_t)lang.at(2), 0, (uint8_t)text.size()};
+    d.insert(d.end(), text.begin(), text.end()); d[1] = (uint8_t)(d.size() - 2); return d;
 }
 static Bytes str(const char* s) { return Bytes(s, s + strlen(s)); }
 static Bytes event(int id, int mjd, int h, int m, int dh, int dm, int running, bool ca, const Bytes& desc) {
@@ -105,8 +107,7 @@ int main() {
         const Bytes name = {'C', 'C', 'T', 'V', '-', '1', ' ', 0xD7, 0xDB, 0xBA, 0xCF};
         const Bytes chinese = {0xD6, 0xD0, 0xCE, 0xC4}; // 中文
         Bytes shortDesc = shortEv("chi", name, chinese);
-        Bytes extended = extEv(0, 0, chinese);
-        extended[3] = 'z'; extended[4] = 'h'; extended[5] = 'o';
+        Bytes extended = extEv(0, 0, chinese, "zho");
         shortDesc.insert(shortDesc.end(), extended.begin(), extended.end());
         Bytes chineseEit = eit(0x4E, 100, 7, 0x2310, 0, {event(99, mjd, 12, 0, 1, 0, 4, false, shortDesc)});
         EitSection parsed;
@@ -209,8 +210,7 @@ int main() {
         };
         for (const auto& sample : samples) {
             Bytes desc = shortEv(sample.lang, sample.raw, sample.raw);
-            Bytes ext = extEv(0, 0, sample.raw);
-            memcpy(ext.data() + 3, sample.lang, 3);
+            Bytes ext = extEv(0, 0, sample.raw, sample.lang);
             desc.insert(desc.end(), ext.begin(), ext.end());
             const Bytes guideSection = eit(0x4E, 100, 7, 0x2310, 0, {event(99, mjd, 12, 0, 1, 0, 4, false, desc)});
             Bytes tot = {0x73, 0x70, 0}; putTime(tot, mjd, 12, 0, 0);
@@ -260,7 +260,8 @@ int main() {
             CHECK(si && !si->otherServices.empty() && si->otherServices[0].name == sample.utf8
                   && !si->eitOther.empty() && si->eitOther[0].nowTitle == sample.utf8, "%s other-transport SI", sample.country);
             if (sample.profile == TextEncoding::Dvb) {
-                Bytes ambiguousZone = zone; memcpy(ambiguousZone.data() + 2, "USA", 3);
+                Bytes ambiguousZone = zone;
+                ambiguousZone.at(2) = 'U'; ambiguousZone.at(3) = 'S'; ambiguousZone.at(4) = 'A';
                 Bytes ambiguousTot = {0x73, 0x70, 0}; putTime(ambiguousTot, mjd, 12, 0, 0);
                 put16(ambiguousTot, 0xF000 | (int)(zone.size() + ambiguousZone.size()));
                 ambiguousTot.insert(ambiguousTot.end(), zone.begin(), zone.end());

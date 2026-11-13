@@ -383,23 +383,3 @@ pub unsafe extern "C" fn onair_dvbsi_sub_blend_region(out: *mut u8, dw: i32, dh:
 pub extern "C" fn onair_dvbsi_sub_pts_delta(a: f64, b: f64) -> f64 {
     subpix::pts_delta(a, b)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn text_encoding_abi_compatibility() {
-        let raw = b"TV \xD6\xD0";
-        for legacy in [0, 1, 17] {
-            let (mut a, mut b) = ([0; 128], [0; 128]);
-            unsafe {
-                let n = onair_dvbsi_dvb_text(raw.as_ptr(), raw.len(), legacy, a.as_mut_ptr(), a.len());
-                let m =
-                    onair_dvbsi_dvb_text_with_encoding(raw.as_ptr(), raw.len(), if legacy != 0 { 1 } else { 0 }, b.as_mut_ptr(), b.len());
-                assert_eq!(&a[..n], &b[..m]);
-                assert_eq!(onair_dvbsi_dvb_text_with_encoding(raw.as_ptr(), raw.len(), 0, core::ptr::null_mut(), 0), usize::MAX);
-                assert_eq!(onair_dvbsi_dvb_text_with_encoding(core::ptr::null(), 10, 0, b.as_mut_ptr(), b.len()), 0);
-            }
-        }
-    }
-}
