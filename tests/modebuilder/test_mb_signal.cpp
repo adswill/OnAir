@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode Builder "Signal" view: the plot data of Receiver::signalView() from generated signals of every modulation (cluster count and
 // positions, thresholds, measured deviation and offset, PSK constellation and EVM), with a frequency offset and noise, and noise only:
 // no clusters may be found in noise. Simulated signals only (the generator of the library); nothing here was checked on air.

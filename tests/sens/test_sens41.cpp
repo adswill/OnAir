@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.1 sensitivity (docs/SENSITIVITY-4.1.md): the gaps 4.0 left open. Each section measures the new path against the 4.0 one in the same run (same seeds, same
 // signals: the receivers' own switches turn the 4.1 change off), prints the curve, and fails when the new path is not better at its guard point or noise alone
 // decodes anything. Simulated signals only. ONAIR_SENS41=<names> picks sections (default all), ONAIR_SENS41_TRIALS sets the trials a point.

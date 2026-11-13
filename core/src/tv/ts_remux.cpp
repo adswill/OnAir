@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Several single-programme transport streams into one multiplex (see ts_remux.h, issue #492).
 #include "dect2/tv/ts_remux.h"
 #include "dect2/tv/ts_proto.h"

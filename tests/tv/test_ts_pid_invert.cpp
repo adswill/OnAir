@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PMTs with inverted elementary-stream PIDs (issue 498, DPRK DVB-T2): the PMT gives video 0x1F37 and audio 0x1F36 while the packets come on
 // 0x00C8 / 0x00C9 (PID XOR 0x1FFF), the PCR PID is the real video PID, and a 101-byte private program descriptor (tag 0x54) sits in front.
 // The demuxer must take the inverse PIDs, the service filter must pass them and write the PMT again with them (valid CRC, a new version),

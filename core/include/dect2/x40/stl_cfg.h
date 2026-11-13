@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Settings of the STL link mode (x40 variant Stl, docs/STL-4.1.md): analogue studio-to-transmitter links. One object for the process, read by the decoder at every block
 // (the interface thread writes, the analysis thread reads); the mode needs none of them for its first run: the defaults are a +-60 kHz composite link in a 250 kHz channel.
 #pragma once

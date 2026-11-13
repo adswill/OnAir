@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SPECTRAN driver (source_spectran.cpp) when Aaronia's RTSA API is missing, and when it is there but does not start: nothing is listed,
 // and opening the receiver or the transmitter fails with a message that says what to install (docs/SPECTRAN-V6.md).
 //   test_spectran_missing <fake library>             : no library in the search folder

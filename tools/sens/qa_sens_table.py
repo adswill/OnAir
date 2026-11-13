@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Merge the qa_sens.py shard results (qa-sens-*.jsonl) into the markdown table of docs/SENSITIVITY-4.1-ALL.md.
 
   tools/sens/qa_sens_table.py results/*/qa-sens-*.jsonl > table.md

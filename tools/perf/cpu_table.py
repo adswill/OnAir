@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Merge the --cpu sweep TSVs of test_qa_sweep (cpu.yml) into one Markdown table (docs/CPU-4.1.md).
 
   cpu_table.py DIR      DIR holds cpu-<os>-<shard>[-cmp].tsv; prints the table, worst first, and the modes above 1.0 CPU s per s.

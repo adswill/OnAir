@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The part of the Hamlib API that source_hamlib.cpp uses, either from <hamlib/rig.h> (the library linked at build time, Linux and macOS
 // packages) or, with DECT2_HAMLIB_DYNAMIC (the Windows packages, #495), loaded at run time from libhamlib-4.dll / libhamlib.so.4 /
 // libhamlib.4.dylib the way the radio drivers load theirs (native_common.h: the program folder, the OnAir codecs folders, then the system).

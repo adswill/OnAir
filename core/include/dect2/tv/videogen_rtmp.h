@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RTMP server input of the digital video generator (Source::Rtmp, adswill/OnAir#490): OBS Studio, or any other program or PC that
 // streams RTMP, pushes its stream to this PC (rtmp://<this PC>:1935/live, stream key "stream") and the generator encodes its picture and
 // sound like a camera's. Nothing else is needed on this PC: FFmpeg's own RTMP protocol in listen mode is the server (handshake, connect,

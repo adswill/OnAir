@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Aaronia SPECTRAN V6 / V6 ECO driver (source_spectran.cpp) against the fake RTSA API (spectran_fake.cpp): listing, the IQ receiver and
 // raw modes, the sample-rate plan, the reference level and the sample scale, live retunes, rate changes (the device stopped first), an
 // unplug and reopen, a busy device, the transmitter's timed packets and its end. Never touches a real device.

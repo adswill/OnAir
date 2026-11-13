@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // T2-MI recordings played as files (issue 498, a Malaysian DVB-T2 modulator feed): an outer stream with T2-MI on PID 0x1000, no PCR, BB frames
 // in high-efficiency mode with ISSY (the Malaysian feed: MATYPE F8) and, for a second PLP, null-packet deletion. TsFileSource must find the
 // T2-MI PID, play the PLP with the most packets as an ordinary transport stream (with a PCR time map), switch PLP, delete its temporary file,

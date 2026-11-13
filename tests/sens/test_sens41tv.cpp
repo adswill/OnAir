@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sensitivity pass 4.1 TV (docs/SENSITIVITY-4.1-TV.md): the gaps 4.0 left open in DVB-T, DVB-T2, DTMB, ATSC 1.0 / 3.0, DRM and ISDB-T.
 // The mode's own test signal through the sens_sweep channel chain (tools/sens/sens_impair.h: echo, TU6 / Rician fading with Jakes Doppler,
 // Wiener phase noise, carrier and clock error) and white noise into a fresh receiver, seeded trials. A trial passes when the receiver counted

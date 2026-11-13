@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A fake Aaronia RTSA API (AaroniaRTSAAPI) for tests/source/test_spectran.cpp: the functions source_spectran.cpp loads, with the same names
 // and the declarations of core/src/source/aartsa_min.h. It lists SPECTRAN V6 and V6 ECO devices, keeps their config trees, plays a tone in
 // timed IQ packets (an eighth of a turn per sample: +rate/8, at half the reference level) and records what is sent to the transmitter.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0, convolutional time interleaver with channel state (4.1, docs/SENSITIVITY-4.1-TV.md). FEC blocks (QPSK 8/15, 16K LDPC) go through
 // the transmitter's CTI (512 rows), then a fading channel in transmit order (Rayleigh gain held for 400 cells, about a third of an 8K symbol
 // of data cells, then a new one) with white noise; the receiver gets the equalised cells y / h and, on the 4.1 path, each cell's weight |h|^2.

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Sensitivity of every engine mode through the QA sweep's generator and Engine stages (4.1, docs/SENSITIVITY-4.1-ALL.md).
 
 sens_sweep (tools/sens/sens_sweep.cpp) measures the modes that have a receiver block in sens_modes.h. Most modes added in 3.9 and 4.0 have

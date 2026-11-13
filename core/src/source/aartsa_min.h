@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The part of Aaronia's RTSA API (the C API of the RTSA-Suite PRO, library AaroniaRTSAAPI.dll / libAaroniaRTSAAPI.so) that the SPECTRAN V6
 // driver (source_spectran.cpp) uses, declared here so that OnAir builds without the SDK. Aaronia's own header (aaroniartsaapi.h) is not
 // included or copied: it comes with the RTSA-Suite PRO installer under Aaronia's licence. These declarations were written from the public

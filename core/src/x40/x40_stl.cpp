@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // STL link: analogue studio-to-transmitter links (broadcast radio, US Part 74 band 944 - 952 MHz and the like elsewhere) carrying the station's programme as FM: either the whole stereo
 // composite (multiplex: mono sum, 19 kHz pilot, 38 kHz stereo difference, RDS on 57 kHz, SCA on 67 / 92 kHz) at about +-60 - 75 kHz deviation in a 250 or 500 kHz channel, or plain mono
 // programme audio. The FM receiver of the broadcast mode (FmReceiver: channel filter, discriminator, pilot PLL, stereo matrix, de-emphasis, RDS, SCA) does the demodulation here with the

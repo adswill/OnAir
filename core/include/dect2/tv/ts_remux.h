@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Several single-programme transport streams into one multi-programme multiplex (issue #492): the transmitter's Multiplex takes the
 // streams of Digital video generators as its services.
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "x40_gen_gsc.h"
 #include "dect2/common/bits.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RTMP server input of the digital video generator (videogen_rtmp.h). One thread, "onair-rtmp": FFmpeg's RTMP protocol listens
 // (listen=1) until a sender connects, the FLV it sends is decoded, the newest picture is kept as YUV 4:2:0 and the sound goes into a short
 // queue of stereo float samples. When the sender stops (or sends nothing for kIdleSeconds) the connection is closed and the thread listens
