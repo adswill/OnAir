@@ -37,7 +37,7 @@ struct Pass {
                 ph += 2 * kPi * f / fs; const double amp = 0.1 * std::pow(10.0, fadeDb * std::sin(2 * kPi * 0.31 * t) / 20);
                 v = (float)amp * cf32((float)std::cos(ph), (float)std::sin(ph));
             }
-            x[i] = v + cf32(sg * rng.g(), sg * rng.g());
+            x[i] = v + cg(rng, sg, sg);
         }
         return x;
     }

@@ -73,11 +73,11 @@ int main() {
         if (db >= 20) CHECK(countPrefix(g, "Mode A") > 1080, "%.0f dB: %d found", db, countPrefix(g, "Mode A"));
     }
     // false reports: noise only, pairs 12 us apart (DME-like), pairs 10 us apart (no such mode), a plain carrier
-    { std::vector<cf32> n((size_t)(4e6 * 20)); Rng r(5); for (auto& v : n) v = cf32(0.05f * r.g(), 0.05f * r.g()); Got g = parse(run(x40::SsrInt, n, 4e6)); CHECK(g.n.empty(), "noise: %zu names", g.n.size()); }
+    { std::vector<cf32> n((size_t)(4e6 * 20)); Rng r(5); for (auto& v : n) v = cg(r, 0.05f, 0.05f); Got g = parse(run(x40::SsrInt, n, 4e6)); CHECK(g.n.empty(), "noise: %zu names", g.n.size()); }
     { auto x = ssrScene(4e6, 4.0, {}, 1e-4, 0, 6);
       auto pairs = [&](double sp) { std::vector<cf32> y = x; Rng r(9); for (double t0 = 0.01; t0 < 3.9; t0 += 0.0033) for (double off : {0.0, sp}) { const size_t i0 = (size_t)((t0 + off * 1e-6) * 4e6); for (size_t i = i0; i < i0 + 4 && i < y.size(); i++) y[i] += cf32(1.0f, 0); } return y; };
       for (double sp : {12.0, 10.0, 36.0}) { auto y = pairs(sp); Got g = parse(run(x40::SsrInt, y, 4e6)); CHECK(g.n.empty(), "pairs %.0f us apart: %zu names", sp, g.n.size()); } }
-    { std::vector<cf32> c((size_t)(4e6 * 10), cf32(1.0f, 0)); Rng r(7); for (auto& v : c) v += cf32(0.01f * r.g(), 0.01f * r.g()); Got g = parse(run(x40::SsrInt, c, 4e6)); CHECK(g.n.empty(), "carrier: %zu names", g.n.size()); }
+    { std::vector<cf32> c((size_t)(4e6 * 10), cf32(1.0f, 0)); Rng r(7); for (auto& v : c) v += cg(r, 0.01f, 0.01f); Got g = parse(run(x40::SsrInt, c, 4e6)); CHECK(g.n.empty(), "carrier: %zu names", g.n.size()); }
     printf(fails ? "x40 ssrint: %d FAILED\n" : "x40 ssrint: ok\n", fails);
     return fails ? 1 : 0;
 }

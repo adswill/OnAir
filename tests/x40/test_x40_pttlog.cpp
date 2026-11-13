@@ -25,7 +25,7 @@ struct Keyed {
             for (auto& v : on) a = std::max(a, edge(t, v.a, v.b));
             for (auto& v : drop) a = std::min(a, 1.0 - edge(t, v.a, v.b));
             ph += 2 * kPi * (hz + drift * t) / fs;
-            x[i] = (float)a * cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * rng.g(), sg * rng.g());
+            x[i] = (float)a * cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(rng, sg, sg);
         }
         return x;
     }

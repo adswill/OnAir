@@ -18,7 +18,7 @@ struct Tx {
             const double t = t0 + i / fs; double amp = 0, f = 0;
             for (auto& v : iv) if (t >= v.a && t < v.b) { const double u = t - v.a; amp = std::min(1.0, u / 0.004) * std::min(1.0, (v.b - t) / 0.004); f = final0 + startOff * std::exp(-u / tau) + drift * u + modDev * std::sin(2 * kPi * 1000 * t); }
             ph += 2 * kPi * f / fs;
-            x[i] = (float)amp * cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * rng.g(), sg * rng.g());
+            x[i] = (float)amp * cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(rng, sg, sg);
         }
         return x;
     }

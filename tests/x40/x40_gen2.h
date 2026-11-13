@@ -182,7 +182,7 @@ struct Pl { double rateHz = 100, jitterUs = 60, widthUs = 70, peakDb = 20, ampSp
 // noise: complex Gaussian with sigma per quadrature noiseSigma; the envelope mean is 1.2533 sigma. Impulses are Gaussian bursts of random phase, peakDb over that mean.
 inline std::vector<cf32> plNoise(const Pl& p, double fs, double seconds) {
     Rng r(p.seed); std::vector<cf32> x((size_t)(fs * seconds));
-    for (auto& v : x) v = cf32((float)(p.noiseSigma * r.g()), (float)(p.noiseSigma * r.g()));
+    for (auto& v : x) v = cg(r, p.noiseSigma, p.noiseSigma);
     std::mt19937 rr(p.seed + 99); std::uniform_real_distribution<double> U(0, 1);
     auto burst = [&](double t0, double dB) {
         const double A = 1.2533 * p.noiseSigma * std::pow(10.0, dB / 20), tau = p.widthUs * 1e-6 / 2.355, ph = U(rr) * 2 * kPi;
@@ -191,7 +191,7 @@ inline std::vector<cf32> plNoise(const Pl& p, double fs, double seconds) {
     };
     double t = 0.1, f = p.rateHz;
     while (t < seconds - 0.01) {
-        if (p.rateHz > 0 && U(rr) >= p.dropProb) burst(t + p.jitterUs * 1e-6 * r.g(), p.peakDb + p.ampSpreadDb * r.g() * 0.5);
+        if (p.rateHz > 0 && U(rr) >= p.dropProb) { const double g2 = r.g(); const double g1 = r.g(); burst(t + p.jitterUs * 1e-6 * g1, p.peakDb + p.ampSpreadDb * g2 * 0.5); }
         f = p.rateHz + p.driftHzPerSec * t; t += 1.0 / f;
     }
     if (p.randomRate > 0) { double tr = 0.1; std::exponential_distribution<double> E(p.randomRate); while (tr < seconds) { tr += E(rr); burst(tr, p.randomDb + 4 * r.g()); } }
@@ -225,7 +225,7 @@ inline dect2::X40Telemetry runRadar(const RadarPlan& p, double fs, unsigned seed
     const size_t N = (size_t)(fs * p.durationSec); size_t pi = 0;
     for (size_t i0 = 0; i0 < N; i0 += blk.size()) {
         const size_t n = std::min(blk.size(), N - i0);
-        for (size_t i = 0; i < n; i++) blk[i] = cf32((float)(p.noiseSigma * rn.g()), (float)(p.noiseSigma * rn.g()));
+        for (size_t i = 0; i < n; i++) blk[i] = cg(rn, p.noiseSigma, p.noiseSigma);
         const double ta = i0 / fs, tb = (i0 + n) / fs;
         while (pi < pl.size() && pl[pi].t + pl[pi].w + 1e-6 < ta) pi++;
         for (size_t q = pi; q < pl.size() && pl[q].t < tb; q++) {
@@ -265,12 +265,12 @@ struct JamGen {
         const double A = std::sqrt(2.0 * std::pow(10.0, j.jamDb / 10));
         for (size_t i = 0; i < n; i++) {
             const double t = (i0 + i) / fs;
-            cf32 v((float)rn.g(), (float)rn.g());
+            cf32 v = cg(rn, 1, 1);
             if (t >= j.fromSec && t < j.toSec) {
                 if (j.kind == Jam::Cw) v += (float)A * cf32((float)std::cos(2 * kPi * j.centerHz * t), (float)std::sin(2 * kPi * j.centerHz * t));
                 else if (j.kind == Jam::Narrow) { cf32 a(0, 0); for (size_t k = 0; k < tf.size(); k++) a += cf32((float)std::cos(2 * kPi * tf[k] * t + tp[k]), (float)std::sin(2 * kPi * tf[k] * t + tp[k])); v += (float)(A / std::sqrt((double)tf.size())) * a; }
                 else if (j.kind == Jam::Chirp) { const double fr = std::fmod(t, j.periodSec) / j.periodSec; const double fi = j.centerHz - j.spanHz / 2 + j.spanHz * fr; phase += 2 * kPi * fi / fs; v += (float)A * cf32((float)std::cos(phase), (float)std::sin(phase)); }
-                else if (j.kind == Jam::Wide) v += (float)(std::sqrt(std::pow(10.0, j.jamDb / 10))) * cf32((float)rn.g(), (float)rn.g());
+                else if (j.kind == Jam::Wide) v += (float)(std::sqrt(std::pow(10.0, j.jamDb / 10))) * cg(rn, 1, 1);
             }
             out[i] = v;
         }
@@ -303,7 +303,7 @@ struct PbGen {
     }
     void render(size_t i0, size_t n, cf32* out) {
         for (size_t i = 0; i < n; i++) {
-            const double t = (i0 + i) / fs; cf32 v((float)rn.g(), (float)rn.g());
+            const double t = (i0 + i) / fs; cf32 v = cg(rn, 1, 1);
             if (((i0 + i) & 0x3FFF) == 0) for (auto& bk : banks) for (auto& z : bk.z) z /= std::abs(z);
             for (size_t s = 0; s < sigs.size(); s++) {
                 const auto& g = sigs[s]; auto& b = banks[s]; double e = 1.0;
@@ -341,7 +341,7 @@ inline std::vector<cf32> mskSignal(const Msk& m, double fs, double seconds) {
         const double t = i / fs; if (t >= nextBit) { bit = r.g() > 0 ? 1 : -1; nextBit += 1.0 / m.rateBd; }
         ph += 2 * kPi * (m.fcHz + m.driftHzPerSec * t + bit * m.rateBd / 4) / fs;
         const float a = (t >= m.from && t < m.to) ? 1.f : 0.f;
-        x[i] = a * cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32((float)(sigma * r.g()), (float)(sigma * r.g()));
+        x[i] = a * cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(r, sigma, sigma);
     }
     return x;
 }

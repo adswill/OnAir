@@ -41,7 +41,7 @@ struct ToneScene {
             }
         }
         const float sg = (float)std::sqrt(noisePower / 2);
-        for (auto& v : x) v += cf32(sg * rng.g(), sg * rng.g());
+        for (auto& v : x) v += cg(rng, sg, sg);
         return x;
     }
 };

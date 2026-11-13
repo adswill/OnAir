@@ -225,7 +225,9 @@ struct MockModem {
             }
             if (ds == kBadSock) { if (FD_ISSET(ld, &rd)) ds = accept(ld, nullptr, nullptr); continue; }
             if (!dataGone && FD_ISSET(ds, &rd)) {
-                const long long k = sockRecv(ds, buf, sizeof buf);
+                // read no further than the drop point, so the modem goes away after exactly dropAfterBytes whatever the timing of the sends
+                const size_t want = dropAfterBytes && gotData.size() < dropAfterBytes ? std::min(sizeof buf, dropAfterBytes - gotData.size()) : sizeof buf;
+                const long long k = sockRecv(ds, buf, want);
                 if (k <= 0) { dataGone = true; continue; }   // a client may close the data port alone
                 onData((const uint8_t*)buf, (size_t)k);
                 if (dropAfterBytes && gotData.size() >= dropAfterBytes) { sockShutdown(cs); sockShutdown(ds); break; }

@@ -9,7 +9,7 @@ using namespace x40gen; using namespace dect2;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL: "); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
 
-static std::vector<cf32> gauss(size_t n, unsigned seed, double pw = 1.0) { Rng r(seed); std::vector<cf32> x(n); const float s = (float)std::sqrt(pw / 2); for (auto& v : x) v = cf32(s * r.g(), s * r.g()); return x; }
+static std::vector<cf32> gauss(size_t n, unsigned seed, double pw = 1.0) { Rng r(seed); std::vector<cf32> x(n); const float s = (float)std::sqrt(pw / 2); for (auto& v : x) v = cg(r, s, s); return x; }
 static double ccdf(const std::vector<cf32>& x, double tail) { std::vector<float> p; p.reserve(x.size()); double m = 0; for (auto& v : x) { p.push_back(std::norm(v)); m += p.back(); } m /= (double)x.size(); std::sort(p.begin(), p.end()); return 10 * std::log10(p[(size_t)((1 - tail) * (double)p.size())] / m); }
 
 int main() {

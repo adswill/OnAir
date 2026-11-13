@@ -11,7 +11,7 @@ static int fails = 0;
 
 static std::vector<cf32> tone(size_t n, double fs, double hz, double amp, double noise, unsigned seed, double drift = 0) {
     Rng r(seed); std::vector<cf32> x(n); double ph = 0; const float sg = (float)std::sqrt(noise / 2);
-    for (size_t i = 0; i < n; i++) { ph += 2 * kPi * (hz + drift * i / fs) / fs; x[i] = (float)amp * cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * r.g(), sg * r.g()); }
+    for (size_t i = 0; i < n; i++) { ph += 2 * kPi * (hz + drift * i / fs) / fs; x[i] = (float)amp * cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(r, sg, sg); }
     return x;
 }
 static std::vector<std::string> rowsOf(const X40Telemetry& t, const char* kind) { std::vector<std::string> v; for (auto& r : t.rows) if (r.kind == kind) v.push_back(r.id + " | " + r.text); return v; }

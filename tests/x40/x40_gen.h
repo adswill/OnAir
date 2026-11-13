@@ -16,16 +16,34 @@ namespace x40gen {
 using dect2::cf32;
 inline constexpr double kPi = 3.14159265358979323846;
 
+// Gaussian numbers that are the same on every platform. std::mt19937 is fixed by the standard but std::normal_distribution is not: libc++ (macOS)
+// and libstdc++ (Linux, MinGW) draw different numbers from the same seed, so a marginal test saw another noise on each. The sensitivity tests
+// were tuned on the CI runners (libstdc++), so this follows libstdc++'s float polar method step by step (the second number of a pair first); the
+// maths functions are the platform's (a last-bit difference in logf does not matter for noise).
 struct Rng {
-    std::mt19937 r; std::normal_distribution<float> n{0, 1};
+    std::mt19937 r; float saved = 0; bool have = false;
     explicit Rng(unsigned s) : r(s) {}
-    float g() { return n(r); }
+    float canon() { float v = (float)(uint32_t)r() / 4294967296.0f; if (v >= 1.0f) v = std::nextafter(1.0f, 0.0f); return v; }
+    float g() {
+        if (have) { have = false; return saved; }
+        float x, y, r2;
+        do { x = 2.0f * canon() - 1.0f; y = 2.0f * canon() - 1.0f; r2 = x * x + y * y; } while (r2 > 1.0f || r2 == 0.0f);
+        const float mult = std::sqrt(-2.0f * std::log(r2) / r2);
+        saved = x * mult; have = true;
+        return y * mult;
+    }
 };
+
+// One complex Gaussian sample with the given scales. The two draws are made in a fixed order: cf32(s * r.g(), s * r.g()) is not, because the
+// order in which the arguments are evaluated is unspecified (GCC draws the second first, clang the first), so the real and the imaginary part
+// were swapped between Linux and macOS and the marginal tests saw another noise. The order here is GCC's, in which the sensitivity tests were
+// tuned on the CI runners: the imaginary part is drawn first.
+template <class R> inline cf32 cg(R& r, double sre, double sim) { const float im = (float)(sim * (double)r.g()); const float re = (float)(sre * (double)r.g()); return cf32(re, im); }
 
 // Complex Gaussian noise with the given power per sample (added in place)
 inline void addNoise(std::vector<cf32>& x, double power, unsigned seed) {
     Rng r(seed); const float s = (float)std::sqrt(power / 2);
-    for (auto& v : x) v += cf32(s * r.g(), s * r.g());
+    for (auto& v : x) v += cg(r, s, s);
 }
 // Carrier offset with a linear drift (Hz and Hz per second)
 inline void mix(std::vector<cf32>& x, double hz, double driftHzPerSec, double fs) {
@@ -102,7 +120,7 @@ inline std::vector<cf32> jove(double fs, double seconds, const std::vector<Burst
         const double t = i / fs; double pw = 1;
         for (auto& e : b) if (t >= e.start && t < e.start + e.len) pw += e.extra;
         const float s = (float)std::sqrt(pw / 2);
-        x[i] = cf32(s * r.g(), s * r.g());
+        x[i] = cg(r, s, s);
     }
     return x;
 }

@@ -24,7 +24,7 @@ struct Hopper {
             const bool on = t < tEnd;
             if (((long)(t * 10000)) != ((long)((t - 1.0 / fs) * 10000))) fskHz = ((g() & 1) ? 1 : -1) * 3000.0;      // 10 kbit/s FSK, +-3 kHz
             ph += 2 * kPi * (f + fskHz + lo + drift * t) / fs;
-            x[i] = (on ? (float)amp * cf32((float)std::cos(ph), (float)std::sin(ph)) : cf32(0, 0)) + cf32(sg * rng.g(), sg * rng.g());
+            x[i] = (on ? (float)amp * cf32((float)std::cos(ph), (float)std::sin(ph)) : cf32(0, 0)) + cg(rng, sg, sg);
         }
         return x;
     }

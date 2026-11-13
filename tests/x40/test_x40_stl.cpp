@@ -66,7 +66,7 @@ static std::vector<cf32> digital(double fs, double secs, double widthHz, double 
     for (int i = 0; i < L; i++) { const double m = i - (L - 1) / 2.0, fc = widthHz / 2 / fs; h[i] = (float)((m == 0 ? 2 * fc : std::sin(2 * kPi * fc * m) / (kPi * m)) * (0.5 - 0.5 * std::cos(2 * kPi * i / (L - 1)))); s += h[i]; }
     for (auto& v : h) v /= (float)s;
     Rng r(seed); std::vector<cf32> w(n + L), x(n);
-    for (auto& v : w) v = cf32(r.g(), r.g());
+    for (auto& v : w) v = cg(r, 1, 1);
     double p = 0;
     for (size_t i = 0; i < n; i++) { cf32 a(0, 0); for (int k = 0; k < L; k++) a += w[i + k] * h[k]; x[i] = a; p += std::norm(a); }
     p /= (double)n; for (auto& v : x) v /= (float)std::sqrt(p);                       // unit power

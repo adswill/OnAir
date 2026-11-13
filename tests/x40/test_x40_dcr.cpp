@@ -191,7 +191,7 @@ int main() {
             const size_t total = (size_t)(250000.0 * 150);
             for (size_t n = 0; n < total; n += blk.size()) {
                 for (auto& v : blk) {
-                    v = cf32(0.02f * rng.g(), 0.02f * rng.g());
+                    v = cg(rng, 0.02f, 0.02f);
                     if (r.mode == 1) { ph += 2 * kPi * 1000.0 / 250000.0; v += cf32(0.1f * (float)std::cos(ph), 0.1f * (float)std::sin(ph)); }
                     if (r.mode == 2) { ph2 += 2 * kPi * 1000.0 / 250000.0; ph += 2 * kPi * 2500.0 * std::sin(ph2) / 250000.0 / 1.0; v += cf32(0.1f * (float)std::cos(ph), 0.1f * (float)std::sin(ph)); }
                 }
@@ -249,7 +249,7 @@ int main() {
             const double off = dcr::findChannel(351.44375e6)->hz - centre;
             for (size_t n = 0; n < (size_t)(fs * 40); n += blk.size()) {
                 for (auto& v : blk) {
-                    v = cf32(0.02f * rng.g(), 0.02f * rng.g());
+                    v = cg(rng, 0.02f, 0.02f);
                     if (mode == 1) { ph += 2 * kPi * off / fs; v += cf32(0.2f * (float)std::cos(ph), 0.2f * (float)std::sin(ph)); }
                     if (mode == 2) { ph2 += 2 * kPi * 1000.0 / fs; ph += 2 * kPi * (off + 2500.0 * std::sin(ph2)) / fs; v += cf32(0.2f * (float)std::cos(ph), 0.2f * (float)std::sin(ph)); }
                 }

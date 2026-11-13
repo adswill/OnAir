@@ -16,8 +16,8 @@ struct Scene {
         std::vector<cf32> x(n); const float a = (float)(1 - std::exp(-2 * kPi * bw / 2 / fs));
         for (size_t i = 0; i < n; i++) {
             const double t = t0 + i / fs; const float s = (float)std::sqrt(p0 / 2);
-            cf32 v(s * rng.g(), s * rng.g());
-            lp += a * (cf32(rng2.g(), rng2.g()) - lp); ph += 2 * kPi * hz / fs; pn += 2 * kPi * narrowHz / fs;
+            cf32 v = cg(rng, s, s);
+            lp += a * (cg(rng2, 1, 1) - lp); ph += 2 * kPi * hz / fs; pn += 2 * kPi * narrowHz / fs;
             if (t >= t1 && t < t2) v += (float)std::sqrt(extra * p0 * 2 * 2 * kPi * bw / 2 / fs / 2) * lp * cf32((float)std::cos(ph), (float)std::sin(ph)) * 3.0f;
             if (narrowAmp > 0) v += (float)narrowAmp * cf32((float)std::cos(pn), (float)std::sin(pn));
             double g = std::pow(10.0, driftDbPerMin * t / 60 / 20); if (t >= tg) g *= std::pow(10.0, gdb / 20);

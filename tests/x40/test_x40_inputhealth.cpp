@@ -16,7 +16,7 @@ struct Radio {
         std::vector<cf32> x(n); const float sg = (float)std::sqrt(pw / 2); const double g = std::pow(10.0, gainDb / 20), ph = phaseDeg * kPi / 180;
         for (size_t i = 0; i < n; i++) {
             p1 += 2 * kPi * 123456.0 / fs; p2 += 2 * kPi * (-300000.0) / fs;
-            cf32 s(sg * rng.g(), sg * rng.g()); s += (float)std::sqrt(pw) * 0.3f * (cf32((float)std::cos(p1), (float)std::sin(p1)) + cf32((float)std::cos(p2), (float)std::sin(p2)));
+            cf32 s = cg(rng, sg, sg); s += (float)std::sqrt(pw) * 0.3f * (cf32((float)std::cos(p1), (float)std::sin(p1)) + cf32((float)std::cos(p2), (float)std::sin(p2)));
             double I = s.real(), Q = s.imag();
             const double Qm = g * (Q * std::cos(ph) + I * std::sin(ph));
             I += dcI; double Qo = Qm + dcQ;

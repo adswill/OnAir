@@ -1243,7 +1243,7 @@ if(DECT2_BUILD_TESTS)
     target_include_directories(test_sens40a3 PRIVATE tools/sens)
     target_link_libraries(test_sens40a3 PRIVATE dect2core)
     add_test(NAME sens40a3 COMMAND test_sens40a3)
-    set_tests_properties(sens40a3 PROPERTIES TIMEOUT 900)
+    set_tests_properties(sens40a3 PROPERTIES TIMEOUT 2400)   # 491 s alone on a macOS runner, over 900 s next to the other tests of a shard
     add_executable(test_sens40a4 tests/sens/test_sens40a4.cpp)   # 4.0 part 4 (docs/SENSITIVITY-4.0-A4.md): sonde tone symbols
     target_include_directories(test_sens40a4 PRIVATE tools/sens)
     target_link_libraries(test_sens40a4 PRIVATE dect2core)

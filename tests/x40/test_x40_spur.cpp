@@ -23,7 +23,7 @@ struct Scene {
             const cf32 e1 = (float)a1 * cf32((float)std::cos(p1), (float)std::sin(p1));
             v += (float)h2 * e1 * e1 + (float)h3 * e1 * e1 * e1;
             v += cf32((float)dc, 0) + (float)spurAmp * cf32((float)std::cos(ps), (float)std::sin(ps)) + (float)realAmp * cf32((float)std::cos(pr), (float)std::sin(pr));
-            x[i] = v + cf32(sg * rng.g(), sg * rng.g());
+            x[i] = v + cg(rng, sg, sg);
         }
         return x;
     }

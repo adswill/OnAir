@@ -32,7 +32,7 @@ struct KeyedAm {
             if (tone2Hz > 0 && keyed(t)) env += tone2Depth * std::sin(pt2);
             env *= 1.0 + fadeDepth * std::sin(2 * kPi * fadeHz * t);
             ph += 2 * kPi * lo / fs; if (ph > 2 * kPi) ph -= 2 * kPi; else if (ph < -2 * kPi) ph += 2 * kPi;
-            x[i] = (float)env * cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * rng.g(), sg * rng.g());
+            x[i] = (float)env * cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(rng, sg, sg);
         }
         return x;
     }
@@ -99,7 +99,7 @@ inline std::vector<cf32> ssrScene(double fs, double seconds, const std::vector<S
         }
     }
     std::vector<cf32> x(n); const float sg = (float)std::sqrt(noise / 2); double ph = 0;
-    for (size_t i = 0; i < n; i++) { ph += 2 * kPi * lo / fs; x[i] = env[i] * cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * rng.g(), sg * rng.g()); }
+    for (size_t i = 0; i < n; i++) { ph += 2 * kPi * lo / fs; x[i] = env[i] * cf32((float)std::cos(ph), (float)std::sin(ph)) + cg(rng, sg, sg); }
     return x;
 }
 
