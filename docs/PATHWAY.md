@@ -2113,3 +2113,17 @@ Mode count fix: tools/gen_modes_list.py, gen_web_schema.py, android/tools/gen_mo
   nothing. showFatalError now also writes ~/.config/onair/startup-error.txt and shows a dialog (zenity / kdialog / notify-send / xmessage,
   2 min timeout, ONAIR_NO_DIALOG=1 turns it off) when there is a desktop and no terminal. README Linux row: Mint, terminal start, the file.
   Packaging unchanged. dect2 built on GitHub quick run 43266619099 (pass).
+
+
+## 2026-11-13 (feat41-cpu): CPU per second of signal for every mode (docs/CPU-4.1.md)
+- Measurement: `test_qa_sweep --cpu` (each mode's test signal at its default rate, then noise alone, through the Engine; CPU s per s of
+  signal after the first quarter, all threads and busiest thread) and `.github/workflows/cpu.yml` (shards on Linux x86-64 and macOS arm64,
+  `compare` for before/after on one runner, `perf` with hottest instructions; a branch triggers it through tools/perf/cpu-request.env until
+  the file is on main). Baseline run 43364172327: 393 modes, 40 above 1.0 on one OS (signal or noise).
+- Changes, all bit-exact but one: NPR sync search (1.54 -> 0.75), inverted ExpressLRS bank from the normal bank's channel (1.38 -> 0.89),
+  popcount and floor without libcalls on x86, DVB-C AVX2 clone picked by features (x86-64-v3; arch=haswell ran only on Haswell: 1.47 ->
+  1.25), DVB-C2 kb search (noise 2.53 -> 1.58), DVB-SH turbo SISO (0.93 -> 0.80), sd3 FIRs in eight sums (S-band 1.23 -> 1.11, identical
+  test output), FY-3 MPT 6.05 -> 5.54. Linux runner figures (run 43381677385). GOES and Wi-SUN filter changes taken back (one fade case
+  2 frames short; no saving).
+- Left above one core: the wideband downlinks (X band, FY-3 MPT, ISDB-S, RDAS, GEONETCAST, UHRIT, GRB: rate-bound serial loops), DVB-C2,
+  DVB-SH and GK-2A on noise (searches), and threaded receivers whose sum is above 1.0. Simulated signals only.
