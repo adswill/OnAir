@@ -36,7 +36,7 @@ constexpr int kGapBits = 28;             // idle mark bits that end a burst (Mod
 constexpr size_t kMaxBurst = 1024;
 constexpr double kDupSec = 0.6;
 
-struct ByteRec { uint8_t b = 0; bool err = false, locked = false; double t = 0; int gap = 0; };   // t: the end of its stop bit; gap: idle bits before its start bit   // t: the end of its stop bit
+struct ByteRec { uint8_t b = 0; bool err = false, locked = false; double t = 0; int gap = 0; uint64_t lockedSyms = 0; };   // t: the end of its stop bit; gap: idle bits before its start bit   // t: the end of its stop bit
 
 struct Uart {
     int parity = 0;                      // 0 none, 1 even, 2 odd
@@ -74,7 +74,7 @@ struct Chain {
     bool crossPending = false;
     double goodC = 0, goodH = 0, goodEvm = 1;   // the levels while the eye was clean (what the link line reports)
     bool locked = false;
-    uint64_t nSym = 0, nSamp = 0, lockSym = 0;
+    uint64_t nSym = 0, nSamp = 0, lockSym = 0, lockedSyms = 0;   // lockedSyms: symbols seen while locked, ever
     int lastSym = 0;
     double steadyHi = 0, steadyLo = 0;
     bool haveHi = false, haveLo = false;
@@ -119,7 +119,7 @@ public:
     void reset() override {
         frontN_.reset(); frontW_.reset(); audioDec_.reset();
         for (int i = 0; i < 2; i++) { lpR_[i].clear(); lpI_[i].clear(); }
-        nco_ = cf32(1, 0); prevA_ = cf32(0, 0); dcX_ = dcY_ = 0; afDc_ = 0; afPow_ = 0;
+        nco_ = cf32(1, 0); prevA_ = cf32(0, 0); dcX_ = dcY_ = 0; afDc_ = 0; afPow_ = 0; afSumV_ = afSumY2_ = 0; afN_ = 0;
         for (Chain& ch : chains_) resetChain(ch);
         recent_.clear(); cands_.clear();
         lastAccept_ = -1e9;
@@ -132,11 +132,11 @@ public:
         Chain& af = chains_[0];
         for (float v : discN_) {
             // carrier offset and FM deviation of the audio modem, measured while it is locked
-            const bool afClean = af.locked && af.evm < 0.3;
-            if (afClean) { afDc_ += 0.0005 * (v - afDc_); }
+            (void)af;
+            afSumV_ += v;
             const double y = v - dcX_ + 0.995 * dcY_;     // DC block (the carrier offset) before the tone discriminator
             dcX_ = v; dcY_ = y;
-            if (afClean) afPow_ += 0.0005 * (y * y - afPow_);
+            afSumY2_ += y * y; afN_++;
             const cf32 in((float)y, 0.f);
             audioDec_.process(&in, 1, [&](cf32 a) { audio(a.real()); });
             for (size_t k = 1; k < chains_.size(); k++) if (!chains_[k].wide) push(chains_[k], v);
@@ -173,7 +173,8 @@ private:
     Decimator audioDec_;
     FmBiquad lpR_[2], lpI_[2];
     cf32 nco_{1, 0}, prevA_{0, 0};
-    double dcX_ = 0, dcY_ = 0, afDc_ = 0, afPow_ = 0;
+    double dcX_ = 0, dcY_ = 0, afDc_ = 0, afPow_ = 0, afSumV_ = 0, afSumY2_ = 0;
+    int afN_ = 0;
     std::vector<Chain> chains_;
     std::deque<Recent> recent_;
     std::deque<UnknownCand> cands_;
@@ -278,15 +279,20 @@ private:
         ch.c += 0.01 * e;
         if (ch.kind == 0) ch.c = std::min(250.0, std::max(-250.0, ch.c));   // the audio tones' centre never moves far from 1700 Hz
         const double half = ch.kind == 2 ? ch.h / 3 : ch.h;
-        ch.evm += (std::min(2.0, std::fabs(e) / half) - ch.evm) / 32;
+        const double en = std::min(2.0, std::fabs(e) / half);
+        ch.evm += (en - ch.evm) / 24;
         ch.nSym++;
         const int top = ch.kind == 2 ? 3 : 1;
-        const bool clean = ch.locked && ch.evm < 0.3;
+        const bool clean = ch.locked && ch.evm < 0.3 && en < 0.25;   // this symbol and the eye are clean: the measurements take it
         if (ch.kind == 2 && ch.crossPending) {   // 4-FSK: only a crossing between opposite symbols (+3/-3, +1/-1) sits at the symbol boundary
             if (s == -ch.lastSym) ch.ph -= (1 - (ch.locked ? 0.85 : 0.6)) * ch.crossPh;
             ch.crossPending = false;
         }
         if (clean) { ch.goodC = ch.c; ch.goodH = ch.h; ch.goodEvm = ch.evm; }
+        if (ch.kind == 0) {                      // the audio modem's FM deviation and carrier offset: the samples of clean symbols only
+            if (clean && afN_ > 0) { afDc_ += 0.02 * (afSumV_ / afN_ - afDc_); afPow_ += 0.02 * (afSumY2_ / afN_ - afPow_); }
+            afSumV_ = afSumY2_ = 0; afN_ = 0;
+        }
         if (clean && s == ch.lastSym && s == top) { ch.steadyHi = ch.haveHi ? ch.steadyHi + 0.1 * (y - ch.steadyHi) : y; ch.haveHi = true; }
         if (clean && s == ch.lastSym && s == -top) { ch.steadyLo = ch.haveLo ? ch.steadyLo + 0.1 * (y - ch.steadyLo) : y; ch.haveLo = true; }
         ch.lastSym = s;
@@ -297,7 +303,7 @@ private:
             ch.locked = false;
             unlocked(ch, t);
         }
-        if (ch.locked) { ch.evmSum += ch.evm; ch.evmN++; }
+        if (ch.locked) { ch.evmSum += ch.evm; ch.evmN++; ch.lockedSyms++; }
         // the bits: higher frequency = 1 for direct FSK; mark (the lower tone) = 1 for audio FSK; 4-FSK dibits +3 01, +1 00, -1 10, -3 11
         int nb[2], ib[2], nbits = 1;
         if (ch.kind == 2) {
@@ -374,7 +380,7 @@ private:
             bool err = !b;
             if (u.parity == 1 && (u.ones & 1)) err = true;
             if (u.parity == 2 && !(u.ones & 1)) err = true;
-            u.buf.push_back(ByteRec{(uint8_t)u.data, err, ch.locked, t, u.gap});
+            u.buf.push_back(ByteRec{(uint8_t)u.data, err, ch.locked, t, u.gap, ch.lockedSyms});
             if (b) { u.state = 1; u.idle = 0; } else u.state = 0;
             if (u.buf.size() >= kMaxBurst) flushUart(ch, u, t);
             break;
@@ -383,9 +389,7 @@ private:
     }
 
     void flushUart(Chain& ch, Uart& u, double t) {
-        size_t nLocked = 0;
-        for (const ByteRec& r : u.buf) nLocked += r.locked;
-        if (!nLocked) { u.buf.clear(); return; }
+        if (u.buf.front().lockedSyms == ch.lockedSyms && !ch.locked) { u.buf.clear(); return; }   // the chain was never locked since these bytes began
         std::vector<uint8_t> by(u.buf.size());
         for (size_t i = 0; i < by.size(); i++) by[i] = u.buf[i].b;
         size_t used = 0;
@@ -405,7 +409,7 @@ private:
             for (size_t i = f.start; i < f.start + f.len; i++) { errs += u.buf[i].err; lk += u.buf[i].locked; }
             used = f.start + f.len;
             if (f.crcOk && errs) continue;                 // a valid CRC read through framing or parity errors: another framer has these bytes right
-            if (!u.buf[f.start + f.len - 1].locked && 2 * lk < f.len) continue;
+            if (!lk && u.buf[f.start].lockedSyms == ch.lockedSyms) continue;   // a valid frame counts when the chain locked during it or before it was cut out
             if (!f.crcOk && lk < f.len) continue;          // damaged frames only from a fully locked stretch
             const char* par = u.parity == 1 ? "8E1" : u.parity == 2 ? "8O1" : "8N1";
             accept(ch, std::string(par) + (u.inv ? ", inverted" : ""), u.parity ? 2 : 1, f, by.data(), u.buf[f.start + f.len - 1].t);

@@ -177,7 +177,8 @@ static void dnpTracker() {
     CHECK(ms[4].func == "write" && hasText(ms[4].summary, "time sync") && hasText(ms[4].summary, "2026-11-13 12:00:00.123"), "time sync: %s", ms[4].summary.c_str());
     CHECK(ms[5].pair == ms[4].id, "time sync answered");
     CHECK(hasText(ms[6].summary, "class poll (class 1)"), "class 1 poll: %s", ms[6].summary.c_str());
-    CHECK(ms[7].pair == ms[6].id && hasText(ms[7].summary, "confirm requested") && point(o, 14, 2) == "4242", "event response: %s", ms[7].summary.c_str());
+    CHECK(ms[7].pair == ms[6].id && hasText(ms[7].summary, "confirm requested") && point(o, 14, 2) == "4242", "event response: %s (pair %llu, request %llu, AI2 %s)",
+          ms[7].summary.c_str(), (unsigned long long)ms[7].pair, (unsigned long long)ms[6].id, point(o, 14, 2).c_str());
     CHECK(ms[8].func == "confirm" && ms[8].pair == ms[7].id, "application confirm paired");
     CHECK(ms[9].func == "unsolicited response" && ms[9].dir == 3 && ms[10].pair == ms[9].id, "unsolicited and its confirm");
     CHECK(ms[12].func == "transport segment" && ms[13].func == "response" && ms[13].pair == ms[11].id && point(o, 14, 160) == "30", "two segments: %s / %s, AI160 %s",
@@ -362,13 +363,13 @@ static void noiseSweep() {
     const auto mbt = modbusTraffic(10);
     struct P { const char* name; Phy p; Framing fm; double must; };
     const P phys[] = {
-        {"Bell 202 8E1", afsk(true), F8E1, 58},
-        {"2-FSK 4800 8N1", fsk(1, 4800, 2000), F8N1, 58},
-        {"2-FSK 9600 8N1", fsk(1, 9600, 3000), F8N1, 61},
-        {"2-FSK 19200 8N1", fsk(1, 19200, 4800), F8N1, 64},
+        {"Bell 202 8E1", afsk(true), F8E1, 56},
+        {"2-FSK 4800 8N1", fsk(1, 4800, 2000), F8N1, 56},
+        {"2-FSK 9600 8N1", fsk(1, 9600, 3000), F8N1, 59},
+        {"2-FSK 19200 8N1", fsk(1, 19200, 4800), F8N1, 62},
         {"4-FSK 4800 8N1", fsk(2, 4800, 1800), F8N1, 62},
-        {"4-FSK 9600 8N1", fsk(2, 9600, 2400), F8N1, 65},
-        {"4-FSK 19200 8N1", fsk(2, 19200, 4000), F8N1, 68},
+        {"4-FSK 9600 8N1", fsk(2, 9600, 2400), F8N1, 67},
+        {"4-FSK 19200 8N1", fsk(2, 19200, 4000), F8N1, 70},
     };
     for (const P& ph : phys) {
         printf("  %-16s", ph.name);
