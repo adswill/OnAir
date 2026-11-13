@@ -886,7 +886,7 @@ void signalConstellation(const mb::SignalView& s) {
 void applyMeasured(const Registered& r) {
     const mb::SignalView& s = V.sig;
     mb::Definition d = V.def;
-    if (s.mod == mb::Mod::FSK || s.mod == mb::Mod::GFSK) d.deviationHz = std::round(s.deviationHz);
+    if (s.mod == mb::Mod::FSK) d.deviationHz = std::round(s.deviationHz);   // Gaussian filtering shrinks the symbol-time frequency: not for GFSK / GMSK
     d.offsetHz += std::round(s.offsetHz);
     std::string err;
     if (mb::writeText(modesDir() + "/" + r.id + ".json", mb::toJson(d), err)) { V.msg = tr("Measured values saved to the definition."); V.family = 0; }   // V.family = 0: the mode loads again
@@ -911,13 +911,13 @@ void signalTab(App& a, const Registered& r) {
     }
     if (!s.resolved) ImGui::TextColored(pal::badRed(), "%s", tr("The clusters are not separate yet: weak signal, wrong symbol rate or deviation, or only noise."));
     if (ImGui::CollapsingHeader(trw("Advanced"))) {
-        const bool fskLike = s.mod == mb::Mod::FSK || s.mod == mb::Mod::GFSK;
-        const bool canApply = s.resolved && (fskLike || psk || s.mod == mb::Mod::GMSK);
+        const bool fskLike = s.mod == mb::Mod::FSK;
+        const bool canApply = s.resolved && (fskLike || psk || s.mod == mb::Mod::GMSK || s.mod == mb::Mod::GFSK);
         ImGui::BeginDisabled(!canApply);
         if (ImGui::Button(tr("Use measured deviation / offset"))) applyMeasured(r);
         ImGui::EndDisabled();
         ImGui::TextDisabled("%s", fskLike ? tr("Writes the measured deviation and the carrier offset into the definition.") :
-                                psk || s.mod == mb::Mod::GMSK ? tr("Writes the measured carrier offset into the definition.") :
+                                psk || s.mod == mb::Mod::GMSK || s.mod == mb::Mod::GFSK ? tr("Writes the measured carrier offset into the definition.") :
                                 tr("The slicer thresholds follow the signal by themselves; nothing to write."));
     }
 }

@@ -465,6 +465,10 @@ struct Receiver::Impl {
         }
     }
 
+    // the Signal view takes a symbol only while the signal is really there: not in the squelch hang time after a burst, where the
+    // strobes sit on noise (it would smear every cluster), and not while the burst starts
+    bool present() const { return open && sinceOpen > 8 && pwS > noise * std::max(thrLin, 4.0); }
+
     void strobe() {
         const cf y = interp(tNext), ym = interp(tNext - sps / 2);
         sinceOpen++;
@@ -488,7 +492,7 @@ struct Receiver::Impl {
             e = (B - A) * Mi * 0.5;
             if (fsk && (std::fabs(r) > 1.4 || std::fabs(ym.real()) > 1.4 || std::fabs(yPrev.real()) > 1.4)) e = 0;   // a click (burst edge, impulse)
             yPrev = y;
-            if (open && sinceOpen > 8 && (!fsk || std::fabs(r) < 1.4)) {
+            if (present() && (!fsk || std::fabs(r) < 1.4)) {
                 std::lock_guard<std::mutex> sl(sigMu);
                 sigR[sigPos] = (float)r; sigLvl[sigPos] = (uint8_t)level;
                 sigPos = (sigPos + 1) % kSigCap; sigCnt = std::min(sigCnt + 1, kSigCap);
@@ -512,7 +516,7 @@ struct Receiver::Impl {
             const cf dz = z - zp;
             e = (dz.real() * zm.real() + dz.imag() * zm.imag()) * 0.5;
             yPrev = y;
-            if (open && sinceOpen > 8) {
+            if (present()) {
                 std::lock_guard<std::mutex> sl(sigMu);
                 sigZ[sigPos] = z; sigLvl[sigPos] = (uint8_t)idx;
                 sigPos = (sigPos + 1) % kSigCap; sigCnt = std::min(sigCnt + 1, kSigCap);

@@ -17,10 +17,10 @@ Numbers next to the plot:
 - PSK: EVM, Es/N0 = -20 log10(EVM), Eb/N0 = Es/N0 - 10 log10(bits per symbol), carrier offset.
 
 A view counts the clusters only when separation >= 4. A single smooth blob split into any number of slices cannot reach 3.5 (a flat
-distribution gives sqrt(12)), so noise does not produce clusters; below 4 the tab says the clusters are not separate yet.
+distribution gives sqrt(12)), so noise does not produce clusters (symbols are taken only while the signal is above the squelch threshold, not in the hang time after a burst); below 4 the tab says the clusters are not separate yet.
 
-**Advanced > Use measured deviation / offset** writes the measured values into the definition file (FSK/GFSK: `deviation_hz` and
-`offset_hz`; GMSK, PSK: `offset_hz`) and reloads the mode. There is no threshold field in the format: the slicer thresholds follow the
+**Advanced > Use measured deviation / offset** writes the measured values into the definition file (FSK: `deviation_hz` and
+`offset_hz`; GFSK, GMSK, PSK: `offset_hz` only, because Gaussian filtering pulls the symbol-time frequency below the nominal deviation) and reloads the mode. There is no threshold field in the format: the slicer thresholds follow the
 signal by themselves (OOK/ASK have nothing to write), so only deviation and offset are applied.
 
 Tests: `test_mb_signal` (ctest `mb_signal`): generated signals of 2FSK, 4FSK, GFSK, GMSK, OOK, ASK4, BPSK, QPSK, 8PSK; cluster count,
