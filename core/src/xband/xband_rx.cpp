@@ -128,8 +128,9 @@ public:
         phase_ = 0; freq_ = 0; t_ = spsNom_ / 2; strobePh_ = 0; lastStrobe_ = 0; mid_ = 0; prevMid_ = 0; sps_ = spsNom_;
         agc = 0.1f; carrierLock = 0; meanAbs_ = 0; varAbs_ = 0;
         cons.clear(); consPos = 0;
+        clearPipe();
     }
-    void reacquire() { acquired = false; acq_.clear(); idle = false; skipLeft_ = 0; }
+    void reacquire() { acquired = false; acq_.clear(); idle = false; skipLeft_ = 0; clearPipe(); }
     double currentCfo() const { return cfoCoarse + freq_ * decRate / (2 * kPi); }
 
     // The pre-check: with no carrier line in a search block (the power-law spectrum of noise is flat) the receiver looks at one block of
@@ -172,6 +173,18 @@ private:
     int strobePh_ = 0;
     cfp lastStrobe_{0, 0}, mid_{0, 0}, prevMid_{0, 0};
     float meanAbs_ = 0, varAbs_ = 0;
+    // Pipelined loops: a symbol's carrier correction reaches the oscillator kCarDelay samples later and its timing correction the clock
+    // kTimDelay symbols later, through small rings, instead of at once. At once, every sample waited for the previous symbol's whole chain
+    // (oscillator, matched filter, interpolator, Gardner error, divisions) before it could start; with the delay the processor overlaps the
+    // next samples. The loop bandwidths are under 1 % of the symbol rate, so a delay of a few symbols changes nothing they follow.
+    static constexpr int kCarDelay = 4, kTimDelay = 2;   // samples (ring of 8), full symbols
+    double pPh_[8] = {}, pFr_[8] = {}, pT_[kTimDelay] = {}, pS_[kTimDelay] = {};
+    uint32_t sIdx_ = 0, eIdx_ = 0;
+    void clearPipe() {
+        for (int k = 0; k < 8; k++) pPh_[k] = pFr_[k] = 0;
+        for (int k = 0; k < kTimDelay; k++) pT_[k] = pS_[k] = 0;
+        sIdx_ = eIdx_ = 0;
+    }
     void updateStep() {
         const double w = -2 * kPi * (offsetHz + cfoCoarse) / inRate;
         step_ = cfp((float)std::cos(w), (float)std::sin(w));
@@ -245,6 +258,7 @@ private:
         if (peak > 6) cfoCoarse += off;
         updateStep();
         phase_ = 0; freq_ = 0;
+        clearPipe();
         acquired = true;
     }
 
@@ -253,6 +267,11 @@ private:
             acq_.push_back(y);
             if ((int)acq_.size() >= kAcq) { acquire(); acq_.clear(); }
             return;
+        }
+        {   // the carrier corrections due at this sample
+            const uint32_t k = sIdx_++ & 7;
+            phase_ += pPh_[k]; freq_ += pFr_[k];
+            pPh_[k] = 0; pFr_[k] = 0;
         }
         const cfp nco = FastSinCos::get().polar(1.f, -phase_);   // a table: std::cos and std::sin in double each sample were the largest single cost
         cfp v = y * nco;
@@ -288,13 +307,19 @@ private:
         lastStrobe_ = a;
         e = std::clamp(e, -1.f, 1.f);
         const double wA = tA_, wB = tB_;
-        sps_ = std::clamp(sps_ + wB * e * spsNom_, spsNom_ * 0.992, spsNom_ * 1.008);
-        t_ += sps_ * 0.5 + wA * e * spsNom_ * 0.5;
+        {   // the timing correction of kTimDelay symbols ago now, this one's later
+            const uint32_t k = eIdx_++ % kTimDelay;
+            sps_ = std::clamp(sps_ + pS_[k], spsNom_ * 0.992, spsNom_ * 1.008);
+            t_ += sps_ * 0.5 + pT_[k];
+            pS_[k] = wB * e * spsNom_; pT_[k] = wA * e * spsNom_ * 0.5;
+        }
         const float I = sy.real() / agc, Q = sy.imag() / agc;
         const float ec = mod == kXbBpsk ? std::clamp((I > 0 ? 1.f : -1.f) * Q, -1.f, 1.f)
                                         : std::clamp((I > 0 ? 1.f : -1.f) * Q - (Q > 0 ? 1.f : -1.f) * I, -1.f, 1.f);
-        freq_ += cB_ * ec / spsNom_;
-        phase_ += cA_ * ec;
+        {   // due kCarDelay samples after this one (sIdx_ - 1)
+            const uint32_t k = (sIdx_ - 1 + kCarDelay) & 7;
+            pFr_[k] += cB_ * ec / spsNom_; pPh_[k] += cA_ * ec;
+        }
         carrierLock += 0.002f * ((1.f - std::fabs(ec)) - carrierLock);
         const float ab = mod == kXbBpsk ? std::fabs(I) : 0.5f * (std::fabs(I) + std::fabs(Q));
         meanAbs_ += 0.003f * (ab - meanAbs_);
