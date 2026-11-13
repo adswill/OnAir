@@ -44,6 +44,7 @@ struct PlpResult {
     // its state from one frame to the next) and cuts the FEC blocks, which may straddle frames.
     bool cti = false;
     std::vector<cf32> cells;
+    std::vector<float> cellW;                     // their channel state weights, |h|^2 / mean |h|^2 (empty: none; 4.1)
     float noise = 0.1f;
     int ctiRows = 0, ctiStartRow = 0, ctiFecBlockStart = 0;
     FramePlp cfg;
