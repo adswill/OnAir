@@ -188,6 +188,7 @@ struct TxRequest {
     int videoSrc = 0;              // analog TV: 0 test card, 1 video file, 2 camera / capture card
     std::string videoDevice;       // camera unique id (listVideoInputs); empty = default
     std::function<bool(double t, int w, int h, float* y, float* u, float* v)> pullVideo;   // analog YUV; empty = test card
+    std::function<double()> pullAspect;   // analog TV: the live picture's width / height (the picture format row "atv.aspect" fits it into the 4:3 or 16:9 frame); empty: 4:3
     std::vector<DemoTsService> mux; // DVB/ATSC/ISDB/DVB-S programmes (own video+audio each). Empty: services[] names.
     std::string fileNote;          // after start / makeTxGenerator: how the video/TS file was used (demo, remux, error)
     // The advanced parameters of the panel (app/panels/tx_params.cpp has the one table): numbers by key, e.g. "am.depth". A generator reads the keys it knows with

@@ -291,6 +291,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
                   [](TxRequest& r, double x) { r.synth.modeOpt[0] = (int)x; }), TxPGroup::Modulation),
             A(SET(TV(pick("atv.colour", "Colour", "The colour system; usual for the system is PAL, or NTSC for M.", 0, {"usual for the system", "PAL", "NTSC", "SECAM", "monochrome"}), 2),
                   [](TxRequest& r, double x) { r.synth.modeOpt[1] = (int)x; }), TxPGroup::Modulation),
+            A(TV(pick("atv.aspect", "Picture format", "How the picture is fitted into the frame. 4:3: a wider picture gets bars above and below. 16:9: the anamorphic frame of 16:9 receivers and transceivers such as the Icom IC-905 (a 4:3 picture gets bars at the sides); the wide screen signalling (625 lines, line 23) says which. Auto: 16:9 for a wide camera or file, else 4:3.", 0, {"Auto", "4:3", "16:9"}), 2), TxPGroup::Modulation),
             A(SET(pick("atv.pattern", "Test picture", "What the test card source draws.", 0, {"test card", "colour bars", "grey ramp"}), [](TxRequest& r, double x) { r.synth.modeOpt[2] = (int)x; }), TxPGroup::Modulation),
         });
         for (auto& d : v) if (!d.custom) d.probeSec = 0.03;

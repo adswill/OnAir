@@ -8,6 +8,7 @@
 //   -> interpolation to the output rate (position stepped in double precision, so a clock error is just a different step)
 //   + FM sound carrier made at the output rate, ghost, noise.
 #include "dect2/atv/atv_gen.h"
+#include "dect2/atv/atv_aspect.h"
 #include "dect2/atv/atv_vbi.h"
 #include "dect2/atv/atv_card.h"
 #include "dect2/atv/atv_nbtv.h"
@@ -149,6 +150,8 @@ struct AtvGenerator::Impl {
         return (double)a * prog.gain(3000.0);
     }
     std::vector<float> liveY, liveU, liveV;
+    std::vector<float> asY, asU, asV;   // the picture of a field fitted into its frame (atv_aspect.h)
+    int aspectWss = -1;                 // the WSS the aspect setting sends (625 lines); -1: the one of the config, if any
     std::vector<cf32> ghost;
     size_t ghostPos = 0;
     NoiseSource noise;
@@ -354,7 +357,7 @@ struct AtvGenerator::Impl {
         cfg.cnrDb = c.cnrDb; cfg.cfoHz = c.cfoHz; cfg.sroPpm = c.sroPpm;
         cfg.echoDb = c.echoDb; cfg.echoDelayUs = c.echoDelayUs; cfg.echoPhaseDeg = c.echoPhaseDeg;
         cfg.syncCompression = c.syncCompression; cfg.humPct = c.humPct; cfg.humHz = c.humHz;
-        cfg.sound = c.sound; cfg.level = c.level;
+        cfg.sound = c.sound; cfg.level = c.level; cfg.aspect = c.aspect;
         step = kFi / cfg.rate / (1.0 + cfg.sroPpm * 1e-6);
         prog.mode = cfg.sound; prog.preUs = fmt.preEmphUs;
         const size_t d = (size_t)std::max(1.0, std::round(cfg.echoDelayUs * 1e-6 * cfg.rate));
@@ -384,7 +387,24 @@ struct AtvGenerator::Impl {
             }
         }
         if (!live) card->renderField(fld, t, frame, fy[fld].data(), fu[fld].data(), fv[fld].data());
+        applyAspect(fld, live);
         fieldFrame[fld] = (int64_t)frame;
+    }
+
+    // The aspect setting (atv_aspect.h): the source (a camera or file of its own aspect, or the 4:3 test card) is fitted into a 4:3 or an anamorphic 16:9
+    // frame without distortion, and the matching WSS is chosen for line 23. A source of the frame's own aspect is left alone (the default does nothing).
+    void applyAspect(int fld, bool live) {
+        double src = kAtvAspectValue43;
+        if (live && cfg.pullAspect) { const double a = cfg.pullAspect(); if (a > 0.1 && a < 10) src = a; }
+        const int frame = atvTxFrame(cfg.aspect, src);
+        aspectWss = fmt.lines == 625 ? atvTxWss(cfg.aspect, frame) : -1;
+        const AtvFit fit = atvFitSource(src, frame == kAtvAspect169 ? kAtvAspectValue169 : kAtvAspectValue43);
+        if (fit.identity()) return;
+        const size_t n = fy[fld].size();
+        if (n != (size_t)fmt.picW * (size_t)fmt.fieldRows) return;
+        asY.resize(n); asU.resize(n); asV.resize(n);
+        atvFitPlanes(fy[fld].data(), fu[fld].data(), fv[fld].data(), fmt.picW, fmt.fieldRows, fit, asY.data(), asU.data(), asV.data());
+        fy[fld].swap(asY); fu[fld].swap(asU); fv[fld].swap(asV);
     }
 
     // the tables of the picture part for lines whose first sample is u0 microseconds after the line start (see PicTab)
@@ -452,8 +472,8 @@ struct AtvGenerator::Impl {
             const int k = (int)(((frame * 32 + (uint64_t)(line < 100 ? line - 7 : line - 320 + 16)) % 24));
             bits = k == 0 ? atvTtxPacketBits(1, 0, 0x00, "ONAIR TEST PAGE") : atvTtxPacketBits(1, k, 0, std::string(body) + " " + std::to_string(k));
             T = 1.0 / 6.9375; start = 12.0 - 12.5 * T; amp = 0.66;
-        } else if (F.lines == 625 && cfg.vbiWss >= 0 && line == 23) {
-            bits = atvWssElements(cfg.vbiWss); T = 0.2; start = 11.0; amp = 0.714;
+        } else if (F.lines == 625 && (aspectWss >= 0 || cfg.vbiWss >= 0) && line == 23) {
+            bits = atvWssElements(aspectWss >= 0 ? aspectWss : cfg.vbiWss); T = 0.2; start = 11.0; amp = 0.714;
         } else if (F.lines == 525 && !cfg.vbiCaptions.empty() && line == 21) {
             const size_t i = (size_t)frame * 2 % cfg.vbiCaptions.size();
             const uint8_t c1 = (uint8_t)cfg.vbiCaptions[i], c2 = i + 1 < cfg.vbiCaptions.size() ? (uint8_t)cfg.vbiCaptions[i + 1] : (uint8_t)' ';
@@ -949,6 +969,8 @@ std::unique_ptr<ModeSynth> makeAtvSynth(const SynthConfig& cfg, double sampleRat
     if (!extra.ident.empty()) c.ident = extra.ident;
     if (extra.pullAudio) c.pullAudio = extra.pullAudio;
     if (extra.pullVideo) c.pullVideo = extra.pullVideo;
+    if (extra.pullAspect) c.pullAspect = extra.pullAspect;
+    c.aspect = extra.aspect;
     auto s = std::make_unique<AtvSynth>(c);
     if (!s->ok()) return nullptr;
     return s;

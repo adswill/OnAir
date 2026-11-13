@@ -697,6 +697,8 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
         extra.ident = r.name.empty() ? r.callsign : r.name;
         if (r.pullAudio) extra.pullAudio = r.pullAudio;
         if (r.pullVideo) extra.pullVideo = r.pullVideo;
+        if (r.pullAspect) extra.pullAspect = r.pullAspect;
+        extra.aspect = std::max(0, std::min(2, (int)std::lround(r.o("atv.aspect", 0))));   // picture format: Auto, 4:3, 16:9 (atv_aspect.h)
         auto vid = makeAtvSynth(s, rate, extra);
         if (vid) return vid;
         return nullptr;

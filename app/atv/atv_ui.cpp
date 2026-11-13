@@ -4,9 +4,11 @@
 // Analog TV screens: the picture with a line scope, the status lamps, the vertical-interval and level panels, the receiver readouts and the options
 // of the test signal. The receiver (AtvReceiver) makes the pictures; the telemetry carries the waveforms and the numbers.
 #include "app.h"
+#include "dect2/atv/atv_aspect.h"
 #include "dect2/atv/atv_ghost.h"
 #include "panels/enhance_ui.h"
 #include "dect2/atv/atv_std.h"
+#include <algorithm>
 #include <cmath>
 #include <memory>
 
@@ -20,6 +22,7 @@ struct State {
     uint64_t frameSeq = 0;
     std::shared_ptr<const AtvFrame> frame;      // the last picture (for the caption)
     int deint = 0;                              // 0 weave, 1 bob
+    int aspect[4] = {0, 0, 0, 0};               // picture format per modulation (AM, FM video, NBTV on AM, NBTV on FM): 0 Auto, 1 4:3, 2 16:9 (atv_aspect.h)
     int sysHint = -1, colHint = -1;             // -1 automatic
     bool colourOn = true;
     float saturation = 1.f, hue = 0.f;
@@ -45,6 +48,10 @@ void loadState() {
     S.loaded = true;
     S.deint = (int)plat::prefs().getI("atvDeint", 0) == 1 ? 1 : 0;
     S.snow = plat::prefs().getI("atvSnow", 0) != 0;
+    S.aspect[0] = (int)std::clamp(plat::prefs().getI("atvAspect0", 0), 0L, 2L);
+    S.aspect[1] = (int)std::clamp(plat::prefs().getI("atvAspect1", 0), 0L, 2L);
+    S.aspect[2] = (int)std::clamp(plat::prefs().getI("atvAspect2", 0), 0L, 2L);
+    S.aspect[3] = (int)std::clamp(plat::prefs().getI("atvAspect3", 0), 0L, 2L);
     S.dualCh = (int)plat::prefs().getI("atvDualCh", 0) == 1 ? 1 : 0;
 }
 
@@ -224,6 +231,14 @@ void uploadFrame(App& a) {
     S.frame = f;
 }
 
+// The aspect the picture is shown with: the setting of the modulation, Auto from the WSS of line 23 (anamorphic 16:9). The NBTV pictures have their own shape.
+float pictureAspect(const App& a) {
+    const float own = S.img && S.imgH > 0 ? (float)S.imgW / S.imgH : 4.f / 3.f;
+    const int mod = a.rx.atv.modulation;
+    if (mod < 0 || mod > 1 || !live(a)) return own;
+    return (float)dect2::atvDisplayAspect(S.aspect[mod], a.rx.atv.wssText);
+}
+
 void picture(App& a, ImVec2 box) {
     const bool on = live(a);
     const AtvTelemetry& t = a.rx.atv;
@@ -231,7 +246,7 @@ void picture(App& a, ImVec2 box) {
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
     ImGui::InvisibleButton("##atvpic", box);
     dl->AddRectFilled(p0, ImVec2(p0.x + box.x, p0.y + box.y), IM_COL32(0, 0, 0, 255));
-    const float ar = S.img && S.imgH > 0 ? (float)S.imgW / S.imgH : 4.f / 3.f;
+    const float ar = pictureAspect(a);
     ImVec2 sz = box;
     if (box.x / box.y > ar) sz.x = box.y * ar; else sz.y = box.x / ar;
     const ImVec2 q0(p0.x + (box.x - sz.x) * 0.5f, p0.y + (box.y - sz.y) * 0.5f), q1(q0.x + sz.x, q0.y + sz.y);
@@ -526,7 +541,7 @@ void tuner(App& a, bool& retune) {
     }
 }
 
-void decoder(App&, bool&) {
+void decoder(App& a, bool&) {
     loadState();
     ImGui::Checkbox("Colour", &S.colourOn);
     nextIf(120);
@@ -537,6 +552,17 @@ void decoder(App&, bool&) {
     ImGui::SliderFloat("##atvsat", &S.saturation, 0.f, 2.f, "%.2f");
     if (ImGui::Checkbox("Show snow when there is no picture", &S.snow)) { plat::prefs().setI("atvSnow", S.snow ? 1 : 0); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Without a picture signal, draw the noise of the channel as a TV does with no station (snow) instead of nothing.\nA weak carrier shows up in it before the picture locks. Off by default.");
+    if (a.rx.atv.modulation == 0 || a.rx.atv.modulation == 1) {   // not the NBTV pictures, which have their own shape
+        static const char* const kAspects[3] = {"Auto", "4:3", "16:9"};
+        int& asp = S.aspect[a.rx.atv.modulation];
+        static const char* const kAspectKeys[2] = {"atvAspect0", "atvAspect1"};
+        ImGui::TextDisabled("Aspect"); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(90));
+        if (ImGui::BeginCombo("##atvasp", kAspects[std::clamp(asp, 0, 2)])) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(kAspects[i], asp == i)) { asp = i; plat::prefs().setI(kAspectKeys[a.rx.atv.modulation], i); savePrefs(a); }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("The shape of the picture on screen, saved for this kind of signal (AM or FM video). 16:9 stretches an anamorphic picture, as an Icom IC-905 sends it,\nback to its width. Auto follows the wide screen signalling (line 23, 625 lines) when the transmitter sends it, else 4:3.");
+    }
     ImGui::TextDisabled("Sound"); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(130));
     if (ImGui::BeginCombo("##atvsnd", S.soundSys == 0 ? "Automatic" : "FM / AM carrier only")) {
         if (ImGui::Selectable("Automatic", S.soundSys == 0)) S.soundSys = 0;
@@ -659,7 +685,7 @@ bool atvFullPicture(App& a, ImVec2 disp) {
     loadState();
     uploadFrame(a);
     if (!S.img || !S.frame) return false;
-    const float ar = S.imgH > 0 ? (float)S.imgW / S.imgH : 4.f / 3.f;
+    const float ar = pictureAspect(a);
     ImVec2 sz = disp;
     if (disp.x / disp.y > ar) sz.x = disp.y * ar; else sz.y = disp.x / ar;
     const ImVec2 q0((disp.x - sz.x) * 0.5f, (disp.y - sz.y) * 0.5f);

@@ -1127,6 +1127,7 @@ bool TxSession::start(std::unique_ptr<TxSink> sink, const TxRequest& r, const Tx
         } else {
             const int waitMs = sink_->name() == "IQ file" ? 500 : 0;   // into a file the signal runs ahead of the clock: the picture waits for its frame
             req_.pullVideo = [this, waitMs](double t, int w, int h, float* y, float* u, float* v) { if (!video_) return false; video_->setClock(t, waitMs); return video_->copyYuv(w, h, y, u, v); };
+            req_.pullAspect = [this]() { return video_ && video_->height() > 0 ? (double)video_->width() / (double)video_->height() : 0.0; };
         }
     }
     try {

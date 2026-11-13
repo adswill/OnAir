@@ -10,6 +10,7 @@
 #include "gfx/gfx.h"
 #include "map/wx_overlay.h"
 #include "platform/platform.h"
+#include "dect2/meteor/meteor_comp.h"
 #include "dect2/meteor/meteor_rx.h"
 #include "dect2/meteor/meteor_tel.h"
 #include <algorithm>
@@ -32,9 +33,11 @@ using dect2::MeteorTelemetry;
 using dect2::kMeteorWidth;
 
 // views: 0 automatic composite, 1 composite 123, 2 composite 125, 3 .. 8 channel 1 .. 6, 9 composite 124 (M2-3 / M2-4 send APID 64, 65 and 67),
-// 10 vegetation (false colour: the near-infrared channel 2 in red). New views go at the end: the number is saved in the settings.
-const char* const kViews[] = {"Colour (automatic)", "Colour 123", "Colour 125", "Channel 1", "Channel 2", "Channel 3", "Channel 4", "Channel 5", "Channel 6", "Colour 124", "Vegetation (false colour)"};
-constexpr int kNumViews = 11;
+// 10 vegetation (false colour: the near-infrared channel 2 in red), 11 AVHRR 221 (channel 2, 2, 1: green land, blue sea).
+// New views go at the end: the number is saved in the settings.
+const char* const kViews[] = {"Colour (automatic)", "Colour 123", "Colour 125", "Channel 1", "Channel 2", "Channel 3", "Channel 4", "Channel 5", "Channel 6", "Colour 124", "Vegetation (false colour)", "AVHRR 221 (false colour)"};
+constexpr int kNumViews = dect2::kMeteorViewCount;
+static_assert(sizeof(kViews) / sizeof(kViews[0]) == kNumViews, "a name for every view");
 const char* const kMods[] = {"Automatic", "OQPSK 72k (N2-3, N2-4)", "QPSK 72k (N2)", "OQPSK 80k interleaved"};
 
 struct State {
@@ -77,20 +80,8 @@ void kvRow(const App& a, const char* k, const char* fmt, ...) {
 
 bool hasCh(const MeteorImage& im, int c) { return im.packets[(size_t)c] > 0; }
 
-// the channels (0 .. 5) behind red, green and blue; -1 none. One channel: the same in all three (grey).
-std::array<int, 3> channelsFor(const MeteorImage* im, int view) {
-    if (view == 9) return {0, 1, 3};
-    if (view == 10) return {1, 0, 0};   // near-infrared in red, the visible channel in green and blue: vegetation shows red
-    if (view >= 3 && view <= 8) { const int c = view - 3; return {c, c, c}; }
-    if (view == 1) return {0, 1, 2};
-    if (view == 2) return {0, 1, 4};
-    if (!im) return {0, 1, 2};
-    if (hasCh(*im, 0) && hasCh(*im, 1) && hasCh(*im, 2)) return {0, 1, 2};   // day
-    if (hasCh(*im, 0) && hasCh(*im, 1) && hasCh(*im, 4)) return {0, 1, 4};   // night: the infrared channel instead of 3
-    if (hasCh(*im, 0) && hasCh(*im, 1) && hasCh(*im, 3)) return {0, 1, 3};   // APID 64, 65 and 67 (channel 3 is not sent)
-    for (int c = 0; c < 6; c++) if (hasCh(*im, c)) return {c, c, c};
-    return {0, 1, 2};
-}
+// the channels (0 .. 5) behind red, green and blue; one channel: the same in all three (grey). The table is in core (meteor_comp.h).
+std::array<int, 3> channelsFor(const MeteorImage* im, int view) { return dect2::meteorViewChannels(im, view); }
 
 const MeteorStrip* stripOf(const MeteorImage& im, int c, int row) {
     const auto& v = im.ch[(size_t)c];
@@ -123,21 +114,8 @@ void computeLut(const MeteorImage& im) {
     }
 }
 
-// grey level -> colour: cold (bright in the infrared) white, then red, yellow, green, cyan, blue for the warm ground
-uint32_t thermal(uint8_t g) {
-    const double t = 1.0 - g / 255.0;   // 0 cold .. 1 warm (inverted grey: the infrared channel shows cold clouds bright)
-    static const double st[6][3] = {{255, 255, 255}, {200, 40, 40}, {240, 220, 40}, {60, 200, 80}, {40, 200, 220}, {20, 40, 140}};
-    const double x = t * 5; const int i = std::min(4, (int)x); const double f = x - i;
-    const uint32_t r = (uint32_t)(st[i][0] + (st[i + 1][0] - st[i][0]) * f), gg = (uint32_t)(st[i][1] + (st[i + 1][1] - st[i][1]) * f), b = (uint32_t)(st[i][2] + (st[i + 1][2] - st[i][2]) * f);
-    return 0xFF000000u | b << 16 | gg << 8 | r;
-}
-
 void composeRow(const MeteorImage& im, const std::array<int, 3>& ch, int row, uint32_t* px) {
-    const MeteorStrip* s[3] = {stripOf(im, ch[0], row), stripOf(im, ch[1], row), stripOf(im, ch[2], row)};
-    for (int i = 0; i < 8 * kMeteorWidth; i++) {
-        const uint32_t r = s[0] ? S.lut[ch[0]][s[0]->px[(size_t)i]] : 0, g = s[1] ? S.lut[ch[1]][s[1]->px[(size_t)i]] : 0, b = s[2] ? S.lut[ch[2]][s[2]->px[(size_t)i]] : 0;
-        px[i] = (S.enh == 2 && ch[0] == ch[1] && ch[1] == ch[2] && s[0] && s[0]->px[(size_t)i]) ? thermal((uint8_t)r) : (0xFF000000u | b << 16 | g << 8 | r);
-    }
+    dect2::meteorComposeRow(im, ch, row, &S.lut[0][0], S.enh == 2, px);
 }
 
 // brings the texture up to the picture: new rows and the strips that changed since they were drawn

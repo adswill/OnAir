@@ -69,7 +69,7 @@ std::vector<uint8_t> atvCcBits(uint8_t c1, uint8_t c2) {
 }
 
 AtvVbi::AtvVbi() : ttx_(std::make_shared<TeletextDecoder>()) {}
-void AtvVbi::reset() { st_ = AtvVbiStatus(); ttx_ = std::make_shared<TeletextDecoder>(); }
+void AtvVbi::reset() { st_ = AtvVbiStatus(); ttx_ = std::make_shared<TeletextDecoder>(); wssMiss_ = 0; }
 
 bool AtvVbi::tryTeletext(const Level& v) {
     const char* const pat = "101010101010101011100100";
@@ -135,7 +135,14 @@ bool AtvVbi::tryWss(const Level& v) {
     return true;
 }
 
-bool AtvVbi::line625(const Level& v) { return tryTeletext(v) || tryWss(v); }
+bool AtvVbi::line625(const Level& v) {
+    const bool ttx = tryTeletext(v);
+    const bool wss = !ttx && tryWss(v);
+    if (wss) wssMiss_ = 0;
+    else if (wssMiss_ <= kWssExpireLines) wssMiss_++;
+    else if (st_.wssValid) { st_.wssValid = false; st_.wssAspect = -1; st_.wssText.clear(); }   // the transmitter stopped sending it: the picture format is unknown again
+    return ttx || wss;
+}
 
 bool AtvVbi::line525(const Level& v) {
     const double T = 1.0 / 0.5034965;
