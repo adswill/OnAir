@@ -910,7 +910,7 @@ void signalTab(App& a, const Registered& r) {
         if (s.resolved && s.unit[0]) ImGui::Text(tr("measured deviation %.0f Hz    offset %+.0f Hz"), s.deviationHz, s.offsetHz);
     }
     if (!s.resolved) ImGui::TextColored(pal::badRed(), "%s", tr("The clusters are not separate yet: weak signal, wrong symbol rate or deviation, or only noise."));
-    if (ImGui::CollapsingHeader(tr("Advanced"))) {
+    if (ImGui::CollapsingHeader(trw("Advanced"))) {
         const bool fskLike = s.mod == mb::Mod::FSK || s.mod == mb::Mod::GFSK;
         const bool canApply = s.resolved && (fskLike || psk || s.mod == mb::Mod::GMSK);
         ImGui::BeginDisabled(!canApply);
