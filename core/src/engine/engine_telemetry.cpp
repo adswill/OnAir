@@ -270,6 +270,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 55: return pollStd(rxWifi_, 55, t, seqs[49], &RxTelemetry::wifi);
     case 56: return pollStd(rxGeneral_, 56, t, seqs[50], &RxTelemetry::general);
     case 57: return pollStd(rxRid_, 57, t, seqs[51], &RxTelemetry::rid);
+    case 899: return pollStd(rxEspnow_, 899, t, seqs[898], &RxTelemetry::espnow);   // ESP-NOW (slot 898)
     case 58: return pollStd(rxNr_, 58, t, seqs[52], &RxTelemetry::nr);
     case 59: return pollStd(rxTime_, 59, t, seqs[53], &RxTelemetry::timesig);
     case 60: return pollStd(rxMeteor_, 60, t, seqs[54], &RxTelemetry::meteor);

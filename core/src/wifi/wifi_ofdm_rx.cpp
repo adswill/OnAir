@@ -283,7 +283,7 @@ struct OfdmRx::Impl {
         if (crc32(f.data(), nn) != got) { st.framesBad++; return; }
         st.framesOk++;
         Info in;
-        in.cfoHz = pcfo; in.at = pd; in.length = plen;
+        in.cfoHz = pcfo; in.at = pd; in.length = plen; in.rateMbps = pqpsk ? 12 : 6;
         in.snrDb = nErr ? (float)(-10 * std::log10(err / (float)nErr + 1e-9)) : 0;
         double pw = 0;
         const int64_t a = std::max(base, pd - 320), z = std::min(n, pend);

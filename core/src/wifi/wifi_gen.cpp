@@ -52,7 +52,7 @@ struct WifiGenerator::Impl {
 
     // one OFDM PPDU at the output rate, mixed to its position (and the duplicates') plus the carrier offset
     void ofdmFrame(const WifiGenFrame& fr, const std::vector<uint8_t>& mp) {
-        const std::vector<cf32> w = wifi::ofdm::txPpdu(mp, fr.scrSeed);
+        const std::vector<cf32> w = wifi::ofdm::txPpdu(mp, fr.scrSeed, fr.phy == 4);
         const double step = wifi::ofdm::kRate * (1 + cfg.clockPpm * 1e-6) / cfg.rate;   // input samples per output sample
         const size_t ns = (size_t)std::ceil(((double)w.size() + 2) / step);
         const double amp = cfg.amp * fr.ampScale;
@@ -90,13 +90,48 @@ struct WifiGenerator::Impl {
         }
     }
 
+    // A DSSS PPDU at 2 Mbit/s (phy 2: long preamble, 3: short): DBPSK up to the header (or the short SFD), DQPSK after it, Barker-11 chips
+    void dsss2Frame(const WifiGenFrame& fr, const std::vector<uint8_t>& mp) {
+        const wifi::DsssPpdu pp = wifi::dsssPpdu(mp, 2, fr.phy == 3, fr.phy == 3 ? 0x6C : 0x1B);
+        std::vector<cf32> sym;
+        sym.reserve(pp.bits.size());
+        int qt = 0;   // the phase in quarter turns
+        static const int kQ[4] = {0, 3, 1, 2};   // index d0 + 2 d1: d0 d1 = 00 -> 0, 10 -> 3 (-pi/2), 01 -> 1 (+pi/2), 11 -> 2 (pi)
+        static const cf32 kP[4] = {cf32(1, 0), cf32(0, 1), cf32(-1, 0), cf32(0, -1)};
+        for (size_t i = 0; i < pp.bits.size();) {
+            if (i < pp.qpskFrom) { if (pp.bits[i]) qt += 2; i++; }
+            else { const int d0 = pp.bits[i], d1 = i + 1 < pp.bits.size() ? pp.bits[i + 1] : 0; qt += kQ[d0 | d1 << 1]; i += 2; }
+            sym.push_back(kP[qt & 3]);
+        }
+        const double chipsPerSample = wifi::kChipRate * (1 + cfg.clockPpm * 1e-6) / cfg.rate;
+        const size_t nChips = sym.size() * 11;
+        const size_t ns = (size_t)std::ceil(nChips / chipsPerSample);
+        const double off = cfg.cfoHz + fr.cfoHz + fr.offHz;
+        const double amp = cfg.amp * fr.ampScale;
+        const double dph = 2 * kPi * off / cfg.rate;
+        for (size_t i = 0; i < ns; i++) {
+            const size_t k = (size_t)(i * chipsPerSample);
+            const cf32 v = k < nChips ? sym[k / 11] * (float)wifi::kBarker[k % 11] : cf32(0, 0);
+            ph = std::remainder(ph + dph, 2 * kPi);
+            const cf32 lo((float)std::cos(ph), (float)std::sin(ph));
+            q.push_back((float)amp * v * lo);
+            nGen++;
+        }
+    }
+
     void refill() {
         if (qPos > 0) { q.erase(q.begin(), q.begin() + (ptrdiff_t)qPos); qPos = 0; }
         if (done || cfg.frames.empty()) { silence(0.001); return; }
         const WifiGenFrame& fr = cfg.frames[idx];
         std::vector<uint8_t> mp = fr.mpdu;
         if (fr.badFcs && !mp.empty()) mp.back() ^= 0x10;
-        if (fr.phy == 1) {
+        if (fr.phy == 2 || fr.phy == 3) {
+            dsss2Frame(fr, mp);
+            silence(fr.gapSec);
+            if (++idx >= cfg.frames.size()) { idx = 0; if (!cfg.loop) done = true; }
+            return;
+        }
+        if (fr.phy == 1 || fr.phy == 4) {
             ofdmFrame(fr, mp);
             silence(fr.gapSec);
             if (++idx >= cfg.frames.size()) { idx = 0; if (!cfg.loop) done = true; }

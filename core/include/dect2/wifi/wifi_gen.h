@@ -24,7 +24,7 @@ struct WifiGenFrame {
     double ampScale = 1;
     double cfoHz = 0;            // this AP's own carrier offset, on top of the config's
     bool badFcs = false;         // tests: one bit of the FCS sent wrong
-    int phy = 0;                 // 0 DSSS 1 Mbit/s, 1 OFDM 6 Mbit/s
+    int phy = 0;                 // 0 DSSS 1 Mbit/s, 1 OFDM 6 Mbit/s, 2 DSSS 2 Mbit/s long preamble, 3 DSSS 2 Mbit/s short preamble, 4 OFDM 12 Mbit/s
     double offHz = 0;            // where the channel sits relative to the capture's centre (a wide capture)
     std::vector<double> dupHz;   // OFDM: further offsets at which the same frame is sent at the same time (non-HT duplicate)
     uint8_t scrSeed = 0x5D;      // OFDM: the scrambler start state

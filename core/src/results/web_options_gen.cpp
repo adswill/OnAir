@@ -33,6 +33,7 @@
 #include "dect2/dvbsh/dvbsh_engine.h"
 #include "dect2/edacs/edacs_rx.h"
 #include "dect2/elektro/elektro_rx.h"
+#include "dect2/espnow/espnow_rx.h"
 #include "dect2/fbr/fbr_rx.h"
 #include "dect2/flarm/flarm_rx.h"
 #include "dect2/fpv/fpv_live.h"
@@ -432,10 +433,11 @@ static bool set_54(Engine& e, const std::string& n, double v) {
     if (n == "setSquelch") { call(r, &Rx<decltype(r)>::setSquelch, v); return true; }
     return false;
 }
-static const char kOpt_55[] = R"JSON([{"n":"setReportInterval","k":"num","l":"Report Interval","h":"seconds of signal between telemetry reports (default 0.25; for tests)","t":"s"}])JSON";
+static const char kOpt_55[] = R"JSON([{"n":"setReportInterval","k":"num","l":"Report Interval","h":"seconds of signal between telemetry reports (default 0.25; for tests)","t":"s"},{"n":"setOfdmQpsk","k":"bool","l":"Ofdm Qpsk","h":"also read OFDM frames at 12 Mbit/s (QPSK 1/2); off by default (beacons are 6 Mbit/s)","t":"s"}])JSON";
 static bool set_55(Engine& e, const std::string& n, double v) {
     auto& r = e.wifi();
     if (n == "setReportInterval") { call(r, &Rx<decltype(r)>::setReportInterval, v); return true; }
+    if (n == "setOfdmQpsk") { call(r, &Rx<decltype(r)>::setOfdmQpsk, v); return true; }
     return false;
 }
 static const char kOpt_56[] = R"JSON([{"n":"setChannelOffsetHz","k":"num","l":"Channel Offset Hz","h":"the channel relative to the dial frequency (click-to-tune)","u":"Hz","t":"s"},{"n":"setDemod","k":"int","l":"Demod","h":"GeneralDemod","t":"s"},{"n":"setWidthHz","k":"num","l":"Width Hz","h":"filter width (clamped to the demodulator's range)","u":"Hz","t":"s"},{"n":"setDeemphUs","k":"num","l":"Deemph Us","h":"NFM / WFM: 0 off, 50, 75, 750","u":"us","t":"s"},{"n":"setFmPll","k":"int","l":"Fm Pll","t":"a"},{"n":"setCwPitchHz","k":"num","l":"Cw Pitch Hz","u":"Hz","t":"a"},{"n":"setAmDetector","k":"int","l":"Am Detector","t":"a"},{"n":"setListenHz","k":"num","l":"Listen Hz","u":"Hz","t":"a"}])JSON";
@@ -1347,6 +1349,13 @@ static bool set_897(Engine& e, const std::string& n, double v) {
     if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
     return false;
 }
+static const char kOpt_899[] = R"JSON([{"n":"setShowBadFcs","k":"bool","l":"Show Bad Fcs","h":"also list ESP-NOW frames whose FCS failed (marked; never added to the devices)","t":"s"},{"n":"setReportInterval","k":"num","l":"Report Interval","h":"seconds of signal between reports (default 0.25; tests)","t":"s"}])JSON";
+static bool set_899(Engine& e, const std::string& n, double v) {
+    auto& r = e.espnow();
+    if (n == "setShowBadFcs") { call(r, &Rx<decltype(r)>::setShowBadFcs, v); return true; }
+    if (n == "setReportInterval") { call(r, &Rx<decltype(r)>::setReportInterval, v); return true; }
+    return false;
+}
 struct OptEntry { int standard; const char* schema; bool (*set)(Engine&, const std::string&, double); };
 const OptEntry kOpt[] = {
     {7, kOpt_7, set_7},
@@ -1527,6 +1536,7 @@ const OptEntry kOpt[] = {
     {895, kOpt_895, set_895},
     {896, kOpt_896, set_896},
     {897, kOpt_897, set_897},
+    {899, kOpt_899, set_899},
 };
 } // namespace
 

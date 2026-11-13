@@ -87,6 +87,7 @@ bool Engine::retune(const TuneSettings& tune) {
         if (lastDev_.kind != DeviceInfo::File) { rxZb_.setCenterHz(radioTune(tune).centerHz); rxTh_.setCenterHz(radioTune(tune).centerHz); }
         if (lastDev_.kind != DeviceInfo::File) rxNb_.setCenterHz(radioTune(tune).centerHz);
         if (lastDev_.kind != DeviceInfo::File) rxHl_.setCenterHz(radioTune(tune).centerHz);
+        if (lastDev_.kind != DeviceInfo::File) rxEspnow_.setCenterHz(radioTune(tune).centerHz);
         if (lastDev_.kind != DeviceInfo::File) rxWs_.setCenterHz(radioTune(tune).centerHz);
         rxWs_.setDialHz(tune.centerHz);
         if (lastDev_.kind != DeviceInfo::File) rxFpv_.setCenterHz(radioTune(tune).centerHz);
@@ -155,6 +156,7 @@ bool Engine::retuneReset(const TuneSettings& tune) {
         if (lastDev_.kind != DeviceInfo::File) { rxZb_.setCenterHz(radioTune(tune).centerHz); rxTh_.setCenterHz(radioTune(tune).centerHz); }
         if (lastDev_.kind != DeviceInfo::File) rxNb_.setCenterHz(radioTune(tune).centerHz);
         if (lastDev_.kind != DeviceInfo::File) rxHl_.setCenterHz(radioTune(tune).centerHz);
+        if (lastDev_.kind != DeviceInfo::File) rxEspnow_.setCenterHz(radioTune(tune).centerHz);
         if (lastDev_.kind != DeviceInfo::File) rxWs_.setCenterHz(radioTune(tune).centerHz);
         rxWs_.setDialHz(tune.centerHz);
         if (lastDev_.kind != DeviceInfo::File) rxFpv_.setCenterHz(radioTune(tune).centerHz);

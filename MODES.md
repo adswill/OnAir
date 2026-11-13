@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**390 modes.**
+**391 modes.**
 
 ## TV (17)
 
@@ -189,7 +189,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Golay paging (GSC)** - GSC pager messages (simulated only)
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (43)
+## IoT & Sensors (44)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
@@ -209,6 +209,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Zigbee / 802.15.4** - Zigbee / 802.15.4: networks and devices from the headers every sniffer sees (receive only, no decryption; needs a fast 2.4 GHz radio)
 - **Thread** - Thread: networks and devices from beacons and 802.15.4 headers, 6LoWPAN where sent in the clear (receive only, encrypted traffic is shown as encrypted; needs a fast 2.4 GHz radio)
 - **Wi-Fi HaLow (802.11ah)** - Wi-Fi HaLow / 802.11ah: the long-range sub-GHz networks around you from their beacons (receive only, no decryption)
+- **ESP-NOW** - ESP-NOW: ESP8266 / ESP32 packets on a 2.4 GHz Wi-Fi channel, devices and payloads (receive only; needs 20 MHz of bandwidth)
 - **ANT+ sensors** - ANT+ sensors on 2457 MHz (and other ANT networks on their own channel): heart rate straps and watches, bike speed, cadence and power sensors, footpods, environment sensors, as a watch or bike computer hears them: 1 Mbit/s GFSK frames with the device number, type and the data page, the heart rate with the beat count and R-R interval plotted over time, power, cadence, speed, temperature, manufacturer, serial and battery pages. Receive only: nothing is sent, paired or acknowledged, and only the open broadcasts are shown. Needs a radio that reaches 2.4 GHz at 4 Msps (HackRF, Pluto, LimeSDR, BladeRF, USRP).
 - **DECT cordless phones** - DECT cordless phones and base stations on the ten carriers 1881.792 - 1897.344 MHz (Europe; 1.152 Mbit/s GFSK, 10 ms frames of 24 slots): every base station from the beacon it sends every frame, with its RFPI (the manufacturer code and system number inside it), level and the slots it uses, the system information tails and a burst log with base and handset bursts. Activity and signalling only: calls are encrypted and the voice is not decoded, nothing is transmitted. Needs a radio that reaches 1.9 GHz at 5 Msps or more (HackRF, Pluto, LimeSDR, BladeRF, USRP, SDRplay).
 - **Wi-SUN FAN** - Wi-SUN FAN: smart meter and street light mesh networks, nodes and links (receive only, no decryption)

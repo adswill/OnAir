@@ -15,7 +15,8 @@
 // 11 Mchip/s. The input is mixed to 0 Hz and brought to 20 Msps (exactly 20 samples a symbol), correlated with the Barker sequence, and
 // each of the 20 sample phases runs its own differential detector and descrambler (z^-7 + z^-4 + 1, self-synchronising) looking for the
 // long preamble: 32 descrambled ones then the SFD 0xF3A0. The strongest phase decodes the PLCP header (CRC-16) and the MPDU with an
-// early / late timing tracker; the FCS (CRC-32) must pass. Short-preamble and 2 / 5.5 / 11 Mbit/s headers are counted, not decoded.
+// early / late timing tracker; the FCS (CRC-32) must pass. 2 Mbit/s (DQPSK, clause 16) is decoded after the long preamble and after the short
+// one (56 scrambled zeros, SFD 0x05CF, header at 2 Mbit/s); 5.5 / 11 Mbit/s (CCK) headers are counted, not decoded.
 //
 // Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never blocks),
 // telemetry() and the setters from the interface thread.
@@ -31,6 +32,16 @@
 namespace dect2 {
 
 struct WifiTelemetry;   // wifi_tel.h
+
+// How a frame was received (setFrameMetaCallback)
+struct WifiFrameMeta {
+    float rssiDbfs = -200;
+    int rateKbps = 1000;                 // DSSS 1000 / 2000, OFDM 6000 / 12000
+    bool ofdm = false, shortPreamble = false;
+    bool fcsOk = true;
+    double cfoHz = 0;                    // carrier offset measured on this frame
+    float snrDb = 0;
+};
 
 class WifiReceiver {
 public:
@@ -53,6 +64,10 @@ public:
     void setLogCallback(std::function<void(const std::string&)> cb);
     // Every good frame (FCS passed; n without the FCS), on the feeding thread: for a mode built on this demodulator (Drone Remote ID). Set before feeding.
     void setFrameCallback(std::function<void(const uint8_t* mpdu, size_t n, float rssiDbfs)> cb);
+    // Every frame whose PLCP header (DSSS) or SIGNAL and FCS (OFDM) decoded, with its rate and level; a DSSS frame whose FCS failed comes with
+    // fcsOk false (n without the four FCS bytes as received). For a mode built on this demodulator (ESP-NOW). Set before feeding.
+    void setFrameMetaCallback(std::function<void(const uint8_t* mpdu, size_t n, const WifiFrameMeta& meta)> cb);
+    void setOfdmQpsk(bool on);            // also read OFDM frames at 12 Mbit/s (QPSK 1/2); off by default (beacons are 6 Mbit/s)
 
 private:
     struct Impl;

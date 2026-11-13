@@ -37,8 +37,8 @@ int viterbiDecode(const float* soft, int nBits, uint8_t* out);                  
 void scramble(std::vector<uint8_t>& bits, uint8_t state);       // x^7 + x^4 + 1 (clause 17.3.5.5); the same call descrambles
 
 // The whole PPDU as 20 Msps samples (unit average power in the data part): preamble, SIGNAL, DATA. mpdu includes its FCS. scrSeed: the 7-bit
-// scrambler start state (non-zero). The 6 Mbit/s rate only (what beacons use).
-std::vector<cf32> txPpdu(const std::vector<uint8_t>& mpdu, uint8_t scrSeed = 0x5D);
+// scrambler start state (non-zero). 6 Mbit/s (BPSK 1/2, what beacons use), or 12 Mbit/s (QPSK 1/2) with qpsk.
+std::vector<cf32> txPpdu(const std::vector<uint8_t>& mpdu, uint8_t scrSeed = 0x5D, bool qpsk = false);
 
 struct Info {
     double cfoHz = 0;       // carrier offset measured on the preamble (the signal sits this far above where it was expected)
@@ -46,6 +46,7 @@ struct Info {
     float rssiDb = -200;    // mean power of the packet, dB (full scale 0)
     int64_t at = 0;         // sample index of the long training start
     int length = 0;         // PSDU bytes (FCS included)
+    int rateMbps = 6;       // 6 (BPSK 1/2) or 12 (QPSK 1/2, setAllowQpsk)
 };
 
 class OfdmRx {

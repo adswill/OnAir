@@ -2962,3 +2962,21 @@ case 881: {
     { Table tb({"Serial", "Time Sec", "Text", "Cp", "Score", "Margin"}); int n = 0; for (auto it = t.chars.rbegin(); it != t.chars.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.timeSec), cell(e.text), cell(e.cp), cell(e.score), cell(e.margin)}); } if (n) addTable(o, "Chars", tb); }
     break;
 }
+case 899: {
+    const auto& t = rx.espnow; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Level Db", t.levelDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Time Sec", t.timeSec);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Center Mhz", t.centerMhz);
+    cardIf(o, "Channel", t.channel);
+    cardIf(o, "Offset Hz", t.offsetHz);
+    cardIf(o, "Wifi Frames", t.wifiFrames);
+    cardIf(o, "Action Frames", t.actionFrames);
+    { Table tb({"Mac", "Vendor", "Version", "Packets", "Encrypted", "Broadcasts", "Rate", "Last To"}); int n = 0; for (auto it = t.devices.rbegin(); it != t.devices.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.mac), cell(e.vendor), cell(e.version), cell(e.packets), cell(e.encrypted), cell(e.broadcasts), cell(e.rate), cell(e.lastTo)}); } if (n) addTable(o, "Devices", tb); }
+    { Table tb({"Wall Time", "Sec", "Channel", "Rate Kbps", "From", "To", "Seq", "Info"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.sec), cell(e.channel), cell(e.rateKbps), cell(e.from), cell(e.to), cell(e.seq), cell(e.info)}); } if (n) addTable(o, "Log", tb); }
+    break;
+}

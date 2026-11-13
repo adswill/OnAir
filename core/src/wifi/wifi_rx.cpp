@@ -44,12 +44,21 @@ uint16_t sfdPattern() {   // the SFD as the history register holds it (newest bi
     return p;
 }
 const uint16_t kSfdPat = sfdPattern();
+uint16_t sfdShortPattern() {
+    uint16_t p = 0;
+    for (int k = 0; k < 16; k++) p = (uint16_t)(p << 1 | (wifi::kSfdShort >> k & 1));
+    return p;
+}
+const uint16_t kSfdShortPat = sfdShortPattern();
+constexpr int kAllOne = 1 << 30;          // demod(): no DQPSK part
 } // namespace
 
 struct WifiReceiver::Impl {
     std::mutex mu;
     std::function<void(const std::string&)> log;
     std::function<void(const uint8_t*, size_t, float)> onFrame;
+    std::function<void(const uint8_t*, size_t, const WifiFrameMeta&)> onMeta;
+    std::atomic<bool> ofdmQpsk{false};
     double rateSet = 0, offsetSet = 0;
     std::atomic<bool> resetReq{true}, clearReq{false};
     std::atomic<double> centerHz{0};
@@ -91,9 +100,9 @@ struct WifiReceiver::Impl {
     // the 20 phase detectors
     struct Chain { std::complex<float> prev{0, 0}; uint8_t scr = 0; uint64_t h = 0; float e = 0; };
     Chain ch[kSps];
-    bool winOpen = false; int64_t winStart = 0, winBest = 0; float winE = 0;
-    // the packet being decoded
-    struct Pend { int64_t at = 0; int stage = 0; int64_t need = 0; int bytes = 0; };
+    bool winOpen = false, winShort = false; int64_t winStart = 0, winBest = 0; float winE = 0;
+    // the packet being decoded; shortPre: the short preamble (header at 2 Mbit/s); rate: the MPDU's (1 or 2 Mbit/s)
+    struct Pend { int64_t at = 0; int stage = 0; int64_t need = 0; int bytes = 0; bool shortPre = false; int rate = 1; };
     bool pending = false;
     Pend pd;
     int64_t busyUntil = 0;
@@ -134,6 +143,7 @@ struct WifiReceiver::Impl {
             sb->cf.configure(rate, offs[i], kOut);
             Sub* sp = sb.get();
             sb->rx.setCallback([this, sp](const uint8_t* p, size_t n, const wifi::ofdm::Info& in) { onOfdm(*sp, p, n, in); });
+            sb->rx.setAllowQpsk(ofdmQpsk.load());
             subs.push_back(std::move(sb));
         }
         tel.subChannels = (int)subs.size();
@@ -146,6 +156,7 @@ struct WifiReceiver::Impl {
         const int b = sb.freqMhz > 0 ? wifi::bandOfMhz(sb.freqMhz) : -1;
         const int ch = b >= 0 ? wifi::bandChannelOf(b, sb.freqMhz, b == wifi::Band24 ? 1.0 : 2.5) : 0;
         tel.phy = 1;
+        if (onMeta) { WifiFrameMeta m; m.rssiDbfs = in.rssiDb; m.rateKbps = in.rateMbps * 1000; m.ofdm = true; m.cfoHz = in.cfoHz; m.snrDb = in.snrDb; onMeta(p, n, m); }
         accept(p, n, (int)n + 4, in.rssiDb, sigSec(), ch, b);
     }
 
@@ -316,11 +327,18 @@ struct WifiReceiver::Impl {
         if (winOpen && at > winStart + kWin) {
             winOpen = false;
             tel.sfdHits++;
-            if (!pending && winBest >= busyUntil) { pending = true; pd = Pend(); pd.at = winBest; pd.need = winBest + (int64_t)49 * kSps + kMargin; busyUntil = pd.need; }
+            if (!pending && winBest >= busyUntil) {
+                pending = true; pd = Pend(); pd.at = winBest; pd.shortPre = winShort;
+                pd.need = winBest + (int64_t)(winShort ? 25 : 49) * kSps + kMargin;   // the header: 48 bits at 1 Mbit/s, or at 2 Mbit/s after the short SFD
+                busyUntil = pd.need;
+            }
         }
         if ((uint16_t)k.h == kSfdPat && popc(k.h >> 16 & 0xFFFFFFFFull) >= 31 && at >= busyUntil) {
-            if (!winOpen) { winOpen = true; winStart = at; winBest = at; winE = k.e; }
-            else if (k.e > winE) { winE = k.e; winBest = at; }
+            if (!winOpen) { winOpen = true; winStart = at; winBest = at; winE = k.e; winShort = false; }
+            else if (k.e > winE) { winE = k.e; winBest = at; winShort = false; }
+        } else if ((uint16_t)k.h == kSfdShortPat && popc(k.h >> 16 & 0xFFFFFFFFull) <= 1 && at >= busyUntil) {   // short preamble: SYNC is scrambled zeros
+            if (!winOpen) { winOpen = true; winStart = at; winBest = at; winE = k.e; winShort = true; }
+            else if (k.e > winE) { winE = k.e; winBest = at; winShort = true; }
         }
     }
 
@@ -342,13 +360,17 @@ struct WifiReceiver::Impl {
 
     struct Demod { std::vector<uint8_t> bits; double angSum = 0, angSq = 0; int nAng = 0; int64_t end = 0; };
 
-    // the descrambled bits after the SFD (nsym of them), with an early / late timing tracker
-    void demod(int64_t at, int nsym, Demod& out) {
+    // nBits descrambled bits after the SFD, with an early / late timing tracker. Bits from qpskFrom on come two to a symbol (DQPSK, clause
+    // 16.2.3.6: the phase change of dibit d0 d1 is 00 0, 01 pi/2, 11 pi, 10 -pi/2), the ones before it one to a symbol (DBPSK).
+    static int symbolsFor(int nBits, int qpskFrom) { return qpskFrom >= nBits ? nBits : qpskFrom + (nBits - qpskFrom + 1) / 2; }
+    void demod(int64_t at, int nBits, int qpskFrom, Demod& out) {
         out.bits.clear();
         int64_t t = at - (int64_t)kBack * kSps;
         std::complex<float> prev = cAt(t);
         uint8_t scr = 0;
         double acc = 0;
+        auto descr = [&](uint8_t bit) { const uint8_t desc = (uint8_t)(bit ^ (scr >> 3 & 1) ^ (scr >> 6 & 1)); scr = (uint8_t)(((scr << 1) | bit) & 0x7F); return desc; };
+        const int nsym = symbolsFor(nBits, qpskFrom);
         for (int j = -kBack + 1; j <= nsym; j++) {
             t += kSps;
             const double e = (mag(t + 1) - mag(t - 1)) / (mag(t) + 1e-12);
@@ -357,16 +379,41 @@ struct WifiReceiver::Impl {
             const std::complex<float> c = cAt(t);
             const std::complex<float> d = c * std::conj(prev);
             prev = c;
-            const uint8_t bit = d.real() < 0 ? 1 : 0;
-            const uint8_t desc = (uint8_t)(bit ^ (scr >> 3 & 1) ^ (scr >> 6 & 1));
-            scr = (uint8_t)(((scr << 1) | bit) & 0x7F);
-            if (j >= 1) out.bits.push_back(desc);
-            if (j >= -kBack + 8) {
-                const double a = std::arg(bit ? -d : d);
-                out.angSum += a; out.angSq += a * a; out.nAng++;
+            const bool two = j >= 1 && (int)out.bits.size() >= qpskFrom;
+            double a;
+            if (!two) {
+                const uint8_t bit = d.real() < 0 ? 1 : 0;
+                const uint8_t desc = descr(bit);
+                if (j >= 1) out.bits.push_back(desc);
+                a = std::arg(bit ? -d : d);
+            } else {
+                // the nearest of 0, pi/2, pi, -pi/2
+                const double ph = std::arg(d);
+                const int qd = ((int)std::lround(ph / (kPi / 2)) % 4 + 4) % 4;   // 0 .. 3 quarter turns
+                static const uint8_t kD0[4] = {0, 0, 1, 1}, kD1[4] = {0, 1, 1, 0};   // 0: 00, 1 (+pi/2): 01, 2 (pi): 11, 3 (-pi/2): 10
+                out.bits.push_back(descr(kD0[qd]));
+                if ((int)out.bits.size() < nBits) out.bits.push_back(descr(kD1[qd]));
+                a = std::remainder(ph - qd * (kPi / 2), 2 * kPi);
             }
+            if (j >= -kBack + 8) { out.angSum += a; out.angSq += a * a; out.nAng++; }
         }
         out.end = t + kSps;
+    }
+    void emitMeta(const uint8_t* f, size_t n, float rssi, bool ok, const Demod& dm) {
+        if (!onMeta) return;
+        WifiFrameMeta m;
+        m.rssiDbfs = rssi; m.rateKbps = pd.rate * 1000; m.shortPreamble = pd.shortPre; m.fcsOk = ok;
+        if (dm.nAng > 8) {
+            const double mu = dm.angSum / dm.nAng, var = std::max(1e-6, dm.angSq / dm.nAng - mu * mu);
+            m.snrDb = (float)(10 * std::log10(1 / var));
+            m.cfoHz = mu / (2 * kPi) * wifi::kSymRate;
+        }
+        onMeta(f, n, m);
+    }
+    float frameRssi(const Demod& dm) const {
+        double p = 0; int np = 0;
+        for (int64_t k = std::max(base, pd.at - (int64_t)kBack * kSps); k < std::min(dm.end, base + (int64_t)pw.size()); k++) { p += pw[(size_t)(k - base)]; np++; }
+        return (float)(10 * std::log10(p / std::max(1, np) + 1e-20));
     }
 
     void process() {
@@ -374,7 +421,7 @@ struct WifiReceiver::Impl {
         while (pending && end >= pd.need) {
             if (pd.stage == 0) {
                 Demod dm;
-                demod(pd.at, 48, dm);
+                demod(pd.at, 48, pd.shortPre ? 0 : kAllOne, dm);
                 if (dm.bits.size() < 48) { tel.headersBad++; pending = false; busyUntil = 0; break; }
                 uint16_t crc = 0;
                 for (int k = 0; k < 16; k++) crc = (uint16_t)(crc << 1 | dm.bits[(size_t)(32 + k)]);
@@ -383,16 +430,19 @@ struct WifiReceiver::Impl {
                 for (int i = 0; i < 32; i++) h[i / 8] |= (uint8_t)(dm.bits[(size_t)i] << (i % 8));
                 tel.headersOk++;
                 const int lenUs = h[2] | h[3] << 8;
-                if (h[0] != wifi::kSignal1M) { tel.otherRate++; pending = false; busyUntil = pd.at + (int64_t)lenUs * kSps; break; }
-                const int bytes = lenUs / 8;
-                if (bytes < 14 || bytes > wifi::kMaxMpdu || lenUs % 8) { tel.headersBad++; pending = false; busyUntil = 0; break; }
+                const bool r1 = h[0] == wifi::kSignal1M && !pd.shortPre, r2 = h[0] == wifi::kSignal2M;
+                if (!r1 && !r2) { tel.otherRate++; pending = false; busyUntil = pd.at + (int64_t)lenUs * kSps; break; }
+                pd.rate = r2 ? 2 : 1;
+                const int usPerByte = r2 ? 4 : 8;
+                const int bytes = lenUs / usPerByte;
+                if (bytes < 14 || bytes > wifi::kMaxMpdu || lenUs % usPerByte) { tel.headersBad++; pending = false; busyUntil = 0; break; }
                 pd.stage = 1; pd.bytes = bytes;
-                pd.need = pd.at + (int64_t)(49 + 8 * bytes) * kSps + kMargin;
+                pd.need = pd.at + (int64_t)(1 + symbolsFor(48 + 8 * bytes, pd.shortPre ? 0 : r2 ? 48 : kAllOne)) * kSps + kMargin;
                 busyUntil = pd.need;
                 continue;
             }
             Demod dm;
-            demod(pd.at, 48 + 8 * pd.bytes, dm);
+            demod(pd.at, 48 + 8 * pd.bytes, pd.shortPre ? 0 : pd.rate == 2 ? 48 : kAllOne, dm);
             pending = false;
             busyUntil = dm.end;
             if (pd.bytes < 14 || dm.bits.size() < (size_t)48 + 8 * (size_t)pd.bytes) { tel.blocksBad++; break; }
@@ -401,10 +451,9 @@ struct WifiReceiver::Impl {
                 for (int k = 0; k < 8; k++) f[(size_t)i] |= (uint8_t)(dm.bits[(size_t)(48 + 8 * i + k)] << k);
             const size_t n = f.size() - 4;
             const uint32_t got = (uint32_t)f[n] | (uint32_t)f[n + 1] << 8 | (uint32_t)f[n + 2] << 16 | (uint32_t)f[n + 3] << 24;
-            if (wifi::crc32(f.data(), n) != got) { tel.blocksBad++; break; }
-            double p = 0; int np = 0;
-            for (int64_t k = std::max(base, pd.at - (int64_t)kBack * kSps); k < std::min(dm.end, base + (int64_t)pw.size()); k++) { p += pw[(size_t)(k - base)]; np++; }
-            const float rssi = (float)(10 * std::log10(p / std::max(1, np) + 1e-20));
+            if (wifi::crc32(f.data(), n) != got) { tel.blocksBad++; emitMeta(f.data(), n, frameRssi(dm), false, dm); break; }
+            const float rssi = frameRssi(dm);
+            emitMeta(f.data(), n, rssi, true, dm);
             if (dm.nAng > 8) {
                 const double m = dm.angSum / dm.nAng, var = std::max(1e-6, dm.angSq / dm.nAng - m * m);
                 const double snr = 10 * std::log10(1 / var);
@@ -624,6 +673,8 @@ bool WifiReceiver::telemetry(WifiTelemetry& out, uint64_t lastSeq) {
 }
 void WifiReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 void WifiReceiver::setFrameCallback(std::function<void(const uint8_t*, size_t, float)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->onFrame = std::move(cb); }
+void WifiReceiver::setFrameMetaCallback(std::function<void(const uint8_t*, size_t, const WifiFrameMeta&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->onMeta = std::move(cb); }
+void WifiReceiver::setOfdmQpsk(bool on) { if (p_->ofdmQpsk.exchange(on) != on) p_->centerChanged = true; }
 
 ModeTuning wifiTuning() {
     ModeTuning t;

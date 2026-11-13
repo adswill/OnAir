@@ -15,7 +15,8 @@ namespace voicekeys {
 const char* protocolName(Protocol p) {
     switch (p) { case Protocol::Dmr: return "DMR"; case Protocol::P25: return "P25"; case Protocol::Nxdn: return "NXDN";
                  case Protocol::Dpmr: return "dPMR"; case Protocol::Zigbee: return "Zigbee"; case Protocol::ZWave: return "Z-Wave";
-                 case Protocol::WiSun: return "Wi-SUN"; case Protocol::WMBus: return "wM-Bus"; case Protocol::LoRaWAN: return "LoRaWAN"; default: return "any"; }
+                 case Protocol::WiSun: return "Wi-SUN"; case Protocol::WMBus: return "wM-Bus"; case Protocol::LoRaWAN: return "LoRaWAN";
+                 case Protocol::EspNow: return "ESP-NOW"; default: return "any"; }
 }
 bool protocolFromName(const std::string& s, Protocol& p) {
     std::string t; for (char c : s) t += (char)std::tolower((unsigned char)c);
@@ -25,6 +26,7 @@ bool protocolFromName(const std::string& s, Protocol& p) {
     if (t == "wi-sun" || t == "wisun") { p = Protocol::WiSun; return true; }
     if (t == "wm-bus" || t == "wmbus") { p = Protocol::WMBus; return true; }
     if (t == "lorawan") { p = Protocol::LoRaWAN; return true; }
+    if (t == "esp-now" || t == "espnow") { p = Protocol::EspNow; return true; }
     if (t == "dmr") { p = Protocol::Dmr; return true; }
     if (t == "p25") { p = Protocol::P25; return true; }
     if (t == "nxdn") { p = Protocol::Nxdn; return true; }
