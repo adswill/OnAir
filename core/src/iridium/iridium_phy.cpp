@@ -577,6 +577,20 @@ void BurstDemod::demodAt(const cf32* x, size_t n, double freqHz, int maxSymbols,
     out.nSymbols = nData;
     out.uwOk = uwDistance(&sym[kPreambleShort], bestDl) <= 2;
     symbolsToBits(&sym[nk], nData, sym[nk - 1], out.bits);
+    // 4.1: bit reliabilities from the phase step y[k] y*[k-1] turned by -45 degrees: the first bit of the pair is the sign of its imaginary part,
+    // the second the inverse sign of its real part (steps 0, 1, 2, 3 quarter turns -> 00, 10, 11, 01), over the mean symbol power
+    out.rel.assign(out.bits.size(), 0.f);
+    {
+        const float norm = 1.f / std::max(1e-12f, amp * amp);
+        const cf32 rot(M_SQRT1_2, -M_SQRT1_2);
+        for (int i = 0; i < nData && 2 * (size_t)i + 1 < out.bits.size(); i++) {
+            const int k = nk + i;
+            const cf32 z = y[k] * std::conj(y[k - 1]) * rot;
+            const float r0 = z.imag() * norm, r1 = -z.real() * norm;
+            out.rel[2 * (size_t)i] = ((r0 > 0) == (out.bits[2 * (size_t)i] != 0)) ? std::fabs(r0) : 0.f;
+            out.rel[2 * (size_t)i + 1] = ((r1 > 0) == (out.bits[2 * (size_t)i + 1] != 0)) ? std::fabs(r1) : 0.f;
+        }
+    }
     // quality over the unique word and the data
     int ok = 0, cnt = 0;
     double ps = 0, es = 0;

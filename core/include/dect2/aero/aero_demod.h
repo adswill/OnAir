@@ -54,6 +54,7 @@ public:
     // 8400 bit/s (Aero C channel, aero_cchan.h): the soft bits (even positions on the Q arm, positive = 1) go to `sink`; `synced` tells the
     // demodulator that the caller's framer holds a frame start (it searches the carrier again when none does for a while)
     void setBitSink(std::function<void(float)> sink, std::function<bool()> synced);
+    void setEveryBlock(bool on);       // 4.1: the carrier search looks after every averaged spectrum from the 4th on (off: after 4, 8, 16, 32)
     float ampLevel() const;            // mean arm amplitude of the decisions (0 before the loops run)
     int bitRate() const;
     bool acquired() const;             // the two lines were found: the loops run

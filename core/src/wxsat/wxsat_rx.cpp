@@ -313,6 +313,16 @@ struct WxsatReceiver::Impl {
     FirDec aptFir;
     cfp aptPrev{1, 0};
     double aptAudioRate = 0;
+    // 4.1: FM feedback demodulator (threshold extension): at 240 kHz or more, the channel is mixed with a local oscillator that follows kFbG times
+    // the demodulated frequency, so the deviation left is 1 / (1 + kFbG) of it and passes a narrower filter (two poles at kFbHz); the
+    // discriminator after it times (1 + kFbG) is the audio. setAptFmFeedback(true); off by default
+    static constexpr double kFbG = 2.0, kFbHz = 14000.0;
+    std::atomic<bool> aptFb{false};
+    bool aptFbOn = false;
+    FirDec aptFirF;
+    double fbPh = 0, fbA = 1, fbAcc = 0, fbRateHz = 0;
+    int fbN = 0;
+    cfp fbL1{0, 0}, fbL2{0, 0}, fbPrev{1, 0};
     wxsat::AptDecoder apt;
     std::vector<float> aptBuf;
     double aptCfo = 0;
@@ -418,6 +428,14 @@ struct WxsatReceiver::Impl {
             aptFir.design(ratio, 18000.0 / rate);
             apt.configure(aptAudioRate);
             aptPrev = {1, 0};
+            {   // 4.1 FM feedback path: the largest divisor of the decimation that leaves 240 kHz or more
+                int dv = 1;
+                for (int k = ratio; k >= 1; k--) if (ratio % k == 0 && rate / k >= 240e3) { dv = k; break; }
+                aptFirF.design(dv, 18000.0 / rate);
+                fbRateHz = rate / dv;
+                fbA = 1 - std::exp(-2 * kPi * kFbHz / fbRateHz);
+                fbPh = 0; fbAcc = 0; fbN = 0; fbL1 = fbL2 = cfp(0, 0); fbPrev = cfp(1, 0);
+            }
             return;
         }
         if (P == kWxArktikaGgak) { ggak.configure(rate); ggak.setSignalOffset(offset); return; }
@@ -444,7 +462,7 @@ struct WxsatReceiver::Impl {
     }
 
     void resetState() {
-        if (P == kWxApt) { apt.reset(); aptFir.clear(); aptPrev = {1, 0}; aptBuf.clear(); }
+        if (P == kWxApt) { apt.reset(); aptFir.clear(); aptPrev = {1, 0}; aptBuf.clear(); aptFirF.clear(); fbPh = 0; fbAcc = 0; fbN = 0; fbL1 = fbL2 = cfp(0, 0); fbPrev = cfp(1, 0); }
         else if (P == kWxArktikaGgak) { ggak.reset(); }
         else if (isFilecast()) { if (dvb) dvb->reset(); files->reset(); }
         else if (rate >= info.minRate - 1) dem.resetAll();
@@ -854,15 +872,31 @@ struct WxsatReceiver::Impl {
         else if (isFilecast()) {
             if (fileRateOk()) { startDvb(); dvb->feed(x, n); }
         } else if (P == kWxApt) {
+            aptFbOn = aptFb.load(std::memory_order_relaxed);
             for (size_t i = 0; i < n; i++) {
                 cfp y;
-                if (!aptFir.push(cfp(x[i].real(), x[i].imag()) * aptRot, y)) { aptRot *= aptStep; continue; }
+                const cfp xin = cfp(x[i].real(), x[i].imag()) * aptRot;
+                if (aptFbOn) {
+                    cfp u;
+                    if (aptFirF.push(xin, u)) {
+                        const cfp v = u * cfp((float)std::cos(fbPh), (float)-std::sin(fbPh));
+                        fbL1 += (float)fbA * (v - fbL1);
+                        fbL2 += (float)fbA * (fbL1 - fbL2);
+                        const double fd = std::arg(fbL2 * std::conj(fbPrev));   // radians a sample at fbRateHz
+                        fbPrev = fbL2;
+                        fbPh += kFbG * fd;
+                        if (fbPh > kPi) fbPh -= 2 * kPi; else if (fbPh < -kPi) fbPh += 2 * kPi;
+                        fbAcc += (1 + kFbG) * fd * fbRateHz; fbN++;   // Hz
+                    }
+                }
+                if (!aptFir.push(xin, y)) { aptRot *= aptStep; continue; }
                 aptRot *= aptStep;
                 const float d = std::arg(y * std::conj(aptPrev));
                 aptPrev = y;
                 aptMean += 0.001f * (d - aptMean);
                 aptCfo = aptMean * aptAudioRate / (2 * kPi);
-                aptBuf.push_back(d / (float)(2 * kPi * 17000.0 / aptAudioRate));
+                if (aptFbOn && fbN > 0) { aptBuf.push_back((float)(fbAcc / fbN / 17000.0)); fbAcc = 0; fbN = 0; }
+                else aptBuf.push_back(d / (float)(2 * kPi * 17000.0 / aptAudioRate));
                 if (aptBuf.size() >= 4096) { apt.pushAudio(aptBuf.data(), aptBuf.size()); aptBuf.clear(); }
             }
             const float m = std::abs(aptRot); if (m > 0) aptRot /= m;
@@ -916,6 +950,7 @@ void WxsatReceiver::setSaveDir(const std::string& dir) { if (p_->files) p_->file
 void WxsatReceiver::setFilecastSymbolRate(double hz) { p_->fcSymbols = hz; p_->fcSymbolsSet = true; }
 void WxsatReceiver::setFilecastPid(int pid) { if (p_->files) p_->files->setPid(pid); }
 void WxsatReceiver::setAptNoiseFilter(bool on) { p_->apt.setNoiseFilter(on); }
+void WxsatReceiver::setAptFmFeedback(bool on) { p_->aptFb = on; }
 wxsat::FilecastLayer* WxsatReceiver::fileLayer() { return p_->files.get(); }
 void WxsatReceiver::setBlocking(bool b) { p_->fileBlocking = b; }
 void WxsatReceiver::flush() { if (p_->dvb) { p_->dvb->flush(); } if (p_->files) p_->files->flush(); p_->report(); }

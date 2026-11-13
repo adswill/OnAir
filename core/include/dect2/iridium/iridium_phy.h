@@ -95,6 +95,7 @@ struct DemodResult {
     bool uwOk = false;               // its hard decisions match the unique word (gr-iridium rule)
     bool downlink = true;
     std::vector<uint8_t> bits;       // bits after the unique word, one per byte
+    std::vector<float> rel;          // 4.1: reliability of each bit (>= 0, larger = surer; 0 when the differential and the coherent decisions disagree)
     int nSymbols = 0;                // symbols after the unique word
     double freqHz = 0;               // refined centre, relative to 0 Hz of the input
     double uwTime = 0;               // time of the first unique word symbol, seconds after the first input sample of the segment

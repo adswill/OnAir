@@ -35,6 +35,8 @@ public:
     void setSignalOffset(double hz);
     void setThreadMode(bool on);          // Thread: the same 802.15.4 receiver, the frames read as 6LoWPAN / Thread (thread_proto.h) instead of Zigbee
     void setCenterHz(double hz);          // the radio's centre: which channel the tuned frequency is (0: unknown)
+    // 4.1: a frame whose FCS fails is tried with the second choice of its 4 least sure symbols (default on; off: hard symbols as in 4.0)
+    void setSoftDecisions(bool on);
     bool ready() const;
     void reset();                         // the demodulator only: the tables stay
     void clearResults();

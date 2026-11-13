@@ -70,6 +70,9 @@ public:
     void setSquelch(bool on, bool autoMode, float levelDb);   // levelDb: the "level" threshold in dBFS
     void setAgc(bool on, float manualGainDb);        // AM / SSB / CW: AGC, or a fixed gain (dB) when off
     void setDeemphUs(double us);                     // NFM / WFM: 0 off, 50, 75, 750
+    // 4.1 NFM below the FM threshold: 0 the discriminator (default), 1 a phase-locked loop demodulator, 2 automatic (the loop while the carrier is
+    // under 8 dB over the noise beside the channel). See docs/SENSITIVITY-4.1.md for what it measured.
+    void setFmPll(int mode);
     void setCwPitchHz(double hz);
     // AM detector: 0 envelope (default), 1 synchronous (a PLL on the carrier: no distortion when the carrier fades, a little less noise
     // near the threshold), 2 synchronous upper sideband only, 3 lower only (an interfering station on the other side is left out)

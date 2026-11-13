@@ -17,6 +17,9 @@ public:
     ~AeroReceiver();
 
     void configure(double inputRateHz);
+    // 4.1: faster acquisition (default on): the band search runs every quarter second for its first 4 searches, and the carrier search of a channel
+    // looks after every averaged spectrum from the 4th on (4.0: after 4, 8, 16 and 32). Off: as in 4.0. Restarts the receiver.
+    void setFastAcquisition(bool on);
     void setSearchLimit(double hz);                      // 0 = whole input; else the band search only looks within +-hz of 0 (the Inmarsat window's pass-band: the rest of its input is empty)
     void setSignalOffset(double hz);                     // where the wanted channel sits relative to 0 Hz in the input
     bool ready() const;                                  // false when the input rate is too low for this mode

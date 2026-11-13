@@ -37,6 +37,7 @@ public:
     void setFilecastSymbolRate(double hz);            // Advanced: 0 is the link's own rate
     void setFilecastPid(int pid);                     // Advanced: 0 is the link's own PID
     void setAptNoiseFilter(bool on);                  // APT: the noise-adaptive line filter (on by default; a clean line passes unchanged)
+    void setAptFmFeedback(bool on);                   // 4.1 APT: FM feedback demodulator (threshold extension); off by default (docs/SENSITIVITY-4.1.md)
     wxsat::FilecastLayer* fileLayer();                // the file layer behind the radio, null for the other profiles
     void setBlocking(bool blocking);                  // file sources: before the first feed; wait for the decoder instead of losing frames
     void flush();                                     // tests and recordings: everything fed so far is decoded and reported
