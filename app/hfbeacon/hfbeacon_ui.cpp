@@ -355,7 +355,6 @@ void mapView(App& a) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
     double rl, ro; receiverLocation(rl, ro);
-    const ImVec2 h = adsbmap::project(rl, ro);
     int drawn = 0;
     for (size_t i = 0; i < S.list.size() && i < t.beacons.size(); i++) {
         const hfb::Beacon& b = S.list[i];
@@ -372,9 +371,6 @@ void mapView(App& a) {
             dl->AddCircle(q, 3 * gUi, IM_COL32(150, 155, 160, 140), 10, 1.f);
         }
     }
-    dl->AddCircleFilled(h, 4 * gUi, IM_COL32(110, 210, 230, 255));
-    dl->AddCircle(h, 8 * gUi, IM_COL32(110, 210, 230, 220), 24, 1.5f * gUi);
-    dl->AddText(ImVec2(h.x + 10 * gUi, h.y - 7 * gUi), IM_COL32(110, 210, 230, 255), receiverLocationSet() ? "me" : "me (placeholder: set it in View > Map)");
     dl->PopClipRect();
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));

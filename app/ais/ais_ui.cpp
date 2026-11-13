@@ -1,6 +1,7 @@
 // AIS screens: the map of vessels (the ADS-B map underneath), the vessel table, the detail panel, the message counters
 // with the rates of the channels (AIS 1, AIS 2, and the long-range channels 75 and 76 when the capture holds them), the raw NMEA log, and the
 // Satellite AIS panel (ais_sat_ui.cpp).
+#include "map/my_location.h"
 #include "../d40/d40_ui.h"
 #include "../panels/photo_links_ui.h"
 #include "ui/kit/mode_panel.h"
@@ -200,7 +201,7 @@ void detail(App& a) {
     }
     photolinks::shipButton(v->mmsi, v->imo, v->name);
     ImGui::Spacing();
-    if (v->hasPos) { snprintf(b, sizeof b, v->lrPosition ? "%.4f, %.4f (1/10 min)" : "%.5f, %.5f", v->lat, v->lon); kv("position", b); } else kv("position", "-");
+    if (v->hasPos) { snprintf(b, sizeof b, v->lrPosition ? "%.4f, %.4f (1/10 min)" : "%.5f, %.5f", v->lat, v->lon); kv("position", b); { std::string mine = mylocmap::distanceBearingText(v->lat, v->lon); if (!mine.empty()) kv("from me", mine.c_str()); } } else kv("position", "-");
     snprintf(b, sizeof b, "%.1f kn", v->sog); kv("speed", v->sog >= 0 ? b : "-");
     snprintf(b, sizeof b, "%.1f deg", v->cog); kv("course", v->cog >= 0 ? b : "-");
     snprintf(b, sizeof b, "%d deg", v->heading); kv("heading", v->heading >= 0 && v->heading < 360 ? b : "-");

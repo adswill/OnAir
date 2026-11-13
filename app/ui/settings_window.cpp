@@ -618,6 +618,7 @@ void rows(App& a, const std::vector<size_t>& idx, bool showCat) {
 }   // namespace
 
 bool& settingsOpen() { static bool open = false; return open; }
+void settingsOpenPage(const char* name) { settingsOpen() = true; U.cat = catIndex(name); U.query[0] = 0; }
 
 void settingsWindow(App& a) {
     ImGuiIO& io = ImGui::GetIO();

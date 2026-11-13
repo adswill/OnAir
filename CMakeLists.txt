@@ -716,10 +716,15 @@ if(DECT2_BUILD_APP)
   list(APPEND APP_SOURCES app/ui/meter_ui.cpp app/platform/proc_cpu.cpp app/panels/picsave_ui.cpp)
   add_executable(test_picsave tests/app/test_picsave.cpp)   # picture save paths, names, collisions, delete with undo (app/state/picsave.h)
   add_test(NAME picsave COMMAND test_picsave)
+  add_executable(test_mylocation tests/geo/test_mylocation.cpp)   # my location on every map: distance, bearing, rings, and a source check (docs/MY-LOCATION-MAPS-4.1.md)
+  target_include_directories(test_mylocation PRIVATE core/include)
+  target_compile_definitions(test_mylocation PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+  add_test(NAME mylocation COMMAND test_mylocation)
   file(GLOB DECT2_D40_UI CONFIGURE_DEPENDS app/d40/*.cpp)   # 4.0 features wired into the mode screens (docs/WIRING-4.0.md)
   list(APPEND APP_SOURCES ${DECT2_D40_UI})
   list(APPEND APP_SOURCES app/ui/ui_preview.cpp app/ui/ui_preview_draw.cpp)   # the hover preview of the appearance choices (docs/UI-PREVIEW-4.0.md)
   list(APPEND APP_SOURCES app/ui/topo_view.cpp)   # the mesh topology picture shared by the mesh, Zigbee / Thread and Z-Wave screens
+  list(APPEND APP_SOURCES app/map/my_location.cpp)   # 4.1: my location, range rings and distance/bearing on every map (docs/MY-LOCATION-MAPS-4.1.md)
   list(APPEND APP_SOURCES app/map/contact_lines.cpp)   # contact lines on the QSO-mode maps
   file(GLOB DECT2_IPTV_UI CONFIGURE_DEPENDS app/iptv/*.cpp)   # Internet TV (family 209): its core is in core/src/tv
   list(APPEND APP_SOURCES ${DECT2_IPTV_UI})

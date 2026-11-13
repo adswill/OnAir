@@ -557,11 +557,6 @@ void dabTransmittersTab(App& a) {
             const float dd = std::hypot(mouse.x - q.x, mouse.y - q.y);
             if (inMap && dd < hitD) { hitD = dd; hit = &r; }
         }
-        if (S.haveRef) {   // the antenna: a cross
-            const float c = 6.f * gUi;
-            dl->AddLine(ImVec2(me.x - c, me.y), ImVec2(me.x + c, me.y), IM_COL32(120, 200, 255, 255), 2.f);
-            dl->AddLine(ImVec2(me.x, me.y - c), ImVec2(me.x, me.y + c), IM_COL32(120, 200, 255, 255), 2.f);
-        }
         dl->PopClipRect();
         if (hit) {
             char dist[32] = "";

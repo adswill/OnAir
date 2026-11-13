@@ -1275,6 +1275,7 @@ void modeVisibilityWindow(App& a);
 void modeVisibilityLoad(App& a);                       // at start, after loadPrefs: modes-shown.txt (the data folder) wins over settings.conf
 std::string modeVisibilityText(const App& a);          // the rules as text, kept inside a workspace
 void modeVisibilityApplyText(App& a, const std::string& text);   // and put back (saved at once)
+void settingsOpenPage(const char* name);   // open Settings on the page of that English name ("Location")
 bool& settingsOpen();          // the Settings window is open (menu bar > Settings, Ctrl+,)
 void settingsWindow(App& a);   // ui/settings_window.cpp: every preference in one searchable window (docs/SETTINGS.md)
 int settingsUnboundRows();     // rows of the table with no field behind them (listed on stderr)
