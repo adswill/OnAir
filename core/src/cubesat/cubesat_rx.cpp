@@ -363,10 +363,16 @@ struct CubesatReceiver::Impl {
         if (dup(f.data, tt)) return;
         // 4.1: a Mobitex frame is reported with the blocks that passed their CRC, so two demodulators that lost different blocks of one frame gave
         // two different frames (the hash differs). The same frame from another path within the duplicate window: keep the copy with more data
-        if (f.framing == Mobitex)
+        // AX100 Mode 6 likewise: an HDLC frame whose end moved by a byte on one path is still put right by the RS code there, with other bytes;
+        // the copy with fewer bytes put right is kept
+        if (f.framing == Mobitex || f.framing == Ax100Mode6)
             for (CubeFrame& o : frames) {
-                if (o.framing != Mobitex || std::fabs(o.timeSec - (double)tt / kMidRate) > (double)kDupWindow / kMidRate) continue;
-                if (f.data.size() > o.data.size()) { o.data = f.data; o.payload = f.payload; o.type = f.type; if (!f.from.empty()) o.from = f.from; }
+                if (o.framing != f.framing || std::fabs(o.timeSec - (double)tt / kMidRate) > (double)kDupWindow / kMidRate) continue;
+                const bool better = f.framing == Mobitex ? f.data.size() > o.data.size() : f.rsErrors >= 0 && f.rsErrors < o.rsErrors;
+                if (better) {
+                    o.data = f.data; o.payload = f.payload; o.type = f.type; o.rsErrors = f.rsErrors; o.hasCsp = f.hasCsp; o.csp = f.csp;
+                    if (!f.from.empty()) o.from = f.from;
+                }
                 return;
             }
         f.timeSec = (double)tt / kMidRate;
@@ -399,12 +405,12 @@ struct CubesatReceiver::Impl {
         }
         // AX100 Mode 6: an RS block in the HDLC frame. Not on a narrow path (variant 2): an HDLC frame that failed its CRC is decoded by the RS
         // code alone, and a second hunter adds miscorrected frames (seen: 9 bytes "corrected" in a 23 byte frame) for a gain of 0.2 dB
-        // 4.1: a differential detector path (variant 3) takes Mode 6 too, but only with at most 4 byte errors put right (an eighth of the 32 parity bytes):
+        // 4.1: a differential detector path (variant 3) takes Mode 6 too, but only with at most 8 byte errors put right (a quarter of the 32 parity bytes):
         // a miscorrection of noise uses nearly all 16 it can correct
         if (framing == Ax25G3ruh && variant != 2) {
             std::vector<uint8_t> csp;
             int rsErr = -1;
-            if (ax100Mode6Decode(d, csp, rsErr) && (variant != 3 || rsErr <= 4)) {
+            if (ax100Mode6Decode(d, csp, rsErr) && (variant != 3 || rsErr <= 8)) {
                 CubeFrame f;
                 f.framing = Ax100Mode6; f.baud = baud; f.rsErrors = rsErr;
                 f.hasCsp = parseCsp(csp, f.csp);
