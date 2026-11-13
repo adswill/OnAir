@@ -359,7 +359,7 @@ struct WifiReceiver::Impl {
         return {cr[j], ci[j]};
     }
 
-    int dbgSteps = 0;   // TEMPORARY diagnostic
+    int dbgSteps = 0, dbgMember = 0;   // TEMPORARY diagnostic
     struct Demod { std::vector<uint8_t> bits; double angSum = 0, angSq = 0; int nAng = 0; int64_t end = 0; };
 
     // nBits descrambled bits after the SFD, with an early / late timing tracker. Bits from qpskFrom on come two to a symbol (DQPSK, clause
@@ -428,7 +428,7 @@ struct WifiReceiver::Impl {
                 demod(pd.at, 48, pd.shortPre ? 0 : kAllOne, dm);
                 if (dm.bits.size() < 48) { tel.headersBad++; pending = false; busyUntil = 0; break; }
                 {
-                    static int dbgM = 0;   // TEMPORARY diagnostic
+                    int& dbgM = dbgMember;   // TEMPORARY diagnostic
                     if (std::getenv("ONAIR_WIFI_DEBUG") && dbgM++ < 2) {
                         std::printf("WDBG rate %.2f at %lld base %lld size %zu winE %.4f e-phases:", rate / 1e6, (long long)pd.at, (long long)base, cr.size(), winE);
                         for (int q = 0; q < kSps; q++) std::printf(" %.4f", ch[q].e);
