@@ -8,9 +8,13 @@
 //  7. UDP and RTP streaming to a local port: whole TS datagrams, RTP header with payload type 33
 //  8. RTMP server input (#490): the listen address and the OBS settings; a sender (FFmpeg's RTMP client, as OBS) streams twice, the
 //     generator shows its picture and sound, black and silence in between, and listens again after the first one stops
+//  9. the transmitter's multiplex of several generators (#492): synthetic streams (new PIDs, PAT / PMT / SDT with good CRCs, continuity,
+//     each input keeps its share so its PCRs still match the packet times), then two real generators read back by FFmpeg as two programmes
 // Run from the source root (the overlay font is third_party/fonts/Inter-Medium.ttf).
 #include "dect2/tv/videogen.h"
 #include "dect2/tv/videogen_rtmp.h"
+#include "dect2/tv/ts_proto.h"
+#include "dect2/tv/ts_remux.h"
 #include "dect2/tx/tx.h"
 #include <algorithm>
 #include <atomic>
@@ -23,6 +27,7 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <set>
 #include <thread>
 extern "C" {
@@ -1321,6 +1326,202 @@ static void testInstancesAndTransmitter(const fs::path& dir, const fs::path& pic
     CHECK(streamUrl(Output::Transmitter, "h", 1).empty() && vlcOpenUrl(Output::Transmitter, "h", 1).empty(), "no network address for the transmitter output");
 }
 
+// ---- 9. several generators in one multiplex (#492) ----
+
+// A single-programme CBR stream as FFmpeg's muxer makes it: PAT, PMT (video 0x100 with the PCR, audio 0x101), SDT, then PES-like
+// packets and null packets. The PCR follows the packet count at `rate`.
+struct FakeTs {
+    double rate = 1e6;
+    int sid = 1;
+    std::string name;
+    uint64_t n = 0;
+    std::map<int, int> cc;
+    void section(uint8_t* pk, int pid, std::vector<uint8_t> sec) {
+        const uint32_t c = dect2::tsp::crc32(sec.data(), (int)sec.size());
+        sec.push_back((uint8_t)(c >> 24)); sec.push_back((uint8_t)(c >> 16)); sec.push_back((uint8_t)(c >> 8)); sec.push_back((uint8_t)c);
+        std::fill(pk, pk + 188, uint8_t(0xFF));
+        pk[0] = 0x47; pk[1] = (uint8_t)(0x40 | (pid >> 8)); pk[2] = (uint8_t)pid; pk[3] = (uint8_t)(0x10 | (cc[pid]++ & 15)); pk[4] = 0;
+        std::copy(sec.begin(), sec.end(), pk + 5);
+    }
+    void next(uint8_t* pk) {
+        const uint64_t i = n++;
+        const int slot = (int)(i % 40);
+        if (slot == 0) { section(pk, 0, {0x00, 0xB0, 13, 0, 1, 0xC1, 0, 0, (uint8_t)(sid >> 8), (uint8_t)sid, 0xF0, 0x00}); return; }
+        if (slot == 1) { section(pk, 0x1000, {0x02, 0xB0, 23, (uint8_t)(sid >> 8), (uint8_t)sid, 0xC1, 0, 0, 0xE1, 0x00, 0xF0, 0, 0x1B, 0xE1, 0x00, 0xF0, 0, 0x0F, 0xE1, 0x01, 0xF0, 0}); return; }
+        if (slot == 2) {
+            std::vector<uint8_t> s = {0x42, 0xF0, 0, 0, 1, 0xC1, 0, 0, 0xFF, 0x01, 0xFF, (uint8_t)(sid >> 8), (uint8_t)sid, 0xFC, 0x80, 0, 0x48, 0, 0x01, 3, 'P', 'r', 'v'};
+            s.push_back((uint8_t)name.size()); s.insert(s.end(), name.begin(), name.end());
+            s[15] = (uint8_t)(s.size() - 16); s[17] = (uint8_t)(s.size() - 18);
+            s[2] = (uint8_t)(s.size() + 4 - 3);
+            section(pk, 0x11, s);
+            return;
+        }
+        std::fill(pk, pk + 188, uint8_t(0x5A));
+        pk[0] = 0x47;
+        if (slot >= 36) { pk[1] = 0x1F; pk[2] = 0xFF; pk[3] = 0x10; return; }
+        const int pid = slot == 35 ? 0x101 : 0x100;
+        pk[1] = (uint8_t)(pid >> 8); pk[2] = (uint8_t)pid;
+        if (slot == 3) {   // a PCR: 27 MHz at this packet's time
+            pk[3] = (uint8_t)(0x30 | (cc[pid]++ & 15));
+            pk[4] = 7; pk[5] = 0x10;
+            const uint64_t pcr = (uint64_t)((double)i * 1504.0 / rate * 27e6);
+            const uint64_t base = pcr / 300, ext = pcr % 300;
+            pk[6] = (uint8_t)(base >> 25); pk[7] = (uint8_t)(base >> 17); pk[8] = (uint8_t)(base >> 9); pk[9] = (uint8_t)(base >> 1);
+            pk[10] = (uint8_t)(((base & 1) << 7) | 0x7E | (ext >> 8)); pk[11] = (uint8_t)ext;
+        } else pk[3] = (uint8_t)(0x10 | (cc[pid]++ & 15));
+    }
+};
+
+static bool sectionAt(const uint8_t* pk, std::vector<uint8_t>& sec) {   // a whole section in one packet, with a good CRC
+    if (!(pk[1] & 0x40) || !(pk[3] & 0x10)) return false;
+    const size_t s = 5 + (size_t)pk[4];
+    if (s + 3 > 188) return false;
+    const size_t n = 3 + (((size_t)pk[s + 1] & 15) << 8 | pk[s + 2]);
+    if (s + n > 188) return false;
+    sec.assign(pk + s, pk + s + n);
+    return dect2::tsp::crc32(sec.data(), (int)n) == 0;
+}
+
+static void testRemuxSynthetic() {
+    FakeTs a, b;
+    a.rate = 2e6; a.sid = 7; a.name = "Alpha";
+    b.rate = 1e6; b.sid = 7; b.name = "Beta";   // the same service ID and PIDs: the remux moves them apart
+    bool bRuns = false;
+    int flushed = 0;
+    std::vector<dect2::TsRemuxInput> in(2);
+    in[0].pop = [&](uint8_t* pk) { a.next(pk); return true; };
+    in[0].rate = [&] { return a.rate; };
+    in[1].pop = [&](uint8_t* pk) { b.next(pk); return true; };
+    in[1].rate = [&] { return bRuns ? b.rate : 0.0; };
+    in[1].flush = [&] { flushed++; };
+    in[1].name = "Named by TX";
+    dect2::TsRemuxConfig c;
+    c.outBitrate = 5e6; c.firstServiceId = 100;
+    dect2::TsRemux mux(in, c);
+    const int total = 40000;   // about 12 s of the channel
+    std::map<int, int> count, lastCc;
+    std::map<int, std::vector<int>> patProgs;
+    std::map<int, std::pair<uint64_t, double>> lastPcr;   // per PID: the PCR and the output time of the previous one
+    double worstPcr = 0;
+    int ccErr = 0, crcBad = 0, pats = 0, sdts = 0;
+    std::vector<int> progsSeen;
+    std::string sdtText;
+    std::map<int, std::vector<int>> pmtEs;
+    std::map<int, int> pmtPcr, pmtProg;
+    for (int i = 0; i < total; i++) {
+        if (i == total / 4) bRuns = true;   // input 2 starts later: it joins
+        uint8_t pk[188];
+        mux.next(pk);
+        CHECK(pk[0] == 0x47, "remux: sync byte");
+        const int pid = ((pk[1] & 0x1F) << 8) | pk[2];
+        count[pid]++;
+        if (pid != 0x1FFF && (pk[3] & 0x10)) {
+            const int cc = pk[3] & 15;
+            if (lastCc.count(pid) && cc != ((lastCc[pid] + 1) & 15)) ccErr++;
+            lastCc[pid] = cc;
+        }
+        std::vector<uint8_t> sec;
+        if (pid == 0 || pid == 0x11 || pid == 0x1000 || pid == 0x1001) {
+            if (!sectionAt(pk, sec)) { if (pk[1] & 0x40) crcBad++; continue; }
+            if (pid == 0) {
+                pats++;
+                progsSeen.clear();
+                for (size_t p = 8; p + 4 <= sec.size() - 4; p += 4) progsSeen.push_back((sec[p] << 8 | sec[p + 1]) * 0x10000 + ((sec[p + 2] & 0x1F) << 8 | sec[p + 3]));
+            } else if (pid == 0x11) { sdts++; sdtText.assign(sec.begin(), sec.end()); }
+            else {
+                pmtProg[pid] = sec[3] << 8 | sec[4];
+                pmtPcr[pid] = (sec[8] & 0x1F) << 8 | sec[9];
+                pmtEs[pid].clear();
+                for (size_t p = 12; p + 5 <= sec.size() - 4; p += 5 + (((size_t)sec[p + 3] & 15) << 8 | sec[p + 4])) pmtEs[pid].push_back((sec[p + 1] & 0x1F) << 8 | sec[p + 2]);
+            }
+        }
+        if ((pid == 0x100 || pid == 0x200) && (pk[3] & 0x20) && pk[4] >= 7 && (pk[5] & 0x10)) {
+            const uint64_t base = ((uint64_t)pk[6] << 25) | ((uint64_t)pk[7] << 17) | ((uint64_t)pk[8] << 9) | ((uint64_t)pk[9] << 1) | (pk[10] >> 7);
+            const uint64_t pcr = base * 300 + (((pk[10] & 1) << 8) | pk[11]);
+            const double t = (double)i * 1504.0 / c.outBitrate;
+            if (lastPcr.count(pid)) {
+                const double dPcr = (double)(pcr - lastPcr[pid].first) / 27e6, dT = t - lastPcr[pid].second;
+                worstPcr = std::max(worstPcr, std::fabs(dPcr - dT));
+            }
+            lastPcr[pid] = {pcr, t};
+        }
+    }
+    CHECK(crcBad == 0, "remux: every PAT / SDT / PMT section has a good CRC (%d bad)", crcBad);
+    CHECK(ccErr == 0, "remux: continuity counters run on (%d jumps)", ccErr);
+    CHECK(pats > 50 && sdts > 10, "remux: PAT %d and SDT %d times", pats, sdts);
+    CHECK(progsSeen.size() == 2 && progsSeen[0] == 100 * 0x10000 + 0x1000 && progsSeen[1] == 101 * 0x10000 + 0x1001, "remux: PAT lists programmes 100 -> 0x1000 and 101 -> 0x1001 (%zu)", progsSeen.size());
+    CHECK(pmtProg[0x1000] == 100 && pmtProg[0x1001] == 101, "remux: PMT programme numbers %d %d", pmtProg[0x1000], pmtProg[0x1001]);
+    CHECK(pmtEs[0x1000] == std::vector<int>({0x100, 0x101}) && pmtEs[0x1001] == std::vector<int>({0x200, 0x201}), "remux: streams moved to their own PIDs");
+    CHECK(pmtPcr[0x1000] == 0x100 && pmtPcr[0x1001] == 0x200, "remux: PCR PIDs 0x%x 0x%x", pmtPcr[0x1000], pmtPcr[0x1001]);
+    CHECK(sdtText.find("Alpha") != std::string::npos && sdtText.find("Named by TX") != std::string::npos && sdtText.find("Beta") == std::string::npos, "remux: SDT has the input's name, or the transmitter's");
+    std::string stray;
+    for (const auto& kv : count) if (!std::set<int>({0, 0x11, 0x1000, 0x1001, 0x100, 0x101, 0x200, 0x201, 0x1FFF}).count(kv.first)) stray += " " + std::to_string(kv.first);
+    CHECK(stray.empty(), "remux: no PIDs but the new ones (stray:%s)", stray.c_str());
+    CHECK(flushed == 1, "remux: a starting input's backlog is dropped once (%d)", flushed);
+    // shares: input 1 (2 of 5 Mbit/s) the whole time, input 2 (1 of 5) for the last three quarters; 33 of 40 packets are PES (slots 3 to 35)
+    const double expA = total * 0.4 * 1.005 * 33 / 40, expB = total * 0.75 * 0.2 * 1.005 * 33 / 40;
+    const double gotA = count[0x100] + count[0x101], gotB = count[0x200] + count[0x201];
+    CHECK(std::fabs(gotA / expA - 1) < 0.02 && std::fabs(gotB / expB - 1) < 0.02, "remux: shares %.0f / %.0f packets, expected %.0f / %.0f", gotA, gotB, expA, expB);
+    CHECK(worstPcr < 0.002, "remux: PCRs still match the packet times (worst %.2f ms)", worstPcr * 1e3);
+    std::printf("remux synthetic: %zu PIDs, worst PCR error %.3f ms\n", count.size(), worstPcr * 1e3);
+}
+
+static void testGeneratorMux(const fs::path& dir, const fs::path& pic) {
+    GenConfig a = pictureConfig(pic), b = pictureConfig(pic);
+    a.output = b.output = Output::Transmitter;
+    a.instanceId = 5; b.instanceId = 6;
+    a.enc.videoEncoder = b.enc.videoEncoder = "mpeg2video";
+    a.enc.serviceName = "Gen five"; b.enc.serviceName = "Gen six";
+    std::function<void(uint8_t*)> src = generatorMuxSource({5, 6}, {"", "Six on air"}, "Club", 300, 6e6);
+    CHECK((bool)src, "multiplex source of generators 5 and 6");
+    CHECK(!generatorMuxSource({5, 99}, {}, "", 1, 6e6), "a generator number out of range is refused");
+    VideoGenerator ga, gb;
+    std::string err;
+    CHECK(ga.start(a, err), "mux start 5: %s", err.c_str());
+    CHECK(gb.start(b, err), "mux start 6: %s", err.c_str());
+    std::vector<uint8_t> out;
+    const double pps = 6e6 / 1504.0;
+    const auto t0 = std::chrono::steady_clock::now();
+    size_t sent = 0;
+    while (std::chrono::steady_clock::now() - t0 < std::chrono::seconds(5)) {   // the transmitter takes packets at the channel's rate
+        const double el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+        uint8_t pk[188];
+        for (; (double)sent < el * pps; sent++) { src(pk); out.insert(out.end(), pk, pk + 188); }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    CHECK(generatorRate(5) > 0 && generatorRate(6) > 0, "running generators tell their mux rate");
+    ga.stop(); gb.stop();
+    CHECK(generatorRate(5) == 0 && generatorRate(6) == 0, "stopped generators have no rate");
+    const fs::path f = dir / "mux.ts";
+    { std::ofstream o(f, std::ios::binary); o.write((const char*)out.data(), (std::streamsize)out.size()); }
+    AVFormatContext* fc = nullptr;
+    CHECK(avformat_open_input(&fc, f.string().c_str(), nullptr, nullptr) >= 0, "FFmpeg opens the multiplex");
+    if (!fc) return;
+    avformat_find_stream_info(fc, nullptr);
+    std::map<int, std::string> names;
+    std::map<int, int> streams;
+    for (unsigned i = 0; i < fc->nb_programs; i++) {
+        const AVProgram* p = fc->programs[i];
+        const AVDictionaryEntry* e = av_dict_get(p->metadata, "service_name", nullptr, 0);
+        names[p->id] = e ? e->value : "";
+        streams[p->id] = (int)p->nb_stream_indexes;
+    }
+    int video = 0, audio = 0, pictures = 0;
+    for (unsigned i = 0; i < fc->nb_streams; i++) {
+        const AVCodecParameters* cp = fc->streams[i]->codecpar;
+        if (cp->codec_type == AVMEDIA_TYPE_VIDEO && cp->width == 352) video++;
+        if (cp->codec_type == AVMEDIA_TYPE_AUDIO && cp->sample_rate > 0) audio++;
+    }
+    AVPacket* pkt = av_packet_alloc();
+    while (av_read_frame(fc, pkt) >= 0) { if (fc->streams[pkt->stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) pictures++; av_packet_unref(pkt); }
+    av_packet_free(&pkt);
+    avformat_close_input(&fc);
+    CHECK(names.size() == 2 && names[300] == "Gen five" && names[301] == "Six on air", "two programmes 300 '%s' and 301 '%s' (%zu)", names[300].c_str(), names[301].c_str(), names.size());
+    CHECK(streams[300] == 2 && streams[301] == 2 && video == 2 && audio == 2, "each programme has its picture and sound (%d video, %d audio)", video, audio);
+    CHECK(pictures > 50, "the pictures of both come through: %d", pictures);
+    std::printf("generator multiplex: %zu packets, %d pictures\n", out.size() / 188, pictures);
+}
+
 int main() {
     const fs::path dir = fs::temp_directory_path() / ("onair_videogen_" + std::to_string((long long)std::chrono::steady_clock::now().time_since_epoch().count()));
     fs::create_directories(dir);
@@ -1344,6 +1545,8 @@ int main() {
     testInstancesAndTransmitter(dir, pic);
     testRtmpUrls();
     testRtmpInput(dir);
+    testRemuxSynthetic();
+    testGeneratorMux(dir, pic);
 #ifndef _WIN32
     testStream(pic, false);
     testStream(pic, true);
