@@ -59,7 +59,7 @@ int main() {
         rx.reset(); rx.telemetry(t, 0); CHECK(t.blocksOk == 0, "reset counters");
     }
     // 4.1 sensitivity: SNR in 25 kHz (the generator's definition), 960 kHz, carrier offsets 0, +2 kHz and -6 kHz, two noise seeds; a trial passes
-    // with 2 frames in 2.2 s (3 bursts are sent). Before 4.1 (the +-14 kHz path alone) about 7 dB here (12 dB in the QA sweep's 7.7 kHz).
+    // with 2 frames in 3.2 s (3 whole TDCS bursts; the first starts with the file, before the AFC has 200 ms of noise to set its floor on). Before 4.1 (the +-14 kHz path alone) about 7 dB here (12 dB in the QA sweep's 7.7 kHz).
     for (auto protocol : {Protocol::Klw, Protocol::Tdcs}) for (double cfo : {0.0, 2000.0, -6000.0}) {
         const double snrs[] = {2, 3, 4, 5, 6, 8, 10, 12};
         double thr = 99;
@@ -68,7 +68,7 @@ int main() {
             for (int seed = 1; seed <= 2; seed++) {
                 SynthConfig cfg; cfg.snrDb = snrs[k]; cfg.cfoHz = cfo; cfg.modeOpt[3] = seed + 10;
                 auto synth = makeRailwaySynth(cfg, 960000, protocol); RailwayReceiver rx(protocol); rx.configure(960000); rx.setSignalOffset(-50000);
-                std::vector<cf32> samples(size_t(960000 * 2.2)); synth->generate(samples.data(), samples.size());
+                std::vector<cf32> samples(size_t(960000 * 3.2)); synth->generate(samples.data(), samples.size());
                 for (size_t i = 0; i < samples.size(); i += 32768) rx.feed(samples.data() + i, std::min(size_t(32768), samples.size() - i));
                 RailwayTelemetry t; rx.telemetry(t, 0);
                 bool good = t.messages.size() >= 2;

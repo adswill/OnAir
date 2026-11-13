@@ -10,6 +10,7 @@
 #include <complex>
 #include <ctime>
 #include <mutex>
+#include <cstdlib>
 #include "dect2/common/mathconst.h"
 
 namespace dect2 {
@@ -33,7 +34,11 @@ bool syncAt(const std::vector<uint8_t>& bits, size_t i) {
 constexpr int kOsr = 4;
 // Stage A: integrate-and-dump to 16 samples per bit, stage B: four one-pole low-passes (12 kHz) and take every 4th sample.
 constexpr int kStageA = 16;
-constexpr double kLpAlpha = 0.2;
+// 4.1: alpha 0.2 put the four poles' -3 dB point at 4.8 kHz, the deviation itself (h 0.5 at 19.2 kb/s is +-4.8 kHz): the 0101 training sequence
+// and every short run lost most of its swing, so bursts failed their FCS even at 30 dB and the threshold sat near 24 dB in 25 kHz. 0.36 puts
+// it at 9.5 kHz (about the bit rate across both sides, the usual pre-detection width for GMSK on a discriminator).
+// DECT2_VDL4_LPA overrides it (measurements only).
+const double kLpAlpha = [] { const char* e = std::getenv("DECT2_VDL4_LPA"); const double v = e ? std::atof(e) : 0.0; return v > 0.01 && v < 1.0 ? v : 0.36; }();
 constexpr int kBurstBits = 480;                 // line bits kept after the sync (a burst is at most a few hundred)
 constexpr int kSyncSamples = kOsr * kVdl4SyncBits;
 constexpr size_t kLineMax = 4 * (size_t)kOsr * (kBurstBits + 64);
