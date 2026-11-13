@@ -455,5 +455,10 @@ std::string adsbTypeOfIcao(uint32_t icao) {
     const dect2::AdsbRegEntry* e = icao >> 24 ? nullptr : adsbui::S.db.find(icao);
     return e ? e->type : "";
 }
+std::string adsbRegOfIcao(uint32_t icao) {
+    adsbui::loadState();
+    const dect2::AdsbRegEntry* e = icao >> 24 ? nullptr : adsbui::S.db.find(icao);
+    return e ? e->registration : "";
+}
 std::string adsbDistText(double nm) { adsbui::loadState(); return adsbui::au::fmt(adsbui::au::distOut(adsbui::S.units, nm), 0); }
 const char* adsbDistUnit() { adsbui::loadState(); return adsbui::au::distUnit(adsbui::S.units); }

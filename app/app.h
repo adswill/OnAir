@@ -774,6 +774,7 @@ void receiverLocation(double& lat, double& lon);  // adsb_ui.cpp: the one receiv
 bool receiverLocationSet();                        // the user has set it (else it is a placeholder)
 void receiverPositionFields(App& a);               // its fields (latitude, longitude, altitude) and the Locate button
 std::string adsbTypeOfIcao(uint32_t icao);          // adsb_ui.cpp: the aircraft type from the aircraft database (aircraft.csv), "" when unknown (VDL2 uses it too)
+std::string adsbRegOfIcao(uint32_t icao);           // adsb_ui.cpp: the registration from the aircraft database, "" when unknown
 std::string adsbDistText(double nm);               // adsb_ui.cpp: a distance in the units chosen for ADS-B (NM or km), no unit
 const char* adsbDistUnit();                         // its unit
 double receiverAltitudeM();                         // its height above sea level, metres (0 until set)

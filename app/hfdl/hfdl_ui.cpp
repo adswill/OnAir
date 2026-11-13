@@ -18,6 +18,7 @@
 #include "map/rangeplot_ui.h"
 #include "dect2/hfdl/hfdl_proto.h"
 #include "dect2/hfdl/hfdl_tel.h"
+#include "../adsb/ac_card.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -360,6 +361,7 @@ void mapCanvas(App& a, ImVec2 size) {
     ImVec2 click; const bool clicked = adsbmap::clickedAt(click);
     float best = 18 * gUi; uint32_t hit = 0;
     int placed = 0;
+    ImVec2 cardAt; adsbmap::AcCard card; bool haveCard = false; uint32_t cardKey = 0;   // the picked aircraft's card (#394)
     for (const auto& s : dect2::hfdlStations()) {   // every station of the table; the ones heard are bright
         const dect2::HfdlGroundStation* g = nullptr;
         if (on) for (const auto& x : t.stations) if (x.id == s.id) g = &x;
@@ -384,6 +386,12 @@ void mapCanvas(App& a, ImVec2 size) {
             for (size_t i = 1; i < c.track.size(); i++) dl->AddLine(adsbmap::project(c.track[i - 1].lat, c.track[i - 1].lon), adsbmap::project(c.track[i].lat, c.track[i].lon), (col & 0x00FFFFFF) | 0x90000000, 1.5f);
             const ImVec2 q = est ? adsbmap::project(pe.lat, pe.lon) : adsbmap::project(c.lat, c.lon);
             const bool sel = c.key == S.selAir;
+            if (sel) {
+                haveCard = true; cardAt = q; cardKey = c.key;
+                card.icao = c.icao; card.reg = c.reg; card.flight = c.flight; card.lat = est ? pe.lat : c.lat; card.lon = est ? pe.lon : c.lon;
+                card.hasAlt = c.hasAlt; card.altFt = c.altFt;
+                card.source = (c.posKind.empty() ? std::string("position") : c.posKind) + (est ? " (estimated), " : ", ") + ago(t.nowSec, c.posTime) + " ago";
+            }
             if (est) { pospred::drawPredictionMarks(dl, pe, q, col, gPred.ellipses); pospred::hoverTooltip(pe, q); }
             dl->AddCircleFilled(q, (sel ? 6.f : 5.f) * gUi, col);
             dl->AddCircle(q, (sel ? 6.f : 5.f) * gUi, sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(0, 0, 0, 160), 16, sel ? 1.6f : 1.f);
@@ -403,6 +411,7 @@ void mapCanvas(App& a, ImVec2 size) {
     if (const dect2::HfdlAircraft* sc = on ? findAir(t, S.selAir) : nullptr; sc && sc->hasPos && receiverLocationSet())
         dl->AddLine(h, adsbmap::project(sc->lat, sc->lon), IM_COL32(110, 210, 230, 110), 1.f * gUi);   // the range line to the picked aircraft
     dl->PopClipRect();
+    if (haveCard && S.selAir == cardKey) adsbmap::aircraftCard("##hfcard", p0, size, cardAt, card);
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
     if (ImGui::Button("+", ImVec2(26 * gUi, 0))) { S.map.zoom = std::min(adsbmap::kMaxZoom, S.map.zoom + 1); S.mapFollow = false; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom in"));

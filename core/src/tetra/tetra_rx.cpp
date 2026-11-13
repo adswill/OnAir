@@ -995,7 +995,7 @@ struct TetraReceiver::Impl {
         identifyOthers(x, center, fs, car, seen, seenRise, g);
         std::lock_guard<std::mutex> lk(mu);
         if (gen.load() != g) return;
-        if (clearReq.exchange(false)) { tel.cells.clear(); tel.events.clear(); tel.sds.clear(); tel.blocksOk = tel.blocksBad = 0; }
+        if (clearReq.exchange(false)) { tel.cells.clear(); tel.events.clear(); tel.sds.clear(); tel.positions.clear(); tel.blocksOk = tel.blocksBad = 0; }
         tel.blocks++;
         tel.carriers = seen;
         for (auto& fr : found) merge(fr.c, fr.d, fr.freq, center, sec);
@@ -1113,6 +1113,23 @@ struct TetraReceiver::Impl {
                 if (same != tel.sds.end()) { r.count = same->count + 1; tel.sds.erase(same); }
                 tel.sds.insert(tel.sds.begin(), std::move(r));
                 if (tel.sds.size() > 300) tel.sds.pop_back();
+                if (sm.hasPos) {   // the Map view: one entry per report; the same report heard again within 5 s (a repeat) is not a new point
+                    TetraPos pp;
+                    pp.wallTime = (int64_t)time(nullptr); pp.freqHz = freq; pp.toAddr = c.addr;
+                    pp.issi = sm.callingIssi >= 0 ? sm.callingIssi : sm.terminalIssi;
+                    pp.lat = sm.lat; pp.lon = sm.lon; pp.hasAlt = sm.hasAlt; pp.altM = sm.altM; pp.uncM = sm.horizUncM; pp.speedKmh = sm.speedKmh;
+                    pp.headingDeg = sm.headingDeg; pp.timeElapsed = sm.hasTimePos ? -1 : sm.timeElapsed; pp.pduType = sm.lipPdu; pp.reason = sm.reason; pp.source = sm.source;
+                    bool dup = false;
+                    for (size_t k = tel.positions.size(); k-- > 0 && !dup;) {
+                        const TetraPos& q = tel.positions[k];
+                        if (pp.wallTime - q.wallTime > 5) break;
+                        dup = q.issi == pp.issi && q.lat == pp.lat && q.lon == pp.lon && q.reason == pp.reason;
+                    }
+                    if (!dup) {
+                        tel.positions.push_back(std::move(pp));
+                        if (tel.positions.size() > kTetraPosMax) tel.positions.erase(tel.positions.begin(), tel.positions.begin() + (long)(tel.positions.size() - kTetraPosMax));
+                    }
+                }
                 char b2[220];
                 snprintf(b2, sizeof b2, "SDS %s from %d to %d: %s", sm.kind.c_str(), sm.callingIssi, c.addr, sm.text.c_str());
                 event(b2, sec);

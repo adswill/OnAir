@@ -72,6 +72,23 @@ struct TetraCell {
 struct TetraEvent { int64_t wallTime = 0; double sec = 0; std::string text; };
 // One clear SDS message, status or LIP position (tetra_sds.h)
 struct TetraSdsRec { int64_t wallTime = 0; double freqHz = 0; int fromIssi = -1, toAddr = -1; std::string kind, text; bool hasPos = false; double lat = 0, lon = 0; int count = 1; };
+// One position report of a terminal (LIP short or long report in a clear SDS, tetra_sds.h), for the Map view: every report is kept, the track of an ISSI is its
+// reports in order.
+struct TetraPos {
+    int64_t wallTime = 0;              // when it was received (unix seconds)
+    double freqHz = 0;
+    int issi = -1;                     // the terminal: the calling ISSI, else the LIP terminal identification, -1 unknown
+    int toAddr = -1;                   // the address the SDS was sent to
+    double lat = 0, lon = 0;
+    bool hasAlt = false; double altM = 0;
+    double uncM = -1;                  // horizontal uncertainty in metres, -1 not known
+    double speedKmh = -1;              // -1 not known
+    int headingDeg = -1;               // -1 not known
+    int timeElapsed = -1;              // 0 < 5 s, 1 < 5 min, 2 < 30 min, 3 not known; -1 none given
+    int pduType = 0;                   // 0 short report, 1 long report
+    int reason = -1;
+    std::string source;                // what it came from, one line, for the click card
+};
 struct TetraCarrierSeen {   // a hump in the spectrum
     double freqHz = 0;                 // the centre of the hump
     float levelDb = 0;                 // over the local floor
@@ -102,10 +119,12 @@ struct TetraTelemetry {
     std::vector<TetraCell> cells;             // most recently seen first
     std::vector<TetraEvent> events;           // newest first, at most kTetraLogMax
     std::vector<TetraSdsRec> sds;             // clear SDS messages and positions, newest first, at most 300
+    std::vector<TetraPos> positions;          // LIP position reports, oldest first, at most kTetraPosMax
 };
 
 constexpr size_t kTetraLogMax = 300;
 constexpr size_t kTetraMax = 200;
+constexpr size_t kTetraPosMax = 2000;
 
 inline std::string tetraSummary(const TetraTelemetry& t) {
     if (t.state == 0) return "waiting for samples";

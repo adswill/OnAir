@@ -68,6 +68,9 @@ static void maths() {
     CHECK(formatDistance(185.2, false) == "100 nm" && formatDistance(1.852, false) == "1.0 nm", "format nm: %s", formatDistance(185.2, false).c_str());
     CHECK(formatBearing(5) == "005\xC2\xB0 N" && formatBearing(359.9) == "000\xC2\xB0 N", "format bearing %s", formatBearing(359.9).c_str());
     CHECK(describe(0, 0, 0, 1, true) == "111 km at 090\xC2\xB0 E", "describe %s", describe(0, 0, 0, 1, true).c_str());
+    // the aircraft card on the VDL2 / HFDL / ACARS maps (#394) says "<distance> <nm or km> at <bearing>" from the user's own location
+    CHECK(describe(25.2, 55.3, 25.2, 56.3, false) == "54 nm at 090\xC2\xB0 E", "describe nm %s", describe(25.2, 55.3, 25.2, 56.3, false).c_str());
+    CHECK(describe(25.2, 55.3, 26.2, 55.3, true) == "111 km at 000\xC2\xB0 N", "describe north %s", describe(25.2, 55.3, 26.2, 55.3, true).c_str());
     CHECK(describe(0, 0, 91, 0, true).empty() && describe(NAN, 0, 0, 0, true).empty(), "invalid positions give nothing");
 }
 
