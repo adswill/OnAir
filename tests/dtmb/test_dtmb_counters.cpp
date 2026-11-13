@@ -31,7 +31,7 @@ using namespace dect2;
 using namespace dect2::dtmb;
 
 static int failures = 0;
-#define CHECK(c, ...) do { if (!(c)) { failures++; printf("FAIL line %d: %s  ", __LINE__, #c); printf(__VA_ARGS__); printf("\n"); } } while (0)
+#define CHECK(c, fmt, ...) do { if (!(c)) { failures++; printf("FAIL line %d: %s  " fmt "\n", __LINE__, #c __VA_OPT__(,) __VA_ARGS__); } } while (0)
 
 static void run(Header header, int carriers) {
     SignalConfig sc;
@@ -109,6 +109,7 @@ static void run(Header header, int carriers) {
 int main() {
     run(Header::Pn595, 1);      // single-carrier body
     run(Header::Pn945, 3780);   // multi-carrier body with PN phase rotation
-    printf(failures ? "dtmb_counters: %d FAILED\n" : "dtmb_counters: all passed\n", failures);
+    if (failures) printf("dtmb_counters: %d FAILED\n", failures);
+    else puts("dtmb_counters: all passed");
     return failures ? 1 : 0;
 }
