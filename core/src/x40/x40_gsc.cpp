@@ -206,7 +206,10 @@ private:
             preambleHunt();
             if (voiceOpen_ && now() - voiceT_ > kVoiceTimeout) voiceOpen_ = false;
             hunt();
-        } else if (bi_ == blockEnd_) lockedBlock();
+        } else {
+            if (voiceOpen_ && voiceEndSearch()) return;
+            if (bi_ == blockEnd_) lockedBlock();
+        }
     }
     void preambleHunt() {
         for (int pol : {1, -1}) {
@@ -237,6 +240,15 @@ private:
         const Slow s1 = slow(st + kCommaBits, pol_), s2 = slow(st + kCommaBits + 47, pol_);
         const uint32_t tx = txMask(golayWord((uint32_t)word));
         return pc(s1.hard ^ tx) + pc(s2.hard ^ tx ^ 0x7FFFFFu);
+    }
+    bool voiceEndSearch() {
+        const int64_t st = bi_ - kBlockBits;
+        if (st + kBlockBits - 1 == blockEnd_ - kBlockBits) return false;
+        if (commaTransitions(st) < 20) return false;
+        const int sv = acScore(st, voiceWord_);
+        if (sv > 6 || sv > acScore(st - 1, voiceWord_) || sv > acScore(st + 1, voiceWord_)) return false;
+        lock(st); nAcHunt_++; onActivation(voiceWord_);
+        return true;
     }
     void hunt() {
         const int64_t st = bi_ - kBlockBits;
@@ -277,11 +289,6 @@ private:
         if (ct >= 16) {
             int word = 0;
             if (activation(st, pol_, 6, word) && ((pend_.on && pend_.blocks.empty()) || (voiceOpen_ && word == voiceWord_))) { misses_ = 0; blockQuality(st); onActivation(word); return; }
-        }
-        if (voiceOpen_) {
-            for (int d = -4; d <= 4; d++) {
-                if (acScore(st + d, voiceWord_) <= 6) { blockEnd_ += d; misses_ = 0; blockQuality(st + d); onActivation(voiceWord_); return; }
-            }
         }
         finish();
         out->bad();
