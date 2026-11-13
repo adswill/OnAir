@@ -2193,3 +2193,10 @@ Receiver::signalView() plus a Signal tab for custom modes: histogram (OOK, ASK, 
 - Receiver: FM discriminator, one 600 bit/s Gardner clock (word bits = bit pairs), search for preamble, start code and address, then block lock: start code, BCH (15,7) data blocks, addresses, activation code. Rows: tone, numeric, alphanumeric and voice pages (voice flagged, not decoded), voice end.
 - Generator and test_x40_gsc: format tables, impairments (offset, drift, clock error and clock drift, deviation, inversion, sample rates), batch, non-battery-saver, noise sweep with 50 / 90 % points, zero false pages on noise, carrier, random FSK and voice. Not run yet: no local compile; CI waits for the 4.0 release. Simulated signals only.
 - CI (4.0 published): quick.yml 43386471840 passes x40_gsc, mode_numbers, gui_rules, i18n and web_schema. From run 43378578019: messages 50 % at -1.1 dB and 90 % at +0.7 dB, tone pages 50 % at -1.8 dB and 90 % at -1.2 dB (12.5 kHz). 0 false pages on noise, carrier, random FSK and voice audio. Fixed along the way: clock wander on idle carrier and voice, a lock half a bit early, the cyclic-shift voice end, and a stale lock during voice.
+## 2026-11-13 (feat41-bugs2): #496 web Play, #495 Windows Hamlib, #491 tour skip, #488 monitor retune, #470 Pi 5 GPU
+- #496: the server's receiver was never started (no --autostart); a listener who may tune now starts it (web_listener_start), failures reach the page, the page tunes again on the first capture.
+- #495: Hamlib loaded at run time on Windows (libhamlib-4.dll, DECT2_HAMLIB_DYNAMIC), entry always shown, docs/OPTIONAL-LIBRARIES.md.
+- #491: tour and "Get me listening" opened together on a fresh install; one guide at a time now.
+- #488: the audio monitor ignored the decode shift of a click / in-band typed frequency; monitorShiftHz adds it.
+- #470: Linux falls back to OpenGL ES 3.0 through EGL when desktop GL is llvmpipe and a GPU node exists; diagnostics in the log.
+- docs/BUGS2-4.1.md. CI results in the final report.

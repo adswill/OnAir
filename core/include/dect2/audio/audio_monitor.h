@@ -41,6 +41,15 @@ struct MonitorStats {
     std::string error;             // output device or port that could not be opened
 };
 
+// Where the monitor's channel sits from the capture centre (the shiftHz of push()). dialHz: the radio's dial (the engine's last tune), captureCentreHz:
+// the centre of the samples, decodeShiftHz: a click or a typed frequency inside the captured band that moved only the decode (sticky tuning),
+// monitorOffsetHz: the user's own offset. A recording's dial already is its VFO (the decode shift is that VFO's distance from the file's centre), so
+// it is not added again. Before 4.1 the decode shift was left out: after such a click the mode's receiver went to the new frequency and the
+// monitor kept playing the old one until the radio was stopped and started (#488).
+inline double monitorShiftHz(double dialHz, double captureCentreHz, double decodeShiftHz, double monitorOffsetHz, bool recording) {
+    return dialHz + (recording ? 0.0 : decodeShiftHz) + monitorOffsetHz - captureCentreHz;
+}
+
 class AudioMonitor {
 public:
     AudioMonitor();

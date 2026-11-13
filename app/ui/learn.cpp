@@ -3,6 +3,7 @@
 // Nothing here blocks the window: the dimming is drawn on top and takes no clicks, so the person uses the real controls.
 #include "../app.h"
 #include "learn_logic.h"
+#include "tour_logic.h"
 #include "autogain_iface.h"
 #include "dect2/audio/audio_rec.h"
 #include "dect2/engine/mode_tuning.h"
@@ -558,7 +559,7 @@ void lessonsStart(App& a, int planPos) {
 }
 
 void lessonsUi(App& a, ImVec2 disp) {
-    if (R.on && !a.setupOpen && !a.wizOpen) lessonCard(a, disp);
+    if (tour::guideInFront(a.setupOpen, a.wizOpen, listenWizardShown(), R.on) == tour::Guide::Lesson) lessonCard(a, disp);   // one guide at a time (#491)
     lessonsWindow(a);
     glossaryWindow(a);
     checkupWindow(a);

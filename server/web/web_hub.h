@@ -45,6 +45,7 @@ struct HubLimits {
     enum { CtlEveryone = 0, CtlMembers = 1, CtlSlot = 2, CtlNobody = 3 };
     int controlMode = CtlEveryone;
     int controlSlotMin = 5;       // how long one person may hold the slot
+    bool listenerStart = true;    // web_listener_start=0: a listener who may tune cannot start a stopped receiver (only the owner, from /app or --autostart)
     bool spectrum = true;         // web_spectrum=0: audio only, listeners get no spectrum / waterfall rows (the setup window's "audio only")
     int threads = 0;              // worker threads (0: automatic)
     size_t queueBytes = 384 * 1024;   // outgoing queue of one listener
@@ -88,6 +89,10 @@ public:
     void rangesChanged();
     void setLogIp(bool on) { logIp_ = on; }
     void setLog(std::function<void(const std::string&)> f) { log_ = std::move(f); }
+    // The host's receiver, for listeners who press Play while it is stopped (#496). start: starts it (false + err when it fails; called on a
+    // thread of its own, never with a hub lock held). lastError: why the last start failed ("" when it did not). Without them a stopped receiver
+    // is only explained.
+    void setReceiverControl(std::function<bool(std::string&)> start, std::function<std::string()> lastError) { startRx_ = std::move(start); rxError_ = std::move(lastError); }
     void registerDecoder(DecoderFactory f);
     void start();
     void stop();
@@ -145,6 +150,12 @@ private:
     std::mutex polMu_;
     std::atomic<bool> logIp_{false};
     std::function<void(const std::string&)> log_;
+    std::function<bool(std::string&)> startRx_;
+    std::function<std::string()> rxError_;
+    std::atomic<bool> starting_{false};      // a start asked for by a listener is in progress
+    std::atomic<double> startOkAt_{-1e9};    // when that start last succeeded (wallSeconds): no second start while its first samples are on the way
+    std::thread startThr_;                   // that start (joined in stop() and the destructor)
+    void receiverStopped(Session& s, bool mayTune);   // a tune while no samples come: start the receiver or say why not (under s.m)
     int nextId_ = 1;
     std::string srvName_ = "OnAir Web", srvLoc_, srvAnt_;
 

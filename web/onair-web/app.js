@@ -554,7 +554,10 @@
   function flushAudio() { if (A.node) A.node.port.postMessage({ flush: true }); else if (A.player) A.player.flush(); }
   async function toggleAudio() {
     if (S.audioOn) { S.audioOn = false; send(L.msg.audio(false)); flushAudio(); if (S.rec) recStop(); }
-    else { if (!(await ensureAudio())) return; S.audioOn = true; S.audioSeq = -1; sendAudio(); }
+    else {
+      if (!(await ensureAudio())) return; S.audioOn = true; S.audioSeq = -1; sendAudio();
+      if (!(S.cap && S.cap.rate_hz > 0)) send(L.msg.tune({ freq_hz: S.freq, mode: S.mode, low_hz: S.low, high_hz: S.high }));   // a stopped receiver: the server starts it or says why not (#496)
+    }
     renderAudio();
   }
   function renderAudio() {
@@ -666,12 +669,19 @@
       case "state": return onState(m);
       case "ranges": S.ranges = L.readRanges(m.ranges); applyRanges(true); return;
       case "control": S.control = m; renderControl(); return;
-      case "capture": S.cap = { centre_hz: m.centre_hz, rate_hz: m.rate_hz }; setCapture(); return;
+      case "capture": { const was = S.cap && S.cap.rate_hz > 0; S.cap = { centre_hz: m.centre_hz, rate_hz: m.rate_hz }; setCapture(); if (!was && m.rate_hz > 0) tuneAfterStart(); return; }
       case "event": return onEvent(m);
       case "error": if (m.code !== "busy") banner(m.message || m.code); return;
       case "kicked": S.stopRetry = !/^(server_busy)$/.test(m.reason); S.kickText = "Disconnected: " + String(m.reason).slice(0, 120); return;
       default: return;   // unknown server messages are ignored (protocol rule)
     }
+  }
+  // the receiver was stopped when this page joined (its tune was answered with not_running, #496) and now delivers samples: tune in again
+  function tuneAfterStart() {
+    banner("");
+    if (!S.bounds || S.freq < S.bounds.start || S.freq > S.bounds.stop) { S.freq = Math.round(S.cap.centre_hz); S.view = null; setCapture(); }
+    renderFreq();
+    if (!S.control || S.control.can_tune) { send(L.msg.tune({ freq_hz: S.freq, mode: S.mode, low_hz: S.low, high_hz: S.high })); send(L.msg.rx(Object.assign({ squelch_db: S.sq }, Cfg.rxFields(ST, S.mode)))); }
   }
   function setCapture() {
     S.bounds = L.captureBounds(S.cap); S.full = L.fullBounds(S.cap);

@@ -26,6 +26,17 @@ Run `onair-server --lan` on the Pi and open the printed address in a browser on 
 | Narrow modes (FM, AM, airband, ADS-B, APRS, AIS, pagers, FT8/WSPR, LoRa, DMR, most data modes): expected fine. | Narrow modes (up to a few hundred kHz of bandwidth): expected fine. |
 | DVB-T/T2, DTMB, ATSC, DVB-S2: may run at low rates, unverified. | DVB-T2, DTMB, ATSC and other wide TV modes: **not expected** to keep up in real time. |
 
+## The GPU (Pi 4 and Pi 5)
+
+The interface should be drawn by the V3D GPU. The terminal says which renderer OnAir got: `renderer: V3D 7.1 ...` is the GPU,
+`renderer: llvmpipe ...` is the processor. Since 4.1, when desktop OpenGL comes back as llvmpipe and a GPU is there, OnAir tries OpenGL ES 3.0
+through EGL and uses it when that reaches the GPU (`renderer: using OpenGL ES 3.0 through EGL on V3D ...`). The lines before it list the GPU
+(`/dev/dri/renderD128 (v3d)`) and say when your user may not open it (add yourself to the `render` group and log in again) or when a variable such
+as `LIBGL_ALWAYS_SOFTWARE` keeps Mesa on the processor. `ONAIR_GL=desktop` keeps desktop OpenGL, `ONAIR_GL=gles` asks for OpenGL ES first.
+If `glxinfo -B` and `eglinfo -B` both show llvmpipe, Mesa's V3D driver is not used on that system at all and OnAir cannot change that.
+The line `GpuLdpc: Vulkan device 0: V3D ... skipped, limits too small` is normal: only the DVB-T2 error correction would use Vulkan, and the V3D
+is too small for it, so the processor does that part.
+
 ## Tips
 
 - Use the lowest sample rate the mode needs; the Pi spends most of its CPU on the spectrum and the DSP.

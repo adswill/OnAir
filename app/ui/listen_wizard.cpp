@@ -2,6 +2,7 @@
 // step 2 the place (its band plan, from core's bandplan registry), step 3 one of five things to listen to. It only picks settings and
 // calls the existing tune and start code (setFamily / setMode / startReceiver); it adds no DSP of its own.
 #include "../app.h"
+#include "tour_logic.h"
 #include "dect2/bandplan/bandplan.h"
 #include "dect2/engine/mode_tuning.h"
 
@@ -94,8 +95,11 @@ void listenWizardOpen(App& a) {
     gDontShow = plat::prefs().getB("listenWizardHide", false);
 }
 
+bool listenWizardShown() { return gOpen; }
+
 void listenWizard(App& a, ImVec2 disp) {
     if (!gOpen) return;
+    if (tour::guideInFront(a.setupOpen, a.wizOpen, gOpen, false) != tour::Guide::Listen) return;   // after the setup and the tour (#491)
     const float u = gUi;
     ImGui::SetNextWindowPos(ImVec2(disp.x * 0.5f, disp.y * 0.45f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
     ImGui::SetNextWindowSize(ImVec2(std::min(620.f * u, disp.x - 24 * u), 0));

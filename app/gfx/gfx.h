@@ -55,6 +55,7 @@ int levelCount();
 int level();
 void setLevel(int l);                     // before windowHints(); the pop-out window then uses the same level as the main one
 const char* levelName();
+int glesLevel();                          // OpenGL only: the OpenGL ES 3.0 / EGL level, tried on Linux when desktop OpenGL is a software renderer (#470)
 void windowHints();                       // before glfwCreateWindow
 Backend* create(GLFWwindow* window);      // after the window exists; also initialises the ImGui renderer back end
 

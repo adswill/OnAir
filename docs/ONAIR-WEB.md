@@ -43,7 +43,7 @@ web_lan=1
 autostart=1
 ```
 
-Then open `http://<address of the server>:8073/` on any computer or phone of your network. Without TLS only private addresses (10.x, 172.16-31.x, 192.168.x, 169.254.x, 100.64-127.x, this computer) are let in; anybody else gets "this server needs HTTPS".
+Then open `http://<address of the server>:8073/` on any computer or phone of your network. If the receiver is stopped (no `--autostart`, nobody pressed Start in `/app`), the first listener who may tune starts it (`web_listener_start`); when the radio fails to start, the page shows the reason the radio gave. Without TLS only private addresses (10.x, 172.16-31.x, 192.168.x, 169.254.x, 100.64-127.x, this computer) are let in; anybody else gets "this server needs HTTPS".
 
 The radio's centre frequency and rate are what the listeners can tune inside: set them in the control page (port 8765) or with `freq_mhz=` / `rate_msps=`. A wider rate gives listeners more spectrum but costs the shared FFT more processor time.
 
@@ -88,6 +88,7 @@ In 3.7 the window is one panel: **Share this radio** starts the web server and g
 | `web_port` | 8073 | its port (also `--web-port`) |
 | `web_control` | everyone | who may tune or change mode: `everyone`, `members` (password or invite), `slot` (one holder at a time, time-limited), `nobody` |
 | `web_control_slot_min` | 5 | length of a control slot |
+| `web_listener_start` | 1 | a listener who may tune (see `web_control`) and presses Listen while the receiver is stopped starts it; a failed start shows the radio's reason on the page. 0: only the owner starts it (`/app`, `--autostart` or the API) and the page says so |
 | `web_max_audio_rate` | 0 | highest audio rate in Hz a listener gets (0: their choice within `web_user_kbps`); the page adapts to the rate in the audio frames |
 | `web_password_hash` | | the password as `pbkdf2$iterations$salt$hash` (PBKDF2-HMAC-SHA256); used instead of `web_password`, so the plain password is on no disk |
 | `web_bind` / `web_lan` | 127.0.0.1 | the address to listen on; `web_lan=1` is `0.0.0.0` (also `--web-lan`) |

@@ -185,6 +185,7 @@ std::vector<DeviceInfo> hamlibRigDevices(const std::vector<HamlibRig>& v) {
 
 #ifndef DECT2_HAVE_HAMLIB
 bool hamlibSupported() { return false; }
+bool hamlibLibraryReady(std::string* why) { if (why) *why = "this build has no Hamlib"; return false; }
 std::unique_ptr<IqSource> makeHamlibSource(const DeviceInfo&) { return nullptr; }
 std::unique_ptr<TxSink> makeHamlibTxSink(const DeviceInfo&) { return nullptr; }
 struct HamlibLink::Impl {};

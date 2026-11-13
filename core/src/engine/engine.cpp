@@ -92,8 +92,9 @@ void Engine::ingest(cf32* x, size_t n) {
     if (const int s = secAct_.load(); s >= 0 && s != activeStd_.load()) pushSecondary(x, n);   // the second mode: a copy, before the first receiver
     if (monitor_.enabled()) {   // "Monitor audio": the tuned channel, a copy
         double dial;
-        { std::lock_guard<std::mutex> lk(tuneMu_); dial = lastTune_.centerHz; }
-        monitor_.push(x, n, rate_.load(), dial + monitorOffsetHz_.load() - captureCentreHz());
+        bool rec;
+        { std::lock_guard<std::mutex> lk(tuneMu_); dial = lastTune_.centerHz; rec = lastDev_.kind == DeviceInfo::File; }
+        monitor_.push(x, n, rate_.load(), monitorShiftHz(dial, captureCentreHz(), decodeShiftHz_.load(), monitorOffsetHz_.load(), rec));   // the decode shift too (#488)
     }
     // sticky tuning: only the first receiver gets the clicked signal at DC. The spectrum, the signal identifier, the second mode and the
     // monitor see the capture as the radio delivers it (their frequencies are relative to captureCentreHz()), so the display stays put
