@@ -232,9 +232,9 @@ int main(int argc, char** argv) {
             if (std::regex_match(m.id, modeRe)) sweep(m, scenRe, n, threads);
         return 0;
     }
-    // guard (filled in as the 4.1 gains land): noise alone gives no unit in any of the receivers touched here
+    // guard: noise alone gives no unit
     int fails = 0;
-    for (const char* id : {"atsc", "drm", "isdbt"}) {
+    for (const char* id : {"atsc", "drm", "isdbt"}) {   // (the receivers this pass looked at)
         const Mode* m = findMode(all, id);
         if (!m) { printf("no %s mode\n", id); fails++; continue; }
         const int thr = std::max(1, std::min(threads, m->maxJobs));
@@ -244,6 +244,15 @@ int main(int argc, char** argv) {
         const Pt f = run(*m, Pn, no, 10, 4, thr, false);
         printf("%s: noise only %.0f%% of runs with a unit\n", id, 100 * f.pass);
         if (f.pass > 0) { printf("FAIL: %s decoded noise\n", id); fails++; }
+    }
+    // DRM 64-QAM through 1 Hz oscillator phase noise at 26 dB: the 4.0 receiver passed no trial (1 % of the units), the common-phase
+    // correction passes them (docs/SENSITIVITY-4.1-TV.md)
+    if (const Mode* m = findMode(all, "drm")) {
+        const Prep P = prepare(*m, m->secs);
+        const Scen pn{"phasenoise", 0, 0, m->pnHz, ""};
+        const Pt r = run(*m, P, pn, 26, 4, std::max(1, std::min(threads, m->maxJobs)), false);
+        printf("drm: phase noise %.2f Hz at 26 dB: pass %.0f%% (units %.0f%%)\n", m->pnHz, 100 * r.pass, 100 * r.frac);
+        if (r.pass < 0.74) { printf("FAIL: drm phase noise 26 dB\n"); fails++; }
     }
     printf(fails ? "FAILED\n" : "PASSED\n");
     return fails ? 1 : 0;
