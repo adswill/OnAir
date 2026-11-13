@@ -438,6 +438,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         // since the BLE whitening and the channel offsets follow from it (with no centre the receiver assumed a channel on the centre)
         const double fc = fileCentreHz_.load(), fc24 = fc >= 2.38e9 && fc <= 2.5e9 ? fc : 0.0;
         rxRid_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : fc24);
+        rxEspnow_.setSignalOffset(o);
+        rxEspnow_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : fc24);   // a recording: the channel from its centre when that is in the band
         rxMeteor_.setSignalOffset(o);
         rxNr_.setSignalOffset(o);
         // the sync raster points searched; a recording: its centre (the frequency entered for it) when it is in the NR bands (with none, only the
@@ -816,6 +818,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     for (auto& g : extraGeneral_) { g.configure(rate_); g.setSilent(true); g.setLogCallback([this](const std::string& s) { rxLog(s); }); }
     rxRid_.configure(rate_);
     rxRid_.setLogCallback([this](const std::string& s) { rxLog(s); });
+    rxEspnow_.configure(rate_);
+    rxEspnow_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxNr_.configure(rate_);
     rxNr_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxWifi_.setLogCallback([this](const std::string& s) { rxLog(s); });

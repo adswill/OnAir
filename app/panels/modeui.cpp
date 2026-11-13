@@ -116,6 +116,7 @@ extern const ModeUi kCisBeeUi, kCis14Ui, kCis12Ui, kCis36Ui, kCisHdrUi, kCis128U
 extern const ModeUi kW1aPacketUi, kW1aInvertUi, kW1aEltUi;   // app/w1a
 extern const ModeUi kSatbeaconUi;
 extern const ModeUi kRidUi;
+extern const ModeUi kEspnowUi;
 extern const ModeUi kMeteorUi;
 extern const ModeUi kNrUi;
 extern const ModeUi kGoesUi;
@@ -385,6 +386,7 @@ const ModeUi* modeUi(int family) {
     case 802: return &kW1aEltUi;
     case 144: return &kSatbeaconUi;
     case 56: return &kRidUi;
+    case 898: return &kEspnowUi;
     case 59: return &kMeteorUi;
     case 57: return &kNrUi;
     case 60: return &kGoesUi;

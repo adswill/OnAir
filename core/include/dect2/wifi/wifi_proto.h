@@ -18,6 +18,9 @@ constexpr double kChipRate = 11e6;       // Barker-11 chips per second
 constexpr double kSymRate = 1e6;         // 1 Mbit/s DBPSK: one symbol per microsecond
 constexpr uint16_t kSfd = 0xF3A0;        // long preamble start frame delimiter (sent LSB first)
 constexpr uint8_t kSignal1M = 0x0A;      // PLCP SIGNAL: 1 Mbit/s
+constexpr uint8_t kSignal2M = 0x14;      // PLCP SIGNAL: 2 Mbit/s (DQPSK)
+constexpr uint16_t kSfdShort = 0x05CF;   // short preamble start frame delimiter (sent LSB first; the long one reversed in time)
+constexpr int kSyncShortBits = 56;       // short preamble SYNC: scrambled zeros
 constexpr int kSyncBits = 128;           // long preamble SYNC: scrambled ones
 constexpr int kMaxMpdu = 2346;           // the longest DSSS MPDU, FCS included
 extern const int kBarker[11];            // +1 -1 +1 +1 -1 +1 +1 +1 -1 -1 -1
@@ -31,6 +34,11 @@ uint16_t crc16(const uint8_t* bits, size_t n);                 // PLCP header CR
 // The whole long-preamble PPDU at 1 Mbit/s as the bits that DBPSK carries (scrambled, transmit order): SYNC, SFD, header, MPDU.
 // mpdu includes its FCS.
 std::vector<uint8_t> ppduBits(const std::vector<uint8_t>& mpdu, uint8_t seed = 0x1B);
+// The same at 1 or 2 Mbit/s with the long or the short preamble (clause 15.2 / 16.2): bits[i] for i < qpskFrom are sent one to a DBPSK symbol, the
+// rest two to a DQPSK symbol (d0 first; 00 -> 0, 01 -> +pi/2, 11 -> pi, 10 -> -pi/2). Long: SYNC, SFD and header at 1 Mbit/s, the MPDU at the rate.
+// Short (2 Mbit/s only): 56 SYNC zeros and the short SFD at 1 Mbit/s, header and MPDU at 2 Mbit/s.
+struct DsssPpdu { std::vector<uint8_t> bits; size_t qpskFrom = 0; };
+DsssPpdu dsssPpdu(const std::vector<uint8_t>& mpdu, int rateMbps, bool shortPreamble, uint8_t seed = 0x1B);
 
 enum Security { Open = 0, Wep, Wpa, WpaWpa2, Wpa2, Wpa2Wpa3, Wpa3, Owe };
 const char* securityName(int s, bool enterprise = false);

@@ -179,6 +179,7 @@
 #include "dect2/satmisc/satdetect_live.h"
 #include "dect2/navic/navic.h"
 #include "dect2/rid/rid_rx.h"
+#include "dect2/espnow/espnow_rx.h"
 #include "dect2/meteor/meteor_rx.h"
 #include "dect2/nr/nr_rx.h"
 #include "dect2/goes/goes_rx.h"
@@ -671,6 +672,7 @@ public:
     HalowReceiver& halow() { return rxHl_; }   // Wi-Fi HaLow / 802.11ah: clear the network table and the frame log (telemetry through latestRx)
     CubesatReceiver& cubesat() { return rxCube_; }   // CubeSat telemetry: satellite table, tracked satellite, KISS (telemetry through latestRx)
     TimeReceiver& timesig() { return rxTime_; }   // time signals: station, receiver position (telemetry through latestRx)
+    EspnowReceiver& espnow() { return rxEspnow_; }   // ESP-NOW: clear, bad-FCS listing (telemetry through latestRx)
     RidReceiver& rid() { return rxRid_; }   // Drone Remote ID: clear the drone table (telemetry through latestRx)
     Sd3Receiver& sd3(int p) { return rxSd3_[p]; }      // SatDump tier 3 links (sd3_tel.h), telemetry through latestRx
     HamsciReceiver& hamsci(int kind) { return rxHs_[kind]; }   // ham science modes by kind (hamsci_tel.h): Auto, options, clear (telemetry through latestRx)
@@ -1113,6 +1115,7 @@ private:
     NavicReceiver rxNavic_;
     SatbeaconLiveReceiver rxSb_;
     RidReceiver rxRid_;
+    EspnowReceiver rxEspnow_;
     MeteorReceiver rxMeteor_;
     NrReceiver rxNr_;
     GoesReceiver rxGoes_;

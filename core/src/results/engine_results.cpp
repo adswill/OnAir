@@ -89,6 +89,7 @@ std::vector<Engine::ResultSlot> Engine::resultSlots() {
         DECT2_RESULT_SLOT("iono", 53, rxIono_),
         DECT2_RESULT_SLOT("wifi", 55, rxWifi_),
         DECT2_RESULT_SLOT("rid", 57, rxRid_),
+        DECT2_RESULT_SLOT("espnow", 899, rxEspnow_),
         DECT2_RESULT_SLOT("nr", 58, rxNr_),
         DECT2_RESULT_SLOT("time", 59, rxTime_),
         DECT2_RESULT_SLOT("meteor", 60, rxMeteor_),

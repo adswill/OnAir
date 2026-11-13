@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 // Wi-Fi network monitor: the test signal through the receiver (wifi_gen.h, wifi_rx.h): two APs on channel 6, a bad FCS, carrier
-// offsets of +-50 kHz, 12 dB SNR, a sample clock error, another sample rate, and noise alone.
+// offsets of +-50 kHz, 12 dB SNR, a sample clock error, other sample rates (25, 24, 26 Msps), and noise alone.
 #include "dect2/wifi/wifi_gen.h"
 #include "dect2/wifi/wifi_proto.h"
 #include "dect2/wifi/wifi_rx.h"
@@ -104,6 +104,20 @@ int main() {
         const WifiTelemetry t = run(c, 0.26);
         printf("  25 Msps: %zu APs, %llu ok, %llu bad\n", t.aps.size(), (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
         twoAps(t, "25 Msps");
+    }
+    for (double rate : {24e6, 26e6}) {   // rates whose resampling once let a sidelobe phase take the header (4.1)
+        WifiGenConfig c;
+        c.rate = rate;
+        c.snrDb = 25;
+        c.clockPpm = rate > 25e6 ? 10 : -10;
+        c.frames = wifiTestSchedule();
+        const WifiTelemetry t = run(c, 0.26);
+        char w[32]; snprintf(w, sizeof w, "%.0f Msps", rate / 1e6);
+        printf("  %s: %zu APs, %llu ok, %llu bad, %llu headers bad\n", w, t.aps.size(), (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, (unsigned long long)t.headersBad);
+        for (const auto& a : t.aps) printf("    %s %s: %llu beacons, %llu probe responses\n", a.bssid.c_str(), a.ssid.c_str(), (unsigned long long)a.beacons, (unsigned long long)a.probeResps);
+        printf("    data %llu, headers %llu good\n", (unsigned long long)t.perType[2], (unsigned long long)t.headersOk);
+        twoAps(t, w);
+        CHECK(t.blocksOk >= 60 && t.blocksBad <= 2, "%s: %llu ok, %llu bad", w, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
     }
     {   // noise alone: nothing
         WifiGenConfig c;

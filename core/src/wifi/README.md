@@ -33,7 +33,9 @@ info indoor / standard power / very low power, duplicate beacon), EHT Operation 
 (co-located 6 GHz APs: operating class, channel, BSSID, short SSID, BSS parameters). FILS discovery: SSID or short SSID, beacon interval, timestamp.
 Unsolicited probe responses (a probe response to the broadcast address) are flagged. The standard column is derived from the elements (`a/n/ac/ax/be`).
 
-Not decoded: OFDM rates above 6 Mbit/s (a good SIGNAL field is counted as "other rate"), the optional fields of a FILS discovery frame after the SSID, Wi-Fi 7
+DSSS 2 Mbit/s (DQPSK) after the long and the short preamble is decoded too (4.1, for ESP-NOW); the OFDM receiver reads 12 Mbit/s (QPSK) when a mode asks for it (`setOfdmQpsk`).
+
+Not decoded: CCK 5.5 / 11 Mbit/s, OFDM rates above 12 Mbit/s (a good SIGNAL field is counted as "other rate"), the optional fields of a FILS discovery frame after the SSID, Wi-Fi 7
 multi-link elements, EHT capability details, 802.11ah (HaLow has its own mode).
 
 ## Receiving

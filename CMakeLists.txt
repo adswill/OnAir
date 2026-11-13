@@ -238,6 +238,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
   list(APPEND DECT2_MODES gk2a)   # GK-2A LRIT (family 230) and HRIT (231): core/src/gk2a, app/gk2a, tests/gk2a, docs/GK2A.md
   list(APPEND DECT2_MODES shortwave)   # Shortwave: the general receiver with one-click HF decoders (family 212, docs/SHORTWAVE-MODE.md): core/src/shortwave, app/shortwave, tests/shortwave
+  list(APPEND DECT2_MODES espnow)   # ESP-NOW (family 898, on the Wi-Fi demodulator of core/src/wifi): core/src/espnow, app/espnow, tests/espnow
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
   list(APPEND DECT2_MODES hfutil)   # HF utility modes (families 430 - 439): core/src/hfutil, app/hfutil, tests/hfutil (docs/HF-UTIL-3.8.md)
   list(APPEND DECT2_MODES pactorhf)   # PACTOR-II (family 237), -III (238) and -IV (239), physical layer only: core/src/pactorhf, app/pactorhf, tests/pactorhf (docs/pactorhf.md)

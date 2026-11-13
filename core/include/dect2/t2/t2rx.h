@@ -170,6 +170,7 @@
 #include "dect2/satmisc/satdetect_tel.h"
 #include "dect2/navic/navic.h"
 #include "dect2/rid/rid_tel.h"
+#include "dect2/espnow/espnow_tel.h"
 #include "dect2/meteor/meteor_tel.h"
 #include "dect2/nr/nr_tel.h"
 #include "dect2/goes/goes_tel.h"
@@ -345,6 +346,7 @@ struct RxTelemetry {
     MultitoneTelemetry multitone;   // valid when standard == 76 (Multitone paging)
     HalowTelemetry halow;     // valid when standard == 71 (Wi-Fi HaLow / 802.11ah)
     RidTelemetry rid;         // valid when standard == 57 (Drone Remote ID)
+    EspnowTelemetry espnow;   // valid when standard == 899 (ESP-NOW, family 898)
     MeteorTelemetry meteor;   // valid when standard == 60 (Meteor-M LRPT)
     NrTelemetry nr;           // valid when standard == 58 (5G NR cells)
     GoesTelemetry goes;       // valid when standard == 61 (GOES HRIT)

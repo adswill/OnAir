@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include "dect2/common/crc.h"
 #include "dect2/common/endian.h"
 
@@ -54,6 +55,38 @@ std::vector<uint8_t> ppduBits(const std::vector<uint8_t>& mpdu, uint8_t seed) {
         b = o;
     }
     return d;
+}
+
+DsssPpdu dsssPpdu(const std::vector<uint8_t>& mpdu, int rateMbps, bool shortPre, uint8_t seed) {
+    const bool two = rateMbps == 2 || shortPre;
+    DsssPpdu out;
+    std::vector<uint8_t>& d = out.bits;
+    d.reserve(kSyncBits + 64 + mpdu.size() * 8);
+    if (shortPre) {
+        for (int i = 0; i < kSyncShortBits; i++) d.push_back(0);
+        for (int k = 0; k < 16; k++) d.push_back((uint8_t)(kSfdShort >> k & 1));
+    } else {
+        for (int i = 0; i < kSyncBits; i++) d.push_back(1);
+        for (int k = 0; k < 16; k++) d.push_back((uint8_t)(kSfd >> k & 1));
+    }
+    const uint16_t lenUs = (uint16_t)(mpdu.size() * (two ? 4 : 8));   // microseconds of the MPDU
+    const uint8_t hdr[4] = {two ? kSignal2M : kSignal1M, 0x04, (uint8_t)lenUs, (uint8_t)(lenUs >> 8)};
+    uint8_t hb[32];
+    for (int i = 0; i < 32; i++) hb[i] = (uint8_t)(hdr[i / 8] >> (i % 8) & 1);
+    const uint16_t crc = crc16(hb, 32);
+    const size_t hdrAt = d.size();
+    d.insert(d.end(), hb, hb + 32);
+    for (int k = 15; k >= 0; k--) d.push_back((uint8_t)(crc >> k & 1));
+    out.qpskFrom = !two ? std::numeric_limits<size_t>::max() : shortPre ? hdrAt : d.size();
+    for (uint8_t b : mpdu) for (int k = 0; k < 8; k++) d.push_back((uint8_t)(b >> k & 1));
+    if (out.qpskFrom > d.size()) out.qpskFrom = d.size();
+    uint8_t s = seed & 0x7F;
+    for (uint8_t& b : d) {
+        const uint8_t o = (uint8_t)(b ^ (s >> 3 & 1) ^ (s >> 6 & 1));
+        s = (uint8_t)(((s << 1) | o) & 0x7F);
+        b = o;
+    }
+    return out;
 }
 
 const char* securityName(int s, bool ent) {

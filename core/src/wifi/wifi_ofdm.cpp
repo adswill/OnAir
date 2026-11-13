@@ -139,10 +139,24 @@ void putSymbol(std::vector<cf32>& out, const uint8_t* coded48, int pol) {
     out.insert(out.end(), t.begin() + (kFft - kCp), t.end());
     out.insert(out.end(), t.begin(), t.end());
 }
+// The same for QPSK (12 Mbit/s): 96 coded bits, interleaved (NCBPS = 96: bit k to 6 (k mod 16) + k / 16; the second permutation does nothing
+// for NBPSC = 2), each carrier's pair (b0 on I, b1 on Q) mapped to (2 b - 1) / sqrt 2 (clause 17.3.5.8)
+void putSymbolQpsk(std::vector<cf32>& out, const uint8_t* coded96, int pol) {
+    std::vector<cf32> X(kFft, cf32(0, 0));
+    const auto& dc = dataCarriers();
+    uint8_t il[96];
+    for (int k = 0; k < 96; k++) il[6 * (k % 16) + k / 16] = coded96[k];
+    const float a = 1.0f / std::sqrt(2.0f);
+    for (int j = 0; j < 48; j++) X[(size_t)bin(dc[(size_t)j])] = cf32(il[2 * j] ? a : -a, il[2 * j + 1] ? a : -a);
+    for (int i = 0; i < 4; i++) X[(size_t)bin(kPilotK[i])] = cf32((float)(kPilotBase[i] * pol), 0);
+    const std::vector<cf32> t = toTime(X);
+    out.insert(out.end(), t.begin() + (kFft - kCp), t.end());
+    out.insert(out.end(), t.begin(), t.end());
+}
 } // namespace
 
 // Preamble, SIGNAL and DATA symbols at 20 Msps (clause 17.3).
-std::vector<cf32> txPpdu(const std::vector<uint8_t>& mpdu, uint8_t seed) {
+std::vector<cf32> txPpdu(const std::vector<uint8_t>& mpdu, uint8_t seed, bool qpsk) {
     std::vector<cf32> out;
     // short training: 12 carriers, period 16 samples, 160 samples in all
     std::vector<cf32> S(kFft, cf32(0, 0));
@@ -156,7 +170,7 @@ std::vector<cf32> txPpdu(const std::vector<uint8_t>& mpdu, uint8_t seed) {
     for (int r = 0; r < 2; r++) out.insert(out.end(), lt.begin(), lt.end());
     // SIGNAL: RATE (6 Mbit/s: 1101, R1 first), reserved 0, LENGTH LSB first, even parity, six tail zeros (Figure 17-5)
     const int len = (int)mpdu.size();
-    std::vector<uint8_t> sig = {1, 1, 0, 1, 0};
+    std::vector<uint8_t> sig = qpsk ? std::vector<uint8_t>{0, 1, 0, 1, 0} : std::vector<uint8_t>{1, 1, 0, 1, 0};   // 12 Mbit/s: 0101
     for (int i = 0; i < 12; i++) sig.push_back((uint8_t)(len >> i & 1));
     uint8_t par = 0;
     for (uint8_t b : sig) par ^= b;
@@ -168,11 +182,13 @@ std::vector<cf32> txPpdu(const std::vector<uint8_t>& mpdu, uint8_t seed) {
     std::vector<uint8_t> d(16, 0);
     for (uint8_t b : mpdu) for (int k = 0; k < 8; k++) d.push_back((uint8_t)(b >> k & 1));
     const size_t tailAt = d.size();
-    d.resize(((tailAt + 6 + 23) / 24) * 24, 0);
+    const size_t dbps = qpsk ? 48 : 24;
+    d.resize(((tailAt + 6 + dbps - 1) / dbps) * dbps, 0);
     scramble(d, seed ? seed : 0x5D);
     for (size_t i = 0; i < 6; i++) d[tailAt + i] = 0;
     const std::vector<uint8_t> coded = convEncode(d);
-    for (size_t s = 0; s * 48 < coded.size(); s++) putSymbol(out, coded.data() + s * 48, pilotPolarity((int)s + 1));
+    if (qpsk) for (size_t s = 0; s * 96 < coded.size(); s++) putSymbolQpsk(out, coded.data() + s * 96, pilotPolarity((int)s + 1));
+    else for (size_t s = 0; s * 48 < coded.size(); s++) putSymbol(out, coded.data() + s * 48, pilotPolarity((int)s + 1));
     return out;
 }
 
