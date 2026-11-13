@@ -8,6 +8,8 @@
 #include "dect2/vdl4/vdl4_gen.h"
 #include "dect2/vdl4/vdl4_rx.h"
 #include <chrono>
+#include <cstdlib>
+#include <string>
 #include <cmath>
 #include <cstdio>
 #include <vector>
@@ -62,6 +64,26 @@ int main() {
             if (rate >= 1e6) CHECK(t.blocksOk >= 2, "%.2f Msps cfo %.0f: %llu frames decoded (%llu bad)", rate / 1e6, cfo, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
             printf("  %5.2f Msps cfo %+5.0f: %llu ok %llu bad, %.2f s CPU\n", rate / 1e6, cfo, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, cpu);
         }
+    }
+    if (getenv("DECT2_VDL4_EXPLORE")) {   // temporary: the demodulator's settings against SNR (4.1 tuning)
+        for (const char* lpa : {"0.2", "0.28", "0.36", "0.45"}) for (const char* off : {"-1", "0", "1"}) for (const char* half : {"0", "1"}) {
+            setenv("DECT2_VDL4_LPA", lpa, 1); setenv("DECT2_VDL4_OFF", off, 1); setenv("DECT2_VDL4_HALF", half, 1);
+            std::string row;
+            for (double snr : {12.0, 14.0, 16.0, 18.0, 20.0}) {
+                uint64_t ok = 0;
+                for (int seed = 1; seed <= 3; seed++) {
+                    SynthConfig sc; sc.snrDb = snr; sc.mode = 84; sc.modeOpt[1] = seed;
+                    auto syn = makeVdl4Synth(sc, 2e6);
+                    Vdl4Receiver rx; rx.configure(2e6); rx.setCenterHz(136.85e6); rx.setSignalOffset(0);
+                    std::vector<cf32> buf(65536);
+                    for (size_t done = 0; done < (size_t)(2e6 * 1.8); done += buf.size()) { syn->generate(buf.data(), buf.size()); rx.feed(buf.data(), buf.size()); }
+                    Vdl4Telemetry t; rx.telemetry(t, ~0ull); ok += t.blocksOk;
+                }
+                char b[48]; snprintf(b, sizeof b, " %2.0f:%2llu", snr, (unsigned long long)ok); row += b;
+            }
+            printf("EXPLORE lpa %s off %s half %s:%s (of 12)\n", lpa, off, half, row.c_str());
+        }
+        unsetenv("DECT2_VDL4_LPA"); unsetenv("DECT2_VDL4_OFF"); unsetenv("DECT2_VDL4_HALF");
     }
     // 4.1 sensitivity: SNR in the 25 kHz channel (the generator's definition), 2 Msps, carrier offsets of 0 and +-2.5 kHz, a +50 ppm sample
     // clock on the offset runs, two noise seeds. Before 4.1 the squelch worked on the power of the whole input band and needed about 21 dB here.
