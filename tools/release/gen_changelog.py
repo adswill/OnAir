@@ -217,7 +217,7 @@ def main():
     if not a.no_readme and os.path.exists(a.readme):
         r = open(a.readme).read()
         grp = readme_rows(rows_new, groups)
-        trows = ['| Family | Modes | What you get |', '|---|:---:|---|']
+        trows = ['| Family | Modes | Examples |', '|---|:---:|---|']
         # the descriptions stay hand-written in the README; only counts are generated
         desc = dict(re.findall(r'^\| \*\*(.+?)\*\* \| \d+ \| (.*) \|$', r, re.M))
         for name, gn in README_GROUPS:
