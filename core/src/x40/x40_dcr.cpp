@@ -211,12 +211,9 @@ private:
         void fswAt(int64_t e, float* v) const { for (int k = 0; k < kFswSym; k++) v[k] = at(e - (int64_t)(kFswSym - 1 - k) * sps); }
     };
 
-    // maxWrong: sync symbols allowed on the wrong level (4.1: the search takes one wrong of ten when the correlation is 0.8 or more; ten right
-    // levels in a row were the limit near the threshold, before the convolutional code and the CRCs of the frame, which still check it)
-    bool syncOk(const float* v, double g, double d, int maxWrong = 0) const {
+    bool syncOk(const float* v, double g, double d) const {
         if (std::fabs(g) < 0.4 * kUnitHz || std::fabs(g) > 1.8 * kUnitHz) return false;
-        int wrong = 0;
-        for (int k = 0; k < kFswSym; k++) if (nearestLevel((v[k] - d) / g) != nxdn::kFsw[k] && ++wrong > maxWrong) return false;
+        for (int k = 0; k < kFswSym; k++) if (nearestLevel((v[k] - d) / g) != nxdn::kFsw[k]) return false;
         return true;
     }
 
@@ -229,10 +226,10 @@ private:
         if (c.mode == Chain::Search) {
             c.fswAt(last, v);
             const float r = pearson(v, nxdn::kFsw, kFswSym);
-            if (std::fabs(r) > 0.8f && std::fabs(r) > c.candR) {
+            if (std::fabs(r) > 0.85f && std::fabs(r) > c.candR) {
                 double g, d;
                 lsFit(v, nxdn::kFsw, kFswSym, g, d);
-                if (syncOk(v, g, d, 1)) { c.candN = last; c.candR = std::fabs(r); }
+                if (syncOk(v, g, d)) { c.candN = last; c.candR = std::fabs(r); }
             }
             if (c.candN >= 0 && last - c.candN > Chain::sps / 2) {
                 c.fs = c.candN; c.candN = -1; c.candR = 0;
