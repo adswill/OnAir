@@ -322,6 +322,11 @@ void RdsDecoder::decodeGroup(const uint16_t b[4], const uint8_t err[4], double n
     if (type == 0) {
         ta = (low >> 4) & 1; ms = (low >> 3) & 1;
         const int seg = low & 3;
+        {   // decoder identification: bit 2 of block B, the segment address says which flag (0 dynamic PTY, 1 compressed, 2 artificial head, 3 stereo)
+            const int bit = 3 - seg, v = (low >> 2) & 1;
+            info.diKnown |= 1 << bit;
+            info.di = (info.di & ~(1 << bit)) | (v << bit);
+        }
         // each segment is kept as it comes (a group lost to noise no longer throws the others away, #46); a segment that comes again
         // with other characters means the name is changing (a scrolling name), and the collection starts over from it, so two
         // versions of the name are never mixed
@@ -414,6 +419,23 @@ void RdsDecoder::decodeGroup(const uint16_t b[4], const uint8_t err[4], double n
         ptynBuf_[seg * 4 + 2] = rdsChar(b[3] >> 8); ptynBuf_[seg * 4 + 3] = rdsChar(b[3] & 0xFF);
         ptynSeen_ |= (uint8_t)(1 << seg);
         if (ptynSeen_ == 3) info.ptyn = rdsText(ptynBuf_, 8, charset);
+    } else if (type == 15 && !verB && cOk) {
+        // long programme service name: 4 UTF-8 bytes per group, the segment address in the low bits of block B, a CR or NUL ends the text
+        const int seg = low & 15;
+        if (seg < 8) {
+            lpsBuf_[seg * 4] = (uint8_t)(b[2] >> 8); lpsBuf_[seg * 4 + 1] = (uint8_t)(b[2] & 0xFF);
+            lpsBuf_[seg * 4 + 2] = (uint8_t)(b[3] >> 8); lpsBuf_[seg * 4 + 3] = (uint8_t)(b[3] & 0xFF);
+            lpsSeen_ |= (uint8_t)(1 << seg);
+            int end = -1;   // the first terminator in the contiguous run of segments from 0
+            for (int s = 0; s < 8 && (lpsSeen_ >> s & 1) && end < 0; s++)
+                for (int k = 0; k < 4; k++) { const uint8_t ch = lpsBuf_[s * 4 + k]; if (ch == 0x0D || ch == 0x00) { end = s * 4 + k; break; } }
+            if (end < 0 && lpsSeen_ == 0xFF) end = 32;
+            if (end > 0) {
+                std::string t((const char*)lpsBuf_, (size_t)end);
+                while (!t.empty() && t.back() == ' ') t.pop_back();
+                info.longPs = t;
+            }
+        }
     } else if (type == 14 && (verB || cOk)) {
         // other networks: 14A carries the name (variants 0-3), the PTY and TA (variant 13) and the TP of the other network (bit 4 of block B);
         // 14B carries its TP and TA announcements (bits 4 and 3 of block B)

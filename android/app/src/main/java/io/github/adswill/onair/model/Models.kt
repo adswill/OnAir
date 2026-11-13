@@ -121,7 +121,8 @@ data class StartConfig(
 data class ResultTable(val name: String, val cols: List<String>, val rows: List<List<String>>)
 
 /** FM broadcast panel (telemetry "fm"). */
-data class FmInfo(val ps: String, val rt: String, val rdsSync: Boolean, val stereo: Boolean, val pi: Int, val pty: String)
+/** [rdsRows]: the other RDS items the station sends (PTYN, long name, country, AF list, clock, RT+, EON ...) as label / value pairs. */
+data class FmInfo(val ps: String, val rt: String, val rdsSync: Boolean, val stereo: Boolean, val pi: Int, val pty: String, val rdsRows: List<Pair<String, String>> = emptyList())
 
 /** General receiver panel (telemetry "general"). */
 data class GeneralInfo(val squelchOpen: Boolean, val levelDb: Double, val audioDb: Double)
@@ -155,7 +156,8 @@ data class Telemetry(
                     ResultTable(t.optString("name"), cols, rows)
                 }
             } ?: emptyList()
-            val fm = raw.optJSONObject("fm")?.let { FmInfo(it.optString("ps"), it.optString("rt"), it.optBoolean("rdsSync"), it.optBoolean("stereo"), it.optInt("pi"), it.optString("pty")) }
+            val fm = raw.optJSONObject("fm")?.let { FmInfo(it.optString("ps"), it.optString("rt"), it.optBoolean("rdsSync"), it.optBoolean("stereo"), it.optInt("pi"), it.optString("pty"),
+                it.optJSONArray("rdsRows")?.let { a -> (0 until a.length()).mapNotNull { i -> a.optJSONArray(i)?.let { r -> r.optString(0) to r.optString(1) } } } ?: emptyList()) }
             val gen = raw.optJSONObject("general")?.let { GeneralInfo(it.optBoolean("squelchOpen"), it.optDouble("levelDb"), it.optDouble("audioDb")) }
             return Telemetry(
                 raw.optBoolean("running"), raw.optBoolean("available"), raw.optInt("standard", -1), raw.optInt("state"), raw.optBoolean("locked"),

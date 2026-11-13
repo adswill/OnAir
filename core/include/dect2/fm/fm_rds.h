@@ -51,6 +51,8 @@ struct RdsInfo {
     bool rtPlusRunning = false;         // RT+ "item running" flag
     std::string ert;                    // enhanced RadioText (UTF-8)
     std::vector<RdsEon> eon;            // other networks
+    std::string longPs;                 // long programme service name (group 15A, UTF-8, up to 32 bytes), "" when not received
+    int diKnown = 0, di = 0;            // decoder identification (group 0, one bit per segment): bits 0 stereo, 1 artificial head, 2 compressed, 3 dynamic PTY; diKnown says which have arrived
     std::string psPartial;              // the name being collected, '_' where nothing has come yet ("" when nothing has)
     uint64_t blocksGood = 0, blocksCorrected = 0, blocksBad = 0;
     uint64_t blocksVoted = 0;   // blocks rebuilt by voting over repeated copies (a subset of blocksCorrected)
@@ -151,6 +153,8 @@ private:
     char ptynBuf_[9] = "        ";
     uint8_t ptynSeen_ = 0;
     int ptynAb_ = -1;
+    uint8_t lpsBuf_[33] = {};
+    uint8_t lpsSeen_ = 0;
     int rtPlusGroup_ = -1, ertGroup_ = -1;   // the group type codes carrying RT+ / eRT (from 3A), -1 none
     int ertUtf8_ = 1;
     uint8_t ertBuf_[128] = {};

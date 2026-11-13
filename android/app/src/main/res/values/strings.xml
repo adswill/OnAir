@@ -124,6 +124,7 @@
     <string name="fm_rds_none">no sync</string>
     <string name="fm_programme_type">Programme type</string>
     <string name="fm_pi">PI code</string>
+    <string name="fm_rds_details">RDS details</string>
     <string name="fm_force_mono">Mono switch is a desktop feature in this build</string>
     <string name="general_demod">Demodulator</string>
     <string name="general_squelch">Squelch</string>

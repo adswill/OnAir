@@ -61,6 +61,18 @@ object RdsPanel : ModePanel {
                     Card(stringResource(R.string.fm_pi), v.pi.ifBlank { "-" }, Modifier.weight(1f))
                     Card(stringResource(R.string.fm_programme_type), v.pty.ifBlank { "-" }, Modifier.weight(1f))
                 }
+                if (v.rows.isNotEmpty()) {   // #436: everything else the station sends, as the desktop's "RDS details"
+                    Spacer(Modifier.height(8.dp))
+                    Column(Modifier.fillMaxWidth().background(p.panel).padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Label(stringResource(R.string.fm_rds_details))
+                        v.rows.forEach { (k, value) ->
+                            Column {
+                                Label(k)
+                                Text(value, color = p.text, fontFamily = Mono, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

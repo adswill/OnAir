@@ -275,6 +275,7 @@ GpuLdpc::~GpuLdpc() = default;
 GpuLdpc& GpuLdpc::instance() { static GpuLdpc g; return g; }
 bool GpuLdpc::available() const { return p_->pso != nil; }
 bool GpuLdpc::boxCorrKernels() const { return true; }
+const char* GpuLdpc::unavailableReason() const { return p_->dev ? "" : "no Metal device"; }
 const char* GpuLdpc::deviceName() const { return p_->dev ? p_->dev.name.UTF8String : "none"; }
 
 bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter, uint8_t* hard, uint8_t* ok, int* iters, float alpha, bool boxCorr) {

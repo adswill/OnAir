@@ -166,6 +166,59 @@ void fm(Out& o, const FmTelemetry& f) {
     if (f.trafficAlert) o.card("Traffic", "announcement");
 }
 
+// The RDS items the station sends beyond the name and the text, as [label, value] rows for the phone's RDS panel (the desktop's "RDS details").
+std::string rdsRows(const FmTelemetry& f) {
+    const RdsInfo& r = f.rds;
+    std::string rows;
+    auto add = [&](const std::string& k, const std::string& v) { if (v.empty()) return; if (!rows.empty()) rows += ','; rows += "[" + q(k) + "," + q(v) + "]"; };
+    auto trim = [](std::string s) { while (!s.empty() && s.back() == ' ') s.pop_back(); size_t i = 0; while (i < s.size() && s[i] == ' ') i++; return s.substr(i); };
+    if (f.piCode) add("PI", fmt("%04X", f.piCode));
+    if (f.rdsSync) add("TP / TA / M/S", fmt("%s / %s / %s", f.trafficProgram ? "TP" : "-", f.trafficAlert ? "TA" : "-", f.music ? "music" : "speech"));
+    add("Long station name (LPS)", trim(r.longPs));
+    add("Programme type name (PTYN)", trim(r.ptyn));
+    if (r.ecc >= 0) add("Country code (ECC)", fmt("%02X  PI %04X", r.ecc, f.piCode));
+    if (r.language >= 0) add("Language", fmt("%s (%02X)", rdsLanguageName(r.language), r.language));
+    if (r.diKnown) {
+        std::string d;
+        auto flag = [&](int bit, const char* on, const char* off) { if (r.diKnown >> bit & 1) { if (!d.empty()) d += ", "; d += (r.di >> bit & 1) ? on : off; } };
+        flag(0, "stereo", "mono"); flag(1, "artificial head", "no artificial head"); flag(2, "compressed", "not compressed"); flag(3, "dynamic PTY", "static PTY");
+        add("Decoder identification (DI)", d);
+    }
+    if (r.clockUtc) {
+        const int64_t loc = r.clockUtc + (int64_t)r.clockOffsetMin * 60, day = loc / 86400, sec = loc % 86400;
+        const int64_t z = day + 719468, era = (z >= 0 ? z : z - 146096) / 146097, doe = z - era * 146097;   // civil date from days since 1970
+        const int64_t yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365, doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+        const int64_t mp = (5 * doy + 2) / 153, dd = doy - (153 * mp + 2) / 5 + 1, mm = mp < 10 ? mp + 3 : mp - 9, yy = yoe + era * 400 + (mm <= 2);
+        add("Station clock (CT)", fmt("%04d-%02d-%02d %02d:%02d (UTC%+d:%02d)", (int)yy, (int)mm, (int)dd, (int)(sec / 3600), (int)(sec / 60 % 60), r.clockOffsetMin / 60, std::abs(r.clockOffsetMin % 60)));
+    }
+    if (!r.afMhz.empty()) {
+        std::string a;
+        for (double m : r.afMhz) { if (!a.empty()) a += ", "; a += fmt("%.1f", m); }
+        add("Also on (AF, MHz)", a);
+    }
+    if (r.pinDay) add("Programme item (PIN)", fmt("day %d, %02d:%02d", r.pinDay, r.pinHour, r.pinMinute));
+    for (const auto& t : r.rtPlus) add(std::string("RT+ ") + t.name, t.text);
+    add("Enhanced RadioText (eRT)", r.ert);
+    for (const auto& e : r.eon) {
+        std::string x = e.ps.empty() ? "..." : trim(e.ps);
+        if (e.pty >= 0) x += fmt("  PTY %d", e.pty);
+        if (e.tp == 1) x += "  TP";
+        if (e.ta == 1) x += "  TA";
+        add(fmt("Other network (EON) %04X", e.pi), x);
+    }
+    if (!r.oda.empty()) {
+        std::string o;
+        for (const auto& p : r.oda) {
+            const char* n = p.first == 0x4BD7 ? "RT+" : p.first == 0x6552 ? "eRT" : (p.first == 0xCD46 || p.first == 0xCD47) ? "TMC" : nullptr;
+            if (!o.empty()) o += ", ";
+            o += n ? std::string(n) : fmt("%04X", p.first);
+            o += fmt(" %d%c", p.second / 2, p.second & 1 ? 'B' : 'A');
+        }
+        add("Data applications (ODA)", o);
+    }
+    return rows;
+}
+
 // ---- exporters added for the voice networks, aviation/satellite data links, DAB, SAME, BLE, ISM, mesh and the HF digital family ----
 std::string idOrQ(int64_t v) { return v < 0 ? std::string("?") : std::to_string(v); }
 std::string yn(bool b) { return b ? "yes" : ""; }
@@ -755,7 +808,8 @@ std::string resultsJson(const RxTelemetry& rx, bool running, const dect2::DabEns
     switch (rx.standard) {
     case 6: fm(o, rx.fm); extra = ",\"fm\":{\"ps\":" + q(rx.fm.psName) + ",\"rt\":" + q(rx.fm.radioText) + ",\"stereo\":" + (rx.fm.stereo ? "true" : "false") +
                                    ",\"rdsSync\":" + (rx.fm.rdsSync ? "true" : "false") + ",\"pty\":" + q(rx.fm.ptyText) + ",\"pi\":" + std::to_string(rx.fm.piCode) +
-                                   ",\"snrDb\":" + jsonNum(rx.fm.snrDb) + ",\"levelDbfs\":" + jsonNum(rx.fm.levelDbfs) + "}"; break;
+                                   ",\"snrDb\":" + jsonNum(rx.fm.snrDb) + ",\"levelDbfs\":" + jsonNum(rx.fm.levelDbfs) +
+                                   ",\"rdsRows\":[" + rdsRows(rx.fm) + "]}"; break;
     case 12: adsb(o, rx.adsb); break;
     case 15: ais(o, rx.ais); break;
     case 17: acars(o, rx.acars); break;

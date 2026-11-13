@@ -15,6 +15,7 @@
 #include <mutex>
 #include <set>
 #include "dect2/common/endian.h"
+#include "dect2/common/platform.h"
 
 namespace dect2 {
 namespace native {
@@ -236,6 +237,11 @@ protected:
     }
     bool restartForRate() const override { return false; }   // the server changes the rate while streaming
     void streamLoop() override {
+        setThreadPriority(ThreadPriority::Realtime);   // like the USB radios' reader: a network read that waits for a busy core leaves the socket buffer to overflow in the server
+        {   // a deep receive buffer: a few hundred ms of the stream can wait in the kernel while this thread is scheduled out (the default is far less, and the server then stalls or drops)
+            const int want = 8 << 20;
+            setsockopt(sock_, SOL_SOCKET, SO_RCVBUF, (const char*)&want, sizeof want);
+        }
         std::vector<unsigned char> buf(1 << 20);   // large reads: at 10 Msps the server sends 20 MB/s
         statT0_ = std::chrono::steady_clock::now();
         uint64_t winBytes = 0, totalBytes = 0;

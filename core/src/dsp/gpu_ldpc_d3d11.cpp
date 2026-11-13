@@ -508,6 +508,7 @@ bool GpuLdpc::selfTest() {
 GpuLdpc::~GpuLdpc() = default;
 GpuLdpc& GpuLdpc::instance() { static GpuLdpc g; return g; }
 bool GpuLdpc::available() const { return p_->ready; }
+const char* GpuLdpc::unavailableReason() const { return p_->ready ? "" : "no Direct3D 11 hardware adapter with compute support, or its self-test failed (see the log)"; }
 const char* GpuLdpc::deviceName() const { return p_->name.c_str(); }
 size_t GpuLdpc::dedicatedMemoryMb() const { return p_->dedicatedMb; }
 
