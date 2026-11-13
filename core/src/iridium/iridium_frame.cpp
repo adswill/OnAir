@@ -686,13 +686,13 @@ std::vector<std::vector<int>> blockPositions(const Bits& d, Kind k) {
 
 // Chase search over one failing block: the 5 least reliable of its 32 bits are tried in every combination, each through the algebraic decoder
 // (2 errors and the parity bit); the candidate with the smallest sum of reliabilities over the bits it changes wins, and only if every bit it
-// changes is among the 10 least reliable of the block (a random word is always near some codeword; a weak frame's errors are in its weak bits).
+// changes is among the 7 least reliable of the block (a random word is always near some codeword; a weak frame's errors are in its weak bits).
 bool chaseBlock(Bits& d, const std::vector<float>& rel, const std::vector<int>& ps, const Bch& bch, int& changed) {
     int ord[32];
     for (int i = 0; i < 32; i++) ord[i] = i;
     std::sort(ord, ord + 32, [&](int a, int b) { return rel[(size_t)ps[(size_t)a]] < rel[(size_t)ps[(size_t)b]]; });
     bool weak[32] = {};
-    for (int i = 0; i < 10; i++) weak[ord[i]] = true;
+    for (int i = 0; i < 7; i++) weak[ord[i]] = true;
     uint32_t orig = 0;
     for (int i = 0; i < 32; i++) orig = (orig << 1) | (d[(size_t)ps[(size_t)i]] & 1u);
     float bestW = 1e30f;
@@ -755,7 +755,7 @@ IridiumFrame decodeIridiumBurst(const IridiumBurstBits& b) {
     const Kind order[3] = {Kind::RA, Kind::BC, Kind::MS};
     for (Kind t : order) {
         if (k != Kind::None && t != k) continue;
-        if (t == Kind::MS && bitDiff(d0, 0, kHdrMsg()) >= 2) continue;
+        if (t == Kind::MS && bitDiff(d0, 0, kHdrMsg()) != 0) continue;   // the pager header is not protected: it must be exact
         Bits d = d0;
         const int ch = softRepair(d, rel, t);
         if (ch < 0) continue;
