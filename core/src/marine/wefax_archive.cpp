@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/marine/wefax_archive.h"
+#include "dect2/common/diag.h"
 #include "dect2/marine/marine_wefax_stations.h"
 #include <algorithm>
 #include <cctype>
@@ -82,7 +83,10 @@ std::string utcIso(long long t) {
 }
 bool parseIso(const std::string& s, long long& t) {
     int Y, M, D, h, mi, se;
-    if (sscanf(s.c_str(), "%d-%d-%dT%d:%d:%dZ", &Y, &M, &D, &h, &mi, &se) != 6) return false;
+    if (sscanf(s.c_str(), "%d-%d-%dT%d:%d:%dZ", &Y, &M, &D, &h, &mi, &se) != 6) {
+        DIAG_DEBUG(412679, "The WeFAX archive time %s is not in the form year-month-dayThour:minute:secondZ, so it is ignored.", s.c_str());
+        return false;
+    }
     t = daysFromCivil(Y, (unsigned)M, (unsigned)D) * 86400 + h * 3600 + mi * 60 + se;
     return true;
 }
@@ -108,8 +112,14 @@ std::string wefaxArchiveUniqueBase(const std::string& base, const std::vector<st
 
 bool wefaxArchiveParseBase(const std::string& base, long long& startUtc, double& dialKhz) {
     int Y, M, D, h, mi, se; double k;
-    if (sscanf(base.c_str(), "wefax_%4d%2d%2dT%2d%2d%2dZ_%lfkHz", &Y, &M, &D, &h, &mi, &se, &k) != 7) return false;
-    if (M < 1 || M > 12 || D < 1 || D > 31 || h > 23 || mi > 59 || se > 60) return false;
+    if (sscanf(base.c_str(), "wefax_%4d%2d%2dT%2d%2d%2dZ_%lfkHz", &Y, &M, &D, &h, &mi, &se, &k) != 7) {
+        DIAG_DEBUG(222342, "The archive file name %s does not follow the WeFAX picture naming, so it is skipped.", base.c_str());
+        return false;
+    }
+    if (M < 1 || M > 12 || D < 1 || D > 31 || h > 23 || mi > 59 || se > 60) {
+        DIAG_DEBUG(366294, "The archive file name %s holds a date or time that does not exist, so it is skipped.", base.c_str());
+        return false;
+    }
     startUtc = daysFromCivil(Y, (unsigned)M, (unsigned)D) * 86400 + h * 3600 + mi * 60 + se;
     dialKhz = k;
     return true;
@@ -128,7 +138,10 @@ std::string wefaxMetaToJson(const WefaxArchiveMeta& m) {
 
 bool wefaxMetaFromJson(const std::string& j, WefaxArchiveMeta& m) {
     std::string v;
-    if (!jsonGet(j, "mode", v) || v != "wefax") return false;
+    if (!jsonGet(j, "mode", v) || v != "wefax") {
+        DIAG_DEBUG(738426, "The archive details file of %zu bytes does not say mode wefax, so it is not read as WeFAX picture details.", j.size());
+        return false;
+    }
     WefaxArchiveMeta r;
     if (jsonGet(j, "dial_khz", v)) r.dialKhz = std::atof(v.c_str());
     if (jsonGet(j, "ioc", v)) r.ioc = std::atoi(v.c_str());

@@ -11,6 +11,7 @@
 //    centred on the line boundary), then one white line before the image (tx phasing, ENDPHASING)
 // Not covered: inverted phasing (black pulse on white), colour fax, line rates other than 60/90/100/120/180/240.
 #include "dect2/marine/marine_fax.h"
+#include "dect2/common/diag.h"
 #include "dect2/common/window.h"
 #include <algorithm>
 #include <atomic>
@@ -387,7 +388,11 @@ struct FaxDecoder::State {
             lpm = 0;
             for (int cand : kLpmChoices)
                 if (std::fabs(est / cand - 1.0) < 0.03) lpm = cand;
-            if (lpm == 0) { chain.clear(); return; }
+            if (lpm == 0) {
+                DIAG_DEBUG_EVERY(688353, 10.0, "The fax phasing pulses are %.1f ms apart, which matches no standard line rate, so the lock is dropped and the search restarts.", 1000.0 * sp / fs);
+                chain.clear();
+                return;
+            }
         }
         curLpm = lpm;
         st.lpm = lpm;
@@ -632,7 +637,7 @@ struct FaxDecoder::State {
 
     void startImage(int kImg) {
         imgW = faxImageWidth(st.ioc);
-        if (imgW <= 0) imgW = faxImageWidth(576);
+        if (imgW <= 0) { DIAG_DEBUG(163893, "The fax IOC %d has no known picture width, so the width for IOC 576 is used.", st.ioc); imgW = faxImageWidth(576); }
         const double m = manualPpm.load();
         double a;
         if (autoSlant.load()) {
@@ -715,7 +720,7 @@ struct FaxDecoder::State {
         std::vector<uint8_t> row(W);
         bool any = false;
         while (static_cast<double>(nAud) >= imgStart + (rowIdx + 1) * Puse + 4) {
-            if (rowIdx >= cap) { st.state = 3; break; }
+            if (rowIdx >= cap) { DIAG_EVERY(150895, 10.0, "The fax picture reached the limit of %d lines, so it ends here and later lines are not drawn.", cap); st.state = 3; break; }
             const double s = imgStart + rowIdx * Puse;
             const double spp = Puse / W;
             if (rowIdx == 0) nvAvg = -1;
