@@ -214,7 +214,7 @@ FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
                 pr.ctiRows = ctiRows(pl.ctiDepth, pl.tiExtendedInterleaving != 0);
                 pr.ctiStartRow = pl.ctiStartRow; pr.ctiFecBlockStart = pl.ctiFecBlockStart;
                 double nsum;
-                planeCells(0, a.size, pr.cells, nsum);
+                planeCells(0, a.size, pr.cells, nsum, haveW ? &pr.cellW : nullptr);   // the weights go through the receiver's de-interleaver too
                 pr.noise = (float)std::max(nsum / a.size, 0.002);
             } else if (bicm.ok() && pl.tiMode == 0 && pl.layer == 0 && a.size > 0) {
                 const int cb = bicm.cells();

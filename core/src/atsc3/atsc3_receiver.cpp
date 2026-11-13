@@ -22,11 +22,13 @@ Atsc3Receiver::~Atsc3Receiver() { remux_.stop(); }
 struct Atsc3Receiver::CtiPlp {
     int rows = 0, fec = -1, mod = -1, cod = -1;
     std::unique_ptr<CtiDeinterleaver> deint;
+    std::unique_ptr<CtiDeinterleaver> deintW;   // the same de-interleaver for the cells' channel state weights (as real parts); null: none
     std::unique_ptr<Bicm> bicm;
     long pushed = 0;           // cells fed to the de-interleaver since it started; the transmit index of the next frame's first cell, counted from there
     long outPos = 0;           // position in the de-interleaved stream (one cell out per cell in) of buf[0]
     long nextBlock = -1;       // position in that stream where the next FEC block starts; -1 until known
     std::vector<cf32> buf;     // de-interleaved cells from outPos on, not yet cut into blocks
+    std::vector<float> bufW;   // their weights (with deintW)
 };
 
 PlpResult Atsc3Receiver::runCti(const PlpResult& in) {
@@ -37,7 +39,12 @@ PlpResult Atsc3Receiver::runCti(const PlpResult& in) {
     if (!up) up.reset(new CtiPlp());
     CtiPlp* c = up.get();
     // the commutator carries on from the previous frame: another position means frames were missed
-    if (!c->deint || c->rows != in.ctiRows || c->fec != in.cfg.fecType || c->mod != in.cfg.mod || c->cod != in.cfg.cod || c->deint->row() != in.ctiStartRow % c->rows) {
+    // Channel state (4.1): each cell's weight goes through a second de-interleaver of the same shape, so that a cell from a deep fade enters the
+    // LDPC decoder with the little confidence it deserves (the other time-interleaving modes had this in 4.0, docs/SENSITIVITY-4.0-X3.md). The
+    // cells of the start-up (the de-interleaver's initial zeros) get weight 0. Without weights (DECT2_ATSC3_NOCSI) one noise figure per block.
+    const bool haveW = in.cellW.size() == in.cells.size() && !in.cells.empty();
+    if (!c->deint || c->rows != in.ctiRows || c->fec != in.cfg.fecType || c->mod != in.cfg.mod || c->cod != in.cfg.cod || c->deint->row() != in.ctiStartRow % c->rows ||
+        (c->deintW != nullptr) != haveW) {
         up.reset(new CtiPlp());
         c = up.get();
         c->rows = in.ctiRows; c->fec = in.cfg.fecType; c->mod = in.cfg.mod; c->cod = in.cfg.cod;
@@ -45,6 +52,7 @@ PlpResult Atsc3Receiver::runCti(const PlpResult& in) {
         c->bicm.reset(new Bicm(plpBicm(in.cfg)));
         if (!c->bicm->ok()) { c->bicm.reset(); return out; }
         c->deint.reset(new CtiDeinterleaver(c->rows, in.ctiStartRow));
+        if (haveW) c->deintW.reset(new CtiDeinterleaver(c->rows, in.ctiStartRow));
     }
     const int cb = c->bicm->cells();
     const long lat = c->deint->latency();
@@ -62,22 +70,31 @@ PlpResult Atsc3Receiver::runCti(const PlpResult& in) {
         float pmax = 0;
         for (const cf32& p : c->bicm->constellation()) pmax = std::max(pmax, std::norm(p));
         const float lim = 2.0f * pmax;
-        for (cf32& v : cellsIn) if (!(std::norm(v) <= lim)) v = cf32(0, 0);
+        for (size_t i = 0; i < cellsIn.size(); i++) if (!(std::norm(cellsIn[i]) <= lim)) cellsIn[i] = cf32(0, 0);
     }
     std::vector<cf32> d = c->deint->process(cellsIn);
+    if (c->deintW) {
+        std::vector<cf32> wIn(cellsIn.size());
+        for (size_t i = 0; i < wIn.size(); i++) wIn[i] = cf32(cellsIn[i] == cf32(0, 0) ? 0.f : in.cellW[i], 0);
+        const std::vector<cf32> dw = c->deintW->process(wIn);
+        for (const cf32& v : dw) c->bufW.push_back(v.real());
+    }
     c->pushed += (long)in.cells.size();
     c->buf.insert(c->buf.end(), d.begin(), d.end());
     std::vector<std::vector<cf32>> blocks;
+    std::vector<std::vector<float>> wblocks;
     while (c->nextBlock >= 0 && c->nextBlock + cb <= c->outPos + (long)c->buf.size()) {
         if (c->nextBlock >= c->outPos) {
             const size_t o = (size_t)(c->nextBlock - c->outPos);
             blocks.emplace_back(c->buf.begin() + o, c->buf.begin() + o + cb);
+            if (c->deintW) wblocks.emplace_back(c->bufW.begin() + o, c->bufW.begin() + o + cb);
         }
         c->nextBlock += cb;
     }
     if (c->nextBlock > c->outPos) {
         const size_t drop = std::min<size_t>((size_t)(c->nextBlock - c->outPos), c->buf.size());
         c->buf.erase(c->buf.begin(), c->buf.begin() + drop);
+        if (c->deintW) c->bufW.erase(c->bufW.begin(), c->bufW.begin() + (long)std::min(drop, c->bufW.size()));
         c->outPos += (long)drop;
     }
     // the blocks are independent: they go to the decoder in batches (one block per vector lane), the batches on a few threads
@@ -91,10 +108,11 @@ PlpResult Atsc3Receiver::runCti(const PlpResult& in) {
         for (size_t k; (k = next++) < nBatches;) {
             const size_t from = k * bs, to = std::min(n, from + bs);
             std::vector<const cf32*> in;
-            for (size_t i = from; i < to; i++) in.push_back(blocks[i].data());
+            std::vector<const float*> win;
+            for (size_t i = from; i < to; i++) { in.push_back(blocks[i].data()); if (!wblocks.empty()) win.push_back(wblocks[i].data()); }
             std::vector<std::vector<uint8_t>> pl;
             std::vector<char> good;
-            bicm.decodeBatch(in, in_noise, pl, good);
+            bicm.decodeBatch(in, in_noise, pl, good, wblocks.empty() ? nullptr : &win);
             for (size_t i = from; i < to; i++) { ok[i] = good[i - from]; bits[i].swap(pl[i - from]); }
         }
     };

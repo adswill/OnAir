@@ -2223,3 +2223,15 @@ Receiver::signalView() plus a Signal tab for custom modes: histogram (OOK, ASK, 
   DVB-SH and GK-2A on noise (searches), and threaded receivers whose sum is above 1.0. Simulated signals only.
 
 2026-11-13 feat41-stl: issue #497, STL link decoding. New mode "STL link (studio-to-transmitter)": x40 variant 53 (52 reserved for GSC), family 785 / active 786 / engine 787 (docs/FAMILY-NUMBERS-4.0.md). Analogue composite and mono STLs (944 - 952 MHz, +-60 kHz, 250 / 500 kHz channels): the FM broadcast receiver demodulates with link settings (deviation, channel width, 75 / 50 us or flat, stereo or mono, RDS / SCA), the mode names what it hears (composite, mono, digital-unknown, nothing) and shows sound meters. Digital STLs (Starlink, Intraplex, GatesAir) are named and measured, not decoded: proprietary, often encrypted. New `FmReceiver::setReferenceDeviation` (sound level only). Tests tests/x40/test_x40_stl.cpp: offsets, deviations, rates, channel widths, noise-only (no false audio), digital-unknown, C/N sweep with RDS 50 / 90 % points. Simulated signals only; docs/STL-4.1.md.
+## 2026-11-13 (feat41-sensTV): TV and DRM sensitivity gaps left by 4.0 (docs/SENSITIVITY-4.1-TV.md)
+- New harness test sens41tv (lock time per trial, 4.0 / 4.1 paths side by side, child processes per receiver setting) and atsc3_cticsi.
+- 50 ppm clock penalty (DVB-T, DVB-T2, DTMB, ATSC): a harness artefact (baseline rows older than the windowed-sinc clock error).
+  sens_sweep now reads 50 ppm = AWGN: 15/15, 14/14, 18/18, 15/15 dB, same lock time (runs 43363616797, 43370655669); baseline rows refreshed.
+- ATSC 3.0 CTI: per-cell channel state through the convolutional de-interleaver; about 1 to 2 dB in a Rayleigh test channel (7 dB: 63/63
+  blocks against 0). Not on a real CTI broadcast (the synthetic transmitter has no CTI).
+- DRM: common-phase-error correction, opt-in (DECT2_DRM_CPE=1): 1 Hz phase noise 64-QAM none -> 24 dB, 16-QAM combined 18 -> 12 dB;
+  off by default because drm_smooth fails with it (mode E, ITU channels 5/6). Harness 1 Hz linewidth is about 25 dB worse than an SDR
+  oscillator. recIf no longer reads outside the ring for negative symbol indices (ASan).
+- Not improved, measured and reverted: ATSC 1.0 TU6 (segment sync lost in every fade; LMS step, pilot loop and fade coasting tried),
+  ISDB-T first-order ICI removal (never switched on; the limit at 50 to 70 Hz is the pilot time interpolation).
+- 0 false decodes in all noise-only runs. Simulated signals only. CI: quick runs listed in the doc.

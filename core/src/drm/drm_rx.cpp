@@ -24,6 +24,7 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <map>
 #include <mutex>
@@ -160,6 +161,9 @@ struct DrmReceiver::Impl {
         int64_t idx = -1;
         std::vector<cf32> Y;
         std::vector<cf32> Hr;
+        std::vector<cf32> Hc;        // Hr turned back by the symbol's common phase (cpe): what the time interpolation works on
+        float cpe = 0;               // common phase of the symbol against the tracker's reference (rad)
+        const std::vector<cf32>& sel(bool c) const { return c ? Hc : Hr; }
         bool haveHr = false;
         float cp = 0;
     };
@@ -180,10 +184,13 @@ struct DrmReceiver::Impl {
     double tauSlope = 0;             // samples per symbol
     std::vector<double> tauHist;
     double sigma2 = 0;               // noise power of a raw channel estimate (pilot amplitude 1)
+    double sigma2R = 0;              // the same from the raw estimates (sigma2 is this or sigma2C)
     double snrSm = 0, hPow = 0;
     double dopplerSm = 0, delaySpreadMs = 0;
     double accR = 0, accP = 0;       // Doppler statistics, smoothed
     double accRr = 0, accRi = 0, acc2r = 0, acc2i = 0;
+    double sigma2C = 0, dopplerR = 0;   // noise of the common-phase corrected estimates (4.1); Doppler spread of the raw ones
+    bool useHc = false;
     double cpRho = 0;
     int kEqLo = 0, kEqHi = 0;        // carriers that are equalised
     int jLo = 0, jHi = 0;
@@ -610,7 +617,8 @@ struct DrmReceiver::Impl {
         lag = 2 * gy;                                    // the Wiener filter uses the pilots up to 2 gy symbols ahead
         framesSync = 0; facOkSince = 0; facBadRun = 0; cpBadRun = 0;
         tauRef = 0; tauMidRel = 0; tauSlope = 0; tauHist.clear();
-        sigma2 = 0; snrSm = 0; hPow = 0; dopplerSm = 0; delaySpreadMs = 0; accR = accP = accRr = accRi = acc2r = acc2i = 0;
+        sigma2 = 0; sigma2R = 0; snrSm = 0; hPow = 0; dopplerSm = 0; delaySpreadMs = 0; accR = accP = accRr = accRi = acc2r = acc2i = 0;
+        sigma2C = dopplerR = 0;
         wien.clear(); wienOk = false; wienMse = 0; statN = 0; pilotP = 0;
         hold = false; holdSnrDb = 30; holdStart = 0; holdEnd = -1; holdSymsAtFrame = holdSyms; fadedRun = 0;
         lastReacq = 0; offCal = false; off0 = 0; lastCal = 0; reacqVotes = 0;
@@ -675,6 +683,7 @@ struct DrmReceiver::Impl {
 
     SymRec& rec(int64_t idx) { return ring[(size_t)(idx % kRing)]; }
     const SymRec* recIf(int64_t idx) const {
+        if (idx < 0) return nullptr;   // before the first symbol (the Wiener taps reach 2 gy back; a negative index wrapped out of the ring)
         const SymRec& r = ring[(size_t)(idx % kRing)];
         return (r.idx == idx && r.haveHr) ? &r : nullptr;
     }
@@ -793,7 +802,52 @@ struct DrmReceiver::Impl {
             const int k = kG0 + j * gx;
             R.Hr[(size_t)j] = R.Y[(size_t)(k - kLoW)] / r;
         }
+        commonPhase(t);
         R.haveHr = true;
+    }
+
+    // Common phase error (4.1). The oscillators' phase noise turns every carrier of a symbol by the same angle; with a 26.7 ms symbol (mode B) a
+    // 1 Hz linewidth moves it by 0.4 rad (rms) from one symbol to the next, so the pilots of the neighbouring symbols that the time interpolation
+    // combines disagree. The common phase of symbol t is measured from its own gain references against those of t - gy (the same carriers, already
+    // turned back) and from the frequency reference tones against t - 1; the raw estimates are turned back by it (Hc) before the interpolation, and
+    // the interpolated channel of the symbol is turned forward again. It holds through a fade.
+    // OFF by default (opt-in DECT2_DRM_CPE=1): it gains 2 to 6 dB under oscillator phase noise (docs/SENSITIVITY-4.1-TV.md) but test_drm_smooth
+    // fails with it: mode E in AWGN, ITU channels 5 and 6, 2 Hz Rayleigh (run 43398851923; the same run with it off passes).
+    const bool cpeOff = getenv("DECT2_DRM_CPE") == nullptr || getenv("DECT2_DRM_NOCPE") != nullptr;
+    uint64_t cpeSyms = 0;
+    void commonPhase(int64_t t) {
+        SymRec& R = rec(t);
+        R.Hc = R.Hr;
+        R.cpe = 0;
+        if (cpeOff) return;
+        const SymRec* P = (t >= 1 && rec(t - 1).idx == t - 1 && rec(t - 1).haveHr) ? &rec(t - 1) : nullptr;
+        const SymRec* A = (t >= gy && rec(t - gy).idx == t - gy && rec(t - gy).haveHr) ? &rec(t - gy) : nullptr;
+        cf32 acc(0, 0);
+        if (A && A->Hc.size() == R.Hr.size())
+            for (size_t j = 0; j < R.Hr.size(); j++) {
+                const cf32 a = A->Hc[j], b = R.Hr[j];
+                if (a != cf32(0, 0) && b != cf32(0, 0)) acc += b * std::conj(a);
+            }
+        if (P && mode != kModeE) {
+            const RefTable& ft = kFreqRefs[mode];
+            const int sa = sOf(t - 1), sb = sOf(t);
+            const cf32 back1 = std::polar(1.0f, -P->cpe);
+            for (int i = 0; i < ft.n; i++) {
+                const int k = ft.data[i][0];
+                cf32 ra, rb;
+                if (k < kLoW || k > kHiW || !pilotRef(mode, -1, sa, k, ra) || !pilotRef(mode, -1, sb, k, rb)) continue;
+                const cf32 ya = P->Y[(size_t)(k - kLoW)] / ra * back1, yb = R.Y[(size_t)(k - kLoW)] / rb;
+                acc += yb * std::conj(ya);
+            }
+        }
+        float th = P ? P->cpe : 0.f;
+        if (!hold && std::abs(acc) > 0) th = std::arg(acc);
+        R.cpe = th;
+        if (th != 0) {
+            const cf32 rot = std::polar(1.0f, -th);
+            for (auto& v : R.Hc) v *= rot;
+        }
+        cpeSyms++;
     }
 
     // Weights of the Wiener filter in time for every offset d (0 .. gy - 1) of a symbol from the last pilot of a carrier: taps at the pilots
@@ -924,7 +978,9 @@ struct DrmReceiver::Impl {
         Gvalid.assign((size_t)nJ, 0);
         double accN = 0; int cntN = 0;
         double sumRe = 0, sumIm = 0, sumP = 0, sum2Re = 0, sum2Im = 0; int cntD = 0;
+        double accNc = 0;
         if (s == 0 || wien.empty()) wienerWeights();
+        useHc = !cpeOff;   // the time interpolation works on the common-phase corrected estimates
         for (int j = jLo; j <= jHi; j++) {
             const int qj = posMod(j + qOff, gy);
             const int d = posMod(s % gy - qj, gy);
@@ -941,14 +997,19 @@ struct DrmReceiver::Impl {
                 for (int m = 0; m < kWT && all; m++) { tap[m] = recIf(t - d + (m - kWT / 2) * gy); all = tap[m] != nullptr; }
                 if (all) {
                     const float* wv = &wien[(size_t)d * kWT];
-                    for (int m = 0; m < kWT; m++) v += tap[m]->Hr[(size_t)j] * wv[m];
+                    for (int m = 0; m < kWT; m++) v += tap[m]->sel(useHc)[(size_t)j] * wv[m];
                     ok = true;
                 }
             }
             if (d == 0) {
-                if (a && !ok) { v = a->Hr[(size_t)j]; ok = true; }
+                if (a && !ok) { v = a->sel(useHc)[(size_t)j]; ok = true; }
                 const SymRec* p = recIf(t - gy);
                 if (a && p && b) {
+                    // the noise of the corrected estimates, the noise and Doppler statistics of the raw ones (see below)
+                    {
+                        const cf32 pc = 0.5f * (p->Hc[(size_t)j] + b->Hc[(size_t)j]);
+                        accNc += std::norm(a->Hc[(size_t)j] - pc);
+                    }
                     const cf32 pred = 0.5f * (p->Hr[(size_t)j] + b->Hr[(size_t)j]);
                     accN += std::norm(a->Hr[(size_t)j] - pred); cntN++;
                     const cf32 c = a->Hr[(size_t)j] * std::conj(p->Hr[(size_t)j]); sumRe += c.real(); sumIm += c.imag(); sumP += std::norm(a->Hr[(size_t)j]); cntD++;
@@ -957,9 +1018,9 @@ struct DrmReceiver::Impl {
             } else if (ok) {
             } else if (a && b) {
                 const float f = (float)d / gy;
-                v = a->Hr[(size_t)j] * (1 - f) + b->Hr[(size_t)j] * f; ok = true;
-            } else if (a) { v = a->Hr[(size_t)j]; ok = true; }
-            else if (b) { v = b->Hr[(size_t)j]; ok = true; }
+                v = a->sel(useHc)[(size_t)j] * (1 - f) + b->sel(useHc)[(size_t)j] * f; ok = true;
+            } else if (a) { v = a->sel(useHc)[(size_t)j]; ok = true; }
+            else if (b) { v = b->sel(useHc)[(size_t)j]; ok = true; }
             G1[(size_t)(j - jLo)] = v;
             Gvalid[(size_t)(j - jLo)] = ok ? 1 : 0;
         }
@@ -975,8 +1036,10 @@ struct DrmReceiver::Impl {
         nearFade = hold ? t + gy >= holdStart - 3 : (holdEnd >= 0 && t - gy <= holdEnd + 1);
         if (!nearFade || (hold && si - holdStart > kHoldFreezeSyms)) {
             if (cntN >= 3) {
-                const double s2 = accN / (1.5 * cntN);
-                sigma2 = sigma2 > 0 ? sigma2 + (s2 - sigma2) * 0.12 : s2;
+                const double s2 = accN / (1.5 * cntN), s2c = accNc / (1.5 * cntN);
+                sigma2R = sigma2R > 0 ? sigma2R + (s2 - sigma2R) * 0.12 : s2;
+                sigma2C = sigma2C > 0 ? sigma2C + (s2c - sigma2C) * 0.12 : s2c;
+                sigma2 = cpeOff ? sigma2R : sigma2C;
                 statN++;
             }
             if (cntD >= 3) {
@@ -988,7 +1051,12 @@ struct DrmReceiver::Impl {
                 const double x = r1 > 1e-30 ? std::max(0.02, std::min(1.0, std::cbrt(r2 / r1))) : 1.0;
                 pilotP = std::max(std::min(r1 / x, accP), 1e-12);
                 const double tauY = (double)gy * Ts / fs;
-                dopplerSm = x < 0.9999 ? std::min(20.0, std::sqrt(-std::log(x)) / (kPi * tauY)) : 0.0;
+                dopplerR = x < 0.9999 ? std::min(20.0, std::sqrt(-std::log(x)) / (kPi * tauY)) : 0.0;
+                // The Doppler spread (and with it the Wiener filter) from the raw estimates: the common phase of a flat fade is the channel's
+                // own, and read from the corrected estimates a fading channel looked slow (the Wiener filter smoothed it away: DRM 64-QAM in
+                // TU6 lost 4 dB, runs 43376642495 / 43378744111). The noise figure from the corrected estimates (with oscillator phase noise
+                // the raw second difference holds the phase walk, not noise).
+                dopplerSm = dopplerR;
             }
         }
         // Delay of the channel from the phase slope over the lattice. The estimates are referred to the nominal grid, so the slope is taken relative to the
@@ -1023,7 +1091,7 @@ struct DrmReceiver::Impl {
                 jj = std::max(jLo, std::min(jHi, jj));
                 acc += G1[(size_t)(jj - jLo)] * kk[(size_t)(m + J - 1)];
             }
-            acc *= std::polar(1.0f, (float)(-ramp * k));
+            acc *= std::polar(1.0f, (float)(-ramp * k) + (useHc ? R.cpe : 0.f));   // the symbol's own common phase back on
             Hhat[(size_t)(k - kEqLo)] = acc;
             hp += std::norm(acc);
         }
