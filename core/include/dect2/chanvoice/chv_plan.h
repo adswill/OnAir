@@ -85,9 +85,15 @@ double rasterHz(Service s, int region);
 struct Span { double loMhz = 0, hiMhz = 0, centreMhz = 0; };
 Span planSpan(Service s, int region);
 
-// ---- wireless microphones (UHF): the bands a finder searches
-struct MicBand { double loMhz, hiMhz; const char* name; const char* note; };
-const std::vector<MicBand>& micBands(int region);       // 0 Europe, 1 USA / Canada
+// ---- wireless microphones: the bands a finder searches
+// stepKhz: the carrier raster of the finder in this band (UHF systems: 100 kHz cells; VHF systems: 25 kHz channels). vhf: not part of the default UHF span.
+struct MicBand { double loMhz, hiMhz; const char* name; const char* note; double stepKhz = 100.0; bool vhf = false; };
+const std::vector<MicBand>& micBands(int region);       // the UHF bands: 0 Europe (and the UK), 1 USA / Canada. Unchanged by the VHF bands below.
+const std::vector<MicBand>& micBandsVhf(int region);    // the VHF bands (169 - 171, 173.8 - 175.0, 174 - 216 MHz), the same list for both regions
+const std::vector<MicBand>& micBandsAll(int region);    // UHF first, then VHF: what the screen offers and the finder labels
+const MicBand* micBandAt(double mhz, int region);       // the (first) band of micBandsAll holding the frequency, nullptr when none
+double micStepHz(double centreMhz, int region);         // the finder raster to use with the radio centred here: the band's, else 100 kHz
+double micBandTuneMhz(const MicBand& b);                // where to tune for the band: its middle when it fits one capture (8 MHz), else 4 MHz above its lower edge
 
 // ---- HF voice: is a scheduled broadcast on the air at this minute of the hour? (continuous ones always)
 bool onAirAtMinute(const Channel& c, int minuteOfHour);

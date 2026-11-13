@@ -71,7 +71,7 @@ void save(chv::Service sv) {
     d.setI(pk(sv, "region").c_str(), x.regionMan); d.setI(pk(sv, "demod").c_str(), x.demod); d.setI(pk(sv, "squelch").c_str(), x.squelch);
     d.setB(pk(sv, "deemph").c_str(), x.deemph); d.setB(pk(sv, "scan").c_str(), x.scan); d.setB(pk(sv, "rec").c_str(), x.rec); d.setB(pk(sv, "onlyActive").c_str(), x.onlyActive);
     d.setD(pk(sv, "dwell").c_str(), x.dwell); d.setD(pk(sv, "hang").c_str(), x.hang);
-    d.setS(pk(sv, "scanList").c_str(), x.scanList); d.setS(pk(sv, "recDir").c_str(), x.recDir); d.setS(pk(sv, "listen").c_str(), x.listen);
+    d.setI(pk(sv, "micband").c_str(), x.micBand); d.setS(pk(sv, "scanList").c_str(), x.scanList); d.setS(pk(sv, "recDir").c_str(), x.recDir); d.setS(pk(sv, "listen").c_str(), x.listen);
     d.flush();
     S.dirty = true;
 }
@@ -85,7 +85,7 @@ void load() {
         x.regionMan = (int)d.getI(pk(sv, "region").c_str(), -1); x.demod = (int)d.getI(pk(sv, "demod").c_str(), -1); x.squelch = (int)d.getI(pk(sv, "squelch").c_str(), 50);
         x.deemph = d.getB(pk(sv, "deemph").c_str(), true); x.scan = d.getB(pk(sv, "scan").c_str(), false); x.rec = d.getB(pk(sv, "rec").c_str(), false); x.onlyActive = d.getB(pk(sv, "onlyActive").c_str(), false);
         x.dwell = (float)d.getD(pk(sv, "dwell").c_str(), sv == chv::Service::HfVoice ? 1.5 : 0.4); x.hang = (float)d.getD(pk(sv, "hang").c_str(), 2.0);
-        x.scanList = d.getS(pk(sv, "scanList").c_str(), ""); x.listen = d.getS(pk(sv, "listen").c_str(), "");
+        x.micBand = (int)d.getI(pk(sv, "micband").c_str(), -1); x.scanList = d.getS(pk(sv, "scanList").c_str(), ""); x.listen = d.getS(pk(sv, "listen").c_str(), "");
         const std::string dir = d.getS(pk(sv, "recDir").c_str(), recordingsSub("audio-recordings") + "/" + chv::serviceId(sv));
         snprintf(x.recDir, sizeof x.recDir, "%s", dir.c_str());
     }
@@ -182,6 +182,27 @@ void controls(App& a, chv::Service sv) {
         ImGui::EndCombo();
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The channel plan of the service for your region. Automatic takes it from the country or position set in the setup; the channel numbers and frequencies differ between regions."));
+    if (sv == chv::Service::Mic) {
+        // the band to search: UHF as before, and the VHF microphone bands (173.8 - 175.0 MHz and others); picking one tunes the radio to it
+        flowNext(10 * gUi);
+        ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Band")); ImGui::SameLine(0, 5 * gUi);
+        const auto& mb = chv::micBandsAll(rg);
+        const bool have = x.micBand >= 0 && x.micBand < (int)mb.size();
+        ImGui::SetNextItemWidth(260 * gUi);
+        if (ImGui::BeginCombo("##chvmicband", have ? tr(mb[(size_t)x.micBand].name) : tr("Tune the radio yourself"))) {
+            if (ImGui::Selectable(tr("Tune the radio yourself"), !have)) { x.micBand = -1; a.engine.chanVoice().setMicBand(-1); save(sv); }
+            for (size_t i = 0; i < mb.size(); i++) {
+                if (ImGui::Selectable(tr(mb[i].name), x.micBand == (int)i)) {
+                    x.micBand = (int)i; a.engine.chanVoice().setMicBand(x.micBand);
+                    tuneDialTo(a, chv::micBandTuneMhz(mb[i]));
+                    save(sv);
+                }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr(mb[i].note));
+            }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Tunes the radio to the middle of the band (or the bottom 8 MHz of a wide one). The VHF bands use 25 kHz channels; the UHF bands use 100 kHz cells. Move the radio with the frequency box to look at another part of a wide band."));
+    }
     if (sv != chv::Service::Mic && sv != chv::Service::Mdc) {
         flowNext(10 * gUi);
         ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Channel")); ImGui::SameLine(0, 5 * gUi);
@@ -277,7 +298,7 @@ void detail(App& a, chv::Service sv) {
     }
     if (sv == chv::Service::Mic) {
         ImGui::PushTextWrapPos(0);
-        ImGui::TextDisabled("%s", tr("Finds wireless microphone transmitters: wide FM carriers (about 40 to 200 kHz) in the UHF bands of your region. Click a candidate to listen. Many systems compress the audio (companding), which sounds harsh and breathing without the matching expander; digital systems show as wide carriers that are not FM."));
+        ImGui::TextDisabled("%s", tr("Finds wireless microphone transmitters: wide FM carriers (about 40 to 200 kHz) in the UHF bands of your region, and narrow FM ones (25 kHz channels) in the VHF bands 169 - 171, 173.8 - 175.0 and 174 - 216 MHz. Pick a band to tune the radio to it. Click a candidate to listen. Many systems compress the audio (companding), which sounds harsh and breathing without the matching expander; digital systems show as wide carriers that are not FM."));
         ImGui::PopTextWrapPos();
         return;
     }

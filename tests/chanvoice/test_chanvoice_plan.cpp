@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <set>
+#include <string>
 using namespace dect2::chv;
 
 static int fails = 0;
@@ -67,6 +68,25 @@ int main() {
     CHECK(toneLabel(88.5, -1, false) == "88.5 Hz" && toneLabel(0, 23, true) == "D023I" && toneLabel(0, -1, false).empty(), "tone labels");
     CHECK(handsetToneNumber(67.0) == 1 && handsetToneNumber(250.3) == 38 || handsetToneNumber(250.3) > 30, "handset tone numbers: %d", handsetToneNumber(250.3));
     CHECK(micBands(0).size() == 3 && micBands(1).size() == 4, "mic bands");
+    // VHF microphone bands (issue #487): added beside the UHF ones, which stay as they were
+    CHECK(micBandsVhf(0).size() == 3 && micBandsVhf(1).size() == 3 && micBandsAll(0).size() == 6 && micBandsAll(1).size() == 7, "VHF mic bands: %zu, all %zu %zu", micBandsVhf(0).size(), micBandsAll(0).size(), micBandsAll(1).size());
+    for (int rg = 0; rg < 2; rg++) {
+        const auto& all = micBandsAll(rg);
+        for (size_t i = 0; i < micBands(rg).size(); i++) CHECK(all[i].loMhz == micBands(rg)[i].loMhz && all[i].hiMhz == micBands(rg)[i].hiMhz && all[i].stepKhz == 100.0 && !all[i].vhf, "UHF band %zu unchanged and first", i);
+        for (const auto& b : micBandsVhf(rg)) CHECK(b.vhf && b.stepKhz == 25.0 && b.loMhz >= 169.0 && b.hiMhz <= 216.0 && b.name && b.note, "VHF band fields");
+        const Span sp = planSpan(Service::Mic, rg);
+        CHECK(sp.loMhz == 470.0 && sp.hiMhz == (rg ? 952.0 : 865.0) && sp.centreMhz == 474.0, "the UHF default span is unchanged: %.1f - %.1f, centre %.1f", sp.loMhz, sp.hiMhz, sp.centreMhz);
+        CHECK(micStepHz(590.0, rg) == 100000.0 && micStepHz(864.0, rg) == 100000.0 && micStepHz(300.0, rg) == 100000.0, "UHF and unknown: 100 kHz cells");
+        CHECK(micStepHz(174.4, rg) == 25000.0 && micStepHz(170.0, rg) == 25000.0 && micStepHz(200.0, rg) == 25000.0 && micStepHz(169.0, rg) == 25000.0 && micStepHz(216.0, rg) == 25000.0, "VHF: 25 kHz channels");
+        CHECK(micStepHz(171.5, rg) == 100000.0 && micStepHz(217.0, rg) == 100000.0 && micStepHz(168.9, rg) == 100000.0, "between and outside the VHF bands");
+        const MicBand* b = micBandAt(174.4, rg);
+        CHECK(b && std::string(b->name) == "VHF 173.8 - 175.0 MHz", "174.4 is in the narrow band, not the TV band: %s", b ? b->name : "none");
+        CHECK(micBandAt(174.0, rg) && std::string(micBandAt(174.0, rg)->name) == "VHF 173.8 - 175.0 MHz", "174.0 is inside two bands: the narrower one wins");
+        CHECK(micBandAt(190.0, rg) && std::string(micBandAt(190.0, rg)->name) == "VHF 174 - 216 MHz" && !micBandAt(172.0, rg) && !micBandAt(100.0, rg), "TV band, a gap, nothing");
+        CHECK(std::fabs(micBandTuneMhz(*micBandAt(174.4, rg)) - 174.4) < 1e-9 && micBandTuneMhz(*micBandAt(190.0, rg)) == 178.0 && micBandTuneMhz(*micBandAt(590.0, rg)) == 474.0, "tune frequencies");
+        // every frequency of every VHF band maps to a band whose step is 25 kHz; 25 kHz channel numbers from 173.8 land on the raster
+        for (double f = 173.8; f <= 175.0001; f += 0.025) { const double k = f * 1e6 / 25000.0; CHECK(std::fabs(k - std::round(k)) < 1e-6 && micStepHz(f, rg) == 25000.0, "channel %.3f on the 25 kHz raster", f); }
+    }
     for (int s = 0; s < kServiceCount; s++) { Service back; CHECK(serviceOfFamily(familyOf((Service)s), back) && back == (Service)s, "family round trip"); }
     printf(fails ? "chv_plan: %d FAILED\n" : "chv_plan: all passed\n", fails);
     return fails ? 1 : 0;

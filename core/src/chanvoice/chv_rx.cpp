@@ -439,7 +439,7 @@ struct ChanVoiceReceiver::Impl {
     int regionOf[chv::kServiceCount] = {};
     CarrierFinder finder;
     bool cfgDone = false;
-    double gridOrigin = -1e18;
+    double gridOrigin = -1e18, gridStep = 0;
     int carrierLimit = 10;
     std::atomic<bool> silent{false};
     std::atomic<float> volume{1.f};
@@ -501,13 +501,13 @@ struct ChanVoiceReceiver::Impl {
     void regrid() {   // under mu
         if (rate <= 0) return;
         const double c = centerAbs();
-        const double step = isMic() ? 100000.0 : chv::rasterHz(svc, region());
+        const double step = isMic() ? chv::micStepHz(c / 1e6, region()) : chv::rasterHz(svc, region());   // microphones: 100 kHz cells in the UHF bands, 25 kHz channels in the VHF ones
         double origin;
         double ref = 0;   // a channel of the plan: the raster passes through it (the CB channels sit 5 kHz off the 10 kHz multiples)
         if (!isMic() && svc != Service::Mdc && !plan().empty()) ref = plan()[0].mhz * 1e6;
         if (c > 0) origin = std::fmod(ref - c, step); else origin = std::fmod(offHz, step);
         if (origin < 0) origin += step;
-        if (cfgDone && std::fabs(origin - gridOrigin) < 1.0) { priors(); return; }
+        if (cfgDone && std::fabs(origin - gridOrigin) < 1.0 && std::fabs(step - gridStep) < 1.0) { priors(); return; }
         CarrierCfg cfg;
         cfg.stepHz = step;
         cfg.gridOriginHz = origin;
@@ -516,7 +516,7 @@ struct ChanVoiceReceiver::Impl {
         cfg.holdSec = isMic() ? 8 : 5; cfg.debounceSec = 0.12; cfg.avgSec = 0.05;
         if (isMic()) { cfg.avgSec = 0.1; cfg.debounceSec = 0.3; cfg.minSnrDb = 6; cfg.mergeSplit = true; cfg.skirtDb = 20; }
         finder.configure(rate, cfg);
-        gridOrigin = origin; cfgDone = true;
+        gridOrigin = origin; gridStep = step; cfgDone = true;
         priors();
     }
     double onDbFor() const { return 5.0 + 0.08 * ctx.squelch.load(); }
@@ -930,10 +930,10 @@ bool ChanVoiceReceiver::telemetry(ChvTelemetry& out, uint64_t lastSeq) {
                     t.rows.push_back(std::move(r));
                 }
             } else {
-                const auto& bands = chv::micBands(reg);
+                const auto& bands = chv::micBandsAll(reg);
                 for (auto& v : sv) {
                     ChvMicRow m; m.id = v.id; m.mhz = v.mhz; m.widthKhz = v.width / 1000.0; m.levelDb = v.level; m.snrDb = v.snr; m.devKhz = v.dev; m.fmLike = v.fm; m.active = v.active; m.listening = v.id == micL; m.ageSec = v.age;
-                    for (const auto& b : bands) if (v.mhz >= b.loMhz && v.mhz <= b.hiMhz) m.band = b.name;
+                    if (const chv::MicBand* b = chv::micBandAt(v.mhz, reg)) m.band = b->name;
                     t.mics.push_back(std::move(m));
                 }
                 std::sort(t.mics.begin(), t.mics.end(), [](const ChvMicRow& a, const ChvMicRow& b) { return a.mhz < b.mhz; });
@@ -970,7 +970,7 @@ ModeTuning chanVoiceTuning(chv::Service s) {
     case chv::Service::Ham:     t.minMhz = 144.0; t.maxMhz = 450.0; t.defMhz = 145.7; t.sampleRate = 2000000; t.bandwidthMhz = 1.0; t.tuneOffsetHz = 25000; break;
     case chv::Service::HfVoice: t.minMhz = 2.8; t.maxMhz = 23.4; t.defMhz = 11.175; t.sampleRate = 250000; t.bandwidthMhz = 0.1; t.minSampleRate = 48000; t.tuneOffsetHz = 12000; break;
     case chv::Service::Mdc:     t.minMhz = 30.0; t.maxMhz = 960.0; t.defMhz = 155.0; t.sampleRate = 2000000; t.bandwidthMhz = 1.0; t.tuneOffsetHz = 25000; break;
-    default:                    t.minMhz = 470.0; t.maxMhz = 960.0; t.defMhz = 590.0; t.sampleRate = 10000000; t.bandwidthMhz = 8.0; t.minSampleRate = 1000000; t.tuneOffsetHz = 0; break;
+    default:                    t.minMhz = 169.0; t.maxMhz = 960.0; t.defMhz = 590.0; t.sampleRate = 10000000; t.bandwidthMhz = 8.0; t.minSampleRate = 1000000; t.tuneOffsetHz = 0; break;
     }
     return t;
 }
