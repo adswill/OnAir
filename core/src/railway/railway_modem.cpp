@@ -107,8 +107,9 @@ void Modem::feed(const cf32* iq, size_t n, std::vector<Message>& out) {
         const double p = std::norm(v);
         if (floorN_ == 0) widePow_ = p;
         widePow_ += (p - widePow_) / 960;
-        if (floorN_ < 9600) wideFloor_ += (widePow_ - wideFloor_) / ++floorN_;
-        else wideFloor_ += (widePow_ < 2 * wideFloor_ ? 1.0 / 9600 : 1.0 / 480000) * (widePow_ - wideFloor_);
+        // the first 200 ms: the lowest 20 ms average after the first 20 ms (a mean would take in a burst that is on from the start)
+        if (floorN_ < 9600) { ++floorN_; wideFloor_ = floorN_ <= 960 ? widePow_ : std::min(wideFloor_, widePow_); }
+        else wideFloor_ += (widePow_ < wideFloor_ ? 1.0 / 2400 : widePow_ < 2 * wideFloor_ ? 1.0 / 9600 : 1.0 / 480000) * (widePow_ - wideFloor_);
         const std::complex<double> l{lag.real(), lag.imag()};
         r1_ += (l - r1_) / 960.0;
         const bool present = floorN_ >= 9600 && widePow_ > 1.25 * wideFloor_;
@@ -125,8 +126,8 @@ void Modem::feed(const cf32* iq, size_t n, std::vector<Message>& out) {
         const double np = std::norm(std::complex<double>{z.real(), z.imag()});
         if (floorN_ <= 1) narrowPow_ = np;
         narrowPow_ += (np - narrowPow_) / 960;
-        if (floorN_ < 9600) narrowFloor_ += (narrowPow_ - narrowFloor_) / floorN_;
-        else narrowFloor_ += (narrowPow_ < 2 * narrowFloor_ ? 1.0 / 9600 : 1.0 / 480000) * (narrowPow_ - narrowFloor_);
+        if (floorN_ < 9600) narrowFloor_ = floorN_ <= 960 ? narrowPow_ : std::min(narrowFloor_, narrowPow_);
+        else narrowFloor_ += (narrowPow_ < narrowFloor_ ? 1.0 / 2400 : narrowPow_ < 2 * narrowFloor_ ? 1.0 / 9600 : 1.0 / 480000) * (narrowPow_ - narrowFloor_);
         const std::complex<double> nl{nlag.real(), nlag.imag()};
         nr1_ += (nl - nr1_) / 960.0;
         const bool nPresent = floorN_ >= 9600 && narrowPow_ > 1.5 * narrowFloor_;
