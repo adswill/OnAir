@@ -2119,3 +2119,6 @@ Mode count fix: tools/gen_modes_list.py, gen_web_schema.py, android/tools/gen_mo
 - `adsbmap::draw()` now draws the station position (and optional range rings) on every map screen, with distance and bearing from it to the pointer; AIS panel, mesh and APRS tooltips, DMR list and Remote ID selection show distance and bearing too. No position set: a small hint that opens Settings > Location.
 - New: `core/include/dect2/geo/mylocation.h`, `app/map/my_location.{h,cpp}`, three settings (`mapMyLoc`, `mapMyLocRings`, `mapMyLocRingList`), test `mylocation`. Details in docs/MY-LOCATION-MAPS-4.1.md.
 - Not compiled or run; tests not yet run.
+
+## 2026-11-12 - OOK on / off-time scatter (feat41-ookxy)
+Added the scatter plot (on time against the following off time per pulse) with cluster centres, an encoding guess (PWM, PPM, Manchester, unknown), burst selection, log or linear axes and CSV copy to the OOK analyser (x40) and the ISM Unknown view. Logic in core/include/dect2/ism/ook_scatter.h, test `ook_scatter`, notes in docs/OOK-SCATTER-4.1.md. Simulated pulse trains only.

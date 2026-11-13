@@ -2,6 +2,7 @@
 #include "app.h"
 #include "dect2/x40/x40_rx.h"
 #include "dect2/x40/x40_tel.h"
+#include "../ism/ook_scatter_ui.h"
 #include <cstdio>
 #include <string>
 
@@ -16,6 +17,12 @@ template <int V> void tab(App& a) {
     if (!live<V>(a)) { ImGui::TextDisabled("%s", tr(a.engine.running() ? "starting" : "stopped")); return; }
     const X40Telemetry& t = a.rx.x40;
     ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(t.headline.c_str()); ImGui::PopFont();
+    if constexpr (V == dect2::x40::OokPulse) {
+        static OokScatterState scatter;
+        std::vector<dect2::ookscatter::Burst> bs(t.ookBursts.begin(), t.ookBursts.end());
+        ookScatterPanel(bs, (int)bs.size() - 1, scatter);
+        ImGui::Separator();
+    }
     if (t.rows.empty()) { ImGui::TextDisabled("%s", tr("nothing decoded yet")); return; }
     if (ImGui::BeginTable("##x40", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
         ImGui::TableSetupColumn(tr("Time")); ImGui::TableSetupColumn(tr("Kind")); ImGui::TableSetupColumn(tr("ID")); ImGui::TableSetupColumn(tr("Decoded"), ImGuiTableColumnFlags_WidthStretch);

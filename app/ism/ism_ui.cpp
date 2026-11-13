@@ -3,6 +3,7 @@
 #include "dect2/common/time_fmt.h"
 #include "app.h"
 #include "../d40/d40_ui.h"
+#include "ook_scatter_ui.h"
 #include "ease/ease_ui.h"
 #include "dect2/ism/ism_rx.h"
 #include "dect2/ism/ism_tel.h"
@@ -21,6 +22,7 @@ struct State {
     int sel = -1;                // the selected unknown signal (index in raws, newest first)
     double selSec = -1;          // its time, so the selection stays on it as new ones arrive
     bool wasRunning = false;
+    OokScatterState scatter;
 };
 State S;
 
@@ -377,6 +379,19 @@ void pulseViewer(App& a, const dect2::IsmRaw& r) {
     ImGui::Dummy(ImVec2(W, H));
     ImGui::TextDisabled("%.1f ms shown of %.1f ms", span / 1000, total / 1000);
     d40IsmClassifyLine(r);   // 4.0: line code classifier (app/d40)
+    {
+        std::vector<dect2::ookscatter::Burst> bs;
+        bs.reserve(a.rx.ism.raws.size());
+        int cur = -1;
+        for (size_t i = a.rx.ism.raws.size(); i-- > 0;) {
+            if (a.rx.ism.raws[i].fsk) continue;
+            dect2::ookscatter::Burst b;
+            for (const auto& p : a.rx.ism.raws[i].pulses) b.push_back({p.pulseUs, p.gapUs});
+            if (&a.rx.ism.raws[i] == &r) cur = (int)bs.size();
+            bs.push_back(std::move(b));
+        }
+        ookScatterPanel(bs, cur, S.scatter);
+    }
     // the timings
     if (ImGui::BeginChild("##isml", ImVec2(0, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_Borders)) {
         ImGui::PushFont(a.mono, 0);
