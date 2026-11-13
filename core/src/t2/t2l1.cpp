@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include <cstdlib>
+#include "dect2/common/diag.h"
 #include "dect2/t2/t2l1.h"
 #include "dect2/dsp/ldpc.h"
 
@@ -372,6 +373,7 @@ L1Result decodeL1Pre(const std::vector<cf32>& y, float n0, L1Pre& out) {
     r.crcOk = crc32Bits(info, 168) == want;
     r.bchOk = bchCheck(hard, NBCH14);
     if (r.crcOk && unpackL1Pre(info, out)) r.ok = true;
+    else if (r.crcOk) DIAG_DEBUG_EVERY(349033, 5, "The DVB-T2 L1-pre passed its CRC check but its fields could not be read, so this frame has no L1-pre.");
     return r;
 }
 
@@ -504,12 +506,18 @@ L1Result decodeL1Block(const std::vector<cf32>& y, float n0, int ksig, int mod, 
 L1Result decodeL1Post(const std::vector<cf32>& y, float n0, const L1Pre& pre, int nP2, bool fef, L1Post& out, const std::vector<float>* n0v) {
     L1Result r;
     const int mod = pre.l1Mod;
-    if (mod < 0 || mod > 3 || pre.l1Cod != 0 || pre.l1Fec != 0) return r; // only rate 1/2, short FEC frames
+    if (mod < 0 || mod > 3 || pre.l1Cod != 0 || pre.l1Fec != 0) { // only rate 1/2, short FEC frames
+        DIAG_DEBUG_EVERY(572136, 5, "The DVB-T2 L1-post uses modulation %d, code rate %d and FEC type %d, which OnAir cannot decode, so this frame has no L1-post.", mod, (int)pre.l1Cod, (int)pre.l1Fec);
+        return r;
+    }
     const int ksig = pre.postInfoSize + 32;
     if (ksig > KBCH12 || ksig < 33) return r;
     PostDims d = postDims(ksig, mod, nP2);
     const int eta = etaMod(mod);
-    if ((int)y.size() < d.npost / eta || pre.postSize != d.npost / eta) return r;
+    if ((int)y.size() < d.npost / eta || pre.postSize != d.npost / eta) {
+        DIAG_DEBUG_EVERY(170241, 5, "The DVB-T2 L1-post size of %d cells does not match the %d cells expected from the L1-pre, so this frame has no L1-post.", (int)pre.postSize, d.npost / eta);
+        return r;
+    }
     std::vector<uint8_t> bits;
     r = decodeL1Block(y, n0, ksig, mod, postMultiple(mod, nP2), bits, n0v);
     r.ok = false;
@@ -524,6 +532,7 @@ L1Result decodeL1Post(const std::vector<cf32>& y, float n0, const L1Pre& pre, in
     if (r.crcOk) {
         std::vector<uint8_t> info(bits.begin(), bits.begin() + (ksig - 32));
         r.ok = unpackL1Post(pre, info, fef, out);
+        if (!r.ok) DIAG_DEBUG_EVERY(348398, 5, "The DVB-T2 L1-post passed its CRC check but its fields could not be read, so this frame has no L1-post.");
         out.crcOk = r.ok;
     }
     return r;

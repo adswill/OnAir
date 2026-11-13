@@ -3,6 +3,7 @@
 
 // The P2 stage of the DVB-T2 receiver: L1 signalling, extended carriers, integer frequency shift.
 #include "t2rx_impl.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -11,7 +12,10 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
     const int G = guard, N = fftN;
     const PilotMap* pmp = &cachedPilotMap(fftCode, ext, 0);
     if (!pmp->valid()) pmp = &cachedPilotMap(fftCode, ext, 1);
-    if (!pmp->valid()) return false;
+    if (!pmp->valid()) {
+        DIAG_DEBUG_EVERY(744105, 5, "The DVB-T2 pilot layout for FFT code %d (extended carriers %d) is not defined, so this P2 symbol is not decoded.", fftCode, (int)ext);
+        return false;
+    }
     const PilotMap& pm = *pmp;
     const int K = pm.carriers(), off = (kMax - K) / 2;
     const bool miso = misoNow();
@@ -137,7 +141,7 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
     // A wrong carrier-mode hypothesis can still pass the L1-pre CRC (the first 1840 cells of the single P2 symbol of a 16K signal fall in
     // the same places in both layouts), but then the cells after them, the L1-post and the start of the PLP, are read from the wrong
     // carriers. The signalled BWT_EXT settles it: a pre that contradicts the hypothesis counts as a miss, so the other mode is tried.
-    if (r.ok && fm->kExt != 0 && ((pre.bwtExt != 0) != ext)) { r.ok = false; if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] P2 hyp ext=%d contradicts the signalled BWT_EXT\n", (int)ext); }
+    if (r.ok && fm->kExt != 0 && ((pre.bwtExt != 0) != ext)) { r.ok = false; DIAG_DEBUG_EVERY(890679, 5, "The DVB-T2 L1-pre signalling contradicts the tried carrier mode (extended carriers %d), so the other carrier mode is tried.", (int)ext); if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] P2 hyp ext=%d contradicts the signalled BWT_EXT\n", (int)ext); }
     bool preOk = r.ok;
     l1Iters = r.ldpcIters;
     L1Post post;
@@ -170,6 +174,8 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
     // marginal signal. Losing the L1 loses the whole 240 ms frame, which is a visible freeze, although its data would decode fine.
     // So when a block fails its CRC, the last good one is reused for a few frames; the data blocks have their own CRCs, which would
     // flag a real change of the configuration.
+    if (!preOk) DIAG_DEBUG_EVERY(796824, 5, "The DVB-T2 L1-pre signalling block failed its CRC check after %d LDPC iterations, so the last good signalling is reused if there is one.", l1Iters);
+    else if (!postOk) DIAG_DEBUG_EVERY(900475, 5, "The DVB-T2 L1-post signalling block failed its CRC check, so the last good signalling is reused if there is one.");
     bool reusedPre = false, reusedPost = false;
     {
         const int64_t anchorNow = frames.empty() ? 0 : frames.front().anchor;
@@ -188,7 +194,7 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
             }
         }
         if (preOk && postOk && !reusedPre && !reusedPost) { goodPre = pre; goodPost = post; goodAnchor = anchorNow; haveGoodL1 = true; l1Reuse = 0; }
-        else if (reusedPre || reusedPost) { l1Reuse++; l1Reused++; }
+        else if (reusedPre || reusedPost) { l1Reuse++; l1Reused++; DIAG_DEBUG_EVERY(519153, 5, "The DVB-T2 L1 signalling of this frame was replaced by the last good copy (reuse number %d of 8 allowed).", l1Reuse); }
     }
 
     // accept this hypothesis: publish channel data

@@ -3,6 +3,7 @@
 
 // The data stage of the DVB-T2 receiver: channel estimation from the scattered pilots and handing cells to the error correction.
 #include "t2rx_impl.h"
+#include "dect2/common/diag.h"
 #include "dect2/dsp/simd.h"
 
 namespace dect2 {
@@ -122,6 +123,7 @@ void T2Receiver::Impl::pollPlp() {
     PlpResult r;
     while (plpDec.poll(r)) {
         plpFrames++;
+        if (r.bchFailed > 0) DIAG_EVERY(664184, 30, "%d of %d DVB-T2 FEC blocks in a frame failed LDPC and BCH decoding and were dropped, so the transport stream has gaps.", r.bchFailed, r.blocks);
         blocksOk += r.blocksOk; blocksBad += r.bchFailed; headersOk += r.headerOk; plpBchCorr += r.bchCorrected;
         plpMer = r.blocksOk ? r.merDb : plpMer;
         plpPre = r.preBer; plpIters = r.avgLdpcIters; plpMs = r.decodeMs; plpGpu = r.usedGpu;
@@ -142,7 +144,7 @@ void T2Receiver::Impl::runDataStage() {
     const FftMode* fm = fftModeFromS2(fftCode);
     if (!fm || !l1preOk) return;
     const int L = frameSyms, N = fftN, G = guard;
-    for (int l = 0; l < L; l++) if ((int)frameCells[l].size() != kMax) { if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] data stage skipped: symbol %d of %d has no cells\n", l, L); return; }
+    for (int l = 0; l < L; l++) if ((int)frameCells[l].size() != kMax) { DIAG_DEBUG_EVERY(704118, 5, "Symbol %d of %d in this DVB-T2 frame has no cells, so the whole frame is skipped by the data stage.", l, L); if (getenv("DECT2_DEBUG")) fprintf(stderr, "  [dbg] data stage skipped: symbol %d of %d has no cells\n", l, L); return; }
     PilotConfig pc;
     pc.miso = misoNow();
     pc.fftCode = fftCode; pc.ext = l1pre.bwtExt != 0; pc.pp = l1pre.pilotPattern; pc.tr = (l1pre.papr & 2) != 0; pc.giIdx = giIdx;
