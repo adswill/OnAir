@@ -2102,3 +2102,12 @@ Mode count fix: tools/gen_modes_list.py, gen_web_schema.py, android/tools/gen_mo
   Windows window icon (GLFW_ICON). Zoom limits were already in 3.7. Feature ideas listed in docs/ISSUES2-4.0.md.
 - CI: android.yml 43198580494, 43207001215; quick 43215392986 (Linux), 43218158764 (Windows): pass. No phone, radio or Windows desktop used.
 
+## 2026-11-13 (feat41-sensData): 4.1 sensitivity gaps left by 4.0
+- docs/SENSITIVITY-4.1.md; test `sens41` measures every change against the 4.0 path (own switch per receiver) with the same seeds. Simulated only.
+- MRZ: both Manchester halves (soft symbols from the sonde symbol chain), about 1 to 1.5 dB. Zigbee: second-choice symbols on an FCS failure,
+  about 0.5 dB. Aero: faster band and carrier search; 3 s trials 0 -> 100 % from 3 dB, 6 s trials 0 dB 68 -> 100 %. FT8 CQ stage: shape
+  filter, wrong texts 1 -> 0 in 30 slots, same decode shares.
+- iMet-54: soft Hamming + CRC Chase + UART realignment measured, no change: the loss is ahead of the code (discriminator FM threshold), not closed.
+- Iridium: soft Chase repair of one BCH block, large at frame level, no change at the receiver (bursts lost before the BCH); false frames 6 -> 8 in 20000.
+- Globalstar odd-rate failure not reproduced; neighbour floor cap kept (neutral). NFM PLL (1 dB worse) and APT FM feedback (mixed) are off by default.
+- CI quick.yml 43363995944, 43369540756, 43373243946, 43376898910 (Linux), 43373132809 (macOS, compare integ-41).
