@@ -6,8 +6,6 @@
 #include "dect2/voice/vocoder_fec.h"
 #include "dect2/common/bits.h"
 #include <array>
-#include <cstdio>
-#include <cstdlib>
 
 namespace dect2::x40 {
 
@@ -45,7 +43,7 @@ public:
         dec_.reset(); prev_ = cf32(1, 0); y_.assign(kYRing, 0.f); n_ = 0; acc_ = 0; fq_.assign((size_t)box_, 0.f); fqPos_ = 0;
         nextT_ = sps_ + box_; omega_ = 0; sPrev_ = 0;
         bits_.assign(kBitRing, 0.f); bi_ = -1; hi_ = 1500; lo_ = -1500;
-        locked_ = false; pol_ = 1; blockEnd_ = 0; misses_ = 0; pend_ = Pending(); voiceOpen_ = false; dbgDumped_ = false;
+        locked_ = false; pol_ = 1; blockEnd_ = 0; misses_ = 0; pend_ = Pending(); voiceOpen_ = false;
         preIdx_ = -1; preRawInv_ = false; preT_ = -1e9; lastPreEvent_ = -1e9; batch_ = false; group_ = -1;
         pages_ = 0; tone_ = numeric_ = alpha_ = voice_ = 0; snrDb_ = 0; have_ = false; nPre_ = nSc_ = nAddrHunt_ = nAcHunt_ = nLost_ = 0; lastKind_.clear(); lastWhat_.clear();
     }
@@ -249,7 +247,6 @@ private:
     bool voiceEndSearch() {
         const int64_t st = bi_ - kBlockBits;
         if (st + kBlockBits - 1 == blockEnd_ - kBlockBits) return false;
-        if (std::getenv("GSC_DBG")) { const int c0 = commaTransitions(st); const int q = acScore(st, voiceWord_); if (q <= 14 && c0 >= 10) fprintf(stderr, "GSCDBG locked t=%.2f bi=%lld ct=%d sv=%d m1=%d p1=%d\n", now(), (long long)st, c0, q, acScore(st - 1, voiceWord_), acScore(st + 1, voiceWord_)); }
         if (commaTransitions(st) < 20) return false;
         const int sv = acScore(st, voiceWord_);
         if (sv > 6 || sv > acScore(st - 1, voiceWord_) || sv > acScore(st + 1, voiceWord_)) return false;
@@ -274,12 +271,6 @@ private:
                 if (sa <= addrScore(st - 1) && sa <= addrScore(st + 1)) { lock(st); nAddrHunt_++; group_ = -1; batch_ = false; onAddress(a); return; }
             }
         }
-        if (std::getenv("GSC_DBG") && voiceOpen_ && ct >= 24 && !dbgDumped_ && acScore(st, voiceWord_) <= 14) {
-            dbgDumped_ = true;
-            std::string line; for (int64_t k = st - 520; k < st + 110; k++) { const float v = b(k); line += v > 0 ? (v > 0.6f ? '#' : '+') : (v < -0.6f ? '=' : '-'); }
-            fprintf(stderr, "GSCBITS st=%lld hi=%.0f lo=%.0f omega=%.5f pol=%d\n%s\n", (long long)st, hi_, lo_, omega_, pol_, line.c_str());
-        }
-        if (std::getenv("GSC_DBG") && voiceOpen_ && ct >= 10) { const int q = acScore(st, voiceWord_); if (q <= 14) fprintf(stderr, "GSCDBG hunt t=%.2f bi=%lld ct=%d sv=%d m1=%d p1=%d\n", now(), (long long)st, ct, q, acScore(st - 1, voiceWord_), acScore(st + 1, voiceWord_)); }
         if (voiceOpen_ && ct >= 20) {
             const int sv = acScore(st, voiceWord_);
             if (sv <= 6 && sv <= acScore(st - 1, voiceWord_) && sv <= acScore(st + 1, voiceWord_)) { lock(st); nAcHunt_++; onActivation(voiceWord_); }
@@ -418,7 +409,6 @@ private:
     int pages_ = 0, tone_ = 0, numeric_ = 0, alpha_ = 0, voice_ = 0;
     std::string lastKind_, lastWhat_;
     Pending pend_;
-    bool dbgDumped_ = false;
     uint32_t w1Tx_[50] = {}, preTx_[10] = {}, scTx_ = 0;
     uint16_t bch_[128] = {};
 };
