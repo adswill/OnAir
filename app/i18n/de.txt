@@ -4545,3 +4545,5 @@ Flat (no de-emphasis)	Linear (ohne Deemphase)
 Automatic (stereo when the pilot is locked)	Automatisch (Stereo bei verriegeltem Pilotton)
 Composite stereo	Composite-Stereo
 the programme	das Programm
+Automatic channel width and centre	Automatische Kanalbreite und Mittenfrequenz
+Follows the link: Carson's rule on the measured deviation and the multiplex content (RDS, SCA), or the occupied width, plus a margin; the carrier offset is removed first.	Folgt der Strecke: Carson-Regel auf den gemessenen Hub und den Multiplexinhalt (RDS, SCA) oder die belegte Breite, plus Reserve; der Trägerversatz wird vorher entfernt.

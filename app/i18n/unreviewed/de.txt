@@ -1252,3 +1252,5 @@ Flat (no de-emphasis)
 Automatic (stereo when the pilot is locked)
 Composite stereo
 the programme
+Automatic channel width and centre
+Follows the link: Carson's rule on the measured deviation and the multiplex content (RDS, SCA), or the occupied width, plus a margin; the carrier offset is removed first.

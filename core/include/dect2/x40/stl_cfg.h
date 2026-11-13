@@ -9,7 +9,9 @@ namespace dect2 {
 
 struct StlConfig {
     std::atomic<double> deviationHz{60000};      // the deviation that means 100 % modulation of the link (sets the sound level; the readings are in kHz as they arrive)
-    std::atomic<double> channelWidthHz{280000};  // the whole pass band of the channel filter (250 / 500 kHz channels; 0 = the receiver's default)
+    std::atomic<bool> autoWidth{true};           // channel width and centre follow the signal: Carson's rule on the measured deviation and content, the occupied width, the carrier offset
+    std::atomic<double> channelWidthHz{300000};  // the manual override (autoWidth off): the whole pass band of the channel filter
+    std::atomic<double> widthNowHz{0};           // out: the width in use
     std::atomic<int> deemphasisUs{75};           // 75 (the US), 50, or 0 for none (flat programme audio)
     std::atomic<int> mode{0};                    // 0 automatic (stereo when the pilot is locked), 1 composite stereo whenever a pilot is there, 2 mono
     std::atomic<int> scaListen{-1};              // -1 programme, 0 SCA 67 kHz, 1 SCA 92 kHz

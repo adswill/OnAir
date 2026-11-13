@@ -77,8 +77,14 @@ void stlControls() {
     float dev = (float)(c.deviationHz.load() / 1000), wid = (float)(c.channelWidthHz.load() / 1000);
     ImGui::TextDisabled("%s", tr("Deviation at 100 % (kHz)")); ImGui::SetNextItemWidth(140 * gUi);
     if (ImGui::DragFloat("##stldev", &dev, 1.f, 10.f, 300.f, "%.0f kHz")) c.deviationHz = (double)dev * 1000;
-    ImGui::TextDisabled("%s", tr("Channel width (kHz)")); ImGui::SetNextItemWidth(140 * gUi);
-    if (ImGui::DragFloat("##stlwid", &wid, 5.f, 20.f, 1000.f, "%.0f kHz")) c.channelWidthHz = (double)wid * 1000;
+    bool autoW = c.autoWidth.load();
+    if (ImGui::Checkbox(tr("Automatic channel width and centre"), &autoW)) c.autoWidth = autoW;
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Follows the link: Carson's rule on the measured deviation and the multiplex content (RDS, SCA), or the occupied width, plus a margin; the carrier offset is removed first."));
+    if (autoW) ImGui::TextDisabled("%.0f kHz", c.widthNowHz.load() / 1000);
+    else {
+        ImGui::TextDisabled("%s", tr("Channel width (kHz)")); ImGui::SetNextItemWidth(140 * gUi);
+        if (ImGui::DragFloat("##stlwid", &wid, 5.f, 20.f, 1000.f, "%.0f kHz")) c.channelWidthHz = (double)wid * 1000;
+    }
     static const int deemph[3] = {75, 50, 0};
     static const char* const deNames[3] = {N_("75 us (US)"), N_("50 us"), N_("Flat (no de-emphasis)")};
     int di = c.deemphasisUs.load() == 50 ? 1 : c.deemphasisUs.load() == 0 ? 2 : 0;

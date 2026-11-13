@@ -15,16 +15,29 @@ static int fails = 0;
 
 static std::string factS(const X40Telemetry& t, const char* key) { for (auto& f : t.facts) if (f.first == key) return f.second; return ""; }
 
-struct Result { X40Telemetry t; double sinadDb = 0, leftPeak = 0; };
+struct Result { X40Telemetry t; double sinadDb = 0, toneAmp = 0; };
 
-// SINAD of the 1 kHz tone in the left channel of the sound, after the first 3 seconds
-static double sinadOf(const std::vector<float>& left) {
+// SINAD of the 1 kHz tone in the left channel of the sound, after the first 3 seconds: tone power against everything else (mean removed, the whole 15 kHz audio band, no weighting).
+// The tone amplitude comes back too (the sound is scaled so that 75 kHz of deviation is 1.0).
+static double sinadOf(const std::vector<float>& left, double* amp = nullptr) {
     const size_t s0 = std::min<size_t>(144000, left.size() / 2);
-    double a = 0, b = 0, tot = 0;
-    for (size_t i = s0; i < left.size(); i++) { const double w = 2 * M_PI * 1000 * (double)i / 48000; a += left[i] * std::cos(w); b += left[i] * std::sin(w); tot += (double)left[i] * left[i]; }
+    double a = 0, b = 0, tot = 0, mean = 0;
+    for (size_t i = s0; i < left.size(); i++) mean += left[i];
     const double n = (double)(left.size() - s0); if (n < 1000) return -99;
+    mean /= n;
+    for (size_t i = s0; i < left.size(); i++) { const double v = left[i] - mean, w = 2 * M_PI * 1000 * (double)i / 48000; a += v * std::cos(w); b += v * std::sin(w); tot += v * v; }
     const double tone = 2 * (a * a + b * b) / n / n, rest = std::max(tot / n - tone, 1e-12);
+    if (amp) *amp = 2 * std::sqrt(a * a + b * b) / n;
     return 10 * std::log10(std::max(tone, 1e-12) / rest);
+}
+
+// What FM theory says the noise alone leaves in the 15 kHz audio after the 75 us de-emphasis: the frequency noise of a carrier at C/N cnrDb in bwHz is f^2 N0 / C Hz^2 per Hz.
+// Returns the noise power in the units of the sound (75 kHz of deviation = 1.0). Above the FM threshold only (about 12 dB C/N in 200 kHz).
+static double theoryNoise(double cnrDb, double bwHz, double tauUs) {
+    const double n0c = 1.0 / (std::pow(10.0, cnrDb / 10) * bwHz);
+    double sum = 0; const double df = 10;
+    for (double f = 30; f < 15000; f += df) { const double w = 2 * M_PI * f * tauUs * 1e-6; sum += f * f * n0c / (1 + w * w) * df; }
+    return sum / (75000.0 * 75000.0);
 }
 
 static Result runStl(const std::vector<cf32>& x, double fs) {
@@ -33,7 +46,7 @@ static Result runStl(const std::vector<cf32>& x, double fs) {
     stlConfig().audioTap = [&](const float* l, const float*, size_t n) { left.insert(left.end(), l, l + n); };
     Result r; r.t = run(x40::Stl, x, fs);
     stlConfig().audioTap = nullptr;
-    r.sinadDb = sinadOf(left);
+    r.sinadDb = sinadOf(left, &r.toneAmp);
     return r;
 }
 
@@ -70,16 +83,14 @@ int main() {
         const std::string what = factS(r.t, "what is this");
         CHECK(what == "composite (stereo multiplex)", "dev %.0f off %.0f: heard '%s' (%s)", dev, off, what.c_str(), r.t.headline.c_str());
         CHECK(factS(r.t, "pilot 19 kHz").rfind("locked", 0) == 0, "pilot: %s", factS(r.t, "pilot 19 kHz").c_str());
-        // +-75 kHz with a +25 kHz offset puts the 57 kHz RDS (and the peaks) at the edge of the 280 kHz channel filter: RDS is lost there (CI run: "no RDS"), the audio is not
-        const bool edge = dev == 75000 && off == 25000;
-        if (!edge) CHECK(factS(r.t, "RDS").find("TESTFM") != std::string::npos, "RDS: %s", factS(r.t, "RDS").c_str());
+        CHECK(factS(r.t, "RDS").find("TESTFM") != std::string::npos, "RDS: %s", factS(r.t, "RDS").c_str());
         CHECK(r.sinadDb > 30, "dev %.0f off %.0f: SINAD %.1f dB", dev, off, r.sinadDb);
         const double pk = atof(factS(r.t, "peak deviation").c_str());
         if (off == 0) (dev == 60000 ? pk60 : pk75) = pk;
         CHECK(std::fabs(r.t.cfoHz - off) < 3000, "dev %.0f off %.0f: offset %.0f", dev, off, r.t.cfoHz);
         const float pkDb = stlConfig().peakDbfs.load();
         CHECK(pkDb > -40 && pkDb <= 3, "sound peak %.1f dBFS", pkDb);
-        printf("composite dev %3.0f off %+6.0f: SINAD %.1f dB, peak %.1f kHz, offset %+.0f Hz, %s\n", dev / 1000, off, r.sinadDb, pk, r.t.cfoHz, r.t.headline.c_str());
+        printf("composite dev %3.0f off %+6.0f: SINAD %.1f dB, peak %.1f kHz, offset %+.0f Hz, width %s, %s\n", dev / 1000, off, r.sinadDb, pk, r.t.cfoHz, factS(r.t, "channel width").c_str(), r.t.headline.c_str());
     }
     CHECK(pk60 > 20 && pk75 / pk60 > 1.1 && pk75 / pk60 < 1.4, "peak deviation reading does not follow the deviation: %.1f kHz at 60, %.1f kHz at 75", pk60, pk75);
     // ---- composite at 2 Msps and with a 500 kHz channel setting ----
@@ -87,11 +98,11 @@ int main() {
         const auto x = station(2e6, 8, 45, 10000, true, true, 60000, 2);
         const Result r = runStl(x, 2e6);
         CHECK(factS(r.t, "what is this") == "composite (stereo multiplex)" && r.sinadDb > 30, "2 Msps: '%s', SINAD %.1f", factS(r.t, "what is this").c_str(), r.sinadDb);
-        stlConfig().channelWidthHz = 500000;
+        stlConfig().autoWidth = false; stlConfig().channelWidthHz = 500000;      // the manual override
         const auto y = station(2e6, 8, 45, 0, true, true, 75000, 3);
         const Result q = runStl(y, 2e6);
         CHECK(factS(q.t, "what is this") == "composite (stereo multiplex)" && q.sinadDb > 30, "500 kHz channel: '%s', SINAD %.1f", factS(q.t, "what is this").c_str(), q.sinadDb);
-        stlConfig().channelWidthHz = 280000;
+        stlConfig().autoWidth = true; stlConfig().channelWidthHz = 300000;
     }
     // ---- mono programme audio, no pilot, no RDS ----
     for (double off : {0.0, 30000.0}) {
@@ -120,27 +131,41 @@ int main() {
         CHECK(factS(r.t, "what is this") == "digital-unknown", "digital %.0f dB: heard '%s' (%s)", over, factS(r.t, "what is this").c_str(), r.t.headline.c_str());
         printf("digital-unknown %.0f dB over the floor: %s\n", over, r.t.headline.c_str());
     }
-    // ---- carrier-to-noise sweep: the 50 % and 90 % points of RDS, the SINAD ----
-    const double cnrs[] = {6, 10, 14, 18, 22, 26, 32, 40};
-    const unsigned seeds[] = {31, 32, 33, 34};
-    double rdsFrac[8], sinadMed[8];
-    for (int i = 0; i < 8; i++) {
-        int rdsOk = 0; std::vector<double> s;
+    // ---- carrier-to-noise sweep (C/N in 200 kHz): the 50 % and 90 % points of RDS and of SINAD 30 dB, stereo as the receiver blends it ----
+    const double cnrs[] = {12, 14, 16, 18, 20, 22, 24, 26};
+    const unsigned seeds[] = {31, 32, 33, 34, 35};
+    const int NC = 8, NS = 5;
+    double rdsFrac[8], sinFrac[8], sinadMed[8];
+    for (int i = 0; i < NC; i++) {
+        int rdsOk = 0, sinOk = 0; std::vector<double> s;
         for (unsigned sd : seeds) {
             const auto x = station(fs, 10, cnrs[i], 0, true, true, 60000, sd);
             const Result r = runStl(x, fs);
             if (factS(r.t, "RDS").find("TESTFM") != std::string::npos) rdsOk++;
+            if (r.sinadDb >= 30) sinOk++;
             s.push_back(r.sinadDb);
         }
-        std::sort(s.begin(), s.end()); sinadMed[i] = s[s.size() / 2]; rdsFrac[i] = (double)rdsOk / 4;
-        printf("C/N %4.0f dB (200 kHz): SINAD median %5.1f dB, RDS decoded in %.0f %% of runs\n", cnrs[i], sinadMed[i], 100 * rdsFrac[i]);
+        std::sort(s.begin(), s.end()); sinadMed[i] = s[s.size() / 2]; rdsFrac[i] = (double)rdsOk / NS; sinFrac[i] = (double)sinOk / NS;
+        printf("stereo C/N %4.0f dB: SINAD median %5.1f dB, SINAD >= 30 dB in %3.0f %%, RDS decoded in %3.0f %% of runs\n", cnrs[i], sinadMed[i], 100 * sinFrac[i], 100 * rdsFrac[i]);
     }
-    auto point = [&](double frac) { for (int i = 0; i < 8; i++) if (rdsFrac[i] >= frac) return cnrs[i]; return 99.0; };
-    auto sinadAt = [&](double db) { for (int i = 0; i < 8; i++) if (sinadMed[i] >= db) return cnrs[i]; return 99.0; };
-    printf("RDS: 50 %% point %.0f dB, 90 %% point %.0f dB; SINAD 12 dB at C/N %.0f dB, 30 dB at C/N %.0f dB\n", point(0.5), point(0.9), sinadAt(12), sinadAt(30));
-    CHECK(rdsFrac[7] >= 0.99 && rdsFrac[6] >= 0.99, "RDS not decoded at 32 / 40 dB");
-    CHECK(sinadMed[7] > 30, "SINAD at 40 dB: %.1f", sinadMed[7]);
-    CHECK(sinadMed[7] > sinadMed[1] + 6, "SINAD does not rise with C/N (%.1f at 10 dB, %.1f at 40 dB)", sinadMed[1], sinadMed[7]);
+    // the lowest C/N from which the fraction stays at or above frac
+    auto point = [&](const double* fr, double frac) { double c = 99; for (int i = NC - 1; i >= 0 && fr[i] >= frac; i--) c = cnrs[i]; return c; };
+    printf("stereo: RDS 50 %% point %.0f dB, 90 %% point %.0f dB; SINAD 30 dB reached in 50 %% of runs from C/N %.0f dB, in 90 %% from %.0f dB\n", point(rdsFrac, 0.5), point(rdsFrac, 0.9), point(sinFrac, 0.5), point(sinFrac, 0.9));
+    CHECK(rdsFrac[NC - 1] >= 0.99 && rdsFrac[NC - 2] >= 0.99, "RDS not decoded at 24 / 26 dB");
+    CHECK(rdsFrac[0] <= rdsFrac[NC - 1], "RDS share falls with C/N");
+    // mono-forced receiver against FM theory: a plain FM discriminator with 75 us de-emphasis, noise only (no stereo penalty): the measured SINAD follows the theory above the threshold
+    stlConfig().mode = 2;
+    double prev = -99;
+    for (double c : {10.0, 14.0, 18.0, 22.0, 26.0, 32.0}) {
+        const auto x = station(fs, 10, c, 0, true, true, 60000, 41);
+        const Result r = runStl(x, fs);
+        const double th = 10 * std::log10((r.toneAmp * r.toneAmp / 2) / theoryNoise(c, 200e3, 75));
+        printf("mono sound, C/N %4.0f dB: SINAD %5.1f dB, FM theory %5.1f dB (tone %.1f kHz)\n", c, r.sinadDb, th, r.toneAmp * 75 / 0.903);
+        if (c >= 14 && c <= 26) CHECK(std::fabs(r.sinadDb - th) < 6, "C/N %.0f: SINAD %.1f dB, theory %.1f dB", c, r.sinadDb, th);
+        CHECK(r.sinadDb > prev + 2, "mono SINAD does not rise with C/N at %.0f dB (%.1f after %.1f)", c, r.sinadDb, prev);
+        prev = r.sinadDb;
+    }
+    stlConfig().mode = 0;
     printf(fails ? "FAILED %d\n" : "ok\n", fails);
     return fails ? 1 : 0;
 }
