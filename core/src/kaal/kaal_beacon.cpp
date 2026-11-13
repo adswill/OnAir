@@ -3,6 +3,7 @@
 
 // KAAL beacon: frame bits (port of kaal_beacon_v2.py), BPSK slice modulator and streaming receiver (port of kaal_beacon_slice.py).
 #include "dect2/kaal/kaal_beacon.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -459,6 +460,7 @@ struct BeaconSliceRx::Impl {
                 return Found;
             }
         }
+        DIAG_DEBUG_EVERY(107799, 5.0, "A KAAL beacon sync word (metric %.2f) was found but its frame did not pass the CRC checks, so the frame is dropped.", bestMetric);
         dropMf(bestM + sync * spsD);
         return Dropped;
     }

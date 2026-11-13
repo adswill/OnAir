@@ -7,6 +7,7 @@
 #include "dect2/kaal/kaal_beacon.h"
 #include "dect2/kaal/kaal_tel.h"
 #include "dect2/kaal/kaal_v4.h"
+#include "dect2/common/diag.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/dsp/fftutil.h"
 #include "dect2/dsp/resampler.h"
@@ -345,6 +346,7 @@ struct KaalLiveReceiver::Impl {
             // locked, but more than one frame in sixteen fails: the block alignment chosen from the window it happened to gather was the wrong one. A later window
             // may pick the right one: search again (the carrier is already right)
             badRestarts++;
+            DIAG_DEBUG(514276, "The KAAL receiver is locked but more than 6%% of its frames fail (%d of %d), so it searches again for a better block alignment (try %d of 4).", (int)st.framesBad, (int)(st.framesGood + st.framesBad), badRestarts);
             vrx.configure(48000.0);
             brx.configure(48000.0);
             fine = 0; locked = false;
@@ -375,6 +377,7 @@ struct KaalLiveReceiver::Impl {
             lg = log;
         }
         if (lg && st.locked != wasLocked) lg(st.locked ? "KAAL locked" : "KAAL lock lost");
+        if (st.locked != wasLocked && !st.locked) DIAG_DEBUG(733898, "The KAAL receiver lost its lock after %d good and %d failed frames, so it searches for the sweep again.", (int)st.framesGood, (int)st.framesBad);
         wasLocked = st.locked;
     }
 };

@@ -5,6 +5,7 @@
 #include "dect2/kaal/kaal_v4.h"
 #include "dect2/kaal/kaal_fec.h"
 #include "dect2/kaal/kaal_phy.h"
+#include "dect2/common/diag.h"
 #include "dect2/dsp/resampler.h"
 #include <algorithm>
 #include <array>
@@ -638,6 +639,7 @@ struct FrameRx::Impl {
         ctrlPos = -1; ctrlHave = 0;
         st.locks++;
         if (log) { char b[160]; snprintf(b, sizeof b, "KAAL v4: lock, chirp score %.2f, carrier %+.0f Hz", score, freq); log(b); }
+        DIAG_DEBUG(898797, "The KAAL v4 receiver locked to a superframe with a chirp score of %.2f and a carrier offset of %+.0f Hz.", score, freq);
         return true;
     }
 
@@ -754,7 +756,7 @@ struct FrameRx::Impl {
         clk = std::max(kSfSamples * 0.999, std::min(kSfSamples * 1.001, clk));
         T += clk + tGain * terr;
         // lock loss
-        if (rho < kLossThr) { if (++lossCount >= kLossSf) { locked = false; if (log) log("KAAL v4: lost"); } }
+        if (rho < kLossThr) { if (++lossCount >= kLossSf) { locked = false; if (log) log("KAAL v4: lost"); DIAG_DEBUG(257674, "The KAAL v4 receiver lost its lock after %d weak superframes in a row, so it searches for the chirp again.", (int)lossCount); } }
         else lossCount = 0;
         // decision-directed phase smoothing (complex average of z * conj(decision) over +-W symbols), known symbols weigh 4x
         if (ddTrack) ddSmooth(zn, ref, known);
