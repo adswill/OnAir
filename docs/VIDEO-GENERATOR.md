@@ -20,7 +20,7 @@ Every setting in the window has a (?) with a short version of what is written he
 ## Quick start
 
 1. Open Tools > Digital video generator.
-2. On **Sources and encoding**, choose the input (Camera, Still picture, Video file or Test generator), the resolution and the frame rate.
+2. On **Sources and encoding**, choose the input (Camera, Still picture, Video file, Test generator or RTMP server), the resolution and the frame rate.
    That is all the tab shows at first. Tick **Advanced** for the output (MPEG-TS file, UDP or RTP stream), the sound and every encoding
    setting; settings you do not see keep their values (the first time: a UDP stream to this PC, `udp://127.0.0.1:5000`, to watch in VLC).
 3. Leave the encoding settings at their defaults, or change them: the **Estimated bitrate** panel on the right follows every change.
@@ -36,6 +36,7 @@ Every setting in the window has a (?) with a short version of what is written he
 | Still picture | One picture (PNG, JPEG, BMP, ...) sent as a continuous stream at the chosen frame rate: a test card, a slide, a station logo. Length one minute unless you change it. |
 | Video file | Any file FFmpeg can read. The length follows the file when you choose it. When the length is longer than the file, the file starts again. Picture and sound are decoded in step, so writing a `.ts` file goes faster than real time. |
 | Test generator | A copy of the transmitter's own moving test picture: the one in the test transport stream that the TX studio's generators carry (for DVB-T2, the T2Generator's real PLP), drawn at the output resolution. **Pattern**: Test card (colour bars, a moving sweep, a chequerboard with a bouncing ball), Colour bars or Grey ramp; a white bar grows along the bottom once a second. Put a callsign, a CQ call or other text on it with the **Preview** tab. Length one minute unless you change it; a `.ts` file is written faster than real time. Picture fit does not apply. |
+| RTMP server (OBS Studio) | OnAir listens for an RTMP stream, picture and sound, from OBS Studio or any other program that streams RTMP, on this PC or another PC on the network (see *RTMP server: streaming from OBS Studio* below). Nothing else needs to be installed. Always encoded in real time; black while no sender is connected. |
 
 ### Your own picture, video and sound
 
@@ -53,13 +54,40 @@ own material here changes what a synthetic signal carries.
 - **Picture fit** (below) keeps the aspect: Letterbox shows the whole picture with bars, Crop fills, Stretch distorts.
 - Reading files is done by the FFmpeg already linked for the generator (no extra decoder, nothing bundled); a format FFmpeg lacks is reported as an error.
 
+### RTMP server: streaming from OBS Studio
+
+OBS Studio mixes scenes, cameras, screen captures and sound (with its own filters) and streams them; OnAir is the RTMP server it streams to.
+Picture and sound arrive together and in step, so no virtual camera or virtual audio cable is needed, and OBS can run on another PC
+(Windows, macOS or Linux): several PCs, each with its own OBS, can each stream to their own generator (the tabs at the top) on its own port.
+
+1. In the generator choose the input **RTMP server (OBS Studio)**. The **RTMP address** is `rtmp://0.0.0.0:1935/live/stream`: OnAir
+   listens on every network card of this PC, port 1935 (the usual RTMP port), application `live`, stream key `stream`. Change the port
+   for a second generator (`rtmp://0.0.0.0:1936/live/stream`), or put one address of this PC in place of `0.0.0.0` to listen on that card only.
+2. Below the address the window shows what to type in OBS, with this PC's network address: in OBS, **Settings > Stream**, Service
+   **Custom...**, **Server** `rtmp://192.168.1.20/live` and **Stream Key** `stream` (OBS on this same PC: `rtmp://127.0.0.1/live`).
+3. Press **Start preview**, **Start streaming** or **Start encoding** in OnAir first, then **Start Streaming** in OBS. The status line under
+   the address says *Waiting for a sender on port 1935*, then what arrives (*Receiving 1280x720 h264 + aac*).
+4. The sound is set to *Sound of the video file / stream*; choose the test tone, a microphone or a sound file instead to replace it.
+
+- OBS's own encoder settings only decide what travels to OnAir: OnAir decodes the stream and encodes it again with the settings of this window
+  (codec, bitrate, resolution, frame rate, transport stream). For a link on the same network, OBS's defaults (H.264, AAC, 2500 kbit/s or
+  more, keyframe interval 1 or 2 s) are fine; *x264* with the *zerolatency* tune keeps the delay small.
+- One sender at a time per generator. When OBS stops streaming (or the network goes away for 10 s) the picture goes black and the sound
+  silent, the stream or file goes on, and OnAir waits for the next sender: pressing Start Streaming in OBS again just continues.
+- Windows asks the first time whether OnAir may accept connections from the network: allow it for private networks. On Linux, a firewall
+  (ufw, firewalld) must let TCP port 1935 in; OBS on the same PC needs nothing.
+- RTMP carries H.264 or HEVC picture and AAC or MP3 sound (what OBS sends with its *FLV* container); RTMPS (encrypted) is not served. The
+  stream is not password protected: use it on your own network, not on a port open to the internet.
+- The RTMP server is FFmpeg's own (its RTMP protocol in listen mode), part of the FFmpeg OnAir is built with: no extra library.
+
 Analog TV transmit (TX studio) already takes a picture/video file or camera on its own; use the same files there.
 
 **Picture fit** decides what happens when the source has another shape than the output, such as a 4:3 camera in a 16:9 picture:
 **Stretch** fills the picture (shapes look wider), **Letterbox** keeps the whole source with black bars, **Crop** fills the picture and
 cuts the edges.
 
-**Sound**: silence, a 1 kHz test tone at -20 dBFS, the sound of the video file (only with a video file as input), or a microphone.
+**Sound**: silence, a 1 kHz test tone at -20 dBFS, the sound of the video file or of the RTMP stream (only with a video file or the RTMP
+server as input), or a microphone.
 
 ## Output
 
@@ -254,5 +282,7 @@ How the modes are worked out (the formulas and standard tables of the workbook `
 | H.264 / H.265 greyed out | This FFmpeg has no such encoder (see *Codecs and FFmpeg*). Use MPEG-2, or build OnAir against a system FFmpeg with libx264. |
 | "frames late" while streaming | The encoder is too slow for real time: a faster preset, a lower resolution or frame rate, or a hardware encoder. |
 | VLC shows nothing | Check the address on the receiving PC (`rtp://@:5000`), the firewall, and that both sides use the same protocol (RTP or UDP). |
+| OBS: "Failed to connect to server" | Start the generator first (it listens only while it runs), check the Server in OBS against the one the window shows, and the firewall on the OnAir PC (TCP port 1935). |
+| RTMP: "Cannot listen on port 1935" | Another program (a second generator, a media server) uses the port: give this generator another port, and OBS the same one. |
 | The mux bar has a red outline | The mux rate is lower than the streams need: raise it, or lower the video bitrate. |
 | The picture breaks up on the receiver | The stream is larger than the link: compare the mux rate with the table of DVB-T bitrates, or check the mode on the Digital Television Mode Selector tab. |

@@ -2,7 +2,7 @@
 // video encoder, the sound -> one encoder per audio track, both into FFmpeg's MPEG-TS muxer (mux rate, service, PIDs), whose packets
 // go to a .ts file (as fast as the encoder runs) or to tsout's paced UDP / RTP sender (in real time). A preview (previewOnly) makes
 // the pictures in real time for the window and encodes nothing.
-// The camera comes from VideoIn (listVideoInputs / start / copyYuv420), the microphone from AudioIn. Pictures and video files are
+// The camera comes from VideoIn (listVideoInputs / start / copyYuv420), an RTMP sender (OBS) from RtmpInput, the microphone from AudioIn. Pictures and video files are
 // decoded here, frame by frame, so a file is encoded faster than real time with its picture and sound in step. The test generator
 // draws its test picture (drawTestCard) straight into the output frame.
 #include "dect2/tv/videogen.h"
@@ -11,6 +11,7 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/common/u8file.h"
 #include "dect2/tv/tsout.h"
+#include "dect2/tv/videogen_rtmp.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -410,7 +411,7 @@ void VideoGenerator::Impl::run(GenConfig c) {
     const int W = s.width & ~1, H = s.height & ~1;
     const AVRational fr = av_d2q(std::clamp(s.fps, 0.5, 120.0), 1001);
     const double fps = av_q2d(fr);
-    const bool live = c.source == Source::Camera || c.output != Output::File || c.previewOnly;
+    const bool live = c.source == Source::Camera || c.source == Source::Rtmp || c.output != Output::File || c.previewOnly;
     const int64_t totalFrames = c.output == Output::File && !c.previewOnly ? std::max<int64_t>(1, (int64_t)std::llround(c.seconds * fps)) : INT64_MAX;
     const Budget bud = estimate(s);
 
@@ -431,6 +432,8 @@ void VideoGenerator::Impl::run(GenConfig c) {
 
     // sources
     VideoIn cam;
+    RtmpInput rtmp;
+    uint64_t rtmpSerial = 0;
     MediaReader vfile, afile;
     std::vector<std::string> vlist, alist;   // the picture / video files and the sound files, in play order
     size_t vidx = 0, aidx = 0;
@@ -441,6 +444,9 @@ void VideoGenerator::Impl::run(GenConfig c) {
     std::string err;
     if (c.source == Source::Camera) {
         if (!cam.start(VideoIn::Camera, c.cameraId, err)) { fail(err.empty() ? "cannot open the camera" : err); return; }
+    } else if (c.source == Source::Rtmp) {
+        // the sound is read only when it goes into the stream; without a sender the picture is black
+        if (!rtmp.start(c.rtmpUrl, s.sampleRate, err)) { fail(err); return; }
     } else if (c.source != Source::Generator) {
         vlist = listMedia(c.path, c.source == Source::Picture ? MediaKind::Picture : MediaKind::Video);
         if (vlist.empty()) { fail("no " + std::string(c.source == Source::Picture ? "pictures" : "videos") + " in " + c.path); return; }
@@ -680,6 +686,15 @@ void VideoGenerator::Impl::run(GenConfig c) {
                         fitter.run(sp, ss, src.w, src.h, out, c.fit);
                     }
                 }
+            } else if (c.source == Source::Rtmp) {
+                rtmp.picture(src.y, src.u, src.v, src.w, src.h, rtmpSerial);   // a newer picture of the sender, if there is one
+                if (src.w >= 2 && src.h >= 2) {   // every frame again: the overlay drew on the last one
+                    const uint8_t* sp[3] = {src.y.data(), src.u.data(), src.v.data()};
+                    const int ss[3] = {src.w, src.w / 2, src.w / 2};
+                    fitter.run(sp, ss, src.w, src.h, out, c.fit);
+                } else {
+                    out.black();   // no sender (yet), or it stopped
+                }
             } else if (c.source == Source::Generator) {
                 drawTestCard(out.y.data(), W, out.u.data(), W / 2, out.v.data(), W / 2, W, H, (int)(n % (1 << 30)), fps, c.pattern);
             } else if (c.source == Source::Picture) {
@@ -759,6 +774,8 @@ void VideoGenerator::Impl::run(GenConfig c) {
                         phase = std::fmod(phase, 2 * kPi);
                     } else if (c.audio == AudioSource::Microphone) {
                         mic.read(abuf.data(), fs);
+                    } else if (c.audio == AudioSource::FromFile && c.source == Source::Rtmp) {
+                        rtmp.readAudio(abuf.data(), fs);
                     } else if (fileSound) {
                         while (fifo.size() < (size_t)fs * 2 && audioMore()) {}
                         const size_t m = std::min(fifo.size(), (size_t)fs * 2);
@@ -818,6 +835,7 @@ void VideoGenerator::Impl::run(GenConfig c) {
                 st.kbps = st.seconds > 0 ? (double)sink.bytes * 8 / st.seconds / 1000.0 : 0;
                 st.progress = c.output == Output::File ? (double)(n + 1) / (double)totalFrames : 0;
                 st.lateFrames = late;
+                if (c.source == Source::Rtmp) st.input = rtmp.status();
             }
         }
         sws_freeContext(prevSws);
@@ -844,6 +862,7 @@ void VideoGenerator::Impl::run(GenConfig c) {
         net.close();
     }
     cam.stop();
+    rtmp.stop();
     mic.stop();
     std::lock_guard<std::mutex> lk(mu);
     st.bytes = sink.bytes;
@@ -858,8 +877,14 @@ bool VideoGenerator::start(const GenConfig& c, std::string& err) {
     if (p_->th.joinable()) p_->th.join();
     if (c.output == Output::File && !c.previewOnly && c.tsPath.empty()) { err = "choose a .ts file to write"; return false; }
     if ((c.source == Source::Picture || c.source == Source::VideoFile) && c.path.empty()) { err = "choose a picture or video file (or a folder)"; return false; }
-    if (c.source != Source::Generator && c.source != Source::Camera && listMedia(c.path, c.source == Source::Picture ? MediaKind::Picture : MediaKind::Video).empty()) { err = "there is nothing to play in " + c.path; return false; }
+    if ((c.source == Source::Picture || c.source == Source::VideoFile) && listMedia(c.path, c.source == Source::Picture ? MediaKind::Picture : MediaKind::Video).empty()) { err = "there is nothing to play in " + c.path; return false; }
     if (c.audio == AudioSource::AudioFile && !c.previewOnly && listMedia(c.audioPath, MediaKind::Audio).empty()) { err = "choose a sound file (or a folder of them)"; return false; }
+    if (c.source == Source::Rtmp) {
+        std::string lu, why;
+        int port = 0;
+        if (!rtmpSupported(why)) { err = "RTMP input: " + why; return false; }
+        if (!parseRtmpListenUrl(c.rtmpUrl, lu, port, why)) { err = "RTMP address: " + why; return false; }
+    }
     if (c.source == Source::Generator && (c.pattern < 0 || c.pattern > 2)) { err = "the test pattern must be 0 to 2"; return false; }
     if (c.output == Output::Transmitter && !c.previewOnly && (c.instanceId < 1 || c.instanceId > kMaxInstances)) { err = "the generator number must be 1 to " + std::to_string(kMaxInstances); return false; }
     { std::vector<ArgOpt> uo; std::string aerr; if (!parseEncoderArgs(c.ffmpegArgs, uo, aerr)) { err = "FFmpeg arguments: " + aerr; return false; } }
