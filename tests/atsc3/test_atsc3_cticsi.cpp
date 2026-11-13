@@ -79,7 +79,7 @@ int main() {
     const long startup = c1.bad;
     double gainAt = 0;
     long bestDiff = 0;
-    for (double snr = 14; snr >= 2; snr -= 2) {
+    for (double snr = 11; snr >= 4; snr -= 1) {
         const Result a = run(snr, true, frames, 7), b = run(snr, false, frames, 7);
         const long okB = b.blocks - b.bad;
         printf("%4.1f dB Rayleigh (gain held 400 cells): blocks decoded after the start-up: with weights %ld of %ld, without %ld\n", snr,

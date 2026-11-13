@@ -995,10 +995,11 @@ struct DrmReceiver::Impl {
                 if (a && !ok) { v = a->Hc[(size_t)j]; ok = true; }
                 const SymRec* p = recIf(t - gy);
                 if (a && p && b) {
-                    const cf32 pred = 0.5f * (p->Hc[(size_t)j] + b->Hc[(size_t)j]);
-                    accN += std::norm(a->Hc[(size_t)j] - pred); cntN++;
-                    // the Doppler statistics on the raw estimates: the common phase is the channel's too (a flat fade turns every carrier), and a
-                    // Doppler spread read from the turned-back estimates would switch the Wiener filter on in a fading channel and smooth it away
+                    // the noise and Doppler statistics stay on the raw estimates (as in 4.0): the common phase is the channel's too (a flat fade
+                    // turns every carrier), and read from the turned-back estimates a fading channel looked slow and clean (a noise figure without
+                    // the interpolation error, the Wiener filter on): TU6 lost its 90 % point
+                    const cf32 pred = 0.5f * (p->Hr[(size_t)j] + b->Hr[(size_t)j]);
+                    accN += std::norm(a->Hr[(size_t)j] - pred); cntN++;
                     const cf32 c = a->Hr[(size_t)j] * std::conj(p->Hr[(size_t)j]); sumRe += c.real(); sumIm += c.imag(); sumP += std::norm(a->Hr[(size_t)j]); cntD++;
                     if (const SymRec* pp = recIf(t - 2 * gy)) { const cf32 c2 = a->Hr[(size_t)j] * std::conj(pp->Hr[(size_t)j]); sum2Re += c2.real(); sum2Im += c2.imag(); }
                 }
