@@ -22,7 +22,7 @@ configure_build() {
   export CCACHE_DISABLE=1
   [ -n "${ONAIR_BUILD:-}" ] || (cd "$REPO" && cmake -S . -B "$dir" -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DDECT2_CCACHE=OFF \
      -DDECT2_HAVE_HAMLIB=ON -DDECT2_WITH_TLS=ON -DOPENSSL_USE_STATIC_LIBS=TRUE -DONAIR_VERSION="$VERSION" -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON "$@" >/dev/null)
-  cmake --build "$dir" -j"$JOBS" --target dect2 dect2cli dect2scan onair-server
+  cmake --build "$dir" -j"$JOBS" --target dect2 dect2cli dect2scan onair-server onair-extcap
 }
 # copy_licenses <sysroot licences folder> <destination> <names...>
 copy_licenses() {

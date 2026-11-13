@@ -13,9 +13,10 @@ MIN=$(sed -n 's/^deployment: *macOS \([0-9.]*\).*/\1/p' "$SY/SYSROOT-MANIFEST.tx
 APP=$B/OnAir.app; C=$APP/Contents
 rm -rf "$APP"; mkdir -p "$C/MacOS" "$C/Resources/web" "$C/Frameworks/SoapySDR/modules"
 cp "$B/dect2" "$C/MacOS/OnAir"; cp "$B/onair-server" "$C/MacOS/onair-server"
-cp -R "$REPO/web/onair-web" "$C/Resources/web/"; cp "$REPO/packaging/icons/OnAir.icns" "$C/Resources/"
+cp "$B/onair-extcap" "$C/MacOS/onair-extcap"   # Wireshark capture interface (docs/WIRESHARK-3.8.md)
+cp -R "$REPO/web/onair-web" "$REPO/web/onair-app" "$C/Resources/web/"; cp "$REPO/packaging/icons/OnAir.icns" "$C/Resources/"
 sed -e "s/\$VERSION/$VERSION/g" -e "s/\$MACOSX_DEPLOYMENT_TARGET/$MIN/g" > "$C/Info.plist" < <(sed -n '/^<?xml version/,/^<\/dict><\/plist>$/p' "$REPO/tools/package/make_dmg.sh")
-for e in "$C/MacOS/OnAir" "$C/MacOS/onair-server"; do
+for e in "$C/MacOS/OnAir" "$C/MacOS/onair-server" "$C/MacOS/onair-extcap"; do
   "$SDK/collect_dylibs.sh" "$e" "$C/Frameworks" "$SY" librtlsdr.0.dylib libairspy.0.dylib libairspyhf.0.dylib libbladeRF.2.dylib libiio.0.dylib 'libLimeSuite.*.dylib' libhamlib.4.dylib >/dev/null
 done
 M=$SY/usr/local/lib/SoapySDR/modules0.8/libremoteSupport.so

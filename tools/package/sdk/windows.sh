@@ -9,7 +9,10 @@ S=$B/OnAir-$VERSION-windows-x64
 rm -rf "$S"; mkdir -p "$S"
 strip_to() { x86_64-w64-mingw32-strip -o "$S/$2" "$B/$1"; }
 strip_to dect2.exe OnAir.exe; strip_to dect2cli.exe onair-cli.exe; strip_to dect2scan.exe onair-scan.exe; strip_to onair-server.exe onair-server.exe
-mkdir -p "$S/web"; cp -R "$REPO/web/onair-web" "$S/web/"
+strip_to onair-extcap.exe onair-extcap.exe   # Wireshark capture interface (docs/WIRESHARK-3.8.md)
+mkdir -p "$S/web"; cp -R "$REPO/web/onair-web" "$REPO/web/onair-app" "$S/web/"   # OnAir Web and OnAir Web 3.9 (onair-server looks in web\ next to it)
+# the camera stub (CMake found no libavdevice in the SDK): the program would list no camera
+if grep -aq "this build has no camera / capture-card support" "$S/OnAir.exe"; then echo "error: OnAir.exe has no camera support (the SDK's FFmpeg has no libavdevice)" >&2; exit 1; fi
 # what the programs import, recursively, and the radio libraries OnAir's native drivers load by name
 for e in "$S"/*.exe; do
   "$SDK/collect_dlls.sh" "$e" "$SY" librtlsdr.dll libairspy.dll libairspyhf.dll libbladeRF.dll libiio.dll libLimeSuite.dll 'libhamlib-*.dll' FTD3XX.dll >/dev/null
