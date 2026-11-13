@@ -2100,4 +2100,5 @@ Then merged integ-40 at f25aff2f1 (feat40-issues2) and added #463, #435, #442 fr
   timed packets a lead time ahead of the stream clock, 1.0 = 0 dBm before main/transgain, end flags on close; warn-only.
 - Missing SDK: plain message, Fix it entry, radio-list hint for USB vendor 2f72. Credits rows added (gen_credits.py).
 - Tests: spectran (fake RTSA API: listing, both modes, rate plan, scaling, I/Q order, retunes, unplug, busy, TX pacing / flags) and
-  spectran_missing (no library, Init failing). CI not run yet: the quick run was cancelled for the 4.0 release builds. Untested on a device.
+  spectran_missing (no library, Init failing). GitHub quick run 43363137455: spectran, spectran_missing, fixit, sdrplay passed, dect2 built;
+  native fails 4 RTL-SDR V4 / HF+ checks, the same 4 on integ-40 (run 43368500233), not from this branch. Untested on a device.
