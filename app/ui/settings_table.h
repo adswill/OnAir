@@ -161,6 +161,9 @@ inline const std::vector<Info>& table() {
         // ---- Location
         {"adsbLat", kLocation, N_("Station latitude"), N_("Degrees, north positive. Used by the maps, passes, ADS-B and distances."), "latitude position home", K::Float, 0, -90, 90, nullptr, nullptr, "", false, false, "!%.5f"},
         {"adsbLon", kLocation, N_("Station longitude"), N_("Degrees, east positive."), "longitude position home", K::Float, 0, -180, 180, nullptr, nullptr, "", false, false, "!%.5f"},
+        {"mapMyLoc", kLocation, N_("Show my location on maps"), N_("A marker at the station position on every map, and the distance and bearing from it to the pointer and to the selected object. Nothing is drawn until a position is set."), "map marker home distance bearing", K::Bool, 1},
+        {"mapMyLocRings", kLocation, N_("Range rings around my location"), N_("Circles around the marker at the distances below."), "map range rings distance circles", K::Bool, 0},
+        {"mapMyLocRingList", kLocation, N_("Range ring distances"), N_("Comma separated, in the distance unit of Settings > Units (nm or km), up to 8, e.g. 50,100,200."), "map range rings distance circles", K::Text, 0, 0, 0, nullptr, nullptr, "50,100,200", true},
         // ---- Keyboard and mouse
         {"keysEditor", kKeys, N_("Keys, mouse buttons and wheel"), N_("Every action with its keys: Set records a key, Clear removes it, Default puts it back. Conflicts are marked; import and export the whole set."), "shortcut shortcuts hotkey hotkeys keybinding keybindings keyboard mouse wheel bind rebind", K::Custom},
         // ---- Notifications

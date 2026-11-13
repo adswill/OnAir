@@ -1,6 +1,7 @@
 // DMR Map and Table sub-tabs: the LRRP positions of the radios (see core/src/dmr/dmr_lrrp.cpp)
 // drawn on the shared slippy map, with Src / TG / age filters, per-radio movement tracks, a table
 // of the received positions and a CSV export.
+#include "map/my_location.h"
 #include "dmr_map.h"
 #include "app.h"
 #include "../adsb/adsb_map.h"
@@ -462,6 +463,7 @@ void dmrMap(App& a) {
             snprintf(b, sizeof b, "%s  %.0f %s%s", head, speedShown(m.hasSpeed ? m.speedKt * 1.852 : 0.0), speedUnit(), cb);
             if (ImGui::Selectable(b, sel)) { S.selSrc = src; S.selValid = true; S.map.lat = m.lat; S.map.lon = m.lon; S.map.zoom = std::max(S.map.zoom, 13); }
             ImGui::TextDisabled("%.5f, %.5f", m.lat, m.lon);
+            mylocmap::infoLine(m.lat, m.lon);
             if (!m.detail.empty()) ImGui::TextDisabled("%s", m.detail.c_str());
             ImGui::TextDisabled("last heard %s ago", dect2::ageText(m.ageSec).c_str());
             ImGui::Separator();

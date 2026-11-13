@@ -5,6 +5,7 @@
 #include "dect2/geo/tilecache.h"
 #include "dect2/geo/worldlow.h"
 #include "map/map_colours.h"
+#include "map/my_location.h"
 #include "tile_url.h"
 #include <algorithm>
 #include <atomic>
@@ -485,6 +486,7 @@ bool draw(View& v, ImVec2 size) {
         const char* m = !onlineMap ? "map switched off: rough outline only" : missing ? "loading the map..." : "no map tiles (no network, or no picture decoder on this system): rough outline only";
         dl->AddText(ImVec2(p0.x + 8, p0.y + size.y - 2 * ImGui::GetTextLineHeightWithSpacing() - 6), u32(gScheme.label), ellipsize(m, size.x - 16).c_str());
     }
+    mylocmap::overlay(dl, p0, size, hov);
     return hov;
 }
 

@@ -1,5 +1,6 @@
 // Mesh (LoRa) screens: the map of node and station positions, the selected node's card and the chat per channel.
 // Split from mesh_ui.cpp; the shared state is declared in mesh_internal.h.
+#include "map/my_location.h"
 #include "mesh_internal.h"
 #include <algorithm>
 #include <cmath>
@@ -67,12 +68,14 @@ void mapView(App& a, ImVec2 size) {
     }
     dl->PopClipRect();
     if (tipA && ImGui::IsWindowHovered()) {
-        ImGui::SetTooltip("%s  %s  %s\n%.5f, %.5f\n%s\nSNR %.1f dB, heard %s ago", tipA->st.call.c_str(), protoName(tipA->protocol), symbolText(tipA->st).c_str(), tipA->st.lat, tipA->st.lon,
-                          tipA->st.comment.c_str(), tipA->lastSnrDb, ago(t.timeSec, tipA->st.lastHeardSec).c_str());
+        const std::string mineA = mylocmap::distanceBearingText(tipA->st.lat, tipA->st.lon);
+        ImGui::SetTooltip("%s  %s  %s\n%.5f, %.5f%s%s\n%s\nSNR %.1f dB, heard %s ago", tipA->st.call.c_str(), protoName(tipA->protocol), symbolText(tipA->st).c_str(), tipA->st.lat, tipA->st.lon,
+                          mineA.empty() ? "" : "  ", mineA.c_str(), tipA->st.comment.c_str(), tipA->lastSnrDb, ago(t.timeSec, tipA->st.lastHeardSec).c_str());
     }
     if (tip && ImGui::IsWindowHovered()) {
-        ImGui::SetTooltip("%s  %s\n%s  %s\n%.5f, %.5f  %.0f m\nSNR %.1f dB, heard %s ago", nodeLabel(*tip).c_str(), tip->id.c_str(), protoName(tip->protocol),
-                          tip->hwModel.c_str(), tip->lat, tip->lon, tip->altM, tip->lastSnrDb, ago(t.timeSec, tip->lastHeard).c_str());
+        const std::string mineN = mylocmap::distanceBearingText(tip->lat, tip->lon);
+        ImGui::SetTooltip("%s  %s\n%s  %s\n%.5f, %.5f  %.0f m%s%s\nSNR %.1f dB, heard %s ago", nodeLabel(*tip).c_str(), tip->id.c_str(), protoName(tip->protocol),
+                          tip->hwModel.c_str(), tip->lat, tip->lon, tip->altM, mineN.empty() ? "" : "  ", mineN.c_str(), tip->lastSnrDb, ago(t.timeSec, tip->lastHeard).c_str());
     }
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));

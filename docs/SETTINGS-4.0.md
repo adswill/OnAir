@@ -245,6 +245,9 @@ a scope and up to two keys. The code asks `inputmap::pressed(Action)` instead of
 |---|---|---|---|---|
 | `adsbLat` | Station latitude | Float | 0 |  |
 | `adsbLon` | Station longitude | Float | 0 |  |
+| `mapMyLoc` | Show my location on maps | Bool | on | 4.1 |
+| `mapMyLocRings` | Range rings around my location | Bool | off | 4.1 |
+| `mapMyLocRingList` | Range ring distances | Text | 50,100,200 | 4.1 |
 
 ### Keyboard and mouse
 

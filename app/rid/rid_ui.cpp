@@ -1,6 +1,7 @@
 // Drone Remote ID screens: the drone table (serial number or session ID, UA type, position, altitude and height, speed and track, operator
 // position, last seen), a map with each drone, its trail and a line to its operator, the message log, and the band picker.
 // Receive only: Remote ID (ASTM F3411 / ASD-STAN EN 4709-002) is a public broadcast meant for anyone to read; nothing is transmitted.
+#include "map/my_location.h"
 #include "dect2/rid/rid_alerts.h"
 #include "dect2/airports/airports.h"
 #include <deque>
@@ -233,7 +234,8 @@ void mapView(App& a, ImVec2 size) {
             }
             if (S.map.zoom >= 13 || sel) {
                 const std::string s = idOf(d);
-                char b2[48]; snprintf(b2, sizeof b2, "%s", altText(d.height).c_str());
+                char b2[96]; snprintf(b2, sizeof b2, "%s", altText(d.height).c_str());
+                if (sel) { const std::string mine = mylocmap::distanceBearingText(d.lat, d.lon); if (!mine.empty()) snprintf(b2, sizeof b2, "%s  %s", altText(d.height).c_str(), mine.c_str()); }
                 const ImVec2 ts = ImGui::CalcTextSize(s.c_str()), ts2 = ImGui::CalcTextSize(b2);
                 const float w = std::max(ts.x, ts2.x) + 8 * gUi, hh = ts.y + ts2.y + 4 * gUi;
                 const ImVec2 lp(q.x + 14 * gUi, q.y - hh * 0.5f);

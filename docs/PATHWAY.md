@@ -2102,3 +2102,10 @@ Mode count fix: tools/gen_modes_list.py, gen_web_schema.py, android/tools/gen_mo
   Windows window icon (GLFW_ICON). Zoom limits were already in 3.7. Feature ideas listed in docs/ISSUES2-4.0.md.
 - CI: android.yml 43198580494, 43207001215; quick 43215392986 (Linux), 43218158764 (Windows): pass. No phone, radio or Windows desktop used.
 
+
+## 2026-11-13: my location on every map (feat41-mypos)
+
+- Request from a Discord user: AIS, APRS and other maps did not show the user's own position.
+- `adsbmap::draw()` now draws the station position (and optional range rings) on every map screen, with distance and bearing from it to the pointer; AIS panel, mesh and APRS tooltips, DMR list and Remote ID selection show distance and bearing too. No position set: a small hint that opens Settings > Location.
+- New: `core/include/dect2/geo/mylocation.h`, `app/map/my_location.{h,cpp}`, three settings (`mapMyLoc`, `mapMyLocRings`, `mapMyLocRingList`), test `mylocation`. Details in docs/MY-LOCATION-MAPS-4.1.md.
+- Not compiled or run; tests not yet run.
