@@ -719,7 +719,7 @@ bool chaseBlock(Bits& d, const std::vector<float>& rel, const std::vector<int>& 
     return true;
 }
 
-// Repairs d for frame kind k when all its blocks but one (broadcast) or two (ring alert, pager) decode as they are, and at least 3 do. Returns
+// Repairs d for frame kind k when all its blocks but one decode as they are, and at least 3 do. Returns
 // the number of bits changed, -1 when nothing was repaired.
 int softRepair(Bits& d, const std::vector<float>& rel, Kind k) {
     const auto blk = blockPositions(d, k);
@@ -732,7 +732,7 @@ int softRepair(Bits& d, const std::vector<float>& rel, Kind k) {
         uint32_t cw = w >> 1;
         if (block32(cw, (int)(w & 1), bch) < 0) bad.push_back(i);
     }
-    const size_t maxBad = k == Kind::BC ? 1 : 2;
+    const size_t maxBad = 1;   // (2 failing blocks doubled the frames found in random bits: 12 against 6 in 20000)
     if (bad.empty() || bad.size() > maxBad || blk.size() - bad.size() < 3) return -1;
     int changed = 0;
     for (size_t i : bad) if (!chaseBlock(d, rel, blk[i], bch, changed)) return -1;

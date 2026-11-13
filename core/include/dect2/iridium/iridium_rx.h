@@ -33,7 +33,7 @@ public:
     void setThresholdDb(double db);      // burst detection threshold over the noise floor per FFT bin (default 13)
     // Files and tests: feed() waits for the worker instead of dropping bursts when it falls behind (never in the app).
     void setOffline(bool on);
-    // 4.1: bit reliabilities go to the frame decoder, which repairs frames with one or two failing BCH blocks (default on; off: hard decisions as in 4.0)
+    // 4.1: bit reliabilities go to the frame decoder, which repairs frames with one failing BCH block (default on; off: hard decisions as in 4.0)
     void setSoftDecisions(bool on);
     void flush();                        // waits until every burst found so far is demodulated and decoded
     // Every burst with a unique word, with its frame (tool output, tests). Called on the worker thread.

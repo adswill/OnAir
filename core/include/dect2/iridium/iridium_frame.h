@@ -22,7 +22,7 @@ struct IridiumBurstBits {
     double snrDb = 0;                   // Es/N0 of the symbols (the noise figure of the .bits lines)
     double refUnixTime = 0;             // wall clock the Iridium time of IBC frames is read against; 0 = this computer's clock
     // 4.1: reliability of each bit (same order and size as bits, >= 0, larger = surer); empty = hard bits only. With it, a ring alert, broadcast or
-    // pager frame whose BCH blocks all decode but one or two is repaired by a Chase search over the least reliable bits of the failing blocks.
+    // pager frame whose BCH blocks all decode but one is repaired by a Chase search over the least reliable bits of the failing blocks.
     std::vector<float> rel;
 };
 

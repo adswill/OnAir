@@ -275,19 +275,34 @@ public:
     void pushSoft(const uint8_t* sym, const float* soft, size_t n, double, std::vector<SondeFix>& out) override { realign_ = true; for (size_t i = 0; i < n; i++) step(sym[i], soft[i], out); }
 private:
     uint64_t hdr_ = 0; bool run_ = false; int inv_ = 0; std::vector<float> bits_;
+    float hs_[40] = {}; int hp_ = 0;   // the soft values of the last 40 symbols (the header search)
     bool realign_ = false;   // soft symbols only: hard ones (+-1) give no measure of how well the framing bits fit
     void step(int s, float v, std::vector<SondeFix>& out) {
         if (!run_) {
             hdr_ = (hdr_ << 1) | (uint64_t)(s & 1);
+            hs_[hp_] = v; hp_ = (hp_ + 1) % 40;
             const uint64_t pat = imet54Header(), m = (1ULL << 40) - 1, hv = hdr_ & m;
-            if (__builtin_popcountll(hv ^ pat) <= 3) inv_ = 0;
-            else if (__builtin_popcountll(hv ^ (pat ^ m)) <= 3) inv_ = 1;
-            else return;
+            const int e0 = __builtin_popcountll(hv ^ pat), e1 = __builtin_popcountll(hv ^ (pat ^ m));
+            if (e0 <= 3) inv_ = 0;
+            else if (e1 <= 3) inv_ = 1;
+            else if (realign_ && std::min(e0, e1) <= 7) {
+                // 4.1, soft symbols: up to 7 wrong header symbols when the soft correlation with the header is still at least 60 % of a clean one
+                // (the 40 symbols are the start of a frame that the CRC checks anyway)
+                const int inv = e0 <= e1 ? 0 : 1;
+                float c = 0, a = 0;
+                for (int k = 0; k < 40; k++) {
+                    const float x = hs_[(hp_ + k) % 40];
+                    const int want = (int)((pat >> (39 - k)) & 1) ^ inv;
+                    c += want ? x : -x; a += std::fabs(x);
+                }
+                if (!(a > 0 && c >= 0.6f * a && c >= 0.6f * 40 * 0.5f)) return;
+                inv_ = inv;
+            } else return;
             run_ = true; bits_.clear();
             return;
         }
         bits_.push_back(inv_ ? -v : v);
-        if (bits_.size() == (size_t)(3 + 216) * 10 + 8) frame(out);
+        if (bits_.size() == (size_t)(3 + 216) * 10 + (realign_ ? 8 : 0)) frame(out);
     }
     static uint64_t imet54Header() {
         static const uint8_t b[4] = {0x00, 0xAA, 0x24, 0x24};
