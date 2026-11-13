@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/dsp/imgproc.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -186,7 +187,10 @@ bool latLonPixel(const SwathGeom& g, const TrackPoint& q, double& row, double& c
 // ---------------------------------------------------------------- projection
 
 bool projectSwath(const uint8_t* rgba, int cols, int lines, int lpt, const SwathGeom& g, int maxDim, MapImage& out) {
-    if (!rgba || cols <= 0 || lines <= 0 || lpt <= 0 || g.track.size() < 2 || maxDim < 16) return false;
+    if (!rgba || cols <= 0 || lines <= 0 || lpt <= 0 || g.track.size() < 2 || maxDim < 16) {
+        DIAG_DEBUG(678991, "The swath projection was given a %d by %d picture, %d lines per track point, %d track points and a limit of %d pixels, which cannot be projected, so no map is made.", cols, lines, lpt, (int)g.track.size(), maxDim);
+        return false;
+    }
     const int rows = (int)g.track.size();
     const double lon0 = g.track[0].lon;
     auto unwrap = [&](double lon) { return lon0 + std::remainder(lon - lon0, 360.0); };   // the pass may cross the antimeridian

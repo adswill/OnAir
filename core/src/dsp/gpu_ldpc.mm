@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/dsp/gpu_ldpc.h"
+#include "dect2/common/diag.h"
 
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
@@ -263,10 +264,10 @@ GpuLdpc::GpuLdpc() : p_(new Impl) {
         if (!d.dev) return;
         NSError* err = nil;
         id<MTLLibrary> lib = [d.dev newLibraryWithSource:kSource options:nil error:&err];
-        if (!lib) { NSLog(@"GpuLdpc: shader compile failed: %@", err); d.dev = nil; return; }
+        if (!lib) { DIAG(622612, "The Metal LDPC shader did not compile (%s), so the CPU LDPC decoder is used.", err ? err.localizedDescription.UTF8String : "no reason given"); d.dev = nil; return; }
         id<MTLFunction> fn = [lib newFunctionWithName:@"ldpc"];
         d.pso = [d.dev newComputePipelineStateWithFunction:fn error:&err];
-        if (!d.pso) { NSLog(@"GpuLdpc: pipeline failed: %@", err); d.dev = nil; return; }
+        if (!d.pso) { DIAG(803191, "The Metal LDPC pipeline could not be created (%s), so the CPU LDPC decoder is used.", err ? err.localizedDescription.UTF8String : "no reason given"); d.dev = nil; return; }
         d.queue = [d.dev newCommandQueue];
     }
 }
@@ -340,10 +341,10 @@ bool GpuLdpc::decodeQc(const QcLdpc& code, const float* llr, int nb, int maxIter
             MTLCompileOptions* opt = [MTLCompileOptions new];
             opt.fastMathEnabled = NO;   // the CPU decoder's arithmetic, operation for operation
             id<MTLLibrary> lib = [d.dev newLibraryWithSource:kQcSource options:opt error:&err];
-            if (!lib) { NSLog(@"GpuLdpc: QC shader compile failed: %@", err); return false; }
+            if (!lib) { DIAG(657398, "The Metal quasi-cyclic LDPC shader did not compile (%s), so DTMB LDPC decodes on the CPU.", err ? err.localizedDescription.UTF8String : "no reason given"); return false; }
             id<MTLFunction> fn = [lib newFunctionWithName:@"qc"];
             d.qcPso = [d.dev newComputePipelineStateWithFunction:fn error:&err];
-            if (!d.qcPso) { NSLog(@"GpuLdpc: QC pipeline failed: %@", err); return false; }
+            if (!d.qcPso) { DIAG(985024, "The Metal quasi-cyclic LDPC pipeline could not be created (%s), so DTMB LDPC decodes on the CPU.", err ? err.localizedDescription.UTF8String : "no reason given"); return false; }
         }
         if (!d.qcPso) return false;
         const size_t tgMem = (size_t)cols * z * 4;

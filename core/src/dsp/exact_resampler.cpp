@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/dsp/exact_resampler.h"
+#include "dect2/common/diag.h"
 #if defined(__GNUC__) && defined(__x86_64__) && !defined(DECT2_NO_SIMD)
 #include <immintrin.h>
 #define DECT2_ER_AVX2 1
@@ -95,7 +96,10 @@ std::vector<float> buildBank(double down, int half, int taps, int stride, int ph
 }
 
 bool ExactResampler::configure(double inRate, double outRate, int lobes) {
-    if (inRate <= 0 || outRate <= 0 || outRate > 4 * inRate) return false;
+    if (inRate <= 0 || outRate <= 0 || outRate > 4 * inRate) {
+        DIAG_DEBUG(232263, "The exact resampler was asked for %.3f Hz in and %.3f Hz out, which is not a positive rate or is more than 4 times up, so it stays unconfigured.", inRate, outRate);
+        return false;
+    }
     const double ratio = outRate / inRate;
     step_ = inRate / outRate;
     pass_ = std::fabs(ratio - 1.0) < 1e-12;

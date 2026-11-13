@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/dsp/gpu_viterbi.h"
+#include "dect2/common/diag.h"
 
 #import <Foundation/Foundation.h>
 #import <Metal/Metal.h>
@@ -107,12 +108,15 @@ GpuViterbi::GpuViterbi() : p_(new Impl) {
         if (!d.dev) return;
         NSError* err = nil;
         id<MTLLibrary> lib = [d.dev newLibraryWithSource:kSource options:nil error:&err];
-        if (!lib) { NSLog(@"GpuViterbi: shader compile failed: %@", err); d.dev = nil; return; }
+        if (!lib) { DIAG(543446, "The Metal Viterbi shader did not compile (%s), so the CPU Viterbi decoder is used.", err ? err.localizedDescription.UTF8String : "no reason given"); d.dev = nil; return; }
         id<MTLFunction> fn = [lib newFunctionWithName:@"viterbi"];
         d.pso = [d.dev newComputePipelineStateWithFunction:fn error:&err];
-        if (!d.pso) { NSLog(@"GpuViterbi: pipeline failed: %@", err); d.dev = nil; return; }
+        if (!d.pso) { DIAG(309719, "The Metal Viterbi pipeline could not be created (%s), so the CPU Viterbi decoder is used.", err ? err.localizedDescription.UTF8String : "no reason given"); d.dev = nil; return; }
         // the kernel's ballots assume a simdgroup of 32 threads
-        if (d.pso.threadExecutionWidth != 32 || d.pso.maxTotalThreadsPerThreadgroup < 32) { d.pso = nil; d.dev = nil; return; }
+        if (d.pso.threadExecutionWidth != 32 || d.pso.maxTotalThreadsPerThreadgroup < 32) {
+            DIAG_DEBUG(470707, "The Metal GPU runs %d threads per SIMD group, not the 32 the Viterbi kernel needs, so the CPU Viterbi decoder is used.", (int)d.pso.threadExecutionWidth);
+            d.pso = nil; d.dev = nil; return;
+        }
         d.queue = [d.dev newCommandQueue];
     }
 }
