@@ -670,8 +670,8 @@ struct ChanVoiceReceiver::Impl {
         if (s->fixed && ctr > 0) shift = plan()[(size_t)key].mhz * 1e6 - ctr;
         if (isMic()) {
             // a VHF microphone channel is 25 kHz: with the UHF filter (160 kHz occupied) a carrier 50 kHz away is inside the passband, beats with this one
-            // and the constant-envelope test calls both "not FM"; the VHF filter keeps ±25 kHz
-            const double occ = finder.cfg().stepHz < 50000.0 ? 50000.0 : 160000.0;
+            // and the constant-envelope test calls both "not FM"; the VHF filter keeps about ±16 kHz (measured: at 50 kHz occupied the neighbour still beat, cv above 0.35)
+            const double occ = finder.cfg().stepHz < 50000.0 ? 32000.0 : 160000.0;
             if (!s->ch.configure(rate, kChvMicRate, shift, occ)) return nullptr;
             s->mic = std::make_unique<MicRx>();
             const int id = c.id;
