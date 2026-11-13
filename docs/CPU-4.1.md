@@ -111,6 +111,12 @@ figures differ from the table above.
 | xb_probav / xb_metopd / xb_npp / xb_gcomw / xb_aqua | 15-45 | within +-5 % (runner noise) | | | |
 | dvbs (unchanged control) | 10 | 0.846 -> 0.842 | 0.331 -> 0.330 | 0.305 -> 0.306 | 0.248 -> 0.249 |
 
+**macOS (same run, macos-15).** This runner was not steady: modes whose code is unchanged on ARM (the X-band links, RDAS, HRPT, Meteor:
+popcount and floor compile to the same instructions there) read 10 - 43 % higher on this branch, which ran first. Read with that bias, the
+changes that act on ARM still come out lower: npr 0.835 -> 0.639, elrs 1.098 -> 0.829 (signal, all threads), dvbc2 on noise 1.809 ->
+0.919, gk2ahrit 0.964 -> 0.679 (with the GOES filter change that was taken back), sband 0.681 -> 0.651. A second macOS run is needed
+for figures to quote.
+
 The popcount, floor and DVB-C clone changes only act on x86 (ARM has the instructions and no clones); the others on both.
 
 ## Quality checks (GitHub quick.yml, this branch and integ-41 on the same runner, verbose output compared line by line)
