@@ -6,6 +6,7 @@
 // Negative or zero lengths are 0 bytes.
 #include "dect2/dab/dab_proto.h"
 #include "dect2/common/rs_abi.h"
+#include "dect2/common/diag.h"
 #include "dect2/rs/dab.h"
 #include <algorithm>
 #include <cstdio>
@@ -42,6 +43,7 @@ std::vector<FigRef> fibWalk(const uint8_t* fib, size_t n, int& used) {
     uint32_t u = 0;
     const size_t c = onair_dab_fib_walk(fib, n, v, 16, &u);
     used = (int)u;
+    if (c > 16) DIAG_DEBUG_EVERY(118388, 30.0, "A FIB holds %zu FIGs, more than the 16 that fit in 30 bytes, so only the first 16 are read.", c);
     std::vector<FigRef> out;
     for (size_t i = 0; i < c && i < 16; i++) out.push_back(FigRef{v[i].type, v[i].off, v[i].len});
     return out;
@@ -197,6 +199,8 @@ bool motParseDirectory(const uint8_t* d, size_t n, std::vector<DirEntry>& out) {
     std::vector<OnairDabDirEntry> v(n / 9 + 1);
     const size_t c = onair_dab_mot_parse_directory(d, n, v.data(), v.size());
     if (c == SIZE_MAX) return false;
+    if (c > v.size()) DIAG_DEBUG(147621, "A MOT directory of %zu bytes lists %zu entries, more than its size allows, so only %zu are read.", n, c, v.size());
+
     for (size_t i = 0; i < c && i < v.size(); i++) out.push_back(DirEntry{v[i].tid, v[i].off, v[i].size});
     return true;
 }

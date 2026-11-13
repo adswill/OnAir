@@ -13,6 +13,7 @@
 #include "dect2/dab/dab_proto.h"
 #include "dect2/dsp/resampler.h"
 #include "dect2/channels/channel_find.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cmath>
 #include <complex>
@@ -54,7 +55,15 @@ inline float maxStar(float a, float b) {
     return m + gMaxStar.v[(int)(d * 8.f)];
 }
 
-bool baselineMode() { static const bool b = std::getenv("DECT2_DAB_BASELINE") != nullptr; return b; }
+bool baselineMode() {
+    static const bool b = [] {
+        const bool on = std::getenv("DECT2_DAB_BASELINE") != nullptr;
+        if (on) DIAG_DEBUG(482512, "DECT2_DAB_BASELINE is set, so the DAB receiver decodes without its channel estimate and the other decoding changes since 0.3.0.");
+        return on;
+    }();
+    return b;
+}
+
 
 uint32_t getBits(const uint8_t* d, int pos, int n) { return (uint32_t)bits::getPackedMsb(d, (size_t)pos, n); }
 } // namespace
@@ -147,7 +156,10 @@ struct DabReceiver::Impl {
         // one CIF of the sub-channel (src nullptr: erased); out(bytes, n, erased) gets every logical frame decoded, erased when most of its soft bits were
         template <class F> bool cif(const DabSubchannel& sub, const int8_t* src, F&& out) {
             int n, br, info, sz, lv;
-            if (sub.eep ? !eepGeometry(sub.size, sub.option, sub.level, n, br, info) : !uepGeometry(sub.uepIndex, sz, br, lv, info)) return false;
+            if (sub.eep ? !eepGeometry(sub.size, sub.option, sub.level, n, br, info) : !uepGeometry(sub.uepIndex, sz, br, lv, info)) {
+                DIAG_DEBUG_EVERY(545688, 10.0, "Sub-channel %d (%d CUs, %s) matches no EEP or UEP profile of EN 300 401, so its CIFs are not decoded.", sub.id, sub.size, sub.eep ? "EEP" : "UEP");
+                return false;
+            }
             const int bits = sub.size * kCuBits;
             std::vector<int8_t>& h = hist[count % 16];
             if (src) h.assign(src, src + bits);
@@ -170,7 +182,10 @@ struct DabReceiver::Impl {
                 zeros += v == 0;
             }
             if (count < 16 && zeros * 8 > bits * 3) return true;   // more than 3/8 missing at the start: not worth trying
-            if (sub.eep ? !eepDepuncture(one.data(), sub.size, sub.option, sub.level, mother.data()) : !uepDepuncture(one.data(), sub.uepIndex, mother.data())) return false;
+            if (sub.eep ? !eepDepuncture(one.data(), sub.size, sub.option, sub.level, mother.data()) : !uepDepuncture(one.data(), sub.uepIndex, mother.data())) {
+                DIAG_DEBUG_EVERY(306027, 10.0, "The puncturing of sub-channel %d does not fill its %d CUs, so this logical frame is skipped.", sub.id, sub.size);
+                return false;
+            }
             viterbiDecode(mother.data(), info, dec.data());
             descramble(dec.data(), info);
             for (int i = 0; i < info / 8; i++) { uint8_t v = 0; for (int b = 0; b < 8; b++) v = (uint8_t)((v << 1) | dec[(size_t)i * 8 + (size_t)b]); bytes[(size_t)i] = v; }
@@ -222,7 +237,12 @@ struct DabReceiver::Impl {
     // FFT of a window of kTu samples starting at `abs`, derotated by `cfoBins` (carrier offset in bins)
     void windowFft(uint64_t abs, double cfoBins, std::vector<cf32>& out) {
         out.resize(kTu);
-        if (abs < base || abs - base + (uint64_t)kTu > (uint64_t)buf.size()) { std::fill(out.begin(), out.end(), cf32(0, 0)); return; }   // never read outside the buffer
+        if (abs < base || abs - base + (uint64_t)kTu > (uint64_t)buf.size()) {   // never read outside the buffer
+            DIAG_DEBUG_EVERY(269159, 10.0, "A DAB demodulation window at sample %llu lies outside the %zu samples buffered from %llu, so it is read as silence.",
+                             (unsigned long long)abs, buf.size(), (unsigned long long)base);
+            std::fill(out.begin(), out.end(), cf32(0, 0));
+            return;
+        }
         const cf32* s = at(abs);
         double x = cfoBins * (double)abs / kTu;
         x -= std::floor(x);
@@ -271,7 +291,10 @@ struct DabReceiver::Impl {
     // Mean sample power over the first `symbols` symbols of the frame whose useful part starts at U (every 7th sample)
     double framePower(uint64_t U, int symbols = kSymbols - 1) const {
         const uint64_t a = U >= (uint64_t)kTg ? U - (uint64_t)kTg : 0, b = U + (uint64_t)symbols * kTs - (uint64_t)kTg;
-        if (a < base || b > base + buf.size()) return 0;
+        if (a < base || b > base + buf.size()) {
+            DIAG_DEBUG_EVERY(777902, 10.0, "The power of the DAB frame at sample %llu needs samples outside the buffer, so it counts as zero for the fade check.", (unsigned long long)U);
+            return 0;
+        }
         double s = 0; size_t n = 0;
         for (uint64_t i = a; i < b; i += 7) { s += std::norm(buf[(size_t)(i - base)]); n++; }
         return n ? s / (double)n : 0;
@@ -384,6 +407,8 @@ struct DabReceiver::Impl {
             trim(base + buf.size() - (size_t)kFrame);
             searchFails++;
             searchNext = base + buf.size() + (uint64_t)(kFrame / 2) * (uint64_t)std::min(searchFails, 6);   // half a frame, up to three
+            DIAG_DEBUG_EVERY(685691, 5.0, "The DAB sync search found a null symbol but no phase reference (peak %.1f, needs 25; %d tries), so it tries the %s spectrum next.",
+                             bestPk, searchFails, mirror ? "mirrored" : "normal");
             return false;
         }
         const uint64_t U = base + (uint64_t)(bestP + bestIdx);
@@ -395,6 +420,8 @@ struct DabReceiver::Impl {
         searchFails = 0; searchNext = 0;
         if (quick) relocks++;
         else tii.reset();   // a new lock: which frames carry TII may have changed sides
+        DIAG_DEBUG(291291, "The DAB receiver %s the ensemble at a carrier offset of %d kHz (phase reference peak %.1f%s), so frames are decoded from here.",
+                   quick ? "found again" : "locked to", bestShift, bestPk, mirror ? ", mirrored spectrum" : "");
         quick = false; quickTries = 0;
         cirPeak = bestPk;
         syncSample = U;
@@ -512,7 +539,12 @@ struct DabReceiver::Impl {
     bool processFrame() {
         const uint64_t needEnd = nextU + (uint64_t)kSymbols * kTs + kTu + 256;
         if (base + buf.size() < needEnd) return false;
-        if (nextU < base + (uint64_t)kTg + 64) { state = 0; return true; }   // the cyclic prefix of the first symbol is read from U - kTg: the samples must still be buffered
+        if (nextU < base + (uint64_t)kTg + 64) {   // the cyclic prefix of the first symbol is read from U - kTg: the samples must still be buffered
+            DIAG_DEBUG(839867, "The next DAB frame at sample %llu starts before the buffered samples (from %llu), so the receiver searches for the sync again.",
+                       (unsigned long long)nextU, (unsigned long long)base);
+            state = 0;
+            return true;
+        }
         uint64_t U = nextU;
         std::vector<cf32> R, tmp;
         const bool wasFresh = fresh;
@@ -531,6 +563,8 @@ struct DabReceiver::Impl {
             }
             else {
                 missed++;
+                DIAG_DEBUG_EVERY(903747, 5.0, "The phase reference of DAB frame %llu is weak (peak %.1f, needs 12), so the timing and carrier offset are held (%d frames so far).",
+                                 (unsigned long long)framesDone, cirPeak, missed);
                 // A fade (the frame far weaker than the good ones) keeps the timing and the carrier offset and is decoded: its soft bits come out
                 // weak and the de-interleaver keeps going. A frame of normal strength without the phase reference where it should be means lost
                 // samples or a jump: it is not decoded (its CIFs go in as erasures) and the sync is found again at once, near the offset known.
@@ -539,6 +573,8 @@ struct DabReceiver::Impl {
                 const bool fade = powRef > 0 && pw < 0.3 * powRef;
                 if (!fade || missed >= kCoast) {
                     state = 0; quick = true; quickTries = 0; syncLosses++;
+                    DIAG_DEBUG(864245, "The DAB sync was lost after %d frames without the phase reference (%s, peak %.1f), so a quick search near %.0f kHz starts.",
+                               missed, fade ? "a fade longer than the coast" : "the frame was at full power", cirPeak, cfo);
                     trim(U > (uint64_t)kFrame / 2 + 2 * kTs ? U - (uint64_t)kFrame / 2 - 2 * kTs : 0);   // the search starts before the frame expected
                     publish();
                     return true;
@@ -576,6 +612,8 @@ struct DabReceiver::Impl {
                     const float pk = cirOf(Rc, 0, ix, tc);
                     if (pk > bestPk) { bestPk = pk; bestC = nc + k; }
                 }
+                if (bestC != nc)
+                    DIAG_DEBUG(222873, "The first DAB frame after the lock moved the carrier offset by one carrier spacing to %.3f kHz, where the phase reference is sharpest.", bestC);
                 nc = bestC;
             }
             cfo = nc;
@@ -700,6 +738,8 @@ struct DabReceiver::Impl {
                 if (c >= 5000 - 64) dupFrame = true;                 // the count went back: this frame was decoded already
                 else if (c < 2500) { gapCifs = c; dupFrame = false; }
             }
+            if (dupFrame) DIAG_DEBUG(172455, "The DAB frame at CIF count %d was decoded before (a re-acquisition on the same frame), so its MSC is not decoded twice.", frameCif);
+            else if (gapCifs > 0) DIAG_DEBUG_EVERY(122718, 5.0, "%d CIFs were lost before the DAB frame at CIF count %d, so they go into the time de-interleaver as erasures.", gapCifs, frameCif);
         }
         if (!dupFrame) {
             decodeMsc();
@@ -722,7 +762,10 @@ struct DabReceiver::Impl {
         for (int cw = 0; cw < 4; cw++) {
             int8_t mother[3096];
             uint8_t bits[768];
-            if (!ficDepuncture(&ficSoft[(size_t)cw * 2304], mother)) continue;
+            if (!ficDepuncture(&ficSoft[(size_t)cw * 2304], mother)) {
+                DIAG_DEBUG_EVERY(414901, 10.0, "The FIC code word %d did not depuncture into 3096 mother code bits, so its three FIBs are skipped.", cw);
+                continue;
+            }
             viterbiDecode(mother, 768, bits);
             descramble(bits, 768);
             uint8_t by[96];
@@ -737,6 +780,8 @@ struct DabReceiver::Impl {
         ficFrames++;
         if (framesDone % 64 == 0) pruneFigs();
         ficRecent = ok;
+        if (ok < 12) DIAG_DEBUG_EVERY(766092, 10.0, "%llu of %llu FIBs failed their CRC since the lock (%d of 12 good in the last frame), so their FIGs were dropped.",
+                                      (unsigned long long)fibBad, (unsigned long long)(fibOk + fibBad), ok);
         ens.valid = ens.eid != 0 && !ens.services.empty();
     }
 
@@ -759,6 +804,7 @@ struct DabReceiver::Impl {
         if (it == figs.end()) {
             r.count = 1; r.firstFrame = r.lastFrame = framesDone; r.lastFib = slot;
             if (figs.size() < 4000) figs.emplace(std::move(key), std::move(r));
+            else DIAG_DEBUG_EVERY(494456, 60.0, "The FIC analysis holds 4000 distinct FIGs already, so FIG %d/%d is counted but its content is not kept.", type, r.ext);
             return;
         }
         DabFigRecord& e = it->second;
@@ -768,9 +814,9 @@ struct DabReceiver::Impl {
 
     // Instances not heard for 5 minutes are gone (a reconfiguration, an ensemble that changed)
     void pruneFigs() {
-        const uint64_t keep = 3125;   // frames of 96 ms
+        constexpr uint64_t kFigKeepFrames = 3125;   // 300 s / 0.096 s (one transmission frame of mode I) = 3125 frames
         for (auto it = figs.begin(); it != figs.end();) {
-            if (framesDone > it->second.lastFrame + keep) it = figs.erase(it);
+            if (framesDone > it->second.lastFrame + kFigKeepFrames) it = figs.erase(it);
             else ++it;
         }
     }
@@ -803,7 +849,10 @@ struct DabReceiver::Impl {
             int eid;
             if (dabp::fig0Eid(d, n, eid)) {
                 // a different ensemble id on the same tuning (a new mux): drop what the previous one told us, the sub-channel ids are only valid per ensemble
-                if (ens.eid != 0 && ens.eid != (uint16_t)eid) { ens = DabEnsemble(); ptyInfo.clear(); annSup.clear(); annSw.clear(); fig2Segs.clear(); fig2Done.clear(); spiDec.reset(); spiDec.clearStore(); spiDirty = true; }
+                if (ens.eid != 0 && ens.eid != (uint16_t)eid) {
+                    DIAG_DEBUG(558659, "The ensemble identifier changed from 0x%04X to 0x%04X on the same tuning, so the service tables start over.", (unsigned)ens.eid, (unsigned)eid);
+                    ens = DabEnsemble(); ptyInfo.clear(); annSup.clear(); annSw.clear(); fig2Segs.clear(); fig2Done.clear(); spiDec.reset(); spiDec.clearStore(); spiDirty = true;
+                }
                 ens.eid = (uint16_t)eid;
             }
         } else if (ext == 1) {
@@ -823,7 +872,11 @@ struct DabReceiver::Impl {
                     s.uepIndex = e.uepIndex;
                     int lv, info;
                     if (!e.uepTable && uepGeometry(s.uepIndex, s.size, s.bitrate, lv, info)) s.level = lv - 1;
-                    else { s.size = 0; s.bitrate = 0; }   // table switch 1 is not defined
+                    else {   // table switch 1 is not defined
+                        s.size = 0; s.bitrate = 0;
+                        DIAG_DEBUG_EVERY(831887, 60.0, "Sub-channel %d uses UEP table %s index %d, which EN 300 401 does not define, so it is listed without a size and cannot play.",
+                                         s.id, e.uepTable ? "switch 1" : "switch 0", s.uepIndex);
+                    }
                 }
                 ens.subs[s.id] = s;
             }
@@ -913,12 +966,17 @@ struct DabReceiver::Impl {
         } else if (ext == 10) {
             dabp::Fig010Time t;
             if (dabp::fig0Time(d, n, t) && t.mjd > 40587) ens.utc = t.utc;
+            else DIAG_DEBUG_EVERY(235693, 60.0, "The FIG 0/10 date and time (%zu bytes) did not parse or is before 1970, so the ensemble time is not updated.", n);
+
         }
     }
 
     void parseFig1(const uint8_t* d, int len) {
         dabp::Fig1Label l;
-        if (!dabp::fig1(d, (size_t)len, l)) return;
+        if (!dabp::fig1(d, (size_t)len, l)) {
+            DIAG_DEBUG_EVERY(212346, 30.0, "A FIG 1 label of %d bytes did not parse, so the label it carries is not updated.", len);
+            return;
+        }
         auto done = [&](int e, uint32_t id) { return fig2Done.count(std::to_string(e) + ":" + std::to_string(id)) > 0; };   // a FIG 2 label of it is known: that one is kept
         if (l.ext == 0) { if (!done(0, 0)) ens.label = labelText(l.charset, d + l.off, 16); }
         else if (l.ext == 1 || l.ext == 5) {   // programme service label (16 bit SId), data service label (32 bit SId, e.g. DMB television)
@@ -934,7 +992,10 @@ struct DabReceiver::Impl {
     // FIG 2: labels in UTF-8 or UCS-2 of up to 8 segments (EN 300 401 8.1.13, TS 103 176)
     void parseFig2(const uint8_t* d, int len) {
         dabp::Fig2Seg g;
-        if (!dabp::fig2(d, (size_t)len, g)) return;
+        if (!dabp::fig2(d, (size_t)len, g)) {
+            DIAG_DEBUG_EVERY(277089, 30.0, "A FIG 2 extended label segment of %d bytes did not parse, so the extended label waits for its next repetition.", len);
+            return;
+        }
         const int ext = g.ext, seg = g.seg;
         const uint32_t sid = g.sid;
         const int scids = g.scids;
@@ -947,7 +1008,10 @@ struct DabReceiver::Impl {
         if (seg == 0) {
             L.ucs2 = g.ucs2;
             L.total = g.total;
-            if (!g.valid) return;
+            if (!g.valid) {
+                DIAG_DEBUG_EVERY(367094, 30.0, "The first segment of FIG 2 label %s announces %d segments in an encoding OnAir does not read, so the FIG 1 label stays.", key.c_str(), g.total);
+                return;
+            }
         }
         L.segs[seg].assign(d + g.textOff, d + g.textOff + g.textLen);
         if (!L.total || (int)L.segs.size() != L.total) return;
@@ -958,7 +1022,7 @@ struct DabReceiver::Impl {
             all.insert(all.end(), it->second.begin(), it->second.end());
         }
         const std::string text = text::clean(L.ucs2 ? text::ucs2be(all.data(), all.size()) : std::string(all.begin(), all.end()));
-        if (text.empty()) return;
+        if (text.empty()) { DIAG_DEBUG_EVERY(730767, 30.0, "The extended label %s is empty after cleaning, so the FIG 1 label stays in use.", key.c_str()); return; }
         if (ext == 0) ens.label = text;
         else if (ext == 1 || ext == 5) { DabService& sv = ens.services[sid]; sv.sid = sid; sv.label = text; }
         else { const auto it = ens.services.find(sid); if (it == ens.services.end()) return; it->second.compLabels[scids] = text; }
@@ -982,6 +1046,9 @@ struct DabReceiver::Impl {
         }
         sel = selReq;
         selDmb = isDmb;
+        DIAG_DEBUG(109615, "Sub-channel %d is selected as %s at %d kbit/s (start CU %d, %d CUs)%s.", sel,
+                   isDmb ? "DMB video" : selPktAddr >= 0 ? "packet data" : plus ? "DAB+ audio" : "DAB audio", selSub.bitrate, selSub.start, selSub.size,
+                   selCa ? ", scrambled with conditional access, so OnAir does not play it" : "");
         mainDec.reset();
         dmb.reset();
         demux.setAddress(selPktAddr);
@@ -1020,7 +1087,10 @@ struct DabReceiver::Impl {
                 spiSub = it->second; spiDecI.reset();
             }
         }
-        if (spiSub.size <= 0 || spiSub.start + spiSub.size > kCifCu) return;
+        if (spiSub.size <= 0 || spiSub.start + spiSub.size > kCifCu) {
+            DIAG_DEBUG_EVERY(747677, 30.0, "The programme guide sub-channel %d (start CU %d, %d CUs) does not fit in the CIF, so the guide is not decoded.", spiSel, spiSub.start, spiSub.size);
+            return;
+        }
         feedCifs(spiDecI, spiSub, [this](const uint8_t* bytes, int n, bool) {
             if (tap) tap(spiSel, bytes, n);
             auto sink = [this](const uint8_t* g, size_t m) { spiDec.dataGroup(g, m); };
@@ -1041,6 +1111,7 @@ struct DabReceiver::Impl {
                 if (it != ens.subs.end()) {
                     const DabSubchannel& n = it->second;
                     if (n.start != selSub.start || n.size != selSub.size || n.eep != selSub.eep || n.option != selSub.option || n.level != selSub.level || n.uepIndex != selSub.uepIndex) {
+                        DIAG_DEBUG(634914, "A reconfiguration moved sub-channel %d to start CU %d with %d CUs, so its de-interleaver starts over.", sel, n.start, n.size);
                         selSub = n;
                         mainDec.reset();
                         audio.flushSync();   // the superframes start over with the de-interleaver
@@ -1053,8 +1124,14 @@ struct DabReceiver::Impl {
             std::lock_guard<std::mutex> lk(mu);
             for (const auto& kv : ens.services) for (const auto& c : kv.second.comps) if (c.tmid == 0 && c.subId == sel) selCa = c.ca;
         }
-        if (selSub.size <= 0 || selSub.start + selSub.size > kCifCu) return;
-        if (gapCifs > 20) audio.flushSync();   // the superframe phase is lost with them
+        if (selSub.size <= 0 || selSub.start + selSub.size > kCifCu) {
+            DIAG_DEBUG_EVERY(859645, 30.0, "The selected sub-channel %d (start CU %d, %d CUs) does not fit in the CIF of 864 CUs, so nothing of it is decoded.", sel, selSub.start, selSub.size);
+            return;
+        }
+        if (gapCifs > 20) {   // the superframe phase is lost with them
+            DIAG_DEBUG(961614, "%d CIFs were lost before this frame, more than the time interleaver bridges, so the decoding of sub-channel %d starts over.", gapCifs, sel);
+            audio.flushSync();
+        }
         erasedCifs += (uint64_t)std::min(gapCifs, 20);
         feedCifs(mainDec, selSub, [this](const uint8_t* bytes, int n, bool erased) {
             if (tap) tap(sel, bytes, n);
@@ -1134,6 +1211,7 @@ void DabReceiver::configure(double inputRateHz) {
     I.inRate = inputRateHz;
     I.resample = std::fabs(inputRateHz - kRate) > 1.0;
     if (I.resample) I.rs.configure(inputRateHz, kRate, nullptr, 1.6e6);
+    DIAG_DEBUG(173344, "The DAB receiver takes %.0f samples per second%s.", inputRateHz, I.resample ? " and resamples them to 2048000 for mode I" : ", the rate of mode I, as they are");
     // an ensemble beyond the search's +-80 kHz is moved to the middle when there is no lock after 0.5 s (the lock takes 0.2 s, p90, down to 3 dB)
     I.cc.configure(inputRateHz, 1.536e6, 60e3, 0.5);
     I.reset();
@@ -1146,9 +1224,16 @@ void DabReceiver::feed(const cf32* x, size_t n) {
     // a channel away from the middle of the sample band (beyond the +-80 kHz of the search) is moved there first
     I.cin.assign(x, x + n);
     // samples that are not numbers (a broken driver or file) are zeroed first: one would spread through the filters, the FFTs and the channel estimate
-    for (cf32& v : I.cin) if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) { v = cf32(0, 0); I.impulses++; }
+    size_t nonFinite = 0;
+    for (cf32& v : I.cin) if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) { v = cf32(0, 0); I.impulses++; nonFinite++; }
+    if (nonFinite) DIAG_DEBUG_EVERY(253006, 30.0, "%zu of %zu input samples were not numbers and were set to zero: the radio driver or the file delivers broken samples.", nonFinite, n);
     I.cc.process(I.cin.data(), n, I.state == 2 && I.fibOk > 0);
-    if (I.cc.takeChanged()) { I.buf.clear(); I.base = 0; I.state = 0; I.searchNext = 0; I.searchFails = 0; I.quietOn = false; I.quietSamples = 0; I.quietPub = 0; I.rs.reset(); }
+    if (I.cc.takeChanged()) {
+        DIAG_DEBUG(296816, "The DAB ensemble lies %.1f kHz from the middle of the sample band, beyond the sync search, so it is moved there and the search starts over.",
+                   I.cc.offsetHz() / 1000.0);
+        I.buf.clear(); I.base = 0; I.state = 0; I.searchNext = 0; I.searchFails = 0; I.quietOn = false; I.quietSamples = 0; I.quietPub = 0; I.rs.reset();
+    }
+
     x = I.cin.data();
     const size_t from = I.buf.size();
     if (I.resample) { I.rsOut.clear(); I.rs.process(x, n, I.rsOut); I.buf.insert(I.buf.end(), I.rsOut.begin(), I.rsOut.end()); }

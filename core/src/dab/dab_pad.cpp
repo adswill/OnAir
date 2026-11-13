@@ -7,6 +7,7 @@
 #include "dect2/dab/dab_proto.h"
 #include "dect2/common/png.h"
 #include "dect2/common/text_charset.h"
+#include "dect2/common/diag.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
@@ -22,7 +23,10 @@ bool decodeSlideImage(const uint8_t* data, size_t n, int subtype, int& w, int& h
     if (subtype == 3) return decodePng(data, n, w, h, rgba);
     const AVCodecID id = subtype == 1 ? AV_CODEC_ID_MJPEG : subtype == 0 ? AV_CODEC_ID_GIF : subtype == 2 ? AV_CODEC_ID_BMP : AV_CODEC_ID_NONE;
     const AVCodec* codec = id == AV_CODEC_ID_NONE ? nullptr : avcodec_find_decoder(id);
-    if (!codec) return false;
+    if (!codec) {
+        DIAG_DEBUG(430656, "No picture decoder is available for MOT image subtype %d (%s), so the picture cannot be shown.", subtype, id == AV_CODEC_ID_NONE ? "not a picture type" : "missing in FFmpeg");
+        return false;
+    }
     AVCodecContext* ctx = avcodec_alloc_context3(codec);
     AVPacket* pkt = av_packet_alloc();
     AVFrame* fr = av_frame_alloc();
@@ -91,7 +95,10 @@ void DabPadDecoder::subfield(int type, const uint8_t* d, int n) {
         int len = groupLen_;
         const int r = dabp::padDgLength(d, n < 0 ? 0 : (size_t)n, len);
         if (r == 0) return;
-        if (r == 1) { groupLen_ = 0; collecting_ = false; return; }
+        if (r == 1) {
+            DIAG_DEBUG_EVERY(825776, 30.0, "A PAD data group length indicator failed its CRC, so the data group that follows is skipped.");
+            groupLen_ = 0; collecting_ = false; return;
+        }
         groupLen_ = len;
         collecting_ = false;
         return;
@@ -161,7 +168,10 @@ void DabPadDecoder::labelSegment(const uint8_t* d, int n) {
 void DabPadDecoder::dlPlusCommand(int toggle, const uint8_t* d, int n) {
     bool running = false;
     std::vector<dabp::DlpTag> tags;
-    if (!dabp::dlPlusTags(d, n < 0 ? 0 : (size_t)n, running, tags)) return;
+    if (!dabp::dlPlusTags(d, n < 0 ? 0 : (size_t)n, running, tags)) {
+        DIAG_DEBUG_EVERY(928905, 30.0, "A DL Plus command of %d bytes did not parse, so the tags of the dynamic label stay as they were.", n);
+        return;
+    }
     dlpRaw_.clear();
     for (const dabp::DlpTag& t : tags) dlpRaw_.push_back({t.type, t.start, t.len});
     dlpRunning_ = running;
@@ -182,7 +192,7 @@ void DabPadDecoder::resolveDlPlus() {
 }
 
 void DabPadDecoder::dataGroup(const uint8_t* d, int n) {
-    if (n < 3) return;
+    if (n < 3) { DIAG_DEBUG_EVERY(999695, 30.0, "A PAD data group of %d bytes is shorter than its 3 byte header, so it is dropped.", n); return; }
     const bool crc = d[0] & 0x40;
     const int type = d[0] & 0x0F;
     if (sink_ && (type == 0 || type == 6)) sink_(d, (size_t)n);
@@ -203,7 +213,10 @@ void DabPadDecoder::motObject(const MotObject& m) {
         return;
     }
     DabSlide s;
-    if (!decodeSlideImage(b.data(), b.size(), subtype, s.w, s.h, s.rgba)) return;
+    if (!decodeSlideImage(b.data(), b.size(), subtype, s.w, s.h, s.rgba)) {
+        DIAG_DEBUG(175162, "The slide show picture '%s' (%zu bytes, MOT subtype %d) did not decode, so the previous slide stays on screen.", name.c_str(), b.size(), subtype);
+        return;
+    }
     s.name = name;
     std::string cat = category;
     for (char& c : cat) c = (char)std::tolower((unsigned char)c);
@@ -297,7 +310,11 @@ void DabPadDecoder::spi(const std::string& xml) {
     for (const SpiLogo& f : found) {
         if (std::none_of(spiLogos_.begin(), spiLogos_.end(), [&](const SpiLogo& l) { return l.sid == f.sid && l.type == f.type && l.url == f.url; })) spiLogos_.push_back(f);
     }
-    if (spiLogos_.size() > 400) spiLogos_.erase(spiLogos_.begin(), spiLogos_.end() - 400);
+    if (spiLogos_.size() > 400) {
+        DIAG_DEBUG(420451, "The SPI lists %zu logos, more than the 400 kept, so the oldest entries are forgotten.", spiLogos_.size());
+        spiLogos_.erase(spiLogos_.begin(), spiLogos_.end() - 400);
+    }
+
     resolveLogos();
 }
 

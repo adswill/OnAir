@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstring>
 #include "dect2/common/crc.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 namespace dab {
@@ -139,7 +140,13 @@ bool eepBlocks(int option, int level, int n, std::vector<Block>& out) {
     if (option == 0) {
         switch (level) {
         case 0: out = {{6 * n - 3, 24}, {3, 23}}; break;
-        case 1: if (n < 2) return false; out = {{2 * n - 3, 14}, {4 * n + 3, 13}}; break;
+        case 1:
+            if (n < 2) {
+                DIAG_DEBUG_EVERY(864017, 30.0, "EEP protection 2-A needs a sub-channel of at least 2 x 8 CUs, so a size of %d x 8 CUs has no puncturing.", n);
+                return false;
+            }
+            out = {{2 * n - 3, 14}, {4 * n + 3, 13}};
+            break;
         case 2: out = {{6 * n - 3, 8}, {3, 7}}; break;
         default: out = {{4 * n - 3, 3}, {2 * n + 3, 2}}; break;
         }
@@ -242,7 +249,10 @@ bool eepGeometry(int size, int option, int level, int& n, int& bitrate, int& inf
     static const int unitA[4] = {12, 8, 6, 4}, unitB[4] = {27, 21, 18, 15};
     if (level < 0 || level > 3 || (option != 0 && option != 1)) return false;
     const int unit = option == 0 ? unitA[level] : unitB[level];
-    if (size <= 0 || size % unit) return false;
+    if (size <= 0 || size % unit) {
+        DIAG_DEBUG_EVERY(730133, 30.0, "An EEP sub-channel of %d CUs is not a multiple of the %d CU unit of protection %d-%c, so it has no bit rate.", size, unit, level + 1, option ? 'B' : 'A');
+        return false;
+    }
     n = size / unit;
     std::vector<Block> b;
     if (!eepBlocks(option, level, n, b)) return false;
@@ -311,8 +321,12 @@ std::vector<Block> uepBlocks(const UepRow& r) {
 } // namespace
 
 bool uepGeometry(int index, int& size, int& bitrate, int& level, int& infoBits) {
-    if (index < 0 || index >= 64) return false;
+    if (index < 0 || index >= 64) {
+        DIAG_DEBUG_EVERY(330994, 30.0, "UEP table index %d is beyond the 64 rows of EN 300 401 table 6, so the sub-channel has no size.", index);
+        return false;
+    }
     const UepRow& r = kUep[index];
+
     size = r.size; bitrate = r.bitrate; level = r.level; infoBits = r.bitrate * 24;
     return true;
 }

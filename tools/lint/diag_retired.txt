@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+#
+# Diagnostic codes that left their place on purpose (docs/DIAGNOSTICS.md, "Codes are permanent").
+# tools/lint/diag_check.py fails when a committed code disappears or turns up in another file, unless it is listed here.
+#
+#   <code> retired: <why>      the diagnostic is gone; the code may never be used again
+#   <code> moved: <why>        the diagnostic moved to another file with its code (the same condition, reworded or not)
+#
+# Example:
+#   482917 retired: the recording dialog no longer opens files itself (4.2)

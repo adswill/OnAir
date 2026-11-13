@@ -3,6 +3,7 @@
 
 // FM / DAB played list: see played_log.h.
 #include "dect2/dab/played_log.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
@@ -118,17 +119,20 @@ std::vector<PlayedItem> playedFromCsv(const std::string& text) {
     std::vector<PlayedItem> v;
     std::stringstream ss(text);
     std::string l;
+    size_t skipped = 0;
     while (std::getline(ss, l)) {
         if (!l.empty() && l.back() == '\r') l.pop_back();
         const auto f = csvSplit(l);
-        if (f.size() < 6) continue;
+        if (f.size() < 6) { skipped += !l.empty(); continue; }
         PlayedItem p;
         p.utc = p.lastUtc = fromIso(f[0]);
-        if (!p.utc) continue;
+        if (!p.utc) { skipped += f[0] != "utc"; continue; }   // the header line is not a skipped line
         p.source = f[1]; p.station = f[2]; p.freqMhz = std::atof(f[3].c_str()); p.artist = f[4]; p.title = f[5];
         v.push_back(p);
     }
+    if (skipped) DIAG_DEBUG(484283, "%zu lines of the played list CSV have fewer than 6 fields or no time, so they were skipped.", skipped);
     return v;
+
 }
 
 }  // namespace dect2

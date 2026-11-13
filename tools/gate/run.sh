@@ -31,7 +31,7 @@ workflow_yaml() {
     fi
     python3 -c "import sys,yaml;[yaml.safe_load(open(f)) for f in sys.argv[1:]]" .github/workflows/*.yml .github/actions/*/action.yml
 }
-python_syntax() { python3 -m py_compile tools/*.py tools/gate/*.py android/tools/*.py; }
+python_syntax() { python3 -m py_compile tools/*.py tools/gate/*.py tools/lint/*.py android/tools/*.py; }
 credits() {
     python3 tools/gen_credits.py > /dev/null || return 1
     git diff --exit-code --stat -- THIRD_PARTY.md app/panels/credits_data.h docs/credits-for-website.md || { echo "credits out of date: run python3 tools/gen_credits.py and commit"; return 1; }
@@ -62,6 +62,8 @@ spdx_headers() {   # warns only, so a merged branch with new files does not stop
     echo "warning only (set ONAIR_SPDX_STRICT=1 to fail)"; return 0
 }
 step "SPDX headers on OnAir source files (tools/release/add_spdx.py --check)" spdx_headers
+step "diagnostic code rules (tools/lint/diag_check.py --self-test)" python3 tools/lint/diag_check.py --self-test
+step "diagnostic codes: numbers, unique codes and messages, permanence (tools/lint/diag_check.py)" python3 tools/lint/diag_check.py
 
 # The real tests that need no receiver library: built with the same sources and defines as CMakeLists.txt.
 if [ $COMPILE = 1 ]; then

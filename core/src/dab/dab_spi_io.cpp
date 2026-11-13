@@ -3,6 +3,7 @@
 
 // DAB SPI: the data group -> store decoder with the acquisition progress, the XMLTV exporter and the per-ensemble cache. See dab_spi.h.
 #include "dect2/dab/dab_spi.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -32,7 +33,7 @@ void DabSpiDecoder::clearStore() {
 }
 
 void DabSpiDecoder::dataGroup(const uint8_t* d, size_t n) {
-    if (n > 65535) return;
+    if (n > 65535) { DIAG_DEBUG_EVERY(413669, 60.0, "An SPI data group of %zu bytes is longer than the 65535 a data group can hold, so it is dropped.", n); return; }
     {
         std::lock_guard<std::mutex> lk(mu_);
         if (resetReq_) { mot_.reset(); resetReq_ = false; }
@@ -64,6 +65,8 @@ void DabSpiDecoder::note(const MotObject& o) {
     }
     if (o.contentType == 2) {   // a picture: a logo or programme image the SPI points to by its ContentName
         std::lock_guard<std::mutex> lk(mu_);
+        if (o.name.empty() || o.body.size() >= (2u << 20))
+            DIAG_DEBUG(172149, "The SPI picture '%s' of %zu bytes has no name or is over 2 MB, so the guide does not keep it.", o.name.c_str(), o.body.size());
         if (!o.name.empty() && o.body.size() < (2u << 20)) {
             auto it = images_.find(o.name);
             if (it != images_.end()) { imageBytes_ -= it->second.data.size(); }
@@ -157,7 +160,12 @@ std::string SpiStore::toXmltv(int64_t from, int64_t to) const {
         if (to > from && (e.start >= to || end < from)) continue;
         if (to <= from && from > 0 && end < from) continue;
         auto pit = s.programmes.find(e.progKey);
-        if (pit == s.programmes.end()) continue;
+        if (pit == s.programmes.end()) {
+            DIAG_DEBUG_EVERY(903286, 60.0, "A guide event of service %04X at %lld refers to programme %s, which is not stored, so the XMLTV export leaves it out.",
+                             (unsigned)e.sid, (long long)e.start, e.progKey.c_str());
+            continue;
+        }
+
         const SpiProgramme& p = pit->second;
         o += "<programme start=\"" + xmltvTime(e.start, e.offMin) + "\"";
         if (e.duration > 0) o += " stop=\"" + xmltvTime(e.start + e.duration, e.offMin) + "\"";
@@ -238,7 +246,10 @@ std::string SpiStore::serialize() const {
 bool SpiStore::deserialize(const std::string& text) {
     std::istringstream in(text);
     std::string l;
-    if (!std::getline(in, l) || l != "ONAIRSPI 1") return false;
+    if (!std::getline(in, l) || l != "ONAIRSPI 1") {
+        DIAG_DEBUG(560905, "The cached programme guide starts with '%.40s' instead of ONAIRSPI 1, so it is not loaded.", l.c_str());
+        return false;
+    }
     std::lock_guard<std::mutex> lk(mu_);
     SpiService* curS = nullptr;
     SpiProgramme* curP = nullptr;
@@ -282,6 +293,7 @@ bool SpiStore::deserialize(const std::string& text) {
         default: break;
         }
     }
+    if (lines >= 400000) DIAG_DEBUG(860967, "The cached programme guide has more than 400000 lines, so only the first ones were loaded.");
     s_.events.assign(ev_.begin(), ev_.end());
     st_.events = ev_.size();
     seq_++;
@@ -304,11 +316,12 @@ bool spiSave(const SpiStore& st, const std::string& dir, uint16_t eid) {
     const std::string txt = st.serialize();
     {
         std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
-        if (!f) return false;
+        if (!f) { DIAG_DEBUG(304514, "The programme guide cache %s could not be created, so the guide of this ensemble is not kept for next time.", tmp.c_str()); return false; }
         f.write(txt.data(), (std::streamsize)txt.size());
-        if (!f) return false;
+        if (!f) { DIAG_DEBUG(338999, "Writing %zu bytes to the programme guide cache %s failed, so the old cache stays.", txt.size(), tmp.c_str()); return false; }
     }
     fs::rename(tmp, path, ec);
+    if (ec) DIAG_DEBUG(550079, "The programme guide cache %s could not replace %s (%s), so the old cache stays.", tmp.c_str(), path.c_str(), ec.message().c_str());
     return !ec;
 }
 
@@ -319,12 +332,15 @@ bool spiLoad(SpiStore& st, const std::string& dir, uint16_t eid, int64_t utcNow,
     const auto mt = fs::last_write_time(path, ec);
     if (ec) return false;
     const auto age = std::chrono::duration_cast<std::chrono::hours>(fs::file_time_type::clock::now() - mt).count();
-    if (age > (long long)maxAgeDays * 24) return false;
+    if (age > (long long)maxAgeDays * 24) {
+        DIAG_DEBUG(126843, "The programme guide cache %s is %lld hours old, more than %d days, so it is not loaded.", path.c_str(), (long long)age, maxAgeDays);
+        return false;
+    }
     std::ifstream f(path, std::ios::binary);
-    if (!f) return false;
+    if (!f) { DIAG_DEBUG(862612, "The programme guide cache %s exists but could not be opened, so the guide starts empty.", path.c_str()); return false; }
     std::stringstream ss;
     ss << f.rdbuf();
-    if (ss.str().size() > (48u << 20)) return false;
+    if (ss.str().size() > (48u << 20)) { DIAG_DEBUG(171883, "The programme guide cache %s is over 48 MB, so it is not loaded.", path.c_str()); return false; }
     if (!st.deserialize(ss.str())) return false;
     st.prune(utcNow);
     return true;
@@ -334,7 +350,9 @@ void spiCleanCache(const std::string& dir, int64_t, int maxAgeDays, size_t maxFi
     namespace fs = std::filesystem;
     std::error_code ec;
     std::vector<std::pair<fs::file_time_type, fs::path>> files;
-    for (const auto& de : fs::directory_iterator(dir, ec)) {
+    fs::directory_iterator dirIt(dir, ec);
+    if (ec) DIAG_DEBUG(134748, "Reading the programme guide cache folder %s failed (%s), so no old cache files are removed.", dir.c_str(), ec.message().c_str());
+    for (const auto& de : dirIt) {
         const std::string n = de.path().filename().string();
         if (n.compare(0, 4, "spi-") != 0 || n.size() < 8) continue;
         files.push_back({de.last_write_time(ec), de.path()});
@@ -343,7 +361,11 @@ void spiCleanCache(const std::string& dir, int64_t, int maxAgeDays, size_t maxFi
     const auto now = fs::file_time_type::clock::now();
     for (size_t i = 0; i < files.size(); i++) {
         const auto age = std::chrono::duration_cast<std::chrono::hours>(now - files[i].first).count();
-        if (i >= maxFiles || age > (long long)maxAgeDays * 24) fs::remove(files[i].second, ec);
+        if (i >= maxFiles || age > (long long)maxAgeDays * 24) {
+            fs::remove(files[i].second, ec);
+            if (ec) DIAG_DEBUG_EVERY(777298, 60.0, "The old programme guide cache file %s could not be removed (%s), so it stays on disk.", files[i].second.string().c_str(), ec.message().c_str());
+        }
+
     }
 }
 

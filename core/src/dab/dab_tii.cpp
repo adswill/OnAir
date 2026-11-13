@@ -3,6 +3,7 @@
 
 // DAB TII: the patterns of table 26, the carriers of clause 14.8.1 (transmission mode I) and the detector. See dab_tii.h.
 #include "dect2/dab/dab_tii.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -48,7 +49,11 @@ void Detector::reset() {
 }
 
 void Detector::addNull(const std::vector<cf32>& X, uint64_t frame) {
-    if ((int)X.size() != kTu) return;
+    if ((int)X.size() != kTu) {
+        DIAG_DEBUG_EVERY(651122, 60.0, "A null symbol spectrum of %zu bins reached the TII detector, which needs 2048, so it is not used.", X.size());
+        return;
+    }
+
     const int j = (int)(frame & 1);
     // a running mean over the first 32 null symbols of each kind, then an average that forgets with a time constant of 32 of them (3 s at
     // one every 192 ms): a transmitter that fades or a retune show within seconds
