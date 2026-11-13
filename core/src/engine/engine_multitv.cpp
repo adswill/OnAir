@@ -4,6 +4,7 @@
 // The engine's side of multi-channel TV (multitv.h): when it is asked for and the capture holds more than one channel of the chosen width, the
 // DVB-T / DVB-T2 receiver is replaced by one receiver per occupied channel; the selected channel's packets go the way the single receiver's did.
 #include "dect2/engine/engine.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <thread>
 
@@ -78,6 +79,7 @@ void Engine::syncMultiTv() {
         snprintf(b, sizeof b, "the capture (%.2f Msps) holds only one %g MHz channel: capture at least %g MHz for two %g MHz channels", rate / 1e6, bw, 2 * bw, bw);
         note = b;
     }
+    if (on && !want) DIAG(299192, "Whole span (multi-channel TV) cannot run with the current settings (%s), so only one channel is decoded.", note.c_str());
     { std::lock_guard<std::mutex> lk(mtvNoteMu_); mtvNote_ = note; }
     if (!want) {
         if (!wasActive) return;
@@ -100,7 +102,7 @@ void Engine::syncMultiTv() {
     o.autoGrid = grid == 0;
     o.gridOffsetHz = grid == 2 ? 0.5 * bw * 1e6 : 0;
     o.blocking = !(src_ && src_->realtimeHardware());
-    if (!m->configure(o)) { std::lock_guard<std::mutex> lk(mtvNoteMu_); mtvNote_ = "the capture is too narrow for multi-channel TV"; return; }
+    if (!m->configure(o)) { DIAG(444352, "The multi-channel TV decoder could not be set up for a %.2f Msps capture and %.4g MHz channels, so only one channel is decoded.", rate / 1e6, bw); std::lock_guard<std::mutex> lk(mtvNoteMu_); mtvNote_ = "the capture is too narrow for multi-channel TV"; return; }
     m->setSink([this](int, const uint8_t* pk, size_t n, double secs, const TsSnapshot& snap) { onMultiPackets(pk, n, secs, snap); });
     player_.select(-1);
     {
@@ -137,7 +139,7 @@ void Engine::syncWideAll() {
     wideAll_.setAudioSink([this](const float* st, size_t frames) {
         if (!vfoSoundOn_.load()) return;
         std::lock_guard<std::mutex> lk(vfoOutMu_);
-        if (!vfoOut_) { vfoOut_.reset(new AudioOut()); if (!vfoOut_->start(VfoBank::kAudioRate)) { vfoOut_.reset(); return; } }
+        if (!vfoOut_) { vfoOut_.reset(new AudioOut()); if (!vfoOut_->start(VfoBank::kAudioRate)) { DIAG(766332, "The sound output for the VFO channels did not open, so the VFO channels are silent."); vfoOut_.reset(); return; } }
         vfoOut_->write(st, (int)frames);
     });
     char b[160];

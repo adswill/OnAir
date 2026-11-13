@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "dect2/engine/updater.h"
 #include "dect2/common/str.h"
 #include "dect2/common/timecompat.h"
@@ -899,6 +900,7 @@ void Updater::runCheck(bool pre) {
     if (rc != 0 || body.empty()) {
         std::string why = rc == 0 ? "no answer from GitHub" : curlError(rc, "the update check");
         if (mirrorEnabled(mirror_)) why += "; the mirror did not answer either";
+        DIAG(117811, "The update check got no usable answer (%s), so no update is offered now.", why.c_str());
         setPhase(Phase::Failed, why);
         return;
     }
@@ -907,7 +909,7 @@ void Updater::runCheck(bool pre) {
     if (viaMirror && r.valid) {
         r.fromMirror = true;
         if (confirmOfficial(r)) {}
-        else if (r.sha256 == "!") { setPhase(Phase::Failed, "the mirror's checksum for the package does not match GitHub's: not installing it"); return; }
+        else if (r.sha256 == "!") { DIAG_ERROR(457475, "The mirror lists a checksum for the update package that differs from the one GitHub lists, so the update is refused."); setPhase(Phase::Failed, "the mirror's checksum for the package does not match GitHub's: not installing it"); return; }
     }
     if (r.valid && !viaMirror && !r.assetName.empty() && (r.sha256.size() != 64 || kind_ == InstallKind::LinuxAppImage)) {
         // no digest in GitHub's list (or an AppImage, which is checked twice): the release's own SHA256SUMS file. Both have to agree when both exist.
@@ -915,7 +917,7 @@ void Updater::runCheck(bool pre) {
         if (fetch(dlBase_ + r.tag + "/SHA256SUMS", &sums, "", 10, 1u << 16) == 0) {
             const std::string f = checksumFor(sums, r.assetName);
             if (f.size() == 64) {
-                if (r.sha256.size() == 64 && r.sha256 != f) { setPhase(Phase::Failed, "the checksum GitHub lists for the package differs from the one in SHA256SUMS: not installing it"); return; }
+                if (r.sha256.size() == 64 && r.sha256 != f) { DIAG_ERROR(801738, "The checksum GitHub lists for the update package differs from the one in the release SHA256SUMS file, so the update is refused."); setPhase(Phase::Failed, "the checksum GitHub lists for the package differs from the one in SHA256SUMS: not installing it"); return; }
                 if (r.sha256.size() != 64) { r.sha256 = f; r.officialVerified = true; }
             }
         }
@@ -948,8 +950,8 @@ void Updater::download(bool confirmMirrorOnly) {
 void Updater::runDownload() {
     ReleaseInfo r;
     { std::lock_guard<std::mutex> lk(mu_); r = st_.release; st_.done = 0; st_.total = r.size; }
-    if (r.assetUrl.empty()) { setPhase(Phase::Failed, "this release has no package for this computer"); return; }
-    if (r.sha256.size() != 64 && api_.compare(0, 7, "file://") != 0) { setPhase(Phase::Failed, "no checksum is listed for the package: not installing it"); return; }
+    if (r.assetUrl.empty()) { DIAG(303459, "The update release %s has no package for this computer, so nothing is downloaded.", r.version.c_str()); setPhase(Phase::Failed, "this release has no package for this computer"); return; }
+    if (r.sha256.size() != 64 && api_.compare(0, 7, "file://") != 0) { DIAG(844116, "The update release %s lists no checksum for its package, so the package is not downloaded.", r.version.c_str()); setPhase(Phase::Failed, "no checksum is listed for the package: not installing it"); return; }
     const std::string dir = workDir();
 #if defined(_WIN32)
     CreateDirectoryA(dir.c_str(), nullptr);   // not through cmd: that would open a console window
@@ -957,8 +959,8 @@ void Updater::runDownload() {
     runCommand("mkdir -p " + shq(dir));
 #endif
     file_ = dir + "/" + r.assetName;
-    if (r.fromMirror && !r.officialVerified && !confirmed_) { setPhase(Phase::Failed, "only the mirror vouches for this package: it needs your confirmation"); return; }
-    if (r.fromMirror && r.size == 0) { setPhase(Phase::Failed, "the mirror's list gives no size for the package: not installing it"); return; }
+    if (r.fromMirror && !r.officialVerified && !confirmed_) { DIAG(953471, "Only the mirror vouches for the update package %s and the user has not confirmed it, so it is not downloaded.", r.version.c_str()); setPhase(Phase::Failed, "only the mirror vouches for this package: it needs your confirmation"); return; }
+    if (r.fromMirror && r.size == 0) { DIAG(729712, "The mirror list gives no size for the update package %s, so it is not downloaded.", r.version.c_str()); setPhase(Phase::Failed, "the mirror's list gives no size for the package: not installing it"); return; }
     // the size of the file is watched while curl runs; a package is never larger than 1.5 GB
     bool dlMirror = false;
     const uint64_t cap = r.size ? r.size + 4096 : (1536ull << 20);
@@ -969,19 +971,19 @@ void Updater::runDownload() {
         st_.done = sz;
     });
     if (cancel_) { setPhase(Phase::Failed, "cancelled"); std::remove(file_.c_str()); return; }
-    if (rc != 0) { setPhase(Phase::Failed, curlError(rc, "the download")); std::remove(file_.c_str()); return; }
+    if (rc != 0) { DIAG(391291, "Downloading the update package %s failed with the transfer code %d, so the partial file is removed.", r.version.c_str(), rc); setPhase(Phase::Failed, curlError(rc, "the download")); std::remove(file_.c_str()); return; }
     std::string err;
     {
         std::ifstream f(file_, std::ios::binary | std::ios::ate);
         const uint64_t sz = f ? (uint64_t)f.tellg() : 0;
-        if (r.size && sz != r.size) { setPhase(Phase::Failed, "the downloaded file has the wrong size (" + std::to_string(sz) + " of " + std::to_string(r.size) + " bytes): not installing it"); std::remove(file_.c_str()); return; }
+        if (r.size && sz != r.size) { DIAG_ERROR(790016, "The downloaded update file has %llu bytes instead of the listed %llu, so it is deleted and not installed.", (unsigned long long)sz, (unsigned long long)r.size); setPhase(Phase::Failed, "the downloaded file has the wrong size (" + std::to_string(sz) + " of " + std::to_string(r.size) + " bytes): not installing it"); std::remove(file_.c_str()); return; }
     }
     const std::string got = sha256File(file_, &err);
     if (got.empty()) { setPhase(Phase::Failed, err.empty() ? "the download is missing" : err); return; }
-    if (r.sha256.size() == 64 && got != r.sha256) { setPhase(Phase::Failed, "the downloaded file does not match its checksum: not installing it"); std::remove(file_.c_str()); return; }
+    if (r.sha256.size() == 64 && got != r.sha256) { DIAG_ERROR(368149, "The downloaded update file does not match its listed checksum, so it is deleted and not installed."); setPhase(Phase::Failed, "the downloaded file does not match its checksum: not installing it"); std::remove(file_.c_str()); return; }
     { std::lock_guard<std::mutex> lk(mu_); st_.done = st_.total = std::max<uint64_t>(st_.total, st_.done); }
     setPhase(Phase::Preparing);
-    if (!prepare(file_, err)) { setPhase(Phase::Failed, err); return; }
+    if (!prepare(file_, err)) { DIAG(652262, "Preparing the downloaded update for installation failed (%s), so it is not installed.", err.c_str()); setPhase(Phase::Failed, err); return; }
     setPhase(Phase::Ready);
 }
 
@@ -1041,6 +1043,7 @@ bool Updater::prepare(const std::string& file, std::string& err) {
         staged_ = file;
         return true;
     default:
+        DIAG_DEBUG(438976, "The update package cannot be prepared because this copy of OnAir is not an install that can replace itself.");
         err = "this copy of OnAir cannot replace itself";
         return false;
     }
@@ -1055,7 +1058,7 @@ bool Updater::apply(bool restart, std::string* err) {
     const std::string pid = std::to_string(waitPid_ ? waitPid_ : pidNow());
 #if defined(_WIN32)
     if (kind_ == InstallKind::WindowsInstall) {
-        auto fail = [&](const std::string& why) { { std::lock_guard<std::mutex> lk(mu_); st_.applyError = why; } if (err) *err = why; return false; };
+        auto fail = [&](const std::string& why) { DIAG(135047, "Starting the Windows installer for the update failed (%s), so the update is not installed.", why.c_str()); { std::lock_guard<std::mutex> lk(mu_); st_.applyError = why; } if (err) *err = why; return false; };
         std::string version, sum;
         { std::lock_guard<std::mutex> lk(mu_); version = st_.release.version; sum = st_.release.sha256; st_.applyError.clear(); }
         // the file sits in a folder the user can write to and is about to run with administrator rights: look at it once more

@@ -4,6 +4,7 @@
 // Engine::start(): opens the source, plans offset tuning, configures every receiver for the new sample rate and channel, and
 // starts the worker threads. The long body is split into small steps called in the original order.
 #include "dect2/engine/engine.h"
+#include "dect2/common/diag.h"
 #include "dect2/automation/engine.h"
 #include "engine_ctl.h"
 #include "engine_internal.h"
@@ -46,12 +47,21 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; cpuPct_ = 0; loadT_ = 0; deliveredPct_ = -1; delivRate_.restart();
     holdDelivery(1000);   // a radio often stutters while its stream starts
     std::string err;
-    if (int holder = 0; !claimDevice(dev, receiverId_, &holder)) { log("this radio is in use by " + deviceHolderText(holder)); return false; }
+    if (int holder = 0; !claimDevice(dev, receiverId_, &holder)) {
+        log("this radio is in use by " + deviceHolderText(holder));
+        DIAG(368551, "The radio %s is already in use by another receiver, so this receiver does not start.", dev.name.c_str());
+        return false;
+    }
     if (dev.kind == DeviceInfo::File)
         src_ = makeFileSource(file.path, file.format, file.sampleRate, file.loop);
     else
         src_ = makeSource(dev);
-    if (!src_) { log("no source"); releaseDevice(receiverId_); return false; }
+    if (!src_) {
+        log("no source");
+        DIAG_ERROR(968464, "No sample source could be created for the device %s, so the receiver does not start.", dev.name.c_str());
+        releaseDevice(receiverId_);
+        return false;
+    }
     offHz_ = 0; offRate_ = 0; offsetDc_ = false;
     std::string offNote;
     if (autoOffset_ && dev.isRadio() && offsetAllowed() && mtvOn_.load() && multiChannelSupported(stdMode_.load()) && wholeSpanFits(stdMode_.load(), tune.sampleRate, tune.bandwidthMhz, 0)) {
@@ -75,6 +85,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     { std::lock_guard<std::mutex> lk(noteMu_); startErr_.clear(); }
     if (!src_->start(hwTune(tune), ring_, err)) {
         log("source start failed: " + err + " (" + dev.name + ")");   // the radio the user selected, so a failure names it
+        DIAG_ERROR(283584, "The radio %s did not start (%s), so the receiver stays stopped.", dev.name.c_str(), err.c_str());
         { std::lock_guard<std::mutex> lk(noteMu_); startErr_ = err.empty() ? "the radio did not start" : err; }
         src_.reset();
         releaseDevice(receiverId_);
@@ -85,7 +96,10 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
         offNote = "offset tuning not possible (the radio runs at " + std::to_string(src_->sampleRate() / 1e6).substr(0, 5) + " Msps): removing the DC spike instead";
         offHz_ = 0; offRate_ = 0; offsetDc_ = true;
         std::string e2;
-        if (!src_->retune(hwTune(tune), e2)) log("retune failed: " + e2);
+        if (!src_->retune(hwTune(tune), e2)) {
+            log("retune failed: " + e2);
+            DIAG(150014, "Returning the radio to the channel centre after the offset rate was refused failed (%s), so the radio may stay tuned to the offset.", e2.c_str());
+        }
     }
     { std::lock_guard<std::mutex> lk(noteMu_); note_.clear(); retuneNote_.clear(); }
     setNote(offNote.empty() ? err : err.empty() ? offNote : err + "; " + offNote, false);

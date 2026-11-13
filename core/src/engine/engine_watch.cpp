@@ -4,6 +4,7 @@
 // Watching the radio and the sample path: unplugged-radio detection and reconnect, catching up after a stall, and the
 // delivery/sample-loss accounting that feeds the status bar.
 #include "dect2/engine/engine.h"
+#include "dect2/common/diag.h"
 #include "dect2/automation/engine.h"
 #include "engine_internal.h"
 #include "dect2/source/converter.h"
@@ -46,6 +47,7 @@ void Engine::watchRadio() {
             automation::receiverState("dropped", "the radio stopped sending samples");
             nextReconnect_ = now + seconds(1);
             lostSince_ = lastSamples_;
+            DIAG(805884, "The radio stopped sending samples for more than 2 seconds, so OnAir waits for it to come back (or reopens it).");
             // a HackRF is reopened below and the native radios reopen themselves; a SoapySDR (SoapyRemote too), Hamlib or audio radio does not
             const bool reopens = lastDev_.kind == DeviceInfo::HackRF || lastDev_.kind == DeviceInfo::Native;
             log(!reopens ? "radio stopped sending samples - press Stop and Start to open it again"
@@ -93,6 +95,7 @@ void Engine::watchRadio() {
     } else if (err != reconnectErr_) {
         reconnectErr_ = err;
         log("radio not available yet: " + err);
+        DIAG(230972, "Reopening the radio after it stopped sending samples failed (%s), so OnAir keeps trying every two seconds.", err.c_str());
     }
 }
 
@@ -114,6 +117,7 @@ void Engine::catchUp() {
         char b[200];
         snprintf(b, sizeof b, "the receiver cannot keep up with the sample rate: skipped %.2f s of signal (%llu skips so far). Close other programs, use a narrower channel or a lower sample rate", skipped / std::max(1.0, srcRate_), (unsigned long long)skipEvents_);
         log(b);
+        DIAG(656327, "The receiver cannot keep up with the sample rate and skipped %llu samples of signal, so decoding has a gap (a narrower channel or a lower sample rate helps).", (unsigned long long)skipped);
     }
 }
 

@@ -5,6 +5,7 @@
 // because the heap and the C library may be what is broken. The binaries are stripped, so a report names module+offset and the
 // image base; those can be looked up against the matching symbols later.
 #include "dect2/engine/crash_report.h"
+#include "dect2/common/diag.h"
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
@@ -276,10 +277,12 @@ void install(const char* name, const char* dir) {
             gFailedStarts = n;
         }
         std::ofstream f(boot, std::ios::trunc);
+        if (!f) DIAG_DEBUG(283055, "The start marker file %s could not be written, so a crash while starting will not be counted.", boot.string().c_str());
         f << gFailedStarts + 1 << "\n";
     }
     {   // mark this start
         std::ofstream f(stamp, std::ios::trunc);
+        if (!f) DIAG_DEBUG(306519, "The version stamp file %s could not be written, so a crash report from this run may be shown again.", stamp.string().c_str());
         f << ONAIR_VERSION << "\n";
     }
     {   // and make sure the mark is newer than an old report, so that the next start does not report it again

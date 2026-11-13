@@ -4,6 +4,7 @@
 // The second mode that runs at the same time (setSecondary): capture shifter, start/stop/refresh of the secondary receiver and
 // its thread, and applySubMode().
 #include "dect2/engine/engine.h"
+#include "dect2/common/diag.h"
 #include "dect2/common/threadpool.h"
 #include "engine_internal.h"
 #include "dect2/source/converter.h"
@@ -161,7 +162,11 @@ bool Engine::startSecondaryLocked(bool keep) {
             }
         }
     }
-    if (!ok && !keep) { secStd_ = 0; setSecNote(why); log("second mode refused: " + why); return false; }
+    if (!ok && !keep) {
+        secStd_ = 0; setSecNote(why); log("second mode refused: " + why);
+        DIAG(936556, "The second mode %d was refused beside the first one: %s.", sm, why.c_str());
+        return false;
+    }
     for (auto& s : modeSeq2_) s = 0;
     {
         std::lock_guard<std::mutex> lk(secQMu_);

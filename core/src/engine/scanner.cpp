@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "dect2/engine/rate_choice.h"
 #include "dect2/engine/scanner.h"
 #include "dect2/power/power.h"
@@ -44,17 +45,18 @@ void Scanner::setResults(std::vector<ScanResult> r) {
 }
 
 bool Scanner::check(const DeviceInfo& dev, const ScanConfig& cfg, std::string& err) {
-    if (!dev.isRadio() && !(cfg.testTune && dev.kind == DeviceInfo::Synthetic)) { err = "scanning needs a radio (the synthetic signal and recordings cannot be scanned)"; return false; }
+    if (!dev.isRadio() && !(cfg.testTune && dev.kind == DeviceInfo::Synthetic)) { DIAG_DEBUG(711188, "A scan was requested on a device that is not a radio, so it is refused."); err = "scanning needs a radio (the synthetic signal and recordings cannot be scanned)"; return false; }
     // a range that is empty or silly would tune the radio to 0 Hz, or step through thousands of channels
-    if (!(cfg.startMHz > 0) || !(cfg.stopMHz >= cfg.startMHz)) { err = "the scan range is empty: the start frequency must be above 0 and not above the stop frequency"; return false; }
-    if (!(cfg.stepMHz >= 0.1) || !(cfg.bwMhz >= 1.0 && cfg.bwMhz <= 10.0)) { err = "the step must be at least 0.1 MHz and the channel bandwidth between 1 and 10 MHz"; return false; }
-    if ((cfg.stopMHz - cfg.startMHz) / cfg.stepMHz > 2000) { err = "the scan range has more than 2000 channels: use a larger step"; return false; }
+    if (!(cfg.startMHz > 0) || !(cfg.stopMHz >= cfg.startMHz)) { DIAG_DEBUG(623598, "A scan was requested with an empty range (%.3f to %.3f MHz), so it is refused.", cfg.startMHz, cfg.stopMHz); err = "the scan range is empty: the start frequency must be above 0 and not above the stop frequency"; return false; }
+    if (!(cfg.stepMHz >= 0.1) || !(cfg.bwMhz >= 1.0 && cfg.bwMhz <= 10.0)) { DIAG_DEBUG(882716, "A scan was requested with a step of %.3f MHz and a bandwidth of %.3f MHz, outside the allowed limits, so it is refused.", cfg.stepMHz, cfg.bwMhz); err = "the step must be at least 0.1 MHz and the channel bandwidth between 1 and 10 MHz"; return false; }
+    if ((cfg.stopMHz - cfg.startMHz) / cfg.stepMHz > 2000) { DIAG_DEBUG(511334, "A scan was requested over more than 2000 channels, so it is refused."); err = "the scan range has more than 2000 channels: use a larger step"; return false; }
     // a radio that cannot reach the sample rate a channel needs would only see part of it
     const double needMhz = cfg.atsc || cfg.isdbt || cfg.atsc3 ? 6.0 : cfg.dtmb ? (cfg.bwMhz < 7 ? 6.0 : 8.0) : cfg.bwMhz;
     if (dev.isGeneric() && dev.maxRateHz > 0 && dev.maxRateHz < needMhz * 1e6 * 1.15) {
         char b[200];
         snprintf(b, sizeof b, "%s reaches at most %.1f Msps, too low for a %.0f MHz channel (it needs about %.1f)", dev.name.c_str(), dev.maxRateHz / 1e6, needMhz, needMhz * 1.15);
         err = b;
+        DIAG_DEBUG(250451, "The radio %s cannot reach the sample rate that a %.0f MHz scan channel needs, so the scan is refused.", dev.name.c_str(), needMhz);
         return false;
     }
     // no channel is left out for the radio's specified range: every channel is asked of the driver, and one it refuses is noted in its result
@@ -82,6 +84,7 @@ bool Scanner::start(const DeviceInfo& dev, const ScanConfig& cfg, std::string& e
         try { run(); return; }
         catch (const std::exception& ex) { why = ex.what(); }
         catch (...) { why = "unknown error"; }
+        DIAG_ERROR(279876, "The scan stopped on an exception (%s), so it ends here.", why.c_str());
         try { if (eng_) eng_->stop(); } catch (...) {}
         std::lock_guard<std::mutex> lk(mu_);
         prog_.running = false;
@@ -162,6 +165,7 @@ void Scanner::run() {
             if (cancel_) break;
             silent = true;
             e.log("scan: " + radioName + " opened but sends no samples: opening it again");
+            DIAG(908805, "The radio %s opened for the scan but delivered no samples, so it is closed and opened again.", radioName.c_str());
             e.stop();
         }
         return false;
