@@ -3,6 +3,7 @@
 
 // macOS cameras and capture cards (Blackmagic, USB HDMI, Continuity, built-in).
 #include "videoin_impl.h"
+#include "dect2/common/diag.h"
 #import <AVFoundation/AVFoundation.h>
 #import <CoreVideo/CoreVideo.h>
 #include <algorithm>
@@ -108,7 +109,7 @@ bool videoInCameraStart(VideoIn::Impl* I, const std::string& deviceId, std::stri
         const AVAuthorizationStatus st = [AVCaptureDevice authorizationStatusForMediaType:AVMediaTypeVideo];
         if (st == AVAuthorizationStatusDenied || st == AVAuthorizationStatusRestricted) { err = "camera access is off for OnAir (System Settings > Privacy & Security > Camera)"; return false; }
         AVCaptureDevice* dev = findDev(deviceId);
-        if (!dev) { err = deviceId.empty() ? "no camera or capture card was found" : "the chosen camera is not connected any more"; return false; }
+        if (!dev) { DIAG(221091, "No camera or capture card was found for the video input (or the chosen one is gone), so there is no picture."); err = deviceId.empty() ? "no camera or capture card was found" : "the chosen camera is not connected any more"; return false; }
         NSError* nse = nil;
         AVCaptureDeviceInput* in = [AVCaptureDeviceInput deviceInputWithDevice:dev error:&nse];
         if (!in) { err = nse.localizedDescription.UTF8String ? nse.localizedDescription.UTF8String : "the camera could not be opened (check Camera in System Settings)"; return false; }
@@ -129,7 +130,7 @@ bool videoInCameraStart(VideoIn::Impl* I, const std::string& deviceId, std::stri
         c->sess = sess; c->sink = sink;
         I->backend = c;
         [sess startRunning];
-        if (!sess.running) { err = "the camera did not start (check Camera in System Settings)"; videoInCameraStop(I); return false; }
+        if (!sess.running) { DIAG(604133, "The camera session did not start, so there is no picture from the capture device."); err = "the camera did not start (check Camera in System Settings)"; videoInCameraStop(I); return false; }
         return true;
     }
 }

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "audioout_impl.h"
+#include "dect2/common/diag.h"
 #include "dect2/audio/audio_rec.h"
 #include "dect2/audio/clip_ring.h"
 #include "dect2/transcribe/audio_tap.h"
@@ -85,7 +86,7 @@ static void bitstreamThread(AudioOut::Impl* I, BitstreamState* b) {
         I->ir.store(ird + take, std::memory_order_release);
         const size_t total = (size_t)block * (size_t)ratio;
         std::fill(out.begin() + (std::ptrdiff_t)(2 * take), out.begin() + (std::ptrdiff_t)(2 * total), (int16_t)0);   // no burst: zeros, the receiver mutes
-        if (!dev->write(out.data(), (int)total)) { b->err = "the bitstream device stopped"; break; }
+        if (!dev->write(out.data(), (int)total)) { DIAG(638654, "The bitstream sound device stopped accepting data, so the compressed audio output ended."); b->err = "the bitstream device stopped"; break; }
     }
     dev.reset();   // closed on this thread (Windows COM)
 }
@@ -111,6 +112,7 @@ bool AudioOut::startBitstream(int pcmRate, int linkRate, int kind, const std::st
     b->th = dect2::namedThread("onair-iec", bitstreamThread, p_.get(), b);
     for (int i = 0; i < 500 && !b->opened; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
     if (!(b->opened && b->ok)) {
+        DIAG(934315, "The bitstream sound device did not open (%s), so the compressed audio is not passed through.", b->opened ? b->err.c_str() : "it took longer than 5 seconds");
         if (err) *err = b->opened ? b->err : "the bitstream device did not open in time";
         b->stop = true;
         if (b->th.joinable()) b->th.join();

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/session/session_store.h"
+#include "dect2/common/diag.h"
 #include "dect2/session/record_rules.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/session/retention.h"
@@ -550,7 +551,7 @@ bool SessionStore::openAt(const std::string& dbPath, const StoreConfig& cfg, std
         I.iqRoots = cfg.iqRoots;
         I.eventsPerSec = cfg.eventsPerSecPerMode;
     }
-    if (!I.db.open(dbPath, err, &I.info)) return false;
+    if (!I.db.open(dbPath, err, &I.info)) { DIAG(706563, "The session database %s could not be opened (%s), so sessions are not recorded.", dbPath.c_str(), err.c_str()); return false; }
     I.dbPathStr = dbPath;
     I.settingsPath.clear();
     if (dbPath != ":memory:") {

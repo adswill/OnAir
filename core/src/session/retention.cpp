@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/session/retention.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -131,7 +132,7 @@ bool moveToTrash(const std::string& path, const std::string& trashDir, int64_t n
     snprintf(day, sizeof day, "%04d-%02d-%02d", g.tm_year + 1900, g.tm_mon + 1, g.tm_mday);
     const fs::path dir = pathOf(trashDir) / day;
     fs::create_directories(dir, ec);
-    if (ec) return false;
+    if (ec) { DIAG(526614, "The trash folder %s could not be created (%s), so the old file %s was not moved.", dir.string().c_str(), ec.message().c_str(), path.c_str()); return false; }
     auto moveOne = [&](const fs::path& src) -> bool {
         fs::path dst = dir / src.filename();
         for (int k = 2; fs::exists(dst, ec) && k < 1000; k++) dst = dir / (src.stem().string() + "_" + std::to_string(k) + src.extension().string());

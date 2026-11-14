@@ -4,6 +4,7 @@
 // AC-4 access units -> AC-3 frames: decoded with the optional AC-4 library (ac4_dec.h), mixed to stereo or 5.1 and encoded by the FFmpeg
 // inside OnAir, so that the transport stream of the ATSC 3.0 receiver carries audio the player can decode.
 #include "dect2/audio/ac4_dec.h"
+#include "dect2/common/diag.h"
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -91,7 +92,7 @@ bool Ac4ToAc3::open(int channelsHint) {
     Impl& I = *p_;
     if (!I.dec.open()) return false;
     const AVCodec* c = avcodec_find_encoder_by_name("ac3");
-    if (!c) { I.err = "no AC-3 encoder in this FFmpeg"; return false; }
+    if (!c) { DIAG(235471, "This FFmpeg has no AC-3 encoder, so AC-4 audio cannot be converted for a receiver."); I.err = "no AC-3 encoder in this FFmpeg"; return false; }
     I.enc = avcodec_alloc_context3(c);
     if (!I.enc) return false;
     I.outCh = channelsHint >= 6 ? 6 : 2;

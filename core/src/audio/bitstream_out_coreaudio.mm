@@ -5,6 +5,7 @@
 // IEC 61937 data (kAudioFormat60958AC3, or 16-bit stereo PCM marked non-mixable at the link rate), an IOProc that copies the words untouched.
 // EXPERIMENTAL: written from Apple's CoreAudio headers, NOT tested on real hardware.
 #include "bitstream_out.h"
+#include "dect2/common/diag.h"
 #import <CoreAudio/CoreAudio.h>
 #include <unistd.h>
 #include <algorithm>
@@ -87,7 +88,7 @@ public:
 
     bool open(const std::string& name, int linkRate, int kind, std::string& err) {
         dev = findDevice(name);
-        if (!dev) { err = "no sound output device"; return false; }
+        if (!dev) { DIAG(536138, "The system reports no sound output device, so the bitstream output did not start."); err = "no sound output device"; return false; }
         AudioObjectPropertyAddress sa = addr(kAudioDevicePropertyStreams, kAudioObjectPropertyScopeOutput);
         UInt32 sz = 0;
         if (AudioObjectGetPropertyDataSize(dev, &sa, 0, nullptr, &sz) != noErr || !sz) { err = "the device has no output stream"; return false; }
@@ -131,7 +132,7 @@ public:
         AudioObjectPropertyAddress pa = addr(kAudioStreamPropertyPhysicalFormat);
         UInt32 osz = sizeof oldFmt;
         haveOld = AudioObjectGetPropertyData(stream, &pa, 0, nullptr, &osz, &oldFmt) == noErr;
-        if (AudioObjectSetPropertyData(stream, &pa, 0, nullptr, sizeof pick, &pick) != noErr) { err = "the output refused the bitstream format"; return false; }
+        if (AudioObjectSetPropertyData(stream, &pa, 0, nullptr, sizeof pick, &pick) != noErr) { DIAG(213935, "The sound output refused the compressed bitstream format, so the bitstream output did not start."); err = "the output refused the bitstream format"; return false; }
         for (int i = 0; i < 50; i++) {   // the format change is asynchronous
             AudioStreamBasicDescription now{}; UInt32 nsz = sizeof now;
             if (AudioObjectGetPropertyData(stream, &pa, 0, nullptr, &nsz, &now) == noErr && now.mFormatID == pick.mFormatID && now.mSampleRate == pick.mSampleRate) break;

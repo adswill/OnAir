@@ -3,6 +3,7 @@
 
 // Logbook tools for the Ham screen (4.0): see ham_logtools.h.
 #include "dect2/ham/ham_logtools.h"
+#include "dect2/common/diag.h"
 #include "dect2/ham/ham.h"
 #include <algorithm>
 #include <cctype>
@@ -195,7 +196,7 @@ std::string logBackup(const std::string& logPath, const std::string& dir, double
     const std::string d = adifDate(now), t = adifTime(now);
     const std::string dst = (fs::path(dir) / ("onair-log-" + d + "-" + t + ".adi")).string();
     fs::copy_file(logPath, dst, fs::copy_options::overwrite_existing, ec);
-    if (ec) { err = "cannot copy the log: " + ec.message(); return ""; }
+    if (ec) { DIAG(529503, "Copying the ham log %s to the backup folder %s failed (%s), so no backup was made.", logPath.c_str(), dir.c_str(), ec.message().c_str()); err = "cannot copy the log: " + ec.message(); return ""; }
     if (keep > 0) {
         const auto all = logBackups(dir);
         for (size_t i = (size_t)keep; i < all.size(); i++) fs::remove(all[i], ec);
