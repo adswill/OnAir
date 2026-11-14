@@ -67,7 +67,7 @@ std::string lonText(double lon) { return hundredths(lon, 3) + (lon < 0 ? "W" : "
 
 std::string beaconLine(const std::string& call, double lat, double lon, const std::string& comment) {
     if (!(std::fabs(lat) <= 90) || !(std::fabs(lon) <= 180)) return {};
-    return upperStr(call) + ">APRS,TCPIP*:!" + latText(lat) + "/" + lonText(lon) + "&" + comment + "\r\n";
+    return upperStr(call) + ">APRS,TCPIP*:!" + latText(lat) + "/" + lonText(lon) + "`" + comment + "\r\n";
 }
 
 std::string objectName(const SondeInfo& s) {

@@ -52,8 +52,8 @@ std::string loginLine(const std::string& call, const std::string& pass);
 // APRS position text: "5240.87N" / "00848.27E" (hundredths of minutes, carry handled, N / E for zero)
 std::string latText(double lat);
 std::string lonText(double lon);
-// "DG9BFC-10>APRS,TCPIP*:!5240.87N/00848.27E&OnAir Radiosonde RX\r\n"; "" for a position out of range
-std::string beaconLine(const std::string& call, double lat, double lon, const std::string& comment = "OnAir Radiosonde RX");
+// "DG9BFC-10>APRS,TCPIP*:!5240.87N/00848.27E`OnAir Radiosonde tracker\r\n"; "" for a position out of range
+std::string beaconLine(const std::string& call, double lat, double lon, const std::string& comment = "OnAir Radiosonde tracker");   // radiosondy.info lists a receiver only with the dish symbol (/`) and "tracker" in the comment
 // The 9 character APRS object name of a sonde, after the agreement of the sonde decoders (RS41 / RS92 serial, D + DFM number, LMS6xxxxx,
 // IMSxxxxxx, MRZxxxxxx, IMETxxxxx); "" when the type has none: M10 and M20 (the ID needs raw bytes OnAir does not keep) and iMet-1/4 (no serial).
 std::string objectName(const SondeInfo& s);
