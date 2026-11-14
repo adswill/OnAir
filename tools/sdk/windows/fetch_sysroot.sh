@@ -66,7 +66,7 @@ sysroot_relocate() {
   done
   echo "==> $n pkg-config files made relocatable"
   left=$(grep -lE "(^|[[:space:]=\",;]|-[IL])$upath(/|\$|[[:space:]\"])" "$out"/lib/pkgconfig/*.pc "$out"/share/pkgconfig/*.pc 2>/dev/null || true)
-  [ -z "$left" ] || { echo "warning: pkg-config files still naming a ucrt64 folder:" >&2; sed 's/^/    /' <<<"$left" >&2; }
+  [ -z "$left" ] || { echo "warning: pkg-config files still naming a ucrt64 folder:" >&2; echo "    ${left//$'\n'/$'\n    '}" >&2; }
 
   local cpat="(^|[[:space:]=\"(;]|-[IL])$upath(/|\$|[[:space:]\")])"
   n=0

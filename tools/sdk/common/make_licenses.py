@@ -12,7 +12,7 @@ It stops with an error when a part has no licence text or no licence in licences
 import os
 import re
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -64,7 +64,9 @@ def text_dir(rel):
 
 
 def run(*cmd):
-    return subprocess.run(cmd, capture_output=True, text=True, check=True).stdout
+    # the program by its full path, with this script's own arguments (archive and file names), no shell
+    prog = shutil.which(cmd[0]) or sys.exit(f"error: {cmd[0]} is not on PATH")
+    return subprocess.run([prog, *cmd[1:]], capture_output=True, text=True, check=True).stdout  # nosec B603  # nosemgrep
 
 
 # --- licence texts that do not come with a package ---------------------------------------------------------------------

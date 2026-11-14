@@ -24,15 +24,24 @@ import os
 import plistlib
 import re
 import struct
-import subprocess
+import shutil
+import subprocess  # nosec B404
 import sys
 import tempfile
-import xml.etree.ElementTree as ET
+# Python 3.14's expat fetches no external entities and limits entity expansion, which is what defusedxml adds; the
+# parsed files are Apple's, checked against a pinned sha256 or Apple's pinned root certificate
+import xml.etree.ElementTree as ET  # nosec B405  # nosemgrep
 import zlib
 
 
 def die(msg):
     sys.exit(f"error: {msg}")
+
+
+def openssl(*args, check=False, text=True):
+    # the host's openssl by its full path, the arguments are fixed options and file names in a temporary folder, no shell
+    prog = shutil.which("openssl") or die("openssl is not on PATH")
+    return subprocess.run([prog, *args], capture_output=True, check=check, text=text)  # nosec B603  # nosemgrep
 
 
 # --- the catalog ------------------------------------------------------------------------------------------------------
@@ -69,7 +78,7 @@ def read_xar(path):
         die(f"{path} is not a xar archive (.pkg)")
     f.seek(hsize)
     toc_z = f.read(toc_c)
-    toc = ET.fromstring(zlib.decompress(toc_z))
+    toc = ET.fromstring(zlib.decompress(toc_z))  # nosec B314  # nosemgrep
     return f, hsize + toc_c, toc_z, toc, cksum
 
 
@@ -82,7 +91,9 @@ def verify(path, root_sha256):
     off, size = int(ck.find("offset").text), int(ck.find("size").text)
     f.seek(heap + off)
     stored = f.read(size)
-    if hashlib.sha1(toc_z).digest() != stored:
+    # SHA-1 is what the xar format uses for its table of contents; the signature checked below and the pinned sha256
+    # of the package are the security
+    if hashlib.sha1(toc_z, usedforsecurity=False).digest() != stored:  # nosemgrep
         die("the xar table of contents does not match its checksum")
     sig = t.find("signature")
     if sig is None or sig.get("style") != "RSA":
@@ -99,7 +110,7 @@ def verify(path, root_sha256):
         for i, der in enumerate(certs):
             p = os.path.join(d, f"c{i}.der")
             open(p, "wb").write(der)
-            out = subprocess.run(["openssl", "x509", "-inform", "DER", "-in", p], capture_output=True, check=True).stdout
+            out = openssl("x509", "-inform", "DER", "-in", p, check=True, text=False).stdout
             pem.append(out)
         root = [i for i, der in enumerate(certs) if hashlib.sha256(der).hexdigest() == root_sha256.lower()]
         if not root:
@@ -107,22 +118,19 @@ def verify(path, root_sha256):
         open(os.path.join(d, "root.pem"), "wb").write(pem[root[0]])
         open(os.path.join(d, "leaf.pem"), "wb").write(pem[0])
         open(os.path.join(d, "mid.pem"), "wb").write(b"".join(pem[1:]))
-        r = subprocess.run(["openssl", "verify", "-purpose", "any", "-CAfile", os.path.join(d, "root.pem"),
-                            "-untrusted", os.path.join(d, "mid.pem"), os.path.join(d, "leaf.pem")],
-                           capture_output=True, text=True)
+        r = openssl("verify", "-purpose", "any", "-CAfile", os.path.join(d, "root.pem"),
+                    "-untrusted", os.path.join(d, "mid.pem"), os.path.join(d, "leaf.pem"))
         if r.returncode != 0:
             die("the certificate chain does not verify: " + (r.stdout + r.stderr).strip())
-        subprocess.run(["openssl", "x509", "-in", os.path.join(d, "leaf.pem"), "-pubkey", "-noout", "-out",
-                        os.path.join(d, "pub.pem")], check=True)
+        openssl("x509", "-in", os.path.join(d, "leaf.pem"), "-pubkey", "-noout", "-out", os.path.join(d, "pub.pem"), check=True)
         open(os.path.join(d, "digest"), "wb").write(stored)
         open(os.path.join(d, "sig"), "wb").write(signature)
-        r = subprocess.run(["openssl", "pkeyutl", "-verify", "-pubin", "-inkey", os.path.join(d, "pub.pem"),
-                            "-in", os.path.join(d, "digest"), "-sigfile", os.path.join(d, "sig"),
-                            "-pkeyopt", "digest:sha1"], capture_output=True, text=True)
+        r = openssl("pkeyutl", "-verify", "-pubin", "-inkey", os.path.join(d, "pub.pem"),
+                    "-in", os.path.join(d, "digest"), "-sigfile", os.path.join(d, "sig"), "-pkeyopt", "digest:sha1")
         if r.returncode != 0:
             die("bad signature on the xar table of contents")
-        subj = subprocess.run(["openssl", "x509", "-in", os.path.join(d, "leaf.pem"), "-noout", "-subject",
-                               "-nameopt", "oneline"], capture_output=True, text=True, check=True).stdout.strip()
+        subj = openssl("x509", "-in", os.path.join(d, "leaf.pem"), "-noout", "-subject", "-nameopt", "oneline",
+                       check=True).stdout.strip()
     print(subj.replace("subject=", "").strip())
 
 

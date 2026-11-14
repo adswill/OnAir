@@ -1,9 +1,11 @@
+# shellcheck shell=bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # windows/msys2.sh - sourced by windows/fetch_sysroot.sh: MSYS2's repositories, the trust in
 # MSYS2's signatures, and cached downloads. The caller defines die(), say(), TMP (a private temporary folder), CACHE
 # (the download cache) and GNUPGHOME (an empty gpg home inside TMP).
 
+# shellcheck disable=SC2034  # used by fetch_sysroot.sh, which sources this file
 MINGW_REPO=https://repo.msys2.org/mingw/ucrt64           # ucrt64.db + the packages
 MSYS_REPO=https://repo.msys2.org/msys/x86_64             # msys.db: only to find msys2-keyring
 # MSYS2's master keys (msys2-keyring, file msys2-trusted). A packager key is trusted when one of these certified it.
@@ -37,6 +39,7 @@ msys2_latest_keyring() {   # sets KEYRING_FILE and KEYRING_SHA to today's msys2-
   download "$MSYS_REPO/msys.db" "$TMP/msys.db"
   mkdir -p "$TMP/msysdb"; tar -xf "$TMP/msys.db" -C "$TMP/msysdb"
   local d; d=$(ls -d "$TMP"/msysdb/msys2-keyring-[0-9]* | sort -V | tail -1)
+  # shellcheck disable=SC2034  # read by fetch_sysroot.sh, which sources this file
   KEYRING_FILE=$(desc_field "$d/desc" FILENAME); KEYRING_SHA=$(desc_field "$d/desc" SHA256SUM)
 }
 

@@ -235,10 +235,10 @@ merge() {
   [ -d "$d" ] || die "$name installed nothing into $DEST$LPFX"
   local stray; stray=$(cd "$DEST" && find . -mindepth 1 -maxdepth 3 -type d | grep -v "^\.$LPFX" | grep -vE "^\.(/usr|/ucrt64)$" || true)
   [ -z "$stray" ] || echo "    (left out, outside $LPFX: $(tr '\n' ' ' <<<"$stray"))"
-  rm -rf "$d/share/doc" "$d/share/man" "$d/share/info" "$d/share/gtk-doc" "$d/share/aclocal" "$d/libexec" "$d/etc"
+  rm -rf "${d:?}/share/doc" "${d:?}/share/man" "${d:?}/share/info" "${d:?}/share/gtk-doc" "${d:?}/share/aclocal" "${d:?}/libexec" "${d:?}/etc"
   find "$d" -name '*.la' -delete
   if [ -d "$d/bin" ]; then   # programs: none (Windows: only the DLLs stay in bin/)
-    if [ "$OS" = windows ]; then find "$d/bin" -type f ! -iname '*.dll' -delete; else rm -rf "$d/bin"; fi
+    if [ "$OS" = windows ]; then find "$d/bin" -type f ! -iname '*.dll' -delete; else rm -rf "${d:?}/bin"; fi
   fi
   for pc in "$d"/lib/pkgconfig/*.pc "$d"/share/pkgconfig/*.pc; do
     [ -f "$pc" ] || continue

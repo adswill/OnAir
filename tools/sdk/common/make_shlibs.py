@@ -6,8 +6,11 @@ A package made with the SDK takes its Depends line from this: dpkg-shlibdeps ask
 One line per library:  soname package minimum-version"""
 import os
 import re
-import subprocess
+import shutil
+import subprocess  # nosec B404
 import sys
+
+DPKG_DEB = shutil.which("dpkg-deb") or sys.exit("error: dpkg-deb is not on PATH")
 
 lock, cache = sys.argv[1:3]
 out = {}
@@ -17,7 +20,8 @@ with open(lock) as h:
         if len(w) < 4 or w[0] != "deb":
             continue
         version, path = w[2], os.path.join(cache, os.path.basename(w[3]))
-        r = subprocess.run(["dpkg-deb", "-I", path, "shlibs"], capture_output=True, text=True)
+        # a fixed program by its full path, the arguments are file names, no shell
+        r = subprocess.run([DPKG_DEB, "-I", path, "shlibs"], capture_output=True, text=True)  # nosec B603  # nosemgrep
         if r.returncode != 0:
             continue
         for s in r.stdout.splitlines():

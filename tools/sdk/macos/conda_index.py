@@ -272,7 +272,6 @@ def keep(rel):
 
 def unpack(pkg, dest, name):
     import shutil
-    import subprocess
     import tarfile
     import tempfile
     import zipfile
@@ -284,8 +283,7 @@ def unpack(pkg, dest, name):
                     if member.endswith(".tar.zst") and "/" not in member:
                         z.extract(member, t)
                         tz = os.path.join(t, member)
-                        subprocess.run(["zstd", "-dqf", tz, "-o", tz[:-4]], check=True)
-                        with tarfile.open(tz[:-4]) as tf:
+                        with tarfile.open(tz, mode="r:zst") as tf:   # (Python 3.14's own zstd)
                             tf.extractall(x, filter="data")
         else:
             with tarfile.open(pkg, "r:bz2") as tf:

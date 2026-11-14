@@ -112,7 +112,7 @@ build_macos() {
   run env CARGO_HOME="$CACHE/cargo" CARGO_TARGET_DIR="$WORK/rc-build" "$OUT/bin/cargo" install apple-codesign --version "$RC_VERSION" --locked --no-default-features --root "$WORK/rc" --quiet
   cp "$WORK/rc/bin/rcodesign" "$P/bin/"
   crate=$(find "$CACHE/cargo/registry/src" -maxdepth 2 -type d -name "apple-codesign-$RC_VERSION" -print -quit)
-  [ -n "$crate" ] && ls "$crate"/LICENSE* >/dev/null 2>&1 || die "no licence file in the apple-codesign $RC_VERSION crate"
+  if [ -z "$crate" ] || ! ls "$crate"/LICENSE* >/dev/null 2>&1; then die "no licence file in the apple-codesign $RC_VERSION crate"; fi
   licence apple-codesign "$crate"/LICENSE*
 }
 

@@ -3,7 +3,11 @@
 and the sysroot has none. Reads NEEDED of every ELF file in the stage, leaves out what the package carries itself, and finds each
 library's package in the SDK's deb-shlibs.txt. A library no package provides stops the build.
   deb_depends.py <stage> <SDK's deb-shlibs.txt> [extra dependency ...]"""
-import os, re, subprocess, sys
+import os
+import re
+import shutil
+import subprocess  # nosec B404
+import sys
 
 stage, shlibs = sys.argv[1:3]
 extra = sys.argv[3:]
@@ -18,11 +22,13 @@ def elf_files():
                 if h.read(4) == b"\x7fELF":
                     yield p
 
+READOBJ = shutil.which("llvm-readobj") or sys.exit("error: llvm-readobj is not on PATH (source the SDK's environment script)")
 carried, needed = set(), set()
 for root, _, files in os.walk(stage):
     carried.update(files)
 for p in elf_files():
-    out = subprocess.run(["llvm-readobj", "--needed-libs", p], check=True, capture_output=True, text=True).stdout
+    # the SDK's llvm-readobj by its full path, the argument is a file of the package, no shell
+    out = subprocess.run([READOBJ, "--needed-libs", p], check=True, capture_output=True, text=True).stdout  # nosec B603  # nosemgrep
     m = re.search(r"NeededLibraries \[(.*?)\]", out, re.S)
     if m:
         needed.update(l.strip() for l in m.group(1).splitlines() if l.strip())

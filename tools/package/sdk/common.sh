@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # Shared by tools/package/sdk/*.sh: packaging OnAir with the clang cross SDK (tools/sdk).
 #   SDK       the SDK folder (the package target passes it; default: that of the environment script sourced in this shell)
 #   VERSION   default: the version in CMakeLists.txt
@@ -12,6 +13,7 @@ VERSION=${VERSION:-$(grep -m1 'project(' "$REPO/CMakeLists.txt" | sed -E 's/.*VE
 JOBS=${JOBS:-$(( $(nproc) > 2 ? $(nproc) - 2 : 1 ))}
 OUT=${OUT:-$REPO/packages}
 mkdir -p "$OUT"
+# shellcheck disable=SC2034  # used by deb.sh and windows.sh, which source this file
 LIBS="libusb openssl glfw hackrf ffmpeg rtlsdr airspy soapysdr soapyremote libxml2 libiio bladerf limesuite hamlib airspyhf"
 # configure_build <environment-setup triple> <build folder> [cmake arguments]: the programs the packages ship, not the tests
 pkg_dir() { printf '%s' "${ONAIR_BUILD:-$REPO/$1}"; }

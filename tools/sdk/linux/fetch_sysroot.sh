@@ -130,7 +130,7 @@ fi
 
 # --- download and check -------------------------------------------------------------------------------------------------
 say "downloading into $CACHE (what is not there yet) and checking sha256"
-while read -r n v f s; do
+while read -r n _ f s; do
   d="$CACHE/$(basename "$f")"
   if [ ! -f "$d" ] || [ "$(sha "$d")" != "$s" ]; then
     download "$SNAPSHOT/$TS/$f" "$d"
@@ -148,14 +148,14 @@ say "unpacking into $OUT"
 STAGE="$OUT.stage.$$"; rm -rf "$STAGE"; mkdir -p "$STAGE"
 trap 'rm -rf "$TMP" "$STAGE"' EXIT
 declare -A SRC_OF
-while read -r n v f s; do
+while read -r n _ f s; do
   dpkg-deb -x "$CACHE/$(basename "$f")" "$STAGE"
   src=$(dpkg-deb -f "$CACHE/$(basename "$f")" Source); SRC_OF[$n]=${src%% *}; SRC_OF[$n]=${SRC_OF[$n]:-$n}
 done < "$TMP/closure"
 # usr/share/licenses/<package>/copyright for every package: its doc folder may be a link to another package's (the GCC
 # runtime -> gcc-16-base), cp follows it; a package without one (libffi-dev) gets the copyright of a package built from
 # the same source (libffi8)
-while read -r n v f s; do
+while read -r n _ f s; do
   c="$STAGE/usr/share/doc/$n/copyright"
   if [ ! -f "$c" ]; then
     c=""

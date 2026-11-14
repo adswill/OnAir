@@ -75,7 +75,7 @@ download() { curl -fsSL --retry 6 --retry-delay 5 --retry-all-errors --connect-t
 # --- the lock file ------------------------------------------------------------------------------------------------------
 declare -A LOCKED
 if [ "$UPDATE" = 0 ] && [ -f "$LOCK" ]; then
-  while read -r kind name ver file sum; do LOCKED[$kind:$file]="$ver $sum"; done < <(grep -v '^#' "$LOCK")
+  while read -r kind _ ver file sum; do LOCKED[$kind:$file]="$ver $sum"; done < <(grep -v '^#' "$LOCK")
   [ -n "${LOCKED[llvm:$LLVM_FILE]:-}" ] || die "the versions above differ from the lock file $LOCK: run with --update"
   for f in "${RUST_FILES[@]}"; do
     [ -n "${LOCKED[rust:$f]:-}" ] || die "$f is not in the lock file $LOCK: run with --update"
