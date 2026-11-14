@@ -254,7 +254,7 @@ void bigView(App&) {
         ImGui::SameLine();
         if (ImGui::SmallButton("-##gph-")) { phaseSaved(g.sel, -1, false); return; }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(160);
+        ImGui::SetNextItemWidth(160 * gUi);
         ImGui::SliderInt("##gphase", &step, -(pw / 2), pw / 2, "%d px");
         if (ImGui::IsItemDeactivatedAfterEdit()) { const int s = step; step = 0; phaseSaved(g.sel, s, false); return; }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Slide every line of this saved chart sideways (wrapping round), for a chart whose black margin bar is in the middle. Applied when you let go; the PNG on disk is rewritten, the opposite shift undoes it.");
