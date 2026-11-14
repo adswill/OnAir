@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include <functional>
+#include <atomic>
 #include <thread>
 #include "../common/test_util.h"
 using namespace dect2::ham;
@@ -166,11 +167,18 @@ int main() {
         const double t1 = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
         CHECK(t1 - t0 > 0.05 && t1 - t0 < 0.3, "started %.3f s after asking, the latency taken off (slot 0.6 s ahead, 0.5 s latency)", t1 - t0);
         CHECK(!tx.waitForSlot(t0 - 10, err) && err.find("late") != std::string::npos, "a missed slot: %s", err.c_str());
-        bool ok = true;
-        std::thread th([&] { std::string e; ok = tx.waitForSlot(t1 + 30, e); });
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        tx.abort(); th.join();
-        CHECK(!ok, "Halt ends the wait");
+        // the wait clears an earlier Halt when it starts, so Halt is pressed until the wait has ended (on a loaded runner the thread can
+        // start more than 50 ms late): it must end well before the 30 s slot
+        std::atomic<bool> ok{true}, done{false};
+        std::thread th([&] { std::string e; ok = tx.waitForSlot(t1 + 30, e); done = true; });
+        const auto h0 = std::chrono::steady_clock::now();
+        while (!done && std::chrono::steady_clock::now() - h0 < std::chrono::seconds(10)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            tx.abort();
+        }
+        th.join();
+        const double haltSec = std::chrono::duration<double>(std::chrono::steady_clock::now() - h0).count();
+        CHECK(!ok && haltSec < 10, "Halt ends the wait (%.2f s)", haltSec);
     }
     return testSummary("ham_safety");
 }

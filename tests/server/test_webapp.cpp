@@ -415,7 +415,10 @@ int main() {
         ws.close();
 
         // the mode options: ADS-B (standard 12) has setCorrection; a visitor may not set them
+        lan.timeoutMs = 20000;   // a mode switch can take seconds on a loaded runner, as in the loop over every mode
         r = lan.post("mode", "{\"id\":\"adsb\"}");
+        if (r.status == 0) r = lan.post("mode", "{\"id\":\"adsb\"}");
+        lan.timeoutMs = 4000;
         CHECK(r.status == 200, "ADS-B: %d %s", r.status, r.body.c_str());
         r = lan.get("options");
         CHECK(r.status == 200 && has(r.body, "\"schemas\":{") && has(r.body, "\"12\":[") && has(r.body, "setCorrection"), "options: %.200s", r.body.c_str());
@@ -434,7 +437,10 @@ int main() {
         CHECK(has(r.body, "\"audioSource\":\"monitor\""), "ADS-B is heard through the monitor");
 
         // digital voice: M17 (Codec2 is part of OnAir) on the test signal; the browser gets the decoded speech, not the demodulator
+        lan.timeoutMs = 20000;   // a mode switch can take seconds on a loaded runner, as in the loop over every mode
         r = lan.post("mode", "{\"id\":\"m17\"}");
+        if (r.status == 0) r = lan.post("mode", "{\"id\":\"m17\"}");
+        lan.timeoutMs = 4000;
         CHECK(r.status == 200, "M17: %d %s", r.status, r.body.c_str());
         r = lan.get("status");
         CHECK(has(r.body, "\"audioSource\":\"voice\""), "M17 audio is the voice: %.200s", r.body.c_str());
@@ -451,7 +457,10 @@ int main() {
         if (dect2::m17Codec2Available()) CHECK(samples >= 8000 && rms > 100, "M17 speech reaches the browser (%zu samples, rms %.0f)", samples, rms);
         else printf("webapp: Codec2 is not available in this build: the M17 speech check is skipped\n");
         wv.close();
+        lan.timeoutMs = 20000;   // a mode switch can take seconds on a loaded runner, as in the loop over every mode
         r = lan.post("mode", "{\"id\":\"fm\"}");
+        if (r.status == 0) r = lan.post("mode", "{\"id\":\"fm\"}");
+        lan.timeoutMs = 4000;
         r = lan.get("status");
         CHECK(has(r.body, "\"audioSource\":\"fm\""), "FM is heard through its own audio");
     }
