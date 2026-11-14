@@ -46,6 +46,7 @@ struct State {
     int pushedDrop = -1;                        // the drop time last given to the receiver
     bool winds = false;                         // "winds aloft": wind arrows at the aircraft (from Comm-B)
     bool full = false;                          // the map or radar fills the whole window (Esc or the same button to leave)
+    int fullView = 0;                           // what fills it: 0 the map, 2 the radar (the screen whose button was pressed, not viewMode: #521)
     double ctxLat = 0, ctxLon = 0;              // where the map was right-clicked
     std::string locMsg;
     int locBusy = 0;
