@@ -17,12 +17,13 @@ export MACOSX_DEPLOYMENT_TARGET
 FFMPEG_PREFIX=${FFMPEG_PREFIX:-$PWD/$BUILD/ffmpeg}
 [ -f "$FFMPEG_PREFIX/lib/libavcodec.dylib" ] || tools/package/build_ffmpeg.sh "$FFMPEG_PREFIX"
 cmake -S . -B $BUILD -DDECT2_FFMPEG_PREFIX="$FFMPEG_PREFIX" -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_TESTS=OFF -DDECT2_BUILD_APP=ON -DDECT2_HAVE_HAMLIB=ON -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET" -DONAIR_VERSION="$VERSION" -DDECT2_WITH_TLS=ON -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"   # TLS: HTTPS for onair-server and the web.on-air.dev heartbeat; libssl/libcrypto are bundled by bundle_macos.py
-cmake --build $BUILD -j"$(sysctl -n hw.ncpu)" --target dect2 onair-server onair-extcap
+cmake --build $BUILD -j"$(sysctl -n hw.ncpu)" --target dect2 onair-server onair-extcap onair-videogen
 APP=$BUILD/OnAir.app
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp $BUILD/dect2 "$APP/Contents/MacOS/OnAir"
 cp $BUILD/onair-extcap "$APP/Contents/MacOS/onair-extcap"   # Wireshark capture interface (docs/WIRESHARK-3.8.md)
+cp $BUILD/onair-videogen "$APP/Contents/MacOS/onair-videogen"   # the Digital video generator (#458): OnAir starts it from its own folder
 cp $BUILD/onair-server "$APP/Contents/MacOS/onair-server"   # the headless server for OnAir Web (docs/headless-server.md); bundle_macos.py gives it the same libraries
 mkdir -p "$APP/Contents/Resources/web"; cp -R web/onair-web "$APP/Contents/Resources/web/"   # the OnAir Web browser page (onair-server looks in ../Resources/web/onair-web)
 cp -R web/onair-app "$APP/Contents/Resources/web/"   # OnAir Web 3.9 (onair-server looks in ../Resources/web/onair-app)
@@ -88,6 +89,7 @@ NOTE
 tools/package/check_lgpl_bundle.sh "$APP/Contents/MacOS/OnAir" "$APP/Contents/Frameworks" || { echo "Licence check failed"; exit 1; }
 tools/package/check_lgpl_bundle.sh "$APP/Contents/MacOS/onair-server" "$APP/Contents/Frameworks" || { echo "Licence check failed (onair-server)"; exit 1; }
 [ -x "$APP/Contents/MacOS/onair-server" ] || { echo "error: onair-server is missing from the app"; exit 1; }
+tools/package/check_lgpl_bundle.sh "$APP/Contents/MacOS/onair-videogen" "$APP/Contents/Frameworks" || { echo "Licence check failed (onair-videogen)"; exit 1; }
 # licence files: the project's own, and the licence file of the Homebrew formula behind every bundled library
 mkdir -p "$APP/Contents/Resources"
 tools/package/add_license_files.sh "$APP/Contents/Resources"

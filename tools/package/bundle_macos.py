@@ -11,7 +11,9 @@ exe = os.path.join(app, "Contents/MacOS/OnAir")
 fw = os.path.join(app, "Contents/Frameworks")
 # the headless server (onair-server) sits next to the app and loads the same bundled libraries
 srv = os.path.join(app, "Contents/MacOS/onair-server")
-exes = [exe] + ([srv] if os.path.exists(srv) else [])
+# the Digital video generator (#458), started by OnAir from MacOS/: the same libraries
+vg = os.path.join(app, "Contents/MacOS/onair-videogen")
+exes = [exe] + [p for p in (srv, vg) if os.path.exists(p)]
 os.makedirs(fw, exist_ok=True)
 
 def run(*a):

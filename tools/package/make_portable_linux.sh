@@ -13,6 +13,7 @@ mkdir -p "$D/bin" "$D/lib" "$D/lib/ffmpeg"
 cp $B/dect2 "$D/bin/onair"; cp $B/dect2cli "$D/bin/onair-cli"; cp $B/dect2scan "$D/bin/onair-scan"
 cp $B/onair-server "$D/bin/onair-server"   # the headless server (OnAir Web)
 cp $B/onair-extcap "$D/bin/onair-extcap"   # Wireshark capture interface (docs/WIRESHARK-3.8.md)
+cp $B/onair-videogen "$D/bin/onair-videogen"   # the Digital video generator (#458): onair starts it from its own folder
 SKIP='linux-vdso|ld-linux|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libutil\.so|/libresolv\.so|/libstdc\+\+|/libgcc_s|/libGL|/libEGL|/libOpenGL|/libX|/libxcb|/libwayland|/libdrm|/libasound|/libpulse|/libudev|/libdbus|/libsystemd|/libxkbcommon|/libffi|/libgbm|/libva'
 # (FFmpeg goes to lib/ffmpeg: the programs load it only from there)
 FFLIB='^lib(avcodec|avformat|avutil|avdevice|avfilter|swscale|swresample|postproc)\.so'
@@ -25,6 +26,7 @@ collect() {
   done
 }
 [ -x "$D/bin/onair-server" ] || { echo "error: onair-server is missing from the portable package"; exit 1; }
+[ -x "$D/bin/onair-videogen" ] || { echo "error: onair-videogen is missing from the portable package"; exit 1; }
 # FFmpeg (LGPL, shared): the build of tools/package/build_ffmpeg.sh the programs were linked with (DECT2_FFMPEG_PREFIX), else the system's (found by ldd)
 FFP=$(sed -n 's/^DECT2_FFMPEG_PREFIX:PATH=//p' "$B/CMakeCache.txt" 2>/dev/null)
 if [ -n "$FFP" ]; then
@@ -47,6 +49,7 @@ fi
 [ -d "$B/radiolibs" ] && cp -a "$B"/radiolibs/. "$D/lib/"
 for l in "$D"/lib/*.so* "$D"/lib/ffmpeg/*.so*; do [ -L "$l" ] || patchelf --set-rpath '$ORIGIN' "$l" 2>/dev/null || true; done
 "$SRC"/tools/package/check_lgpl_bundle.sh "$D/bin/onair" "$D/lib/ffmpeg" || { echo "error: licence check of the portable package failed"; exit 1; }
+"$SRC"/tools/package/check_lgpl_bundle.sh "$D/bin/onair-videogen" "$D/lib/ffmpeg" || { echo "error: licence check of onair-videogen failed"; exit 1; }
 mkdir -p "$D/share/applications" "$D/share/icons"
 cp $SRC/packaging/linux/onair.desktop "$D/share/applications/"; cp $SRC/packaging/icons/onair_1024.png "$D/share/icons/onair.png"
 cp $SRC/LICENSE "$D/LICENSE"

@@ -31,6 +31,8 @@ is_system() {
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 FILES=$T/files; find "$DIR" -type f \( -iname '*.exe' -o -iname '*.dll' \) | sort > "$FILES"
 [ -s "$FILES" ] || { echo "no .exe or .dll in $DIR"; exit 2; }
+# OnAir.exe starts the Digital video generator from its own folder (#458): a package with OnAir.exe must carry it (and its DLLs are checked below)
+if [ -f "$DIR/OnAir.exe" ] && [ ! -f "$DIR/onair_videogen.exe" ]; then echo "onair_videogen.exe is missing next to OnAir.exe"; VG_MISSING=1; fi
 
 # imports of one file: "dll function" per line (dll lowercase); exports of one file: one name per line
 imports() {
@@ -86,5 +88,6 @@ while read -r f; do
     done
 done < "$FILES"
 
+[ -n "$VG_MISSING" ] && bad=$((bad + 1))
 if [ $bad -gt 0 ]; then echo "$bad problem(s) in $n files of $DIR"; exit 1; fi
 echo "OK: $n .exe/.dll files in $DIR, all imported DLLs are present or part of Windows, all imported functions from the shipped DLLs exist"

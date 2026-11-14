@@ -27,7 +27,7 @@ mkdir -p dist
 rm -rf "$OUT"
 mkdir -p "$OUT/lib/SoapySDR/modules0.8"
 cp "$SRC/dect2.exe" "$OUT/OnAir.exe"
-for pair in "dect2cli.exe:onair-cli.exe" "dect2scan.exe:onair-scan.exe"; do
+for pair in "dect2cli.exe:onair-cli.exe" "dect2scan.exe:onair-scan.exe" "onair_videogen.exe:onair_videogen.exe"; do
   from="${pair%%:*}" to="${pair##*:}"
   [ ! -f "$SRC/$from" ] || cp "$SRC/$from" "$OUT/$to"
 done

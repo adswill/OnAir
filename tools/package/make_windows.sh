@@ -15,20 +15,21 @@ BUILD=build-windows
 OUT=$BUILD/OnAir-$VERSION-windows-x64
 PREFIX=${MSYSTEM_PREFIX:-/ucrt64}
 cmake -S . -B $BUILD -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON
-cmake --build $BUILD -j"$(nproc)" --target dect2 dect2cli dect2scan onair-extcap
+cmake --build $BUILD -j"$(nproc)" --target dect2 dect2cli dect2scan onair-extcap onair-videogen
 
 rm -rf "$OUT" && mkdir -p "$OUT"
 strip -o "$OUT/OnAir.exe" $BUILD/dect2.exe
 strip -o "$OUT/onair-cli.exe" $BUILD/dect2cli.exe
 strip -o "$OUT/onair-scan.exe" $BUILD/dect2scan.exe
 strip -o "$OUT/onair-extcap.exe" $BUILD/onair-extcap.exe   # Wireshark capture interface (docs/WIRESHARK-3.8.md)
+strip -o "$OUT/onair_videogen.exe" $BUILD/onair_videogen.exe   # the Digital video generator (#458)
 # every DLL the programs need from the MSYS2 tree (FFmpeg, GLFW, libhackrf, libusb, the C++ runtime ...), found recursively
 collect() {
   ldd "$1" | awk -v p="$PREFIX/" 'index($3, p) == 1 {print $3}' | while read -r dll; do
     [ -f "$OUT/$(basename "$dll")" ] || { cp "$dll" "$OUT/"; collect "$dll"; }
   done
 }
-collect "$OUT/OnAir.exe"; collect "$OUT/onair-cli.exe"; collect "$OUT/onair-scan.exe"
+collect "$OUT/OnAir.exe"; collect "$OUT/onair-cli.exe"; collect "$OUT/onair-scan.exe"; collect "$OUT/onair_videogen.exe"
 # the radios OnAir drives by itself load their libraries at run time (nothing links them), so they are copied here
 for d in librtlsdr libairspy libairspyhf libbladeRF libLimeSuite libiio libuhd; do
   [ -f "$PREFIX/bin/$d.dll" ] && { cp "$PREFIX/bin/$d.dll" "$OUT/"; collect "$OUT/$d.dll"; }
