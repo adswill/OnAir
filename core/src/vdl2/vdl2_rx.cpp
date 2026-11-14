@@ -585,7 +585,7 @@ struct Vdl2Receiver::Impl {
             g.addr = a; g.type = src ? m.srcType : m.dstType; g.lastSeenSec = m.timeSec;
             if (src) {
                 g.messages++; g.freqHz = m.freqHz; g.lastHeardSec = m.timeSec; g.levelDb = m.levelDb;
-                if (m.hasPos && m.posKind == "XID ground station location") { g.hasPos = true; g.lat = m.lat; g.lon = m.lon; }
+                if (m.hasPos && m.posKind == "XID ground station location") vdl2StationReport(g, m.lat, m.lon);
                 const size_t at = m.detail.find("airport coverage ");
                 if (at != std::string::npos) g.airports = m.detail.substr(at + 17, m.detail.find('\n', at) - at - 17);
             }

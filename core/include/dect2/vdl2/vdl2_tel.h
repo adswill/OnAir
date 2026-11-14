@@ -164,6 +164,12 @@ struct Vdl2GroundStation {
     double sumW = 0, sumX = 0, sumY = 0, sumZ = 0;
     float coverageNm = 0;        // farthest aircraft with a position that talked to it, from its location or estimate
     uint32_t aircraftHeard = 0;  // frames with a located aircraft
+    // reported locations: a ground station does not move, so hasPos / lat / lon are the consensus of these (vdl2StationReport), not the last report
+    std::vector<std::pair<double, double>> posHist;   // the last valid reports (not saved in the results file)
+    bool hasPending = false;     // one report heard, no second one agreeing with it yet: drawn as unconfirmed, hasPos stays false
+    double pendLat = 0, pendLon = 0;
+    uint32_t posOutliers = 0;    // reports that disagreed with the consensus (a corrupted coordinate) and were ignored
+    uint32_t posRejected = 0;    // reports with impossible coordinates
 };
 
 // One aircraft position heard talking to this station: the estimate on the sphere and the coverage radius
@@ -183,6 +189,46 @@ inline void vdl2StationLearn(Vdl2GroundStation& g, double lat, double lon, bool 
         g.hasEstimate = true;
     }
     if (g.hasPos || g.hasEstimate) g.coverageNm = std::max(g.coverageNm, (float)vdl2DistNm(g.hasPos ? g.lat : g.estLat, g.hasPos ? g.lon : g.estLon, lat, lon));
+}
+
+// A coordinate a station can really report: on the globe and not the empty 0,0 a failed decode gives.
+inline bool vdl2ValidCoord(double lat, double lon) {
+    return std::isfinite(lat) && std::isfinite(lon) && std::fabs(lat) <= 90.0 && std::fabs(lon) <= 180.0 && !(lat == 0.0 && lon == 0.0);
+}
+
+enum class Vdl2PosResult { Rejected, Outlier, Unconfirmed, Confirmed };
+
+// One reported location of a ground station. The reports are kept (the last 16); the position is the mean of the largest group of reports
+// within 5 km of each other, and it needs two agreeing reports. A single report far from that group (one wrong bit in a coordinate) is an
+// outlier: counted and ignored. A station loaded from a results file (hasPos, no history) counts its saved position as two reports.
+inline Vdl2PosResult vdl2StationReport(Vdl2GroundStation& g, double lat, double lon) {
+    constexpr double kAgreeNm = 2.7;   // 5 km
+    constexpr size_t kKeep = 16;
+    if (!vdl2ValidCoord(lat, lon)) { g.posRejected++; return Vdl2PosResult::Rejected; }
+    if (g.hasPos && g.posHist.empty()) g.posHist.assign(2, {g.lat, g.lon});
+    g.posHist.emplace_back(lat, lon);
+    if (g.posHist.size() > kKeep) g.posHist.erase(g.posHist.begin());
+    const auto& h = g.posHist;
+    size_t bestN = 0, bestI = 0;
+    for (size_t i = 0; i < h.size(); i++) {
+        size_t n = 0;
+        for (size_t j = 0; j < h.size(); j++) n += vdl2DistNm(h[i].first, h[i].second, h[j].first, h[j].second) <= kAgreeNm;
+        if (n >= bestN) { bestN = n; bestI = i; }   // ties: the newer report
+    }
+    if (bestN < 2) {   // nothing agrees yet
+        if (g.hasPos) { g.posOutliers++; return Vdl2PosResult::Outlier; }
+        g.hasPending = true; g.pendLat = lat; g.pendLon = lon;
+        return Vdl2PosResult::Unconfirmed;
+    }
+    double sx = 0, sy = 0, sz = 0;
+    const double r = dect2::math::kPi / 180.0;
+    for (const auto& q : h) if (vdl2DistNm(h[bestI].first, h[bestI].second, q.first, q.second) <= kAgreeNm) {
+        sx += std::cos(q.first * r) * std::cos(q.second * r); sy += std::cos(q.first * r) * std::sin(q.second * r); sz += std::sin(q.first * r);
+    }
+    const double cl = std::atan2(sz, std::hypot(sx, sy)) / r, co = std::atan2(sy, sx) / r;
+    g.hasPos = true; g.hasPending = false; g.lat = cl; g.lon = co;
+    if (vdl2DistNm(cl, co, lat, lon) > kAgreeNm) { g.posOutliers++; return Vdl2PosResult::Outlier; }
+    return Vdl2PosResult::Confirmed;
 }
 
 struct Vdl2ChannelInfo {
