@@ -351,8 +351,14 @@ void testSessionThreads() {
         MCHECK(!ses.running() && !ses.sourceRunning(0) && !ses.sourceRunning(1), "session: Stop stops the sources and the mux");
         MCHECK(waitUntil([&] { return generatorRate(slot) == 0; }, 3), "session: OnAir sees the stream stop");
     }   // the Session's destructor joins the preview thread
-    const std::vector<std::string> after = threadNames();
-    MCHECK(countPrefix(after, "vg-src") == 0 && countPrefix(after, "vg-mux") == 0 && countPrefix(after, "vg-preview") == 0, "session: no generator thread is left after the session ends");
+    // the session's own threads are joined; helper threads that libraries start from them (FFmpeg, the encoders) carry the same name on
+    // Linux and may end a moment later: wait for those, and name what is left
+    auto ours = [] {
+        std::string left;
+        for (const auto& n : threadNames()) if (n.rfind("vg-src", 0) == 0 || n.rfind("vg-mux", 0) == 0 || n.rfind("vg-preview", 0) == 0) left += " " + n;
+        return left;
+    };
+    MCHECK(waitUntil([&] { return ours().empty(); }, 3), "session: no generator thread is left after the session ends:%s", ours().c_str());
     link.stop();
     srv.stop();
 }

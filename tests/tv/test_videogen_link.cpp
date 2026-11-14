@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -93,8 +94,9 @@ void testServerClient() {
     LCHECK(srv.start(0, false, err), "the server listens on a free port (%s)", err.c_str());
     const int port = srv.port();
     LCHECK(port > 0, "a port was chosen");
+    std::mutex byeMu;   // onBye runs on the link's thread
     std::string byeToken;
-    srv.onBye = [&](const std::string& t) { byeToken = t; };
+    srv.onBye = [&](const std::string& t) { std::lock_guard<std::mutex> lk(byeMu); byeToken = t; };
 
     VgLinkClient a, b;
     a.start("127.0.0.1", port, "Club camera", 1, "tok-a");
@@ -132,7 +134,7 @@ void testServerClient() {
     LCHECK(!srv.raise("") && !srv.raise("other"), "no generator with an empty or unknown token");
     LCHECK(srv.quit("tok-a") && waitFor([&] { return a.takeQuit(); }), "Quit by token");
     a.bye();
-    LCHECK(waitFor([&] { return byeToken == "tok-a"; }), "Bye tells OnAir which one was closed");
+    LCHECK(waitFor([&] { std::lock_guard<std::mutex> lk(byeMu); return byeToken == "tok-a"; }), "Bye tells OnAir which one was closed");
     // a generator leaving: its rate goes, its slot is free again
     b.startStream(1e6);
     LCHECK(waitFor([] { return generatorRate(2) == 1e6; }), "b sends");
