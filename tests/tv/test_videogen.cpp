@@ -1525,6 +1525,8 @@ static void testGeneratorMux(const fs::path& dir, const fs::path& pic) {
     std::printf("generator multiplex: %zu packets, %d pictures\n", out.size() / 188, pictures);
 }
 
+int videogenLinkTests();   // test_videogen_link.cpp
+
 int main() {
     const fs::path dir = fs::temp_directory_path() / ("onair_videogen_" + std::to_string((long long)std::chrono::steady_clock::now().time_since_epoch().count()));
     fs::create_directories(dir);
@@ -1550,6 +1552,7 @@ int main() {
     testRtmpInput(dir);
     testRemuxSynthetic();
     testGeneratorMux(dir, pic);
+    failures += videogenLinkTests();
 #ifndef _WIN32
     testStream(pic, false);
     testStream(pic, true);

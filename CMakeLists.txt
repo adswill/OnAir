@@ -339,6 +339,7 @@ target_sources(dect2core PRIVATE
 target_include_directories(dect2core PRIVATE third_party/uat_fec)
 # Tools > Digital video generator (docs in videogen.h): encoder settings and estimate, overlay (stb_truetype from Dear ImGui), engine
 target_sources(dect2core PRIVATE core/src/tv/videogen_params.cpp core/src/tv/videogen_overlay.cpp core/src/tv/videogen.cpp core/src/tv/videogen_hub.cpp core/src/tv/videogen_rtmp.cpp core/src/tv/ts_remux.cpp
+                                 core/src/tv/vglink.cpp   # the link generator <-> OnAir (vglink.h, #458)
                                  core/src/tv/dvb_modes.cpp)   # its tab "Digital Television Mode Selector" (dvb_modes.h)
 set_source_files_properties(core/src/tv/videogen_overlay.cpp PROPERTIES INCLUDE_DIRECTORIES "${ONAIR_ROOT}/third_party/imgui")
 set_source_files_properties(third_party/uat_fec/fec.c third_party/uat_fec/decode_rs_char.c third_party/uat_fec/init_rs_char.c
@@ -2792,7 +2793,7 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_tsout_udp tests/tv/test_tsout_udp.cpp)
   target_link_libraries(test_tsout_udp PRIVATE dect2core)
   add_test(NAME tsout_udp COMMAND test_tsout_udp)
-  add_executable(test_videogen tests/tv/test_videogen.cpp)   # Digital video generator: bitrate estimate, encoder settings, overlay, .ts file, UDP / RTP
+  add_executable(test_videogen tests/tv/test_videogen.cpp tests/tv/test_videogen_link.cpp)   # Digital video generator: bitrate estimate, encoder settings, overlay, .ts file, UDP / RTP
   target_link_libraries(test_videogen PRIVATE dect2core)
   add_test(NAME videogen COMMAND test_videogen WORKING_DIRECTORY ${ONAIR_ROOT})
   add_executable(test_dvb_modes tests/tv/test_dvb_modes.cpp)   # its mode selector: DVB modes against the workbook, link fit, best mode
