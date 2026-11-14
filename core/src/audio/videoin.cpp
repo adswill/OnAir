@@ -44,6 +44,68 @@ bool sampleRgb(const VideoIn::Impl& I, int dw, int dh, int x, int y, float& r, f
     return true;
 }
 
+// A Digital video generator's stream for the analog transmitter ("generator:N", #458): the generator is its own program now, so the
+// picture comes from decoding its transport stream (the hub's tap of slot N, filled over the link) instead of raw frames.
+struct TapIo { int id; std::atomic<bool>* stop; };
+int tapRead(void* op, uint8_t* buf, int size) {
+    TapIo* t = static_cast<TapIo*>(op);
+    while (!t->stop->load()) {
+        const size_t n = vgen::generatorTapRead(t->id, buf, (size_t)std::max(0, size), 100);
+        if (n > 0) return (int)n;
+    }
+    return AVERROR_EOF;
+}
+
+bool openGeneratorStream(VideoIn::Impl* I, int gid) {
+    vgen::generatorTapOpen(gid);
+    I->fileTh = dect2::namedThread("onair-vidgen", [I, gid]() {
+        TapIo io{gid, &I->stop};
+        std::vector<uint8_t> rgb;
+        while (!I->stop.load()) {   // (again) after the generator stopped or its stream broke
+            const int ioSize = 188 * 64;
+            uint8_t* ioBuf = (uint8_t*)av_malloc(ioSize);
+            AVIOContext* pb = avio_alloc_context(ioBuf, ioSize, 0, &io, tapRead, nullptr, nullptr);
+            AVFormatContext* fmt = avformat_alloc_context();
+            AVCodecContext* ctx = nullptr;
+            SwsContext* sws = nullptr;
+            AVFrame* fr = av_frame_alloc();
+            AVPacket* pk = av_packet_alloc();
+            fmt->pb = pb;
+            fmt->flags |= AVFMT_FLAG_CUSTOM_IO;
+            int si = -1;
+            if (avformat_open_input(&fmt, nullptr, av_find_input_format("mpegts"), nullptr) >= 0 && avformat_find_stream_info(fmt, nullptr) >= 0 &&
+                (si = av_find_best_stream(fmt, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0)) >= 0) {
+                const AVCodec* codec = avcodec_find_decoder(fmt->streams[si]->codecpar->codec_id);
+                ctx = codec ? avcodec_alloc_context3(codec) : nullptr;
+                if (ctx && (avcodec_parameters_to_context(ctx, fmt->streams[si]->codecpar) < 0 || avcodec_open2(ctx, codec, nullptr) < 0)) avcodec_free_context(&ctx);
+            }
+            while (ctx && !I->stop.load() && av_read_frame(fmt, pk) >= 0) {
+                if (pk->stream_index == si && avcodec_send_packet(ctx, pk) >= 0) {
+                    while (avcodec_receive_frame(ctx, fr) >= 0) {
+                        const int ow = std::min(fr->width, 720) & ~1, oh = std::max(2, (int)std::lround((double)ow * fr->height / std::max(1, fr->width)) & ~1);
+                        if (ow < 2) continue;
+                        sws = sws_getCachedContext(sws, fr->width, fr->height, (AVPixelFormat)fr->format, ow, oh, AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
+                        if (!sws) continue;
+                        rgb.resize((size_t)ow * oh * 3);
+                        uint8_t* dst[4] = {rgb.data(), nullptr, nullptr, nullptr};
+                        int ls[4] = {ow * 3, 0, 0, 0};
+                        sws_scale(sws, fr->data, fr->linesize, 0, fr->height, dst, ls);
+                        I->setRgb(ow, oh, rgb.data());
+                    }
+                }
+                av_packet_unref(pk);
+            }
+            sws_freeContext(sws);
+            av_frame_free(&fr);
+            av_packet_free(&pk);
+            avcodec_free_context(&ctx);
+            avformat_close_input(&fmt);   // with AVFMT_FLAG_CUSTOM_IO the AVIO context stays ours
+            if (pb) { av_freep(&pb->buffer); avio_context_free(&pb); }
+        }
+    });
+    return true;
+}
+
 bool openFileLoop(VideoIn::Impl* I, const std::string& path, std::string& err) {
     AVFormatContext* fmt = nullptr;
     if (avformat_open_input(&fmt, path.c_str(), nullptr, nullptr) < 0) { err = "could not open this video file"; return false; }
@@ -140,8 +202,7 @@ bool VideoIn::start(Kind k, const std::string& pathOrDevice, std::string& err) {
     if (k == File) {
         if (int gid = 0; vgen::parseGeneratorSpec(pathOrDevice, gid)) {   // the Digital video generator of that number, while it sends to the transmitter
             p_->genId = gid;
-            Impl* impl = p_.get();
-            vgen::setGeneratorFrameSink(gid, [impl](int w, int h, const uint8_t* rgb) { impl->setRgb(w, h, rgb); });
+            openGeneratorStream(p_.get(), gid);
             running_ = true;
             return true;
         }
@@ -161,9 +222,9 @@ bool VideoIn::start(Kind k, const std::string& pathOrDevice, std::string& err) {
 
 void VideoIn::stop() {
     p_->stop = true;
-    if (p_->genId > 0) { vgen::setGeneratorFrameSink(p_->genId, {}); p_->genId = 0; }
     videoInCameraStop(p_.get());
     if (p_->fileTh.joinable()) p_->fileTh.join();
+    if (p_->genId > 0) { vgen::generatorTapClose(p_->genId); p_->genId = 0; }
     running_ = false;
     kind_ = None;
 }

@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// Digital video generator: several instances, their outputs for the transmitter, and the free-text FFmpeg arguments (see videogen.h).
+// OnAir's side of the Digital video generators (#458): the queue of each connected generator (filled by VgLinkServer, vglink.h) that the
+// transmitter reads as "generator:N", and the free-text FFmpeg arguments (see videogen.h).
 #include "dect2/tv/videogen.h"
 #include "dect2/tv/ts_remux.h"
 #include <algorithm>
+#include <chrono>
+#include <condition_variable>
 #include <cctype>
 #include <deque>
 #include <map>
@@ -18,7 +21,8 @@ namespace {
 struct Fifo { std::deque<uint8_t> bytes; };   // whole 188 byte packets, oldest first
 std::mutex gMu;
 std::map<int, Fifo> gFifo;
-std::map<int, FrameSink> gSink;
+std::map<int, std::deque<uint8_t>> gTap;      // the analog transmitter's copy of a generator's stream (generatorTapOpen)
+std::condition_variable gTapCv;
 std::map<int, double> gRate;                   // bit/s of each running generator with Output::Transmitter
 constexpr size_t kMaxQueued = 188u * 4000;     // about 6 MB: at 10 Mbit/s a little over 4 s; the oldest packets go first when the transmitter is slower
 }
@@ -39,6 +43,26 @@ void generatorPush(int id, const uint8_t* packets, size_t n) {
     Fifo& f = gFifo[id];
     f.bytes.insert(f.bytes.end(), packets, packets + n * 188);
     if (f.bytes.size() > kMaxQueued) f.bytes.erase(f.bytes.begin(), f.bytes.begin() + (std::ptrdiff_t)((f.bytes.size() - kMaxQueued) / 188 * 188));
+    auto t = gTap.find(id);
+    if (t != gTap.end()) {
+        t->second.insert(t->second.end(), packets, packets + n * 188);
+        if (t->second.size() > kMaxQueued) t->second.erase(t->second.begin(), t->second.begin() + (std::ptrdiff_t)((t->second.size() - kMaxQueued) / 188 * 188));
+        gTapCv.notify_all();
+    }
+}
+
+void generatorTapOpen(int id) { std::lock_guard<std::mutex> lk(gMu); gTap[id].clear(); }
+void generatorTapClose(int id) { std::lock_guard<std::mutex> lk(gMu); gTap.erase(id); gTapCv.notify_all(); }
+
+size_t generatorTapRead(int id, uint8_t* buf, size_t max, int timeoutMs) {
+    std::unique_lock<std::mutex> lk(gMu);
+    gTapCv.wait_for(lk, std::chrono::milliseconds(timeoutMs), [&] { auto t = gTap.find(id); return t == gTap.end() || !t->second.empty(); });
+    auto t = gTap.find(id);
+    if (t == gTap.end() || t->second.empty()) return 0;
+    const size_t n = std::min(max, t->second.size());
+    std::copy_n(t->second.begin(), n, buf);
+    t->second.erase(t->second.begin(), t->second.begin() + (std::ptrdiff_t)n);
+    return n;
 }
 
 void generatorClear(int id) { std::lock_guard<std::mutex> lk(gMu); gFifo[id].bytes.clear(); }
@@ -107,14 +131,6 @@ bool generatorTsSource(int id, std::function<void(uint8_t*)>& out) {
         std::fill(pk + 4, pk + 188, 0xFF);
     };
     return true;
-}
-
-void setGeneratorFrameSink(int id, FrameSink s) { std::lock_guard<std::mutex> lk(gMu); if (s) gSink[id] = std::move(s); else gSink.erase(id); }
-bool generatorHasFrameSink(int id) { std::lock_guard<std::mutex> lk(gMu); return gSink.count(id) != 0; }
-void generatorPublishFrame(int id, int w, int h, const uint8_t* rgb24) {
-    std::lock_guard<std::mutex> lk(gMu);   // the sink is short (a copy); clearing waits for it, so it never runs after its owner has gone
-    auto it = gSink.find(id);
-    if (it != gSink.end()) it->second(w, h, rgb24);
 }
 
 // ---- FFmpeg arguments ----------------------------------------------------------------------------------------------------------

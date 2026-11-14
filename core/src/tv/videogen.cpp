@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// Digital video generator engine (videogen.h). One thread, "onair-videogen": source picture -> fit to the output size -> overlay ->
+// Digital video generator engine (videogen.h): one source. One thread ("vg-src-N" in the program, videogen_session.h): source picture -> fit to the output size -> overlay ->
 // video encoder, the sound -> one encoder per audio track, both into FFmpeg's MPEG-TS muxer (mux rate, service, PIDs), whose packets
-// go to a .ts file (as fast as the encoder runs) or to tsout's paced UDP / RTP sender (in real time). A preview (previewOnly) makes
-// the pictures in real time for the window and encodes nothing.
+// go to the session's queue for the mux thread (Output::Queue), a .ts file (as fast as the encoder runs), tsout's paced UDP / RTP sender
+// (in real time) or this process's hub (tests). A preview (previewOnly) makes the pictures in real time and encodes nothing. The pictures
+// for the window are copied out (latest wins) and scaled by whoever calls preview(), never on this thread.
 // The camera comes from VideoIn (listVideoInputs / start / copyYuv420), an RTMP sender (OBS) from RtmpInput, the microphone from AudioIn. Pictures and video files are
 // decoded here, frame by frame, so a file is encoded faster than real time with its picture and sound in step. The test generator
 // draws its test picture (drawTestCard) straight into the output frame.
 #include "dect2/tv/videogen.h"
 #include "dect2/audio/audioin.h"
 #include "dect2/audio/videoin.h"
+#include "dect2/common/cpu_meter.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/common/u8file.h"
 #include "dect2/tv/tsout.h"
+#include "dect2/tv/videogen_session.h"
 #include "dect2/tv/videogen_rtmp.h"
 #include "dect2/common/diag.h"
 extern "C" {
@@ -247,8 +250,18 @@ struct Sink {
     uint64_t bytes = 0;
     bool failed = false;
     int hubId = 0;               // Output::Transmitter: the queue of this generator (videogen_hub.cpp)
+    std::shared_ptr<TsQueue> q;  // Output::Queue: the mux thread's queue of this source
+    bool block = false;
     void write(const uint8_t* d, int n) {
         bytes += (uint64_t)n;
+        if (q) {
+            part.insert(part.end(), d, d + n);
+            const size_t whole = part.size() / 188;
+            if (whole) {
+                q->push(part.data(), whole, block);
+                part.erase(part.begin(), part.begin() + (std::ptrdiff_t)(whole * 188));
+            }
+        }
         if (file && fwrite(d, 1, (size_t)n, file) != (size_t)n) failed = true;
         if (hubId > 0) {
             part.insert(part.end(), d, d + n);
@@ -402,9 +415,14 @@ struct VideoGenerator::Impl {
     GenStats st;
     Layout overlay;
     uint64_t overlaySerial = 0;
-    std::vector<uint8_t> prev;
-    int prevW = 0, prevH = 0;
-    uint64_t prevSerial = 0;
+    // the newest picture with its overlay, for preview() (only while someone asked for one in the last second)
+    struct Pic { int w = 0, h = 0; std::vector<uint8_t> y, u, v; };
+    std::shared_ptr<const Pic> pic;
+    uint64_t picSerial = 0;
+    std::atomic<int64_t> wantPicsUntilMs{0};
+    std::mutex scaleMu;               // the preview's scaler (callers of preview(), not the source thread)
+    SwsContext* scaleSws = nullptr;
+    ~Impl() { sws_freeContext(scaleSws); }
 
     void fail(const std::string& e) { DIAG_ERROR(753702, "The video generator stopped with an error: %s.", e.c_str()); std::lock_guard<std::mutex> lk(mu); if (st.error.empty()) st.error = e; }
     void run(GenConfig c);
@@ -415,8 +433,9 @@ void VideoGenerator::Impl::run(GenConfig c) {
     const int W = s.width & ~1, H = s.height & ~1;
     const AVRational fr = av_d2q(std::clamp(s.fps, 0.5, 120.0), 1001);
     const double fps = av_q2d(fr);
-    const bool live = c.source == Source::Camera || c.source == Source::Rtmp || c.output != Output::File || c.previewOnly;
-    const int64_t totalFrames = c.output == Output::File && !c.previewOnly ? std::max<int64_t>(1, (int64_t)std::llround(c.seconds * fps)) : INT64_MAX;
+    const bool toFile = c.output == Output::File || (c.output == Output::Queue && c.queueBlocking);   // a mux writing a file waits for it: as fast as it encodes, for its length
+    const bool live = c.source == Source::Camera || c.source == Source::Rtmp || !toFile || c.previewOnly;
+    const int64_t totalFrames = toFile && !c.previewOnly ? std::max<int64_t>(1, (int64_t)std::llround(c.seconds * fps)) : INT64_MAX;
     const Budget bud = estimate(s);
 
     std::vector<ArgOpt> userOpts;
@@ -484,10 +503,23 @@ void VideoGenerator::Impl::run(GenConfig c) {
     // output (a preview's sink goes nowhere)
     Sink sink;
     OutputManager net;
-    struct RateGuard { int id = 0; ~RateGuard() { if (id > 0) generatorSetRate(id, 0); } } rateGuard;   // the transmitter's multiplex sees it stop
+    struct RateGuard {   // the transmitter's multiplex / the mux thread sees it stop
+        int id = 0;
+        TsQueue* q = nullptr;
+        ~RateGuard() { if (id > 0) generatorSetRate(id, 0); if (q) { q->rate = 0; q->producing = false; } }
+    } rateGuard;
+    if (!c.previewOnly && c.output == Output::Queue && c.queue) {
+        c.queue->rate = bud.mux * 1000.0;   // its share of the multiplex (TsRemux)
+        c.queue->producing = true;
+        rateGuard.q = c.queue.get();
+    }
     if (!c.previewOnly && c.output == Output::File) {
         sink.file = u8fopen(c.tsPath, "wb");
         if (!sink.file) { fail("cannot write " + c.tsPath + ": " + strerror(errno)); return; }
+    } else if (!c.previewOnly && c.output == Output::Queue) {
+        if (!c.queue) { fail("no queue for the mux"); return; }
+        sink.q = c.queue;
+        sink.block = c.queueBlocking;
     } else if (!c.previewOnly && c.output == Output::Transmitter) {
         sink.hubId = c.instanceId;
         generatorClear(c.instanceId);
@@ -669,9 +701,8 @@ void VideoGenerator::Impl::run(GenConfig c) {
             }
             return false;
         };
-        SwsContext* prevSws = nullptr;
-        SwsContext* frameSws = nullptr;
-        std::vector<uint8_t> frameRgb;
+        auto cpuAt = std::chrono::steady_clock::now();
+        uint64_t cpuNs = cpu::threadNs();
         auto lastPreview = std::chrono::steady_clock::now() - std::chrono::seconds(1);
         const auto t0 = std::chrono::steady_clock::now();
         int late = 0;
@@ -804,35 +835,23 @@ void VideoGenerator::Impl::run(GenConfig c) {
             if (sink.net) net.burstDone(1.0 / fps);
             if (muxErr) { fail("the MPEG-TS muxer refused a packet of " + venc + ": " + averr(muxErr)); break; }
             if (sink.failed) { fail(c.output == Output::File ? "cannot write " + c.tsPath : "cannot send the stream"); break; }
-            if (c.instanceId > 0 && generatorHasFrameSink(c.instanceId)) {   // the analog transmitter takes the picture itself
-                const int fw = std::min(W, 720) & ~1, fh = std::max(2, (int)std::lround((double)fw * H / W) & ~1);
-                frameSws = sws_getCachedContext(frameSws, W, H, AV_PIX_FMT_YUV420P, fw, fh, AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
-                if (frameSws) {
-                    frameRgb.resize((size_t)fw * fh * 3);
-                    const uint8_t* sp[3] = {out.y.data(), out.u.data(), out.v.data()};
-                    const int ss[3] = {W, W / 2, W / 2};
-                    uint8_t* d[1] = {frameRgb.data()};
-                    const int ds[1] = {fw * 3};
-                    sws_scale(frameSws, sp, ss, 0, H, d, ds);
-                    generatorPublishFrame(c.instanceId, fw, fh, frameRgb.data());
-                }
-            }
-            // the preview for the window, about 8 times a second
+            // the picture for the preview thread, about 15 a second while one is wanted (a copy: the source never waits for it)
             const auto now = std::chrono::steady_clock::now();
-            if (now - lastPreview > std::chrono::milliseconds(120)) {
+            const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+            if (nowMs < wantPicsUntilMs.load() && now - lastPreview > std::chrono::milliseconds(60)) {
                 lastPreview = now;
-                const int pw = std::min(W, 640) & ~1, ph = std::max(2, (int)std::lround((double)pw * H / W) & ~1);
-                prevSws = sws_getCachedContext(prevSws, W, H, AV_PIX_FMT_YUV420P, pw, ph, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
-                if (prevSws) {
-                    std::vector<uint8_t> rgba((size_t)pw * ph * 4);
-                    const uint8_t* sp[3] = {out.y.data(), out.u.data(), out.v.data()};
-                    const int ss[3] = {W, W / 2, W / 2};
-                    uint8_t* d[1] = {rgba.data()};
-                    const int ds[1] = {pw * 4};
-                    sws_scale(prevSws, sp, ss, 0, H, d, ds);
-                    std::lock_guard<std::mutex> lk(mu);
-                    prev.swap(rgba); prevW = pw; prevH = ph; prevSerial++;
-                }
+                auto p = std::make_shared<Pic>();
+                p->w = W; p->h = H; p->y = out.y; p->u = out.u; p->v = out.v;
+                std::lock_guard<std::mutex> lk(mu);
+                pic = std::move(p);
+                picSerial++;
+            }
+            if (now - cpuAt > std::chrono::seconds(1)) {   // this thread's CPU over the last second
+                const uint64_t ns = cpu::threadNs();
+                const double busy = 100.0 * (double)(ns - cpuNs) / (double)std::chrono::duration_cast<std::chrono::nanoseconds>(now - cpuAt).count();
+                cpuNs = ns; cpuAt = now;
+                std::lock_guard<std::mutex> lk(mu);
+                st.cpuBusy = busy;
             }
             {
                 std::lock_guard<std::mutex> lk(mu);
@@ -840,13 +859,11 @@ void VideoGenerator::Impl::run(GenConfig c) {
                 st.seconds = (double)(n + 1) / fps;
                 st.bytes = sink.bytes;
                 st.kbps = st.seconds > 0 ? (double)sink.bytes * 8 / st.seconds / 1000.0 : 0;
-                st.progress = c.output == Output::File ? (double)(n + 1) / (double)totalFrames : 0;
+                st.progress = toFile ? (double)(n + 1) / (double)totalFrames : 0;
                 st.lateFrames = late;
                 if (c.source == Source::Rtmp) st.input = rtmp.status();
             }
         }
-        sws_freeContext(prevSws);
-        sws_freeContext(frameSws);
         // flush the encoders and close the stream
         if (const int r = encode(vx, vs, nullptr); r < 0) fail("the video encoder " + venc + " did not finish: " + averr(r));
         for (int k = 0; k < tracks; k++) if (ax[(size_t)k]) encode(ax[(size_t)k], as[(size_t)k], nullptr);
@@ -905,12 +922,12 @@ bool VideoGenerator::start(const GenConfig& c, std::string& err) {
         p_->active = true;
         p_->overlay = c.overlay;
         p_->overlaySerial++;
-        p_->prev.clear();   // the last run's picture: preview() would hand it out with a 0 x 0 size (a crash in the window)
-        p_->prevW = p_->prevH = 0;
+        p_->pic.reset();   // the last run's picture
     }
     p_->stopFlag = false;
     Impl* I = p_.get();
-    p_->th = namedThread("onair-videogen", [I](GenConfig cfg) {
+    const std::string tname = c.threadName.empty() ? std::string("onair-videogen") : c.threadName;
+    p_->th = namedThread(tname.c_str(), [I](GenConfig cfg) {
         I->run(std::move(cfg));
         std::lock_guard<std::mutex> lk(I->mu);
         I->st.running = false;
@@ -947,11 +964,29 @@ void VideoGenerator::setOverlay(const Layout& l) {
 }
 
 bool VideoGenerator::preview(std::vector<uint8_t>& rgba, int& w, int& h, uint64_t& serial) const {
-    std::lock_guard<std::mutex> lk(p_->mu);
-    if (p_->prevSerial == serial || p_->prev.empty()) return false;
-    rgba = p_->prev;
-    w = p_->prevW; h = p_->prevH;
-    serial = p_->prevSerial;
+    Impl& I = *p_;
+    I.wantPicsUntilMs = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() + 1000;
+    std::shared_ptr<const Impl::Pic> pc;
+    uint64_t ser = 0;
+    {
+        std::lock_guard<std::mutex> lk(I.mu);
+        if (I.picSerial == serial || !I.pic) return false;
+        pc = I.pic;
+        ser = I.picSerial;
+    }
+    if (pc->w < 2 || pc->h < 2) return false;
+    const int pw = std::min(pc->w, 640) & ~1, ph = std::max(2, (int)std::lround((double)pw * pc->h / pc->w) & ~1);
+    std::lock_guard<std::mutex> lk(I.scaleMu);
+    I.scaleSws = sws_getCachedContext(I.scaleSws, pc->w, pc->h, AV_PIX_FMT_YUV420P, pw, ph, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
+    if (!I.scaleSws) return false;
+    rgba.resize((size_t)pw * ph * 4);
+    const uint8_t* sp[3] = {pc->y.data(), pc->u.data(), pc->v.data()};
+    const int ss[3] = {pc->w, pc->w / 2, pc->w / 2};
+    uint8_t* d[1] = {rgba.data()};
+    const int ds[1] = {pw * 4};
+    sws_scale(I.scaleSws, sp, ss, 0, pc->h, d, ds);
+    w = pw; h = ph;
+    serial = ser;
     return true;
 }
 

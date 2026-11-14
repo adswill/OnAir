@@ -4,8 +4,8 @@
 // Digital video generator (Tools > Digital video generator): a camera, a still picture, a video file or the transmitter's test picture
 // (Test generator), with the overlay, encoded with
 // FFmpeg (the codec and settings of videogen_params.h) into one MPEG transport stream, written to a .ts file or sent over UDP / RTP.
-// It stands alone: nothing here talks to the receiver or the transmitter (a .ts file it writes can be given to the transmitter as its
-// "MPEG-TS / video file").
+// Since #458 it runs in its own program (onair-videogen): each source is a VideoGenerator on its own thread, put into one multiplex by
+// videogen_session.h and sent to OnAir's transmitter over the link of vglink.h. The hub below is OnAir's side of that link.
 #pragma once
 #include "videogen_overlay.h"
 #include "videogen_params.h"
@@ -23,8 +23,10 @@ namespace dect2::vgen {
 // T2Generator carries in its real PLP), drawn at the output resolution (drawTestCard); text goes on it with the overlay
 enum class Source { Camera, Picture, VideoFile, Generator, Rtmp };
 enum class AudioSource { Silence, Tone, FromFile, Microphone, AudioFile };   // FromFile: the video file's or the RTMP stream's; AudioFile: your own sound file (or folder), see audioPath
-enum class Output { File, Udp, Rtp, Transmitter };   // Transmitter: the transport stream waits in a queue for the transmitter (generatorSpec(instanceId))
+enum class Output { File, Udp, Rtp, Transmitter, Queue };   // Transmitter: into this process's hub for the transmitter (generatorSpec(instanceId)); Queue: into GenConfig::queue for the mux thread (videogen_session.h)
 enum class Fit { Stretch, Letterbox, Crop };
+
+class TsQueue;   // videogen_session.h
 
 struct GenConfig {
     Source source = Source::Camera;
@@ -51,6 +53,9 @@ struct GenConfig {
     Settings enc;
     Layout overlay;
     std::shared_ptr<const std::vector<uint8_t>> font;   // TrueType for the overlay text
+    std::shared_ptr<TsQueue> queue;    // Output::Queue: where the packets go
+    bool queueBlocking = false;        // Output::Queue: wait for room instead of dropping the oldest (the mux writes a file)
+    std::string threadName;            // empty: "onair-videogen"; the program names its sources "vg-src-1" ...
 };
 
 struct GenStats {
@@ -64,6 +69,7 @@ struct GenStats {
     std::string input;                        // Rtmp: waiting for a sender / what it sends / why listening failed
     std::string notice;                       // the video encoder had to be opened without the profile / B-frames (and why)
     std::string error;
+    double cpuBusy = 0;                       // the thread's CPU in percent of one core, about the last second
 };
 
 // Where the source picture goes in the output picture (even numbers for 4:2:0): the part of the source to use (s*) and where it lands (d*)
@@ -102,16 +108,17 @@ size_t generatorQueued(int id);                                      // packets 
 void generatorPush(int id, const uint8_t* packets, size_t n);        // (the generator) n whole packets; the oldest go when the queue is full
 void generatorClear(int id);
 bool generatorPop(int id, uint8_t* pk);                              // the next queued packet; false when none is waiting (no null fill)
+// The analog transmitter decodes a generator's stream itself (VideoIn, "generator:N"): while a tap is open every packet pushed for id is
+// also kept for it (at most about 6 MB); tapRead takes up to max bytes, waiting up to timeoutMs for some. 0: nothing (or the tap is closed).
+void generatorTapOpen(int id);
+void generatorTapClose(int id);
+size_t generatorTapRead(int id, uint8_t* buf, size_t max, int timeoutMs);
 void generatorSetRate(int id, double bps);                           // (the generator) its mux rate while it runs, 0 when it stops
 double generatorRate(int id);                                        // 0: not running with Output::Transmitter
 // Several generators as the services of one multiplex (the transmitter's Multiplex, #492): generator ids[k] is programme
 // firstServiceId + k, named names[k] (empty: the generator's own service name), see ts_remux.h. outBitrate: the channel's TS rate.
 std::function<void(uint8_t*)> generatorMuxSource(const std::vector<int>& ids, const std::vector<std::string>& names, const std::string& provider,
                                                  int firstServiceId, double outBitrate);
-using FrameSink = std::function<void(int w, int h, const uint8_t* rgb24)>;
-void setGeneratorFrameSink(int id, FrameSink s);                     // the picture of every frame, RGB 8 bit packed; an empty function removes it
-bool generatorHasFrameSink(int id);
-void generatorPublishFrame(int id, int w, int h, const uint8_t* rgb24);
 
 // ---- free-text FFmpeg arguments ----
 // Split into an argument list (quotes group, nothing is expanded or run: there is no shell anywhere).
@@ -134,7 +141,8 @@ public:
     bool wait(double timeoutSeconds);                   // true when the run has ended
     GenStats stats() const;
     void setOverlay(const Layout& l);                   // takes effect on the next frame
-    // The latest encoded picture with its overlay, RGBA at a reduced size; false when there is none newer than `serial`
+    // The latest picture with its overlay, RGBA at most 640 wide, scaled here in the caller's thread (the preview thread); false when there
+    // is none newer than `serial`. The source thread keeps a copy of its pictures (about 15 a second) only while someone asks for them.
     bool preview(std::vector<uint8_t>& rgba, int& w, int& h, uint64_t& serial) const;
 
     struct Impl;

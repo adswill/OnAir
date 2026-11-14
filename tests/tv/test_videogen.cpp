@@ -14,6 +14,7 @@
 //  9. the transmitter's multiplex of several generators (#492): synthetic streams (new PIDs, PAT / PMT / SDT with good CRCs, continuity,
 //     each input keeps its share so its PCRs still match the packet times), then two real generators read back by FFmpeg as two programmes
 // Run from the source root (the overlay font is third_party/fonts/Inter-Medium.ttf).
+#include "dect2/audio/videoin.h"
 #include "dect2/tv/videogen.h"
 #include "dect2/tv/videogen_rtmp.h"
 #include "dect2/tv/ts_proto.h"
@@ -1280,10 +1281,11 @@ static void testInstancesAndTransmitter(const fs::path& dir, const fs::path& pic
     a.enc.serviceId = 0x111; b.enc.serviceId = 0x222;
     a.enc.serviceName = "Gen A"; b.enc.serviceName = "Gen B";
     a.ffmpegArgs = "-qmin 4 -nosuchoption 7";
-    std::atomic<int> frames{0}; std::atomic<int> fw{0}, fh{0};
-    setGeneratorFrameSink(2, [&](int w, int h, const uint8_t* rgb) { if (rgb && w > 0 && h > 0) { frames++; fw = w; fh = h; } });
-    VideoGenerator ga, gb;
+    // the analog transmitter's picture of generator 2: decoded from its transport stream (#458: the generator is its own program)
+    dect2::VideoIn analog;
     std::string err;
+    CHECK(analog.start(dect2::VideoIn::File, generatorSpec(2), err), "the analog path opens generator:2 (%s)", err.c_str());
+    VideoGenerator ga, gb;
     CHECK(ga.start(a, err), "start 1: %s", err.c_str());
     CHECK(gb.start(b, err), "start 2: %s", err.c_str());
     std::function<void(uint8_t*)> s1, s2;
@@ -1304,14 +1306,15 @@ static void testInstancesAndTransmitter(const fs::path& dir, const fs::path& pic
         while (generatorQueued(2) > 0) { s2(pk); d2.insert(d2.end(), pk, pk + 188); }
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
+    const int fw = analog.width(), fh = analog.height();
     ga.stop(); gb.stop();
-    setGeneratorFrameSink(2, {});
+    analog.stop();
     auto nameOfBytes = [&](const std::vector<uint8_t>& d) { const fs::path f = dir / "q.ts"; { std::ofstream o(f, std::ios::binary); o.write((const char*)d.data(), (std::streamsize)d.size()); } return serviceNameOf(f); };
     const TsInfo t1 = parseTs(d1), t2 = parseTs(d2);
     CHECK(t1.sync && t1.packets > 100 && t2.sync && t2.packets > 100, "both streams are whole packets (%zu, %zu)", t1.packets, t2.packets);
     CHECK(t1.program == 0x111 && t2.program == 0x222, "each queue holds its own stream: programs 0x%x / 0x%x", t1.program, t2.program);
     CHECK(nameOfBytes(d1) == "Gen A" && nameOfBytes(d2) == "Gen B", "service names stay apart");
-    CHECK(frames > 10 && fw >= 352 && fh >= 280, "analog path: %d pictures of %dx%d", frames.load(), fw.load(), fh.load());
+    CHECK(fw >= 352 && fh >= 280, "analog path: the decoded picture is %dx%d", fw, fh);
     const GenStats sa = ga.stats();
     CHECK(sa.error.empty() && sa.notice.find("nosuchoption") != std::string::npos && sa.notice.find("qmin") == std::string::npos, "unknown encoder option reported, known one not: '%s' (%s)", sa.notice.c_str(), sa.error.c_str());
     // an empty queue gives null packets, so the transmitter keeps its rate
@@ -1526,6 +1529,7 @@ static void testGeneratorMux(const fs::path& dir, const fs::path& pic) {
 }
 
 int videogenLinkTests();   // test_videogen_link.cpp
+int videogenMuxTests();    // test_videogen_mux.cpp
 
 int main() {
     const fs::path dir = fs::temp_directory_path() / ("onair_videogen_" + std::to_string((long long)std::chrono::steady_clock::now().time_since_epoch().count()));
@@ -1553,6 +1557,7 @@ int main() {
     testRemuxSynthetic();
     testGeneratorMux(dir, pic);
     failures += videogenLinkTests();
+    failures += videogenMuxTests();
 #ifndef _WIN32
     testStream(pic, false);
     testStream(pic, true);
