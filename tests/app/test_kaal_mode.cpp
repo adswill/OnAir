@@ -37,7 +37,7 @@ int main() {
     need("app/ui/mode_table.cpp", table, "{124, \"KAPP\", 15,");
     need("app/ui/mode_table.cpp", table, "{125, \"KAFT\", 15,");
     need("app/ui/mode_table.cpp", table, "N_(\"PLUGINS\"), \"Kris custom modes\", N_(\"CUSTOM MODES\")}");   // the Mode Builder's group follows
-    need("app/ui/mode_table.cpp", table, "IM_COL32(236, 160, 84, 255),\n    IM_COL32(120, 200, 170, 255)};");
+    need("app/ui/mode_table.cpp", table, "IM_COL32(233, 163, 101, 255),\n    IM_COL32(147, 191, 179, 255)};");
 
     const std::string app = readSource("app/app.h");
     need("app/app.h", app, "constexpr int kNumFamilies = ");
