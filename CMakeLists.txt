@@ -2695,6 +2695,7 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_wide_session tests/engine/test_wide_session.cpp)   # wide multi-signal decode: DMR + P25 + pager + APRS + air band AM from one capture, identifier, enable/disable, CPU guard
   target_link_libraries(test_wide_session PRIVATE dect2core)
   add_test(NAME wide_session COMMAND test_wide_session)
+  set_tests_properties(wide_session PROPERTIES RUN_SERIAL TRUE)   # its CPU guard measures real load: other tests on the same cores make it drop decoders
   add_executable(test_wide_placed tests/engine/test_wide_placed.cpp)   # several modes at once on one capture (issue #384), simulated signals
   target_link_libraries(test_wide_placed PRIVATE dect2core)
   add_test(NAME wide_placed COMMAND test_wide_placed)
