@@ -437,9 +437,11 @@ def addr2line(path, addrs):
     """Map file addresses to a list of (function, file:line), inlined frames included."""
     if not addrs:
         return {}
-    cmd = ["addr2line", "-f", "-C", "-i", "-a", "-e", path] + ["0x%x" % a for a in addrs]
+    hexes = ["0x%x" % a for a in addrs]
     try:
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=120, check=False).stdout.splitlines()  # nosec B603 - fixed program, no shell
+        r = subprocess.run(["addr2line", "-f", "-C", "-i", "-a", "-e", path, *hexes],  # nosec B603 B607 - fixed program from PATH, no shell
+                           capture_output=True, text=True, timeout=120, check=False)
+        out = r.stdout.splitlines()
     except (OSError, subprocess.TimeoutExpired):
         return {}
     res, cur, i = {}, None, 0
@@ -598,11 +600,12 @@ def gdb_backtraces(dump, core, src):
     if src:
         cmds.append("set substitute-path onair " + src)
     cmds += ["info threads", "thread apply all bt 40", "thread 1", "info registers", "x/12i $pc-24", "bt full 12"]
-    args = ["gdb", "-nx", "-batch"]
+    ex = []
     for c in cmds:
-        args += ["-ex", c]
+        ex += ["-ex", c]
     try:
-        r = subprocess.run(args, capture_output=True, text=True, timeout=1200, check=False)  # nosec B603 - fixed program, no shell
+        r = subprocess.run(["gdb", "-nx", "-batch", *ex],  # nosec B603 B607 - fixed program from PATH, no shell
+                           capture_output=True, text=True, timeout=1200, check=False)
     except (OSError, subprocess.TimeoutExpired) as e:
         return "gdb failed: %s" % e
     return r.stdout + ("\n[gdb stderr]\n" + r.stderr[-4000:] if r.stderr.strip() else "")

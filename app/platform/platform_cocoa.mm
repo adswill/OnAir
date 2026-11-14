@@ -5,9 +5,12 @@
 #include "datadir_ptr.h"
 #include "cjk_order.h"
 #include <algorithm>
+#include <array>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <sys/sysctl.h>
+#include <unistd.h>
 #import <Cocoa/Cocoa.h>
 #import <CoreLocation/CoreLocation.h>
 #import <ImageIO/ImageIO.h>
@@ -374,6 +377,14 @@ std::vector<std::string> monoFontCandidates() { return {"/System/Library/Fonts/M
 std::string uiLanguage() {
     NSArray<NSString*>* l = [NSLocale preferredLanguages];   // the order of System Settings > Language & Region
     return l.count ? std::string([l[0] UTF8String]) : std::string("en");
+}
+
+bool debuggerAttached() {
+    std::array<int, 4> mib{CTL_KERN, KERN_PROC, KERN_PROC_PID, (int)getpid()};
+    struct kinfo_proc info{};
+    size_t size = sizeof info;
+    if (sysctl(mib.data(), (u_int)mib.size(), &info, &size, nullptr, 0) != 0) return false;
+    return (info.kp_proc.p_flag & P_TRACED) != 0;   // the process is being traced: a debugger is attached
 }
 
 }

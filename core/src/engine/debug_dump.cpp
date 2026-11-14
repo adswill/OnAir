@@ -123,7 +123,7 @@ size_t readFile(const char* path, char* buf, size_t cap) {
     if (fd < 0) return 0;
     size_t n = 0;
     while (n < cap) {
-        const ssize_t r = read(fd, buf + n, cap - n);
+        const ssize_t r = read(fd, buf + n, cap - n);   // Flawfinder: ignore (bounded: at most cap - n bytes, n < cap)
         if (r < 0 && errno == EINTR) continue;
         if (r <= 0) break;
         n += (size_t)r;

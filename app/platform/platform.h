@@ -16,6 +16,8 @@ void showFatalError(const char* title, const char* text);
 
 // While a dialog of the system is open the main loop stands still: the hang watchdog (app/panels/debug_report.cpp) does not count that.
 inline std::atomic<int>& dialogDepth() { static std::atomic<int> d{0}; return d; }
+// True while a debugger is attached to OnAir: the hang watchdog then waits, as a stop at a breakpoint is not a hang.
+bool debuggerAttached();
 struct DialogScope {
     DialogScope() { dialogDepth().fetch_add(1); }
     ~DialogScope() { dialogDepth().fetch_sub(1); }

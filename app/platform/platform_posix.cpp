@@ -744,4 +744,16 @@ std::string uiLanguage() {
 #endif
 }
 
+bool debuggerAttached() {
+#ifdef _WIN32
+    return IsDebuggerPresent() != FALSE;
+#else
+    std::ifstream f("/proc/self/status");   // Linux: TracerPid is the process id of the debugger, 0 without one
+    std::string line;
+    while (std::getline(f, line))
+        if (line.rfind("TracerPid:", 0) == 0) return std::atoi(line.c_str() + 10) != 0;
+    return false;
+#endif
+}
+
 }

@@ -121,19 +121,6 @@ const char* archTag() {
 #endif
 }
 
-bool debuggerAttached() {
-#ifdef _WIN32
-    return IsDebuggerPresent() != FALSE;
-#elif defined(__linux__)
-    std::ifstream f("/proc/self/status");
-    std::string line;
-    while (std::getline(f, line)) if (line.rfind("TracerPid:", 0) == 0) return std::atoi(line.c_str() + 10) != 0;
-    return false;
-#else
-    return false;
-#endif
-}
-
 int resizeCb(ImGuiInputTextCallbackData* d) {
     if (d->EventFlag == ImGuiInputTextFlags_CallbackResize) {
         auto* s = static_cast<std::string*>(d->UserData);
@@ -170,7 +157,7 @@ void watchdogMain() {
         if (plat::dialogDepth().load() > 0 && gBeat.load() != 0) gBeat.store(now);   // a file dialog of the system is open: waiting is normal
         const int64_t beat = gBeat.load();
         if (beat == 0 || gHangDumped.load() || now - beat < kHangMs) continue;
-        if (debuggerAttached()) continue;   // stopped at a breakpoint
+        if (plat::debuggerAttached()) continue;   // stopped at a breakpoint
         lk.unlock();
         std::string err;
         const bool ok = dect2::dump::write(gHangPath, err);
