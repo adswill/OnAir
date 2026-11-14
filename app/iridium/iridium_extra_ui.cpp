@@ -4,6 +4,7 @@
 // Iridium ACARS, packet dump and pager screens. Nothing here is verified against a real Iridium recording (see
 // core/include/dect2/iridium/iridium_acars.h): the screens show what the decoder made of the frames, with its flags.
 #include "app.h"
+#include "dect2/common/diag.h"
 #include "iridium_extra_ui.h"
 #include "dect2/iridium/iridium_acars.h"
 #include "dect2/iridium/iridium_tel.h"
@@ -59,7 +60,7 @@ void saveText(const std::string& name, const std::string& body) {
     const std::string p = saveFileDialog(name.c_str());
     if (p.empty()) return;
     std::ofstream f(std::filesystem::path(reinterpret_cast<const char8_t*>(p.c_str())), std::ios::binary);
-    if (!f) { S.note = "cannot write " + p; return; }
+    if (!f) { DIAG(452948, "Writing the Iridium export file %s failed (the folder may be read-only), so nothing was saved.", p.c_str()); S.note = "cannot write " + p; return; }
     f << body;
     S.note = "saved " + p;
 }

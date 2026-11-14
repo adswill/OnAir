@@ -4,6 +4,7 @@
 // Linux and Windows services. Linux: dialogs through zenity/kdialog, settings in ~/.config/onair/settings.conf.
 // Windows: the standard Open/Save dialogs, settings in %APPDATA%\\OnAir\\settings.conf.
 #include "platform.h"
+#include "dect2/common/diag.h"
 #include "prefs_text.h"
 #include "datadir_ptr.h"
 #include "cjk_order.h"
@@ -287,7 +288,7 @@ HttpResult httpCall(const std::string& method, const std::string& url, const std
         fclose(f);
         return ok;
     };
-    if ((send && !put(inFile, body, false)) || !put(hdrIn, hdr, true)) { r.net = 4; r.detail = "cannot write a temporary file"; return r; }
+    if ((send && !put(inFile, body, false)) || !put(hdrIn, hdr, true)) { DIAG(696652, "The temporary request files for %s could not be written in the cache folder, so the web request was not sent.", url.c_str()); r.net = 4; r.detail = "cannot write a temporary file"; return r; }
     const std::string to = std::to_string(std::max(1, timeoutSec));
 #ifdef _WIN32
     wchar_t sys[MAX_PATH + 1] = {0};
@@ -357,10 +358,10 @@ bool postJsonReply(const std::string& url, const std::string& json, const std::s
 // the map tiles are PNG: OnAir's own decoder (these systems have none it could call without an extra library)
 bool decodeImage(const std::string& path, int& w, int& h, std::vector<uint32_t>& rgba) {
     std::ifstream f(std::filesystem::path(reinterpret_cast<const char8_t*>(path.c_str())), std::ios::binary);
-    if (!f) return false;
+    if (!f) { DIAG_DEBUG(173178, "The picture file %s could not be opened, so it was not decoded.", path.c_str()); return false; }
     const std::vector<uint8_t> data((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     std::vector<uint8_t> px;
-    if (!dect2::decodePng(data.data(), data.size(), w, h, px) || w > 4096 || h > 4096) return false;
+    if (!dect2::decodePng(data.data(), data.size(), w, h, px) || w > 4096 || h > 4096) { DIAG_DEBUG(704587, "The picture file %s is not a PNG OnAir can decode or is larger than 4096 pixels, so it was not shown.", path.c_str()); return false; }
     rgba.resize((size_t)w * h);
     memcpy(rgba.data(), px.data(), px.size());   // bytes R, G, B, A in memory, as on macOS
     return true;

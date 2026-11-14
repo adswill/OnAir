@@ -6,6 +6,7 @@
 // which bytes are constant, counters, checksums or data. The result exports as a protocol description. The stages are in
 // core/src/protolab; this file is the window only. Nothing here decrypts anything.
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "../app.h"
 #include "dect2/common/u8file.h"
 #include "dect2/protolab/protolab.h"
@@ -93,7 +94,7 @@ void startWork(std::function<void()> job) {
     S.run = 1;
     S.err.clear();
     S.worker = dect2::namedThread("onair-protolab", [job] {
-        try { job(); } catch (const std::exception& e) { std::lock_guard<std::mutex> lk(S.mu); S.err = e.what(); }
+        try { job(); } catch (const std::exception& e) { DIAG(912131, "A Protocol lab job stopped with an error (%s), so its result is missing.", e.what()); std::lock_guard<std::mutex> lk(S.mu); S.err = e.what(); }
         S.run = 2;
     });
 }
