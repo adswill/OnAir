@@ -69,6 +69,7 @@ fn span_of(v: &Option<Val>) -> Span {
 pub fn datatype(dt: &[u8]) -> Option<(i32, bool)> {
     let mut buf = [0u8; 16];
     if dt.len() > buf.len() {
+        onair_common::diag_debug!(889497, "The SigMF data type is {} bytes long, which is too long to be a known type, so the recording is not read.", dt.len());
         return None;
     }
     for (i, &c) in dt.iter().enumerate() {

@@ -8,6 +8,7 @@
 // Both backends run one thread that asks AudioOut::Impl::render() for a short block of audio and hands it to the device. The thread has a
 // high priority: if it is late, the sound breaks up.
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "audioout_impl.h"
 #include "dect2/common/platform.h"
 #include <atomic>
@@ -57,7 +58,7 @@ struct Wasapi {
     bool open(int rate, int C = 2) {
         close();
         if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&en))) return false;
-        if (FAILED(en->GetDefaultAudioEndpoint(eRender, eConsole, &dev))) return false;
+        if (FAILED(en->GetDefaultAudioEndpoint(eRender, eConsole, &dev))) { DIAG(305051, "Windows reports no default sound output device, so there is no sound output."); return false; }
         if (FAILED(dev->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, (void**)&client))) return false;
         WAVEFORMATEXTENSIBLE wf{};
         wf.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
@@ -73,7 +74,7 @@ struct Wasapi {
         wf.SubFormat = {0x00000003, 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};   // KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
         // the system converts our format to the one of the device (rate and channels)
         const DWORD flags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY;
-        if (FAILED(client->Initialize(AUDCLNT_SHAREMODE_SHARED, flags, 400000 /* 40 ms */, 0, &wf.Format, nullptr))) return false;
+        if (FAILED(client->Initialize(AUDCLNT_SHAREMODE_SHARED, flags, 400000 /* 40 ms */, 0, &wf.Format, nullptr))) { DIAG(108174, "The Windows sound device did not accept the audio format, so there is no sound output."); return false; }
         event = CreateEventW(nullptr, FALSE, FALSE, nullptr);
         if (!event || FAILED(client->SetEventHandle(event))) return false;
         if (FAILED(client->GetBufferSize(&bufFrames))) return false;
@@ -149,7 +150,7 @@ struct Alsa {
     bool load() {
         if (lib) return true;
         lib = dlopen("libasound.so.2", RTLD_NOW);
-        if (!lib) return false;
+        if (!lib) { DIAG_DEBUG(773906, "The ALSA sound library libasound.so.2 could not be loaded, so there is no sound output."); return false; }
         open = (decltype(open))dlsym(lib, "snd_pcm_open");
         setParams = (decltype(setParams))dlsym(lib, "snd_pcm_set_params");
         writei = (decltype(writei))dlsym(lib, "snd_pcm_writei");
@@ -162,9 +163,9 @@ struct Alsa {
     bool openDevice(int rate) {
         closeDevice();
         const char* name = getenv("DECT2_ALSA_DEVICE") ? getenv("DECT2_ALSA_DEVICE") : "default";
-        if (open(&pcm, name, 0 /* playback */, 0) < 0) { pcm = nullptr; return false; }
+        if (open(&pcm, name, 0 /* playback */, 0) < 0) { DIAG(874645, "The ALSA sound device %s could not be opened, so there is no sound output.", name); pcm = nullptr; return false; }
         // interleaved 32-bit float, the system resamples; 60 ms of buffering
-        if (setParams(pcm, 14 /* FLOAT_LE */, 3 /* RW_INTERLEAVED */, (unsigned)C, (unsigned)rate, 1, 60000) < 0) { closeDevice(); return false; }
+        if (setParams(pcm, 14 /* FLOAT_LE */, 3 /* RW_INTERLEAVED */, (unsigned)C, (unsigned)rate, 1, 60000) < 0) { DIAG(308761, "The ALSA sound device did not accept %d channels at %d Hz, so there is no sound output.", C, rate); closeDevice(); return false; }
         return true;
     }
     void closeDevice() { if (pcm) { drop(pcm); close(pcm); pcm = nullptr; } }

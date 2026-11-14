@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "voice/tgdir_ui.h"
+#include "dect2/common/diag.h"
 #include "app.h"
 #include "i18n/i18n.h"
 #include "platform/platform.h"
@@ -53,6 +54,7 @@ void tick() {
         std::error_code ec; fs::create_directories(fs::u8path(plat::dataDir()), ec);
         std::ofstream f(fs::u8path(filePath()), std::ios::binary | std::ios::trunc);
         if (f) f << dect2::tgSnapshot().exportCsv(true);
+        else DIAG(811024, "Writing the talkgroup directory file %s failed (the folder may be read-only), so the learned talkgroup names were not saved.", filePath().c_str());
     }
 }
 
@@ -104,7 +106,7 @@ void section(TgKind k) {
         ImGui::BeginDisabled(snap.count(k) == 0);
         if (ImGui::Button(tr("Export CSV ...##tg"))) {
             const std::string p = saveFileDialog(k == TgKind::Tetra ? "tetra_talkgroups.csv" : k == TgKind::P25 ? "p25_talkgroups.csv" : "dmr_talkgroups.csv");
-            if (!p.empty()) { std::ofstream f(fs::u8path(p), std::ios::binary); if (f) { f << snap.exportCsv(false, k); gMsg = tr("exported"); } else gMsg = tr("could not write the file"); }
+            if (!p.empty()) { std::ofstream f(fs::u8path(p), std::ios::binary); if (f) { f << snap.exportCsv(false, k); gMsg = tr("exported"); } else { DIAG(522337, "Writing the talkgroup export file %s failed (the folder may be read-only), so nothing was exported.", p.c_str()); gMsg = tr("could not write the file"); } }
         }
         ImGui::EndDisabled();
         flowNext(6 * gUi);

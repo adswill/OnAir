@@ -38,11 +38,13 @@ pub fn greeting(h: &[u8]) -> Option<Greeting> {
         return None;
     }
     if h[..4].iter().any(|&c| !(0x20..=0x7e).contains(&c)) {
+        onair_common::diag_debug!(626862, "The first 4 bytes of the answer are not printable text, so this is not an rtl_tcp server.");
         return None;
     }
     let tuner = u32::from_be_bytes([h[4], h[5], h[6], h[7]]);
     let n_gains = u32::from_be_bytes([h[8], h[9], h[10], h[11]]);
     if tuner > 0xffff || n_gains > 0xffff {
+        onair_common::diag_debug!(998719, "The rtl_tcp greeting names tuner type {} and {} gains, which are out of range, so this is not an rtl_tcp server.", tuner, n_gains);
         return None;
     }
     let magic = [h[0], h[1], h[2], h[3]];

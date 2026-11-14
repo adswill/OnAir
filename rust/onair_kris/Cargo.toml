@@ -8,3 +8,4 @@ license.workspace = true
 description = "OnAir Kris modes (KAVB, KAPP, KAFT, KAAL): QC-LDPC code family and the K = 7 convolutional code"
 
 [dependencies]
+onair_common = { path = "../onair_common" }

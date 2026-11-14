@@ -5,6 +5,7 @@
 // one waterfall line a second (512 bins, one byte each), and decoded ACARS text only when the room was started with that box ticked.
 // Audio is not sent: the repo has no Opus encoder. The host token goes in the JSON body, never in a URL. The room page shows the viewers.
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "dect2/net/map_guard.h"
 #include "rooms.h"
 #include "rooms_net.h"
@@ -134,6 +135,7 @@ void worker() {
         if (f == roomsnet::Fail::None && (jstr(reply, "id").empty() || jstr(reply, "hostToken").empty())) f = roomsnet::Fail::BadReply;
         if (f != roomsnet::Fail::None) {
             const std::string d = roomsnet::describe(url, r);
+            DIAG(616973, "Creating the room failed (%s), so nothing was shared.", d.c_str());
             rlog("could not create the room: " + d);
             {
                 std::lock_guard<std::mutex> lk(gMu);

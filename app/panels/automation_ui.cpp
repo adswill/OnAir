@@ -5,6 +5,7 @@
 // drop-down lists; an expression and a script editor are there for the rest. Recipes are single JSON files in <data folder>/automations.
 // The engine itself (events, rules, limits, the sandbox) is in core/src/automation; the actions are in automation_sink.cpp.
 #include "../app.h"
+#include "dect2/common/diag.h"
 #include "automation_internal.h"
 #include "dect2/automation/catalog.h"
 #include "dect2/automation/expr.h"
@@ -697,7 +698,7 @@ void windowPanel(App& a) {
             std::ofstream f(pth(p), std::ios::binary | std::ios::trunc);
             Recipe copy = it.r;
             if (copy.kind == Recipe::KindRule) copy.rule.enabled = true; else copy.script.enabled = true;
-            if (f) { f << au::recipeToText(copy); S.msg = std::string(tr("Saved to")) + " " + p; } else S.msg = tr("Cannot write the file.");
+            if (f) { f << au::recipeToText(copy); S.msg = std::string(tr("Saved to")) + " " + p; } else { DIAG(737493, "Writing the automation recipe file %s failed (the folder may be read-only), so the recipe was not exported.", p.c_str()); S.msg = tr("Cannot write the file."); }
         }
     }
     ImGui::SameLine();

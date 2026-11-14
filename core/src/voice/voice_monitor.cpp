@@ -3,6 +3,7 @@
 
 // The voice monitor of the digital voice modes (voice_monitor.h).
 #include "dect2/voice/voice_monitor.h"
+#include "dect2/common/diag.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/common/timecompat.h"
 #include "dect2/session/record_rules.h"
@@ -475,7 +476,7 @@ void Monitor::openRecLocked(Live& l, int channels, int rate) {
     fs::path p = dir / (stem + ".wav");
     for (int k = 2; fs::exists(p, ec) && k < 1000; k++) p = dir / (stem + "_" + std::to_string(k) + ".wav");
     r.f = fopen(p.string().c_str(), "wb");
-    if (!r.f) return;
+    if (!r.f) { DIAG(730191, "The voice recording %s could not be opened for writing (the folder may be read-only), so this call is not recorded.", p.string().c_str()); return; }
     r.path = p.string();
     wavHeader(r.f, rate, 0);
     l.e.file = r.path;

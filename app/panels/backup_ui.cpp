@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "backup_ui.h"
+#include "dect2/common/diag.h"
 #include "../i18n/i18n.h"
 #include "../ui/scale.h"
 #include "dect2/backup/backup.h"
@@ -63,7 +64,7 @@ bool readAll(const fs::path& p, std::string& out, uintmax_t maxBytes) {
     const uintmax_t n = fs::file_size(p, ec);
     if (ec || n > maxBytes) return false;
     std::ifstream in(p, std::ios::binary);
-    if (!in) return false;
+    if (!in) { DIAG_DEBUG(146427, "The backup file %s could not be opened for reading, so it was not loaded.", p.c_str()); return false; }
     out.assign((size_t)n, '\0');
     in.read(&out[0], (std::streamsize)n);
     return (bool)in;
@@ -334,7 +335,8 @@ std::string doRestore(State& s, bool dryRun) {
         fs::create_directories(dect2::u8file(backupsDir()), ec);
         const std::string safety = backupsDir() + "/onair-before-restore-" + bk::autoBackupName(nowEpoch()).substr(11);
         if (!buildArchive(all, false, "", bytes, err, left) || !writeArchive(safety, bytes))
-            return std::string(tr("Could not make the safety backup, so nothing was restored: ")) + err;
+        { DIAG(582714, "The safety backup before restoring could not be written to %s (%s), so nothing was restored.", safety.c_str(), err.c_str());
+            return std::string(tr("Could not make the safety backup, so nothing was restored: ")) + err; }
     }
     bk::ExtractReport r = bk::extractTo(dataRoot(), src, plan, false);
     int nPref = 0;

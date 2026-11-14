@@ -4,6 +4,7 @@
 // The community marketplace panel (see market_ui.h). Network work runs on one background thread at a time; this file draws and starts
 // tasks. The client is core/src/pstore/market.cpp, the server tools/marketplace/server.
 #include "market_ui.h"
+#include "dect2/common/diag.h"
 #include "store_ui.h"
 #include "../app.h"
 #include "dect2/engine/updater.h"
@@ -201,7 +202,7 @@ void loadPackage(const std::string& path) {
     std::vector<uint8_t> d;
     if (f) d.assign((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     U.pkg.clear(); U.pkgPath = path; U.pv = ps::UploadPreview{};
-    if (!f) { U.pv.error = tr("Cannot open the file."); return; }
+    if (!f) { DIAG(956762, "The package file %s could not be opened, so it cannot be uploaded to the market.", path.c_str()); U.pv.error = tr("Cannot open the file."); return; }
     if (d.size() > kMaxUploadBytes) { U.pv.error = tr("The file is larger than 25 MiB."); return; }
     U.pv = ps::Market::preview(d, ONAIR_VERSION);
     if (!U.pv.ok) return;

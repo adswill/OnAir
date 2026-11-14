@@ -6,6 +6,7 @@
 // OnAir mode that fits the SatNOGS mode, where there is one) and, when the pass planner has TLEs for the satellite, its next pass for the
 // receiver's position.
 #include "../app.h"
+#include "dect2/common/diag.h"
 #include "../ui/typography.h"
 #include "dect2/geo/passes.h"
 #include "dect2/net/satnogs.h"
@@ -89,14 +90,14 @@ void startDownload() {
         bool ok = false;
         std::string msg;
         // each list goes to a .part file and replaces the cached one only when it parses
-        if (!plat::fetchUrl(kSatUrl, d + "/satellites.part", ua)) msg = "could not download the satellite list";
-        else if (!plat::fetchUrl(kTxUrl, d + "/transmitters.part", ua)) msg = "could not download the transmitter list";
+        if (!plat::fetchUrl(kSatUrl, d + "/satellites.part", ua)) { DIAG(184534, "The SatNOGS satellite list could not be downloaded, so the satellite data stays as it was."); msg = "could not download the satellite list"; }
+        else if (!plat::fetchUrl(kTxUrl, d + "/transmitters.part", ua)) { DIAG(774747, "The SatNOGS transmitter list could not be downloaded, so the satellite data stays as it was."); msg = "could not download the transmitter list"; }
         else {
             std::map<int, std::string> names;
             std::vector<dect2::SatnogsTx> tx;
             const int ns = dect2::parseSatnogsSatellites(readAll(d + "/satellites.part"), names);
             const int nt = dect2::parseSatnogsTransmitters(readAll(d + "/transmitters.part"), names, tx);
-            if (ns == 0 || nt == 0) msg = "the answer was not a SatNOGS list";
+            if (ns == 0 || nt == 0) { DIAG(601452, "The SatNOGS answer held %d satellites and %d transmitters, so it was not used and the old lists stay.", ns, nt); msg = "the answer was not a SatNOGS list"; }
             else {
                 fs::rename(fsPath(d + "/satellites.part"), fsPath(d + "/satellites.json"), ec);
                 fs::rename(fsPath(d + "/transmitters.part"), fsPath(d + "/transmitters.json"), ec);

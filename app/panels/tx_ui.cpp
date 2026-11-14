@@ -12,6 +12,7 @@
 // view itself opens as RX), and stops when it is stopped, the radio fails or the program ends. Nothing is limited here: frequency and gain go to the
 // driver as typed, and the driver's own refusal is shown as it came.
 #include "../app.h"
+#include "dect2/common/diag.h"
 #include "dect2/hfdig/hfdig_sstv.h"
 #include "dect2/tv/videogen.h"
 #include <algorithm>
@@ -332,10 +333,10 @@ bool startTx(App& a, TxUi& s, const DeviceInfo* radio, const TxModeSpec* mode, b
         sink = makeNullTxSink();
         if (radio) lim = TxRateLimits{radio->txMinRateHz, radio->txMaxRateHz};
     } else {
-        if (!txClaimRadio(*radio, err)) { s.error = err; return false; }
+        if (!txClaimRadio(*radio, err)) { DIAG(505722, "The transmit radio could not be claimed (%s), so transmitting did not start.", err.c_str()); s.error = err; return false; }
         s.claimed = true;
         sink = makeTxSink(*radio);
-        if (!sink) { s.error = txUnavailableReason(*radio); if (s.error.empty()) s.error = tr("This radio has no transmit driver in OnAir."); release(s); return false; }
+        if (!sink) { DIAG(971405, "This radio has no transmit driver in OnAir, so transmitting did not start."); s.error = txUnavailableReason(*radio); if (s.error.empty()) s.error = tr("This radio has no transmit driver in OnAir."); release(s); return false; }
         lim = TxRateLimits{radio->txMinRateHz, radio->txMaxRateHz};
         mapPauseForTransmit(a);   // before the radio is keyed, so this frame cannot post what the receiver hears from it
     }

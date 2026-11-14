@@ -3,6 +3,7 @@
 
 // Pagers screens: lamps for the signal, the sync and the two protocols; the message list with a filter; the statistics per speed.
 #include "../d40/d40_ui.h"
+#include "dect2/common/diag.h"
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
@@ -567,7 +568,7 @@ void capcodeView(App& a) {
             const std::string p = openFileDialog();
             if (!p.empty()) {
                 std::ifstream f(p, std::ios::binary);
-                if (!f) S.aliasNote = tr("Could not read the file");
+                if (!f) { DIAG_DEBUG(650544, "The pager alias file %s could not be opened, so no aliases were imported.", p.c_str()); S.aliasNote = tr("Could not read the file"); }
                 else {
                     const std::string t((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
                     const dect2::PagerAliasImport r = S.aliases.importCsv(t);
@@ -582,7 +583,7 @@ void capcodeView(App& a) {
             const std::string p = saveFileDialog("pager-capcodes.csv");
             if (!p.empty()) {
                 std::ofstream f(p, std::ios::binary | std::ios::trunc);
-                if (f) { f << S.aliases.exportCsv(); S.aliasNote = std::string(tr("Saved")) + ": " + p; } else S.aliasNote = tr("Could not write the file");
+                if (f) { f << S.aliases.exportCsv(); S.aliasNote = std::string(tr("Saved")) + ": " + p; } else { DIAG(383284, "Writing the pager alias file %s failed (the folder may be read-only), so the aliases were not exported.", p.c_str()); S.aliasNote = tr("Could not write the file"); }
             }
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Save the capcode names as a CSV file (opens in a spreadsheet)."));
