@@ -35,6 +35,10 @@ struct SynthConfig {
     int mode = 0;           // 0: the DVB / ATSC / DAB settings above; 8 and up: the test signal of that engine standard (see mode_synth.h)
     int modeOpt[8] = {};    // options of that test signal; every mode says what they mean in its <mode>_gen.h
     double modeVal[4] = {};
+    // "Synthetic content" (synth_media.h): the picture / video and sound the test signal carries instead of the built-in ones. 0 = built-in (nothing changes).
+    int mediaKind = 0;      // 0 built-in, 1 picture file, 2 video file
+    std::string mediaPath;  // the picture or the video
+    std::string mediaAudio; // a sound file; empty: the video's own sound (kind 2) or the built-in sound
 };
 
 struct TuneSettings {

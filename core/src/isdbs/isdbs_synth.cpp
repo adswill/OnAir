@@ -4,6 +4,7 @@
 // The ISDB-S test signal for the built-in synthetic source, see isdbs_rx.h.
 #include "dect2/isdbs/isdbs_rx.h"
 #include "dect2/tv/demo_ts.h"
+#include "dect2/source/synth_media.h"
 #include <memory>
 
 namespace dect2 {
@@ -38,6 +39,7 @@ std::unique_ptr<ModeSynth> makeIsdbsSynth(const SynthConfig& cfg, double sampleR
     } else {
         StreamCfg a, b, c;
         a.mod = kTc8psk23; a.slots = 36;   // all 48 slots are allocated: 36 + 8 + 4 a.tsId = 0x4010; a.src = demoTsSource(slotTsBitrate(a.mod) * a.slots * 0.9);
+        if (SynthMediaScope::current()) a.src = demoTsSource(slotTsBitrate(a.mod) * a.slots * 0.9);   // Synthetic content: the user's picture and sound in the main stream
         b.mod = kQpsk34; b.slots = 8; b.tsId = 0x4011;
         c.mod = kBpsk12; c.slots = 4; c.tsId = 0x4012;
         g.streams = {a, b, c};

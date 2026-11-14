@@ -15,10 +15,12 @@
 #include "dect2/atv/atv_sound2.h"
 #include "atv_dsp.h"
 #include "dect2/common/threadpool.h"
+#include "dect2/source/synth_media.h"
 #include "dect2/dsp/dsp_compat.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <mutex>
 
 namespace dect2 {
 
@@ -894,7 +896,23 @@ public:
     bool configure(const SynthConfig& s) override {
         AtvGenConfig c = gen_.config();
         if (!fromSynth(s, gen_.config().rate, c)) return false;
+        if (synthMediaOf(s).key() != mediaKey) return false;   // another file: a new generator
         return gen_.update(c);
+    }
+    std::string mediaKey = synthMediaOf(SynthConfig()).key();
+    // Synthetic content (synth_media.h; the picture is fitted into the frame with black bars by the reader): the picture or video of the user's file is the picture, its (or the chosen) sound the sound carrier
+    static void attachMedia(const SynthConfig& s, AtvGenConfig& c) {
+        if (auto v = synthMediaVideoFor(s)) {
+            auto mu = std::make_shared<std::mutex>();
+            auto buf = std::make_shared<std::vector<uint8_t>>();
+            c.pullVideo = [v, mu, buf](double t, int w, int h, float* y, float* u, float* vv) {
+                std::lock_guard<std::mutex> lk(*mu);
+                if (!v->rgb(t, w, h, *buf)) return false;
+                for (size_t i = 0, n = (size_t)w * (size_t)h; i < n; i++) atvRgbToYuv((*buf)[3 * i] / 255.f, (*buf)[3 * i + 1] / 255.f, (*buf)[3 * i + 2] / 255.f, y[i], u[i], vv[i]);
+                return true;
+            };
+        }
+        if (auto a = synthMediaAudioFor(s, 120)) c.pullAudio = [a](float* st, int n) { return a->read(st, n); };
     }
     static bool fromSynth(const SynthConfig& s, double rate, AtvGenConfig& c) {
         static const int kSys[13] = {kAtvG, kAtvB, kAtvI, kAtvDK, kAtvM, kAtvN, kAtvA, kAtvC, kAtvE, kAtvH, kAtvKp, kAtvL, kAtvLp};
@@ -971,8 +989,10 @@ std::unique_ptr<ModeSynth> makeAtvSynth(const SynthConfig& cfg, double sampleRat
     if (extra.pullVideo) c.pullVideo = extra.pullVideo;
     if (extra.pullAspect) c.pullAspect = extra.pullAspect;
     c.aspect = extra.aspect;
+    if (!c.pullVideo && !c.pullAudio) AtvSynth::attachMedia(cfg, c);
     auto s = std::make_unique<AtvSynth>(c);
     if (!s->ok()) return nullptr;
+    if (!extra.pullVideo && !extra.pullAudio) s->mediaKey = synthMediaOf(cfg).key();
     return s;
 }
 

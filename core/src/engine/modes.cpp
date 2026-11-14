@@ -416,6 +416,7 @@
 #include "dect2/hrpt/hrpt_gen.h"
 #include "dect2/engine/modes.h"
 #include "dect2/tv/demo_ts.h"
+#include "dect2/source/synth_media.h"
 #include "dect2/dsp/exact_resampler.h"
 #include "dect2/fm/fm_gen.h"
 #include "dect2/isdbt/isdbt_gen.h"
@@ -434,6 +435,11 @@ public:
         FmGenConfig g;
         g.rate = rate; g.cnrDb = c.snrDb >= 40 ? 200 : c.snrDb + 10; g.cfoHz = c.cfoHz;
         g.ps = "ONAIR FM"; g.rt = "OnAir FM test signal: 1 kHz left, 3 kHz right";
+        if (auto a = synthMediaAudioFor(c, 120)) {   // Synthetic content: the user's sound is the programme
+            a->setPeak(0.7f);
+            g.rt = "OnAir FM: your sound file";
+            g.pull48k = [a](float* st, int n) { a->read(st, n); };
+        }
         gen_ = std::make_unique<FmGenerator>(g);
     }
     double sampleRate() const override { return rate_; }

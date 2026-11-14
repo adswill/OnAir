@@ -25,6 +25,7 @@ KEEP long av_frame_free(void) { return -1; }
 KEEP long av_frame_get_buffer(void) { return -1; }
 KEEP long av_frame_make_writable(void) { return -1; }
 KEEP long av_frame_unref(void) { return -1; }
+KEEP long av_frame_ref(void) { return -1; }
 KEEP long av_free(void) { return -1; }
 KEEP long av_freep(void) { return -1; }
 KEEP int64_t av_guess_sample_aspect_ratio(void) { return 0; }

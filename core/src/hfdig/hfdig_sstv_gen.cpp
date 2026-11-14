@@ -3,6 +3,7 @@
 #include "dect2/hfdig/hfdig_sstv.h"
 #include "dect2/hfdig/hfdig_gen.h"
 #include "hfdig_sstv_modes.h"
+#include "dect2/source/synth_media.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -107,7 +108,14 @@ using namespace sstv;
 class SstvTestAudio : public HfdigTestAudio {
 public:
     explicit SstvTestAudio(const SynthConfig& c)
-        : SstvTestAudio(c.modeOpt[1], {}, c.modeOpt[2] == 0, c.modeVal[0], c.sroPpm) {}
+        : SstvTestAudio(c.modeOpt[1], mediaPicture(c), c.modeOpt[2] == 0, c.modeVal[0], c.sroPpm) {}
+    // Synthetic content: the user's picture, fitted into the size of the chosen SSTV mode (empty: the built-in test picture)
+    static std::vector<uint8_t> mediaPicture(const SynthConfig& c) {
+        if (c.mediaKind == 0 || c.mediaPath.empty()) return {};
+        const auto& tab = table();
+        const auto& sp = tab[(size_t)std::max(0, std::min((int)tab.size() - 1, c.modeOpt[1]))];
+        return synthMediaPicture(c, sp.info.width, sp.info.height);
+    }
     SstvTestAudio(int modeIdx, const std::vector<uint8_t>& rgbIn, bool withVis = true, double offHz = 0, double sroPpm = 0) {
         const auto& tab = table();
         sp_ = &tab[(size_t)std::max(0, std::min((int)tab.size() - 1, modeIdx))];

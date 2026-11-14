@@ -13,6 +13,7 @@
 #include "dect2/hdr/hdr_rx.h"
 #include "dect2/source/hamlib_link.h"
 #include "dect2/source/iq_file.h"
+#include "dect2/source/synth_media.h"
 #include "dect2/ssdv/ssdv_audio.h"
 #include <filesystem>
 #include <cstring>
@@ -348,8 +349,60 @@ bool sourceOptionsOpen(const App& a) {
     return k == DeviceInfo::Synthetic || (k == DeviceInfo::File && !a.engine.running()) || k == DeviceInfo::Audio || k == DeviceInfo::Hamlib;
 }
 
-// the synthetic generator: noise, offset and signal-shape controls (per mode)
+// "Synthetic content": the picture / video and sound the test signal carries (built-in unless the user picks files). One setting for every mode
+// that can carry them; the others say why they keep the built-in content.
+static void synthContentOptions(App& a, bool running) {
+    SynthConfig& sc = a.tune.synth;
+    std::string note;
+    const int sup = synthMediaSupport(sc, &note);
+    ImGui::TextDisabled("%s", tr("content"));
+    ImGui::SameLine();
+    if (sup == 0) {
+        ImGui::TextDisabled("%s", tr("built-in"));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", note.c_str());
+        flowEnd();
+        return;
+    }
+    bool ch = false;
+    static const char* kinds[] = {N_("Built-in"), N_("Picture file"), N_("Video file")};
+    ImGui::SetNextItemWidth(110 * gUi);
+    if (sup & kSynthMediaPicture) {
+        if (ImGui::BeginCombo("##scontent", tr(kinds[std::max(0, std::min(2, sc.mediaKind))]))) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(tr(kinds[i]), i == sc.mediaKind)) { sc.mediaKind = i; ch = true; }
+            ImGui::EndCombo();
+        }
+        if (sc.mediaKind != 0) {
+            flowNext();
+            if (ImGui::SmallButton(tr("Choose..."))) { const std::string p = openFileDialog(); if (!p.empty()) { sc.mediaPath = p; ch = true; } }
+            ImGui::SameLine(); ImGui::TextDisabled("%s", sc.mediaPath.empty() ? tr("no file") : std::filesystem::path(sc.mediaPath).filename().string().c_str());
+        }
+    } else {
+        if (sc.mediaAudio.empty() && !(sc.mediaKind == 2 && !sc.mediaPath.empty())) ImGui::TextDisabled("%s", tr("built-in sound"));
+        else ImGui::TextDisabled("%s", tr("your sound"));
+    }
+    if (sup & kSynthMediaAudio) {
+        flowNext(); ImGui::TextDisabled("%s", tr("sound"));
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Audio file..."))) { const std::string p = openFileDialog(); if (!p.empty()) { sc.mediaAudio = p; ch = true; } }
+        if (!sc.mediaAudio.empty()) {
+            ImGui::SameLine(); ImGui::TextDisabled("%s", std::filesystem::path(sc.mediaAudio).filename().string().c_str());
+            ImGui::SameLine(); if (ImGui::SmallButton(tr("Clear##saud"))) { sc.mediaAudio.clear(); ch = true; }
+        } else if (sc.mediaKind == 2 && (sup & kSynthMediaPicture)) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("the video's own")); }
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", note.c_str());
+    const std::string st = synthMediaStatus();
+    if (!st.empty() && (sc.mediaKind != 0 || !sc.mediaAudio.empty())) { flowNext(); ImGui::TextDisabled("%s", st.c_str()); }
+    flowEnd();
+    if (ch) { savePrefsSoon(a); if (running) a.engine.retune(a.tune); }
+}
+
+static void synthSourceOptionsBody(App& a, bool running);
+// the synthetic generator: noise, offset and signal-shape controls (per mode), and its content
 static void synthSourceOptions(App& a, bool running) {
+    synthSourceOptionsBody(a, running);
+    synthContentOptions(a, running);
+}
+static void synthSourceOptionsBody(App& a, bool running) {
     SynthConfig& sc = a.tune.synth;
     bool ch = false;
     ImGui::TextDisabled("%s", tr("synthetic"));
