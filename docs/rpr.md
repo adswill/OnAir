@@ -25,6 +25,8 @@ tools/credits_data.tsv). The numbers 200 / 600 bit/s agree with 8 carriers x 50 
 
 ## What is NOT public, so not implemented (nothing was invented)
 
+The coding and framing details below are not public (SCS sells the only implementation).
+
 * the generator polynomials of the k = 9 code and the puncturing that makes R = 3/4,
 * the scrambler, the interleaver permutation, the callsign compression, the 25 packet types, the CRC polynomial,
 * the content of the preamble (so the burst start is found from the power and the symbol clock, not from a known sequence),
