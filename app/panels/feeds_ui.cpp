@@ -134,6 +134,8 @@ void sondeHubEntry(dect2::FeedConfig& c, bool& changed) {
             ImGui::TextDisabled("%s", tr("Last telemetry upload (PUT /sondes/telemetry, gzip-compressed):"));
             const std::string fo = firstObject(tj);
             ImGui::TextUnformatted(fo.empty() ? tr("(not sent yet)") : fo.c_str());
+            ImGui::TextDisabled("%s", tr("SondeHub's last answer:"));
+            ImGui::TextUnformatted(s.lastReply.empty() ? tr("(none yet)") : s.lastReply.c_str());
             ImGui::PopTextWrapPos();
             ImGui::TreePop();
         }
