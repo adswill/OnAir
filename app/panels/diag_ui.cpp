@@ -19,6 +19,7 @@
 #include "dect2/hfdig/hfdig_freedv.h"
 #include "fixit.h"
 #include "dect2/engine/crash_report.h"
+#include "bugreport_logic.h"
 #include "dect2/voicekeys/key_guard.h"
 #include "../ui/panel_layout.h"
 #include "../ui/next_step_logic.h"
@@ -739,7 +740,11 @@ void radioMessagesUi(App& a, bool vertical) {
             f.push_back({"diagnostics.txt", diagnosticsText(a)});
             for (const char* n : {"onair.log", "onair-prev.log", "crash.txt"}) {
                 std::error_code ec;
-                if (std::filesystem::exists(d / n, ec)) f.push_back({n, slurp(d / n)});
+                if (!std::filesystem::exists(d / n, ec)) continue;
+                std::string body = slurp(d / n);
+                // an old crash report from another version keeps its own name, so it is not read as this version's crash
+                const std::string name = std::strcmp(n, "crash.txt") == 0 ? bugreport::crashFileName(body, ONAIR_VERSION) : std::string(n);
+                f.push_back({name, std::move(body)});
             }
             a.diagCopiedAt = writeZip(path, f) ? ImGui::GetTime() : -10.0;
         }
