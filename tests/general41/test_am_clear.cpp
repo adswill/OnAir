@@ -86,10 +86,10 @@ int main(int argc, char**) {
     const auto sp = speechLike(12, 7), mu = musicLike(12);
     // (a) musical noise: a carrier with no programme and noise only (C/N 12 dB)
     { std::vector<float> sil(sp.size(), 0.f); Opt o; o.cn = 12; const auto r = runProc(makeAm(sil, o, 1));
-      const double mi = musicalIndex(r.out, (size_t)(5 * FS)); chk(printOnly || mi < 1.40, "musical-noise index, noise only (lower better)", mi, 1.40);
+      const double mi = musicalIndex(r.out, (size_t)(5 * FS)); chk(printOnly || mi < 1.20, "musical-noise index, noise only (lower better)", mi, 1.20);
       std::vector<double> e; for (size_t s = (size_t)(5 * FS); s + 960 <= r.out.size(); s += 960) { double a = 0; for (size_t i = s; i < s + 960; i++) a += r.out[i] * r.out[i]; e.push_back(10 * std::log10(a / 960 + 1e-12)); }
       double m = 0, v = 0; for (double q : e) m += q; m /= (double)e.size(); for (double q : e) v += (q - m) * (q - m); const double sd = std::sqrt(v / (double)e.size());
-      chk(printOnly || sd < 0.95, "residual noise level flutter, 20 ms std dB", sd, 0.95); }
+      chk(printOnly || sd < 0.85, "residual noise level flutter, 20 ms std dB", sd, 0.85); }
     // (b) speech-band SNR improvement of weak signals against the unprocessed chain
     for (double cn : {12.0, 18.0, 25.0}) { Opt o; o.cn = cn; const auto x = makeAm(sp, o, 2); const auto a = runProc(x), off = runProc(x, 0);
       const double sa = refSnr(sp, a.out, 3, 11), so = refSnr(sp, off.out, 3, 11); char nm[64]; snprintf(nm, sizeof nm, "speech SNR gain vs NR off, C/N %.0f dB", cn);
