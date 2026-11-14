@@ -4,6 +4,7 @@
 // The Messages window (View > Messages): the unified database of decoded messages (core/src/msgdb) with search, filters, a timeline, export and the
 // retention settings. The database is fed by a tap on the automation event bus; voice and encrypted content never reaches it.
 #include "dect2/common/time_fmt.h"
+#include "dect2/common/diag.h"
 #include "../app.h"
 #include "dect2/common/u8file.h"
 #include "dect2/automation/engine.h"
@@ -140,6 +141,7 @@ void exportButton(const char* label, const char* fmt, const char* ext) {
     std::ofstream o(dect2::u8file(path), std::ios::binary);
     o << mdb::global().exportAs(f, fmt);
     o.flush();
+    if (!o) DIAG(706513, "Writing the message database export %s failed (the folder may be read-only or the disk full), so nothing was saved.", path.c_str());
     S.note = o ? std::string(tr("saved")) + " " + path : std::string(tr("could not write")) + " " + path;
 }
 
@@ -170,6 +172,7 @@ void exportGeoButton(const char* label, dect2::xport::Format fmt) {
     std::ofstream o(dect2::u8file(path), std::ios::binary);
     o << data;
     o.flush();
+    if (!o) DIAG(510847, "Writing the message export file %s failed (the folder may be read-only or the disk full), so nothing was saved.", path.c_str());
     S.note = o ? std::string(tr("saved")) + " " + path : std::string(tr("could not write")) + " " + path;
 }
 

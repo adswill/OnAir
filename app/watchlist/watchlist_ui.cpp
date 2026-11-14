@@ -5,6 +5,7 @@
 // (desktop notification, sound, ntfy, Telegram bot, webhook), with a rate limit and quiet hours. The matching is in core/src/watchlist; this file is
 // the window, the saved file and the sink that shows the alerts and sends the web requests. Tokens are written to the file only, never to a log.
 #include <algorithm>
+#include "dect2/common/diag.h"
 #include <set>
 #include "dect2/watchlist/plane_alert.h"
 #include "dect2/common/time_fmt.h"
@@ -130,6 +131,7 @@ void save() {
     {
         std::ofstream o(dect2::u8file(path), std::ios::binary | std::ios::trunc);
         o << wl::toJson(S.lists, S.set);
+        if (!o) DIAG(965633, "Writing the watchlist file %s failed (the folder may be read-only or the disk full), so the latest changes were not saved.", path.c_str());
     }
     fs::permissions(fs::path(reinterpret_cast<const char8_t*>(path.c_str())), fs::perms::owner_read | fs::perms::owner_write, fs::perm_options::replace, ec);   // the file holds the user's tokens
 }
@@ -143,7 +145,7 @@ void load() {
     std::vector<wl::List> l;
     wl::Settings s;
     if (wl::fromJson(ss.str(), l, s, err)) { S.lists = l; S.set = s; }
-    else S.note = std::string(tr("The watchlist file could not be read:")) + " " + err;
+    else { DIAG(759292, "The watchlist file could not be read (%s), so the lists in memory were kept.", err.c_str()); S.note = std::string(tr("The watchlist file could not be read:")) + " " + err; }
 }
 
 void copyTo(char* dst, size_t n, const std::string& s) { snprintf(dst, n, "%s", s.c_str()); }

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "app.h"
+#include "dect2/common/diag.h"
 #include "wefax_gallery.h"
 #include "platform/platform.h"
 #include "dect2/marine/wefax_archive.h"
@@ -160,17 +161,17 @@ void makeThumb(const std::string& base) {
 void rotateSaved(const std::string& base, int turns) {
     int w = 0, h = 0; std::vector<uint32_t> px;
     const fs::path png = P(folder()) / P(base + ".png");
-    if (!plat::decodeImage(U(png), w, h, px) || w <= 0 || h <= 0) { g.msg = "could not read the picture"; return; }
+    if (!plat::decodeImage(U(png), w, h, px) || w <= 0 || h <= 0) { DIAG(201001, "The saved weather fax picture %s could not be read for rotating, so it was left as it is.", base.c_str()); g.msg = "could not read the picture"; return; }
     FaxImage grey;
     grey.pix.resize(px.size());
     for (size_t i = 0; i < px.size(); i++) grey.pix[i] = (uint8_t)(px[i] & 0xFF);
     FaxImage o;
     wefaxRotate(grey.pix.data(), w, h, turns, o.pix, o.width, o.height);
     const fs::path tmp = P(folder()) / P(base + ".rot.png");
-    if (!writeGreyPng(tmp, o)) { g.msg = "could not write the rotated picture"; return; }
+    if (!writeGreyPng(tmp, o)) { DIAG(198735, "Writing the rotated weather fax picture %s failed (the disk may be full), so the picture was not rotated.", base.c_str()); g.msg = "could not write the rotated picture"; return; }
     std::error_code ec;
     fs::rename(tmp, png, ec);
-    if (ec) { fs::remove(tmp, ec); g.msg = "could not replace the picture"; return; }
+    if (ec) { DIAG(387132, "Replacing the weather fax picture %s with its rotated copy failed, so the picture was not rotated.", base.c_str()); fs::remove(tmp, ec); g.msg = "could not replace the picture"; return; }
     auto mi = g.meta.find(base);
     if (mi != g.meta.end()) { mi->second.width = o.width; mi->second.height = o.height; writeMeta(base); }
     g.thumbs.erase(base);

@@ -3,6 +3,7 @@
 
 // The airport search of the airband panel (see airport_ui.h).
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "airband/airport_ui.h"
 #include "ui/ease_logic.h"
 #include "app.h"
@@ -107,7 +108,7 @@ bool installCsv(const std::string& apFile, const std::string& frFile, std::strin
     {
         std::ofstream o(fs::u8path(tmp), std::ios::binary);
         o << "# Imported by OnAir from OurAirports (public domain). airports.csv sha256 " << h1 << "  airport-frequencies.csv sha256 " << h2 << "\n" << db->toTsv();
-        if (!o) { msg = "cannot write " + dst; return false; }
+        if (!o) { DIAG(403092, "Writing the imported airport list %s failed (the folder may be read-only or the disk full), so the import was dropped.", tmp.c_str()); msg = "cannot write " + dst; return false; }
     }
     fs::rename(fs::u8path(tmp), fs::u8path(dst), ec);
     if (ec) { msg = "cannot write " + dst; return false; }

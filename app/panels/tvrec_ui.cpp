@@ -5,6 +5,7 @@
 // timeshift / playback bar of the Player tab. The work is in core/src/tv (epg, recorder, timeshift, playback); this file keeps the state, feeds it from
 // the engine's packet tap and draws it.
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "../app.h"
 #include "i18n/i18n.h"
 #include "dect2/net/remote_api.h"   // jsonEscape
@@ -301,7 +302,7 @@ void startFile(App& a, const RecordingEntry& e) {
             a.engine.teletext().reset();
             if (t.file.t2mi()) { char b[96]; snprintf(b, sizeof b, "playback: T2-MI on PID 0x%X, playing PLP %d of %zu", t.file.t2miPid(), t.file.t2miPlp(), t.file.t2miPlps().size()); a.engine.log(b); }
             t.feeder.start(&t.file, 0, playSink);
-        } else t.msg = "cannot open " + path;
+        } else { DIAG(372551, "The recording %s could not be opened for playback (the file may be missing or not a transport stream).", path.c_str()); t.msg = "cannot open " + path; }
         t.loading = false;
     });
 }
@@ -315,7 +316,7 @@ void switchT2miPlp(int plp) {
     s.loader = dect2::namedThread("onair-tvload", [plp] {
         TvRec& t = S();
         t.feeder.stop();
-        if (!t.file.selectT2miPlp(plp)) t.msg = "cannot rebuild PLP " + std::to_string(plp);
+        if (!t.file.selectT2miPlp(plp)) { DIAG(879217, "The T2-MI recording could not rebuild PLP %d, so playback stays on the previous PLP.", plp); t.msg = "cannot rebuild PLP " + std::to_string(plp); }
         { std::lock_guard<std::mutex> lk(t.pmu); t.pdemux.reset(); t.psnap = TsSnapshot(); t.psnapT = 0; }
         resetPlayerLocked();
         t.feeder.start(&t.file, 0, playSink);

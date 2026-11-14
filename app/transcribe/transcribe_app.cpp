@@ -3,6 +3,7 @@
 
 // Live transcripts in the app. See transcribe_app.h and docs/TRANSCRIBE.md.
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "transcribe_app.h"
 #include "app.h"
 #include "adsb/adsb_acars.h"
@@ -282,7 +283,7 @@ void startLoad(const std::string& file) {
         auto b = dect2::makeWhisperBackend(path, workers, &err);
         std::lock_guard<std::mutex> lk(gMu);
         if (b) { gPending = b; gLoadErr.clear(); gLoadState = 2; }
-        else { gLoadErr = err; gLoadState = 3; }
+        else { DIAG(174763, "The speech model %s could not be loaded (%s), so transcripts and captions stay off.", path.c_str(), err.c_str()); gLoadErr = err; gLoadState = 3; }
     });
 }
 
@@ -681,7 +682,7 @@ void exportRows(const char* ext) {
     if (!strcmp(ext, "csv")) data = "\xEF\xBB\xBF" + data;   // Excel reads it as UTF-8 then
     FILE* f = dect2::u8fopen(path, "wb");
     char nb[1024];
-    if (!f) { snprintf(nb, sizeof nb, tr("Cannot write %s"), path.c_str()); U.note = nb; return; }
+    if (!f) { DIAG(357122, "Writing the transcript file %s failed (the folder may be read-only or missing), so nothing was saved.", path.c_str()); snprintf(nb, sizeof nb, tr("Cannot write %s"), path.c_str()); U.note = nb; return; }
     fwrite(data.data(), 1, data.size(), f);
     fclose(f);
     snprintf(nb, sizeof nb, tr("Saved %s"), path.c_str());
@@ -987,7 +988,7 @@ bool writeText(const std::string& path, const std::string& body) {
     std::error_code ec;
     std::filesystem::create_directories(std::filesystem::path(dect2::u8file(path)).parent_path(), ec);
     std::ofstream f(dect2::u8file(path), std::ios::binary);
-    if (!f) return false;
+    if (!f) { DIAG_DEBUG(933095, "The text file %s could not be opened for writing, so it was not saved.", path.c_str()); return false; }
     f << body;
     return (bool)f;
 }

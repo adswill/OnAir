@@ -5,6 +5,7 @@
 // A window (View > Frequencies, Ctrl+Shift+F), an optional tab of the main screen, and the "Known frequencies" drop-down of the Tuner panel.
 // Tuning goes through the Memory panel's recall (memory_options.h), so the mode is switched and its tuning applied exactly as a recalled memory does.
 #include "airband/airport_ui.h"
+#include "dect2/common/diag.h"
 #include "../memory/memory_options.h"
 #include "../ui/ui_common.h"
 #include "dect2/channels/freq_db.h"
@@ -59,10 +60,10 @@ void saveUser() {
     {
         std::ofstream f(dect2::u8file(tmp), std::ios::binary);
         f << dect2::freqExportJson(u.user);
-        if (!f) { say(std::string(tr("Could not save ")) + path, true); return; }
+        if (!f) { DIAG(419776, "Writing the frequency list %s failed (the folder may be read-only or the disk full), so your entries were not saved.", path.c_str()); say(std::string(tr("Could not save ")) + path, true); return; }
     }
     std::filesystem::rename(dect2::u8file(tmp), dect2::u8file(path), ec);
-    if (ec) say(std::string(tr("Could not save ")) + path, true);
+    if (ec) { DIAG(322109, "Replacing the frequency list %s with its new copy failed, so your latest changes were not saved.", path.c_str()); say(std::string(tr("Could not save ")) + path, true); }
 }
 
 void saveFav() {

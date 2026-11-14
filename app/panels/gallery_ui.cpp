@@ -7,6 +7,7 @@
 // track an equirectangular map projection (graticule, coastlines, borders; saved as PNG with a world file, or as GeoTIFF), tone curves,
 // colour palettes, a histogram, crop to the visible part, and a mosaic that stitches several projected passes into one map.
 #include "../app.h"
+#include "dect2/common/diag.h"
 #include "gallery.h"
 #include "enhance_ui.h"
 #include "../gfx/gfx.h"
@@ -182,7 +183,7 @@ bool writeGrey(const std::string& path, const std::vector<uint8_t>& g, int w, in
 
 bool readPng(const std::string& path, int& w, int& h, std::vector<uint8_t>& rgba) {
     std::ifstream f(P(path), std::ios::binary);
-    if (!f) return false;
+    if (!f) { DIAG_DEBUG(921111, "The satellite picture file %s could not be opened, so it was not loaded.", path.c_str()); return false; }
     std::vector<uint8_t> b((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     return dect2::decodePng(b.data(), b.size(), w, h, rgba) && w > 0 && h > 0;
 }
@@ -277,7 +278,7 @@ void publish(const std::string& key, const std::string& source, double unixTime,
         it.detail += (it.detail.empty() ? "" : ", ") + std::string(b) + ", max " + std::to_string((int)std::lround(gPassCtx.maxEl)) + " deg";
     }
     const std::string base = S.dir + "/" + id;
-    if (!gfx::writePng((base + ".png").c_str(), rgba, w, h)) { S.msg = "could not write " + base + ".png"; return; }
+    if (!gfx::writePng((base + ".png").c_str(), rgba, w, h)) { DIAG(194693, "Writing the gallery picture %s.png failed (the folder may be read-only or the disk full), so it was not saved.", base.c_str()); S.msg = "could not write " + base + ".png"; return; }
     it.bytes = fileSize(base + ".png");
     enhui::autoEnhanceFile(source, rgba, w, h, base + "_e.png");   // "Apply to all new images" of this mode: an enhanced copy beside the raw one
     std::vector<uint8_t> th; int tw, thh;
@@ -371,7 +372,7 @@ void selectItem(const Item& it) {
     v.enh.setSaveName(fileStamp(it.time) + "-" + fsafe(it.sat.empty() ? it.source : it.sat) + "-enhanced.png");
     std::vector<uint8_t> rgba;
     int w = 0, h = 0;
-    if (!readPng(S.dir + "/" + it.id + ".png", w, h, rgba) || w != it.w || h != it.h) { v.msg = "could not read the picture"; v.w = v.h = 0; return; }
+    if (!readPng(S.dir + "/" + it.id + ".png", w, h, rgba) || w != it.w || h != it.h) { DIAG(403938, "The gallery picture %s.png could not be read or has a different size than recorded, so it is not shown.", it.id.c_str()); v.msg = "could not read the picture"; v.w = v.h = 0; return; }
     v.src = std::move(rgba);
     v.planes.assign(6, {});
     for (int c = 0; c < 6; c++)
