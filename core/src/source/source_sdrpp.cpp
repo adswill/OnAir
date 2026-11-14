@@ -18,6 +18,7 @@
 // setting under its own name. So any source module SDR++ has works, not only the ones OnAir knows. A change made this way is a change to
 // the server's own settings: SDR++ keeps it after OnAir disconnects.
 #include "../net/tcp_client.h"
+#include "dect2/common/diag.h"
 #include "native_common.h"
 #include "dect2/net/netradio.h"
 #include "dect2/net/net_proto.h"
@@ -508,7 +509,7 @@ std::string silentText(const std::string& addr) { return addr + " accepted the c
 bool hello(Link& l, const std::string& addr, int timeoutMs, std::string& err, bool& retry) {
     retry = false;
     std::string e;
-    if (!l.connect(timeoutMs, e)) { err = e; retry = true; return false; }
+    if (!l.connect(timeoutMs, e)) { DIAG_DEBUG(827261, "The connection to the SDR++ server %s failed (%s), so the radio was not opened.", addr.c_str(), e.c_str()); err = e; retry = true; return false; }
     if (!l.waitGreeting(timeoutMs) && l.busy()) { err = busyText(addr); retry = true; return false; }
     if (!l.fetchUi(timeoutMs)) {
         if (l.busy()) { err = busyText(addr); retry = true; }

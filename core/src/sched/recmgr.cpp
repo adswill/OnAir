@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/sched/recmgr.h"
+#include "dect2/common/diag.h"
 #include "dect2/automation/json_mini.h"
 #include "dect2/common/u8file.h"
 #include <algorithm>
@@ -35,7 +36,7 @@ bool readFile(const std::string& p, std::string& out, size_t maxBytes = 4u << 20
 }
 bool writeFile(const std::string& p, const std::string& data, std::string& err) {
     FILE* f = u8fopen(p, "wb");
-    if (!f) { err = "cannot write " + p; return false; }
+    if (!f) { DIAG(961797, "Writing the recording manager file %s failed (the folder may be read-only or missing), so it was not saved.", p.c_str()); err = "cannot write " + p; return false; }
     const bool ok = fwrite(data.data(), 1, data.size(), f) == data.size();
     if (fclose(f) != 0 || !ok) { err = "write failed: " + p; return false; }
     return true;
