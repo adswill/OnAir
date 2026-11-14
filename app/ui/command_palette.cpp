@@ -7,6 +7,7 @@
 #include "scale.h"
 #include "input_map.h"
 #include "../voice/voice_monitor_ui.h"
+#include "../panels/debug_report.h"
 #include "dect2/engine/updater.h"
 #include <algorithm>
 #include <cctype>
@@ -59,6 +60,7 @@ std::vector<Cmd> collect(App& a) {
     c.push_back({"Credits and licences", "Action", [](App& x) { x.creditsOpen = true; x.creditsTab = 1; }});
     c.push_back({"Documentation", "Action", [](App&) { dect2::openUrl("https://on-air.dev/docs/"); }});
     c.push_back({"Troubleshooting", "Action", [](App&) { dect2::openUrl("https://on-air.dev/docs/troubleshooting/"); }});
+    c.push_back({"Debug report (Ctrl+D)", "Action", [](App&) { debugReportRequest(); }});
     return c;
 }
 

@@ -255,6 +255,7 @@ bool postJson(const std::string& url, const std::string& json, const std::string
 bool postJsonReply(const std::string& url, const std::string& json, const std::string& userAgent, std::string& reply) { reply.clear(); return postImpl(url, json, userAgent, &reply); }
 
 std::string openFileDialog() {
+    DialogScope blocked;
     NSOpenPanel* p = [NSOpenPanel openPanel];
     p.canChooseFiles = YES; p.canChooseDirectories = NO; p.allowsMultipleSelection = NO;
     if ([p runModal] == NSModalResponseOK) return std::string(p.URL.path.UTF8String);
@@ -262,6 +263,7 @@ std::string openFileDialog() {
 }
 
 std::string openFolderDialog() {
+    DialogScope blocked;
     NSOpenPanel* p = [NSOpenPanel openPanel];
     p.canChooseFiles = NO; p.canChooseDirectories = YES; p.canCreateDirectories = YES; p.allowsMultipleSelection = NO;
     if ([p runModal] == NSModalResponseOK) return std::string(p.URL.path.UTF8String);
@@ -269,6 +271,7 @@ std::string openFolderDialog() {
 }
 
 std::string saveFileDialog(const char* name) {
+    DialogScope blocked;
     NSSavePanel* p = [NSSavePanel savePanel];
     p.nameFieldStringValue = [NSString stringWithUTF8String:name];
     if ([p runModal] == NSModalResponseOK) return std::string(p.URL.path.UTF8String);

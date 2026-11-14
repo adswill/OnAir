@@ -34,6 +34,7 @@
 #include "dect2/engine/overload_hint.h"
 #include "../platform/discord_rpc.h"
 #include "../panels/report_problem.h"
+#include "../panels/debug_report.h"
 #include "../panels/backup_ui.h"
 #include "../badges/badges_ui.h"
 #include "../gfx/render_caps.h"
@@ -971,6 +972,7 @@ float menuBar(App& a) {
             if (ImGui::MenuItem(tr("Credits and licences"))) { a.creditsOpen = true; a.creditsTab = 1; }
             ImGui::Separator();
             if (ImGui::MenuItem(tr("Report a problem"))) a.reportOpen = true;
+            if (ImGui::MenuItem(tr("Debug report"), "Ctrl+D")) debugReportRequest();
             ImGui::EndMenu();
         }
         tourMark("help", ImVec2(hx0, my0), ImVec2(ImGui::GetCursorScreenPos().x, my1));

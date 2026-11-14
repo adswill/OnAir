@@ -4,6 +4,7 @@
 // Operating-system services for the UI: file dialogs, saved settings, fonts.
 #pragma once
 #include "dect2/backup/backup.h"
+#include <atomic>
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -12,6 +13,15 @@ namespace plat {
 
 // A message the user must see before the program exits (a message box on Windows, standard error elsewhere).
 void showFatalError(const char* title, const char* text);
+
+// While a dialog of the system is open the main loop stands still: the hang watchdog (app/panels/debug_report.cpp) does not count that.
+inline std::atomic<int>& dialogDepth() { static std::atomic<int> d{0}; return d; }
+struct DialogScope {
+    DialogScope() { dialogDepth().fetch_add(1); }
+    ~DialogScope() { dialogDepth().fetch_sub(1); }
+    DialogScope(const DialogScope&) = delete;
+    DialogScope& operator=(const DialogScope&) = delete;
+};
 
 std::string openFileDialog();
 std::string saveFileDialog(const char* defaultName);

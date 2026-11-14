@@ -3,6 +3,7 @@
 
 // Crash report tests: the log rotation (everywhere) and, where there is fork(), a child that crashes and leaves a report.
 #include "dect2/engine/crash_report.h"
+#include "dect2/engine/debug_dump.h"
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -59,10 +60,16 @@ int main() {
     CHECK(rep.find("crashed") != std::string::npos, "the report says crashed: %s", rep.c_str());
     CHECK(rep.find("SIGSEGV") != std::string::npos, "the report names the signal: %s", rep.c_str());
     CHECK(rep.find("stack:") != std::string::npos, "the report has a stack");
+    if (dump::supported()) {   // Linux x86-64: the dump of all threads next to the report
+        const std::string dmp = slurp(dir / "crash.dmp");
+        CHECK(dmp.size() > 32 && dmp.compare(0, 4, "MDMP") == 0, "crash.dmp is a minidump (%zu bytes)", dmp.size());
+    }
 
     // the next start finds the report, the one after it does not
     crash::install("crash", dir.string().c_str());
     CHECK(crash::lastRunCrashed(path) && path == (dir / "crash.txt").string(), "the next start sees the crash (%s)", path.c_str());
+    if (dump::supported())
+        CHECK(crash::lastCrashDump() == (dir / "crash.dmp").string(), "the next start finds the dump (%s)", crash::lastCrashDump().c_str());
     crash::install("crash", dir.string().c_str());
     CHECK(!crash::lastRunCrashed(path), "the start after that sees none");
 #endif
