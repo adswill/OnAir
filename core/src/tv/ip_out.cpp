@@ -12,6 +12,7 @@
 #include <cstring>
 #include <mutex>
 #include <vector>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -46,7 +47,7 @@ bool IpOut::configure(const IpOutConfig& c) {
     if (reopenPcap) {
         m.pcap.close();
         if (c.pcap) {
-            if (c.pcapPath.empty() || !m.pcap.open(c.pcapPath)) { m.err = "cannot write the pcap file " + c.pcapPath; ok = false; }
+            if (c.pcapPath.empty() || !m.pcap.open(c.pcapPath)) { DIAG(482469, "The pcap file %s for the IP output could not be opened for writing, so the output does not start.", c.pcapPath.c_str()); m.err = "cannot write the pcap file " + c.pcapPath; ok = false; }
         }
     }
     m.closeSock();
