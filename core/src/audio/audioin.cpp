@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstring>
 #include <vector>
+#include "dect2/common/diag.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -14,7 +15,6 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libswresample/swresample.h>
 #include "dect2/common/mathconst.h"
-#include "dect2/common/diag.h"
 }
 
 namespace dect2 {
