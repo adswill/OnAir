@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstring>
 #include <deque>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 namespace cubesat {
@@ -296,7 +297,7 @@ bool u482cDecode(const uint8_t* a, size_t n, std::vector<uint8_t>& packet, int& 
     if (flags & kU482cRs) {
         if (p.size() <= 32) return false;
         rsErr = rsDecode(p.data(), p.size());
-        if (rsErr < 0) return false;
+        if (rsErr < 0) { DIAG_DEBUG_EVERY(678424, 30, "A U482C frame failed Reed-Solomon correction, so the frame was dropped."); return false; }
         p.resize(p.size() - 32);
     }
     packet = std::move(p);
@@ -395,7 +396,7 @@ bool uspDecode(const float* soft, size_t n, std::vector<uint8_t>& ax25, int& rsE
     std::vector<uint8_t> d = packBits(bits, (dataLen + 32) * 8);
     ccsdsRandomize(d.data(), d.size());
     rsErr = rsDecodeDual(d.data(), d.size());
-    if (rsErr < 0) return false;
+    if (rsErr < 0) { DIAG_DEBUG_EVERY(563601, 30, "A CubeSat CCSDS frame failed dual-basis Reed-Solomon correction, so the frame was dropped."); return false; }
     const size_t len = (size_t)d[2] | ((size_t)d[3] << 8);
     if (len == 0 || len + 4 > dataLen) return false;
     ax25.assign(d.begin() + 4, d.begin() + 4 + (ptrdiff_t)len);

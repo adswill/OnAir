@@ -10,6 +10,7 @@
 #include <cmath>
 #include <filesystem>
 #include <mutex>
+#include "dect2/common/diag.h"
 
 namespace dect2::sess {
 
@@ -201,6 +202,7 @@ struct SessionDb::Impl {
         }
         int rc = sqlite3_open_v2(p.c_str(), &w, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nullptr);
         if (rc != SQLITE_OK) {
+            DIAG(183743, "The session database %s could not be opened (SQLite code %d), so session history is unavailable.", p.c_str(), rc);
             if (err) *err = w ? sqlite3_errmsg(w) : "out of memory";
             if (w) { sqlite3_close(w); w = nullptr; }
             return false;
@@ -212,6 +214,7 @@ struct SessionDb::Impl {
         char* em = nullptr;
         rc = sqlite3_exec(w, kSchema, nullptr, nullptr, &em);
         if (rc != SQLITE_OK) {
+            DIAG(455395, "Creating the session database tables failed (SQLite code %d), so session history is unavailable.", rc);
             if (err) *err = em ? em : "schema";
             sqlite3_free(em);
             sqlite3_close(w);
@@ -220,6 +223,7 @@ struct SessionDb::Impl {
         }
         // a first read of an index: a file whose pages are badly damaged fails here
         if (sqlite3_exec(w, "SELECT id FROM sessions ORDER BY start DESC LIMIT 1", nullptr, nullptr, nullptr) != SQLITE_OK) {
+            DIAG(592637, "The session database %s failed its first read (the file may be damaged), so session history is unavailable.", p.c_str());
             if (err) *err = sqlite3_errmsg(w);
             sqlite3_close(w);
             w = nullptr;
@@ -232,6 +236,7 @@ struct SessionDb::Impl {
                 restrictToOwner(p + "-shm", false);
             }
             if (sqlite3_open_v2(p.c_str(), &r, SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX, nullptr) != SQLITE_OK) {
+                DIAG(780898, "The read-only connection to the session database %s could not be opened, so session history is unavailable.", p.c_str());
                 if (err) *err = r ? sqlite3_errmsg(r) : "out of memory";
                 if (r) { sqlite3_close(r); r = nullptr; }
                 sqlite3_close(w);
@@ -307,7 +312,7 @@ bool SessionDb::inTx() const { std::lock_guard<std::mutex> lk(p_->wmu); return p
 bool SessionDb::upsert(const Session& s, int64_t updMs) {
     std::lock_guard<std::mutex> lk(p_->wmu);
     if (!p_->w) return false;
-    if (!p_->upsertSt && sqlite3_prepare_v2(p_->w, kUpsert, -1, &p_->upsertSt, nullptr) != SQLITE_OK) { p_->upsertSt = nullptr; return false; }
+    if (!p_->upsertSt && sqlite3_prepare_v2(p_->w, kUpsert, -1, &p_->upsertSt, nullptr) != SQLITE_OK) { DIAG_DEBUG(425577, "The session database refused the statement that saves a session, so this session was not saved."); p_->upsertSt = nullptr; return false; }
     sqlite3_stmt* st = p_->upsertSt;
     sqlite3_reset(st);
     auto text = [&](int i, const std::string& v) { sqlite3_bind_text(st, i, v.c_str(), (int)v.size(), SQLITE_TRANSIENT); };

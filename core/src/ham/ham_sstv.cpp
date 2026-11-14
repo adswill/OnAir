@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <fstream>
 #include <iterator>
+#include "dect2/common/diag.h"
 
 namespace dect2::ham {
 
@@ -112,7 +113,7 @@ bool sstvDecodePicture(const std::vector<uint8_t>& d, SstvPicture& o, std::strin
     if (d.size() >= 8 && d[0] == 0x89 && d[1] == 'P' && d[2] == 'N' && d[3] == 'G') {
         std::vector<uint8_t> rgba;
         int w = 0, h = 0;
-        if (!decodePng(d.data(), d.size(), w, h, rgba) || w <= 0 || h <= 0) { err = "the PNG file cannot be decoded"; return false; }
+        if (!decodePng(d.data(), d.size(), w, h, rgba) || w <= 0 || h <= 0) { DIAG(350568, "The PNG image for SSTV could not be decoded, so nothing was prepared for sending."); err = "the PNG file cannot be decoded"; return false; }
         o.w = w; o.h = h; o.rgb.resize((size_t)w * h * 3);
         for (size_t i = 0; i < (size_t)w * h; i++) for (int c = 0; c < 3; c++) o.rgb[i * 3 + c] = rgba[i * 4 + c];   // premultiplied: on black
         return true;
@@ -125,7 +126,7 @@ bool sstvDecodePicture(const std::vector<uint8_t>& d, SstvPicture& o, std::strin
 
 bool sstvLoadPicture(const std::string& path, SstvPicture& o, std::string& err) {
     std::ifstream f(path, std::ios::binary);
-    if (!f) { err = "cannot open " + path; return false; }
+    if (!f) { DIAG(677605, "The SSTV image file %s could not be opened, so nothing was prepared for sending.", path.c_str()); err = "cannot open " + path; return false; }
     std::vector<uint8_t> d((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
     if (d.size() > 64u << 20) { err = "the picture file is too large"; return false; }
     return sstvDecodePicture(d, o, err);

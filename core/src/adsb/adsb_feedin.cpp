@@ -15,6 +15,7 @@
 #include <cstring>
 #include <mutex>
 #include <thread>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -222,6 +223,7 @@ struct AdsbFeedIn::Impl {
             sockClose(k);
             s->state = 0;
             { std::lock_guard<std::mutex> lk(s->mu); s->error = "connection lost, trying again"; }
+            DIAG_DEBUG(884174, "The ADS-B feed %s:%d dropped the connection, so it will reconnect in a moment.", s->host.c_str(), (int)s->port);
             for (int i = 0; i < 30 && !s->stop; i++) std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
@@ -248,8 +250,8 @@ void AdsbFeedIn::setSources(const std::vector<std::string>& specs, bool allowNon
         auto s = std::make_unique<Impl::Src>();
         s->spec = specs[i];
         std::string err;
-        if (!adsbSplitHostPort(specs[i], s->host, s->port, err)) s->error = err;
-        else if (!allowNonLan && !adsbHostIsLan(s->host)) s->error = "not on the local network (allow other hosts in the options to use it)";
+        if (!adsbSplitHostPort(specs[i], s->host, s->port, err)) { DIAG(946451, "The ADS-B feed address %s is not a valid host and port, so it is skipped.", specs[i].c_str()); s->error = err; }
+        else if (!allowNonLan && !adsbHostIsLan(s->host)) { DIAG(248836, "The ADS-B feed host %s is not on the local network and other hosts are not allowed, so it is not used.", s->host.c_str()); s->error = "not on the local network (allow other hosts in the options to use it)"; }
         next.push_back(std::move(s));
     }
     for (auto& o : old) o->stop = true;

@@ -8,6 +8,7 @@
 #include <cctype>
 #include <cmath>
 #include <ctime>
+#include "dect2/common/diag.h"
 
 namespace dect2::automation {
 
@@ -159,11 +160,11 @@ bool buildWebhook(const ActionSpec& a, const Event& ev, const std::string& ruleN
     } else if (preset == "telegram") {
         const std::string tok = getp(a, "token"), chat = getp(a, "chat_id");
         if (tok.empty() || chat.empty()) { err = "Telegram needs a bot token and a chat id"; return false; }
-        for (unsigned char c : tok) if (!std::isalnum(c) && c != ':' && c != '_' && c != '-') { err = "bad bot token"; return false; }
+        for (unsigned char c : tok) if (!std::isalnum(c) && c != ':' && c != '_' && c != '-') { DIAG(978054, "The Telegram bot token contains characters a token cannot have, so the webhook was not created."); err = "bad bot token"; return false; }
         url = "https://api.telegram.org/bot" + tok + "/sendMessage";
         body = "{\"chat_id\":\"" + json::escape(chat) + "\",\"text\":\"" + text + "\"}";
     } else { err = "unknown webhook preset '" + preset + "'"; return false; }
-    if (!isHttp(url)) { err = "the webhook address must start with http:// or https://"; return false; }
+    if (!isHttp(url)) { DIAG(129305, "The webhook address does not start with http:// or https://, so the webhook was not created."); err = "the webhook address must start with http:// or https://"; return false; }
     return true;
 }
 
@@ -356,9 +357,9 @@ std::string recipeToText(const Recipe& r) { return json::dump(recipeToJson(r), t
 bool recipeFromText(const std::string& text, Recipe& out, std::string& err, bool fromStore) {
     json::Value j;
     if (!json::parse(text, j, err)) return false;
-    if (j.type != json::Value::Obj) { err = "not an OnAir automation file"; return false; }
-    if (j.str("format") != "onair-automation") { err = "not an OnAir automation file (\"format\" is missing)"; return false; }
-    if (j.num("version", 0) > 1) { err = "this file is from a newer OnAir"; return false; }
+    if (j.type != json::Value::Obj) { DIAG(520329, "The automation file is not a JSON object, so nothing was imported."); err = "not an OnAir automation file"; return false; }
+    if (j.str("format") != "onair-automation") { DIAG(905644, "The automation file has no onair-automation format marker, so nothing was imported."); err = "not an OnAir automation file (\"format\" is missing)"; return false; }
+    if (j.num("version", 0) > 1) { DIAG(973362, "The automation file comes from a newer OnAir version, so it was not imported."); err = "this file is from a newer OnAir"; return false; }
     const std::string kind = j.str("kind");
     Recipe r;
     auto str = [&](const char* k, size_t n) { return clip(j.str(k), n); };
@@ -392,7 +393,7 @@ bool recipeFromText(const std::string& text, Recipe& out, std::string& err, bool
         }
         const json::Value* acts = j.get("actions");
         if (!acts || acts->type != json::Value::Arr) { err = "\"actions\" is missing"; return false; }
-        if (acts->a.size() > kMaxActions) { err = "too many actions (8 at most)"; return false; }
+        if (acts->a.size() > kMaxActions) { DIAG(991877, "An automation rule in the file has more than 8 actions, so the file was not imported."); err = "too many actions (8 at most)"; return false; }
         for (const json::Value& av : acts->a) {
             if (av.type != json::Value::Obj) { err = "an action is not an object"; return false; }
             ActionSpec a;
@@ -422,7 +423,7 @@ bool recipeFromText(const std::string& text, Recipe& out, std::string& err, bool
             if (s.events.size() < 32) s.events.push_back(v.s);
         }
         s.code = j.str("code");
-        if (s.code.size() > kMaxCode) { err = "the script is longer than 64 KB"; return false; }
+        if (s.code.size() > kMaxCode) { DIAG(219666, "An automation script in the file is longer than 64 KB, so the file was not imported."); err = "the script is longer than 64 KB"; return false; }
         if (s.code.empty()) { err = "the script is empty"; return false; }
     } else { err = "\"kind\" must be \"rule\" or \"script\""; return false; }
     out = std::move(r);

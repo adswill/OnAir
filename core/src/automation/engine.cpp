@@ -10,6 +10,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include "dect2/common/diag.h"
 
 namespace dect2::automation {
 
@@ -241,7 +242,7 @@ bool Engine::Impl::doLog(const std::map<std::string, std::string>& raw, const Ev
     const bool fresh = !fs::exists(p, ec);
     if (!fresh && fs::file_size(p, ec) > (5u << 20)) { desc = "log: " + name + ".csv is full (5 MB)"; return false; }
     std::ofstream f(p, std::ios::app | std::ios::binary);
-    if (!f) { desc = "log: cannot write " + name + ".csv"; return false; }
+    if (!f) { DIAG(867922, "The automation log file %s.csv could not be opened for writing, so the log line was dropped.", name.c_str()); desc = "log: cannot write " + name + ".csv"; return false; }
     if (fresh && !fromScript && rowT.empty()) f << "time,rule,type,mode,freq_mhz,fields\n";
     f << line << "\n";
     return true;
@@ -626,7 +627,7 @@ void Engine::Impl::processLocked(const Event& ev0) {
         bool ok;
         runActions(r, ev, true, fi.actions, ok);
         fi.ok = ok;
-        if (!ok) { fi.error = "an action failed"; std::lock_guard<std::mutex> lk(mu); rt[r.id].st.errors++; rt[r.id].st.lastError = "an action failed"; }
+        if (!ok) { DIAG(679876, "An action of the automation rule %s failed, so the rest of its firing is marked as an error.", r.name.c_str()); fi.error = "an action failed"; std::lock_guard<std::mutex> lk(mu); rt[r.id].st.errors++; rt[r.id].st.lastError = "an action failed"; }
         addFiring(fi);
     }
     runScripts(ev, now);

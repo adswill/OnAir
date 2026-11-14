@@ -15,6 +15,7 @@ extern "C" {
 #include <cstring>
 #include <mutex>
 #include <string_view>
+#include "dect2/common/diag.h"
 #ifdef _WIN32
 #include "win_privacy.h"
 #include <chrono>
@@ -129,6 +130,7 @@ bool openCam(VideoIn::Impl* I, const std::string& url, std::string& err) {
     if (rc < 0) {
         std::string e(AV_ERROR_MAX_STRING_SIZE, '\0');
         av_strerror(rc, e.data(), e.size());
+        DIAG(847535, "FFmpeg could not open the capture device %s (%s), so no video input started.", url.c_str(), e.c_str());
         err = "could not open this capture device (" + url + "): " + e.c_str();
         if (!log.text.empty()) err += " (" + log.text + ")";
         err += privacyHint();
@@ -136,15 +138,17 @@ bool openCam(VideoIn::Impl* I, const std::string& url, std::string& err) {
     }
     if (avformat_find_stream_info(fmt, nullptr) < 0) {
         avformat_close_input(&fmt);
+        DIAG(391635, "The capture device %s opened but sent no video stream information, so video input stops.", url.c_str());
         err = "this capture device sent no video" + (log.text.empty() ? std::string() : " (" + log.text + ")") + privacyHint();
         return false;
     }
     const int si = av_find_best_stream(fmt, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
-    if (si < 0) { avformat_close_input(&fmt); err = "this capture device has no video"; return false; }
+    if (si < 0) { DIAG(900197, "The capture device %s has no video stream, so video input stops.", url.c_str()); avformat_close_input(&fmt); err = "this capture device has no video"; return false; }
     AVStream* st = fmt->streams[si];
     const AVCodec* codec = avcodec_find_decoder(st->codecpar->codec_id);
     AVCodecContext* ctx = codec ? avcodec_alloc_context3(codec) : nullptr;
     if (!ctx || avcodec_parameters_to_context(ctx, st->codecpar) < 0 || avcodec_open2(ctx, codec, nullptr) < 0) {
+        DIAG(586023, "No FFmpeg decoder could be opened for the capture device %s, so video input stops.", url.c_str());
         avcodec_free_context(&ctx); avformat_close_input(&fmt); err = "could not decode this capture device"; return false;
     }
     I->fileTh = dect2::namedThread("onair-vidin", [=]() mutable {

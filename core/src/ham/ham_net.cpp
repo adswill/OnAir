@@ -12,6 +12,7 @@
 #include <ctime>
 #include <fstream>
 #include <sstream>
+#include "dect2/common/diag.h"
 
 namespace dect2::ham {
 
@@ -81,7 +82,7 @@ HttpGet curlGet() {
         r.status = std::atoi(code.c_str());
         std::ostringstream ss; ss << of.rdbuf(); r.body = ss.str();
         cf.close(); of.close();
-        if (!r.status) r.err = "connection failed";
+        if (!r.status) { DIAG(368161, "The ham network request got no HTTP answer from the server, so the lookup failed."); r.err = "connection failed"; }
         std::remove(outF.c_str()); std::remove(codeF.c_str());
         return r;
     };

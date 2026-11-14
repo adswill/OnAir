@@ -17,6 +17,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include "dect2/common/diag.h"
 #ifndef _WIN32
 #include <fcntl.h>
 #endif
@@ -154,7 +155,7 @@ struct AudioMonitor::Impl {
         auto n = std::make_unique<AudioOut>();
         n->setMonitorRole(true);
         n->setDevice(dev);
-        if (!n->start(kOutRate)) { err = "audio output \"" + (dev.empty() ? std::string("default") : dev) + "\" could not be opened"; return; }
+        if (!n->start(kOutRate)) { DIAG(118492, "The audio monitor output %s could not be opened, so the monitor stays silent.", dev.empty() ? "default" : dev.c_str()); err = "audio output \"" + (dev.empty() ? std::string("default") : dev) + "\" could not be opened"; return; }
         n->setStartThreshold(kOutRate * c.latencyMs / 1000);
         o = std::move(n); cur = dev;
     }

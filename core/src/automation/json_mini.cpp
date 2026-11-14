@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include "dect2/common/diag.h"
 
 namespace dect2::automation::json {
 
@@ -175,7 +176,7 @@ void dumpTo(const Value& v, bool pretty, int ind, std::string& o) {
 }  // namespace
 
 bool parse(const std::string& text, Value& out, std::string& err) {
-    if (text.size() > kMaxText) { err = "file too large"; return false; }
+    if (text.size() > kMaxText) { DIAG(345151, "The automation JSON text is larger than the allowed size, so it was not read."); err = "file too large"; return false; }
     P p(text);
     Value v;
     if (!p.value(v, 0)) { err = p.err; return false; }
