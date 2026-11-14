@@ -23,6 +23,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include "dect2/common/diag.h"
 
 namespace vk = dect2::voicekeys;
 using keyswin::CallStatus;
@@ -89,7 +90,7 @@ void tryLoad(const std::string& pass) {
     S.fileNeedsPass = false;
     if (!S.haveFile) { S.unlocked = true; return; }   // nothing stored yet: an empty store, ready to fill
     bool needs = false;
-    if (!vk::fileNeedsPassphrase(bytes, needs)) { S.error = "The key file is not an OnAir key file."; S.unlocked = false; return; }
+    if (!vk::fileNeedsPassphrase(bytes, needs)) { DIAG(870281, "The selected key file is not an OnAir key file, so it stays locked."); S.error = "The key file is not an OnAir key file."; S.unlocked = false; return; }
     S.fileNeedsPass = needs;
     if (needs && pass.empty()) { S.unlocked = false; return; }   // locked: ask for the passphrase
     const std::string err = vk::loadFromFile(filePath(), pass);
@@ -100,7 +101,7 @@ void tryLoad(const std::string& pass) {
 
 // Write the store. On a keychain failure fall back to the passphrase route and say so.
 bool persist() {
-    if (!canSave()) { S.error = "Set a passphrase first: there is no OS keychain on this system."; return false; }
+    if (!canSave()) { DIAG_DEBUG(997723, "Keys cannot be saved because there is no OS keychain and no passphrase is set."); S.error = "Set a passphrase first: there is no OS keychain on this system."; return false; }
     std::error_code ec;
     std::filesystem::create_directories(dect2::u8file(filePath()).parent_path(), ec);
     const std::string err = vk::saveToFile(filePath(), S.passphrase);
@@ -303,7 +304,7 @@ void startImport() {
     S.importError.clear();
     S.importNeedsPass = false;
     wipe(S.importPass, sizeof S.importPass);
-    if (!readFile(path, S.importBytes, 1u << 20)) { S.error = "That file could not be read (or it is over 1 MB)."; return; }
+    if (!readFile(path, S.importBytes, 1u << 20)) { DIAG(110692, "The key import file %s could not be read or is over 1 MB, so nothing was imported.", path.c_str()); S.error = "That file could not be read (or it is over 1 MB)."; return; }
     S.preview = keyswin::previewCsv(S.importBytes, vk::store().list());
     S.importNeedsPass = S.preview.encryptedFile;
     S.openImport = true;
@@ -396,7 +397,7 @@ void exportDialog() {
             if (err.empty()) {
                 std::ofstream o(dect2::u8file(path), std::ios::binary | std::ios::trunc);
                 o.write(bytes.data(), (std::streamsize)bytes.size());
-                if (!o) err = "The file could not be written.";
+                if (!o) { DIAG(918455, "Writing the key export file %s failed (the folder may be read-only or the disk full), so it was not saved.", path.c_str()); err = "The file could not be written."; }
             }
             wipe(bytes);
             if (err.empty()) { S.notice = "Exported " + std::to_string(vk::store().count()) + " key(s). The file holds your keys: keep it private."; wipe(S.pass, sizeof S.pass); wipe(S.pass2, sizeof S.pass2); ImGui::CloseCurrentPopup(); }

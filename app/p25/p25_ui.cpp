@@ -45,6 +45,7 @@
 #include <map>
 #include <vector>
 #include "trunkpool/trunk1.h"
+#include "dect2/common/diag.h"
 
 namespace {
 
@@ -101,7 +102,7 @@ std::string tgFile() { return plat::dataDir() + "/trunk_talkgroups.csv"; }
 
 void tgLoad(const std::string& path, bool merge) {
     std::ifstream f(std::filesystem::u8path(path), std::ios::binary);
-    if (!f) { T.status = "cannot open " + path; return; }
+    if (!f) { DIAG_DEBUG(901821, "The P25 talkgroup list %s could not be opened, so no talkgroups were loaded.", path.c_str()); T.status = "cannot open " + path; return; }
     std::stringstream ss; ss << f.rdbuf();
     std::string err; int skipped = 0;
     const int n = T.ctl.tgs.importCsv(ss.str(), &err, &skipped, merge);
@@ -110,7 +111,7 @@ void tgLoad(const std::string& path, bool merge) {
 void tgSave(const std::string& path) {
     std::ofstream f(std::filesystem::u8path(path), std::ios::binary);
     if (f) f << T.ctl.tgs.exportCsv();
-    else T.status = "cannot write " + path;
+    else { DIAG(404247, "Writing the P25 talkgroup list %s failed (the folder may be read-only), so it was not saved.", path.c_str()); T.status = "cannot write " + path; }
 }
 
 bool live(const App& a) { return a.rx.standard == 51; }   // the engine reports its standard code minus one

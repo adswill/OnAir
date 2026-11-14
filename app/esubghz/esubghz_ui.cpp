@@ -23,6 +23,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include "dect2/common/diag.h"
 
 namespace {
 
@@ -166,7 +167,7 @@ void queueLine(App& a, const std::string& text) {
     p.line = line;
     p.encrypted = S.key.on;
     p.octets = S.sender->encode(S.key.on ? &S.key : nullptr, line);
-    if (p.octets.size() > esubghz::kMaxMessage) { S.error = "the line is too long for a Flipper"; return; }
+    if (p.octets.size() > esubghz::kMaxMessage) { DIAG_DEBUG(868605, "A Sub-GHz line of %d octets is too long for a Flipper, so it was not queued.", (int)p.octets.size()); S.error = "the line is too long for a Flipper"; return; }
     S.queue.push_back(std::move(p));
     S.error.clear();
     sendTick(a);
