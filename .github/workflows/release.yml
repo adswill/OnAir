@@ -92,7 +92,7 @@ jobs:
       built: ${{ steps.pfx.outputs.have }}
     env:
       GH_TOKEN: ${{ github.token }}
-      ONAIR_DEBUG_SYMBOLS: "ON"   # -g and the target debug_symbols_zip (CMakeLists.txt): the symbols for the debug dumps
+      ONAIR_DEBUG_SYMBOLS: "ON"   # -g1 and the target debug_symbols_zip (CMakeLists.txt): the symbols for the debug dumps
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_MAXSIZE: 1G
@@ -201,7 +201,7 @@ jobs:
     if: needs.version.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'macos')
     env:
       MACOSX_DEPLOYMENT_TARGET: "15.0"
-      ONAIR_DEBUG_SYMBOLS: "ON"   # -g and the target debug_symbols_zip (CMakeLists.txt): the symbols for the debug dumps
+      ONAIR_DEBUG_SYMBOLS: "ON"   # -g1 and the target debug_symbols_zip (CMakeLists.txt): the symbols for the debug dumps
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_MAXSIZE: 1G
@@ -291,7 +291,7 @@ jobs:
             ccache-release-${{ matrix.arch }}-
       - name: Build
         env:
-          ONAIR_DEBUG_SYMBOLS: "ON"   # -g and the target debug_symbols_zip (CMakeLists.txt): the symbols for the debug dumps
+          ONAIR_DEBUG_SYMBOLS: "ON"   # -g1 and the target debug_symbols_zip (CMakeLists.txt): the symbols for the debug dumps
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ github.workspace }}
           CCACHE_MAXSIZE: 1G

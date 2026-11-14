@@ -31,12 +31,12 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 
 # Debug symbols for the debug dumps (app/panels/debug_report.cpp): the build server sets ONAIR_DEBUG_SYMBOLS=ON (environment or -D) and then
-# runs the target debug_symbols_zip (end of this file). A normal build is not changed: no -g, no target. -g adds DWARF sections only; the
+# runs the target debug_symbols_zip (end of this file). A normal build is not changed: no -g1, no target. -g1 adds DWARF sections only; the
 # machine code is the same, so speed and timing tests do not change.
 option(ONAIR_DEBUG_SYMBOLS "Release with debug information; adds the target debug_symbols_zip" "$ENV{ONAIR_DEBUG_SYMBOLS}")
 if(ONAIR_DEBUG_SYMBOLS AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   foreach(_lang C CXX OBJC OBJCXX)
-    string(APPEND CMAKE_${_lang}_FLAGS_RELEASE " -g")
+    string(APPEND CMAKE_${_lang}_FLAGS_RELEASE " -g1")   # functions and line numbers: backtraces with file:line. Full -g made dect2 3.9 GB (types, variables)
   endforeach()
   if(MINGW)
     add_link_options(-Wl,--build-id)   # the PE gets a CodeView record with the build id; a minidump names it, so the symbols match (Linux ld does this by default, macOS has LC_UUID)
