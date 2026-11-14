@@ -52,6 +52,18 @@ The same commands work for every SDK: replace `windows` by the SDK's name (`linu
 
 Use one build folder per SDK, and never a build folder that was configured without an SDK: CMake keeps the compiler of the first configure.
 
+## All releases in one go
+
+`build_all_releases.sh` does steps 1 and 2 for every platform: the `sdk_<platform>` targets, then each SDK's `--target package`. The installers go to `build-releases/installers/`, with `SHA256SUMS`; a failed build leaves its log in `build-releases/logs/`.
+
+```bash
+tools/sdk/build_all_releases.sh                              # on a terminal it asks; otherwise all five platforms
+tools/sdk/build_all_releases.sh --windows --linux_amd64      # only these
+tools/sdk/build_all_releases.sh --docker                     # in an Ubuntu 26.04 container: only Docker needed, on any system
+```
+
+`--sdk-only` stops after the SDKs, `-o DIR` writes elsewhere, `--cache DIR` keeps the SDK cache elsewhere, `-j N` limits OnAir's build, `--keep-build-artif` keeps the build folders and `--dry-run` prints the commands. `--help` lists them all.
+
 ## 3. Run the tests
 
 - **Linux x86-64:** the tests run on the build machine: `ctest --test-dir build-linux_amd64 -j8 --output-on-failure -LE "timing|slow"`. That is the fast tier CI runs on a pull request; `-L slow` (hours) runs nightly, and `-L timing` measures speed and needs an otherwise idle machine.
@@ -85,6 +97,7 @@ These steps need no questions and no terminal. Points that are easy to miss:
 | | |
 |---|---|
 | `CMakeLists.txt`, `cached_tarball.sh` | the CMake targets and the key and cache |
+| `build_all_releases.sh`, `Dockerfile` | every SDK and every installer in one go, natively or in Docker |
 | `make_tarball.sh` | one SDK, from scratch, into `sdk_<platform>.tar.gz` |
 | `check_host.sh` | the Ubuntu packages the build needs |
 | `common/make_sdk.sh` | the SDK's layout: native tools, target sysroots, licences (`LICENSES.txt`) |
