@@ -1,0 +1,112 @@
+# The video generator link, version 1
+
+How the Digital video generator (`onair-videogen`, `onair_videogen.exe` on Windows) and OnAir talk to each other (#458). The generator
+is its own program; OnAir's transmitter takes its multiplex over this link. Everything is plain RTP and RTCP over UDP (RFC 3550): no
+connection, no handshake, no buffering in the link itself.
+
+- Code: `core/include/dect2/tv/vglink.h`, `core/src/tv/vglink.cpp` (both sides), `app/panels/vg_launch.cpp` (OnAir starts the
+  generator), `app/videogen/` (the generator program)
+- Tests: `tests/tv/test_videogen_link.cpp` (packets, server and client), `tests/tv/test_videogen_mux.cpp` (the whole chain: generator,
+  link, DVB-T transmitter, OnAir's own DVB-T receiver)
+
+## Ports
+
+| | Default | Setting |
+|---|---|---|
+| RTP, the transport stream (generator -> OnAir) | UDP **5460** | OnAir: `videoGenLinkPort` (must be even) |
+| RTCP, the control (both ways) | UDP **5461** (the RTP port + 1) | follows the RTP port |
+
+OnAir listens on `127.0.0.1` only. With `videoGenLinkAll=1` it listens on every network card, so generators on other computers can
+link. The generator sends from any local port and gets its replies on that port, so it needs no port of its own and works through NAT.
+5454 is not used: SDRconnect has it.
+
+The generator looks for OnAir at `127.0.0.1:5460` unless it is started with `--onair host:port`. OnAir's Tools menu always passes
+`--onair 127.0.0.1:<port> --token <t>`.
+
+## The stream (RTP)
+
+- Payload type **33** (MPEG-2 TS, RFC 2250 / RFC 3551), version 2, no CSRC, no extension.
+- Up to **7 TS packets** (1316 bytes) per datagram, so a datagram stays under a 1500-byte MTU.
+- Time stamp: 90 kHz, from the generator's mux clock. Sequence numbers count up by one per datagram.
+- The generator's mux paces the packets at its mux rate. OnAir does not pace or reorder them: it puts each packet in the slot's queue,
+  which the transmitter reads as `generator:N`.
+- OnAir counts **lost** packets (sequence gaps) and **late** packets (behind the last one), and drops the late ones: the transmitter's
+  queue only goes forward.
+- An RTP packet is ignored when its SSRC has sent no State, when it comes from another IP address than that State, or when the
+  generator's State says it is not sending (`rate=0`, so a stale datagram does not refill the queue).
+
+## The control (RTCP)
+
+Each control message is a compound RTCP packet: **RR** (no report blocks) + **SDES** (CNAME, and NAME when there is one) + **APP**
+with name `OAVG`. The APP subtype is the message. Its data is UTF-8 text, `key=value` lines, padded with zeros to 32 bits. Unknown keys
+are ignored, so either side can add keys without a new version. Unknown RTCP packets in a compound packet are skipped. A packet that is
+cut off or not version 2 is dropped as a whole.
+
+| Subtype | Message | Direction |
+|---|---|---|
+| 1 | State | generator -> OnAir |
+| 2 | Reply | OnAir -> generator |
+| 3 | Refused | OnAir -> generator |
+| (RTCP BYE) | Bye | generator -> OnAir |
+
+Every message describes a **state**, not an event, so a lost datagram only delays it:
+
+- The generator sends its State about **once a second**, and at once when something changes.
+- OnAir answers each State with a Reply to the address the State came from. It also repeats every Reply each second.
+- Raise and Quit are **counters** in the Reply: the generator acts when one goes up.
+- A new stream is a counter in the State: when it goes up, OnAir empties the slot's queue. This is the same as "a starting generator
+  empties the queue" of #494.
+
+### State (generator -> OnAir)
+
+| Key | Value |
+|---|---|
+| `proto` | link version, `1` |
+| `name` | the generator's name, shown in the transmitter (at most 60 characters) |
+| `slot` | the slot it asks for (1-8). OnAir gives the next free one when that one is taken. |
+| `token` | the token OnAir started it with (empty when started by hand), at most 80 characters |
+| `rate` | its mux rate in bit/s, 0 when not sending |
+| `stream` | counts its starts (see above) |
+| `easy` | `1` in Easy mode, `0` in Advanced. In Easy mode the transmitter greys the Multiplex fields the generator controls. |
+| `programmes`, `p0`, `p1` ... | the programmes of its multiplex, "number name" each (at most 16) |
+
+### Reply (OnAir -> generator)
+
+| Key | Value |
+|---|---|
+| `proto` | link version, `1` |
+| `slot` | the slot it got: the transmitter reads it as `generator:<slot>` |
+| `raise`, `quit` | counters: come to the front (Tools > Digital video generator once more); quit (OnAir is closing the generator it started) |
+| `running` | `1` while the transmitter is on air |
+| `tv` | `1` when the transmitter's mode carries a transport stream (DVB-T/T2, DVB-S/S2, DVB-C, ATSC, ISDB-T, DTMB) |
+| `channel` | the channel's transport-stream rate in bit/s (0: not known) |
+| `usable` | what this generator may use: 97 % of the channel, shared equally by the generators in the multiplex |
+| `system`, `params` | the transmitter's system and parameters, as text for the user ("DVB-T", "8 MHz") |
+| `generators`, `inmux` | how many generators the multiplex uses; `1` when this one is among them |
+
+In Easy mode the generator fits its video bitrate to `usable`. In Advanced mode, `usable` is the capacity on its Muxing tab (unless a
+capacity is typed in there).
+
+### Refused (OnAir -> generator)
+
+`error`: why. For example, eight generators are linked already.
+
+### Bye
+
+An RTCP **BYE**, sent three times. The reason `closed` means the user closed the generator window: OnAir then clears "the generator
+runs" (`videoGenOpen`), so it does not start the generator again next time. Any other reason (`stop`) is a plain stop.
+
+## Timeouts
+
+- OnAir counts a generator as gone after **5 s** without a State from it (the RTP stream alone does not keep it linked). Its slot's
+  rate goes to 0 and the slot is free again.
+- The generator counts OnAir as gone after **3 s** without a Reply. It keeps sending its State, so it links again by itself once OnAir is
+  back.
+
+## Versions
+
+| Version | Change |
+|---|---|
+| 1 | first version (#458) |
+
+A generator that sends `proto` < 1 is ignored. A later version keeps the keys above and adds new ones.

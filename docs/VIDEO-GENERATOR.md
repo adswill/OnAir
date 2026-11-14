@@ -1,32 +1,50 @@
 # Digital video generator
 
-Tools > Digital video generator turns a camera, a still picture or a video file into an MPEG transport stream, with an overlay of your
-own on the picture: a logo, the encoding parameters, free text and a band of rolling text. The stream is written to a `.ts` file or
-sent over the network as UDP or RTP. Every encoder setting can be chosen, and the window estimates the bitrate the settings need, so the
-stream can be fitted to a DVB link before anything is encoded.
+The Digital video generator turns cameras, still pictures, video files, the test generator or an RTMP stream into an MPEG transport
+stream, with an overlay of your own on each picture: a logo, the encoding parameters, free text and a band of rolling text. The stream
+goes to OnAir's transmitter, a `.ts` file, or the network as UDP or RTP. Every encoder setting can be chosen, and the window estimates the
+bitrate the settings need, so the stream can be fitted to a DVB link before anything is encoded.
 
-The tool stands alone: it does not change the receiver, the transmitter or anything else in OnAir. To transmit what it makes, write a
-`.ts` file and choose it in the transmitter as the "MPEG-TS / video file" (DVB-T, T2, S, S2, C, ATSC, ISDB-T, DTMB send a `.ts` as it is).
+The generator is **its own program**: `onair-videogen` (`onair_videogen.exe` on Windows), installed next to OnAir. **Tools > Digital
+video generator** starts it, or brings it to the front when it already runs. It has its own window, so it can sit on a second screen.
+It keeps running when OnAir's window is busy, and OnAir keeps running when an encoder is slow. The two talk over a small link on this
+computer (RTP over UDP, port 5460, see [VIDEOGEN-LINK.md](VIDEOGEN-LINK.md)): the generator sends its multiplex to the transmitter, and
+the transmitter tells the generator how much it may send. When OnAir closes, the generator it started closes too, and it starts again with
+OnAir next time. Closing the generator window yourself ends that. A generator started by hand links to OnAir by itself when OnAir runs.
 
-- Engine: `core/include/dect2/tv/videogen.h`, `core/src/tv/videogen.cpp` (sources, encoders, muxer, output)
+- Program: `app/videogen/` (`vg_main.cpp` the window and command line, `vg_window.cpp` the tabs, Muxing and the link, `vg_sources.cpp`
+  a source's rows, the estimate and the overlay editor). It shares OnAir's graphics, fonts, settings and translations (the `onair_uikit`
+  library) and its engine (`dect2core`).
+- Engine: `core/include/dect2/tv/videogen.h`, `core/src/tv/videogen.cpp` (sources, encoders, muxer, output); the threads of a session
+  (`vg-src-N` per source, `vg-mux`, `vg-preview`): `core/include/dect2/tv/videogen_session.h`, `core/src/tv/videogen_session.cpp`
+- Link: `core/include/dect2/tv/vglink.h`, `core/src/tv/vglink.cpp`; OnAir's side: `app/panels/vg_launch.cpp`
 - Settings and estimate: `core/include/dect2/tv/videogen_params.h`, `core/src/tv/videogen_params.cpp`
 - Overlay: `core/include/dect2/tv/videogen_overlay.h`, `core/src/tv/videogen_overlay.cpp` (text with stb_truetype, logo with OnAir's PNG decoder or FFmpeg, scaled with swscale)
-- Window: `app/panels/videogen_ui.cpp`; the mode selector tab `app/panels/videogen_modes_ui.cpp`
-- DVB modes for the mode selector: `core/include/dect2/tv/dvb_modes.h`, `core/src/tv/dvb_modes.cpp`
-- Tests: `tests/tv/test_videogen.cpp`, `tests/tv/test_dvb_modes.cpp`
+- Digital TV mode selector (an OnAir tool): `app/panels/videogen_modes_ui.cpp`, the modes in `core/include/dect2/tv/dvb_modes.h`, `core/src/tv/dvb_modes.cpp`
+- Tests: `tests/tv/test_videogen.cpp`, `test_videogen_link.cpp`, `test_videogen_mux.cpp` (`ctest -R "^videogen$"`), `tests/tv/test_dvb_modes.cpp`
 
 Every setting in the window has a (?) with a short version of what is written here.
 
 ## Quick start
 
-1. Open Tools > Digital video generator.
-2. On **Sources and encoding**, choose the input (Camera, Still picture, Video file, Test generator or RTMP server), the resolution and the frame rate.
-   That is all the tab shows at first. Tick **Advanced** for the output (MPEG-TS file, UDP or RTP stream), the sound and every encoding
-   setting; settings you do not see keep their values (the first time: a UDP stream to this PC, `udp://127.0.0.1:5000`, to watch in VLC).
-3. Leave the encoding settings at their defaults, or change them: the **Estimated bitrate** panel on the right follows every change.
-4. Press **Start preview** to see the moving picture on the **Preview** tab (nothing is encoded or sent; **Stop preview** brings back
-   the grey card), and optionally place an overlay there, and check on **Digital Television Mode Selector** which DVB modes carry the stream.
-5. Press **Start encoding** (file) or **Start streaming** (UDP / RTP). Stop ends a stream; a file stops by itself at its length.
+1. Choose a digital TV mode in OnAir's transmitter (DVB-T, for example), then open **Tools > Digital video generator**.
+2. On the **Easy** tab, choose the input (Camera, Still picture, Video file, Test generator or RTMP server), the resolution and the
+   frame rate. Easy mode does the rest: it sends to OnAir's transmitter and fits the video bitrate to what the transmitter's channel
+   carries (the **Transmitter** panel on the right shows it).
+3. Press **Start preview** to see the moving picture (nothing is encoded or sent).
+4. Press **Start streaming**. In OnAir's Transmit panel, the **Video generator** row lists the generator (`1: Video generator *`, where `*`
+   means it is sending): click it, then start the transmitter.
+
+Tick **Advanced** (next to Start, above the tabs) for everything else: several sources in one multiplex, every encoding setting, the
+overlay, and the output to a file, UDP or RTP. Settings you do not see keep their values.
+
+### The tabs (Advanced)
+
+| Tab | What it holds |
+|---|---|
+| **Source 1**, **Source 2** ... | One input each, with its encoding (codec, bitrates, picture, sound) and the estimate. **+** adds a source (at most 8); the **x** on a tab closes it (not the last one, and not while streaming). |
+| **Muxing** | The multiplex: each source's programme number, service name and PIDs (automatic, or typed), the first programme number, the transport stream ID and the provider; the channel's capacity (from the transmitter, or typed); padding; the output; and a table of the threads (`vg-src-N`, `vg-mux`, `vg-preview`) with their CPU, frames, drops and queue. |
+| **Preview** | The picture of one source (chosen at the top) and its overlay editor. |
 
 ## Sources
 
@@ -114,24 +132,28 @@ On the receiving PC, choose Media > Open Network Stream and enter:
 
 The `@` means "listen here". If nothing arrives, check the firewall of the receiving PC (UDP port 5000 inbound).
 
-### Several generators in one multiplex (transmitter)
+### Sending to OnAir's transmitter
 
-Output **Transmitter** hands the stream to the transmitter (Transmit panel) instead of a file or the network; the generator number
-(1 to 8) names it there. One generator can be the whole transport stream (the **Video generator: 1 2 3 4** buttons next to the
-MPEG-TS file). To send several at once in one DVB-T/T2, DVB-S/S2/S2X, DTMB, DVB-C, ATSC or ISDB-T channel, for example the same
-picture in H.264 and in H.265 to compare them on a receiver:
+Output **Transmitter** (always in Easy mode) sends the multiplex to OnAir over the link instead of to a file or the network. OnAir gives
+each linked generator a slot (1 to 8); the transmitter reads it as `generator:<slot>`. A generator's whole multiplex, with all its
+sources, can be the whole transport stream: click it in the **Video generator** row of the Transmit panel. To put several generators
+in one channel, for example the same picture in H.264 and H.265 on two computers:
 
-1. Open as many generators as you need (Tools > Digital video generator, one window each), give each its own number, Output
-   **Transmitter**, and its codec and bitrates. Start them.
-2. In the Transmit panel, under **Multiplex**, set **Services** to the number of generators. For each service choose Programme source
-   **Video generator** and its generator number (`*` = it is sending now). Leave the MPEG-TS file empty.
-3. Start the transmitter. Each generator is its own programme: service ID **First service ID** + 0, 1, 2 ..., PMT PID `0x1000` + n,
-   its streams on `0x100` x (n + 1) and up. The service name is the one typed in the Multiplex, or else the generator's own.
+1. Start the generators (Tools > Digital video generator starts one; more can be started by hand, also on other computers with
+   OnAir's setting `videoGenLinkAll=1`).
+2. In the Transmit panel, under **Multiplex**, set **Services** to the number of generators. For each one choose Programme source
+   **Video generator** and the generator (`*` = it is sending now). Below it, the transmitter shows that generator's programmes.
+3. Start the transmitter.
 
-The transmitter rewrites the PIDs, the PMTs, the PAT and the SDT; the pictures and sound pass untouched. Each generator gets a fixed share
-of the channel, its mux rate, so its timing (PCR) stays right: **the mux rates together must stay below the channel's bitrate** (the
-transmitter's note shows both). A generator started later joins the multiplex; one that stops leaves it. Services with another source
-(test card, file, camera) are left out while a generator is in the multiplex.
+Each generator keeps its own programme numbers, names and PIDs: in Easy mode programme 1, in Advanced mode those of its Muxing tab. When
+two generators use the same programme number or PIDs, the transmitter moves the later one's to the next free ones. In Easy mode the
+transmitter greys the Multiplex fields the generator controls (provider, first service ID and the service name), with the tooltip "Service
+settings are controlled by the Digital video generator". For a generator in Advanced mode it only warns that its Muxing tab sets them.
+
+The transmitter tells every generator the channel's rate. Each one may use 97 % of it, shared equally by the generators in the multiplex.
+Easy mode fits its video bitrate to that. Advanced mode uses it as the Muxing tab's capacity, unless one is typed there. A generator
+started later joins the multiplex; one that stops leaves it. Starting a generator empties its old queue, so the transmitter never sends
+stale pictures. Services with another source (test card, file, camera) are left out while a generator is in the multiplex.
 
 ## Encoding settings
 
@@ -204,7 +226,7 @@ The net bitrate of an 8 MHz DVB-T channel, in Mbit/s (EN 300 744). Set the TS mu
 | 64-QAM | 2/3 | 19.91 | 22.12 | 24.13 |
 | 64-QAM | 3/4 | 22.39 | 24.88 | 27.14 |
 
-A 7 MHz channel carries 7/8 of these, a 6 MHz channel 6/8. The **Digital Television Mode Selector** tab has every mode of every system.
+A 7 MHz channel carries 7/8 of these, a 6 MHz channel 6/8. **Tools > Digital TV mode selector** has every mode of every system.
 
 ## Codecs and FFmpeg
 
@@ -252,16 +274,18 @@ and changes to the overlay go out on the next frame.
 The overlay text uses the font of the OnAir interface (Inter). The layout is kept in `videogen_overlay.txt` and the other settings in
 `videogen.txt`, both in the OnAir data folder.
 
-## Digital Television Mode Selector
+## Digital TV mode selector
 
-The third tab answers: with this bitrate, this much room on the spectrum and this signal quality, which DVB modes will work, and which
-is the best? It knows every standard mode of DVB-T, DVB-T2, DVB-T2 narrow band (the 1,7 MHz channel, a block of its own), DVB-S,
-DVB-S2 and DVB-S2X.
+**Tools > Digital TV mode selector** in OnAir (it was the third tab of the generator before it became its own program) answers: with
+this bitrate, this much room on the spectrum and this signal quality, which DVB modes will work, and which is the best? It knows every
+standard mode of DVB-T, DVB-T2, DVB-T2 narrow band (the 1,7 MHz channel, a block of its own), DVB-S, DVB-S2 and DVB-S2X. DVB-T comes
+first and is open.
 
 **Left, the link:**
 
-- **Bitrate**: what has to be carried. By default the TS mux rate of the first tab (*The generator's TS mux rate*); untick it to type
-  your own, in Mbit/s.
+- **Bitrate**: what has to be carried. By default it is what the Digital video generators linked to OnAir send to the transmitter now
+  (their mux rates added up, **Live from the generators**); when none is sending, the last value stays. Untick it to type your own, in
+  Mbit/s.
 - **Bandwidth**: the room you have on the spectrum, in MHz: a channel, or a segment of the band plan.
 - **C/N**: the carrier-to-noise ratio you see on the spectrum analyser, in dB, measured in the same bandwidth as the signal.
 - **Most optimal mode**: the mode with the smallest bandwidth that carries the bitrate at this C/N, over all systems and with the
@@ -304,6 +328,8 @@ How the modes are worked out (the formulas and standard tables of the workbook `
 | OBS: "Failed to connect to server" | Start the generator first (it listens only while it runs), check the Server in OBS against the one the window shows, and the firewall on the OnAir PC (TCP port 1935). |
 | RTMP: "Cannot listen on port 1935" | Another program (a second generator, a media server) uses the port: give this generator another port, and OBS the same one. |
 | Transmitter: "Too much for this channel" | The generators' mux rates add up to more than the channel carries: lower their bitrates, or choose a channel mode with a higher bitrate. |
-| Transmitter: a generator service is missing | Its generator is not running with Output **Transmitter** and the same number (the transmitter's note lists those not running). |
+| Transmitter: a generator service is missing | Its generator is not linked or not streaming with Output **Transmitter**: its row in the Transmit panel then has no `*` (the transmitter's note lists those not running). |
+| The generator says "Not linked to OnAir" | Start OnAir; the generator links by itself within a few seconds. A generator on another computer needs OnAir's `videoGenLinkAll=1` and UDP ports 5460-5461 open in OnAir's firewall. |
+| Tools > Digital video generator: "could not start" | `onair-videogen` (`onair_videogen.exe`) is missing next to OnAir: reinstall, or copy it from the package. |
 | The mux bar has a red outline | The mux rate is lower than the streams need: raise it, or lower the video bitrate. |
-| The picture breaks up on the receiver | The stream is larger than the link: compare the mux rate with the table of DVB-T bitrates, or check the mode on the Digital Television Mode Selector tab. |
+| The picture breaks up on the receiver | The stream is larger than the link: compare the mux rate with the table of DVB-T bitrates, or check the mode with Tools > Digital TV mode selector. |
