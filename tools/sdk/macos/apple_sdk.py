@@ -40,7 +40,9 @@ def die(msg):
 
 def openssl(*args, check=False, text=True):
     # the host's openssl by its full path, the arguments are fixed options and file names in a temporary folder, no shell
-    prog = shutil.which("openssl") or die("openssl is not on PATH")
+    prog = shutil.which("openssl")
+    if prog is None:
+        die("openssl is not on PATH")
     return subprocess.run([prog, *args], capture_output=True, check=check, text=text)  # nosec B603  # nosemgrep
 
 

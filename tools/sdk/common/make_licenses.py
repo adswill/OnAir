@@ -65,7 +65,9 @@ def text_dir(rel):
 
 def run(*cmd):
     # the program by its full path, with this script's own arguments (archive and file names), no shell
-    prog = shutil.which(cmd[0]) or sys.exit(f"error: {cmd[0]} is not on PATH")
+    prog = shutil.which(cmd[0])
+    if prog is None:
+        sys.exit(f"error: {cmd[0]} is not on PATH")
     return subprocess.run([prog, *cmd[1:]], capture_output=True, text=True, check=True).stdout  # nosec B603  # nosemgrep
 
 

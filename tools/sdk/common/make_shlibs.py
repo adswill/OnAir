@@ -10,7 +10,9 @@ import shutil
 import subprocess  # nosec B404
 import sys
 
-DPKG_DEB = shutil.which("dpkg-deb") or sys.exit("error: dpkg-deb is not on PATH")
+DPKG_DEB = shutil.which("dpkg-deb")
+if DPKG_DEB is None:
+    sys.exit("error: dpkg-deb is not on PATH")
 
 lock, cache = sys.argv[1:3]
 out = {}

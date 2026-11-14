@@ -22,7 +22,9 @@ def elf_files():
                 if h.read(4) == b"\x7fELF":
                     yield p
 
-READOBJ = shutil.which("llvm-readobj") or sys.exit("error: llvm-readobj is not on PATH (source the SDK's environment script)")
+READOBJ = shutil.which("llvm-readobj")
+if READOBJ is None:
+    sys.exit("error: llvm-readobj is not on PATH (source the SDK's environment script)")
 carried, needed = set(), set()
 for root, _, files in os.walk(stage):
     carried.update(files)
