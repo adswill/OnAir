@@ -10,6 +10,7 @@
 #include "dect2/tv/ts_proto.h"
 #include "dect2/tv/ts_remux.h"
 #include "dect2/tv/vglink.h"
+#include "vg_test_pipe.h"
 #include "dect2/tv/videogen_session.h"
 #include "dect2/tx/tx.h"
 #include "dect2/dvbt/dvbt_rx.h"
@@ -278,9 +279,9 @@ std::map<int, int> patOf(const std::vector<uint8_t>& d) {
 void testSessionThreads() {
     VgLinkServer srv;
     std::string err;
-    MCHECK(srv.start(0, false, err), "session: the link server listens (%s)", err.c_str());
+    MCHECK(srv.start(true, 0, false, err, vgTestPipeName()), "session: the link server listens (%s)", err.c_str());
     VgLinkClient link;
-    link.start("127.0.0.1", srv.port(), "Session test", 3, "");
+    link.start("127.0.0.1", srv.port(), "Session test", 3, "");   // over UDP (the chain test below uses the pipe)
     MCHECK(waitUntil([&] { return link.connected(); }, 5), "session: the generator is linked (%s)", link.status().c_str());
     const int slot = link.slot();
     std::vector<uint8_t> got;
@@ -432,9 +433,10 @@ void testTxChain() {
     using dect2::TxModeSpec; using dect2::TxRequest; using dect2::makeTxGenerator; using dect2::txModeById; using dect2::txTsBitrate; using dect2::DvbtReceiver; using dect2::cf32;
     VgLinkServer srv;
     std::string err;
-    MCHECK(srv.start(0, false, err), "chain: the link server listens (%s)", err.c_str());
+    const std::string pipe = vgTestPipeName();
+    MCHECK(srv.start(false, 0, false, err, pipe), "chain: the link server listens (%s)", err.c_str());
     VgLinkClient link;
-    link.start("127.0.0.1", srv.port(), "Chain test", 0, "");
+    link.startLocal(pipe, "Chain test", 0, "");   // the local pipe, as OnAir starts its generator
     MCHECK(waitUntil([&] { return link.connected(); }, 5), "chain: the generator is linked (%s)", link.status().c_str());
     const int slot = link.slot();
     const TxModeSpec* mode = txModeById("dvbt");

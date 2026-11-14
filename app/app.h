@@ -1082,6 +1082,8 @@ void videoGenRequest(App& a);   // vg_launch.cpp: Tools > Digital video generato
 void videoGenTick(App& a);      // vg_launch.cpp: every frame (the link server, the generator ending)
 void videoGenShutdown();        // vg_launch.cpp: OnAir closes: the generator it started quits
 const std::string& videoGenError();   // vg_launch.cpp: why the link or the program did not start (empty: fine)
+bool videoGenNetwork();               // vg_launch.cpp: the link also listens on UDP (saved videoGenLinkNet; off: the local pipe only)
+void videoGenSetNetwork(bool on);     // saves it and starts the link again (the generators link again within a second)
 void dvbModesWindow(App& a);    // videogen_modes_ui.cpp: Tools > Digital TV mode selector (a.dvbModesOpen)
 void pluginRegister(App& a);       // plugin/plugin_app.cpp: discovery and the tunings of the plugin rows; first thing in the frame
 void pluginFrame(App& a);          // plugin/plugin_app.cpp, every frame: discovery at the first call, starts and stops the running plugin mode, ticks the host

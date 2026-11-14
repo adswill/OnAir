@@ -1,8 +1,8 @@
 // onair-videogen: the Digital video generator as its own program (#458, docs/VIDEO-GENERATOR.md, docs/VIDEOGEN-LINK.md).
 //
-//   onair-videogen [--onair host:port] [--token t] [--slot n] [--easy | --advanced]
-//   OnAir's Tools > Digital video generator starts it with --onair 127.0.0.1:<port> --token <t>; started by hand it looks for OnAir
-//   at 127.0.0.1:5460 and links when OnAir runs. Screenshots (the OnAir flags): --hidden --shot <png> [--shotdelay s], --tab <name>,
+//   onair-videogen [--onair local | host:port] [--token t] [--slot n] [--easy | --advanced]
+//   OnAir's Tools > Digital video generator starts it with --onair local --token <t>; started by hand it looks for OnAir's pipe on
+//   this computer (or, with --onair host:port, for OnAir's UDP port) and links when OnAir runs. Screenshots (the OnAir flags): --hidden --shot <png> [--shotdelay s], --tab <name>,
 //   --sources n, --preview; the window size from ONAIR_WINSIZE (e.g. 1400x900).
 //
 // The window, graphics, fonts, settings and translations are OnAir's own (the onair_uikit library); the engine is dect2core.
@@ -54,8 +54,9 @@ Args parseArgs(int argc, char** argv) {
         const std::string k = argv[i];
         const bool more = i + 1 < argc;
         if (k == "--onair" && more) {
-            const std::string v = argv[++i];
+            const std::string v = argv[++i];   // "local" (the default): OnAir's pipe on this computer; host:port: UDP
             const size_t c = v.rfind(':');
+            if (v == "local") continue;
             a.o.host = c == std::string::npos ? v : v.substr(0, c);
             if (c != std::string::npos) a.o.port = std::clamp(atoi(v.c_str() + c + 1), 0, 65534);
         } else if (k == "--token" && more) a.o.token = std::string(argv[++i]).substr(0, 80);

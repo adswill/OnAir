@@ -73,7 +73,7 @@ struct Gen {
     std::shared_ptr<const std::vector<uint8_t>> font;
     Session ses;
     VgLinkClient link;
-    std::string linkHost = "127.0.0.1", token, name = "Video generator";
+    std::string linkHost, token, name = "Video generator";
     int linkPort = kVgLinkDefaultPort, slot = 1;
     bool startedByOnAir = false;
     MuxUi mux;

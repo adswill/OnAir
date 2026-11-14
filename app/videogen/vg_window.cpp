@@ -626,7 +626,7 @@ void closeSource(Gen& g, int k) {
 void init(const Options& o) {
     Gen& g = G();
     g.font = atlasFont();
-    g.linkHost = o.host.empty() ? "127.0.0.1" : o.host;
+    g.linkHost = o.host;   // "": the local pipe
     g.linkPort = o.port > 0 ? o.port : kVgLinkDefaultPort;
     g.token = o.token;
     g.slot = std::clamp(o.slot, 1, kMaxInstances);
@@ -655,7 +655,8 @@ void init(const Options& o) {
     for (int i = 0; i < n; i++) g.src.push_back(makeSource(g, i, mux));
     g.savedMux = saveMux(g);
     startProbe(g);
-    g.link.start(g.linkHost, g.linkPort, g.name, g.slot, g.token);
+    if (g.linkHost.empty()) g.link.startLocal("", g.name, g.slot, g.token);
+    else g.link.start(g.linkHost, g.linkPort, g.name, g.slot, g.token);
 }
 
 FrameResult frame() {

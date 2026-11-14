@@ -1,27 +1,49 @@
 # The video generator link, version 1
 
 How the Digital video generator (`onair-videogen`, `onair_videogen.exe` on Windows) and OnAir talk to each other (#458). The generator
-is its own program; OnAir's transmitter takes its multiplex over this link. Everything is plain RTP and RTCP over UDP (RFC 3550): no
-connection, no handshake, no buffering in the link itself.
+is its own program; OnAir's transmitter takes its multiplex over this link. Everything is plain RTP and RTCP (RFC 3550), over a local
+pipe or over UDP: no connection, no handshake, no buffering in the link itself.
 
-- Code: `core/include/dect2/tv/vglink.h`, `core/src/tv/vglink.cpp` (both sides), `app/panels/vg_launch.cpp` (OnAir starts the
+- Code: `core/include/dect2/tv/vglink.h`, `core/src/tv/vglink.cpp` (both sides), `core/src/tv/vglink_transport.cpp` (pipe and UDP), `app/panels/vg_launch.cpp` (OnAir starts the
   generator), `app/videogen/` (the generator program)
-- Tests: `tests/tv/test_videogen_link.cpp` (packets, server and client), `tests/tv/test_videogen_mux.cpp` (the whole chain: generator,
+- Tests: `tests/tv/test_videogen_link.cpp` (packets, server and client, over the pipe and over UDP), `tests/tv/test_videogen_mux.cpp` (the whole chain: generator,
   link, DVB-T transmitter, OnAir's own DVB-T receiver)
 
-## Ports
+## Transports
+
+### The local pipe (always on, no ports)
+
+OnAir always listens on a pipe that only this user on this computer can reach. OnAir starts its generator on it (`--onair local`), and
+a generator started by hand uses it too. So the usual setup needs no network port and cannot clash with another program's port.
+
+| | Name |
+|---|---|
+| Windows | the named pipe `\\.\pipe\onair-videogen-<user>`, message mode, local clients only (`PIPE_REJECT_REMOTE_CLIENTS`) |
+| Linux, macOS | the Unix datagram socket `onair-videogen.sock` in `$XDG_RUNTIME_DIR` (macOS: `$TMPDIR`; else `/tmp/onair-<uid>/`), mode 0600 |
+
+On Linux and macOS a named pipe (FIFO) is a byte stream, so the link uses the same idea with whole datagrams there: a Unix-domain
+datagram socket. One pipe message or datagram is one RTP or RTCP packet. RTP and RTCP share the pipe and are told apart by the packet
+type, as in RFC 5761 (RTCP types 200-204 sit where RTP has its marker bit and payload type 33). Each generator has its own pipe instance
+(Windows) or its own address (Linux: an automatic abstract address; macOS: a socket file next to OnAir's, removed when it ends).
+Nothing waits for a slow reader: a packet that does not fit in the pipe is dropped, as with UDP (Windows: a 1 MB buffer per direction
+and generator, and a write waits at most 20 ms). Only one OnAir can have the pipe. A socket file left behind by a crashed OnAir is
+taken over.
+
+### UDP (the "Listen on the network for generators" box)
+
+In the Transmit panel, under the **Video generator** row, **Listen on the network for generators** (`videoGenLinkNet=1`) makes OnAir
+also listen on UDP, for generators on other computers or started with `--onair host:port`:
 
 | | Default | Setting |
 |---|---|---|
 | RTP, the transport stream (generator -> OnAir) | UDP **5460** | OnAir: `videoGenLinkPort` (must be even) |
 | RTCP, the control (both ways) | UDP **5461** (the RTP port + 1) | follows the RTP port |
 
-OnAir listens on `127.0.0.1` only. With `videoGenLinkAll=1` it listens on every network card, so generators on other computers can
-link. The generator sends from any local port and gets its replies on that port, so it needs no port of its own and works through NAT.
-5454 is not used: SDRconnect has it.
+OnAir then listens on every network card (`videoGenLinkAll=0`: on `127.0.0.1` only). The generator sends from any local port and
+gets its replies on that port, so it needs no port of its own and works through NAT. 5454 is not used: SDRconnect has it.
 
-The generator looks for OnAir at `127.0.0.1:5460` unless it is started with `--onair host:port`. OnAir's Tools menu always passes
-`--onair 127.0.0.1:<port> --token <t>`.
+The generator uses the local pipe unless it is started with `--onair host:port`. OnAir's Tools menu passes `--onair local --token <t>`
+(`127.0.0.1:<port>` only when the pipe could not be made).
 
 ## The stream (RTP)
 

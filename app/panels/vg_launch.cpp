@@ -1,8 +1,9 @@
 // OnAir's side of the Digital video generator, which is its own program since #458 (onair-videogen, app/videogen/):
 //  - the link server (vglink.h) runs from the start of OnAir: the generators send their multiplex to it over RTP and the transmitter
-//    reads it as "generator:N", as before;
-//  - Tools > Digital video generator starts onair-videogen from OnAir's own folder with --onair 127.0.0.1:<port> --token <t>, or
-//    asks the running one to come to the front;
+//    reads it as "generator:N", as before. It always listens on the local pipe (no ports); with the Transmit panel's "Listen on the
+//    network" box (videoGenLinkNet) also on UDP videoGenLinkPort / + 1, on 127.0.0.1 or (videoGenLinkAll) every network card;
+//  - Tools > Digital video generator starts onair-videogen from OnAir's own folder with --onair local --token <t> (the UDP port only
+//    when the pipe could not be made), or asks the running one to come to the front;
 //  - a.videoGenOpen (saved) means "the generator runs": set when it is started, cleared when the user closes the generator window (its
 //    RTCP BYE "closed") or it ends otherwise, kept when OnAir closes, so the next start of OnAir starts it again. OnAir closing asks the
 //    generator it started to quit (and ends it after 3 s); a generator started by hand keeps running and links again later.
@@ -49,10 +50,12 @@ std::string newToken() {
 void startServer() {
     if (gServerTried) return;
     gServerTried = true;
+    const bool net = plat::prefs().getB("videoGenLinkNet", false);   // UDP too (off: the local pipe only)
     const int port = (int)plat::prefs().getI("videoGenLinkPort", kVgLinkDefaultPort);
-    const bool any = plat::prefs().getB("videoGenLinkAll", false);   // generators on other computers (off: this one only)
+    const bool any = plat::prefs().getB("videoGenLinkAll", true);    // with UDP: every network card (off: 127.0.0.1)
     vgLinkServer().onBye = [](const std::string& tok) { std::lock_guard<std::mutex> lk(gTokenMu); if (!tok.empty() && tok == gToken) gBye = true; };
-    if (!vgLinkServer().start(port, any, gServerError)) fprintf(stderr, "video generator link: %s\n", gServerError.c_str());
+    gServerError.clear();
+    if (!vgLinkServer().start(net, port, any, gServerError)) fprintf(stderr, "video generator link: %s\n", gServerError.c_str());
 }
 
 bool ours() { return gPid > 0 && plat::childAlive(gPid); }
@@ -62,7 +65,8 @@ std::string token() { std::lock_guard<std::mutex> lk(gTokenMu); return gToken; }
 bool spawn(App& a) {
     { std::lock_guard<std::mutex> lk(gTokenMu); gToken = newToken(); }
     std::string err;
-    const std::vector<std::string> args = {"--onair", "127.0.0.1:" + std::to_string(vgLinkServer().port()), "--token", token()};
+    const std::string at = vgLinkServer().listeningLocal() || vgLinkServer().port() == 0 ? std::string("local") : "127.0.0.1:" + std::to_string(vgLinkServer().port());
+    const std::vector<std::string> args = {"--onair", at, "--token", token()};
     gPid = plat::spawnChild(generatorExe(), args, plat::cacheDir() + "/onair-videogen.log", err);
     if (gPid > 0) return true;
     a.videoGenOpen = false;
@@ -74,6 +78,15 @@ bool spawn(App& a) {
 } // namespace
 
 const std::string& videoGenError() { return gServerError; }
+
+bool videoGenNetwork() { return plat::prefs().getB("videoGenLinkNet", false); }
+
+void videoGenSetNetwork(bool on) {
+    plat::prefs().setB("videoGenLinkNet", on);
+    plat::prefs().flush();
+    gServerTried = false;
+    startServer();
+}
 
 // Tools > Digital video generator
 void videoGenRequest(App& a) {

@@ -7,6 +7,7 @@
 //     leaving (its rate goes to 0), the ninth generator refused, OnAir away and back on the same ports, lost datagrams counted
 #include "dect2/tv/videogen.h"
 #include "dect2/tv/vglink.h"
+#include "vg_test_pipe.h"
 #include <chrono>
 #include <cstdarg>
 #include <cstdio>
@@ -88,26 +89,39 @@ void testTxInfo() {
     LCHECK(vgUsableBps(none, 1) == 0, "no channel: no usable rate");
 }
 
-void testServerClient() {
+// local: over the pipe (Windows) / Unix socket; else over UDP
+void testServerClient(bool local) {
+    printf("  link over %s\n", local ? "the local pipe" : "UDP");
     VgLinkServer srv;
     std::string err;
-    LCHECK(srv.start(0, false, err), "the server listens on a free port (%s)", err.c_str());
+    const std::string pipe = vgTestPipeName();
+    LCHECK(srv.start(!local, 0, false, err, pipe), "the server listens (%s)", err.c_str());
     const int port = srv.port();
-    LCHECK(port > 0, "a port was chosen");
+    LCHECK(srv.listeningLocal() && srv.localName() == pipe, "it always has the local pipe (%s)", srv.localName().c_str());
+    LCHECK(local ? port == 0 : port > 0, "a UDP port only when asked (%d)", port);
+    auto open = [&](VgLinkClient& c, const std::string& name, int slot, const std::string& tok) {
+        if (local) c.startLocal(pipe, name, slot, tok);
+        else c.start("127.0.0.1", port, name, slot, tok);
+    };
+    if (local) {   // one OnAir per pipe
+        VgLinkServer other;
+        std::string e2;
+        LCHECK(!other.start(false, 0, false, e2, pipe) && e2.find("another OnAir") != std::string::npos, "a second OnAir cannot take the pipe (%s)", e2.c_str());
+    }
     std::mutex byeMu;   // onBye runs on the link's thread
     std::string byeToken;
     srv.onBye = [&](const std::string& t) { std::lock_guard<std::mutex> lk(byeMu); byeToken = t; };
 
     VgLinkClient a, b;
-    a.start("127.0.0.1", port, "Club camera", 1, "tok-a");
+    open(a, "Club camera", 1, "tok-a");
     LCHECK(waitFor([&] { return a.connected() && a.slot() == 1; }), "the first generator gets slot 1 (%s)", a.status().c_str());
-    b.start("127.0.0.1", port, "Second", 1, "");
+    open(b, "Second", 1, "");
     LCHECK(waitFor([&] { return b.connected() && b.slot() == 2; }), "slot 1 is taken: the next free one (%d)", b.slot());
     a.setStatus(false, {"300 H.264", "301 H.265"});
     LCHECK(waitFor([&] { auto p = srv.peers(); return p.size() == 2 && !p[0].easy && p[0].programmes.size() == 2; }), "Status reaches OnAir");
     {
         auto p = srv.peers();
-        LCHECK(p.size() == 2 && p[0].name == "Club camera" && p[0].host == "127.0.0.1" && p[0].token == "tok-a" && p[1].slot == 2, "peers: name, host, token, slot");
+        LCHECK(p.size() == 2 && p[0].name == "Club camera" && p[0].host == (local ? "this computer" : "127.0.0.1") && p[0].local == local && p[0].token == "tok-a" && p[1].slot == 2, "peers: name, host, token, slot");
     }
     // the stream
     std::vector<uint8_t> pk(188 * 50, 0xFF);
@@ -142,14 +156,14 @@ void testServerClient() {
     LCHECK(waitFor([&] { return srv.peers().size() == 1 && generatorRate(2) == 0; }), "b left: rate 0, one peer");
     // eight at most
     std::vector<std::unique_ptr<VgLinkClient>> many;
-    for (int i = 0; i < kMaxInstances; i++) { many.push_back(std::make_unique<VgLinkClient>()); many.back()->start("127.0.0.1", port, "G" + std::to_string(i), 1, ""); }
+    for (int i = 0; i < kMaxInstances; i++) { many.push_back(std::make_unique<VgLinkClient>()); open(*many.back(), "G" + std::to_string(i), 1, ""); }
     LCHECK(waitFor([&] { return srv.peers().size() == (size_t)kMaxInstances; }), "eight generators connected (%zu)", srv.peers().size());
     LCHECK(waitFor([&] { int refused = 0; for (auto& m : many) if (m->status().find("refused") != std::string::npos) refused++; return refused == 1; }), "the ninth is refused");
     many.clear();
     // lost datagrams are counted from the sequence numbers (a gap made by hand)
     {
         VgLinkClient c;
-        c.start("127.0.0.1", port, "Gap", 4, "");
+        open(c, "Gap", 4, "");
         LCHECK(waitFor([&] { return c.connected(); }), "a fourth generator links");
         c.startStream(1e6);
         LCHECK(waitFor([&] { return generatorRate(c.slot()) == 1e6; }), "it sends");
@@ -163,7 +177,7 @@ void testServerClient() {
     srv.stop();
     LCHECK(waitFor([&] { return !a.connected(); }), "the generator sees OnAir gone");
     LCHECK(generatorRate(1) == 0, "OnAir's slots are empty after stop");
-    LCHECK(srv.start(port, false, err), "the server listens again (%s)", err.c_str());
+    LCHECK(srv.start(!local, port, false, err, pipe), "the server listens again (%s)", err.c_str());
     LCHECK(waitFor([&] { return a.connected(); }, 6), "the generator reconnects");
     LCHECK(waitFor([] { return generatorRate(1) == 1.5e6; }), "and starts its stream again (rate %.0f)", generatorRate(1));
     a.stop();
@@ -175,6 +189,7 @@ void testServerClient() {
 int videogenLinkTests() {
     testFraming();
     testTxInfo();
-    testServerClient();
+    testServerClient(true);
+    testServerClient(false);
     return gFail;
 }

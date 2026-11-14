@@ -8,7 +8,7 @@ bitrate the settings need, so the stream can be fitted to a DVB link before anyt
 The generator is **its own program**: `onair-videogen` (`onair_videogen.exe` on Windows), installed next to OnAir. **Tools > Digital
 video generator** starts it, or brings it to the front when it already runs. It has its own window, so it can sit on a second screen.
 It keeps running when OnAir's window is busy, and OnAir keeps running when an encoder is slow. The two talk over a small link on this
-computer (RTP over UDP, port 5460, see [VIDEOGEN-LINK.md](VIDEOGEN-LINK.md)): the generator sends its multiplex to the transmitter, and
+computer (RTP over a named pipe, no network port, see [VIDEOGEN-LINK.md](VIDEOGEN-LINK.md)): the generator sends its multiplex to the transmitter, and
 the transmitter tells the generator how much it may send. When OnAir closes, the generator it started closes too, and it starts again with
 OnAir next time. Closing the generator window yourself ends that. A generator started by hand links to OnAir by itself when OnAir runs.
 
@@ -139,8 +139,8 @@ each linked generator a slot (1 to 8); the transmitter reads it as `generator:<s
 sources, can be the whole transport stream: click it in the **Video generator** row of the Transmit panel. To put several generators
 in one channel, for example the same picture in H.264 and H.265 on two computers:
 
-1. Start the generators (Tools > Digital video generator starts one; more can be started by hand, also on other computers with
-   OnAir's setting `videoGenLinkAll=1`).
+1. Start the generators (Tools > Digital video generator starts one; more can be started by hand, also on other computers: tick
+   **Listen on the network for generators** in OnAir's Transmit panel and start them with `--onair <OnAir's address>:5460`).
 2. In the Transmit panel, under **Multiplex**, set **Services** to the number of generators. For each one choose Programme source
    **Video generator** and the generator (`*` = it is sending now). Below it, the transmitter shows that generator's programmes.
 3. Start the transmitter.
@@ -329,7 +329,7 @@ How the modes are worked out (the formulas and standard tables of the workbook `
 | RTMP: "Cannot listen on port 1935" | Another program (a second generator, a media server) uses the port: give this generator another port, and OBS the same one. |
 | Transmitter: "Too much for this channel" | The generators' mux rates add up to more than the channel carries: lower their bitrates, or choose a channel mode with a higher bitrate. |
 | Transmitter: a generator service is missing | Its generator is not linked or not streaming with Output **Transmitter**: its row in the Transmit panel then has no `*` (the transmitter's note lists those not running). |
-| The generator says "Not linked to OnAir" | Start OnAir; the generator links by itself within a few seconds. A generator on another computer needs OnAir's `videoGenLinkAll=1` and UDP ports 5460-5461 open in OnAir's firewall. |
+| The generator says "Not linked to OnAir" | Start OnAir; the generator links by itself within a few seconds. A generator on another computer needs **Listen on the network for generators** ticked in OnAir's Transmit panel, `--onair <OnAir's address>:5460`, and UDP ports 5460-5461 open in OnAir's firewall. |
 | Tools > Digital video generator: "could not start" | `onair-videogen` (`onair_videogen.exe`) is missing next to OnAir: reinstall, or copy it from the package. |
 | The mux bar has a red outline | The mux rate is lower than the streams need: raise it, or lower the video bitrate. |
 | The picture breaks up on the receiver | The stream is larger than the link: compare the mux rate with the table of DVB-T bitrates, or check the mode with Tools > Digital TV mode selector. |

@@ -1,7 +1,11 @@
 // The link between the Digital video generator (onair-videogen, its own program) and OnAir (issue #458), version 1 (docs/VIDEOGEN-LINK.md).
 //
-// Plain RTP over UDP (RFC 3550), no connection and no buffering in the link: OnAir listens on an even UDP port for RTP
-// (kVgLinkDefaultPort, 127.0.0.1 or every network card) and on the next one for RTCP.
+// Plain RTP (RFC 3550), no connection and no buffering in the link. Two transports (vglink_transport.h):
+//  - local, always on, no ports: the named pipe \\.\pipe\onair-videogen-<user> (Windows, message mode) or the Unix datagram socket
+//    <runtime dir>/onair-videogen.sock (Linux, macOS). One pipe message / datagram = one RTP or RTCP packet; RTP and RTCP share it,
+//    told apart by the packet type (RFC 5761). OnAir starts its generator on it.
+//  - network, when OnAir's "Listen on the network" box is ticked: an even UDP port for RTP (kVgLinkDefaultPort, 127.0.0.1 or every
+//    network card) and the next one for RTCP, for generators on other computers (or started with --onair host:port).
 //  - the stream, generator -> OnAir: RTP payload type 33 (MPEG-2 TS, RFC 2250 / RFC 3551), 7 TS packets per datagram (1316 bytes, under
 //    a 1500 byte MTU), 90 kHz time stamps, paced by the generator's mux. OnAir counts lost and late packets by the sequence numbers;
 //    a late packet is dropped (the transmitter's queue only goes forward).
@@ -86,6 +90,7 @@ struct VgPeer {
     uint64_t packets = 0;          // received
     uint64_t lost = 0, late = 0;   // RTP datagrams missing / out of order (dropped)
     std::vector<std::string> programmes;   // "sid name" of each programme of its multiplex (from Status)
+    bool local = true;             // over the pipe (false: UDP from host)
 };
 
 // ---- OnAir side ----
@@ -93,11 +98,14 @@ class VgLinkServer {
 public:
     VgLinkServer();
     ~VgLinkServer();   // stops
-    // listens on UDP port (RTP) and port + 1 (RTCP); port 0: a free pair; false with err (in use ...)
-    bool start(int port, bool anyAddress, std::string& err);
+    // listens on the local pipe (localName: "" = this user's) and, with network, on UDP port (RTP) and port + 1 (RTCP) too (port 0:
+    // a free pair). false with err when one of them could not start (in use ...); the other one runs then.
+    bool start(bool network, int port, bool anyAddress, std::string& err, const std::string& localName = std::string());
     void stop();                                               // forgets every generator, joins its thread, empties the slots
-    bool listening() const;
-    int port() const;                        // the RTP port
+    bool listening() const;                  // on one of them
+    bool listeningLocal() const;
+    int port() const;                        // the RTP port (0: not on the network)
+    std::string localName() const;           // the pipe / socket
     std::vector<VgPeer> peers() const;
     void setTxInfo(const VgTxInfo& t);       // in every Reply; sent at once when it changes
     bool raise(const std::string& token);    // asks the generator started with this token to come to the front; false: none has it
@@ -118,13 +126,15 @@ class VgLinkClient {
 public:
     VgLinkClient();
     ~VgLinkClient();   // stops
-    // Talks to OnAir at host:port (RTP; RTCP port + 1) until stop. name: the generator's name shown in OnAir; wantSlot: the slot
+    // Talks to OnAir at host:port (UDP: RTP; RTCP port + 1) until stop. name: the generator's name shown in OnAir; wantSlot: the slot
     // (generator number) it asks for; token: the one OnAir started it with ("" when started by itself).
     void start(const std::string& host, int port, const std::string& name, int wantSlot, const std::string& token);
+    // the same over OnAir's local pipe / socket on this computer ("": this user's)
+    void startLocal(const std::string& localName, const std::string& name, int wantSlot, const std::string& token);
     void stop();                             // BYE "stop": OnAir frees the slot at once
     bool connected() const;                  // a Reply came in the last 3 s
     int slot() const;                        // the slot OnAir gave it (0: not connected)
-    std::string status() const;              // "linked to OnAir at 127.0.0.1:5460 as generator:1", "OnAir not found at ...", "refused: ..."
+    std::string status() const;              // "linked to OnAir on this computer as generator:1", "... at host:5460 ...", "OnAir not found at ...", "refused: ..."
     VgTxInfo txInfo(double& usableBps) const;   // the last TxInfo (running false while not connected)
     void setStatus(bool easy, const std::vector<std::string>& programmes);   // in the State
     void startStream(double muxBps);         // a new stream at this mux rate (OnAir empties the slot's queue)

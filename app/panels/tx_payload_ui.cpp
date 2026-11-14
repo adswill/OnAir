@@ -269,7 +269,7 @@ void fileRow(TxUi& s, const char* label, const char* btnId) {
 namespace {
 // the Digital video generators linked to OnAir (#458): "N: name (host) *", * = sending now
 std::string peerLabel(const dect2::vgen::VgPeer& p) {
-    return std::to_string(p.slot) + ": " + p.name + (p.host == "127.0.0.1" ? std::string() : " (" + p.host + ")") + (p.rateBps > 0 ? " *" : "");
+    return std::to_string(p.slot) + ": " + p.name + (p.local || p.host == "127.0.0.1" ? std::string() : " (" + p.host + ")") + (p.rateBps > 0 ? " *" : "");
 }
 const dect2::vgen::VgPeer* peerOf(const std::vector<dect2::vgen::VgPeer>& peers, int slot) {
     for (const auto& p : peers) if (p.slot == slot) return &p;
@@ -291,6 +291,15 @@ void generatorPick(TxUi& s) {
         if (ImGui::SmallButton(lb.c_str())) snprintf(s.file, sizeof s.file, "%s", on ? "" : spec.c_str());
     }
     { ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The Digital video generators linked to OnAir (Tools > Digital video generator starts one; * = it is sending now). Its whole multiplex is sent as it is; click again to clear.")); }
+    // the link: always the local pipe on this computer (no ports); ticked, UDP too, for generators on other computers (#458)
+    bool net = videoGenNetwork();
+    if (ImGui::Checkbox(tr("Listen on the network for generators##vgnet"), &net)) videoGenSetNetwork(net);
+    ImGui::SameLine();
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Off: generators link to OnAir through a named pipe on this computer only, so no network port is needed. On: OnAir also listens on UDP ports (RTP and RTCP), for a generator started with --onair host:port, for example on another computer."));
+    const int port = dect2::vgen::vgLinkServer().port();
+    if (net && port > 0) { ImGui::SameLine(); ImGui::TextDisabled("UDP %d / %d", port, port + 1); }
+    if (!videoGenError().empty()) ImGui::TextColored(ImVec4(1, 0.55f, 0.3f, 1), "%s", videoGenError().c_str());
 }
 
 void analogNfmBox(TxUi& s, bool running) {

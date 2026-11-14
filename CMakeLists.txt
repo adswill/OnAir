@@ -341,6 +341,7 @@ target_include_directories(dect2core PRIVATE third_party/uat_fec)
 target_sources(dect2core PRIVATE core/src/tv/videogen_params.cpp core/src/tv/videogen_overlay.cpp core/src/tv/videogen.cpp core/src/tv/videogen_hub.cpp core/src/tv/videogen_rtmp.cpp core/src/tv/ts_remux.cpp
                                  core/src/tv/videogen_session.cpp   # sources, mux and preview threads of the generator program (#458)
                                  core/src/tv/vglink.cpp   # the link generator <-> OnAir (vglink.h, #458)
+                                 core/src/tv/vglink_transport.cpp   # its local pipe / Unix socket and UDP
                                  core/src/tv/dvb_modes.cpp)   # its tab "Digital Television Mode Selector" (dvb_modes.h)
 set_source_files_properties(core/src/tv/videogen_overlay.cpp PROPERTIES INCLUDE_DIRECTORIES "${ONAIR_ROOT}/third_party/imgui")
 set_source_files_properties(third_party/uat_fec/fec.c third_party/uat_fec/decode_rs_char.c third_party/uat_fec/init_rs_char.c
