@@ -30,7 +30,9 @@ namespace dect2 {
 
 namespace {
 using dect2::math::kPi;
-#if defined(__GNUC__) && !defined(__clang__) && defined(__x86_64__) && defined(__linux__) && __GNUC__ >= 12
+#if defined(__GNUC__) && !defined(__clang__) && defined(__x86_64__) && defined(__linux__) && defined(__SANITIZE_THREAD__)
+#define DVBC_HOT   // ThreadSanitizer instruments the ifunc resolver, which runs before its runtime starts: every program crashed at load
+#elif defined(__GNUC__) && !defined(__clang__) && defined(__x86_64__) && defined(__linux__) && __GNUC__ >= 12
 // the loops that set the CPU load: use AVX2 and FMA where the CPU has them. "arch=x86-64-v3" is picked by the CPU's features; "arch=haswell"
 // (before 4.1) is picked by the CPU model, so only Haswell itself ran it: AMD and later Intel processors ran the baseline copy
 #define DVBC_HOT __attribute__((target_clones("arch=x86-64-v3", "default")))
