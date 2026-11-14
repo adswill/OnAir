@@ -127,6 +127,7 @@ esubghz	--mode esubghz	Overview|Flipper chat|Receiver|History
 roshf	--mode roshf	Overview|ROS|Receiver|History
 ssdv	--mode ssdv	Overview|SSDV|Receiver|History
 ebicab	--mode ebicab	Overview|Balise|Receiver|History
+rpr	--mode rpr	Overview|Robust Packet|Receiver|History
 inmsat	--mode inmsat	Overview|Inmarsat|Receiver|History
 nrf24	--mode nrf24	Overview|nRF24|Receiver|History
 atis	--mode atis	Overview|ATIS|Receiver|History

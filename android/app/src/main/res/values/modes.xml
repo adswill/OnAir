@@ -497,6 +497,7 @@
         <item>STL link (studio-to-transmitter)</item>
         <item>SCADA radio telemetry (Modbus, DNP3)</item>
         <item>ESP-NOW</item>
+        <item>Robust Packet (RPR, needs a user test)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -975,6 +976,7 @@
         <item>Analogue studio-to-transmitter links of broadcast radio (US Part 74 band 944 - 952 MHz, similar bands elsewhere): FM carrying the station\'s whole stereo composite (19 kHz pilot, stereo difference, RDS, SCA) at about +-60 kHz deviation in a 250 or 500 kHz channel, or mono programme audio. Plays the sound with a stereo decoder, 75 / 50 microsecond de-emphasis, adjustable deviation and channel width, level meters, RDS and SCA listening, and says what it hears: composite, mono, or a digital link (Moseley Starlink, Intraplex and similar: QAM or OFDM with PCM or AAC, often encrypted) which is named and measured but not decoded. Unencrypted analogue links only; receive only. Simulated signals only</item>
         <item>Licensed utility and pipeline data radios (450 MHz, 900 MHz, the US MAS band 928 / 952 MHz): Bell 202 or V.23 audio FSK at 1200 baud on an FM channel, or direct 2-FSK / 4-FSK at 4800, 9600 and 19200 bit/s, found by itself with its baud rate and deviation; async 8N1 / 8E1 / 8O1 bytes or HDLC framing. Reads Modbus RTU (address, function, registers and values, exceptions, CRC) and DNP3 (link layer with its CRCs, transport, application: function, objects, IIN flags, class polls, unsolicited responses, time sync), pairs each request with its response and lists the masters and outstations with the registers and points seen. Unknown, proprietary or encrypted frames (DNP3 Secure Authentication, MDS or MOSCAD framing) are shown raw, never guessed. Export to CSV and JSON. Receive only: listening to non-broadcast utility traffic may be restricted in some countries; check local law. Not verified on a live signal (simulated signals only)</item>
         <item>ESP-NOW: the packets ESP8266 / ESP32 boards send each other with Espressif\'s connectionless protocol, on one 2.4 GHz Wi-Fi channel (1 - 14, or auto to hop over them). 802.11 DSSS at 1 Mbit/s (the default) and 2 Mbit/s, OFDM at 6 and 12 Mbit/s; the MAC header, the vendor-specific action frame and the ESP-NOW element (v1 and v2), the payload as hex and text, the FCS. A Devices table (sender, Espressif address or not, packet rate, level, last payload) and a Messages log. Encrypted packets (CCMP with the user\'s LMK) are shown as encrypted; a key you enter under Tools &gt; Keys (ESP-NOW) opens yours. Needs a radio with 20 MHz of bandwidth on 2.4 GHz (HackRF, Pluto, LimeSDR, USRP, bladeRF), not an RTL-SDR; 20 Msps works best. Known limit: OFDM frames near the 1470-byte maximum can be lost when the sender\'s clock runs 25 ppm fast. Receive only</item>
+        <item>Robust Packet (RPR, SCS), receive only, physical layer: eight OFDM carriers 60 Hz apart around 1500 Hz (500 Hz wide), 50 baud, D-BPSK (speed level 1, code rate 1/2) or D-QPSK (level 2, rate 3/4), upper sideband, usually 10147.3 kHz. Finds the carrier comb, the bursts, the symbol clock and the speed level and shows the demodulated symbols. The convolutional code polynomials, the interleaver, the scrambler, the callsign compression and the packet types are not public, so no AX.25 frames or text are produced yet: needs a recording (and a user test: no real signal was available)</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1453,6 +1455,7 @@
         <item>Stereo and RDS</item>
         <item>Utility telemetry</item>
         <item>ESP32, 2.4 GHz</item>
+        <item>HF packet, OFDM</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1931,5 +1934,6 @@
         <item>stl studio transmitter link composite mpx fm 950 mhz 944 952 part 74 broadcast moseley marti pcl-6000 sca rds stereo mono tsl starlink intraplex</item>
         <item>scada modbus rtu dnp3 ieee 1815 telemetry utility pipeline rtu plc mas 928 952 450 900 bell 202 v.23 fsk 4fsk data radio mds moscad outstation master poll</item>
         <item>espnow esp-now esp now espressif esp32 esp8266 esp32-c3 esp32-s3 arduino iot 2.4 ghz wifi wi-fi action frame vendor 18:fe:34 mesh sensor maker diy</item>
+        <item>rpr robust packet scs hf aprs winlink ax25 ax.25 ofdm dbpsk dqpsk 8 carriers 500 hz 10147.3 30m tracker dsp tnc</item>
     </string-array>
 </resources>

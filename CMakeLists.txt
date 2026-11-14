@@ -242,6 +242,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES espnow)   # ESP-NOW (family 898, on the Wi-Fi demodulator of core/src/wifi): core/src/espnow, app/espnow, tests/espnow
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
   list(APPEND DECT2_MODES hfutil)   # HF utility modes (families 430 - 439): core/src/hfutil, app/hfutil, tests/hfutil (docs/HF-UTIL-3.8.md)
+  list(APPEND DECT2_MODES rpr)   # Robust Packet (RPR, family 899), physical layer only: core/src/rpr, app/rpr, tests/rpr (docs/rpr.md)
   list(APPEND DECT2_MODES pactorhf)   # PACTOR-II (family 237), -III (238) and -IV (239), physical layer only: core/src/pactorhf, app/pactorhf, tests/pactorhf (docs/pactorhf.md)
   list(APPEND DECT2_MODES sensors)   # Sub-GHz sensors (family 241, docs/SENSORS-3.7.md): core/src/sensors, app/sensors, tests/sensors; decoders vendored from rtl_433 (third_party/rtl_433)
   list(APPEND DECT2_MODES bgan)   # Inmarsat BGAN forward bearers, signalling only (family 245, docs/BGAN-3.7.md): core/src/bgan, app/bgan, tests/bgan
@@ -1851,6 +1852,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_pactorhf_mode PRIVATE dect2core)
     target_compile_definitions(test_pactorhf_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME pactorhf_mode COMMAND test_pactorhf_mode)
+    add_executable(test_rpr_mode tests/app/test_rpr_mode.cpp)   # Robust Packet: tuning, mode row, engine / panel wiring, honesty strings
+    target_link_libraries(test_rpr_mode PRIVATE dect2core)
+    target_compile_definitions(test_rpr_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME rpr_mode COMMAND test_rpr_mode)
     add_executable(test_roshf_mode tests/app/test_roshf_mode.cpp)   # Roshf: tuning, mode row, engine / panel wiring, honesty strings
     target_link_libraries(test_roshf_mode PRIVATE dect2core)
     target_compile_definitions(test_roshf_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -3264,7 +3269,7 @@ if(DECT2_BUILD_TESTS)
   endforeach()
   # socket/thread timing tests and CPU speed limits: label "timing"; CI runs these apart from the -j 4 run, a failed one twice (ci.yml)
   foreach(t voice_inversion atsc3_synth_basic scan_synth dvbs_engine isdbt_rx radio_mode_glue atv_switch tx wifi_engine multitone_engine native_netradio native_sdrpp feeds feed_targets rooms_net discord_rpc remote_api plugin ais_engine marine_engine inmc_engine scan_soapy dvbc_engine qo100_dvbs_second asterix_engine tx_quality_b tx_quality_a_rt
-          halow_engine wisun_engine iono_engine dtmb_engine mesh_rates kaft_engine ebicab_engine protolab time_ntp native_tci native_kiwisdr iridium_engine
+          halow_engine wisun_engine iono_engine dtmb_engine mesh_rates kaft_engine ebicab_engine rpr_engine protolab time_ntp native_tci native_kiwisdr iridium_engine
           time_machine pskdsp_engine)   # wall-clock deadlines: failed next to the longest tests when ctest started those first (run 42886049629)
     if(TEST ${t})
       set_property(TEST ${t} APPEND PROPERTY LABELS timing)

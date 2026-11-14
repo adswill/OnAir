@@ -77,6 +77,7 @@
 #include "dect2/rclink/rc_rx.h"
 #include "dect2/rid/rid_rx.h"
 #include "dect2/roshf/roshf_rx.h"
+#include "dect2/rpr/rpr_rx.h"
 #include "dect2/same/same_rx.h"
 #include "dect2/sarsat/sarsat_rx.h"
 #include "dect2/satmisc/satdetect_live.h"
@@ -1362,6 +1363,12 @@ static bool set_899(Engine& e, const std::string& n, double v) {
     if (n == "setReportInterval") { call(r, &Rx<decltype(r)>::setReportInterval, v); return true; }
     return false;
 }
+static const char kOpt_900[] = R"JSON([{"n":"setAnalysisInterval","k":"num","l":"Analysis Interval","h":"tests (default 4 s)","t":"s"}])JSON";
+static bool set_900(Engine& e, const std::string& n, double v) {
+    auto& r = e.rpr();
+    if (n == "setAnalysisInterval") { call(r, &Rx<decltype(r)>::setAnalysisInterval, v); return true; }
+    return false;
+}
 struct OptEntry { int standard; const char* schema; bool (*set)(Engine&, const std::string&, double); };
 const OptEntry kOpt[] = {
     {7, kOpt_7, set_7},
@@ -1544,6 +1551,7 @@ const OptEntry kOpt[] = {
     {896, kOpt_896, set_896},
     {897, kOpt_897, set_897},
     {899, kOpt_899, set_899},
+    {900, kOpt_900, set_900},
 };
 } // namespace
 

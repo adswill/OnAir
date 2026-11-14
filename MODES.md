@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**392 modes.**
+**393 modes.**
 
 ## TV (17)
 
@@ -354,7 +354,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Ham FM repeaters** - Ham FM repeaters: 2 m and 70 cm outputs with offsets, the tone heard on each, call log and recording (receive only)
 - **HF packet 300 Bd** - HF packet 300 Bd: AX.25 frames, full decode (simulated only)
 
-## HF Utility (41)
+## HF Utility (42)
 
 - **PACTOR-II** - PACTOR-II: HF D-PSK carriers, symbols and frame structure (physical layer only; no text)
 - **PACTOR-III** - PACTOR-III: HF multi-carrier D-PSK, carrier set and frame structure (physical layer only; no text)
@@ -375,6 +375,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Coquelet-8** - Coquelet-8: HF MFSK teleprinter (simulated signals only)
 - **UVB-76 buzzer monitor** - UVB-76: buzz rate and breaks
 - **VLF MSK transmitter monitor** - VLF MSK: carrier, bit rate, on / off
+- **Robust Packet (RPR, needs a user test)** - Robust Packet: HF AX.25 packet, 8 OFDM carriers, speed level and bursts (physical layer only, needs a recording)
 - **Datawell Buoy HF Link** - Datawell Buoy HF Link: wave heights, periods and spectra from wave buoys on HF (receive only)
 - **CODAR / HF ocean radar** - CODAR / HF ocean radar: the coastal radar chirps on the HF bands (receive only)
 - **Shortwave** - Shortwave listening with one-click decoders: retune and they follow
