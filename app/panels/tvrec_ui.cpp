@@ -164,6 +164,7 @@ void savePrefs() {
 void tap(const uint8_t* p, size_t n, const TsSnapshot* snap, double secs) {
     TvRec& s = *&S();
     if (!snap) return;
+    s.col.setTextEncoding(snap->textEncoding);
     s.col.advance(secs);
     for (size_t i = 0; i < n; i++) s.col.feed(p + i * 188);
     s.rec.feed(p, n, *snap, s.muxKey);

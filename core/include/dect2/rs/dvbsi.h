@@ -46,6 +46,8 @@ size_t onair_dvbsi_dab_charset(int32_t cs, const uint8_t* p, size_t n, uint8_t* 
 size_t onair_dvbsi_iso6937(const uint8_t* p, size_t n, uint8_t* out, size_t cap);
 size_t onair_dvbsi_clean(const uint8_t* p, size_t n, uint8_t* out, size_t cap);
 size_t onair_dvbsi_dvb_text(const uint8_t* p, size_t n, uint32_t gb_default, uint8_t* out, size_t cap);
+// Generic fallback: 0 DVB/ISO 6937, 1 GBK, 2 EUC-KR, 3 Big5, 4 UTF-8, 5 ISO 8859-15. The older bool-like entry point remains ABI compatible.
+size_t onair_dvbsi_dvb_text_with_encoding(const uint8_t* p, size_t n, uint32_t encoding, uint8_t* out, size_t cap);
 
 // Teletext (EN 300 706): Hamming 8/4 (nibble or -1), Hamming 24/18 of 3 bytes (-1 for two errors), bit reversal, G0 code to Unicode in a national subset.
 int32_t onair_dvbsi_ttx_hamming84(uint32_t b);

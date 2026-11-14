@@ -50,7 +50,7 @@ private:
     std::vector<float> re_, im_;    // buffered input
     size_t fill_ = 0;               // valid samples in re_ / im_
     double dc_re_ = 0, dc_im_ = 0;  // slow DC estimate removed from the input
-    long dcCount_ = 0;
+    uint64_t dcCount_ = 0;
     bool dcOn_ = true;
 };
 

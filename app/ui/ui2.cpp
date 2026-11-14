@@ -310,6 +310,7 @@ void drawShell2(App& a, ImVec2 disp) {
     ImGui::SetCursorPos(ImVec2(6 * gUi, 4 * gUi));
     txViewSwitch(a);   // RX / TX, top left
     ImGui::SetCursorPosX(0);
+    // const float sbH = 2 * statusStripBlockHeight() + 8 * gUi; // give footer enough space
     const float sbH = statusStripBlockHeight() + 8 * gUi;
     if (hamViewFlag()) {}   // the Ham view has no top bar of its own: the receiver keeps its
     else if (txViewFlag()) txTopBar(a, disp);   // the transmit view has its own top bar (the same frequency digits) and no side list

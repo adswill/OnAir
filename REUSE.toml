@@ -26,6 +26,13 @@ precedence = "closest"
 SPDX-FileCopyrightText = "Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>"
 SPDX-License-Identifier = "LicenseRef-FSF-GPL-verbatim"
 
+# ---------------------------------------------------------------- Unicode character mappings
+[[annotations]]
+path = ["rust/onair_dvbsi/src/iso8859.rs", "LICENSES/Unicode-3.0.txt"]
+precedence = "closest"
+SPDX-FileCopyrightText = "Copyright (C) 2015 Unicode, Inc."
+SPDX-License-Identifier = "Unicode-3.0"
+
 # ---------------------------------------------------------------- name and logo: all rights reserved
 # (NOTICE.md and TRADEMARKS.md are covered by the default entry above; TRADEMARKS.md describes the policy for these files.)
 [[annotations]]

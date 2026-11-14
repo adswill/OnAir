@@ -19,7 +19,7 @@ static void one(const uint8_t* d, size_t n) {
     uint8_t* p = n ? (uint8_t*)malloc(n) : nullptr;
     if (n) memcpy(p, d, n);
     D::text::ebuLatin(p, n); D::text::ucs2be(p, n); D::text::iso6937(p, n); D::text::dabCharset(n ? p[0] % 17 : 0, p, n); D::text::clean(std::string((const char*)p, n));
-    D::dvbsi::dvbText(p, (int)n, n & 1);
+    D::dvbsi::dvbText(p, (int)n, {static_cast<D::dvbsi::TextEncoding>(n % 8)});
     // teletext
     if (n >= 44) { D::TtxUnit u = D::ttxDecodeUnit(p); (void)u; }
     uint32_t off[64]; D::ttxPesUnits(p, n, off, 64);

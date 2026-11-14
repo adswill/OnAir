@@ -184,17 +184,14 @@ int main() {
     const uint8_t gb[] = {0x13, 0xD6, 0xD0, 0xD1, 0xEB, 0xB5, 0xE7, 0xCA, 0xD3, 0xCC, 0xA8}; // GB-2312: "中央电视台"
     const char* cctv = "\xE4\xB8\xAD\xE5\xA4\xAE\xE7\x94\xB5\xE8\xA7\x86\xE5\x8F\xB0";
     CHECK(dvbText(gb, 11) == cctv, "GB2312 decode");
-    CHECK(dvbText(gb + 1, 10, true) == cctv, "unprefixed GB2312 decode (DTMB)");
+    CHECK(dvbText(gb + 1, 10, {dvbsi::TextEncoding::Gb2312}) == cctv, "unprefixed GB2312 decode (DTMB)");
     CHECK(dvbText(gb + 1, 10) != cctv, "unprefixed high bytes stay ISO 6937 outside DTMB");
     const uint8_t guangdong[] = {0xB9, 0xE3, 0xB6, 0xAB, 0xCE, 0xC0, 0xCA, 0xD3, '-', 'H', 'D'};
-    CHECK(dvbText(guangdong, sizeof(guangdong), true) == "广东卫视-HD", "unprefixed Guangdong GBK service name");
-    {   // GBK names with a character outside GB 2312 (U+5586 is 86 B4) convert whole, and the DTMB switch reaches every dvbText() caller
+    CHECK(dvbText(guangdong, sizeof(guangdong), {dvbsi::TextEncoding::Gb2312}) == "广东卫视-HD", "unprefixed Guangdong GBK service name");
+    {   // GBK names with a character outside GB 2312 (U+5586 is 86 B4) convert whole, through the explicit stream context
         const uint8_t gbk[] = {0xD6, 0xD0, 0x86, 0xB4};
         const char* want = "\xE4\xB8\xAD\xE5\x96\x86";
-        CHECK(dvbText(gbk, 4, true) == want, "unprefixed GBK decode (DTMB)");
-        dvbsi::setGbDefaultGlobal(true);
-        CHECK(dvbText(gbk, 4) == want, "DTMB switch decodes GBK without the argument");
-        dvbsi::setGbDefaultGlobal(false);
+        CHECK(dvbText(gbk, 4, {dvbsi::TextEncoding::Gb2312}) == want, "unprefixed GBK decode (DTMB)");
         CHECK(dvbText(gbk, 4) != want, "switch off: ISO 6937 again");
     }
     const uint8_t ks[] = {0x12, 0xC7, 0xD1, 0xB1, 0xB9}; // KS X 1001: "한국"

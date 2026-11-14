@@ -7,6 +7,7 @@
 #include "dect2/tv/demo_ts.h"
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstring>
 #include <random>
 #include "dtmb_simd.h"
@@ -82,10 +83,10 @@ Signal::Signal(const SignalConfig& cfg, FrameTx::TsSource ts) : cfg_(cfg), tx_(c
     tau_ = 0;
 }
 
-void Signal::ensure(long upTo) {
+void Signal::ensure(int64_t upTo) {
     // make symbols with index < upTo available
     const size_t fl = (size_t)tx_.frameLength();
-    while (base_ + (long)re_.size() < upTo) {
+    while (base_ + (int64_t)re_.size() < upTo) {
         frame_.resize(fl);
         tx_.nextFrame(frame_.data());
         for (size_t i = 0; i < fl; i++) { re_.push_back(frame_[i].real()); im_.push_back(frame_[i].imag()); }
@@ -94,19 +95,19 @@ void Signal::ensure(long upTo) {
 
 void Signal::generate(cf32* out, size_t n) {
     for (size_t i = 0; i < n; i++) {
-        const long i0 = (long)std::floor(tau_);
+        const int64_t i0 = (int64_t)std::floor(tau_);
         ensure(i0 + kHalf + 1);
-        const long first = i0 - kHalf + 1;
+        const int64_t first = i0 - kHalf + 1;
         // before the first symbol the pulse sums over zeros: pad the front
         float ar = 0.f, ai = 0.f;
         const int p = (int)std::lround((tau_ - (double)i0) * phases_);
         const float* w = &table_[(size_t)(p >= phases_ ? phases_ - 1 : p) * (size_t)taps_];
-        const long off = first - base_;
+        const int64_t off = first - base_;
         if (off >= 0) {
             dotRI(&re_[(size_t)off], &im_[(size_t)off], w, taps_, ar, ai);
         } else {
             for (int k = 0; k < taps_; k++) {
-                const long j = off + k;
+                const int64_t j = off + k;
                 if (j < 0) continue;
                 ar += w[k] * re_[(size_t)j]; ai += w[k] * im_[(size_t)j];
             }
@@ -144,12 +145,12 @@ void Signal::generate(cf32* out, size_t n) {
         out[i] = cf32(re, im);
     }
     // drop symbols that are no longer needed
-    const long keep = (long)std::floor(tau_) - kHalf - 2;
+    const int64_t keep = (int64_t)std::floor(tau_) - kHalf - 2;
     if (keep - base_ > 65536) {
         const size_t d = (size_t)(keep - base_);
-        re_.erase(re_.begin(), re_.begin() + (long)d);
-        im_.erase(im_.begin(), im_.begin() + (long)d);
-        base_ += (long)d;
+        re_.erase(re_.begin(), re_.begin() + (std::ptrdiff_t)d);
+        im_.erase(im_.begin(), im_.begin() + (std::ptrdiff_t)d);
+        base_ += (int64_t)d;
     }
 }
 

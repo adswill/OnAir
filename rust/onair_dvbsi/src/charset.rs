@@ -5,6 +5,7 @@
 //! UCS-2 (big endian, with surrogate pairs), the DAB charset selector, `clean` (valid UTF-8 with no control or invisible characters, spaces folded) and the DVB
 //! text field with its character table prefix. Output goes into a caller buffer (`Out`: bounded, overflow is reported, never panics). Conversions
 //! that need iconv tables (ISO 8859-x, GB 2312, Big5, EUC-KR, iconv's UCS-2) are done by a callback the C++ side registers; without one the bytes are kept.
+use crate::iso8859::{ISO8859_10, ISO8859_14};
 use crate::tables::{EBU_LATIN, ISO6937_COMB, ISO6937_HI};
 
 /// A bounded byte writer over a caller buffer: once something does not fit the text is cut at the buffer end and `overflow` is set.
@@ -250,10 +251,10 @@ pub fn clean(src: &[u8], out: &mut [u8]) -> usize {
     clean_in_place(out, src.len())
 }
 
-/// Does unprefixed text look like a run of valid GB 2312 (EUC-CN) pairs, as some Chinese DTMB muxes send?
-fn looks_gb2312(p: &[u8]) -> bool {
+/// Validate the byte pairs of a hinted legacy multibyte field, allowing ASCII before and between pairs.
+fn looks_multibyte(p: &[u8], encoding: Encoding) -> bool {
     let n = p.len();
-    if n < 2 || p[0] < 0x81 {
+    if n < 2 || p[0] < 0x20 || p[0] == 0x80 {
         return false;
     }
     let mut pairs = 0;
@@ -263,8 +264,18 @@ fn looks_gb2312(p: &[u8]) -> bool {
             i += 1;
             continue;
         }
-        // GBK (a superset of GB 2312, what Chinese DTMB names really use): lead 81..FE, trail 40..FE without 7F
-        if i + 1 >= n || p[i] > 0xFE || p[i + 1] < 0x40 || p[i + 1] == 0x7F || p[i + 1] > 0xFE {
+        if i + 1 >= n {
+            return false;
+        }
+        let (lead, trail) = (p[i], p[i + 1]);
+        let valid = match encoding {
+            Encoding::EucKr => (0xA1..=0xFE).contains(&lead) && (0xA1..=0xFE).contains(&trail),
+            Encoding::Big5 => (0x81..=0xFE).contains(&lead) && ((0x40..=0x7E).contains(&trail) || (0xA1..=0xFE).contains(&trail)),
+            // Preserve the legacy GBK input domain; its golden vectors predate the generic context API.
+            Encoding::Gb2312 => lead <= 0xFE && (0x40..=0xFE).contains(&trail) && trail != 0x7F,
+            _ => false,
+        };
+        if !valid {
             return false;
         }
         i += 2;
@@ -300,6 +311,18 @@ fn local_clean(b: &mut [u8], n: usize) -> usize {
 
 /// Run the conversion callback (or keep the bytes) into `o`.
 fn convert(conv: Option<Convert>, name: &[u8], p: &[u8], o: &mut Out) {
+    // Windows has no code pages for these DVB tables. Decode them identically on every platform.
+    let table = match name {
+        b"ISO-8859-10" => Some(&ISO8859_10),
+        b"ISO-8859-14" => Some(&ISO8859_14),
+        _ => None,
+    };
+    if let Some(hi) = table {
+        for &b in p {
+            append_utf8(o, if b < 0xA0 { b as u32 } else { hi[(b - 0xA0) as usize] as u32 });
+        }
+        return;
+    }
     if let Some(f) = conv {
         if let Some(w) = f(name, p, o.tail()) {
             o.advance(w);
@@ -309,9 +332,33 @@ fn convert(conv: Option<Convert>, name: &[u8], p: &[u8], o: &mut Out) {
     o.bytes(p);
 }
 
-/// A DVB text field (EN 300 468 Annex A) to clean UTF-8 in `out`; returns the length (`usize::MAX` when `out` was too small for the converted text; use
-/// `4 * p.len() + 16` bytes). `gb_default`: unprefixed GB 2312 pairs are decoded as GB 2312 (DTMB).
-pub fn dvb_text(p: &[u8], gb_default: bool, conv: Option<Convert>, out: &mut [u8]) -> usize {
+/// Fallback for unprefixed fields; explicit DVB encoding selectors retain priority.
+#[derive(Clone, Copy)]
+#[repr(u32)]
+pub enum Encoding {
+    Dvb = 0,
+    Gb2312 = 1,
+    EucKr = 2,
+    Big5 = 3,
+    Utf8 = 4,
+    Latin15 = 5,
+}
+
+impl Encoding {
+    pub fn from_code(code: u32) -> Self {
+        match code {
+            1 => Self::Gb2312,
+            2 => Self::EucKr,
+            3 => Self::Big5,
+            4 => Self::Utf8,
+            5 => Self::Latin15,
+            _ => Self::Dvb,
+        }
+    }
+}
+
+/// A DVB text field to UTF-8 (4 * input length + 16 bytes). The stream supplies a fallback, never a process-global default.
+pub fn dvb_text(p: &[u8], encoding: Encoding, conv: Option<Convert>, out: &mut [u8]) -> usize {
     let n = p.len();
     if n == 0 {
         return 0;
@@ -332,10 +379,15 @@ pub fn dvb_text(p: &[u8], gb_default: bool, conv: Option<Convert>, out: &mut [u8
         b"ISO-8859-14",
         b"ISO-8859-15",
     ];
-    if gb_default && looks_gb2312(p) {
-        convert(conv, b"GB2312", p, &mut o);
-    } else if first >= 0x20 {
-        iso6937(p, &mut o);
+    if first >= 0x20 {
+        match encoding {
+            Encoding::Utf8 => o.bytes(p),
+            Encoding::Latin15 => convert(conv, b"ISO-8859-15", p, &mut o),
+            Encoding::Gb2312 if looks_multibyte(p, encoding) => convert(conv, b"GB2312", p, &mut o),
+            Encoding::EucKr if looks_multibyte(p, encoding) => convert(conv, b"EUC-KR", p, &mut o),
+            Encoding::Big5 if looks_multibyte(p, encoding) => convert(conv, b"BIG5", p, &mut o),
+            _ => iso6937(p, &mut o),
+        }
     } else if (1..=0x0B).contains(&first) && n > 1 {
         convert(conv, CS[first as usize], &p[1..], &mut o);
     } else if first == 0x10 && n > 3 {

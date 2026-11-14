@@ -37,10 +37,91 @@ fn charsets() {
     assert_eq!(text(|o| charset::iso6937(&[0xC2, b'e'], o)), "\u{e9}".as_bytes());
     assert_eq!(text(|o| charset::ucs2be(&[0xD8, 0x3D, 0xDE, 0x00, 0x00, 0x41], o)), "\u{1F600}A".as_bytes());
     let mut b = [0u8; 64];
-    let n = charset::dvb_text(&[0x15, b'H', b'i', 0x0A, b'x', 0xC2, 0x86], false, None, &mut b);
+    let n = charset::dvb_text(&[0x15, b'H', b'i', 0x0A, b'x', 0xC2, 0x86], charset::Encoding::Dvb, None, &mut b);
     assert_eq!(&b[..n], b"Hi x");
-    let n = charset::dvb_text(b"\x15  Caf\xc3\xa9\t ", false, None, &mut b);
+    let n = charset::dvb_text(b"\x15  Caf\xc3\xa9\t ", charset::Encoding::Dvb, None, &mut b);
     assert_eq!(&b[..n], b"Caf\xc3\xa9");
+}
+
+#[test]
+fn gb_default_with_ascii_prefix() {
+    let convert = |name: &[u8], src: &[u8], out: &mut [u8]| {
+        assert_eq!(name, b"GB2312");
+        assert_eq!(src, b"CCTV-1 \xD7\xDB\xBA\xCF");
+        let text = "CCTV-1 综合".as_bytes();
+        out[..text.len()].copy_from_slice(text);
+        Some(text.len())
+    };
+    let mut out = [0; 128];
+    let n = charset::dvb_text(b"CCTV-1 \xD7\xDB\xBA\xCF", charset::Encoding::Gb2312, Some(&convert), &mut out);
+    assert_eq!(&out[..n], "CCTV-1 综合".as_bytes());
+    let n = charset::dvb_text("\x15CCTV-1 综合".as_bytes(), charset::Encoding::Gb2312, Some(&convert), &mut out);
+    assert_eq!(&out[..n], "CCTV-1 综合".as_bytes());
+    let n = charset::dvb_text(b"\x13CCTV-1 \xD7\xDB\xBA\xCF", charset::Encoding::Gb2312, Some(&convert), &mut out);
+    assert_eq!(&out[..n], "CCTV-1 综合".as_bytes());
+    let n = charset::dvb_text(b"CCTV-1", charset::Encoding::Gb2312, Some(&convert), &mut out);
+    assert_eq!(&out[..n], b"CCTV-1");
+    let n = charset::dvb_text(b"CCTV-1 \xD7\xDB\xBA\xCF", charset::Encoding::Dvb, Some(&convert), &mut out);
+    assert_eq!(&out[..n], b"CCTV-1 \xc2\xa6\xe2\x80\x9d");
+}
+
+#[test]
+fn gb_default_preserves_explicit_latin_selector() {
+    let convert = |name: &[u8], src: &[u8], out: &mut [u8]| {
+        assert_eq!(name, b"ISO-8859-1");
+        assert_eq!(src, b"Caf\xe9");
+        let text = "Café".as_bytes();
+        out[..text.len()].copy_from_slice(text);
+        Some(text.len())
+    };
+    let mut out = [0; 32];
+    let n = charset::dvb_text(b"\x10\x00\x01Caf\xe9", charset::Encoding::Gb2312, Some(&convert), &mut out);
+    assert_eq!(&out[..n], "Café".as_bytes());
+}
+
+#[test]
+fn stream_encoding_fallbacks() {
+    use charset::Encoding::*;
+    for (encoding, name, raw) in [
+        (EucKr, &b"EUC-KR"[..], &b"TV \xC7\xD1\xB1\xDB"[..]),
+        (Big5, &b"BIG5"[..], &b"TV \xA4\xA4\xA4\xE5"[..]),
+        (Latin15, &b"ISO-8859-15"[..], &b"Caf\xe9"[..]),
+    ] {
+        let convert = |cs: &[u8], src: &[u8], out: &mut [u8]| {
+            assert_eq!(cs, name);
+            assert_eq!(src, raw);
+            out[..2].copy_from_slice(b"ok");
+            Some(2)
+        };
+        let mut out = [0; 128];
+        let n = charset::dvb_text(raw, encoding, Some(&convert), &mut out);
+        assert_eq!(&out[..n], b"ok");
+        // A field's explicit selector overrides every fallback.
+        let n = charset::dvb_text("\x15日本語".as_bytes(), encoding, Some(&convert), &mut out);
+        assert_eq!(&out[..n], "日本語".as_bytes());
+    }
+    let mut out = [0; 128];
+    let n = charset::dvb_text("Café".as_bytes(), Utf8, None, &mut out);
+    assert_eq!(&out[..n], "Café".as_bytes());
+    for encoding in [EucKr, Big5, Gb2312] {
+        let no_conversion = |_: &[u8], _: &[u8], _: &mut [u8]| panic!("invalid pair converted");
+        let n = charset::dvb_text(b"A\xff", encoding, Some(&no_conversion), &mut out);
+        assert_eq!(&out[..n], b"A"); // ISO 6937 soft hyphen is removed by clean-up.
+    }
+}
+
+#[test]
+fn dvb_nordic_and_celtic_selectors() {
+    let unavailable = |_: &[u8], _: &[u8], _: &mut [u8]| panic!("native DVB table needs no OS converter");
+    let mut out = [0; 128];
+    for (short, long, expected) in
+        [(&b"\x06\xa1\xaa"[..], &b"\x10\x00\x0a\xa1\xaa"[..], "ĄŠ"), (&b"\x0a\xa1\xa2"[..], &b"\x10\x00\x0e\xa1\xa2"[..], "Ḃḃ")]
+    {
+        for raw in [short, long] {
+            let n = charset::dvb_text(raw, charset::Encoding::Gb2312, Some(&unavailable), &mut out);
+            assert_eq!(&out[..n], expected.as_bytes());
+        }
+    }
 }
 
 #[test]

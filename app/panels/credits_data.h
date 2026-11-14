@@ -4,6 +4,7 @@
 struct CreditEntry { const char *name, *author, *licence, *where, *how, *url, *note; };
 
 inline constexpr CreditEntry kCredits[] = {
+    {"Unicode ISO 8859-10 and ISO 8859-14 mappings", "Unicode, Inc.; Ken Whistler and Markus Kuhn", "Unicode-3.0", "rust/onair_dvbsi/src/iso8859.rs", "numeric tables generated from the published Unicode mappings; compiled in", "https://www.unicode.org/Public/MAPPINGS/ISO8859/", "Copyright and licence retained; see LICENSES/Unicode-3.0.txt."},
     {"fisb-decode (FIS-B TWGO layout, protocol reference)", "Rand Projects", "see project", "core/src/uat/uat_twgo.cpp (protocol reference, not copied code)", "reimplemented", "https://github.com/rand-projects/fisb-decode", "Keep this credit."},
     {"Dire Wolf (FX.25 tag table and IL2P scrambler, protocol reference)", "John Langner WB2OSZ", "GPL-2.0-or-later", "core/src/packet/packet_fec.cpp (protocol reference, not copied code)", "reimplemented", "https://github.com/wb2osz/direwolf", "Keep this credit; GPL-3 compatible."},
     {"openETCS XML of SUBSET-026 chapter 7 (protocol reference)", "openETCS project", "EUPL-1.1", "core/src/ebicab/ebicab_proto.cpp (packet field layouts: protocol reference, not copied code)", "layouts read from the published XML", "https://github.com/openETCS/validation", "Keep this credit."},

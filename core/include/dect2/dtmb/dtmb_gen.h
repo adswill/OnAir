@@ -52,12 +52,12 @@ public:
     double firstSymbolSample() const { return 0.0; }
 
 private:
-    void ensure(long upTo);
+    void ensure(int64_t upTo);
     SignalConfig cfg_;
     FrameTx tx_;
     std::vector<float> re_, im_;
     std::vector<cf32> frame_;
-    long base_ = 0;                // symbol index of re_[0]
+    int64_t base_ = 0;             // symbol index of re_[0]
     double tau_ = 0;               // position of the next output sample, in symbols
     double step_ = 1;              // symbols per output sample
     std::vector<float> table_;     // pulse weights: phases x taps
@@ -70,7 +70,7 @@ private:
     double dph_ = 0;
     cf32 rot_{1, 0}, cur_{1, 0};
     float noiseSigma_ = 0, gain_ = 1;
-    long produced_ = 0;
+    uint64_t produced_ = 0;
 };
 
 // Numbered test packets for bit-exact checks: PID 0x100, packet n carries n and a pseudo-random fill derived from n and the seed.

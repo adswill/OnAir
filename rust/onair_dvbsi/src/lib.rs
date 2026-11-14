@@ -11,6 +11,7 @@
 #![allow(clippy::needless_range_loop)] // table code is clearer with explicit indices, as in the specification
 
 pub mod charset;
+mod iso8859;
 pub mod subpix;
 pub mod subs;
 pub mod tables;

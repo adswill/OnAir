@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// DTMB single carrier mode (C=1): the transmitter model (36 system information symbols, then 3744 data symbols in the time domain, PN595 header),
+// DTMB single carrier mode (C=1): the transmitter model (36 system information symbols, then 3744 data symbols in the time domain),
 // the frequency domain equaliser against the transmitted symbols, the receiver on the test signal for every modulation, and the carrier mode
-// decision between C=1 and C=3780 for PN595 signals. The C=1 frame layout (system information first, no scrambling beyond the data scrambler) is
+// decision between C=1 and C=3780 for every PN header. The C=1 frame layout (system information first, no scrambling beyond the data scrambler) is
 // taken from the dtmb-sdr project (c1.cpp) and the standard as recalled; two recordings of real C=1 transmitters (issue #58, test_dtmb_onair.cpp)
 // agree with it once the PN595 header is the on-air one.
 #include "dect2/dtmb/dtmb_demod.h"
@@ -163,6 +163,26 @@ int main() {
         o.sc = makeSignal(Header::Pn945, Mapping::Qam16, Rate::R06, false, 10e6, 30);
         r = run(o);
         CHECK(r.good > 8000 && r.tel.carriers == 3780, "PN945: carriers %d", r.tel.carriers);
+    }
+
+    // Check single-carrier detection independently of the PN header and phase mode.
+    for (Header h : {Header::Pn945, Header::Pn420}) for (bool rotating : {false, true}) {
+        Scenario o;
+        o.threads = 0;
+        o.sc = makeSignal(h, Mapping::Qam16, Rate::R08, true, 8e6, 30);
+        o.sc.tx.carriers = 1;
+        o.sc.tx.phaseRotate = rotating;
+        o.sc.cfoHz = 200;
+        o.seconds = 1.5;
+        const Result r = run(o);
+        printf("  %s C=1 %s phase: %llu good, %llu wrong, C=%d SI=%d\n", headerInfo(h).name, rotating ? "rotating" : "fixed",
+               (unsigned long long)r.good, (unsigned long long)r.wrong, r.tel.carriers, (int)r.tel.siOk);
+        CHECK(r.tel.header == (int)h && r.tel.siOk && r.tel.carriers == 1,
+              "%s single carrier: header %d carriers %d SI %d", headerInfo(h).name, r.tel.header, r.tel.carriers, (int)r.tel.siOk);
+        CHECK(r.good > 8000 && r.wrong == 0 && r.backwards == 0 && r.seqBack == 0,
+              "%s single carrier: %llu good, %llu wrong", headerInfo(h).name, (unsigned long long)r.good, (unsigned long long)r.wrong);
+        CHECK(r.tel.mapping == (int)Mapping::Qam16 && r.tel.rate == (int)Rate::R08 && r.tel.interleaver == 2,
+              "%s single carrier: parameters from the system information", headerInfo(h).name);
     }
 
     printf(failures ? "dtmb_c1: %d FAILED\n" : "dtmb_c1: all passed\n", failures);

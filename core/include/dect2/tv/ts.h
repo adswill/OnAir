@@ -76,6 +76,7 @@ struct TsPid {
 };
 
 struct TsSnapshot {
+    dvbsi::TextEncoding textEncoding = dvbsi::TextEncoding::Dvb;
     std::vector<TsService> services;
     std::vector<TsPid> pids;
     std::string networkName, utc;
@@ -101,10 +102,13 @@ public:
     // Programme guide per service id, sorted by start time (now/next plus the schedule when the broadcaster sends it).
     std::map<int, std::vector<EpgEvent>> epg() const;
     void reset();
-    void setGbDefault(bool on) { gbText_ = on; }   // DTMB: unprefixed SI text may be GB 2312
+    void setTextEncoding(dvbsi::TextEncoding encoding) {
+        if (textEncoding_ != encoding) si_.resetTextCountry();
+        textEncoding_ = encoding; si_.setTextEncoding(encoding);
+    }
 
 private:
-    bool gbText_ = false;
+    dvbsi::TextEncoding textEncoding_ = dvbsi::TextEncoding::Dvb;
     struct SectionBuf { std::vector<uint8_t> data; bool active = false; };
     struct PidState { uint32_t scrWin = 0, clrWin = 0; uint64_t packets = 0, bytesWin = 0, ccErrors = 0, tei = 0; int lastCc = -1; double kbps = 0; bool scrambled = false; bool resync = true; };
     void section(int pid, const uint8_t* s, int len);
@@ -155,6 +159,6 @@ private:
 };
 
 uint32_t mpegCrc32(const uint8_t* p, int n);
-std::string dvbText(const uint8_t* p, int n, bool gbDefault = false); // gbDefault: unprefixed GB 2312 pairs are decoded as GB 2312 (DTMB) // DVB text with character-table prefix -> UTF-8
+using dvbsi::dvbText; // DVB/ISDB broadcast text -> UTF-8
 
 } // namespace dect2

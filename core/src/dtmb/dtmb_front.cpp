@@ -61,10 +61,10 @@ void SrrcResampler::push(const cf32* in, size_t n) {
     // DC offset of the radio: a slow average (time constant 25 ms), a plain average at first so that it settles quickly; updated per block
     double sr = 0, si = 0;
     for (size_t i = 0; i < n; i++) { sr += in[i].real(); si += in[i].imag(); }
-    const double alpha = std::max((double)n / (inRate_ * 0.025), (double)n / (double)(dcCount_ + (long)n));
+    const double alpha = std::max((double)n / (inRate_ * 0.025), (double)n / ((double)dcCount_ + (double)n));
     dc_re_ += std::min(1.0, alpha) * (sr / (double)n - dc_re_);
     dc_im_ += std::min(1.0, alpha) * (si / (double)n - dc_im_);
-    dcCount_ += (long)n;
+    dcCount_ += n;
     const float dr = dcOn_ ? (float)dc_re_ : 0.f, di = dcOn_ ? (float)dc_im_ : 0.f;
     if (fill_ + n + (size_t)stride_ + 16 > re_.size()) { re_.resize(fill_ + n + (size_t)stride_ + 16 + 65536); im_.resize(re_.size()); }
     float* r = &re_[fill_];

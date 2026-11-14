@@ -8,7 +8,10 @@
 #include <string>
 #include <vector>
 
-namespace dect2 { std::string dvbText(const unsigned char*, int, bool) { return {}; } }   // names are not under test
+namespace dect2::dvbsi { // names are not under test
+std::string dvbText(const unsigned char*, int, const TextContext&) { return {}; }
+TextContext TextContext::withLanguage(std::string_view) const { return *this; }
+}
 
 using namespace dect2;
 using namespace dect2::ease;

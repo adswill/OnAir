@@ -79,7 +79,7 @@ private:
     int perFrame_, pkCw_, cwPerGroup_;
     double secsPerCw_;
     std::vector<uint8_t> descr_;                 // descrambler bits of one signal frame's payload
-    long frames_ = 0, primed_ = 0;
+    uint64_t frames_ = 0, primed_ = 0;
     bool aligned_ = false;
     int searchWait_ = 0;                         // frames until the next alignment attempt
     int failRun_ = 0;                            // consecutive failed codewords (receiver thread only)

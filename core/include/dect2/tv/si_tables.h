@@ -3,6 +3,7 @@
 // of other transport streams (SDT other), the event counts of other transport streams (EIT other), local time offsets (TOT) and the conditional access table (CAT).
 // Signalling only: nothing is descrambled. Fed with CRC-checked sections by TsDemux.
 #pragma once
+#include "dvb_text.h"
 #include <cstdint>
 #include <map>
 #include <memory>
@@ -79,6 +80,9 @@ public:
     void section(int pid, const uint8_t* s, int len);
     SiSnapshot snapshot() const;
     void reset() { *this = SiCollector(); }
+    void setTextEncoding(dvbsi::TextEncoding encoding) { textEncoding_ = encoding; }
+    dvbsi::TextContext textContext() const { return {textEncoding_, textCountry_}; }
+    void resetTextCountry() { textCountry_.clear(); }
 private:
     void nit(const uint8_t* s, int len);
     void bat(const uint8_t* s, int len);
@@ -94,6 +98,8 @@ private:
     int64_t totUtc_ = 0;
     std::map<int, SiCaSystem> ca_;
     uint64_t sections_ = 0;
+    dvbsi::TextEncoding textEncoding_ = dvbsi::TextEncoding::Dvb;
+    std::string textCountry_;
 };
 
 } // namespace dect2
