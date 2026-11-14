@@ -27,7 +27,9 @@ the receiver of integ-41, run 43511467794; after: run 43519850093). dB in the 99
 - CubeSat (NGHam, BEESAT, AX100, USP): `core/src/cubesat/cubesat_rx.cpp`. A 1-bit differential detector (arg of y[n] y*[n-T], the products
   averaged over half a bit) on the 9600 and 4800 baud narrow channels beside the discriminator paths: the phase over a bit without FM clicks,
   so no FM threshold. The AFC's residual comes from the discriminator path's slicer midpoint. AX100 Mode 6 is taken on these paths only with
-  at most 8 byte errors put right. One Mobitex frame that several demodulators report with different lost blocks now counts once (the copy
+  at most 8 byte errors put right, and a Mode 6 frame two paths give (an HDLC end one byte off on one of them) counts once. With a signal
+  present the narrow test's calibration still shows about one wrong Mode 6 frame in 32 at 8 to 10 dB (4.0: about one in 100); noise alone
+  gives the same 2 Mobitex frames in 4 x 219 s as 4.0, nothing else. One Mobitex frame that several demodulators report with different lost blocks now counts once (the copy
   with more data); it was counted two or three times (the clean BEESAT trial counted 9 units for 3 frames). `DECT2_CUBESAT_NODIFF=1` turns
   the detectors off. U482C (audio FSK) is unchanged.
 - e-Czas: the QA sweep runs 60 s trials for it (the time packet comes every 12 s; an 8 s trial held one or none, so the old 30 dB was the
