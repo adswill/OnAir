@@ -5,6 +5,7 @@
 #include "dect2/tx/tx_control.h"
 #include "dect2/common/diag.h"
 #include "dect2/engine/rate_choice.h"
+#include "dect2/source/pluto_ports.h"
 #include "native_common.h"
 #include <cerrno>
 #include <map>
@@ -290,10 +291,14 @@ protected:
         phy_ = radio_->phy;
         rx_ = iio().context_find_device(ctx_, "cf-ad9361-lpc");
         if (!phy_ || !rx_) { DIAG_ERROR(959587, "The AD9361 devices were not found on the PlutoSDR, so the receiver stays closed."); err = "PlutoSDR: the AD9361 devices were not found"; return false; }
-        rxCh_ = iio().device_find_channel(phy_, "voltage0", false);
+        // RX port: RX1 is phy voltage0 with I/Q voltage0/voltage1 on cf-ad9361-lpc (the default, unchanged). RX2 (Pluto+, or a 2R2T image) is phy voltage1
+        // with I/Q voltage2/voltage3. NOT TESTED ON HARDWARE: written from the AD9361 driver's channel layout; the owner has no Pluto+ to check it on.
+        const bool rx2 = plutoRxPort(s.radio) == 1;
+        rxCh_ = iio().device_find_channel(phy_, rx2 ? "voltage1" : "voltage0", false);
         lo_ = iio().device_find_channel(phy_, "altvoltage0", true);
-        i_ = iio().device_find_channel(rx_, "voltage0", false);
-        q_ = iio().device_find_channel(rx_, "voltage1", false);
+        i_ = iio().device_find_channel(rx_, rx2 ? "voltage2" : "voltage0", false);
+        q_ = iio().device_find_channel(rx_, rx2 ? "voltage3" : "voltage1", false);
+        if (rx2 && (!rxCh_ || !i_ || !q_)) { DIAG_ERROR(318264, "The PlutoSDR has only one receive input (RX1), so input 2 is refused."); err = "this Pluto has one receive input (RX1): set the RX port to RX1 (RX2 needs a Pluto+ or the second channel enabled)"; return false; }
         if (!rxCh_ || !lo_ || !i_ || !q_) { DIAG_ERROR(610936, "The PlutoSDR receive channels were not found, so the receiver stays closed."); err = "PlutoSDR: the receive channels were not found"; return false; }
         gainMode_.clear();
         fw_.clear(); tezuka_ = false;
@@ -560,7 +565,7 @@ public:
         dev_ = iio().context_find_device(ctx_, "cf-ad9361-dds-core-lpc");
         if (!phy_ || !dev_) { DIAG_ERROR(642922, "The AD9361 transmit devices were not found on the PlutoSDR, so the transmitter stays closed."); err = "PlutoSDR: the AD9361 transmit devices were not found"; shut(); return false; }
         // voltage0 is TX1. A 2T image (some Pluto+) has voltage1 as TX2; its I/Q pair on the DDS core is voltage2 and voltage3. One LO (altvoltage1) tunes both.
-        const int ch = t.channel < 0 ? 0 : t.channel;
+        const int ch = plutoTxPort(t.radio, t.channel < 0 ? 0 : t.channel);   // "txport" tx2 = output 2; not tested on hardware (no Pluto+ to try it on)
         if (ch > 1) { DIAG_ERROR(527196, "The PlutoSDR has at most two transmit outputs, so the picked output is refused."); err = "this Pluto has at most two transmit outputs"; shut(); return false; }
         const char* phyName = ch == 0 ? "voltage0" : "voltage1";
         const char* iName = ch == 0 ? "voltage0" : "voltage2";
@@ -728,7 +733,16 @@ DeviceInfo plutoEntry(const std::string& uri, const std::string& desc, bool prob
                   choiceSetting("gainmode", "Gain mode",
                                 "Manual: the gain slider (and OnAir's AGC) set the AD9361's gain (the default).\n"
                                 "Slow / fast attack: the AD9361's own AGC sets it (fast attack for bursts); the gain slider then has no effect.",
-                                {"manual", "slow_attack", "fast_attack"}, {"Manual", "Radio AGC, slow attack", "Radio AGC, fast attack"}, "manual")};
+                                {"manual", "slow_attack", "fast_attack"}, {"Manual", "Radio AGC, slow attack", "Radio AGC, fast attack"}, "manual"),
+                  // the second SMA ports of a Pluto+ (or a Pluto with the second channel enabled); a Pluto with one channel refuses RX2 / TX2 when it opens, saying so
+                  choiceSetting("rxport", "RX port",
+                                "Which receive SMA port to use. RX1 is the default. RX2 only exists on a Pluto+ or a Pluto with the second channel enabled\n"
+                                "(2R2T firmware); on a one-channel Pluto it is refused with a message. Not tested on hardware.",
+                                {"rx1", "rx2"}, {"RX1", "RX2"}, "rx1", true),
+                  choiceSetting("txport", "TX port",
+                                "Which transmit SMA port to use. TX1 is the default. TX2 only exists on a Pluto+ or a Pluto with the second channel enabled;\n"
+                                "on a one-channel Pluto it is refused with a message. Not tested on hardware.",
+                                {"tx1", "tx2"}, {"TX1", "TX2"}, "tx1", true)};
     bool tez = false, known = false;
     {
         std::lock_guard<std::mutex> lk(gRangeMu);
