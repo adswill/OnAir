@@ -998,8 +998,10 @@ void canvas(SourceTab& s, bool editable, bool sending, bool previewing) {
     dl->PopClipRect();
     if (!sending) {
         const bool file = G().mux.output == Output::File;
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + std::max(size.x, 200 * gUi));   // as wide as the picture (the Easy tab's is small)
         ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.35f, 1), "%s", file ? tr("Not encoding: this is only a preview. Press Start encoding to write the file.")
                                                                       : tr("Not streaming: this is only a preview. Press Start streaming to send it."));
+        ImGui::PopTextWrapPos();
     }
     if (!s.ovr.hasFont()) ImGui::TextDisabled("%s", tr("No font for the overlay text was found: text blocks are not drawn."));
     else if (editable) ImGui::TextDisabled("%dx%d. %s", W, H, tr("Drag to move, the corner to resize (logo, rolling text), Delete removes the selected block."));
