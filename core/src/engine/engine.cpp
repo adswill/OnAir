@@ -3,8 +3,9 @@
 
 // The Engine core: sample ingest (cleaning, offset tuning), stop, recording, applyReset, and the per-receiver feed,
 // reset and auto-select switches. Other Engine members live in engine_*.cpp next to this file.
-#include "dect2/engine/engine.h"
 #include "dect2/common/diag.h"
+#include "dect2/rs/common.h"
+#include "dect2/engine/engine.h"
 #include "dect2/source/hw_time.h"
 #include "dect2/tv/dvb_text.h"
 #include "dect2/automation/engine.h"
@@ -138,7 +139,18 @@ void Engine::ingest(cf32* x, size_t n) {
     nSamp_ += n;
 }
 
+namespace {
+// The Rust crates report their diagnostic codes through this: the line is the same as a C++ DIAG (docs/DIAGNOSTICS.md).
+void rustDiagEmit(int32_t level, int32_t code, const uint8_t* text, size_t len) {
+    const diag::Level l = level <= 0 ? diag::Level::Debug : level == 1 ? diag::Level::Warn : diag::Level::Error;
+    diag::emit(l, code, "%.*s", (int)len, reinterpret_cast<const char*>(text));
+}
+int32_t rustDiagDebug() { return diag::debugEnabled() ? 1 : 0; }
+} // namespace
+
 Engine::Engine() : t0_(std::chrono::steady_clock::now()) {
+    static const bool rustDiag = (onair_diag_set_sink(&rustDiagEmit, &rustDiagDebug), true);   // once per process
+    (void)rustDiag;
     wide_.setTuning(WideTuning());   // the whole-span banks get the CPU limit
     // DVB-H / IP datacasting: datagrams whose bytes are all known good (section CRCs, MPE-FEC) go to the IP output
     mpe_.setDatagramCallback([this](const uint8_t* d, size_t n, bool reliable, int) { if (reliable) ipOut_.packet(d, n); });
