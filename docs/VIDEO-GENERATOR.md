@@ -45,6 +45,14 @@ Every setting in the window has a (?) with a short version of what is written he
 
 ## Quick start
 
+The shortest way: choose a digital TV mode in OnAir's Transmit panel and press **Start**. When no video is being sent, OnAir starts the
+generator in **Easy** mode and it starts streaming by itself, fitted to the transmitter's allowed bitrate; the transmitter goes on the
+air at once and the picture joins a few seconds later (null packets until then). An input that cannot work at that moment (no camera,
+no file chosen) becomes the test generator, so a picture always goes out. When OnAir's generator already runs but is not streaming,
+Start asks it to stream.
+
+Step by step:
+
 1. Choose a digital TV mode in OnAir's transmitter (DVB-T, for example), then open **Tools > Digital video generator**.
 2. On the **Easy** tab, choose the input (Camera, Still picture, Video file, Test generator or RTMP server), the resolution and the
    frame rate. Easy mode does the rest: it sends to OnAir's transmitter and fits itself to what the transmitter's channel carries

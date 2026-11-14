@@ -152,6 +152,8 @@ void testServerClient(bool local) {
     // Raise / Quit / Bye
     LCHECK(srv.raise("tok-a") && waitFor([&] { return a.takeRaise(); }) && !b.takeRaise(), "Raise goes to the generator with that token only");
     LCHECK(!srv.raise("") && !srv.raise("other"), "no generator with an empty or unknown token");
+    LCHECK(srv.startStreaming("tok-a") && waitFor([&] { return a.takeStart(); }) && !b.takeStart(), "Start streaming goes to the generator with that token only");
+    LCHECK(!srv.startStreaming("") && !srv.startStreaming("other"), "no Start for an empty or unknown token");
     LCHECK(srv.quit("tok-a") && waitFor([&] { return a.takeQuit(); }), "Quit by token");
     a.bye();
     LCHECK(waitFor([&] { std::lock_guard<std::mutex> lk(byeMu); return byeToken == "tok-a"; }), "Bye tells OnAir which one was closed");

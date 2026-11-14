@@ -235,7 +235,7 @@ struct VgLinkServer::Impl {
         int stream = -1;
         bool haveSeq = false;
         uint16_t seq = 0;
-        int raise = 0, quit = 0;
+        int raise = 0, quit = 0, start = 0;
     };
     mutable std::mutex mu;
     std::vector<std::unique_ptr<link::ServerTransport>> tr;   // changed only while stopped
@@ -266,6 +266,7 @@ struct VgLinkServer::Impl {
         kv["slot"] = std::to_string(p.info.slot);
         kv["raise"] = std::to_string(p.raise);
         kv["quit"] = std::to_string(p.quit);
+        kv["start"] = std::to_string(p.start);
         kv["ours"] = !ownToken.empty() && p.info.token == ownToken ? "1" : "0";
         send(p.via, p.from, VgMsg::Reply, kv);
     }
@@ -444,22 +445,24 @@ void VgLinkServer::setTxInfo(const VgTxInfo& t) {
     for (const auto& p : p_->peers) p_->reply(p);
 }
 
-static bool bumpByToken(VgLinkServer::Impl& I, const std::string& token, bool quit) {
+enum class Bump { Raise, Quit, Start };
+static bool bumpByToken(VgLinkServer::Impl& I, const std::string& token, Bump what) {
     if (token.empty()) return false;
     std::lock_guard<std::mutex> lk(I.mu);
     bool any = false;
     for (auto& p : I.peers)
-        if (p.info.token == token) { (quit ? p.quit : p.raise)++; I.reply(p); any = true; }
+        if (p.info.token == token) { (what == Bump::Quit ? p.quit : what == Bump::Start ? p.start : p.raise)++; I.reply(p); any = true; }
     return any;
 }
 
-bool VgLinkServer::raise(const std::string& token) { return bumpByToken(*p_, token, false); }
+bool VgLinkServer::raise(const std::string& token) { return bumpByToken(*p_, token, Bump::Raise); }
+bool VgLinkServer::startStreaming(const std::string& token) { return bumpByToken(*p_, token, Bump::Start); }
 void VgLinkServer::setOwnToken(const std::string& token) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->ownToken = token;
     for (const auto& p : p_->peers) p_->reply(p);   // at once: the generator learns whether it is OnAir's own
 }
-bool VgLinkServer::quit(const std::string& token) { return bumpByToken(*p_, token, true); }
+bool VgLinkServer::quit(const std::string& token) { return bumpByToken(*p_, token, Bump::Quit); }
 void VgLinkServer::quitAll() {
     std::lock_guard<std::mutex> lk(p_->mu);
     for (auto& p : p_->peers) { p.quit++; p_->reply(p); }
@@ -491,8 +494,8 @@ struct VgLinkClient::Impl {
     std::vector<std::string> progs;
     double rate = 0;                // > 0: streaming
     int stream = 0;                 // counts the starts
-    int raiseSeen = -1, quitSeen = -1;
-    std::atomic<bool> raise{false}, quit{false};
+    int raiseSeen = -1, quitSeen = -1, startSeen = -1;
+    std::atomic<bool> raise{false}, quit{false}, start{false};
     std::atomic<uint64_t> sent{0};
     uint32_t ssrc = 0;
     uint16_t seq = 0;
@@ -551,6 +554,9 @@ void VgLinkClient::Impl::run() {
                     if (raiseSeen >= 0 && r > raiseSeen) raise = true;   // the first Reply only tells where the counters are
                     if (quitSeen >= 0 && q > quitSeen) quit = true;
                     raiseSeen = r; quitSeen = q;
+                    const int st = (int)vgKvNum(kv, "start");
+                    if (startSeen >= 0 && st > startSeen) start = true;
+                    startSeen = st;
                 } else if (m.type == VgMsg::Refused) {
                     refused = true;
                     linked = false;
@@ -566,7 +572,7 @@ void VgLinkClient::Impl::run() {
             slot = 0;
             tx = VgTxInfo();
             usable = 0;
-            raiseSeen = quitSeen = -1;   // OnAir may have restarted: its counters start again
+            raiseSeen = quitSeen = startSeen = -1;   // OnAir may have restarted: its counters start again
             status = "OnAir does not answer " + at + " (trying again)";
         } else if (!linked && !refused && t->isOpen() && now - lastState < std::chrono::milliseconds(60) && status.compare(0, 6, "linked") != 0 && status.compare(0, 12, "OnAir does n") != 0)
             status = "looking for OnAir " + at;
@@ -588,7 +594,7 @@ void VgLinkClient::Impl::begin(std::unique_ptr<link::ClientTransport> tr, const 
         wantSlot = std::clamp(want, 1, kMaxInstances);
         token = tok;
         status = "looking for OnAir " + std::string(where == "this computer" ? "on " : "at ") + where;
-        raiseSeen = quitSeen = -1;
+        raiseSeen = quitSeen = startSeen = -1;
     }
     stop = false;
     th = namedThread("vg-link", [this] { run(); });
@@ -666,6 +672,7 @@ bool VgLinkClient::sendTs(const uint8_t* packets, size_t n) {
 
 void VgLinkClient::bye() { for (int i = 0; i < 3; i++) p_->sendRtcp(VgMsg::Bye, "closed"); }
 bool VgLinkClient::takeRaise() { return p_->raise.exchange(false); }
+bool VgLinkClient::takeStart() { return p_->start.exchange(false); }
 bool VgLinkClient::takeQuit() { return p_->quit.exchange(false); }
 uint64_t VgLinkClient::sentPackets() const { return p_->sent; }
 

@@ -5,6 +5,7 @@
 #include "vg_state.h"
 #include "platform.h"
 #include <algorithm>
+#include <filesystem>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -300,6 +301,27 @@ void easyRefit(Gen& g) {
     g.ses.stopSource(0);
     std::string err;
     if (!g.ses.startSource(0, runConfig(g, *g.src[0]), g.src[0]->num, err)) g.msg = err;
+}
+
+// OnAir's Start with nothing to send (#458: no friction): Easy mode, and Start streaming pressed for the user once the encoders are
+// known and OnAir is linked. An input that cannot work now (no camera, no file chosen or found) becomes the test generator, so a
+// picture always goes out. Given up after 30 s without a link.
+void autoStart(Gen& g) {
+    if (g.startWanted < 0) return;
+    const double now = ImGui::GetTime();
+    if (g.startWanted == 0) g.startWanted = now;   // --start: counted from the first frame
+    if (now - g.startWanted > 30) { g.startWanted = -1; return; }
+    if (!g.probed || !g.link.connected() || g.src.empty()) return;
+    g.startWanted = -1;
+    if (g.ses.running() && !g.advanced) return;   // already streaming in Easy mode
+    if (g.ses.running()) g.ses.stop();
+    g.advanced = false;
+    GenConfig& c = g.src[0]->cfg;
+    std::error_code ec;
+    const bool noCam = c.source == Source::Camera && g.cams.empty();
+    const bool noFile = (c.source == Source::Picture || c.source == Source::VideoFile) && (c.path.empty() || !std::filesystem::exists(std::filesystem::u8path(c.path), ec));
+    if (noCam || noFile || c.source == Source::Rtmp) c.source = Source::Generator;
+    startMux(g);
 }
 
 void topBar(Gen& g) {
@@ -705,6 +727,7 @@ void init(const Options& o) {
         }
     }
     if (o.easy) g.advanced = false;
+    if (o.start) g.startWanted = 0;
     if (o.advanced) g.advanced = true;
     // started on its own (#458): not by OnAir (no token) and not pointed at an OnAir (no --onair). Then it is a stand-alone encoder:
     // Advanced mode, streaming over UDP, since the transmitter output needs OnAir. A file or RTP output chosen before is kept;
@@ -726,6 +749,8 @@ FrameResult frame() {
     FrameResult r;
     if (g.link.takeRaise()) r.raise = true;
     if (g.link.takeQuit()) r.quit = true;
+    if (g.link.takeStart() && followsOnAir(g)) g.startWanted = ImGui::GetTime();
+    autoStart(g);
     if (!g.probed && g.probe.valid() && g.probe.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
         g.probe.get();
         g.cams = g.camsFound;

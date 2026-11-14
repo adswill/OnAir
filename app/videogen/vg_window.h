@@ -10,6 +10,7 @@ struct Options {
     int slot = 1;               // the generator number it asks for
     bool onairGiven = false;    // --onair was given (local or host:port): it was pointed at an OnAir
     bool easy = false, advanced = false;   // --easy / --advanced for this run (screenshots)
+    bool start = false;         // --start: stream to the transmitter in Easy mode as soon as it is linked (OnAir's Start, #458)
 };
 
 struct FrameResult {

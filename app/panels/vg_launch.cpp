@@ -9,6 +9,7 @@
 //    generator it started to quit (and ends it after 3 s); a generator started by hand keeps running and links again later.
 #include "../app.h"
 #include "../platform/platform.h"
+#include "dect2/tv/videogen.h"
 #include "dect2/tv/vglink.h"
 #include <atomic>
 #include <chrono>
@@ -62,12 +63,13 @@ bool ours() { return gPid > 0 && plat::childAlive(gPid); }
 
 std::string token() { std::lock_guard<std::mutex> lk(gTokenMu); return gToken; }
 
-bool spawn(App& a) {
+bool spawn(App& a, const std::vector<std::string>& extra = {}) {
     { std::lock_guard<std::mutex> lk(gTokenMu); gToken = newToken(); }
     vgLinkServer().setOwnToken(token());   // only this generator follows the transmitter's rate (#458)
     std::string err;
     const std::string at = vgLinkServer().listeningLocal() || vgLinkServer().port() == 0 ? std::string("local") : "127.0.0.1:" + std::to_string(vgLinkServer().port());
     std::vector<std::string> args = {"--onair", at, "--token", token()};
+    args.insert(args.end(), extra.begin(), extra.end());
     if (const char* shot = getenv("DECT2_VGSHOT")) {   // dev: the generator OnAir starts saves its window too (#458 screenshots)
         const char* delay = getenv("DECT2_VGSHOTDELAY");
         args.insert(args.end(), {"--hidden", "--no-first-run", "--shot", shot, "--shotdelay", delay ? delay : "12"});
@@ -103,6 +105,29 @@ void videoGenRequest(App& a) {
     }
     if (spawn(a)) a.videoGenOpen = true;
     savePrefs(a);
+}
+
+// Start in the Transmit panel with nothing to send (#458: no friction): OnAir's own generator streams in Easy mode. Running and linked:
+// it is asked to start; not running: it is started with --easy --start, asking for the first free slot. The slot the transmitter reads.
+int videoGenStreamNow(App& a) {
+    startServer();
+    const auto peers = vgLinkServer().peers();
+    const std::string tok = token();
+    if (ours()) {
+        for (const auto& p : peers)
+            if (!tok.empty() && p.token == tok) {
+                if (p.rateBps <= 0) vgLinkServer().startStreaming(tok);
+                return p.slot;
+            }
+        return 0;   // still starting: it was started with --start, or it links in a moment and takes the first free slot
+    }
+    int slot = 1;
+    auto used = [&](int k) { for (const auto& p : peers) if (p.slot == k) return true; return false; };
+    while (slot < dect2::vgen::kMaxInstances && used(slot)) slot++;
+    if (!spawn(a, {"--easy", "--start", "--slot", std::to_string(slot)})) return 0;
+    a.videoGenOpen = true;
+    savePrefs(a);
+    return slot;
 }
 
 // a button without the App at hand (the Transmit panel's "Open the generator"): the next frame opens it

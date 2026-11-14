@@ -79,6 +79,7 @@ struct Gen {
     bool standalone = false;     // started on its own: neither by OnAir (token) nor pointed at one (--onair)
     int easyKbps = 0;            // Easy mode streaming: the video CBR and frame rate it runs with; a new channel rate re-fits them (#458)
     double easyFps = 0, easyDiffAt = -1;
+    double startWanted = -1;     // OnAir's Start (#458): stream in Easy mode once linked and probed; the time it was asked (-1: not asked)
     MuxUi mux;
     int previewSrc = 0;
     bool previewOn = false;

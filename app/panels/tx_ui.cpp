@@ -353,6 +353,15 @@ bool startTx(App& a, TxUi& s, const DeviceInfo* radio, const TxModeSpec* mode, b
         return false;
     }
     if (!s.dryRun && !toFile && !plat::basePrefs().getB("txNoticeAccepted", false)) { s.askNotice = true; return false; }   // the radio notice is for a radio, not for a file
+    if (!carrier && tvTakesStream(*mode, s) && s.tvSrc == 1) {   // #458, no friction: nothing sending yet? OnAir's own generator streams in Easy mode
+        const auto peers = dect2::vgen::vgLinkServer().peers();
+        const dect2::vgen::VgPeer* cur = nullptr;
+        for (const auto& p : peers) if (p.slot == s.tvGen) cur = &p;
+        if (!cur || cur->rateBps <= 0) {
+            if (const int slot = videoGenStreamNow(a); slot > 0 && slot != s.tvGen) { s.tvGen = slot; plat::basePrefs().setI("tx.tvGen", slot); }
+            s.info = tr("No video was being sent: the Digital video generator streams its picture in Easy mode (it joins in a few seconds; null packets until then).");
+        }
+    }
     std::string err;
     TxRequest req = makeReq(s, *mode, carrier);
     std::unique_ptr<TxSink> sink;

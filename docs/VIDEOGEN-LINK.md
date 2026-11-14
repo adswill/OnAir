@@ -42,7 +42,7 @@ also listen on UDP, for generators on other computers or started with `--onair h
 OnAir then listens on every network card (`videoGenLinkAll=0`: on `127.0.0.1` only). The generator sends from any local port and
 gets its replies on that port, so it needs no port of its own and works through NAT. 5454 is not used: SDRconnect has it.
 
-The generator uses the local pipe unless it is started with `--onair host:port`. OnAir's Tools menu passes `--onair local --token <t>`
+The generator uses the local pipe unless it is started with `--onair host:port`. OnAir's Tools menu passes `--onair local --token <t>` (Start in the Transmit panel adds `--easy --start --slot <n>`)
 (`127.0.0.1:<port>` only when the pipe could not be made).
 
 ## The stream (RTP)
@@ -99,6 +99,8 @@ Every message describes a **state**, not an event, so a lost datagram only delay
 | `proto` | link version, `1` |
 | `slot` | the slot it got: the transmitter reads it as `generator:<slot>` |
 | `raise`, `quit` | counters: come to the front (Tools > Digital video generator once more); quit (OnAir is closing the generator it started) |
+| `start` | counter: start streaming to the transmitter in Easy mode (Start in the Transmit panel with nothing being sent); only OnAir's own generator gets it |
+| `ours` | `1` for the generator OnAir started (its token is the one OnAir spawned it with): only that one follows `usable` |
 | `running` | `1` while the transmitter is on air |
 | `tv` | `1` when the transmitter's mode carries a transport stream (DVB-T/T2, DVB-S/S2, DVB-C, ATSC, ISDB-T, DTMB) |
 | `channel` | the channel's transport-stream rate in bit/s (0: not known): worked out from the mode and its Advanced settings (`txTsRateFor`), on the air the rate of the signal made (`txTsBitrate`) |

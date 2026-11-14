@@ -112,6 +112,7 @@ public:
     // the token OnAir started its own generator with: that generator's Reply says ours=1, so only it follows the transmitter's rate (#458)
     void setOwnToken(const std::string& token);
     bool quit(const std::string& token);     // asks it to quit
+    bool startStreaming(const std::string& token);   // asks it to start streaming to the transmitter in Easy mode (#458: Start in the Transmit panel)
     void quitAll();
     // the user closed the generator window (BYE "closed"): its token. Called on the link thread.
     std::function<void(const std::string& token)> onBye;
@@ -148,6 +149,7 @@ public:
     void bye();                              // the window was closed by the user (BYE "closed"): OnAir clears its "open" setting
     // OnAir asked: taken (and cleared) by the window each frame
     bool takeRaise();
+    bool takeStart();                        // OnAir asked: start streaming in Easy mode
     bool takeQuit();
     uint64_t sentPackets() const;
 

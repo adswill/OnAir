@@ -1,6 +1,6 @@
 // onair-videogen: the Digital video generator as its own program (#458, docs/VIDEO-GENERATOR.md, docs/VIDEOGEN-LINK.md).
 //
-//   onair-videogen [--onair local | host:port] [--token t] [--slot n] [--easy | --advanced]
+//   onair-videogen [--onair local | host:port] [--token t] [--slot n] [--easy | --advanced] [--start]
 //   OnAir's Tools > Digital video generator starts it with --onair local --token <t>; started by hand it looks for OnAir's pipe on
 //   this computer (or, with --onair host:port, for OnAir's UDP port) and links when OnAir runs. Started without a token and without
 //   --onair it is a stand-alone encoder: Advanced mode, output UDP (vg_window.cpp init). Screenshots (the OnAir flags): --hidden --shot <png> [--shotdelay s], --tab <name>,
@@ -65,6 +65,7 @@ Args parseArgs(int argc, char** argv) {
         else if (k == "--slot" && more) a.o.slot = std::clamp(atoi(argv[++i]), 1, dect2::vgen::kMaxInstances);
         else if (k == "--easy") a.o.easy = true;
         else if (k == "--advanced") a.o.advanced = true;
+        else if (k == "--start") a.o.start = true;
         else if (k == "--hidden") a.hidden = true;
         else if (k == "--shot" && more) a.shot = argv[++i];
         else if (k == "--shotdelay" && more) a.shotDelay = std::max(0.0, atof(argv[++i]));
