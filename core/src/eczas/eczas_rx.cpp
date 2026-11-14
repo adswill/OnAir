@@ -33,6 +33,10 @@ public:
         for (int i = 0; i < kSyncSymbols; i++) symbols_[i] = &s_[i * kSamplesPerBit];
     }
 
+    // 4.1: the symbol is the keying state itself (+-16384 about the midpoint of the two phases, from a coherent reference), not the phase change
+    // over a bit: the bit is the sign, and the sync needs only the first symbol on the right side
+    void setCoherent(bool on) { coherent_ = on; }
+
     void setPeakHint(int32_t peakAbs) { peakAbs_ = std::max(peakAbs_, std::max(peakAbs, 512)); }
 
     void push(int16_t sample, uint64_t idx, std::vector<EczasRxPacket>& out, EczasRxStats& st) {
@@ -63,7 +67,7 @@ public:
         int32_t corr = 0;
         for (int i = 0; i < kSyncSymbols; i++) corr += *symbols_[i] * kSyncPattern[i];
 
-        if (corr > kSyncSymbols * thresh && *symbols_[0] < -thresh) {
+        if (corr > kSyncSymbols * thresh && *symbols_[0] < (coherent_ ? 0 : -thresh)) {
             int32_t corrMax = corr;
             uint8_t shiftMax = 0;
             for (uint8_t shift = 1; shift <= 5; shift++) {
@@ -86,7 +90,8 @@ public:
             for (int i = 0; i < kPacketBits; i++) {
                 const uint16_t idx = (uint16_t)((sIdx_ + shiftMax + i * kSamplesPerBit) % kLargeBufLen);
                 const int16_t symb = s_[idx];
-                if (std::abs(symb) > thresh) b = uint8_t(!b);
+                if (coherent_) b = symb > 0 ? 1 : 0;
+                else if (std::abs(symb) > thresh) b = uint8_t(!b);
                 raw[i / 8] |= (uint8_t)(b << (7 - (i % 8)));
             }
 
@@ -119,6 +124,7 @@ private:
     uint16_t skipCnt_ = 0;
     uint16_t skipLen_ = 0;
     int32_t peakAbs_ = kThreshNominal * 2;
+    bool coherent_ = false;
 };
 
 static int decimationFactor(double pcmRateHz) {
@@ -146,6 +152,11 @@ void EczasReceiver::reset() {
 void EczasReceiver::setPeakHint(int32_t peakAbsSample) {
     if (!demod_) demod_ = std::make_unique<Impl>();
     demod_->demod.setPeakHint(peakAbsSample);
+}
+
+void EczasReceiver::setCoherent(bool on) {
+    if (!demod_) demod_ = std::make_unique<Impl>();
+    demod_->demod.setCoherent(on);
 }
 
 void EczasReceiver::configure(double pcmRateHz, int decimPhase) {

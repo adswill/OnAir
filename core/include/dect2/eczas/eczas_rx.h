@@ -39,6 +39,8 @@ public:
     void reset();
     void configure(double pcmRateHz, int decimPhase = 0);
     void setPeakHint(int32_t peakAbsSample);
+    // 4.1: the symbols are the keying state (+-16384 about the midpoint of the two phases) from a coherent detector, not the phase change over a bit
+    void setCoherent(bool on);
     void feed(const int16_t* x, size_t n);
     bool pop(EczasRxPacket& out);   // every frame behind a sync word, oldest first: time.status is CrcOk for a time packet, BadCrc, WrongType (another slot of the minute frame)
     const EczasRxStats& stats() const { return stats_; }
