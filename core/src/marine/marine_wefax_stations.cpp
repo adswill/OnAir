@@ -30,6 +30,7 @@ const std::vector<WefaxStation>& wefaxStations() {
         // Asia
         {"JMH", "Tokyo (Japan Meteorological Agency)", "JMH", "Japan", "Asia", {3622.5, 7795, 13988.5}},
         {"JJC", "Kyodo News, Tokyo", "JJC", "Japan", "Asia", {4316, 8467.5, 12745.5, 16971, 17069.6, 22542}},
+        {"JFX", "Kagoshima (Japan Coast Guard)", "JFX", "Japan", "Asia", {4274, 8658, 13074, 16907.5, 22559.6}},
         {"HLL2", "Seoul (KMA)", "HLL2", "South Korea", "Asia", {3585, 5857.5, 7433.5, 9165, 13570}},
         {"BAF", "Beijing", "BAF", "China", "Asia", {5526.9, 8121.9, 10116.9, 14366.9, 16025.9, 18236.9}},
         {"XSG", "Shanghai", "XSG", "China", "Asia", {4170, 8302, 12382, 16559}},
