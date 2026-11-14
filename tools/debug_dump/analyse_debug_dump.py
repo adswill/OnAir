@@ -457,6 +457,24 @@ def addr2line(path, addrs):
     return res
 
 
+_GLUED_COMP_DIR = re.compile(r"^onair/[^/]+/(onair/.*)$")   # the build folder sits in the checkout
+_DRIVE = re.compile(r"[A-Za-z]:/")
+
+
+# -ffile-prefix-map makes the source names relative ("onair/core/..."), so addr2line puts the compile folder in front of them.
+# The MinGW build records that folder with backslashes ("onair\\build") and the system headers as "C:/msys64/...".
+def source_location(loc):
+    """Turn an addr2line file:line into a path in the checkout, or an absolute system path."""
+    loc = loc.replace("\\", "/")
+    drive = _DRIVE.search(loc)
+    if drive and drive.start() > 0:
+        return loc[drive.start():]
+    glued = _GLUED_COMP_DIR.match(loc)
+    if glued:
+        loc = glued.group(1)
+    return loc[len("onair/"):] if loc.startswith("onair/") else loc
+
+
 _BASES = {}
 
 
@@ -480,7 +498,7 @@ def _names_for_module(m, lst):
         where = "%s+0x%x" % (m["name"], a - m["base"])
         frames = res.get(a)
         if frames and frames[0][0] != "??":
-            text = " <- ".join("%s (%s)" % (fn, loc.replace("onair/", "")) for fn, loc in frames)
+            text = " <- ".join("%s (%s)" % (fn, source_location(loc)) for fn, loc in frames)
             names[a] = "%s  [%s]" % (text, where)
         else:
             names[a] = where
