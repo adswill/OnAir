@@ -11,6 +11,8 @@
 #include "dect2/tv/ts_remux.h"
 #include "dect2/tv/vglink.h"
 #include "dect2/tv/videogen_session.h"
+#include "dect2/tx/tx.h"
+#include "dect2/dvbt/dvbt_rx.h"
 #include <algorithm>
 #include <chrono>
 #include <filesystem>
@@ -389,6 +391,21 @@ void testSessionFile() {
     fs::remove(f, ec);
 }
 
+// Easy mode: the stream follows the transmitter's usable rate
+void testEasyFit() {
+    Settings e;
+    e.videoEncoder = "libx264";
+    e.width = 720; e.height = 576; e.fps = 25;
+    MCHECK(fitVideoToMux(e, 4850), "easy: fits 4.85 Mbit/s");
+    const Budget b = estimate(e);
+    MCHECK(e.muxKbps == 4850 && b.suggestedMux <= 4850 && b.suggestedMux > 4850 - 200, "easy: the mux rate is the usable rate and the video fills it (%d of 4850)", b.suggestedMux);
+    MCHECK(!e.autoBitrate && !e.autoMux && e.videoKbps > 3500, "easy: a set video bitrate (%d kbit/s)", e.videoKbps);
+    Settings m;
+    m.videoEncoder = "mpeg2video";
+    m.width = 1920; m.height = 1080;
+    MCHECK(!fitVideoToMux(m, 150) && m.videoKbps == minVideoKbps(m), "easy: too small a channel is reported, at the lowest bitrate");
+}
+
 void testMuxRate() {
     MuxConfig m;
     m.channelBps = 10e6;
@@ -403,13 +420,86 @@ void testMuxRate() {
     MCHECK(muxRateFor(m, {3e6}) == 2e6, "mux rate: never above the channel");
 }
 
+// The whole chain (#458): the generator program's multiplex over the RTP link into OnAir, read by the DVB-T transmitter as
+// "generator:N" (the TX panel's video source), on the air and decoded by OnAir's own DVB-T receiver: its programme number comes out.
+void testTxChain() {
+    using dect2::TxModeSpec; using dect2::TxRequest; using dect2::makeTxGenerator; using dect2::txModeById; using dect2::txTsBitrate; using dect2::DvbtReceiver; using dect2::cf32;
+    VgLinkServer srv;
+    std::string err;
+    MCHECK(srv.start(0, false, err), "chain: the link server listens (%s)", err.c_str());
+    VgLinkClient link;
+    link.start("127.0.0.1", srv.port(), "Chain test", 0, "");
+    MCHECK(waitUntil([&] { return link.connected(); }, 5), "chain: the generator is linked (%s)", link.status().c_str());
+    const int slot = link.slot();
+    const TxModeSpec* mode = txModeById("dvbt");
+    MCHECK(mode != nullptr, "chain: DVB-T is a transmit mode");
+    if (!mode) return;
+    TxRequest r;
+    r.modeId = "dvbt";
+    r.bandwidthMhz = 8;
+    r.loop = true;
+    r.file = generatorSpec(slot);
+    const double fs = 64e6 / 7;
+    auto tx = makeTxGenerator(*mode, r, fs, err);
+    MCHECK(tx != nullptr, "chain: the DVB-T transmitter reads %s (%s)", generatorSpec(slot).c_str(), err.c_str());
+    if (!tx) return;
+    MCHECK(txTsBitrate() > 4e6 && txTsBitrate() < 32e6, "chain: the transmitter tells its TS rate (%.0f)", txTsBitrate());
+    VgTxInfo t;   // what the TX panel tells the generators
+    t.running = t.digitalTv = true;
+    t.channelBps = txTsBitrate();
+    t.system = "DVB-T";
+    t.slots = {slot};
+    srv.setTxInfo(t);
+    double usable = 0;
+    MCHECK(waitUntil([&] { link.txInfo(usable); return usable > 0; }, 5), "chain: the generator learns the usable rate");
+    Session ses;
+    std::vector<Session::SourceSpec> src(1);
+    src[0].cfg = patternSource(0, 0);
+    MuxNumbering num;
+    num.serviceId = 458;
+    src[0].num = num;
+    MuxConfig m;
+    m.output = Output::Transmitter;
+    m.link = &link;
+    m.channelBps = usable;
+    MCHECK(ses.start(src, m, err), "chain: the generator starts (%s)", err.c_str());
+    DvbtReceiver rx;
+    rx.configure(fs, 8);
+    std::vector<uint8_t> got;
+    size_t bad = 0;
+    rx.setPacketCallback([&](const uint8_t* pk, size_t n, double) {
+        for (size_t i = 0; i < n; i++) {
+            if (pk[i * 188 + 1] & 0x80) { bad++; continue; }
+            got.insert(got.end(), pk + i * 188, pk + i * 188 + 188);
+        }
+    });
+    std::vector<cf32> buf(1 << 15);
+    const auto t0 = std::chrono::steady_clock::now();
+    double sent = 0;
+    while (std::chrono::steady_clock::now() - t0 < std::chrono::seconds(6)) {   // the transmitter at the channel's pace
+        const double el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+        while (sent < el * fs) { tx->generate(buf.data(), buf.size()); rx.feed(buf.data(), buf.size()); sent += (double)buf.size(); }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    ses.stop();
+    const std::map<int, int> pat = patOf(got);
+    MCHECK(rx.detectLevel() == 3, "chain: the receiver decodes the transport stream (level %d)", rx.detectLevel());
+    MCHECK(pat.count(458) == 1, "chain: the generator's programme 458 comes out of the receiver (%zu programmes, %zu packets, %zu bad)", pat.size(), got.size() / 188, bad);
+    size_t video = 0;   // packets on the programme's first stream PID (the generator's automatic numbering: 0x0100)
+    for (size_t o = 0; o + 188 <= got.size(); o += 188) if ((((got[o + 1] & 0x1F) << 8) | got[o + 2]) == 0x0100) video++;
+    MCHECK(video > 100, "chain: its picture is on the air (%zu video packets)", video);
+    std::printf("chain: generator -> RTP link -> DVB-T transmitter -> receiver: %zu packets, %zu video, %zu bad\n", got.size() / 188, video, bad);
+}
+
 } // namespace
 
 int videogenMuxTests() {
     testSetNumbering();
     testKeptNumbering();
     testMuxRate();
+    testEasyFit();
     testSessionFile();
     testSessionThreads();
+    testTxChain();
     return gFail;
 }

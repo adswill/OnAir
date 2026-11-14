@@ -89,6 +89,9 @@ TxPayloadKind txPayloadKind(const std::string& id);
 // "generator:N": the live stream of Digital video generator N (tv/videogen.h), null packets while it is not sending to the transmitter.
 // Empty path: false, note says demo. A file that is not TS and cannot be remuxed: false with an error in note (the caller keeps the demo).
 bool txOpenMpegTs(const std::string& path, std::function<void(uint8_t*)>& outTs, std::string& note);
+// The transport-stream rate (bit/s) of the digital TV signal made last (the running transmission or the panel's preview), 0 before
+// any: what the Digital video generators are told they may use (vglink.h)
+double txTsBitrate();
 
 // Power spectrum of n complex samples (Hann, FFT size nfft, DC at bin 0). For a carrier at IF centre, bin 0 is the peak.
 void txSpectrumDb(const cf32* x, size_t n, int nfft, std::vector<float>& db);

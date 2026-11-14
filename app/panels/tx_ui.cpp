@@ -15,6 +15,7 @@
 #include "dect2/common/diag.h"
 #include "dect2/hfdig/hfdig_sstv.h"
 #include "dect2/tv/videogen.h"
+#include "dect2/tv/vglink.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -488,6 +489,20 @@ void txTick(App& a) {
         s.sessionFile = false;
     }
     scheduleTick(a, s);   // a planned start, or the next one after a scheduled transmission has ended
+    {   // what the Digital video generators are told (vglink.h): Easy mode follows the usable rate
+        dect2::vgen::VgTxInfo t;
+        const TxModeSpec* m = txModeById(s.modeId);
+        t.running = s.session.running();
+        t.digitalTv = m && (m->stdMode == 0 || m->stdMode == 3 || m->stdMode == 6 || m->stdMode == 8 || m->stdMode == 9 || m->stdMode == 42);
+        if (t.digitalTv) {
+            t.channelBps = txTsBitrate();
+            t.system = s.modeName.empty() && m && m->name ? m->name : s.modeName;
+            if (m->stdMode == 0) t.params = std::to_string((int)kTxBw[std::clamp(s.bwIdx, 0, 3)]) + " MHz";
+            if (std::strncmp(s.file, "generator:", 10) == 0) t.slots.push_back(atoi(s.file + 10));
+            else for (int i = 0; i < std::clamp(s.nsvc, 1, 4); i++) if (s.svcSrc[i] == 3) t.slots.push_back(s.svcGen[i]);
+        }
+        dect2::vgen::vgLinkServer().setTxInfo(t);
+    }
     if (!s.session.running()) return;
     char b[220];
     const TxSession::Stats st = s.session.stats();
@@ -574,5 +589,10 @@ void txDevOpen(App& a, const char* modeId, bool dryRun) {
     const TxModeSpec* t = txModeById(modeId);
     if (!t) return;
     for (const auto& m : allModes()) if (txModeForList(m.family, m.subId, s.dvbVariant) == t) { txSelectMode(a, m.family, m.subId); break; }
+    if (const char* g = getenv("DECT2_TXGEN")) {   // dev: programme 1 of the multiplex from linked generator N (#458 screenshots)
+        s.nsvc = std::max(s.nsvc, 1);
+        s.svcSrc[0] = 3;
+        s.svcGen[0] = std::clamp(atoi(g), 1, dect2::vgen::kMaxInstances);
+    }
     if (dryRun) { s.dryRun = true; s.devAutoStart = true; }
 }

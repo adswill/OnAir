@@ -1478,6 +1478,7 @@ static void testGeneratorMux(const fs::path& dir, const fs::path& pic) {
     a.instanceId = 5; b.instanceId = 6;
     a.enc.videoEncoder = b.enc.videoEncoder = "mpeg2video";
     a.enc.serviceName = "Gen five"; b.enc.serviceName = "Gen six";
+    a.enc.serviceId = 1; b.enc.serviceId = 1;   // both in Easy mode: programme 1; the second generator's is moved to 2 (#458: kept numbering)
     std::function<void(uint8_t*)> src = generatorMuxSource({5, 6}, {"", "Six on air"}, "Club", 300, 6e6);
     CHECK((bool)src, "multiplex source of generators 5 and 6");
     CHECK(!generatorMuxSource({5, 99}, {}, "", 1, 6e6), "a generator number out of range is refused");
@@ -1522,8 +1523,11 @@ static void testGeneratorMux(const fs::path& dir, const fs::path& pic) {
     while (av_read_frame(fc, pkt) >= 0) { if (fc->streams[pkt->stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) pictures++; av_packet_unref(pkt); }
     av_packet_free(&pkt);
     avformat_close_input(&fc);
-    CHECK(names.size() == 2 && names[300] == "Gen five" && names[301] == "Six on air", "two programmes 300 '%s' and 301 '%s' (%zu)", names[300].c_str(), names[301].c_str(), names.size());
-    CHECK(streams[300] == 2 && streams[301] == 2 && video == 2 && audio == 2, "each programme has its picture and sound (%d video, %d audio)", video, audio);
+    std::string found;
+    for (const auto& [id, n] : names) found += " " + std::to_string(id) + "='" + n + "'";
+    // each generator's own number and name (the transmitter's names and first service ID are not used for generators any more)
+    CHECK(names.size() == 2 && names[1] == "Gen five" && names[2] == "Gen six", "two programmes 1 and 2 with the generators' names:%s", found.c_str());
+    CHECK(streams[1] == 2 && streams[2] == 2 && video == 2 && audio == 2, "each programme has its picture and sound (%d video, %d audio)", video, audio);
     CHECK(pictures > 50, "the pictures of both come through: %d", pictures);
     std::printf("generator multiplex: %zu packets, %d pictures\n", out.size() / 188, pictures);
 }

@@ -95,8 +95,8 @@ std::function<void(uint8_t*)> generatorMuxSource(const std::vector<int>& ids, co
         x.rate = [id] { return generatorRate(id); };
         x.queued = [id] { return generatorQueued(id); };
         x.flush = [id] { generatorClear(id); };
-        x.name = k < names.size() ? names[k] : std::string();
-        x.provider = provider;
+        x.keepIds = true;   // the generator's Muxing tab numbers its programmes (#458)
+        (void)names; (void)provider;
         in.push_back(std::move(x));
     }
     if (in.empty()) return {};

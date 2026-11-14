@@ -15,6 +15,7 @@
 #include "dect2/cp16/cp16_proto.h"
 #include "../ui/cjk_fonts.h"
 #include "dect2/tv/videogen.h"
+#include "dect2/tv/vglink.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -265,17 +266,31 @@ void fileRow(TxUi& s, const char* label, const char* btnId) {
     if (ImGui::Button(btnId)) browseFile(s, btnId);
 }
 
-// Tools > Digital video generator, as the video source: its running stream (Output: Transmitter) is read by the name generator:N
+namespace {
+// the Digital video generators linked to OnAir (#458): "N: name (host) *", * = sending now
+std::string peerLabel(const dect2::vgen::VgPeer& p) {
+    return std::to_string(p.slot) + ": " + p.name + (p.host == "127.0.0.1" ? std::string() : " (" + p.host + ")") + (p.rateBps > 0 ? " *" : "");
+}
+const dect2::vgen::VgPeer* peerOf(const std::vector<dect2::vgen::VgPeer>& peers, int slot) {
+    for (const auto& p : peers) if (p.slot == slot) return &p;
+    return nullptr;
+}
+const char* const kGenControls = N_("Service settings are controlled by the Digital video generator");
+} // namespace
+
+// A Digital video generator as the video source: its whole multiplex as it is, read by the name generator:N
 void generatorPick(TxUi& s) {
+    const auto peers = dect2::vgen::vgLinkServer().peers();
     ImGui::TextDisabled("%s", tr("Video generator:"));
-    for (int i = 1; i <= 4; i++) {
+    if (peers.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("none linked")); }
+    for (const auto& p : peers) {
         ImGui::SameLine();
-        const std::string spec = dect2::vgen::generatorSpec(i);
+        const std::string spec = dect2::vgen::generatorSpec(p.slot);
         const bool on = spec == s.file;
-        char lb[40]; snprintf(lb, sizeof lb, "%d%s##tvgen%d", i, dect2::vgen::generatorQueued(i) > 0 ? " *" : "", i);
-        if (ImGui::SmallButton(lb)) snprintf(s.file, sizeof s.file, "%s", on ? "" : spec.c_str());
+        const std::string lb = (on ? "[" + peerLabel(p) + "]" : peerLabel(p)) + "##tvgen" + std::to_string(p.slot);
+        if (ImGui::SmallButton(lb.c_str())) snprintf(s.file, sizeof s.file, "%s", on ? "" : spec.c_str());
     }
-    { ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Uses the stream of a generator of Tools > Digital video generator whose output is \"Transmitter\" (* = it is sending now). Start it there; click again to clear.")); }
+    { ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The Digital video generators linked to OnAir (Tools > Digital video generator starts one; * = it is sending now). Its whole multiplex is sent as it is; click again to clear.")); }
 }
 
 void analogNfmBox(TxUi& s, bool running) {
@@ -287,25 +302,51 @@ void analogNfmBox(TxUi& s, bool running) {
 
 void muxIdentity(TxUi& s) {
     typo::separatorText(tr("Multiplex"));
+    // poka-yoke (#458): a generator in Easy mode numbers and names its own programmes, so the fields it controls are greyed; one in
+    // Advanced mode only gets a warning (its Muxing tab sets them)
+    const auto peers = dect2::vgen::vgLinkServer().peers();
+    bool easyGen = false;
+    std::string advGens;
+    for (int i = 0; i < std::clamp(s.nsvc, 1, 4); i++) {
+        if (s.svcSrc[i] != 3) continue;
+        const dect2::vgen::VgPeer* p = peerOf(peers, s.svcGen[i]);
+        if (!p) continue;
+        if (p->easy) easyGen = true;
+        else if (advGens.find(std::to_string(p->slot)) == std::string::npos) advGens += (advGens.empty() ? "" : ", ") + std::to_string(p->slot);
+    }
+    auto controlled = [](bool on) { if (on && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr(kGenControls)); };
     ImGui::SetNextItemWidth(200 * gUi);
     ImGui::InputText(tr("Network name"), s.network, sizeof s.network);
+    ImGui::BeginDisabled(easyGen);
     ImGui::SetNextItemWidth(200 * gUi);
     ImGui::InputText(tr("Provider"), s.provider, sizeof s.provider);
+    controlled(easyGen);
     ImGui::SetNextItemWidth(100 * gUi);
     ImGui::InputInt(tr("First service ID"), &s.serviceId);
+    controlled(easyGen);
+    ImGui::EndDisabled();
     if (s.serviceId < 1) s.serviceId = 1;
+    if (!advGens.empty()) {
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.7f, 0.28f, 1));
+        ImGui::TextWrapped(tr("Generator %s is in Advanced mode: its Muxing tab sets its programme numbers, names and PIDs; these fields do not change them."), advGens.c_str());
+        ImGui::PopStyleColor();
+    }
     ImGui::SetNextItemWidth(120 * gUi);
     if (ImGui::SliderInt(tr("Services"), &s.nsvc, 1, 4)) s.nsvc = std::max(1, std::min(4, s.nsvc));
     ImGui::TextDisabled("%s", tr("Each service is its own programme (own video and audio PIDs in the PAT / PMT / SDT). The whole-mux MPEG-TS above, if set, replaces this."));
     ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));   // wrapped: it is long
-    ImGui::TextWrapped("%s", tr("Source \"Video generator\": the live stream of Tools > Digital video generator N (Output: Transmitter), e.g. the same picture in H.264 and in H.265. Then only the generator services are sent."));
+    ImGui::TextWrapped("%s", tr("Source \"Video generator\": the live multiplex of a Digital video generator linked to OnAir (Tools > Digital video generator), with its own programme numbers and names. Then only the generator services are sent."));
     ImGui::PopStyleColor();
     const auto cams = listVideoInputs();
     for (int i = 0; i < s.nsvc; i++) {
         char lb[48];
         snprintf(lb, sizeof lb, "%s %d", tr("Service name"), i + 1);
+        const dect2::vgen::VgPeer* rowGen = s.svcSrc[i] == 3 ? peerOf(peers, s.svcGen[i]) : nullptr;
+        ImGui::BeginDisabled(rowGen && rowGen->easy);
         ImGui::SetNextItemWidth(220 * gUi);
         ImGui::InputText(lb, s.svc[i], sizeof s.svc[i]);
+        controlled(rowGen && rowGen->easy);
+        ImGui::EndDisabled();
         const char* srcn[] = {tr("Test card"), tr("Video file"), tr("Camera / capture card"), tr("Video generator")};
         snprintf(lb, sizeof lb, "%s %d", tr("Programme source"), i + 1);
         ImGui::SetNextItemWidth(220 * gUi);
@@ -313,21 +354,25 @@ void muxIdentity(TxUi& s) {
             for (int k = 0; k < 4; k++) if (ImGui::Selectable(srcn[k], s.svcSrc[i] == k)) s.svcSrc[i] = k;
             ImGui::EndCombo();
         }
-        if (s.svcSrc[i] == 3) {   // a Digital video generator as this programme (#492): the transmitter remuxes the generators' streams
+        if (s.svcSrc[i] == 3) {   // a Digital video generator as this programme (#492), linked to OnAir (#458)
             snprintf(lb, sizeof lb, "%s %d", tr("Generator"), i + 1);
             const int cur = std::max(1, std::min(dect2::vgen::kMaxInstances, s.svcGen[i]));
-            const std::string curName = std::to_string(cur) + (dect2::vgen::generatorRate(cur) > 0 ? " *" : "");
-            ImGui::SetNextItemWidth(120 * gUi);
+            const dect2::vgen::VgPeer* cp = peerOf(peers, cur);
+            const std::string curName = cp ? peerLabel(*cp) : std::to_string(cur) + " " + tr("(not linked)");
+            ImGui::SetNextItemWidth(220 * gUi);
             if (ImGui::BeginCombo(lb, curName.c_str())) {
-                for (int g = 1; g <= dect2::vgen::kMaxInstances; g++) {
-                    const std::string n = std::to_string(g) + (dect2::vgen::generatorRate(g) > 0 ? " *" : "");
-                    if (ImGui::Selectable(n.c_str(), g == cur)) s.svcGen[i] = g;
-                }
+                for (const auto& p : peers) if (ImGui::Selectable(peerLabel(p).c_str(), p.slot == cur)) s.svcGen[i] = p.slot;
+                if (peers.empty()) ImGui::TextDisabled("%s", tr("No generator is linked: Tools > Digital video generator starts one."));
                 ImGui::EndCombo();
             }
             ImGui::SameLine();
             ImGui::TextDisabled("(?)");
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("* = it is sending to the transmitter now. Start it in Tools > Digital video generator with Output \"Transmitter\" and the same number. An empty service name takes the generator's own. Its mux rate is its share of the channel."));
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The Digital video generators linked to OnAir (* = sending now). Its programmes keep the numbers and names it gives them (its Easy tab or Muxing tab). Its mux rate is its share of the channel."));
+            if (cp && !cp->programmes.empty()) {
+                std::string t;
+                for (const auto& pr : cp->programmes) t += (t.empty() ? "" : ", ") + pr;
+                ImGui::TextDisabled("    %s: %s", tr("its programmes"), t.c_str());
+            }
         }
         if (s.svcSrc[i] == 1) {
             snprintf(lb, sizeof lb, "%s %d", tr("Video file"), i + 1);

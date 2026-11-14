@@ -44,6 +44,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 #include <algorithm>
+#include <atomic>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -692,6 +693,9 @@ static std::function<void(uint8_t*)> generatorMux(const TxRequest& r, double br)
     return src;
 }
 
+static std::atomic<double> gTsBitrate{0};
+double txTsBitrate() { return gTsBitrate; }
+
 std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxRequest& r, double rateHz, std::string& err) {
     if (m.stdMode == 125) return makeKavbTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAVB: its own video-container transmitter at the radio's rate
     if (m.stdMode == 126) return makeKappTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAPP: its own burst transmitter at the radio's rate
@@ -727,6 +731,7 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
         return id;
     };
     auto namedTs = [&](std::function<void(uint8_t*)> file, double br) {
+        if (br > 0) gTsBitrate = br;
         if (file) return file;
         if (auto gm = generatorMux(r, br > 1e6 ? br : 20e6)) return gm;
         return demoTsSource(br > 1e6 ? br : 20e6, ident(r));

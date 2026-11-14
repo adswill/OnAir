@@ -115,8 +115,10 @@ void generatorTapClose(int id);
 size_t generatorTapRead(int id, uint8_t* buf, size_t max, int timeoutMs);
 void generatorSetRate(int id, double bps);                           // (the generator) its mux rate while it runs, 0 when it stops
 double generatorRate(int id);                                        // 0: not running with Output::Transmitter
-// Several generators as the services of one multiplex (the transmitter's Multiplex, #492): generator ids[k] is programme
-// firstServiceId + k, named names[k] (empty: the generator's own service name), see ts_remux.h. outBitrate: the channel's TS rate.
+// Several generators as the services of one multiplex (the transmitter's Multiplex, #492): since the generator is its own program
+// (#458) each one sends a whole multiplex, carried with its own programme numbers, PIDs and names (TsRemux keepIds; what collides
+// with an earlier generator is moved). names / provider / firstServiceId are not used for them any more (kept for the callers).
+// outBitrate: the channel's TS rate.
 std::function<void(uint8_t*)> generatorMuxSource(const std::vector<int>& ids, const std::vector<std::string>& names, const std::string& provider,
                                                  int firstServiceId, double outBitrate);
 
