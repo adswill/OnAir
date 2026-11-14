@@ -83,6 +83,7 @@ The table below is the list of topic pages.
 | [nrf24.md](nrf24.md) | nRF24L01 | Enhanced ShockBurst frames on one 2.4 GHz channel, 250 kbit/s / 1 / 2 Mbit/s, address sniffer (needs a 2.4 GHz SDR; needs a user test). |
 | [INMARSAT.md](INMARSAT.md) | Inmarsat (all carriers) | Every Aero P and Inmarsat-C carrier of one wide capture at once; C voice not decoded (needs a user test). |
 | [ebicab.md](ebicab.md) | EBICab / Eurobalise | Balise up-link telegrams per SUBSET-036 (needs a user test); EBICab formats not public. |
+| [rpr.md](rpr.md) | Robust Packet (RPR) | HF OFDM packet: carriers, bursts and speed level (physical layer only; the coding is not public; needs a recording). |
 
 ## Added in 3.0 (not in the table above yet)
 

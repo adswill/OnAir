@@ -114,6 +114,7 @@
 #include "dect2/pactor/pactor_tel.h"
 #include "dect2/hfutil/hfutil_tel.h"
 #include "dect2/pactorhf/pactorhf_tel.h"
+#include "dect2/rpr/rpr_tel.h"
 #include "dect2/esubghz/esubghz_tel.h"
 #include "dect2/roshf/roshf_tel.h"
 #include "dect2/ssdv/ssdv_tel.h"
@@ -283,6 +284,7 @@ struct RxTelemetry {
     XbTelemetry xband;        // valid when standard is 531 .. 550 (families 530 .. 549, xband_tel.h)
     Fy3Telemetry fy3a;        // valid when standard == 236 (FY-3 AHRPT, family 235, engine standard 237)
     Fy3Telemetry fy3m;        // valid when standard == 237 (FY-3 MPT, family 236, engine standard 238)
+    RprTelemetry rpr;   // valid when standard == 900 (Robust Packet, family 899, engine standard 901)
     PactorHfTelemetry pactorhf;   // valid when standard == 238, 239 or 240 (PACTOR-II / -III / -IV, families 237 .. 239, engine standards 239 .. 241)
     UmtsTelemetry umts;   // valid when standard == 481 (UMTS cells, family 480, engine standard 482)
     CdmaTelemetry cdma;   // valid when standard == 661 (CDMA2000 cells, family 660, engine standard 662)

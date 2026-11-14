@@ -103,6 +103,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     "fy3ahrpt", "fy3mpt", "noaaapt", "noaahrpt", "noaagac", "noaadsb", "meteorhrpt", "elektrordas", "arktikardas", "arktikaggak", "awsl", "xb_npp", "xb_jpss2", "xb_aqua", "xb_terra", "xb_metopd", "xb_metopsg", "xb_landsatx", "xb_landsats", "xb_probas", "xb_probav", "xb_gcomw", "xb_gcomc", "xb_stereo", "xb_oceansat2", "xb_oceansat3", "xb_saral", "xb_oceansat3x", "xb_saralx", "xb_kanopus", "xb_dmsp",
     "sitor", "pactor2", "pactor3", "pactor4",
     "espnow",   // 4.1: ESP-NOW; blocked until the owner approves it for web listeners
+    "rpr",      // 4.1: Robust Packet (physical layer, needs a recording); blocked until the owner approves it for web listeners
     };
     return s;
 }
