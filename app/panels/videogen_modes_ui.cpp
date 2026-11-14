@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// Tools > Digital video generator, tab "Digital Television Mode Selector" (videogen_modes_ui.h). Left: the link (bitrate, bandwidth,
+// Tools > Digital TV mode selector, a window of OnAir (#458: before, a tab of the Digital video generator) (videogen_modes_ui.h). Left: the link (bitrate, bandwidth,
 // C/N), and under it the most optimal mode. Right: a block per system (DVB-T, DVB-T2, DVB-T2 1.7 MHz, DVB-S, DVB-S2, DVB-S2X), its parameters on the left - each left open ("Any") or set -
 // and on the right the modes that still work on the link with those parameters, the best first. The inputs and the parameters are
 // kept in <data dir>/videogen_modes.txt.
@@ -10,6 +10,7 @@
 #include "../platform/platform.h"
 #include "dect2/common/u8file.h"
 #include "dect2/tv/dvb_modes.h"
+#include "dect2/tv/vglink.h"
 #include <algorithm>
 #include <array>
 #include <cstdio>
@@ -21,7 +22,7 @@ using namespace dect2::vgen;
 
 namespace {
 
-const char* const kLinkHelp = N_("What the link offers. The bitrate is what has to be carried: the generator's TS mux rate unless you untick it. The bandwidth is the room you have on the spectrum (a channel, a band-plan segment). The C/N is the ratio of the carrier to the noise you see on the spectrum analyser, in the same bandwidth as the signal.");
+const char* const kLinkHelp = N_("What the link offers. The bitrate is what has to be carried: the mux rate the Digital video generators send to the transmitter now, unless you untick it. The bandwidth is the room you have on the spectrum (a channel, a band-plan segment). The C/N is the ratio of the carrier to the noise you see on the spectrum analyser, in the same bandwidth as the signal.");
 
 const char* const kModesHelp = N_("Per system, set the parameters you want or leave them on Any. The list beside them shows the modes that carry the bitrate within the bandwidth at the C/N, the best first: the smallest bandwidth, then the most C/N margin. Satellite modes have a free symbol rate: their bandwidth is what the bitrate needs, their capacity what the whole bandwidth would carry. The thresholds are the ideal AWGN values of the standards (no implementation margin, phase noise or multipath): keep a few dB in hand. The DVB-T2 bitrate is the ideal cell capacity (P1/P2 symbols and signalling not deducted), so the real one is a few percent lower.");
 
@@ -145,11 +146,13 @@ void linkInputs(Sel& s, int generatorKbps) {
     ImGui::SeparatorText(tr("Link"));
     helpMark(kLinkHelp);
     const float col = 110 * gUi, w = std::max(90 * gUi, ImGui::GetContentRegionAvail().x - col);
-    if (s.fromGenerator) s.mbps = generatorKbps / 1000.0;
+    if (s.fromGenerator && generatorKbps > 0) s.mbps = generatorKbps / 1000.0;
     ImGui::BeginDisabled(s.fromGenerator);
     numberRow(N_("Bitrate"), "##dmsrate", s.mbps, "%.3f Mbit/s", 0.001, 1000, col, w);
     ImGui::EndDisabled();
-    ImGui::Checkbox(tr("The generator's TS mux rate"), &s.fromGenerator);
+    ImGui::Checkbox(tr("Live from the generators"), &s.fromGenerator);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The bitrate is what the Digital video generators linked to OnAir send to the transmitter now (their mux rate). Untick it to type a bitrate."));
+    if (s.fromGenerator && generatorKbps <= 0) ImGui::TextDisabled("%s", tr("No generator is sending: the last bitrate stays."));
     numberRow(N_("Bandwidth"), "##dmsbw", s.bwMHz, "%.3f MHz", 0.01, 1000, col, w);
     numberRow(N_("C/N"), "##dmscn", s.cnDb, "%.1f dB", -20, 60, col, w);
 }
@@ -347,4 +350,15 @@ void dvbModeSelectorTab(int generatorKbps) {
     for (int i = 0; i < kNumDvbSystems; i++) systemBlock(s, (DvbSystem)i);
     ImGui::EndChild();
     saveSoon(s);
+}
+
+// Tools > Digital TV mode selector: the bitrate follows what the linked generators send now (their mux rates added up)
+void dvbModesWindow(App& a) {
+    if (!a.dvbModesOpen) return;
+    double bps = 0;
+    for (const auto& p : dect2::vgen::vgLinkServer().peers()) bps += p.rateBps;
+    firstWindowSize(1100 * gUi, 760 * gUi);
+    if (ImGui::Begin(trw("Digital TV mode selector"), &a.dvbModesOpen)) dvbModeSelectorTab((int)(bps / 1000));
+    ImGui::End();
+    if (!a.dvbModesOpen) savePrefs(a);
 }

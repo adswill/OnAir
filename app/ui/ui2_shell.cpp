@@ -305,7 +305,12 @@ void sideToolsBody(App& a) {
     tool("Signal Lab...", a.signallabOpen, N_("Blind analysis of an unknown digital signal from the spectrum or a recording, stage by stage with confidences, a bit viewer and a Mode Builder export"));
     tool("Mode Builder...", a.modeBuilderOpen, N_("Build a decoder without code: describe the modulation, sync word, frame, FEC, CRC and fields, test it on a recording, add it to the mode list"));
     tool("TX studio...", a.txStudioOpen, N_("Make a transmit signal as a file: spectrum, waterfall, measurements and a decoder check. No radio, nothing is transmitted"));
-    tool("Digital video generator...", a.videoGenOpen, N_("Encode a camera, a still picture or a video file with an overlay into an MPEG transport stream: a .ts file or a UDP / RTP stream (port 5000)"));
+    {   // its own program (#458): a click starts it, or brings it to the front; the tick shows that it runs
+        bool on = a.videoGenOpen;
+        if (ImGui::Checkbox(tr("Digital video generator..."), &on)) videoGenRequest(a);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Starts the Digital video generator (its own window), or brings it to the front: a camera, pictures or video files with an overlay, as programmes for the transmitter, a UDP / RTP stream or a .ts file"));
+    }
+    tool("Digital TV mode selector...", a.dvbModesOpen, N_("Which DVB mode carries a bitrate in your bandwidth at your C/N: follows the mux rate the generators send to the transmitter"));
     tool("Integrations...", a.integrationsOpen, N_("Send decoded events (aircraft, ships, APRS, pagers, sondes ...) to an MQTT broker, Home Assistant, a webhook or a JSON-lines file. Off until you set it up"));
     tool("Conversations...", a.ssbConvOpen, N_("Finds SSB voice on the span and organises it into conversations you can just listen to: auto-listen, record, timeline"));
     tool("Watchlists...", a.watchlistOpen, N_("Alerts when listed aircraft, ships, call signs, frequencies or words are heard: notification, sound, ntfy, Telegram or webhook"));
@@ -606,8 +611,10 @@ static void toolMenuItem(App& a, const menugroups::ToolItem& it) {
         case T::ModeBuilder: ImGui::MenuItem(lab, nullptr, &a.modeBuilderOpen); break;
         case T::TxStudio: ImGui::MenuItem(lab, nullptr, &a.txStudioOpen);
             tip(tr("Make a transmit signal as a file, with spectrum, waterfall, measurements and a decoder check. No radio, nothing is transmitted.")); break;
-        case T::VideoGen: if (ImGui::MenuItem(lab, nullptr, &a.videoGenOpen)) savePrefs(a);
-            tip(tr("Encode a camera, a still picture or a video file with an overlay into an MPEG transport stream: a .ts file or a UDP / RTP stream (port 5000)")); break;
+        case T::VideoGen: if (ImGui::MenuItem(lab, nullptr, a.videoGenOpen)) videoGenRequest(a);   // its own program (#458): starts it or brings it to the front
+            tip(tr("Starts the Digital video generator (its own window), or brings it to the front: a camera, pictures or video files with an overlay, as programmes for the transmitter, a UDP / RTP stream or a .ts file")); break;
+        case T::DvbModes: if (ImGui::MenuItem(lab, nullptr, &a.dvbModesOpen)) savePrefs(a);
+            tip(tr("Which DVB mode carries a bitrate in your bandwidth at your C/N: follows the mux rate the generators send to the transmitter")); break;
         case T::Integrations: ImGui::MenuItem(lab, nullptr, &a.integrationsOpen); break;
         case T::Conversations: ImGui::MenuItem(lab, nullptr, &a.ssbConvOpen); break;
         case T::Watchlists: ImGui::MenuItem(lab, nullptr, &a.watchlistOpen); break;

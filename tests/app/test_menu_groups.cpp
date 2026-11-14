@@ -78,7 +78,8 @@ int main() {
     }
     for (const char* l : kOld) CHECK(seen[l] == 1, "\"%s\" appears %d times in the table (want 1)", l, seen[l]);
     CHECK(seen["Plugin store..."] == 1, "Plugin store entry missing");
-    CHECK(n == (int)(sizeof kOld / sizeof kOld[0]) + 1, "table has %d items, the old menu %d + the new Plugin store", n, (int)(sizeof kOld / sizeof kOld[0]));
+    CHECK(seen["Digital TV mode selector..."] == 1, "Digital TV mode selector entry missing (#458: moved out of the generator)");
+    CHECK(n == (int)(sizeof kOld / sizeof kOld[0]) + 2, "table has %d items, the old menu %d + the new Plugin store and Digital TV mode selector", n, (int)(sizeof kOld / sizeof kOld[0]));
     for (int g = 0; g < kNumToolGroups; g++) {
         CHECK(perGroup[g] >= 2, "group %d (%s) has %d items: no group with one item", g, toolGroupTitle(g), perGroup[g]);
         CHECK(perGroup[g] <= 9, "group %d (%s) has %d items", g, toolGroupTitle(g), perGroup[g]);

@@ -391,7 +391,8 @@ struct App {
     bool signallabOpen = false;    // Tools > Signal Lab: blind analysis of an unknown digital signal, stage by stage, with a bit viewer (signallab_ui.cpp)
     bool modeBuilderOpen = false;  // Tools > Mode Builder: decoders built from a JSON definition (modebuilder_ui.cpp)
     bool txStudioOpen = false;     // Tools > TX studio: make, measure, decode-check and save a transmit signal without a radio (tx_studio.cpp)
-    bool videoGenOpen = false;     // Tools > Digital video generator: camera / picture / video file to a .ts file or a UDP / RTP stream (videogen_ui.cpp)
+    bool videoGenOpen = false;     // Tools > Digital video generator: the program onair-videogen runs (vg_launch.cpp, #458)
+    bool dvbModesOpen = false;     // Tools > Digital TV mode selector (videogen_modes_ui.cpp)
     bool pluginsOpen = false;      // View > Plugins: the plugin manager (plugin/plugin_app.cpp)
     bool automationOpen = false;   // View > Automations: rules and scripts (automation_ui.cpp)
     dect2::FeedConfig feeds;  // the data feeds out (all off by default), saved with the preferences
@@ -1077,8 +1078,11 @@ void modeBuilderFrame(App& a);    // modebuilder_ui.cpp, every frame: lists the 
 void modeBuilderOpenText(const std::string& json);   // modebuilder_ui.cpp: opens the Mode Builder with this definition (Protocol lab > Export)
 bool customModeSink(const float* iq, size_t nComplex, double rate);   // modebuilder_ui.cpp: the samples of a running custom mode (true: taken)
 void txStudioWindow(App& a);   // tx_studio.cpp: Tools > TX studio (a.txStudioOpen); no radio, nothing is transmitted
-bool vgQueueDrop(int n, const char** paths);   // videogen_ui.cpp: files dropped on the window; true when the Digital video generator is open and took them
-void videoGenWindow(App& a);   // videogen_ui.cpp: Tools > Digital video generator (a.videoGenOpen); stands alone, no link to the receiver or transmitter
+void videoGenRequest(App& a);   // vg_launch.cpp: Tools > Digital video generator: starts onair-videogen, or brings it to the front
+void videoGenTick(App& a);      // vg_launch.cpp: every frame (the link server, the generator ending)
+void videoGenShutdown();        // vg_launch.cpp: OnAir closes: the generator it started quits
+const std::string& videoGenError();   // vg_launch.cpp: why the link or the program did not start (empty: fine)
+void dvbModesWindow(App& a);    // videogen_modes_ui.cpp: Tools > Digital TV mode selector (a.dvbModesOpen)
 void pluginRegister(App& a);       // plugin/plugin_app.cpp: discovery and the tunings of the plugin rows; first thing in the frame
 void pluginFrame(App& a);          // plugin/plugin_app.cpp, every frame: discovery at the first call, starts and stops the running plugin mode, ticks the host
 void pluginShutdown();             // at exit: stops the plugins and removes the crash marker

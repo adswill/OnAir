@@ -380,6 +380,24 @@ int suggestVideoKbps(const Settings& s) {
 
 int effectiveVideoKbps(const Settings& s) { return std::max(minVideoKbps(s), s.autoBitrate ? suggestVideoKbps(s) : s.videoKbps); }
 
+bool fitVideoToMux(Settings& s, int muxKbps) {
+    s.autoBitrate = false;
+    s.autoMux = false;
+    s.muxKbps = std::max(100, muxKbps);
+    int lo = minVideoKbps(s), hi = std::max(lo, s.muxKbps);
+    s.videoKbps = lo;
+    if (estimate(s).suggestedMux > s.muxKbps) return false;
+    while (hi - lo > 10) {   // the suggested mux rate grows with the video bitrate
+        const int mid = (lo + hi) / 2 / 10 * 10;
+        if (mid <= lo) break;
+        s.videoKbps = mid;
+        if (estimate(s).suggestedMux <= s.muxKbps) lo = mid;
+        else hi = mid;
+    }
+    s.videoKbps = lo;
+    return true;
+}
+
 Budget estimate(const Settings& s) {
     Budget b;
     const double fps = std::max(0.1, s.fps);

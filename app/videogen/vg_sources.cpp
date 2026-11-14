@@ -1,35 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// Tools > Digital video generator: a camera, a still picture or a video file encoded into an MPEG transport stream, written to a .ts
-// file or sent over UDP / RTP (port 5000 unless changed). Three tabs: "Sources and encoding" (the input, resolution and frame rate; with
-// Advanced ticked also the output and every encoder parameter; the bitrate estimate follows each change), "Preview" (the picture, with
-// a red cross while nothing is sent, and the overlay: a logo, parameter blocks, free text and rolling text, placed by drag and drop) and "Digital Television Mode Selector" (the DVB modes that carry the stream on a link,
-// videogen_modes_ui.cpp). A standalone tool: it does not touch the receiver or the transmitter; a .ts file it writes can be given to the
-// transmitter as its "MPEG-TS / video file". The engine is core/src/tv/videogen*.cpp.
-#include "../app.h"
-#include "../platform/platform.h"
-#include "videogen_modes_ui.h"
-#include "dect2/audio/audioin.h"
-#include "dect2/audio/videoin.h"
+// onair-videogen (vg_state.h): a source's rows (input, encoding), the bitrate estimate, the overlay editor and the preview picture.
+// Moved from OnAir's Tools > Digital video generator window (#458).
+#include "vg_state.h"
+#include "platform.h"
 #include "dect2/common/u8file.h"
 #include "dect2/net/swarm_net.h"
-#include "dect2/tv/videogen.h"
 #include "dect2/tv/videogen_rtmp.h"
 #include <algorithm>
 #include <array>
 #include <atomic>
-#include <mutex>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include <future>
-#include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
-using namespace dect2::vgen;
+namespace vgui {
 
 namespace {
 
@@ -41,7 +31,6 @@ const int kSampleRates[] = {32000, 44100, 48000};
 const char* const kSourceNames[] = {N_("Camera"), N_("Still picture"), N_("Video file"), N_("Test generator"), N_("RTMP server (OBS Studio)")};
 const char* const kPatternNames[] = {N_("Test card"), N_("Colour bars"), N_("Grey ramp")};
 const char* const kAudioNames[] = {N_("Silence"), N_("Test tone (1 kHz)"), N_("Sound of the video file / stream"), N_("Microphone"), N_("Your own sound file / folder")};
-const char* const kOutputNames[] = {N_("MPEG-TS file (.ts)"), N_("UDP stream"), N_("RTP stream"), N_("Transmitter (OnAir TX)")};
 const char* const kFitNames[] = {N_("Stretch"), N_("Letterbox"), N_("Crop")};
 const char* const kContentNames[] = {N_("Video only"), N_("Video + audio"), N_("Video + multiple audio tracks")};
 const char* const kRcNames[] = {N_("CBR"), N_("Constrained VBR"), N_("VBR / CRF")};
@@ -105,57 +94,17 @@ const RowHelp kRowHelp[] = {
     {N_("Audio PID"), N_("The packet ID of the first audio track; further tracks follow it.")},
 };
 
-const char* const kToolHelp = N_("Encodes a camera, a still picture or a video file, with the overlay of the second tab, into an MPEG transport stream: a .ts file, or a UDP / RTP stream to watch in VLC. A .ts file can be given to the transmitter as its \"MPEG-TS / video file\". The estimate on the right of the first tab shows the bitrate the settings need, so you can fit the stream to your DVB link before encoding; the tab Digital Television Mode Selector shows which DVB modes carry it in your bandwidth at your C/N. Each setting has its own (?). The whole guide: docs/VIDEO-GENERATOR.md.");
+} // namespace
 
+const char* const kToolHelp = N_("Encodes cameras, still pictures, video files or the test generator, each with its own overlay, into one MPEG transport stream and sends it to OnAir's transmitter (Easy mode does only that and fits the bitrate to the transmitter's channel). Advanced adds sources (tabs Source 1, Source 2 ...), the Muxing tab (programme numbers, names, PIDs, capacity, the output: transmitter, .ts file, UDP or RTP) and the Preview tab with the overlay editor. The estimate on the right of a source shows the bitrate its settings need. OnAir's Tools > Digital TV mode selector shows which DVB modes carry the stream in your bandwidth at your C/N. Each setting has its own (?). The whole guide: docs/VIDEO-GENERATOR.md.");
+
+namespace {
 struct DropItem { int kind; int param; };   // the drag-and-drop payload "VGBLOCK"
 
-struct State {
-    int idx = 0;             // which generator this is (0 = the first; the transmitter names it generator:idx+1)
-    bool init = false;
-    GenConfig cfg;
-    bool lengthEdited = false;
-    bool advanced = false;   // the first tab shows every setting; off: only the input, resolution and frame rate
-    std::future<void> probe;   // encoders, cameras and microphones, looked up when the window first opens
-    bool probed = false;
-    std::vector<dect2::VideoInputDevice> cams, camsFound;
-    std::vector<dect2::AudioInputDevice> mics, micsFound;
-    VideoGenerator gen;
-    bool previewing = false;   // the run going (or the last one) is a preview: the picture only, nothing encoded or sent
-    std::string previewKey;    // what the preview picture was started with (pictureKey)
-    std::string msg, note;   // msg: a problem (red); note: what a drop just set
-    std::string savedCfg, savedLayout, sentLayout;
-    double lastSave = 0;
-    double minRateNoticeUntil = 0;   // the video bitrate was raised to the MPEG-2 minimum: explain why until then
-    // overlay editor
-    int sel = -1;
-    bool dragging = false, resizing = false, snap = true;
-    ImVec2 grab{0, 0};
-    OverlayRenderer ovr;
-    std::shared_ptr<const std::vector<uint8_t>> font;
-    gfx::Image* ovImg = nullptr;
-    int ovW = 0, ovH = 0;
-    std::string ovKey;
-    double ovAt = 0;
-    std::vector<uint8_t> ovRgba;
-    gfx::Image* prevImg = nullptr;
-    int prevW = 0, prevH = 0;
-    uint64_t prevSerial = 0;
-    std::vector<uint8_t> prevRgba;
-    double startedAt = 0;
-};
+} // namespace
 
-// Several generators can run at once (each its own settings, stream and queue for the transmitter); the window shows one at a time.
-std::vector<std::unique_ptr<State>> gInst;
-int gCur = 0;
-State& S() {
-    if (gInst.empty()) gInst.push_back(std::make_unique<State>());
-    gCur = std::clamp(gCur, 0, (int)gInst.size() - 1);
-    return *gInst[(size_t)gCur];
-}
-
-std::string instSuffix(int i) { return i == 0 ? std::string() : "_" + std::to_string(i + 1); }
-std::string cfgPath(int i) { return plat::dataDir() + "/videogen" + instSuffix(i) + ".txt"; }
-std::string layoutPath(int i) { return plat::dataDir() + "/videogen_overlay" + instSuffix(i) + ".txt"; }
+std::string cfgPath(int i) { return plat::dataDir() + "/videogen" + (i == 0 ? std::string() : "_" + std::to_string(i + 1)) + ".txt"; }
+std::string layoutPath(int i) { return plat::dataDir() + "/videogen_overlay" + (i == 0 ? std::string() : "_" + std::to_string(i + 1)) + ".txt"; }
 
 std::string readText(const std::string& p) {
     std::string t;
@@ -268,7 +217,7 @@ void rowLabel(const char* english, float col) {
     ImGui::SameLine(col);
 }
 
-bool combo(const char* id, int& v, const char* const* names, int n, float width, const std::vector<bool>* enabled = nullptr, const char* offTip = nullptr) {
+bool combo(const char* id, int& v, const char* const* names, int n, float width, const std::vector<bool>* enabled, const char* offTip) {
     bool changed = false;
     ImGui::SetNextItemWidth(width);
     if (ImGui::BeginCombo(id, tr(names[std::clamp(v, 0, n - 1)]))) {
@@ -291,46 +240,15 @@ std::string kbpsText(double v) {
     return b;
 }
 
-void startProbe(State& s) {
-    s.probed = false;
-    s.probe = std::async(std::launch::async, [&s] {
+void startProbe(Gen& g) {
+    g.probed = false;
+    g.probe = std::async(std::launch::async, [&g] {
         videoEncoders();
         audioEncoders();
-        s.camsFound = dect2::listVideoInputs();   // lists only: no camera is opened until Start
-        s.micsFound = dect2::listAudioInputs();
+        g.camsFound = dect2::listVideoInputs();   // lists only: no camera is opened until Start
+        g.micsFound = dect2::listAudioInputs();
     });
 }
-
-void loadOnce(State& s) {
-    if (s.init) return;
-    s.init = true;
-    s.cfg.instanceId = s.idx + 1;
-    s.cfg.tsPath = plat::dataDir() + "/onair_video" + instSuffix(s.idx) + ".ts";
-    s.cfg.port = 5000 + s.idx;
-    s.cfg.output = Output::Udp;   // a new user streams (to this PC, 127.0.0.1:5000); a saved choice replaces it
-    const std::string c = readText(cfgPath(s.idx));
-    if (!c.empty()) { loadCfg(c, s.cfg, s.advanced); s.lengthEdited = true; }
-    const std::string l = readText(layoutPath(s.idx));
-    if (!l.empty()) s.cfg.overlay = loadLayout(l);
-    s.savedCfg = saveCfg(s.cfg, s.advanced);
-    s.savedLayout = saveLayout(s.cfg.overlay);
-    s.font = atlasFont();
-    s.ovr.setFont(s.font);
-    startProbe(s);
-}
-
-void saveSoon(State& s) {
-    const double now = ImGui::GetTime();
-    if (now - s.lastSave < 1.0) return;
-    s.lastSave = now;
-    const std::string c = saveCfg(s.cfg, s.advanced), l = saveLayout(s.cfg.overlay);
-    if (c != s.savedCfg) { writeText(cfgPath(s.idx), c); s.savedCfg = c; }
-    if (l != s.savedLayout) { writeText(layoutPath(s.idx), l); s.savedLayout = l; }
-}
-
-// a stream or a file is being made (not a preview)
-bool sending(const State& s) { return s.gen.running() && !s.previewing; }
-bool previewRunning(const State& s) { return s.gen.running() && s.previewing; }
 
 // the settings that change the preview picture: a change restarts a running preview
 std::string pictureKey(const GenConfig& c) {
@@ -339,29 +257,10 @@ std::string pictureKey(const GenConfig& c) {
            "|" + std::to_string(c.slideSeconds);
 }
 
-// starts the stream or the file, or (preview) only the picture for the Preview tab; a preview going is stopped first
-void startRun(State& s, bool preview) {
-    if (s.gen.running()) s.gen.stop();
-    GenConfig run = s.cfg;
-    run.previewOnly = preview;
-    run.enc.videoEncoder = pickVideoEncoder(s.cfg.enc.videoEncoder, videoEncoders());
-    run.font = s.font;
-    std::string err;
-    if (s.gen.start(run, err)) {
-        s.msg.clear();
-        s.note.clear();
-        s.sentLayout = saveLayout(s.cfg.overlay);
-        s.startedAt = ImGui::GetTime();
-        s.prevSerial = 0;
-        s.previewing = preview;
-        s.previewKey = pictureKey(s.cfg);
-    } else s.msg = err;
-}
-
 // ---- the first tab: sources, output, encoding ----
 
 // the stream length follows what was chosen: a video's own length, a slideshow's pictures times their seconds
-void fitLength(State& s) {
+void fitLength(SourceTab& s) {
     GenConfig& c = s.cfg;
     if (s.lengthEdited) return;
     if (c.source == Source::VideoFile) {
@@ -377,14 +276,15 @@ void fitLength(State& s) {
 
 // Files dropped on the window (GLFW's drop callback, vgQueueDrop): a picture or a folder of pictures becomes the picture / slideshow, a
 // video or a folder of videos the video, a sound file or folder the sound; one drop sets only its own slot.
+namespace {
 std::mutex gDropMu;
 std::vector<std::string> gDrops;
-std::atomic<bool> gWantDrops{false};
+} // namespace
 
-void applyDrops(State& s) {
+void applyDrops(SourceTab& s, bool locked) {
     std::vector<std::string> d;
     { std::lock_guard<std::mutex> lk(gDropMu); d.swap(gDrops); }
-    if (d.empty() || sending(s)) return;   // a preview follows the dropped file (pictureKey)
+    if (d.empty() || locked) return;   // a preview follows the dropped file (pictureKey)
     GenConfig& c = s.cfg;
     for (const std::string& p : d) {
         const MediaKind k = dropKind(p);
@@ -401,6 +301,7 @@ void applyDrops(State& s) {
 }
 
 // this PC's addresses on the local network, for the OBS settings (looked up once a few seconds, not every frame)
+namespace {
 std::string thisPcAddress() {
     static std::string cached;
     static double at = -100;
@@ -416,7 +317,7 @@ std::string thisPcAddress() {
 }
 
 // RTMP server input: the address to listen on, what to type in OBS, and (streaming) what arrives
-void rtmpRows(State& s, float col, float w) {
+void rtmpRows(SourceTab& s, float col, float w) {
     GenConfig& c = s.cfg;
     rowLabel(N_("RTMP address"), col);
     inputText("##vgrtmp", c.rtmpUrl, w - 90 * gUi);
@@ -435,12 +336,16 @@ void rtmpRows(State& s, float col, float w) {
     ImGui::TextDisabled("  %s: %s", tr("Server"), server.c_str());
     ImGui::TextDisabled("  %s: %s", tr("Stream key"), key.empty() ? tr("(empty)") : key.c_str());
     if (several && server.find('<') != std::string::npos) ImGui::TextDisabled("  %s: %s", tr("This PC"), pc.c_str());   // only when listening on every card
-    const GenStats st = s.gen.stats();
-    if (s.gen.running() && !st.input.empty()) ImGui::TextColored(ImVec4(0.55f, 0.85f, 0.55f, 1), "%s", st.input.c_str());
+    const SourceStatus ss = G().ses.sourceStatus(s.idx);
+    const GenStats& st = ss.gen;
+    if (ss.running && !st.input.empty()) ImGui::TextColored(ImVec4(0.55f, 0.85f, 0.55f, 1), "%s", st.input.c_str());
 }
 
-void sourceSection(State& s, float col, float w) {
+} // namespace
+
+void sourceSection(SourceTab& s, float col, float w, bool advanced) {
     GenConfig& c = s.cfg;
+    Gen& g = G();
     ImGui::SeparatorText(tr("Source"));
     rowLabel(N_("Input"), col);
     int src = (int)c.source;
@@ -453,18 +358,18 @@ void sourceSection(State& s, float col, float w) {
     if (c.source == Source::Camera) {
         rowLabel(N_("Camera"), col);
         std::string cur = tr("Default camera");
-        for (const auto& d : s.cams) if (d.id == c.cameraId) cur = d.name;
+        for (const auto& d : g.cams) if (d.id == c.cameraId) cur = d.name;
         ImGui::SetNextItemWidth(w - 90 * gUi);
         if (ImGui::BeginCombo("##vgcam", cur.c_str())) {
             if (ImGui::Selectable(tr("Default camera"), c.cameraId.empty())) c.cameraId.clear();
-            for (const auto& d : s.cams) if (!d.id.empty() && ImGui::Selectable(d.name.c_str(), d.id == c.cameraId)) c.cameraId = d.id;
+            for (const auto& d : g.cams) if (!d.id.empty() && ImGui::Selectable(d.name.c_str(), d.id == c.cameraId)) c.cameraId = d.id;
             ImGui::EndCombo();
         }
         ImGui::SameLine();
-        ImGui::BeginDisabled(!s.probed);
-        if (ImGui::Button(tr("Refresh##vgcam"))) startProbe(s);
+        ImGui::BeginDisabled(!g.probed);
+        if (ImGui::Button(tr("Refresh##vgcam"))) startProbe(g);
         ImGui::EndDisabled();
-        if (s.probed && s.cams.empty()) ImGui::TextDisabled("%s", tr("No camera found. Connect one and press Refresh."));
+        if (g.probed && g.cams.empty()) ImGui::TextDisabled("%s", tr("No camera found. Connect one and press Refresh."));
     } else if (c.source == Source::Rtmp) {
         rtmpRows(s, col, w);
     } else if (c.source == Source::Generator) {
@@ -495,7 +400,7 @@ void sourceSection(State& s, float col, float w) {
         }
         ImGui::TextDisabled("%s", tr("Tip: drag a picture, video, sound file or folder onto this window."));
     }
-    if (!s.advanced) return;
+    if (!advanced) return;
     rowLabel(N_("Picture fit"), col);
     int fit = (int)c.fit;
     ImGui::BeginDisabled(c.source == Source::Generator);   // drawn at the output size
@@ -521,54 +426,21 @@ void sourceSection(State& s, float col, float w) {
     if (c.audio == AudioSource::Microphone) {
         rowLabel(N_("Microphone"), col);
         std::string cur = tr("Default input");
-        for (const auto& d : s.mics) if (d.id == c.micId) cur = d.name;
+        for (const auto& d : g.mics) if (d.id == c.micId) cur = d.name;
         ImGui::SetNextItemWidth(w);
         if (ImGui::BeginCombo("##vgmic", cur.c_str())) {
             if (ImGui::Selectable(tr("Default input"), c.micId.empty())) c.micId.clear();
-            for (const auto& d : s.mics) if (!d.id.empty() && ImGui::Selectable(d.name.c_str(), d.id == c.micId)) c.micId = d.id;
+            for (const auto& d : g.mics) if (!d.id.empty() && ImGui::Selectable(d.name.c_str(), d.id == c.micId)) c.micId = d.id;
             ImGui::EndCombo();
         }
     }
 }
 
-void outputSection(State& s, float col, float w) {
+// the length of a source in a .ts file (the Muxing tab's output is a file); a stream runs until Stop
+void lengthRow(SourceTab& s, float col, bool file) {
     GenConfig& c = s.cfg;
-    ImGui::SeparatorText(tr("Output"));
-    rowLabel(N_("Send to"), col);
-    int out = (int)c.output;
-    if (combo("##vgout", out, kOutputNames, 4, w)) c.output = (Output)out;
-    if (c.output == Output::File) {
-        rowLabel(N_("File"), col);
-        inputText("##vgts", c.tsPath, w - 90 * gUi);
-        ImGui::SameLine();
-        if (ImGui::Button(tr("Browse...##vgts"))) {
-            const std::string p = plat::saveFileDialog("onair_video.ts");
-            if (!p.empty()) c.tsPath = p;
-        }
-    } else if (c.output == Output::Transmitter) {
-        rowLabel(N_("Name for the transmitter"), col);
-        const std::string spec = generatorSpec(c.instanceId);
-        ImGui::TextUnformatted(spec.c_str());
-        ImGui::SameLine();
-        if (ImGui::SmallButton(tr("Copy##vgspec"))) ImGui::SetClipboardText(spec.c_str());
-        ImGui::TextDisabled("%s", tr("In Transmit, choose \"Video generator\" as the video source (or type this name as the video file). Start streaming here first: until then the transmitter sends null packets."));
-    } else {
-        rowLabel(N_("Address"), col);
-        inputText("##vghost", c.host, w * 0.6f);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The receiving PC (unicast) or a multicast group such as 239.1.1.1"));
-        ImGui::SameLine();
-        ImGui::TextUnformatted(tr("Port"));
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(std::max(60 * gUi, w * 0.4f - ImGui::CalcTextSize(tr("Port")).x - ImGui::GetStyle().ItemSpacing.x * 2));
-        if (ImGui::InputInt("##vgport", &c.port, 0)) c.port = std::clamp(c.port, 1, 65535);
-        if (isMulticast(c.host)) {
-            rowLabel(N_("TTL"), col);
-            ImGui::SetNextItemWidth(120 * gUi);
-            if (ImGui::InputInt("##vgttl", &c.ttl)) c.ttl = std::clamp(c.ttl, 1, 255);
-        }
-    }
     rowLabel(N_("Length"), col);
-    const bool stream = c.output != Output::File;
+    const bool stream = !file;
     ImGui::BeginDisabled(stream);   // a stream goes on until it is stopped
     ImGui::SetNextItemWidth(150 * gUi);
     if (ImGui::InputDouble("##vglen", &c.seconds, 10, 60, "%.1f s")) { c.seconds = std::clamp(c.seconds, 1.0, 86400.0); s.lengthEdited = true; }
@@ -581,6 +453,7 @@ void outputSection(State& s, float col, float w) {
     }
 }
 
+namespace {
 // Why an encoder this FFmpeg has does not work here, in plain words (FFmpeg's own message follows it in the tooltip)
 const char* encoderAdvice(const std::string& name) {
     if (name.find("_nvenc") != std::string::npos) return N_("needs an NVIDIA graphics card (GeForce GTX 600 or newer) with a current driver");
@@ -625,12 +498,17 @@ void encoderNotice(const std::vector<EncoderInfo>& venc) {
     ImGui::EndTooltip();
 }
 
+} // namespace
+
 // frame rate and resolution: in the Video section, and the only encoder rows when the Advanced box is off
+namespace {
 std::string fpsText(double f) {
     std::array<char, 32> b{};
     snprintf(b.data(), b.size(), "%.*f fps", f == std::floor(f) ? 0 : 1, f);
     return b.data();
 }
+
+} // namespace
 
 void frameRows(Settings& e, float col, float w) {
     rowLabel(N_("Frame rate"), col);
@@ -648,7 +526,7 @@ void frameRows(Settings& e, float col, float w) {
     }
 }
 
-void encodingSection(State& s, float col, float w) {
+void encodingSection(SourceTab& s, float col, float w) {
     Settings& e = s.cfg.enc;
     const auto& venc = videoEncoders();
     const auto& aenc = audioEncoders();
@@ -790,7 +668,7 @@ void encodingSection(State& s, float col, float w) {
 
     ImGui::SeparatorText(tr("Transport stream"));
     const Budget b = estimate(e);
-    rowLabel(N_("TS mux rate"), col);
+    rowLabel(N_("Share of the multiplex"), col);
     if (e.autoMux) e.muxKbps = b.suggestedMux;
     ImGui::BeginDisabled(e.autoMux);
     ImGui::SetNextItemWidth(130 * gUi);
@@ -801,28 +679,10 @@ void encodingSection(State& s, float col, float w) {
     ImGui::SameLine();
     ImGui::Checkbox(tr("Auto##vgmux"), &e.autoMux);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The total TS rate with signalling and null packets. Set it to what the DVB link carries, or let it follow the estimate."));
-    rowLabel(N_("Service ID"), col);
-    ImGui::SetNextItemWidth(130 * gUi);
-    if (ImGui::InputInt("##vgsid", &e.serviceId)) e.serviceId = std::clamp(e.serviceId, 1, 65535);
     rowLabel(N_("Service name"), col);
     inputText("##vgsname", e.serviceName, w);
     rowLabel(N_("Provider"), col);
     inputText("##vgsprov", e.provider, w);
-    rowLabel(N_("PIDs"), col);
-    ImGui::Checkbox(tr("Automatic##vgpid"), &e.autoPids);
-    if (!e.autoPids) {
-        auto pid = [&](const char* label, const char* id, int& v, int hi) {
-            rowLabel(label, col);
-            ImGui::SetNextItemWidth(130 * gUi);
-            if (ImGui::InputInt(id, &v, 1, 16, ImGuiInputTextFlags_CharsHexadecimal)) v = std::clamp(v, 0x20, hi);
-            ImGui::SameLine();
-            ImGui::TextDisabled("0x%04X", v);
-        };
-        pid(N_("PMT PID"), "##vgpmt", e.pmtPid, 0x1FFE);
-        pid(N_("Video PID"), "##vgvpid", e.videoPid, 0x1FFE);
-        pid(N_("Audio PID"), "##vgapid", e.audioPid, 0x1FFA);
-        if (audioTrackCount(e) > 1) ImGui::TextDisabled("%s (0x%04X)", tr("Audio track n uses the audio PID + n, up to"), e.audioPid + audioTrackCount(e) - 1);
-    }
 }
 
 // The estimate beside the settings: what each part takes of the mux rate, updated on every change
@@ -876,32 +736,9 @@ void estimatePanel(const Settings& e) {
     for (const std::string& w : checkSettings(e, b)) ImGui::TextColored(ImVec4(0.95f, 0.65f, 0.2f, 1), "%s", tr(w.c_str()));
 }
 
-void sourcesTab(State& s) {
-    const bool running = sending(s);   // a preview leaves the settings open: it restarts with them
-    const float right = std::min(340 * gUi, ImGui::GetContentRegionAvail().x * 0.4f);
-    ImGui::BeginChild("##vgsettings", ImVec2(ImGui::GetContentRegionAvail().x - right - ImGui::GetStyle().ItemSpacing.x, 0));
-    ImGui::Checkbox(tr("Advanced"), &s.advanced);
-    helpMark(N_("Off: only the input, the resolution and the frame rate; every other setting keeps its value. On: the output (file or stream), the sound and every encoder and transport stream setting."));
-    ImGui::BeginDisabled(running);
-    const float col = 175 * gUi, w = std::max(160 * gUi, std::min(360 * gUi, ImGui::GetContentRegionAvail().x - col - 8 * gUi));
-    sourceSection(s, col, w);
-    if (s.advanced) {
-        outputSection(s, col, w);
-        encodingSection(s, col, w);
-    } else {
-        ImGui::SeparatorText(tr("Video"));
-        frameRows(s.cfg.enc, col, w);
-    }
-    ImGui::EndDisabled();
-    ImGui::EndChild();
-    ImGui::SameLine();
-    ImGui::BeginChild("##vgestimate", ImVec2(0, 0));
-    estimatePanel(s.cfg.enc);
-    ImGui::EndChild();
-}
-
 // ---- the second tab, Preview: the picture and the overlay editor ----
 
+namespace {
 Block newBlock(BlockKind k, Param p) {
     Block b;
     b.kind = k;
@@ -915,7 +752,7 @@ Block newBlock(BlockKind k, Param p) {
     return b;
 }
 
-void paletteItem(const char* label, BlockKind k, Param p, const char* tip, State& s) {
+void paletteItem(const char* label, BlockKind k, Param p, const char* tip, SourceTab& s) {
     ImGui::Selectable(label, false);
     if (ImGui::BeginDragDropSource()) {
         const DropItem d{(int)k, (int)p};
@@ -933,7 +770,7 @@ void paletteItem(const char* label, BlockKind k, Param p, const char* tip, State
     if (tip && ImGui::IsItemHovered() && !ImGui::IsMouseDragging(ImGuiMouseButton_Left)) ImGui::SetTooltip("%s", tip);
 }
 
-void palette(State& s) {
+void palette(SourceTab& s) {
     ImGui::TextDisabled("%s", tr("Drag onto the picture"));
     helpMark(N_("Drag a block from this list onto the picture, or double-click it to put it in the middle. Drag a block to move it, and the blue corner to resize a logo or the rolling band. Magnetic: blocks snap to each other's edges and to the picture's edges and centre; hold Alt to place freely. Click a block to change its text, font size, colour and box on the right; Delete removes it. Parameter blocks show the current value from the first tab and follow it. What you see is drawn by the same code as the encoded picture; while encoding, the picture here is the encoder's own and your changes go out on the next frame. More in docs/VIDEO-GENERATOR.md."));
     ImGui::SeparatorText(tr("Blocks"));
@@ -943,7 +780,7 @@ void palette(State& s) {
     for (const ParamGroup& g : kGroups) {
         ImGui::SeparatorText(tr(g.name));
         for (Param p : g.params) {
-            const std::string tip = std::string(tr("From the tab \"Sources and encoding\"")) + " > " + tr(g.name) + ". " + tr("Now:") + " " + paramValue(p, s.cfg.enc);
+            const std::string tip = std::string(tr("From the source's tab")) + " > " + tr(g.name) + ". " + tr("Now:") + " " + paramValue(p, s.cfg.enc);
             ImGui::PushID((int)p);
             paletteItem(tr(paramLabel(p)), BlockKind::Param, p, tip.c_str(), s);
             ImGui::PopID();
@@ -951,7 +788,7 @@ void palette(State& s) {
     }
 }
 
-void properties(State& s) {
+void properties(SourceTab& s) {
     std::vector<Block>& bl = s.cfg.overlay.blocks;
     ImGui::Checkbox(tr("Magnetic"), &s.snap);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Blocks snap to each other's edges and to the picture's edges and centre. Hold Alt while dragging to place freely."));
@@ -1031,7 +868,9 @@ void properties(State& s) {
     if (ImGui::Button(tr("Delete"))) { bl.erase(bl.begin() + s.sel); s.sel = -1; }
 }
 
-void canvas(State& s) {
+} // namespace
+
+void canvas(SourceTab& s, bool editable, bool sending, bool previewing) {
     const Settings& e = s.cfg.enc;
     const int W = e.width, H = e.height;
     std::vector<Block>& bl = s.cfg.overlay.blocks;
@@ -1040,18 +879,11 @@ void canvas(State& s) {
     const ImVec2 size((float)W * sc, (float)H * sc);
     const ImVec2 p0 = ImGui::GetCursorScreenPos(), p1(p0.x + size.x, p0.y + size.y);
     ImGui::InvisibleButton("##vgcanvas", size);
-    const bool hovered = ImGui::IsItemHovered(), active = ImGui::IsItemActive(), activated = ImGui::IsItemActivated();
+    const bool hovered = editable && ImGui::IsItemHovered(), active = editable && ImGui::IsItemActive(), activated = editable && ImGui::IsItemActivated();
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    const bool running = s.gen.running();
-
-    // the picture: the engine's own frame while it runs, streaming or preview (overlay included), else a grey card with the overlay
-    // drawn by the same renderer
-    if (running) {
-        int pw = 0, ph = 0;
-        if (s.gen.preview(s.prevRgba, pw, ph, s.prevSerial)) {
-            if (!s.prevImg || pw != s.prevW || ph != s.prevH) { delete s.prevImg; s.prevImg = gGfx->createImage(pw, ph, 0xFF000000u); s.prevW = pw; s.prevH = ph; }
-            s.prevImg->update(0, 0, pw, ph, reinterpret_cast<const uint32_t*>(s.prevRgba.data()));
-        }
+    // the picture: the preview thread's (the engine's own frame, overlay included) while it shows this source, else a grey card with
+    // the overlay drawn by the same renderer
+    if (previewing) {
         if (s.prevImg) dl->AddImage(s.prevImg->texture(), p0, p1);
         else dl->AddRectFilled(p0, p1, IM_COL32(20, 20, 20, 255));
     } else {
@@ -1122,7 +954,7 @@ void canvas(State& s) {
     if (ImGui::IsItemDeactivated()) s.dragging = s.resizing = false;
 
     // a block dropped from the palette lands where the mouse is
-    if (ImGui::BeginDragDropTarget()) {
+    if (editable && ImGui::BeginDragDropTarget()) {
         if (const ImGuiPayload* pl = ImGui::AcceptDragDropPayload("VGBLOCK")) {
             DropItem d{};
             if (pl->Data && pl->DataSize == (int)sizeof d) std::copy_n(static_cast<const unsigned char*>(pl->Data), sizeof d, reinterpret_cast<unsigned char*>(&d));
@@ -1143,7 +975,7 @@ void canvas(State& s) {
 
     // outlines, the selection and its handle, the snap guides
     dl->PushClipRect(p0, p1, true);
-    for (size_t i = 0; i < bl.size(); i++) {
+    for (size_t i = 0; editable && i < bl.size(); i++) {
         const auto [a, z] = toScreen(rects[i]);
         const bool sel = (int)i == s.sel;
         dl->AddRect(a, z, sel ? IM_COL32(80, 200, 255, 255) : IM_COL32(255, 255, 255, 70), 0, 0, sel ? 2 * gUi : 1);
@@ -1157,169 +989,47 @@ void canvas(State& s) {
         if (snappedY) { dl->AddLine(ImVec2(p0.x, a.y), ImVec2(p1.x, a.y), g); dl->AddLine(ImVec2(p0.x, z.y), ImVec2(p1.x, z.y), g); }
     }
     // not streaming (stopped or a preview): a red cross over the picture and a line under it, so it is clear nothing goes out
-    if (!sending(s)) {
+    if (!sending) {
         const ImU32 red = IM_COL32(230, 50, 50, 200);
         const float t = std::max(3.f, 0.012f * std::min(size.x, size.y));
         dl->AddLine(p0, p1, red, t);
         dl->AddLine(ImVec2(p1.x, p0.y), ImVec2(p0.x, p1.y), red, t);
     }
     dl->PopClipRect();
-    if (!sending(s)) {
-        const bool file = s.cfg.output == Output::File;
+    if (!sending) {
+        const bool file = G().mux.output == Output::File;
         ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.35f, 1), "%s", file ? tr("Not encoding: this is only a preview. Press Start encoding to write the file.")
                                                                       : tr("Not streaming: this is only a preview. Press Start streaming to send it."));
     }
     if (!s.ovr.hasFont()) ImGui::TextDisabled("%s", tr("No font for the overlay text was found: text blocks are not drawn."));
-    else ImGui::TextDisabled("%dx%d. %s", W, H, tr("Drag to move, the corner to resize (logo, rolling text), Delete removes the selected block."));
+    else if (editable) ImGui::TextDisabled("%dx%d. %s", W, H, tr("Drag to move, the corner to resize (logo, rolling text), Delete removes the selected block."));
 }
 
-void overlayTab(State& s) {
+// the Preview tab's editor: the blocks, the picture, the selected block's properties
+void overlayEditor(SourceTab& s, bool sending, bool previewing) {
     const float leftW = 210 * gUi, rightW = 270 * gUi;
     ImGui::BeginChild("##vgpalette", ImVec2(leftW, 0), ImGuiChildFlags_Borders);
     palette(s);
     ImGui::EndChild();
     ImGui::SameLine();
     ImGui::BeginChild("##vgcanvaschild", ImVec2(ImGui::GetContentRegionAvail().x - rightW - ImGui::GetStyle().ItemSpacing.x, 0));
-    canvas(s);
+    canvas(s, true, sending, previewing);
     ImGui::EndChild();
     ImGui::SameLine();
     ImGui::BeginChild("##vgprops", ImVec2(0, 0), ImGuiChildFlags_Borders);
     properties(s);
     ImGui::EndChild();
     // live: the running encoder takes the edited overlay on its next frame
-    if (s.gen.running()) {
+    if (G().ses.sourceRunning(s.idx)) {
         const std::string l = saveLayout(s.cfg.overlay);
-        if (l != s.sentLayout) { s.gen.setOverlay(s.cfg.overlay); s.sentLayout = l; }
+        if (l != s.sentLayout) { G().ses.setOverlay(s.idx, s.cfg.overlay); s.sentLayout = l; }
     }
 }
 
-// ---- above both tabs: start / stop, progress, the address to open ----
-
-void controlBar(State& s) {
-    const bool running = sending(s);
-    const GenStats st = s.gen.stats();
-    const GenConfig& c = s.cfg;
-    if (!running) {
-        ImGui::BeginDisabled(!s.probed);
-        if (ImGui::Button(c.output == Output::File ? tr("Start encoding") : tr("Start streaming"))) startRun(s, false);
-        ImGui::SameLine();
-        if (previewRunning(s)) {
-            if (ImGui::Button(tr("Stop preview"))) s.gen.stop();
-        } else if (ImGui::Button(tr("Start preview"))) startRun(s, true);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Shows the moving picture with its overlay on the Preview tab. Nothing is encoded, written or sent: the red cross stays until you start streaming or encoding."));
-        ImGui::EndDisabled();
-        helpMark(kToolHelp);
-        if (!s.probed) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("Looking for encoders and cameras...")); }
-    } else {
-        if (ImGui::Button(tr("Stop"))) s.gen.stop();
-        helpMark(kToolHelp);
-    }
-    ImGui::SameLine();
-    if (running) {
-        char t[200];
-        if (c.output == Output::File) {
-            snprintf(t, sizeof t, "%s: %.1f / %.1f s, %.0f kbit/s", tr("Encoding"), st.seconds, c.seconds, st.kbps);
-            ImGui::SetNextItemWidth(200 * gUi);
-            ImGui::ProgressBar((float)st.progress, ImVec2(200 * gUi, 0));
-            ImGui::SameLine();
-        } else {
-            const int sec = (int)st.seconds;
-            snprintf(t, sizeof t, "%s: %d:%02d, %.0f kbit/s", tr("Streaming"), sec / 60, sec % 60, st.kbps);
-        }
-        ImGui::TextUnformatted(t);
-        ImGui::SameLine();
-        ImGui::TextDisabled("%s%s%s", st.videoEncoder.c_str(), st.audioEncoder.empty() ? "" : " + ", st.audioEncoder.c_str());
-        if (!st.notice.empty()) {
-            ImGui::SameLine();
-            ImGui::TextColored(ImVec4(0.95f, 0.65f, 0.2f, 1), "%s", tr("(simplified)"));
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", st.notice.c_str());
-        }
-        if (st.lateFrames > 0) { ImGui::SameLine(); ImGui::TextColored(ImVec4(0.95f, 0.65f, 0.2f, 1), tr("%d frames late: the encoder is too slow for real time"), st.lateFrames); }
-    } else if (previewRunning(s)) {
-        ImGui::TextDisabled("%s", tr("Preview: nothing is encoded or sent"));
-    } else if (!st.error.empty()) {
-        ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.35f, 1), "%s", st.error.c_str());
-    } else if (!s.msg.empty()) {
-        ImGui::TextColored(ImVec4(0.95f, 0.4f, 0.35f, 1), "%s", tr(s.msg.c_str()));
-    } else if (!s.note.empty()) {
-        ImGui::TextDisabled("%s", s.note.c_str());
-    } else if (st.finished && !s.previewing && c.output == Output::File && st.frames > 0) {
-        ImGui::TextDisabled("%s: %s (%.1f s, %.1f MB). %s", tr("Written"), c.tsPath.c_str(), st.seconds, st.bytes / 1e6, tr("The transmitter takes it as its \"MPEG-TS / video file\"."));
-    } else ImGui::NewLine();
-
-    // where to watch the stream: the address set here, with a copy button and the VLC hint
-    if (c.output == Output::Transmitter) {
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted(running ? tr("Queued for the transmitter as") : tr("Will be queued for the transmitter as"));
-        ImGui::SameLine();
-        ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogram), "%s", generatorSpec(c.instanceId).c_str());
-        if (running) { ImGui::SameLine(); ImGui::TextDisabled("(%zu %s)", generatorQueued(c.instanceId), tr("packets waiting")); }
-    } else if (c.output != Output::File) {
-        const std::string url = streamUrl(c.output, c.host, c.port);
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted(running ? tr("Streaming to") : tr("Will stream to"));
-        ImGui::SameLine();
-        ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogram), "%s", url.c_str());
-        ImGui::SameLine();
-        if (ImGui::SmallButton(tr("Copy##vgurl"))) ImGui::SetClipboardText(url.c_str());
-        const std::string vlc = vlcOpenUrl(c.output, c.host, c.port);
-        const std::string where = isMulticast(c.host) ? std::string(tr("In VLC on a receiving PC (multicast group)")) : std::string(tr("In VLC on the receiving PC")) + " (" + c.host + ")";
-        ImGui::TextDisabled("%s: %s > %s", where.c_str(), tr("Media > Open Network Stream"), vlc.c_str());
-    }
-}
-
-} // namespace
+} // namespace vgui
 
 bool vgQueueDrop(int n, const char** paths) {
-    if (!gWantDrops) return false;
-    std::lock_guard<std::mutex> lk(gDropMu);
-    for (int i = 0; i < n; i++) gDrops.push_back(paths[i]);
+    std::lock_guard<std::mutex> lk(vgui::gDropMu);
+    for (int i = 0; i < n; i++) vgui::gDrops.push_back(paths[i]);
     return true;
-}
-
-void videoGenWindow(App& a) {
-    State& s = S();
-    if (!a.videoGenOpen) {
-        gWantDrops = false;
-        for (auto& g : gInst) if (g->init && g->gen.running()) g->gen.stop();   // closing the window stops every stream and file (they are closed properly)
-        return;
-    }
-    loadOnce(s);
-    gWantDrops = true;
-    applyDrops(s);
-    if (previewRunning(s) && pictureKey(s.cfg) != s.previewKey) startRun(s, true);   // a new input, size or rate: the preview follows
-    if (!s.probed && s.probe.valid() && s.probe.wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-        s.probe.get();
-        s.cams = s.camsFound;
-        s.mics = s.micsFound;
-        s.probed = true;
-        const std::string want = s.cfg.enc.videoEncoder;
-        s.cfg.enc.videoEncoder = pickVideoEncoder(want, videoEncoders());
-        const auto& ae = audioEncoders();
-        if (!ae.empty() && std::none_of(ae.begin(), ae.end(), [&](const EncoderInfo& i) { return i.name == s.cfg.enc.audioEncoder; })) s.cfg.enc.audioEncoder = ae.front().name;
-    }
-    firstWindowSize(1180 * gUi, 820 * gUi);
-    if (!ImGui::Begin(trw("Digital video generator"), &a.videoGenOpen)) { ImGui::End(); return; }
-    {   // the generators: one tab each, "+" adds another (up to kMaxInstances), each runs on its own
-        for (int i = 0; i < (int)gInst.size(); i++) {
-            char lb[48]; snprintf(lb, sizeof lb, "%s %d%s##vginst%d", tr("Generator"), i + 1, gInst[(size_t)i]->gen.running() && !gInst[(size_t)i]->previewing ? " *" : "", i);
-            if (ImGui::RadioButton(lb, gCur == i)) gCur = i;
-            ImGui::SameLine();
-        }
-        ImGui::BeginDisabled((int)gInst.size() >= kMaxInstances);
-        if (ImGui::SmallButton(tr("+ add generator##vgadd"))) { gInst.push_back(std::make_unique<State>()); gInst.back()->idx = (int)gInst.size() - 1; gCur = (int)gInst.size() - 1; }
-        ImGui::EndDisabled();
-        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Another generator with its own source, settings and stream, running at the same time (for several programmes). * = sending."));
-        if (gCur != s.idx) { ImGui::End(); return; }   // the choice changed this frame: the next frame draws the other one
-    }
-    controlBar(s);
-    ImGui::Separator();
-    if (ImGui::BeginTabBar("##vgtabs")) {
-        if (ImGui::BeginTabItem(trw("Sources and encoding"))) { sourcesTab(s); ImGui::EndTabItem(); }
-        if (ImGui::BeginTabItem(trw("Preview"))) { overlayTab(s); ImGui::EndTabItem(); }
-        if (ImGui::BeginTabItem(trw("Digital Television Mode Selector"))) { dvbModeSelectorTab(estimate(s.cfg.enc).mux); ImGui::EndTabItem(); }
-        ImGui::EndTabBar();
-    }
-    ImGui::End();
-    saveSoon(s);
 }

@@ -277,6 +277,7 @@ static void shutdownApp(App& app, gfx::Backend* gfxBackend, GLFWwindow* window) 
     delete gDiscord;   // clears the status and joins its thread
     iptvShutdown();    // an Internet TV stream stops reading before the player and the engine go away
     txShutdown();      // the transmitter goes quiet before anything else is closed
+    videoGenShutdown();   // the Digital video generator OnAir started quits, the link closes
     echolinkShutdown();   // the EchoLink connection says BYE and logs out
     pluginShutdown();  // plugin threads and helper processes end, the crash marker goes
     receiversShutdown(app);
@@ -382,7 +383,7 @@ int main(int argc, char** argv) {
 
 
     ImGui_ImplGlfw_InitForOther(window, true);
-    glfwSetDropCallback(window, [](GLFWwindow*, int n, const char** paths) { if (n > 0 && !vgQueueDrop(n, paths)) wbQueueDrop(paths[0]); });   // a recording dropped on the window: the Signal workbench opens it
+    glfwSetDropCallback(window, [](GLFWwindow*, int n, const char** paths) { if (n > 0) wbQueueDrop(paths[0]); });   // a recording dropped on the window: the Signal workbench opens it
     watchMonitors();
     if (gWayland) ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;   // see chooseGlfwPlatform()
 

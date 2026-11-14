@@ -284,7 +284,8 @@ static void floatingWindows(App& a, ImVec2 disp) {
     modeBuilderFrame(a);
     modeBuilderWindow(a);
     txStudioWindow(a);
-    videoGenWindow(a);
+    videoGenTick(a);
+    dvbModesWindow(a);
     pluginFrame(a);
     pluginManagerWindow(a);
     msgdbWindow(a);

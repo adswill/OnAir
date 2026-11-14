@@ -18,7 +18,7 @@ namespace menugroups {
 // ---- Tools menu ----
 enum class Tool {
     Transcripts, Passes, Scheduler, Recordings, SatNogs, Df, Rfi, PassiveRadar, Images, Feeds, EchoLink, Wireshark, Swarm, Messages,
-    ProtoLab, Esp32, SignalLab, ModeBuilder, TxStudio, VideoGen, Integrations, Conversations, Watchlists, Automations, Plugins, Backup,
+    ProtoLab, Esp32, SignalLab, ModeBuilder, TxStudio, VideoGen, DvbModes, Integrations, Conversations, Watchlists, Automations, Plugins, Backup,
     Memory, Datasets, Packs, Frequencies, FreqTab, Transmit, Map, Sweep, StationHealth, Heard, Insights, MyStation, Doctor, RfFp,
     WideAll, Trunking, Scanner, Propagation, AntDesigner, Rotator, VoiceKeys, Calibrate,
     PluginStore,   // new in 4.0: opens the plugin window on its Store tab
@@ -53,7 +53,7 @@ inline const ToolItem* toolItems(int& n) {
         {Tool::Swarm, N_("LAN swarm..."), 5}, {Tool::Integrations, N_("Integrations..."), 5},
         {Tool::Watchlists, N_("Watchlists..."), 6}, {Tool::Automations, N_("Automations..."), 6}, {Tool::Plugins, N_("Plugins..."), 6},
         {Tool::ModeBuilder, N_("Mode Builder..."), 6},
-        {Tool::Transmit, N_("Transmit..."), 7}, {Tool::TxStudio, N_("TX studio..."), 7}, {Tool::VideoGen, N_("Digital video generator..."), 7},
+        {Tool::Transmit, N_("Transmit..."), 7}, {Tool::TxStudio, N_("TX studio..."), 7}, {Tool::VideoGen, N_("Digital video generator..."), 7}, {Tool::DvbModes, N_("Digital TV mode selector..."), 7},
         {Tool::Esp32, N_("nRF24 / ESP32 radio..."), 7},
         {Tool::Calibrate, N_("Calibrate frequency..."), 8}, {Tool::StationHealth, N_("Station health"), 8}, {Tool::Doctor, N_("Reception doctor"), 8},
     };

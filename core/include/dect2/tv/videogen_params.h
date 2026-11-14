@@ -134,6 +134,10 @@ struct Budget {
     int mux = 0;             // the mux rate used: suggestedMux or the user's
 };
 Budget estimate(const Settings& s);
+// Easy mode of the generator program (#458): the stream follows the rate the transmitter can carry. Sets the mux rate to muxKbps and the
+// video bitrate to the highest (in steps of 10 kbit/s) whose suggested mux rate still fits; the audio stays as it is. False when even
+// the lowest video bitrate does not fit (the settings are then at that lowest bitrate).
+bool fitVideoToMux(Settings& s, int muxKbps);
 // Plain warnings for settings that will not work as asked (empty when fine)
 std::vector<std::string> checkSettings(const Settings& s, const Budget& b);
 
