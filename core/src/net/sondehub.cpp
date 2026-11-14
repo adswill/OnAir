@@ -268,6 +268,18 @@ std::string answerText(const std::string& body) {
     return o;
 }
 
+Reply analyseReply(const std::string& body) {
+    Reply r;
+    r.text = answerText(body);
+    for (const std::string& m : stringsOf(body, "error_message")) {
+        std::string l; for (char c : m) l += (char)std::tolower((unsigned char)c);
+        if (l.find("z-check") != std::string::npos) r.zcheck++; else r.rejected++;
+    }
+    std::set<std::string> seen;
+    for (const std::string& s : stringsOf(body, "serial")) if (!s.empty() && seen.insert(s).second && r.serials.size() < 5) r.serials.push_back(s);
+    return r;
+}
+
 bool Batch::add(const std::string& serial, long long frame, const std::string& json, bool slow, double t) {
     auto it = last_.find(serial);
     if (it != last_.end() && it->second == frame) { duplicates++; return false; }
@@ -370,13 +382,22 @@ struct SondeHub::Impl {
         const int code = put("/sondes/telemetry", gz, true, ans, err, myGen);
         std::lock_guard<std::mutex> lk(mu);
         lastJson = js;
+        stat.lastReply = ans.size() > 600 ? ans.substr(0, 600) + "..." : ans;
         char b[200];
         snprintf(b, sizeof b, "PUT /sondes/telemetry: %zu frames of %zu sonde%s, %zu bytes JSON, %zu bytes gzip, ", objs.size(), sondes, sondes == 1 ? "" : "s", js.size(), gz.size());
         stat.lastLine = b + (code ? "HTTP " + std::to_string(code) : std::string("no answer"));
-        if (code == 200) { stat.sent += objs.size(); stat.uploads++; stat.connected = true; stat.lastError.clear(); }
-        else if (code == 201 || code == 202) {   // taken, with notes about some frames (z-check and others)
-            stat.sent += objs.size(); stat.uploads++; stat.connected = true;
-            stat.lastError = "SondeHub took the upload with notes: " + sondehub::answerText(ans);
+        if (code >= 200 && code <= 299) {
+            // 200, 201 and 202 can all carry refused payloads: count only what SondeHub took
+            const sondehub::Reply rp = sondehub::analyseReply(ans);
+            const size_t bad = std::min((size_t)rp.rejected, objs.size());
+            stat.sent += objs.size() - bad; stat.rejected += bad; stat.dropped += bad;
+            if (bad < objs.size()) { stat.uploads++; stat.connected = true; }
+            if (bad) {
+                std::string who; for (const std::string& sn : rp.serials) who += (who.empty() ? "" : ", ") + sn;
+                stat.connected = bad < objs.size();
+                stat.lastError = "SondeHub refused " + std::to_string(bad) + " of " + std::to_string(objs.size()) + " frames (HTTP " + std::to_string(code) + (who.empty() ? "" : ", sonde " + who) + "): " + rp.text;
+            } else if (code != 200 || rp.zcheck) stat.lastError = "SondeHub took the upload with notes (HTTP " + std::to_string(code) + "): " + rp.text;
+            else stat.lastError.clear();
         } else {
             stat.dropped += objs.size(); stat.connected = false;
             stat.lastError = code ? "SondeHub refused the upload (HTTP " + std::to_string(code) + "): " + sondehub::answerText(ans) : "upload failed after 5 tries: " + err;

@@ -17,7 +17,7 @@ The APRS-IS iGate (`Feeds::aprs`, core/src/net/feeds.cpp) is fed from one place 
 ## Wire format (dxlAPRS / radiosonde_auto_rx)
 
 - Login: `user CALL-SSID pass N vers OnAir <version>\r\n` (empty passcode is sent as -1; the iGate does the same). The `# logresp ... verified|unverified` answer is read; on `unverified` the sonde lines are not sent and are counted as dropped.
-- Beacon on connect and every N minutes (default 10), only when a location is set (View > Map): `CALL>APRS,TCPIP*:!DDMM.MMN/DDDMM.MME&OnAir Radiosonde RX`.
+- Beacon on connect and every N minutes (default 10), only when a location is set (View > Map): `CALL>APRS,TCPIP*:!DDMM.MMN/DDDMM.MME`OnAir Radiosonde tracker` (symbol /` dish antenna; radiosondy.info lists a receiver only with that symbol and the word "tracker").
 - Object per sonde: `CALL>APRS,TCPIP*:;NAME9*HHMMSShDDMM.MMN/DDDMM.MMEOCCC/SSS/A=AAAAAA Clb=x.xm/s t=x.xC h=x.x% p=x.xhPa 403.500MHz Type=T`.
   - Position in hundredths of a minute (carry handled), `N`/`E` for zero. Time: the sonde's UTC time, else the PC's.
   - Course 001 to 360 (APRS: 0 is unknown), speed in KNOTS (APRS data extension, as auto_rx does: m/s x 1.944), altitude in feet (`/A=` six digits, `-00328` when negative). The form in the request left the speed unit open; knots is the APRS definition.

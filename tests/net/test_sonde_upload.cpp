@@ -67,7 +67,7 @@ int main() {
     CHECK(sondeup::loginLine("dg9bfc-10", "12345").find("user DG9BFC-10 pass 12345 vers OnAir ") == 0, "login line");
     CHECK(sondeup::loginLine(C, "") .find(" pass -1 vers OnAir ") != std::string::npos, "empty passcode is -1");
     CHECK(sondeup::loginLine(C, "1").size() > 2 && sondeup::loginLine(C, "1").substr(sondeup::loginLine(C, "1").size() - 2) == "\r\n", "login ends with CRLF");
-    CHECK(sondeup::beaconLine(C, 52.6812, 8.7954) == "DG9BFC-10>APRS,TCPIP*:!5240.87N/00847.72E&OnAir Radiosonde RX\r\n", "beacon: %s", sondeup::beaconLine(C, 52.6812, 8.7954).c_str());
+    CHECK(sondeup::beaconLine(C, 52.6812, 8.7954) == "DG9BFC-10>APRS,TCPIP*:!5240.87N/00847.72E`OnAir Radiosonde tracker\r\n", "beacon: %s", sondeup::beaconLine(C, 52.6812, 8.7954).c_str());
     CHECK(sondeup::beaconLine(C, 91, 0).empty(), "beacon with a bad latitude is refused");
     CHECK(sondeup::latText(10.999999) == "1100.00N" && sondeup::lonText(-179.999999) == "18000.00W", "minutes carry into degrees: %s %s", sondeup::latText(10.999999).c_str(), sondeup::lonText(-179.999999).c_str());
     CHECK(sondeup::latText(0) == "0000.00N" && sondeup::latText(-0.5) == "0030.00S" && sondeup::lonText(-0.5) == "00030.00W", "zero and signs");
@@ -144,7 +144,7 @@ int main() {
     if (c1 == kBadSock || c2 == kBadSock) { printf("sonde_upload: %d failures\n", ++fails); return 1; }
     std::vector<std::string> h1 = readLines(c1, 2, 2000), h2 = readLines(c2, 2, 2000);
     CHECK(h1.size() == 2 && h1[0].rfind("user DG9BFC-10 pass 12345 vers OnAir ", 0) == 0, "target A login: %s", h1.empty() ? "(none)" : h1[0].c_str());
-    CHECK(h1.size() == 2 && h1[1] == "DG9BFC-10>APRS,TCPIP*:!5240.87N/00847.72E&OnAir Radiosonde RX", "target A beacon on connect");
+    CHECK(h1.size() == 2 && h1[1] == "DG9BFC-10>APRS,TCPIP*:!5240.87N/00847.72E`OnAir Radiosonde tracker", "target A beacon on connect");
     CHECK(h2.size() == 2 && h2[0].rfind("user DG9BFC-11 pass -1 vers OnAir ", 0) == 0, "target B login with -1");
     say(c1, "# logresp DG9BFC-10 verified, server T2TEST\r\n");
     say(c2, "# logresp DG9BFC-11 verified, server T2TEST\r\n");

@@ -9,6 +9,7 @@
 #include "dect2/common/timecompat.h"
 #include "../../core/src/net/tcp_client.h"
 #include "../common/test_util.h"
+#include <algorithm>
 #include <atomic>
 #include <cctype>
 #include <chrono>
@@ -267,6 +268,55 @@ static void testAnswer() {
     CHECK(sondehub::answerText(std::string(1000, 'x')).size() < 420, "long answers are cut");
 }
 
+static void testReply() {
+    const std::string rej = "{\"message\":\"some or all payloads could not be processed\",\"errors\":[{\"error_message\":\"Serial number is not valid for DFM\",\"payload\":{\"serial\":\"123\",\"type\":\"DFM\"}},{\"error_message\":\"z-check failed - payload GPS may not be valid for M3423108.\",\"payload\":{\"serial\":\"M3423108\"}}]}";
+    const sondehub::Reply r = sondehub::analyseReply(rej);
+    CHECK(r.rejected == 1 && r.zcheck == 1 && r.serials.size() == 2 && r.serials[0] == "123" && has(r.text, "not valid"), "reply: 1 refused, 1 z-check (%d %d)", r.rejected, r.zcheck);
+    const sondehub::Reply ok = sondehub::analyseReply("Telemetry Saved into Database Successfuly");
+    CHECK(ok.rejected == 0 && ok.zcheck == 0 && ok.serials.empty(), "a plain 200 text has no errors");
+}
+
+// every sonde type OnAir decodes: the JSON has the mandatory fields with the types of SondeHub's swagger (strings, integer frame, numbers)
+static void testSchemaPerType() {
+    const double now = 1700000000.0;
+    SondeHubConfig c; c.call = "DL1ABC";
+    SondeHubStation st; st.set = true; st.lat = 52.5; st.lon = 13.4; st.altM = 40;
+    struct T { SondeKind k; const char* type; const char* sub; const char* ser; const char* man; const char* wtype; const char* wser; };
+    const T ts[] = {
+        {SondeRs41, "RS41", "RS41-SG", "T1234567", "Vaisala", "RS41", "T1234567"},
+        {SondeRs92, "RS92", "RS92-SGP", "M1234567", "Vaisala", "RS92", "M1234567"},
+        {SondeDfm, "DFM", "DFM-09", "21034567", "Graw", "DFM", "21034567"},
+        {SondeM10, "M10", "M10", "123-4-56789", "Meteomodem", "M10", "123-4-56789"},
+        {SondeM20, "M20", "M20", "123-4-56789", "Meteomodem", "M20", "123-4-56789"},
+        {SondeLms6, "LMS6", "LMS6", "LMS6-12345", "Lockheed Martin", "LMS6-400", "12345"},
+        {SondeImet54, "iMet-54", "iMet-54", "iMet54-55012345", "Intermet Systems", "iMet-54", "55012345"},
+        {SondeMrz, "MRZ", "MRZ-N1", "MRZ-5667-39155", "Meteo-Radiy", "MRZ", "5667-39155"},
+        {SondeMeisei, "iMS-100", "iMS-100", "1234567", "Meisei", "iMS-100", "1234567"},
+    };
+    for (const T& t : ts) {
+        SondeInfo s = rs41(now - 1); s.kind = t.k; s.type = t.type; s.subtype = t.sub; s.serial = t.ser; s.freqHz = 403.5e6;
+        std::string why;
+        const std::string js = sondehub::telemetryJson(c, st, s, now, &why);
+        CHECK(!js.empty() && validJson(js), "%s: JSON (%s)", t.type, why.c_str());
+        for (const char* k : {"software_name", "software_version", "uploader_callsign", "time_received", "manufacturer", "type", "serial", "datetime"})
+            CHECK(has(js, std::string("\"") + k + "\":\""), "%s: %s is a string", t.type, k);
+        for (const char* k : {"frame", "lat", "lon", "alt"}) {
+            const std::string v = field(js, k);
+            CHECK(v != "<none>" && !v.empty() && v[0] != '"' && (std::isdigit((unsigned char)v[0]) || v[0] == '-'), "%s: %s is a number (%s)", t.type, k, v.c_str());
+        }
+        CHECK(field(js, "frame").find('.') == std::string::npos, "%s: frame is an integer", t.type);
+        for (const char* k : {"time_received", "datetime"}) {
+            const std::string v = field(js, k);
+            CHECK(v.size() == 27 && v[10] == 'T' && v[19] == '.' && v.back() == 'Z', "%s: %s is ISO 8601 UTC with microseconds (%s)", t.type, k, v.c_str());
+        }
+        CHECK(field(js, "manufacturer") == t.man && field(js, "type") == t.wtype && field(js, "serial") == t.wser, "%s: names %s/%s/%s", t.type, field(js, "manufacturer").c_str(), field(js, "type").c_str(), field(js, "serial").c_str());
+        CHECK(field(js, "sats").find('.') == std::string::npos && std::atof(field(js, "frequency").c_str()) > 100 && std::atof(field(js, "frequency").c_str()) < 2000, "%s: sats integer, frequency in MHz", t.type);
+        const std::string up = field(js, "uploader_position");
+        CHECK(up.front() == '[' && std::count(up.begin(), up.end(), ',') == 2, "%s: uploader_position has 3 numbers", t.type);
+        CHECK(js.front() == '{' && js.back() == '}' && validJson(sondehub::jsonArray({js})), "%s: goes out as an array of objects", t.type);
+    }
+}
+
 // ---- the mock SondeHub ----
 struct Req { std::string method, path, body; std::vector<std::pair<std::string, std::string>> headers; std::string header(const std::string& k) const { for (auto& h : headers) { std::string a = h.first; for (auto& c : a) c = (char)std::tolower((unsigned char)c); if (a == k) return h.second; } return {}; } };
 struct Mock {
@@ -341,6 +391,7 @@ static void testUploader() {
     if (!m.start()) { CHECK(false, "mock server"); return; }
     m.answer = [](const Req& r, int nth) -> std::pair<int, std::string> {
         if (r.path == "/sondes/telemetry" && nth == 0) return {500, "{\"message\":\"busy\"}"};   // the first upload: busy once, then fine
+        if (r.path == "/sondes/telemetry" && nth == 3) return {202, "{\"message\":\"some or all payloads could not be processed\",\"errors\":[{\"error_message\":\"Serial number invalid\",\"payload\":{\"serial\":\"S1234567\"}},{\"error_message\":\"Altitude = 0\",\"payload\":{\"serial\":\"S1234567\"}}]}"};
         if (r.path == "/sondes/telemetry" && nth == 2) return {400, "{\"message\":\"bad data\",\"errors\":[{\"error_message\":\"serial wrong\"}]}"};
         return {200, "{\"message\":\"ok\"}"};
     };
@@ -395,6 +446,12 @@ static void testUploader() {
     s = h.status();
     int t3 = 0; for (auto& r : m.got()) t3 += r.path == "/sondes/telemetry";
     CHECK(t3 == 3 && has(s.lastError, "HTTP 400") && has(s.lastError, "serial wrong"), "400 not retried and its text shown (%d, %s)", t3, s.lastError.c_str());
+    // a 202 that refuses 2 of the 3 frames: those are not counted as sent, the reply is kept and shown
+    const uint64_t sentBefore = h.status().sent;
+    for (int i = 0; i < 3; i++) { SondeInfo x = rs41(now + i); x.frame = 500 + i; h.frame(x, now); }
+    CHECK(waitFor([&] { return h.status().rejected == 2; }, 6000), "a 202 with errors counts the refused frames (rejected %llu)", (unsigned long long)h.status().rejected);
+    s = h.status();
+    CHECK(s.sent == sentBefore + 1 && has(s.lastError, "refused 2 of 3") && has(s.lastError, "S1234567") && has(s.lastError, "Serial number invalid") && has(s.lastReply, "some or all payloads"), "reported to the user: %s", s.lastError.c_str());
     // off again: frames are ignored
     c.enabled = false; h.configure(c);
     const size_t before = m.got().size();
@@ -419,6 +476,8 @@ int main() {
     testGzip();
     testBatch();
     testAnswer();
+    testReply();
+    testSchemaPerType();
     testUploader();
     return testSummary("sonde_hub");
 }

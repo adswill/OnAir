@@ -67,6 +67,15 @@ uint32_t crc32(const void* data, size_t n);
 std::string gzip(const std::string& in);      // RFC 1952, one member, deflate from stb_image_write's zlib compressor
 // The text of a SondeHub answer for the user: its message, errors and warnings (raw text, shortened, when it is not that JSON)
 std::string answerText(const std::string& body);
+// What a 2xx answer says about the frames: SondeHub answers 200 / 201 / 202 with {"message", "errors":[{"error_message", "payload":{...}}]} when
+// payloads were refused ("some or all payloads could not be processed"), so the status code alone does not say they were stored.
+struct Reply {
+    int rejected = 0;                 // errors that mean a frame was refused (anything but a z-check)
+    int zcheck = 0;                   // z-check notes (frames flagged as GPS outliers: normal for DFM and RS92, see the wiki)
+    std::vector<std::string> serials; // serial numbers named in the errors' payloads
+    std::string text;                 // answerText of the body
+};
+Reply analyseReply(const std::string& body);
 
 // The batch: frames wait here until the interval is up. A frame of a sonde already queued with the same frame number is a duplicate.
 class Batch {
@@ -90,6 +99,8 @@ struct SondeHubStatus : SondeUploadStatus {
     uint64_t skipped = 0;             // frames the rules kept back (no fix, no time, unknown serial, ...)
     std::string skipWhy;              // the last such reason
     uint64_t uploads = 0;             // PUT requests that SondeHub accepted
+    uint64_t rejected = 0;            // frames SondeHub answered with an error for (bad serial, ...), not counted as sent
+    std::string lastReply;            // the raw body of SondeHub's last answer (shortened), shown under "What is sent"
 };
 
 struct SondeHubTiming {            // tests shorten these
