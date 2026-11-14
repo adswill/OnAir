@@ -57,14 +57,17 @@ int parseIdList(const std::string& text, std::map<int, std::string>& out) {
 
 // ---------------------------------------------------------------- a small JSON reader for the custom field list
 namespace {
+struct JMember;
 struct J {
     enum T { Null, Str, Num, Arr, Obj } t = Null;
     std::string s;
     double n = 0;
     std::vector<J> a;
-    std::vector<std::pair<std::string, J>> o;
-    const J* get(const char* k) const { for (const auto& kv : o) if (kv.first == k) return &kv.second; return nullptr; }
+    std::vector<JMember> o;   // not std::pair<std::string, J>: libstdc++ 16 asks for J's destructor while J is incomplete (clang, Windows SDK)
+    const J* get(const char* k) const;
 };
+struct JMember { std::string first; J second; };
+const J* J::get(const char* k) const { for (const auto& kv : o) if (kv.first == k) return &kv.second; return nullptr; }
 struct Reader {
     const std::string& x; size_t i = 0; std::string err;
     explicit Reader(const std::string& s) : x(s) {}

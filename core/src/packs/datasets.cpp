@@ -58,14 +58,17 @@ int compareVersions(const std::string& a, const std::string& b) {
 
 // ---------------------------------------------------------------- tiny JSON (objects, arrays, strings, numbers, true/false/null)
 namespace {
+struct JMember;
 struct J {
     enum K { Null, Num, Str, Bool, Arr, Obj } k = Null;
     double num = 0;
     std::string str;
     std::vector<J> arr;
-    std::vector<std::pair<std::string, J>> obj;
-    const J* get(const std::string& key) const { for (const auto& p : obj) if (p.first == key) return &p.second; return nullptr; }
+    std::vector<JMember> obj;   // not std::pair<std::string, J>: libstdc++ 16 asks for J's destructor while J is incomplete (clang, Windows SDK)
+    const J* get(const std::string& key) const;
 };
+struct JMember { std::string first; J second; };
+const J* J::get(const std::string& key) const { for (const auto& p : obj) if (p.first == key) return &p.second; return nullptr; }
 struct JP {
     const std::string& s;
     size_t p = 0;

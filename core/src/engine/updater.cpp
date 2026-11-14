@@ -114,18 +114,26 @@ std::string sha256File(const std::string& path, std::string* err) {
 // ---------------------------------------------------------------- a small JSON reader
 
 namespace {
+struct JMember;
 struct J {
     enum T { Null, Bool, Num, Str, Arr, Obj } t = Null;
     bool b = false;
     double n = 0;
     std::string s;
     std::vector<J> a;
-    std::vector<std::pair<std::string, J>> o;
-    const J* get(const char* key) const { for (auto& kv : o) if (kv.first == key) return &kv.second; return nullptr; }
-    std::string str(const char* key) const { const J* v = get(key); return v && v->t == Str ? v->s : std::string(); }
-    double num(const char* key) const { const J* v = get(key); return v && v->t == Num ? v->n : 0; }
-    bool flag(const char* key) const { const J* v = get(key); return v && v->t == Bool && v->b; }
+    // the members of an object: not std::pair<std::string, J>, whose traits ask for J's destructor while J is still incomplete (a
+    // cycle clang with libstdc++ 16 refuses: the Windows SDK)
+    std::vector<JMember> o;
+    const J* get(const char* key) const;
+    std::string str(const char* key) const;
+    double num(const char* key) const;
+    bool flag(const char* key) const;
 };
+struct JMember { std::string first; J second; };
+const J* J::get(const char* key) const { for (auto& kv : o) if (kv.first == key) return &kv.second; return nullptr; }
+std::string J::str(const char* key) const { const J* v = get(key); return v && v->t == Str ? v->s : std::string(); }
+double J::num(const char* key) const { const J* v = get(key); return v && v->t == Num ? v->n : 0; }
+bool J::flag(const char* key) const { const J* v = get(key); return v && v->t == Bool && v->b; }
 
 struct JParser {
     const std::string& s;
@@ -183,7 +191,7 @@ struct JParser {
                 ws();
                 if (i >= s.size() || s[i] != ':') { ok = false; return v; }
                 i++;
-                v.o.emplace_back(std::move(k), value(depth + 1));
+                v.o.push_back(JMember{std::move(k), value(depth + 1)});
                 if (!ok) return v;
                 ws();
                 if (i < s.size() && s[i] == ',') { i++; continue; }

@@ -11,15 +11,18 @@ namespace dect2 {
 namespace {
 
 // A small JSON reader: enough for the flat objects the API sends (nested values are read and skipped).
+struct JMember;
 struct J {
     enum T { Null, Bool, Num, Str, Arr, Obj } t = Null;
     bool b = false;
     double n = 0;
     std::string s;
     std::vector<J> a;
-    std::vector<std::pair<std::string, J>> o;
-    const J* get(const char* k) const { for (const auto& p : o) if (p.first == k) return &p.second; return nullptr; }
+    std::vector<JMember> o;   // not std::pair<std::string, J>: libstdc++ 16 asks for J's destructor while J is incomplete (clang, Windows SDK)
+    const J* get(const char* k) const;
 };
+struct JMember { std::string first; J second; };
+const J* J::get(const char* k) const { for (const auto& p : o) if (p.first == k) return &p.second; return nullptr; }
 
 struct P {
     const std::string& s;
