@@ -8,6 +8,7 @@ struct Options {
     std::string host, token;    // OnAir's address (127.0.0.1) and the token it started this generator with ("": started by itself)
     int port = 0;               // OnAir's RTP port (0: kVgLinkDefaultPort)
     int slot = 1;               // the generator number it asks for
+    bool onairGiven = false;    // --onair was given (local or host:port): it was pointed at an OnAir
     bool easy = false, advanced = false;   // --easy / --advanced for this run (screenshots)
 };
 

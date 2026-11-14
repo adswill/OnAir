@@ -241,6 +241,12 @@ void linkLine(Gen& g) {
     double u = 0;
     const VgTxInfo t = g.link.txInfo(u);
     ImGui::AlignTextToFramePadding();
+    if (!g.link.connected() && g.standalone && muxOutput(g) != Output::Transmitter) {   // a stand-alone encoder: OnAir is not needed
+        const char* how = muxOutput(g) == Output::Udp ? "UDP" : muxOutput(g) == Output::Rtp ? "RTP" : nullptr;
+        if (how) ImGui::TextDisabled("%s %s %s:%d", tr("Started on its own: streaming over"), how, g.mux.host.c_str(), g.mux.port);
+        else ImGui::TextDisabled("%s %s", tr("Started on its own: writing to"), g.mux.tsPath.c_str());
+        return;
+    }
     if (!g.link.connected()) {
         ImGui::TextColored(kOrange, "%s", tr("Not linked to OnAir"));
         ImGui::SameLine();
@@ -485,7 +491,9 @@ void muxingTab(Gen& g) {
     double need = 0;
     for (int k = 0; k < activeSources(g); k++) need += estimate(g.src[(size_t)k]->cfg.enc).mux;
     const double cap = capacityBps(g) / 1000;
-    if (cap <= 0) ImGui::TextColored(kOrange, "%s", g.mux.capFromLink ? tr("The capacity is not known: link to OnAir's transmitter with a digital TV mode chosen, or type it in.") : "");
+    // only the transmitter output has a channel to fill; UDP, RTP and a file run at the sources' rate plus a margin (muxRateFor)
+    if (cap <= 0 && g.mux.output != Output::Transmitter) ImGui::TextDisabled("%s", tr("No channel to fill: the multiplex runs at what the sources need, plus a small margin. Type a capacity in for a fixed rate."));
+    else if (cap <= 0) ImGui::TextColored(kOrange, "%s", g.mux.capFromLink ? tr("The capacity is not known: link to OnAir's transmitter with a digital TV mode chosen, or type it in.") : "");
     else {
         ImDrawList* dl = ImGui::GetWindowDrawList();
         const ImVec2 p0 = ImGui::GetCursorScreenPos();
@@ -558,8 +566,9 @@ void muxingTab(Gen& g) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn(); ImGui::TextUnformatted("vg-mux");
         ImGui::TableNextColumn(); ImGui::TextUnformatted(ms.running ? tr("running") : tr("stopped"));
-        ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)ms.packets);
-        ImGui::TableNextColumn(); ImGui::Text("%llu %s", (unsigned long long)ms.nulls, tr("null"));
+        // packets sent, of which null packets (the padding up to the mux rate); the mux itself drops nothing (a source's queue does)
+        ImGui::TableNextColumn(); ImGui::Text("%llu (%llu %s)", (unsigned long long)ms.packets, (unsigned long long)ms.nulls, tr("null"));
+        ImGui::TableNextColumn(); ImGui::TextDisabled("-");
         ImGui::TableNextColumn(); ImGui::TextUnformatted("");
         ImGui::TableNextColumn(); ImGui::Text("%.0f %%", ms.cpuBusy);
         const PreviewStatus ps = g.ses.previewStatus();
@@ -652,6 +661,14 @@ void init(const Options& o) {
     }
     if (o.easy) g.advanced = false;
     if (o.advanced) g.advanced = true;
+    // started on its own (#458): not by OnAir (no token) and not pointed at an OnAir (no --onair). Then it is a stand-alone encoder:
+    // Advanced mode, streaming over UDP, since the transmitter output needs OnAir. A file or RTP output chosen before is kept;
+    // --easy (screenshots) wins.
+    g.standalone = o.token.empty() && !o.onairGiven;
+    if (g.standalone && !o.easy) {
+        g.advanced = true;
+        if (g.mux.output == Output::Transmitter) g.mux.output = Output::Udp;
+    }
     for (int i = 0; i < n; i++) g.src.push_back(makeSource(g, i, mux));
     g.savedMux = saveMux(g);
     startProbe(g);

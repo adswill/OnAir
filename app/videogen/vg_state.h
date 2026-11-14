@@ -76,6 +76,7 @@ struct Gen {
     std::string linkHost, token, name = "Video generator";
     int linkPort = kVgLinkDefaultPort, slot = 1;
     bool startedByOnAir = false;
+    bool standalone = false;     // started on its own: neither by OnAir (token) nor pointed at one (--onair)
     MuxUi mux;
     int previewSrc = 0;
     bool previewOn = false;

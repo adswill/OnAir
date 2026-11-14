@@ -10,7 +10,7 @@ video generator** starts it, or brings it to the front when it already runs. It 
 It keeps running when OnAir's window is busy, and OnAir keeps running when an encoder is slow. The two talk over a small link on this
 computer (RTP over a named pipe, no network port, see [VIDEOGEN-LINK.md](VIDEOGEN-LINK.md)): the generator sends its multiplex to the transmitter, and
 the transmitter tells the generator how much it may send. When OnAir closes, the generator it started closes too, and it starts again with
-OnAir next time. Closing the generator window yourself ends that. A generator started by hand links to OnAir by itself when OnAir runs.
+OnAir next time. Closing the generator window yourself ends that. A generator started by hand (not from OnAir, and without `--onair`) is a stand-alone encoder: it opens in **Advanced** mode and streams over **UDP** (to 127.0.0.1:5000 unless the Muxing tab says otherwise; a file or RTP output chosen before is kept), and it still links to OnAir when OnAir runs. Started with `--onair local` or `--onair host:port`, it sends to OnAir's transmitter as before.
 
 - Program: `app/videogen/` (`vg_main.cpp` the window and command line, `vg_window.cpp` the tabs, Muxing and the link, `vg_sources.cpp`
   a source's rows, the estimate and the overlay editor). It shares OnAir's graphics, fonts, settings and translations (the `onair_uikit`
@@ -43,7 +43,7 @@ overlay, and the output to a file, UDP or RTP. Settings you do not see keep thei
 | Tab | What it holds |
 |---|---|
 | **Source 1**, **Source 2** ... | One input each, with its encoding (codec, bitrates, picture, sound) and the estimate. **+** adds a source (at most 8); the **x** on a tab closes it (not the last one, and not while streaming). |
-| **Muxing** | The multiplex: each source's programme number, service name and PIDs (automatic, or typed), the first programme number, the transport stream ID and the provider; the channel's capacity (from the transmitter, or typed); padding; the output; and a table of the threads (`vg-src-N`, `vg-mux`, `vg-preview`) with their CPU, frames, drops and queue. |
+| **Muxing** | The multiplex: each source's programme number, service name and PIDs (automatic, or typed), the first programme number, the transport stream ID and the provider; the channel's capacity (from the transmitter, or typed); padding; the output; and a table of the threads (`vg-src-N`, `vg-mux`, `vg-preview`) with their CPU, frames, drops and queue (the mux row counts its packets and, in brackets, the null packets it added as padding; the mux itself drops nothing). |
 | **Preview** | The picture of one source (chosen at the top) and its overlay editor. |
 
 ## Sources

@@ -2,7 +2,8 @@
 //
 //   onair-videogen [--onair local | host:port] [--token t] [--slot n] [--easy | --advanced]
 //   OnAir's Tools > Digital video generator starts it with --onair local --token <t>; started by hand it looks for OnAir's pipe on
-//   this computer (or, with --onair host:port, for OnAir's UDP port) and links when OnAir runs. Screenshots (the OnAir flags): --hidden --shot <png> [--shotdelay s], --tab <name>,
+//   this computer (or, with --onair host:port, for OnAir's UDP port) and links when OnAir runs. Started without a token and without
+//   --onair it is a stand-alone encoder: Advanced mode, output UDP (vg_window.cpp init). Screenshots (the OnAir flags): --hidden --shot <png> [--shotdelay s], --tab <name>,
 //   --sources n, --preview; the window size from ONAIR_WINSIZE (e.g. 1400x900).
 //
 // The window, graphics, fonts, settings and translations are OnAir's own (the onair_uikit library); the engine is dect2core.
@@ -54,6 +55,7 @@ Args parseArgs(int argc, char** argv) {
         const std::string k = argv[i];
         const bool more = i + 1 < argc;
         if (k == "--onair" && more) {
+            a.o.onairGiven = true;
             const std::string v = argv[++i];   // "local" (the default): OnAir's pipe on this computer; host:port: UDP
             const size_t c = v.rfind(':');
             if (v == "local") continue;
