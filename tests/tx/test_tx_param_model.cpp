@@ -7,6 +7,7 @@
 //   3. the table itself is sane: unique keys, defaults inside the range, a choice default that exists, `when` conditions on rows of the same table.
 // The modes whose signal depends on the clock (two runs with the same values differ) are listed and their rows are not compared.
 // Everything is generated into memory: NOTHING is transmitted. Signals are the clean generator output (no noise); this checks wiring, not sensitivity.
+#include "dect2/tx/tx.h"
 #include "dect2/tx/tx_params.h"
 #include <algorithm>
 #include <cmath>
@@ -170,6 +171,9 @@ static void checkMode(const TxModeSpec& m, const TxParamCtx& c) {
     auto checkKeys = [&](const char* what) {
         for (const auto& k : keys) if (!declared.count(k)) { FAIL("%s: the generator reads %s, which is not a row of the table (%s)", tag.c_str(), k.c_str(), what); declared.insert(k); }
     };
+    // a UTC-slot generator (FT8 family, JT65 with its 60 s slots) is silent until its next slot: still silent after 8 s means the slot lies
+    // beyond the window at this time of the minute, which is the clock again, not a broken generator
+    if (energy(a) < 1e-9 && txPayloadKind(m.id) == TxPayloadKind::Ftx) { nondet.push_back(tag + " (waits for its UTC slot)"); return; }
     checkKeys("defaults");
     make(m, c, rows, base, false, probe, a2, keys, err);
     modesChecked++;
