@@ -18,7 +18,7 @@ constexpr int kAnaN = 4096;          // spectrum analysis of the derotated signa
 constexpr int kHil = 255;            // Hilbert filter for the sideband split (flat above about 250 Hz)
 constexpr int kLpTaps = 191;         // audio low-pass bank
 constexpr int kBwMin = 2500, kBwMax = 10000, kBwStep = 500, kBwN = (kBwMax - kBwMin) / kBwStep + 1;
-constexpr int kNrN = 1024, kNrHop = 256;   // 75% overlap: gain changes are spread over four frames, no block edges
+constexpr int kNrN = 1024, kNrHop = 512;   // 50% overlap with sqrt-Hann windows (75% did not help once the gains are smoothed, and cost tone SINAD)
 constexpr int kNrSub = 12 * 512 / kNrHop;  // frames per minimum-statistics sub-window (the same 128 ms)
 constexpr int kMaxNotch = 6;
 constexpr int kLook = 144;           // limiter look-ahead, 3 ms
@@ -454,7 +454,7 @@ struct AmProcessor::Impl {
             std::vector<double> gs(nrG);
             for (int k = 1; k + 1 < K; k++) gs[(size_t)k] = 0.25 * nrG[(size_t)k - 1] + 0.5 * nrG[(size_t)k] + 0.25 * nrG[(size_t)k + 1];
             for (int k = 0; k < K; k++) {
-                const double prev = nrGOut[(size_t)k], a = gs[(size_t)k] > prev ? 0.6 : 0.15;
+                const double prev = nrGOut[(size_t)k], a = gs[(size_t)k] > prev ? 0.8 : 0.6;
                 gs[(size_t)k] = nrGOut[(size_t)k] = prev + a * (gs[(size_t)k] - prev);
             }
             for (int k = 0; k < K; k++) {
