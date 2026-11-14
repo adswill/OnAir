@@ -551,7 +551,7 @@ bool SessionStore::openAt(const std::string& dbPath, const StoreConfig& cfg, std
         I.iqRoots = cfg.iqRoots;
         I.eventsPerSec = cfg.eventsPerSecPerMode;
     }
-    if (!I.db.open(dbPath, err, &I.info)) { DIAG(706563, "The session database %s could not be opened (%s), so sessions are not recorded.", dbPath.c_str(), err.c_str()); return false; }
+    if (!I.db.open(dbPath, err, &I.info)) { DIAG(706563, "The session database %s could not be opened (%s), so sessions are not recorded.", dbPath.c_str(), err ? err->c_str() : "no reason given"); return false; }
     I.dbPathStr = dbPath;
     I.settingsPath.clear();
     if (dbPath != ":memory:") {

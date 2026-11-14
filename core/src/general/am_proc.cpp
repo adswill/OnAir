@@ -18,7 +18,8 @@ constexpr int kAnaN = 4096;          // spectrum analysis of the derotated signa
 constexpr int kHil = 255;            // Hilbert filter for the sideband split (flat above about 250 Hz)
 constexpr int kLpTaps = 191;         // audio low-pass bank
 constexpr int kBwMin = 2500, kBwMax = 10000, kBwStep = 500, kBwN = (kBwMax - kBwMin) / kBwStep + 1;
-constexpr int kNrN = 1024, kNrHop = 512;
+constexpr int kNrN = 1024, kNrHop = 256;   // 75% overlap: gain changes are spread over four frames, no block edges
+constexpr int kNrSub = 12 * 512 / kNrHop;  // frames per minimum-statistics sub-window (the same 128 ms)
 constexpr int kMaxNotch = 6;
 constexpr int kLook = 144;           // limiter look-ahead, 3 ms
 
@@ -147,7 +148,7 @@ struct AmProcessor::Impl {
     std::unique_ptr<Fft> nrFft;
     std::vector<float> nrIn, nrOut, nrWin;
     size_t nrInPos = 0;
-    std::vector<double> nrSmooth, nrMin, nrMinSub, nrNoise, nrPrevG2Gamma, nrG;
+    std::vector<double> nrGOut, nrSmooth, nrMin, nrMinSub, nrNoise, nrPrevG2Gamma, nrG;
     int nrFrame = 0, nrSub = 0;
     std::vector<std::vector<double>> nrSubMins;
     bool nrPrimed = false;
@@ -196,7 +197,7 @@ struct AmProcessor::Impl {
         for (auto& b : notch) b.clear();
         for (auto& b : hum) b.clear();
         nrIn.assign(kNrN, 0.f); nrOut.assign(kNrN, 0.f); nrInPos = 0;
-        nrSmooth.assign(kNrN / 2 + 1, 0.0); nrNoise.assign(kNrN / 2 + 1, 0.0); nrPrevG2Gamma.assign(kNrN / 2 + 1, 1.0); nrG.assign(kNrN / 2 + 1, 1.0);
+        nrSmooth.assign(kNrN / 2 + 1, 0.0); nrNoise.assign(kNrN / 2 + 1, 0.0); nrPrevG2Gamma.assign(kNrN / 2 + 1, 1.0); nrG.assign(kNrN / 2 + 1, 1.0); nrGOut.assign(kNrN / 2 + 1, 1.0);
         nrSubMins.assign(8, std::vector<double>(kNrN / 2 + 1, 1e30)); nrMinSub.assign(kNrN / 2 + 1, 1e30);
         nrFrame = 0; nrSub = 0; nrPrimed = false; nrSpec.assign(kNrN, cf32(0, 0));
         nrQueue.clear(); nrQHead = 0;
@@ -409,11 +410,11 @@ struct AmProcessor::Impl {
         const double gmin = std::pow(10.0, -nrFloorDb / 20.0);
         for (int k = 0; k < K; k++) {
             const double p = std::norm(nrSpec[(size_t)k]);
-            nrSmooth[(size_t)k] = nrPrimed ? 0.85 * nrSmooth[(size_t)k] + 0.15 * p : p;
+            nrSmooth[(size_t)k] = nrPrimed ? 0.92 * nrSmooth[(size_t)k] + 0.08 * p : p;
             // minimum statistics: the minimum of the smoothed power over 8 sub-windows of 12 frames (about 1 s), with a bias of 1.5
             nrMinSub[(size_t)k] = std::min(nrMinSub[(size_t)k], nrSmooth[(size_t)k]);
         }
-        if (++nrFrame >= 12) {
+        if (++nrFrame >= kNrSub) {
             nrFrame = 0;
             nrSubMins[(size_t)nrSub] = nrMinSub;
             nrSub = (nrSub + 1) % 8;
@@ -433,21 +434,29 @@ struct AmProcessor::Impl {
             for (const auto& s : nrSubMins) m = std::min(m, s[(size_t)k]);
             nrNoise[(size_t)k] = std::min(m < 1e29 ? nrBias() * m : nrSmooth[(size_t)k], cap);
         }
+        {   // the noise estimate smoothed across 7 bins: a ragged estimate makes ragged gains (musical noise)
+            std::vector<double> t(nrNoise);
+            for (int k = 0; k < K; k++) { double a = 0; int c = 0; for (int j = std::max(0, k - 3); j <= std::min(K - 1, k + 3); j++) { a += t[(size_t)j]; c++; } nrNoise[(size_t)k] = a / c; }
+        }
         if (nrFloorDb > 0) {
             for (int k = 0; k < K; k++) {
                 const double p = std::norm(nrSpec[(size_t)k]);
                 const double n = std::max(nrNoise[(size_t)k], 1e-20);
                 const double gamma = std::min(p / n, 1e4);
-                const double xi = std::max(0.98 * nrPrevG2Gamma[(size_t)k] + 0.02 * std::max(gamma - 1, 0.0), 1e-3);
+                const double xi = std::max(0.985 * nrPrevG2Gamma[(size_t)k] + 0.015 * std::max(gamma - 1, 0.0), 1e-3);
                 const double vv = xi / (1 + xi) * gamma;
                 double g = xi / (1 + xi) * std::exp(0.5 * expint1(vv));
                 g = std::max(gmin, std::min(1.0, g));
-                nrG[(size_t)k] = g;
                 nrPrevG2Gamma[(size_t)k] = g * g * gamma;
+                nrG[(size_t)k] = g;
             }
-            // musical noise: the gains smoothed across neighbouring bins where they are low
+            // musical noise: the gain smoothed across neighbouring bins and over time (fast to open on speech onsets, slow to close)
             std::vector<double> gs(nrG);
-            for (int k = 1; k + 1 < K; k++) if (nrG[(size_t)k] < 0.5) gs[(size_t)k] = 0.25 * nrG[(size_t)k - 1] + 0.5 * nrG[(size_t)k] + 0.25 * nrG[(size_t)k + 1];
+            for (int k = 1; k + 1 < K; k++) gs[(size_t)k] = 0.25 * nrG[(size_t)k - 1] + 0.5 * nrG[(size_t)k] + 0.25 * nrG[(size_t)k + 1];
+            for (int k = 0; k < K; k++) {
+                const double prev = nrGOut[(size_t)k], a = gs[(size_t)k] > prev ? 0.6 : 0.15;
+                gs[(size_t)k] = nrGOut[(size_t)k] = prev + a * (gs[(size_t)k] - prev);
+            }
             for (int k = 0; k < K; k++) {
                 nrSpec[(size_t)k] *= (float)gs[(size_t)k];
                 if (k > 0 && k < kNrN / 2) nrSpec[(size_t)(kNrN - k)] *= (float)gs[(size_t)k];
@@ -456,7 +465,7 @@ struct AmProcessor::Impl {
         nrPrimed = true;
         // inverse (unnormalised) and overlap-add with the synthesis window
         nrFft->inverse(nrSpec.data());
-        for (int k = 0; k < kNrN; k++) nrOut[(size_t)k] += nrSpec[(size_t)k].real() / kNrN * nrWin[(size_t)k];
+        for (int k = 0; k < kNrN; k++) nrOut[(size_t)k] += nrSpec[(size_t)k].real() / kNrN * nrWin[(size_t)k] * (float)(2.0 * kNrHop / kNrN);
         for (int k = 0; k < kNrHop; k++) nrQueue.push_back(nrOut[(size_t)k]);
         std::memmove(nrOut.data(), nrOut.data() + kNrHop, sizeof(float) * (kNrN - kNrHop));
         std::fill(nrOut.begin() + (kNrN - kNrHop), nrOut.end(), 0.f);
@@ -576,14 +585,14 @@ struct AmProcessor::Impl {
                 exEnv += 0.001 * (std::fabs(b) - exEnv);
             }
             if (cfg.agc) {
-                // leveler: 30 ms rms, attack 60 ms, release 1 s after a hang of 0.5 s, within +-12 dB
-                lvlRms += (y * y - lvlRms) * (1.0 / (0.03 * fs));
+                // leveler: 60 ms rms, attack 250 ms, release 1.5 s after a hang of 0.8 s, within +-12 dB
+                lvlRms += (y * y - lvlRms) * (1.0 / (0.06 * fs));
                 const double r = std::sqrt(lvlRms);
                 if (r > 1e-4 && cfg.leveler) {
                     const double want = std::clamp(tgt / r, 0.25, 4.0);
-                    if (want < lvlGain) { lvlGain += (want - lvlGain) * (1.0 / (0.06 * fs)); lvlHang = 0.5; }
+                    if (want < lvlGain) { lvlGain += (want - lvlGain) * (1.0 / (0.25 * fs)); lvlHang = 0.8; }
                     else if (lvlHang > 0) lvlHang -= 1 / fs;
-                    else lvlGain += (want - lvlGain) * (1.0 / (1.0 * fs));
+                    else lvlGain += (want - lvlGain) * (1.0 / (1.5 * fs));
                 }
                 y *= lvlGain;
                 // limiter: 3 ms ahead, at 0.9
