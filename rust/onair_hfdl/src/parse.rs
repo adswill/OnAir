@@ -587,6 +587,7 @@ pub fn parse_pdu(p: &[u8], out: &mut [Msg]) -> Option<usize> {
         hdr = at;
     }
     if n < hdr + 2 || !fcs_ok(&p[..hdr + 2]) {
+        onair_common::diag_debug!(487122, "An HFDL frame of {} bytes is too short or failed its frame check, so it was dropped.", n);
         return None;
     }
     let mut at = hdr + 2;

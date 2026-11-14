@@ -8,4 +8,5 @@ license.workspace = true
 description = "OnAir KAWS (the owner's HF weak-signal mode, 2.4 kHz): chirp and OFDM modems, woven-lattice preamble and detector, LDPC, Watterson channel simulator"
 
 [dependencies]
+onair_common = { path = "../onair_common" }
 

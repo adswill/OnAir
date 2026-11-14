@@ -84,6 +84,7 @@ pub fn header(h: &[u8]) -> Option<(u32, u32, u32)> {
     let mt = le32(h, 1);
     let size = le32(h, 4);
     if size > MAX_BODY {
+        onair_common::diag_debug!(820056, "A SpyServer message announces a body of {} bytes, above the limit of {}, so the connection data is dropped.", size, MAX_BODY);
         return None;
     }
     Some((mt & 0xffff, mt >> 16, size))

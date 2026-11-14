@@ -87,6 +87,7 @@ pub struct Col {
 pub fn record(r: &[u8], cols: &mut [Col]) -> Option<usize> {
     let (hs, n) = varint(r)?;
     if hs > r.len() as u64 || hs < n as u64 {
+        onair_common::diag_debug!(515611, "A database record of {} bytes announces a header of {} bytes, so the record is damaged and was skipped.", r.len(), hs);
         return None;
     }
     let hs = hs as usize;
@@ -150,6 +151,7 @@ pub fn record(r: &[u8], cols: &mut [Col]) -> Option<usize> {
 /// page too small to hold a cell. An index b-tree (`index_tree`) keeps less on the page than a table b-tree.
 pub fn payload_local(total: u64, usable: u64, index_tree: bool) -> Option<(u64, bool)> {
     if total > (1 << 28) || usable < 36 {
+        onair_common::diag_debug!(152343, "A database cell with a payload of {} bytes on pages of {} usable bytes is not valid, so it was skipped.", total, usable);
         return None;
     }
     // unsigned 64 bit arithmetic that wraps, like the reference (a usable size under 480 is rejected when the file is opened; the wraps only matter for odd test values)

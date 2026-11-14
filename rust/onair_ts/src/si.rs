@@ -447,6 +447,7 @@ pub struct Tvct {
 pub fn parse_tvct(s: &[u8], out: &mut [Tvct]) -> Option<(i32, usize)> {
     let len = s.len();
     if len < 14 {
+        onair_common::diag_debug!(203124, "A transport stream section of {} bytes is too short for its table header, so it was skipped.", len);
         return None;
     }
     let cnt = rd(s, 9);
@@ -528,6 +529,7 @@ fn put_int(out: &mut [u8; 32], n: &mut usize, v: i32, w: usize) {
 /// Parse a TDT / TOT (`s.len() >= 8`): the UTC time as text and Unix seconds. The date is the MJD conversion of EN 300 468 Annex C.
 pub fn parse_tdt(s: &[u8]) -> Option<Tdt> {
     if s.len() < 8 {
+        onair_common::diag_debug!(978878, "A time table section of {} bytes is too short, so the stream time was not updated.", s.len());
         return None;
     }
     let mjd = rd16(s, 3);
