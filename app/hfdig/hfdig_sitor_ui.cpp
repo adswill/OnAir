@@ -5,13 +5,38 @@
 // character counts, and the SITOR-A / AMTOR (ARQ) monitor: selective call, blocks and repeats, link events and the text without repeats. The receiver is core/include/dect2/sitor/sitor_live.h (family 119, engine standard 121, active standard 120).
 #include "app.h"
 #include "i18n/i18n.h"
+#include "dect2/sitor/sitor_history.h"
 #include "dect2/sitor/sitor_tel.h"
+#include <cmath>
+#include <ctime>
+#include <filesystem>
+#include <fstream>
 #include <cstdio>
 #include <string>
 
 namespace {
 
 bool live(const App& a) { return a.rx.standard == 120; }
+
+dect2::SitorHistory gHist;   // the text shown: kept when the frequency changes
+double gHistFreq = -1;
+
+void feedHistory(const App& a) {
+    if (gHistFreq >= 0 && std::fabs(gHistFreq - a.freqMhz) > 1e-9) {
+        char b[96];
+        const time_t tt = time(nullptr);
+        struct tm g;
+#ifdef _WIN32
+        gmtime_s(&g, &tt);
+#else
+        gmtime_r(&tt, &g);
+#endif
+        snprintf(b, sizeof b, "--- %.4f MHz, %02d:%02d:%02d UTC ---", a.freqMhz, g.tm_hour, g.tm_min, g.tm_sec);
+        gHist.retune(b);
+    }
+    gHistFreq = a.freqMhz;
+    gHist.update(a.rx.sitor.text);
+}
 
 void tab(App& a) {
     ImGui::PushTextWrapPos(0);
@@ -42,9 +67,20 @@ void tab(App& a) {
         if (!t.selcall.empty()) row(tr("selective call"), t.selcall.c_str());
     }
     ImGui::Spacing();
+    feedHistory(a);
+    if (ImGui::SmallButton(tr("Clear"))) gHist.clear();
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Save..."))) {
+        const std::string path = saveFileDialog("sitor.txt");
+        if (!path.empty()) {
+            std::ofstream o(std::filesystem::path(reinterpret_cast<const char8_t*>(path.c_str())), std::ios::binary);
+            o << gHist.text;
+            if (!t.arqText.empty()) o << "\n--- SITOR-A ---\n" << t.arqText << "\n";
+        }
+    }
     ImGui::BeginChild("sitortext", ImVec2(0, 0), ImGuiChildFlags_Borders);
     ImGui::PushTextWrapPos(0);
-    ImGui::TextUnformatted(t.text.c_str());
+    ImGui::TextUnformatted(gHist.text.c_str());
     if (!t.arqText.empty()) { ImGui::Separator(); ImGui::TextDisabled("%s", tr("SITOR-A")); ImGui::TextUnformatted(t.arqText.c_str()); }
     ImGui::PopTextWrapPos();
     if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 4) ImGui::SetScrollHereY(1.0f);
