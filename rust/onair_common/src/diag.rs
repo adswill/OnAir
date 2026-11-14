@@ -25,9 +25,9 @@ use core::sync::atomic::{AtomicBool, AtomicU8, AtomicUsize, Ordering};
 /// How serious a line is. `Debug` lines start with `[v] ` like the other verbose lines.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Level {
-    Debug,
-    Warn,
-    Error,
+    Debug = 0,
+    Warn = 1,
+    Error = 2,
 }
 
 /// A place the finished line goes to.
@@ -71,6 +71,21 @@ impl<const C: u32> Code<C> {
 }
 
 static SINK: AtomicUsize = AtomicUsize::new(0);
+// the C++ side: a function that takes (level, code, text pointer, text length) and one that says whether debug diagnostics are on
+static C_EMIT: AtomicUsize = AtomicUsize::new(0);
+static C_DEBUG: AtomicUsize = AtomicUsize::new(0);
+
+type CEmit = extern "C" fn(i32, i32, *const u8, usize);
+type CDebug = extern "C" fn() -> i32;
+
+/// For the C++ side, once at startup: every diagnostic line goes to `emit(level, code, text, len)` (level 0 debug, 1 warning, 2 error; the text
+/// without the `[E######]` prefix, which dect2::diag::emit adds, so the line is the same as a C++ DIAG) and `debug()` says whether debug
+/// diagnostics are on. Passing nothing for `emit` clears it. Without it the lines go to the sink or standard error.
+#[no_mangle]
+pub extern "C" fn onair_diag_set_sink(emit: Option<CEmit>, debug: Option<CDebug>) {
+    C_EMIT.store(emit.map_or(0, |f| f as usize), Ordering::Release);
+    C_DEBUG.store(debug.map_or(0, |f| f as usize), Ordering::Release);
+}
 // 0 unknown (the environment is read on first use), 1 off, 2 on
 static DEBUG: AtomicU8 = AtomicU8::new(0);
 static DEBUG_SET: AtomicBool = AtomicBool::new(false);
@@ -100,6 +115,12 @@ fn env_debug() -> bool {
 
 /// True when debug diagnostics are on. One relaxed load and a branch once the environment has been read.
 pub fn debug_enabled() -> bool {
+    let d = C_DEBUG.load(Ordering::Acquire);
+    if d != 0 {
+        // SAFETY: C_DEBUG only ever holds 0 or the address of a `CDebug` stored by `onair_diag_set_sink`.
+        let f: CDebug = unsafe { core::mem::transmute::<usize, CDebug>(d) };
+        return f() != 0;
+    }
     match DEBUG.load(Ordering::Relaxed) {
         2 => true,
         1 => false,
@@ -136,6 +157,19 @@ impl Write for Buf {
 /// Formats `[E<code>] <text>` (a debug line also gets the `[v] ` mark) and hands it to the sink. Use the macros, not this.
 pub fn emit(level: Level, code: u32, args: fmt::Arguments) {
     if level == Level::Debug && !debug_enabled() {
+        return;
+    }
+    let c = C_EMIT.load(Ordering::Acquire);
+    if c != 0 {
+        let mut buf = Buf { b: [0; LINE], n: 0 };
+        let _ = buf.write_fmt(args);
+        let n = match core::str::from_utf8(&buf.b[..buf.n]) {
+            Ok(_) => buf.n,
+            Err(e) => e.valid_up_to(),
+        };
+        // SAFETY: C_EMIT only ever holds 0 or the address of a `CEmit` stored by `onair_diag_set_sink`; the pointer and length describe `buf`.
+        let f: CEmit = unsafe { core::mem::transmute::<usize, CEmit>(c) };
+        f(level as i32, code as i32, buf.b.as_ptr(), n);
         return;
     }
     let mut buf = Buf { b: [0; LINE], n: 0 };
@@ -211,9 +245,29 @@ mod tests {
     use super::*;
     use std::sync::Mutex;
 
+    static LOCK: Mutex<()> = Mutex::new(());
     static GOT: Mutex<std::vec::Vec<(Level, std::string::String)>> = Mutex::new(std::vec::Vec::new());
     fn grab(l: Level, s: &str) {
         GOT.lock().unwrap().push((l, s.into()));
+    }
+
+    static C_GOT: Mutex<std::vec::Vec<(i32, i32, std::string::String)>> = Mutex::new(std::vec::Vec::new());
+    extern "C" fn c_emit(l: i32, c: i32, p: *const u8, n: usize) {
+        let t = std::string::String::from_utf8_lossy(unsafe { core::slice::from_raw_parts(p, n) }).into_owned();
+        C_GOT.lock().unwrap().push((l, c, t));
+    }
+    extern "C" fn c_debug() -> i32 {
+        1
+    }
+
+    #[test]
+    fn the_c_callback_gets_code_and_text_without_prefix() {
+        let _l = LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        onair_diag_set_sink(Some(c_emit), Some(c_debug));
+        crate::diag_debug!(613587, "Quiet drop of {} bytes.", 4);
+        onair_diag_set_sink(None, None);
+        let g = C_GOT.lock().unwrap();
+        assert!(g.contains(&(0, 613587, "Quiet drop of 4 bytes.".into())));
     }
 
     #[test]
@@ -229,6 +283,7 @@ mod tests {
 
     #[test]
     fn lines_have_the_cpp_format_and_the_debug_switch_works() {
+        let _l = LOCK.lock().unwrap_or_else(|e| e.into_inner());
         set_sink(grab);
         set_debug(false);
         crate::diag!(482917, "The value {} is out of range, so it was ignored.", 7);
