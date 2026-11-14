@@ -17,7 +17,7 @@ the receiver of integ-41, run 43511467794; after: run 43519850093). dB in the 99
 | NGHam | 12 -> 10 | 12 -> 10 | 12 -> 12 | 0/4 -> 0/4 | +9..14 % (cubesat receiver) |
 | BEESAT (Mobitex) | 12 -> 12 (at 10 dB 11 of 12 trials pass, 1 of 12 before) | 12 -> 10 | 12 -> 10 | 0/4 -> 0/4 | same receiver |
 | AX100 Mode 5 | 10 -> 8 | 10 -> 8 | 10 -> 8 | 0/4 -> 0/8 | same receiver |
-| AX100 Mode 6 | 14 -> 12 | 14 -> 12 | 14 -> 12 | 0/4 -> 0/4 | same receiver |
+| AX100 Mode 6 | 14 -> 14 (kept off the new paths, see below; 12 with them) | 14 -> 14 | 14 -> 14 | 0/4 -> 0/4 | same receiver |
 | USP | 10 -> 8 | 10 -> 8 | 10 -> 8 | 0/4 -> 0/8 | same receiver |
 | CubeSat (all framings) | 12 -> 10 | 12 -> 10 | 12 -> 10 | 0/4 -> 0/4 | same receiver |
 | U482C | 14 -> 14 | 14 -> 14 | 14 -> 14 | 0/4 -> 0/4 | same receiver |
@@ -26,10 +26,10 @@ the receiver of integ-41, run 43511467794; after: run 43519850093). dB in the 99
 
 - CubeSat (NGHam, BEESAT, AX100, USP): `core/src/cubesat/cubesat_rx.cpp`. A 1-bit differential detector (arg of y[n] y*[n-T], the products
   averaged over half a bit) on the 9600 and 4800 baud narrow channels beside the discriminator paths: the phase over a bit without FM clicks,
-  so no FM threshold. The AFC's residual comes from the discriminator path's slicer midpoint. AX100 Mode 6 is taken on these paths only with
-  at most 8 byte errors put right, and a Mode 6 frame two paths give (an HDLC end one byte off on one of them) counts once. With a signal
-  present the narrow test's calibration still shows about one wrong Mode 6 frame in 32 at 8 to 10 dB (4.0: about one in 100); noise alone
-  gives the same 2 Mobitex frames in 4 x 219 s as 4.0, nothing else. One Mobitex frame that several demodulators report with different lost blocks now counts once (the copy
+  so no FM threshold. The AFC's residual comes from the discriminator path's slicer midpoint. AX100 Mode 6 is not taken on these paths: tried
+  with at most 8 byte errors put right, it gained 2 dB but with a signal present the narrow test's calibration showed about one wrong Mode 6
+  frame in 32 at 8 to 10 dB (4.0: about one in 100), so 4.1 leaves Mode 6 on the discriminator paths. A Mode 6 frame two paths give (an HDLC
+  end one byte off on one of them) counts once. Noise alone gives the same 2 Mobitex frames in 4 x 219 s as 4.0, nothing else. One Mobitex frame that several demodulators report with different lost blocks now counts once (the copy
   with more data); it was counted two or three times (the clean BEESAT trial counted 9 units for 3 frames). `DECT2_CUBESAT_NODIFF=1` turns
   the detectors off. U482C (audio FSK) is unchanged.
 - e-Czas: the QA sweep runs 60 s trials for it (the time packet comes every 12 s; an 8 s trial held one or none, so the old 30 dB was the
