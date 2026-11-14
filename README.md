@@ -2,7 +2,7 @@
 
 <h1 align="center">OnAir</h1>
 
-<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->390<!-- /modecount --> modes with one software-defined radio.</b><br>
+<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->391<!-- /modecount --> modes with one software-defined radio.</b><br>
 Free and open source, for macOS, Windows, Linux and Android.</p>
 
 <p align="center">
@@ -34,7 +34,7 @@ Free and open source, for macOS, Windows, Linux and Android.</p>
 
 OnAir turns a low-cost software-defined radio (a HackRF, an RTL-SDR, an Airspy and many others) into a receiver for most of what is on the air. Plug in an antenna, pick a mode, and watch the spectrum, the sync, the error correction and the decoded data.
 
-- <!-- modecount -->390<!-- /modecount --> modes in 14 families, from TV and DAB to aircraft, ships, satellites, two-way radio, pagers and sensors.
+- <!-- modecount -->391<!-- /modecount --> modes in 14 families, from TV and DAB to aircraft, ships, satellites, two-way radio, pagers and sensors.
 - Works with HackRF, RTL-SDR, Airspy, SDRplay, BladeRF, LimeSDR, USRP, Pluto and more, plus network radios, sound cards and Hamlib rigs.
 - Runs on macOS, Windows, Linux and Android. Free and open source (GPL-3.0-or-later).
 - A receiver first. It can also send test signals through a transmit-capable radio into a dummy load (off by default, behind a licence notice; see [Transmit](docs/TRANSMIT.md)).
@@ -94,7 +94,7 @@ Every receiver is built from published specifications and tested on generated si
 
 The full list, with what was measured and the known limits, is in [docs/CHANGELOG-4.1.md](docs/CHANGELOG-4.1.md) and in the 4.1 release notes on the [releases page](https://github.com/adswill/OnAir/releases/latest). Read the **Known limits** section: nearly everything new was tested on generated signals, not on the air.
 
-- **New modes** (390 in the app's list, 4 more than 4.0; [MODES.md](MODES.md) has 392 rows): Golay paging (GSC), STL link, ESP-NOW and SCADA radio telemetry.
+- **New modes** (391 in the app's list, 5 more than 4.0; [MODES.md](MODES.md) has 393 rows): Golay paging (GSC), STL link, ESP-NOW, SCADA radio telemetry and Robust Packet (RPR).
 - **Devices**: Aaronia SPECTRAN V6, a native SDRplay RSP1 / MSi2500 driver, RX888 MkII up to 130 Msps (none of them tested on hardware).
 - **Sensitivity**: a measured table of every mode, and lower thresholds for CubeSat links, e-Czas, VDL4, KLW, TDCS, ATSC 3.0 and DRM (simulated signals).
 - **Maps**: your own position, range rings, distance and bearing to the pointer.
