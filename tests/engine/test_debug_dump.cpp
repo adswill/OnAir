@@ -4,6 +4,7 @@
 // elsewhere the test checks that write() says it cannot.
 #include "dect2/engine/debug_dump.h"
 #include "dect2/common/thread_name.h"
+#include <cstdlib>
 #include <atomic>
 #include <chrono>
 #include <cstdarg>
@@ -101,6 +102,10 @@ int main() {
     }
     if (!ok) { fail("write() failed: %s", err.c_str()); fs::remove_all(dir); return 1; }
 
+    if (const char* keep = std::getenv("ONAIR_DUMP_TEST_KEEP")) {   // a copy for trying the analysis script (tools/debug_dump)
+        std::error_code ec;
+        fs::copy_file(dmp, fs::path(keep), fs::copy_options::overwrite_existing, ec);
+    }
     const std::string d = slurp(dmp);
     Rd r{d};
     if (r.get(0, 4) != 0x504d444du) fail("no MDMP signature");
