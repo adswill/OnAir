@@ -134,26 +134,28 @@ The `@` means "listen here". If nothing arrives, check the firewall of the recei
 
 ### Sending to OnAir's transmitter
 
+OnAir's transmitter does not build a multiplex for digital TV (DVB-T/T2, DVB-S/S2, DVB-C, ATSC, ISDB-T, DTMB, QO-100 DATV). It sends a
+transport stream that is ready, as it is. In the Transmit panel, **Transport stream** takes one of two:
+
+| Transport stream | What it is |
+|---|---|
+| **Digital video generator** (the default) | The multiplex of a linked generator, over the local pipe (no ports). Click it in the **Video generator** row (`*` = it is sending now); the first generator that links is taken until another is chosen. Below it, the transmitter shows that generator's programmes. |
+| **UDP stream** | A transport stream that arrives over UDP or RTP, from VLC, FFmpeg, OBS, a hardware encoder or this generator's UDP output. The address is written as in VLC: `udp://@:5004` (every network card, the default), `udp://@127.0.0.1:5004` (this computer only), `udp://@239.1.1.1:5004` (multicast), `rtp://@:5004` (RTP). |
+
 Output **Transmitter** (always in Easy mode) sends the multiplex to OnAir over the link instead of to a file or the network. OnAir gives
-each linked generator a slot (1 to 8); the transmitter reads it as `generator:<slot>`. A generator's whole multiplex, with all its
-sources, can be the whole transport stream: click it in the **Video generator** row of the Transmit panel. To put several generators
-in one channel, for example the same picture in H.264 and H.265 on two computers:
+each linked generator a slot (1 to 8); the transmitter reads it as `generator:<slot>`. A generator on another computer links too: tick
+**Listen on the network for generators** in OnAir's Transmit panel and start it with `--onair <OnAir's address>:5460`.
 
-1. Start the generators (Tools > Digital video generator starts one; more can be started by hand, also on other computers: tick
-   **Listen on the network for generators** in OnAir's Transmit panel and start them with `--onair <OnAir's address>:5460`).
-2. In the Transmit panel, under **Multiplex**, set **Services** to the number of generators. For each one choose Programme source
-   **Video generator** and the generator (`*` = it is sending now). Below it, the transmitter shows that generator's programmes.
-3. Start the transmitter.
+The programme numbers, names and PIDs are the stream's: in Easy mode the generator sends programme 1, in Advanced mode its Muxing tab
+sets them, with one programme per source. Several programmes in one channel are several sources of one generator in Advanced mode.
 
-Each generator keeps its own programme numbers, names and PIDs: in Easy mode programme 1, in Advanced mode those of its Muxing tab. When
-two generators use the same programme number or PIDs, the transmitter moves the later one's to the next free ones. In Easy mode the
-transmitter greys the Multiplex fields the generator controls (provider, first service ID and the service name), with the tooltip "Service
-settings are controlled by the Digital video generator". For a generator in Advanced mode it only warns that its Muxing tab sets them.
+The transmitter tells the generator the channel's rate, and the generator may use 97 % of it. Easy mode fits its video bitrate to that.
+Advanced mode uses it as the Muxing tab's capacity, unless one is typed there. Starting a generator empties its old queue, so the
+transmitter never sends stale pictures; while it is not sending, the transmitter sends null packets.
 
-The transmitter tells every generator the channel's rate. Each one may use 97 % of it, shared equally by the generators in the multiplex.
-Easy mode fits its video bitrate to that. Advanced mode uses it as the Muxing tab's capacity, unless one is typed there. A generator
-started later joins the multiplex; one that stops leaves it. Starting a generator empties its old queue, so the transmitter never sends
-stale pictures. Services with another source (test card, file, camera) are left out while a generator is in the multiplex.
+A UDP stream is taken as it comes: OnAir does not pace it. When it is faster than the channel, its oldest packets are dropped (about
+2.5 s are kept); while none arrives, null packets are sent. The panel counts both while on the air. Make the stream's rate fit the
+channel: the Transmit panel shows the channel's transport-stream rate.
 
 ## Encoding settings
 

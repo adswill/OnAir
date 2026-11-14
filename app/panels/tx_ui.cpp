@@ -143,6 +143,9 @@ void loadPayloadPrefs(TxUi& s) {
     s.meshNodeInfo = p.getB("tx.meshNodeInfo", true);
     s.offsetMhz = p.getD("tx.offsetMhz", 0);
     s.dryRun = p.getB("tx.dryRun", false);
+    s.tvSrc = p.getI("tx.tvSrc", 1) == 0 ? 0 : 1;
+    s.tvGen = (int)std::clamp<long long>(p.getI("tx.tvGen", 0), 0, dect2::vgen::kMaxInstances);
+    snprintf(s.tvUdp, sizeof s.tvUdp, "%s", p.getS("tx.tvUdp", "udp://@:5004").c_str());
     s.destKind = p.getI("tx.destKind", 0) == 1 ? 1 : 0;
     snprintf(s.ifPath, sizeof s.ifPath, "%s", p.getS("tx.ifPath", "").c_str());
     s.ifFormat = std::max(0, std::min(kIqFileFormats - 1, (int)p.getI("tx.ifFormat", 0)));
@@ -184,6 +187,19 @@ void pushRecent(TxUi& s, const std::string& id, double mhz, float gain) {
 
 void saveStr(const char* key, const char* v) {
     plat::basePrefs().setS(key, v);
+}
+
+// Digital TV takes a ready transport stream (#458): the modes that carry one, and QO-100 on its DATV path
+bool tvTakesStream(const TxModeSpec& m, const TxUi& s) {
+    switch (m.stdMode) {
+    case 0: case 3: case 6: case 8: case 9: case 42: return true;
+    default: return m.id && std::string(m.id) == "qo100" && s.variant == 1;
+    }
+}
+// what txOpenMpegTs gets: "udp://..." or "generator:N" (empty while no generator is chosen: the built-in test card)
+std::string tvStreamSpec(const TxUi& s) {
+    if (s.tvSrc == 0) return s.tvUdp;
+    return s.tvGen > 0 ? dect2::vgen::generatorSpec(s.tvGen) : std::string();
 }
 
 TxRequest makeReq(const TxUi& s, const TxModeSpec& mode, bool carrier) {
@@ -285,15 +301,7 @@ TxRequest makeReq(const TxUi& s, const TxModeSpec& mode, bool carrier) {
     r.analogVoice = s.analogVoice;
     r.videoSrc = s.videoSrc;
     r.videoDevice = s.videoDevice;
-    for (int i = 0; i < std::max(1, std::min(4, s.nsvc)); i++) {
-        DemoTsService p;
-        p.name = s.svc[i][0] ? s.svc[i] : (s.name[0] && i == 0 ? s.name : std::string("OnAir ") + std::to_string(i + 1));
-        p.picture = i % 3;
-        if (s.svcSrc[i] == 1) p.file = s.svcFile[i];
-        if (s.svcSrc[i] == 2) { p.liveCamera = true; p.camera = s.svcCam[i]; }
-        if (s.svcSrc[i] == 3) { p.generator = std::max(1, std::min(dect2::vgen::kMaxInstances, s.svcGen[i])); p.name = s.svc[i]; }   // empty name: the generator's own
-        r.mux.push_back(std::move(p));
-    }
+    if (tvTakesStream(mode, s)) r.file = tvStreamSpec(s);   // digital TV: the UDP stream or the generator, never another mode's file (#458)
     paramsApply(s, r);
     controlApply(s, r);   // the radio's filter, gain stages and calibration (tx_control_ui.cpp)
     return r;
@@ -498,8 +506,7 @@ void txTick(App& a) {
             t.channelBps = txTsBitrate();
             t.system = s.modeName.empty() && m && m->name ? m->name : s.modeName;
             if (m->stdMode == 0) t.params = std::to_string((int)kTxBw[std::clamp(s.bwIdx, 0, 3)]) + " MHz";
-            if (std::strncmp(s.file, "generator:", 10) == 0) t.slots.push_back(atoi(s.file + 10));
-            else for (int i = 0; i < std::clamp(s.nsvc, 1, 4); i++) if (s.svcSrc[i] == 3) t.slots.push_back(s.svcGen[i]);
+            if (s.tvSrc == 1 && s.tvGen > 0) t.slots.push_back(s.tvGen);
         }
         dect2::vgen::vgLinkServer().setTxInfo(t);
     }
@@ -589,10 +596,9 @@ void txDevOpen(App& a, const char* modeId, bool dryRun) {
     const TxModeSpec* t = txModeById(modeId);
     if (!t) return;
     for (const auto& m : allModes()) if (txModeForList(m.family, m.subId, s.dvbVariant) == t) { txSelectMode(a, m.family, m.subId); break; }
-    if (const char* g = getenv("DECT2_TXGEN")) {   // dev: programme 1 of the multiplex from linked generator N (#458 screenshots)
-        s.nsvc = std::max(s.nsvc, 1);
-        s.svcSrc[0] = 3;
-        s.svcGen[0] = std::clamp(atoi(g), 1, dect2::vgen::kMaxInstances);
+    if (const char* g = getenv("DECT2_TXGEN")) {   // dev: the transport stream of linked generator N (#458 screenshots)
+        s.tvSrc = 1;
+        s.tvGen = std::clamp(atoi(g), 1, dect2::vgen::kMaxInstances);
     }
     if (dryRun) { s.dryRun = true; s.devAutoStart = true; }
 }

@@ -598,6 +598,7 @@ bool txOpenMpegTs(const std::string& path, std::function<void(uint8_t*)>& outTs,
         note = "video generator " + std::to_string(gid) + " (live; null packets while it is not running)";
         return true;
     }
+    if (isTxUdpSpec(path)) return txUdpTsSource(path, outTs, note);   // a transport stream over UDP / RTP (#458)
     int stride = 188, syncOff = 0;
     if (looksLikeMpegTs(path, stride, syncOff)) {
         outTs = loopingTsFile(path, stride, syncOff);
@@ -718,7 +719,7 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
         if (!txOpenMpegTs(r.file, fileTs, fileNote)) {
             if (fileNote.empty()) fileNote = "could not use this file as a transport stream; the demo programme is sent";
         }
-    } else if (wantTs) fileNote = r.services.empty() && r.name.empty() ? "empty: the built-in demo programme" : "built-in test card with your service names";
+    } else if (wantTs) fileNote = "no transport stream chosen: the built-in test card";
     const_cast<TxRequest&>(r).fileNote = fileNote;
     auto ident = [](const TxRequest& r) {
         DemoTsIdentity id;

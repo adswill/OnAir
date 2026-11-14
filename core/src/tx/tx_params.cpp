@@ -253,13 +253,10 @@ void dvbsRows(std::vector<D>& v, double symDef = 5e6) {
     });
 }
 
-// the TV payload: a transport stream file or the test card with the names of the multiplex
+// the TV payload: a ready transport stream (#458), from UDP or from a Digital video generator; the panel's widget sets TxRequest::file
 void tvPayload(std::vector<D>& v, const std::string& id) {
-    if (id == "atsc3") return;   // ATSC 3.0 sends its own ROUTE / fMP4 test programme: no file, no names
-    v.push_back(META(file("tv.file", "MPEG-TS / video file", "Your .ts / .m2ts is sent as it is; other video is remuxed when FFmpeg can. Empty: a test card with the names below."),
-                     "a file of the test machine; tests/tx/test_tx_mux.cpp sends files"));
-    v.push_back(custom("tv.mux", "Multiplex", "Network, provider, first service ID and up to four programmes (name and picture source each).", TxPField::Name));
-    v.push_back(HID(custom("tv.network", "Network name", "", TxPField::Network)));
+    if (id == "atsc3") return;   // ATSC 3.0 sends its own ROUTE / fMP4 test programme: no stream to give
+    v.push_back(custom("tv.source", "Transport stream", "A UDP stream (udp://@:5004) or the multiplex of a Digital video generator, sent as it is.", TxPField::File));
 }
 
 // ---------------------------------------------------------------- the builder

@@ -21,6 +21,7 @@
 #include "dect2/tv/ts_remux.h"
 #include "dect2/tx/tx.h"
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <functional>
@@ -1025,6 +1026,59 @@ static void testStream(const fs::path& pic, bool rtp) {
 #endif
 
 
+// The transmitter's UDP input (tx.h txUdpTsSource, #458): the generator streams UDP or RTP to 127.0.0.1, the transmitter's source
+// gives whole TS packets of that stream in order, and null packets while none waits
+static void testTxUdpInput(const fs::path& pic, bool rtp) {
+    std::function<void(uint8_t*)> src;
+    std::string note;
+    CHECK(!dect2::txOpenMpegTs("udp://nohost", src, note) && !src, "an address without a port is refused: %s", note.c_str());
+    const int port = 41000 + 2 * (int)(std::chrono::steady_clock::now().time_since_epoch().count() % 2000) + (rtp ? 1 : 0) * 4000;
+    const std::string url = std::string(rtp ? "rtp" : "udp") + "://@127.0.0.1:" + std::to_string(port);
+    CHECK(dect2::txOpenMpegTs(url, src, note) && src, "%s opens: %s", url.c_str(), note.c_str());
+    if (!src) return;
+    std::array<uint8_t, 188> pk{};
+    src(pk.data());
+    CHECK(pk[0] == 0x47 && ((pk[1] & 0x1F) << 8 | pk[2]) == 0x1FFF, "a null packet before the stream comes");
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));   // the receiver binds its port
+    GenConfig c = pictureConfig(pic);
+    c.output = rtp ? Output::Rtp : Output::Udp;
+    c.host = "127.0.0.1";
+    c.port = port;
+    c.enc.videoEncoder = "mpeg2video";
+    VideoGenerator g;
+    std::string err;
+    CHECK(g.start(c, err), "start stream: %s", err.c_str());
+    size_t real = 0, bad = 0, pat = 0, ccJumps = 0;
+    std::map<int, int> cc;
+    const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(1500);
+    while (std::chrono::steady_clock::now() < end) {
+        int nullRun = 0;
+        for (int i = 0; i < 8000 && nullRun < 64; i++) {   // what came in so far: the queue is empty after many nulls in a row (the stream pads with some too)
+            src(pk.data());
+            const int pid = (pk[1] & 0x1F) << 8 | pk[2];
+            if (pk[0] != 0x47) { bad++; continue; }
+            if (pid == 0x1FFF) { nullRun++; continue; }
+            nullRun = 0;
+            real++;
+            if (pid == 0) pat++;
+            if (pk[3] & 0x10) {
+                const int k = pk[3] & 0x0F;
+                if (cc.count(pid) && k != ((cc[pid] + 1) & 0x0F)) ccJumps++;
+                cc[pid] = k;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    g.stop();
+    const dect2::TxUdpTsStats st = dect2::txUdpTsStats();
+    CHECK(real > 100 && bad == 0 && pat > 0, "%s: %zu packets of the stream, %zu not TS, %zu PAT", url.c_str(), real, bad, pat);
+    CHECK(ccJumps == 0, "%s: the packets come in order, none lost (%zu continuity jumps)", url.c_str(), ccJumps);
+    CHECK(st.running && st.received > 0 && st.dropped == 0 && st.url == url, "%s stats: %llu received, %llu dropped (%s %s)", url.c_str(),
+          (unsigned long long)st.received, (unsigned long long)st.dropped, st.state.c_str(), st.message.c_str());
+    src = {};   // the input ends with its source
+    CHECK(!dect2::txUdpTsStats().running, "the UDP input stops with its source");
+}
+
 // ---- RTMP server input ----
 static void testRtmpUrls() {
     std::string lu, err, server, key;
@@ -1560,6 +1614,8 @@ int main() {
     testRtmpInput(dir);
     testRemuxSynthetic();
     testGeneratorMux(dir, pic);
+    testTxUdpInput(pic, false);
+    testTxUdpInput(pic, true);
     failures += videogenLinkTests();
     failures += videogenMuxTests();
 #ifndef _WIN32

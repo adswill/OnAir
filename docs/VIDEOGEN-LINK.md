@@ -89,7 +89,7 @@ Every message describes a **state**, not an event, so a lost datagram only delay
 | `token` | the token OnAir started it with (empty when started by hand), at most 80 characters |
 | `rate` | its mux rate in bit/s, 0 when not sending |
 | `stream` | counts its starts (see above) |
-| `easy` | `1` in Easy mode, `0` in Advanced. In Easy mode the transmitter greys the Multiplex fields the generator controls. |
+| `easy` | `1` in Easy mode, `0` in Advanced (for the user: the transmitter takes the stream as it is in both) |
 | `programmes`, `p0`, `p1` ... | the programmes of its multiplex, "number name" each (at most 16) |
 
 ### Reply (OnAir -> generator)

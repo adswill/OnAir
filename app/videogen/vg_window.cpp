@@ -291,7 +291,7 @@ void topBar(Gen& g) {
     } else if (!g.msg.empty()) ImGui::TextColored(kRed, "%s", g.msg.c_str());
     else if (!ms.error.empty()) ImGui::TextColored(kRed, "%s", ms.error.c_str());
     else if (ms.finished && out == Output::File && ms.packets > 0)
-        ImGui::TextDisabled("%s: %s (%.1f s). %s", tr("Written"), g.mux.tsPath.c_str(), ms.seconds, tr("The transmitter takes it as its \"MPEG-TS / video file\"."));
+        ImGui::TextDisabled("%s: %s (%.1f s). %s", tr("Written"), g.mux.tsPath.c_str(), ms.seconds, tr("To put it on the air: play it to the transmitter's UDP stream input, or use Output: Transmitter."));
     else if (!g.probed) ImGui::TextDisabled("%s", tr("Looking for encoders and cameras..."));
     else ImGui::NewLine();
     linkLine(g);

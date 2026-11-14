@@ -51,9 +51,12 @@ struct TxUi {
     char callsign[16] = {}, grid[8] = {}, dest[24] = {}, name[16] = {}, path[64] = {}, file[512] = {}, text[256] = {};
     std::string rdsRt;
     std::string audioDevice;   // the microphone (listAudioInputs id: its name, which can be longer than 64 bytes); empty = default
-    char provider[64] = {}, network[64] = {}, svc[4][48] = {}, svcFile[4][512] = {}, svcCam[4][96] = {}, videoDevice[96] = {};
-    int nsvc = 1, serviceId = 1, videoSrc = 0, svcSrc[4] = {};   // svcSrc: 0 test card, 1 video file, 2 camera, 3 video generator (svcGen)
-    int svcGen[4] = {1, 2, 3, 4};   // svcSrc 3: which Digital video generator (1..8) is this service (#492)
+    char provider[64] = {}, network[64] = {}, svc[4][48] = {}, videoDevice[96] = {};
+    int nsvc = 1, serviceId = 1, videoSrc = 0;
+    // digital TV sends a ready transport stream (#458): 0 the one that arrives on tvUdp, 1 the multiplex of Digital video generator tvGen
+    // (1..8, 0 none chosen yet) over the local pipe. Its own fields: the audio or video file of another mode is never taken as the stream.
+    int tvSrc = 1, tvGen = 0;
+    char tvUdp[256] = "udp://@:5004";
     int kind = 0, baudIdx = 0, shiftIdx = 0, variant = 0, wpm = 20, dbm = 37, function = 3;
     unsigned address = 0;
     double toneHz = 1000, lat = 0, lon = 0;
@@ -180,6 +183,8 @@ void saveStr(const char* key, const char* v);        // one text into the settin
 void saveRecent(const TxUi& s);                        // writes the recent list
 void pushRecent(TxUi& s, const std::string& id, double mhz, float gain);
 TxRequest makeReq(const TxUi& s, const TxModeSpec& mode, bool carrier);
+bool tvTakesStream(const TxModeSpec& m, const TxUi& s);   // digital TV (and QO-100 DATV): it sends a ready transport stream (#458)
+std::string tvStreamSpec(const TxUi& s);                 // that stream for txOpenMpegTs: "udp://..." or "generator:N"
 // the advanced parameters (tx_params.cpp)
 const std::vector<PDef>& paramsFor(TxUi& s, const TxModeSpec& m);
 void paramsEnter(TxUi& s, const TxModeSpec& m);        // the mode was chosen: defaults, then the values it had last time

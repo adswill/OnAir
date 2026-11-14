@@ -275,22 +275,27 @@ const dect2::vgen::VgPeer* peerOf(const std::vector<dect2::vgen::VgPeer>& peers,
     for (const auto& p : peers) if (p.slot == slot) return &p;
     return nullptr;
 }
-const char* const kGenControls = N_("Service settings are controlled by the Digital video generator");
 } // namespace
 
-// A Digital video generator as the video source: its whole multiplex as it is, read by the name generator:N
-void generatorPick(TxUi& s) {
+namespace {
+// The linked Digital video generators as buttons: `cur` the chosen slot (0 none), `pick` gets the clicked one (0: clicked again, cleared)
+// and the link's own box (pipe always; ticked, UDP too)
+void generatorButtons(int cur, const std::function<void(int)>& pick) {
     const auto peers = dect2::vgen::vgLinkServer().peers();
     ImGui::TextDisabled("%s", tr("Video generator:"));
     if (peers.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("none linked")); }
     for (const auto& p : peers) {
         ImGui::SameLine();
-        const std::string spec = dect2::vgen::generatorSpec(p.slot);
-        const bool on = spec == s.file;
+        const bool on = p.slot == cur;
         const std::string lb = (on ? "[" + peerLabel(p) + "]" : peerLabel(p)) + "##tvgen" + std::to_string(p.slot);
-        if (ImGui::SmallButton(lb.c_str())) snprintf(s.file, sizeof s.file, "%s", on ? "" : spec.c_str());
+        if (ImGui::SmallButton(lb.c_str())) pick(on ? 0 : p.slot);
     }
     { ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The Digital video generators linked to OnAir (Tools > Digital video generator starts one; * = it is sending now). Its whole multiplex is sent as it is; click again to clear.")); }
+    if (const dect2::vgen::VgPeer* cp = cur > 0 ? peerOf(peers, cur) : nullptr; cp && !cp->programmes.empty()) {
+        std::string t;
+        for (const auto& pr : cp->programmes) t += (t.empty() ? "" : ", ") + pr;
+        ImGui::TextDisabled("    %s: %s", tr("its programmes"), t.c_str());
+    } else if (cur > 0 && !cp) ImGui::TextDisabled("    %s", tr("not linked now: null packets are sent until it links again"));
     // the link: always the local pipe on this computer (no ports); ticked, UDP too, for generators on other computers (#458)
     bool net = videoGenNetwork();
     if (ImGui::Checkbox(tr("Listen on the network for generators##vgnet"), &net)) videoGenSetNetwork(net);
@@ -301,6 +306,54 @@ void generatorPick(TxUi& s) {
     if (net && port > 0) { ImGui::SameLine(); ImGui::TextDisabled("UDP %d / %d", port, port + 1); }
     if (!videoGenError().empty()) ImGui::TextColored(ImVec4(1, 0.55f, 0.3f, 1), "%s", videoGenError().c_str());
 }
+} // namespace
+
+// Analog TV: a Digital video generator as the video file, read by the name generator:N
+void generatorPick(TxUi& s) {
+    int cur = 0;
+    dect2::vgen::parseGeneratorSpec(s.file, cur);
+    generatorButtons(cur, [&s](int slot) { snprintf(s.file, sizeof s.file, "%s", slot > 0 ? dect2::vgen::generatorSpec(slot).c_str() : ""); });
+}
+
+// Digital TV sends a ready transport stream and makes none (#458): the one that arrives over UDP, or the multiplex of a Digital video
+// generator over the local pipe. Its programme numbers, names and PIDs are that stream's.
+void tvSource(TxUi& s, bool running) {
+    plat::Prefs& pr = plat::basePrefs();
+    const char* srcn[] = {tr("UDP stream"), tr("Digital video generator")};
+    ImGui::BeginDisabled(running);
+    ImGui::SetNextItemWidth(220 * gUi);
+    if (ImGui::BeginCombo(tr("Transport stream"), srcn[s.tvSrc == 0 ? 0 : 1])) {
+        for (int k = 0; k < 2; k++) if (ImGui::Selectable(srcn[k], s.tvSrc == k)) { s.tvSrc = k; pr.setI("tx.tvSrc", k); }
+        ImGui::EndCombo();
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The transmitter sends a transport stream that is ready, as it is: a UDP stream (from VLC, FFmpeg, OBS or an encoder), or the multiplex of a Digital video generator (Tools > Digital video generator). Programme numbers, names and PIDs come from that stream."));
+    if (s.tvSrc == 0) {
+        ImGui::BeginDisabled(running);
+        ImGui::SetNextItemWidth(260 * gUi);
+        if (ImGui::InputText(tr("UDP address"), s.tvUdp, sizeof s.tvUdp)) pr.setS("tx.tvUdp", s.tvUdp);
+        ImGui::EndDisabled();
+        ImGui::SameLine();
+        ImGui::TextDisabled("(?)");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Written as in VLC: udp://@:5004 listens on every network card, udp://@127.0.0.1:5004 on this computer only, udp://@239.1.1.1:5004 joins a multicast group; rtp:// for RTP. For example: ffmpeg -re -i video.ts -c copy -f mpegts \"udp://127.0.0.1:5004?pkt_size=1316\""));
+        if (!dect2::isTxUdpSpec(s.tvUdp)) ImGui::TextColored(kRed, "%s", tr("Write the address as udp://@:5004 (or rtp://@:5004)."));
+        const dect2::TxUdpTsStats st = dect2::txUdpTsStats();
+        if (running && st.running) {
+            ImGui::TextDisabled("%s %llu, %s %llu, %s %llu", tr("Packets received"), (unsigned long long)st.received, tr("null packets while none waited"),
+                                (unsigned long long)st.nulls, tr("dropped (the stream is faster than the channel)"), (unsigned long long)st.dropped);
+            if (st.state == "error") ImGui::TextColored(kRed, "%s", st.message.c_str());
+        }
+        return;
+    }
+    if (s.tvGen == 0) {   // the first generator that links is the stream until another is chosen (poka-yoke: nothing to forget)
+        const auto peers = dect2::vgen::vgLinkServer().peers();
+        if (!peers.empty()) { s.tvGen = peers.front().slot; pr.setI("tx.tvGen", s.tvGen); }
+    }
+    generatorButtons(s.tvGen, [&s, &pr](int slot) { s.tvGen = slot; pr.setI("tx.tvGen", slot); });
+    if (s.tvGen == 0) ImGui::TextDisabled("%s", tr("No generator chosen: the built-in test card is sent."));
+}
 
 void analogNfmBox(TxUi& s, bool running) {
     if (s.modeId == "general")   // the general receiver sends the audio with the modulation its test signal is set to (#373)
@@ -309,108 +362,10 @@ void analogNfmBox(TxUi& s, bool running) {
     if (s.analogVoice) audioSourceRow(s, running);
 }
 
-void muxIdentity(TxUi& s) {
-    typo::separatorText(tr("Multiplex"));
-    // poka-yoke (#458): a generator in Easy mode numbers and names its own programmes, so the fields it controls are greyed; one in
-    // Advanced mode only gets a warning (its Muxing tab sets them)
-    const auto peers = dect2::vgen::vgLinkServer().peers();
-    bool easyGen = false;
-    std::string advGens;
-    for (int i = 0; i < std::clamp(s.nsvc, 1, 4); i++) {
-        if (s.svcSrc[i] != 3) continue;
-        const dect2::vgen::VgPeer* p = peerOf(peers, s.svcGen[i]);
-        if (!p) continue;
-        if (p->easy) easyGen = true;
-        else if (advGens.find(std::to_string(p->slot)) == std::string::npos) advGens += (advGens.empty() ? "" : ", ") + std::to_string(p->slot);
-    }
-    auto controlled = [](bool on) { if (on && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr(kGenControls)); };
-    ImGui::SetNextItemWidth(200 * gUi);
-    ImGui::InputText(tr("Network name"), s.network, sizeof s.network);
-    ImGui::BeginDisabled(easyGen);
-    ImGui::SetNextItemWidth(200 * gUi);
-    ImGui::InputText(tr("Provider"), s.provider, sizeof s.provider);
-    controlled(easyGen);
-    ImGui::SetNextItemWidth(100 * gUi);
-    ImGui::InputInt(tr("First service ID"), &s.serviceId);
-    controlled(easyGen);
-    ImGui::EndDisabled();
-    if (s.serviceId < 1) s.serviceId = 1;
-    if (!advGens.empty()) {
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.7f, 0.28f, 1));
-        ImGui::TextWrapped(tr("Generator %s is in Advanced mode: its Muxing tab sets its programme numbers, names and PIDs; these fields do not change them."), advGens.c_str());
-        ImGui::PopStyleColor();
-    }
-    ImGui::SetNextItemWidth(120 * gUi);
-    if (ImGui::SliderInt(tr("Services"), &s.nsvc, 1, 4)) s.nsvc = std::max(1, std::min(4, s.nsvc));
-    ImGui::TextDisabled("%s", tr("Each service is its own programme (own video and audio PIDs in the PAT / PMT / SDT). The whole-mux MPEG-TS above, if set, replaces this."));
-    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));   // wrapped: it is long
-    ImGui::TextWrapped("%s", tr("Source \"Video generator\": the live multiplex of a Digital video generator linked to OnAir (Tools > Digital video generator), with its own programme numbers and names. Then only the generator services are sent."));
-    ImGui::PopStyleColor();
-    const auto cams = listVideoInputs();
-    for (int i = 0; i < s.nsvc; i++) {
-        char lb[48];
-        snprintf(lb, sizeof lb, "%s %d", tr("Service name"), i + 1);
-        const dect2::vgen::VgPeer* rowGen = s.svcSrc[i] == 3 ? peerOf(peers, s.svcGen[i]) : nullptr;
-        ImGui::BeginDisabled(rowGen && rowGen->easy);
-        ImGui::SetNextItemWidth(220 * gUi);
-        ImGui::InputText(lb, s.svc[i], sizeof s.svc[i]);
-        controlled(rowGen && rowGen->easy);
-        ImGui::EndDisabled();
-        const char* srcn[] = {tr("Test card"), tr("Video file"), tr("Camera / capture card"), tr("Video generator")};
-        snprintf(lb, sizeof lb, "%s %d", tr("Programme source"), i + 1);
-        ImGui::SetNextItemWidth(220 * gUi);
-        if (ImGui::BeginCombo(lb, srcn[std::max(0, std::min(3, s.svcSrc[i]))])) {
-            for (int k = 0; k < 4; k++) if (ImGui::Selectable(srcn[k], s.svcSrc[i] == k)) s.svcSrc[i] = k;
-            ImGui::EndCombo();
-        }
-        if (s.svcSrc[i] == 3) {   // a Digital video generator as this programme (#492), linked to OnAir (#458)
-            snprintf(lb, sizeof lb, "%s %d", tr("Generator"), i + 1);
-            const int cur = std::max(1, std::min(dect2::vgen::kMaxInstances, s.svcGen[i]));
-            const dect2::vgen::VgPeer* cp = peerOf(peers, cur);
-            const std::string curName = cp ? peerLabel(*cp) : std::to_string(cur) + " " + tr("(not linked)");
-            ImGui::SetNextItemWidth(220 * gUi);
-            if (ImGui::BeginCombo(lb, curName.c_str())) {
-                for (const auto& p : peers) if (ImGui::Selectable(peerLabel(p).c_str(), p.slot == cur)) s.svcGen[i] = p.slot;
-                if (peers.empty()) ImGui::TextDisabled("%s", tr("No generator is linked: Tools > Digital video generator starts one."));
-                ImGui::EndCombo();
-            }
-            ImGui::SameLine();
-            ImGui::TextDisabled("(?)");
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The Digital video generators linked to OnAir (* = sending now). Its programmes keep the numbers and names it gives them (its Easy tab or Muxing tab). Its mux rate is its share of the channel."));
-            if (cp && !cp->programmes.empty()) {
-                std::string t;
-                for (const auto& pr : cp->programmes) t += (t.empty() ? "" : ", ") + pr;
-                ImGui::TextDisabled("    %s: %s", tr("its programmes"), t.c_str());
-            }
-        }
-        if (s.svcSrc[i] == 1) {
-            snprintf(lb, sizeof lb, "%s %d", tr("Video file"), i + 1);
-            ImGui::SetNextItemWidth(220 * gUi);
-            ImGui::InputText(lb, s.svcFile[i], sizeof s.svcFile[i]);
-            ImGui::SameLine();
-            snprintf(lb, sizeof lb, "%s##svcfile%d", tr("Browse…"), i);
-            if (ImGui::Button(lb)) { const std::string p = openFileDialog(); if (!p.empty()) snprintf(s.svcFile[i], sizeof s.svcFile[i], "%s", p.c_str()); }
-        } else if (s.svcSrc[i] == 2) {
-            snprintf(lb, sizeof lb, "%s %d", tr("Camera"), i + 1);
-            const char* cur = tr("Default camera");
-            for (const auto& d : cams) if (s.svcCam[i][0] && std::string(s.svcCam[i]) == d.id) { cur = d.name.c_str(); break; }
-            ImGui::SetNextItemWidth(280 * gUi);
-            if (ImGui::BeginCombo(lb, cur)) {
-                if (ImGui::Selectable(tr("Default camera"), s.svcCam[i][0] == 0)) s.svcCam[i][0] = 0;
-                for (const auto& d : cams) {
-                    const bool sel = std::string(s.svcCam[i]) == d.id;
-                    if (ImGui::Selectable(d.name.c_str(), sel)) snprintf(s.svcCam[i], sizeof s.svcCam[i], "%s", d.id.c_str());
-                }
-                ImGui::EndCombo();
-            }
-        }
-    }
-}
-
-// The DVB standard of the TV list entry, the digital video generator as the source, and what was done with the file last time
-void tvExtras(TxUi& s, const TxModeSpec& mode) {
+// The transport stream, the DVB standard of the TV list entry, and what was done with the stream last time
+void tvExtras(TxUi& s, const TxModeSpec& mode, bool running) {
     const std::string id = mode.id ? mode.id : "";
-    generatorPick(s);
+    tvSource(s, running);
     if (!s.fileNote.empty()) ImGui::TextWrapped("%s", s.fileNote.c_str());
     if (id == "dvbt2" || id == "dvbt") {
         const char* dvb[] = {"DVB-T2", "DVB-T"};
@@ -521,7 +476,7 @@ void customRow(TxUi& s, const TxModeSpec& mode, const PDef& d, bool running) {
         if (!note.empty()) banner(Note::Info, tr(note.c_str()));
         if (id == "dmr") banner(Note::Info, tr("Your DMR ID and callsign go on the air. Voice bits are a test pattern (OnAir cannot encode AMBE+2). Not tested on air against a real repeater."));
     } else if (k == "dmr.slotSync") dmrSlotSyncRow(s);
-    else if (k == "tv.mux") { tvExtras(s, mode); muxIdentity(s); }
+    else if (k == "tv.source") tvExtras(s, mode, running);
     else if (k == "atv.picture") atvPicture(s);
     else if (k == "atv.sound") atvSound(s, running);
     else if (k == "dab.services") dabServices(s);

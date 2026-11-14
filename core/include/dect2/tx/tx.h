@@ -89,6 +89,19 @@ TxPayloadKind txPayloadKind(const std::string& id);
 // "generator:N": the live stream of Digital video generator N (tv/videogen.h), null packets while it is not sending to the transmitter.
 // Empty path: false, note says demo. A file that is not TS and cannot be remuxed: false with an error in note (the caller keeps the demo).
 bool txOpenMpegTs(const std::string& path, std::function<void(uint8_t*)>& outTs, std::string& note);
+// "udp://..." / "rtp://..." (txOpenMpegTs takes them too): the transport stream that arrives over UDP, raw TS or RTP payload type 33,
+// written as VLC does: udp://@:5004 (every network card), udp://@127.0.0.1:5004, udp://@239.1.1.1:5004 (multicast). The source gives
+// the oldest packet that came in, or a null packet when none waits; a stream faster than the channel loses its oldest packets
+// (counted). false only for an address that is not one (a port in use shows in txUdpTsStats).
+bool isTxUdpSpec(const std::string& s);
+bool txUdpTsSource(const std::string& spec, std::function<void(uint8_t*)>& outTs, std::string& note);
+struct TxUdpTsStats {
+    bool running = false;
+    std::string url, state, message;   // state / message: the receiver's ("playing", "buffering", "error": port in use ...)
+    uint64_t received = 0, dropped = 0, nulls = 0;
+    size_t queued = 0;
+};
+TxUdpTsStats txUdpTsStats();   // of the UDP input running now (or the last one)
 // The transport-stream rate (bit/s) of the digital TV signal made last (the running transmission or the panel's preview), 0 before
 // any: what the Digital video generators are told they may use (vglink.h)
 double txTsBitrate();
