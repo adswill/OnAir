@@ -28,6 +28,7 @@ OnAir 4.1 adds 5 new receivers: 393 entries in MODES.md in total, 391 in the app
 - VDL2 ground stations stay where they are: a position needs two agreeing reports and a corrupted one is ignored; they are named after the nearest airport; the map has Ground stations and Coverage switches.
 - Clearer AM: the noise reduction leaves much less "warbling" (musical noise index 1.57 to 0.98 on generated signals) and the leveller no longer pumps.
 - Workspaces remember the window size, position and maximised state.
+- Radiosonde upload: the station beacon uses the dish symbol and says "tracker", so radiosondy.info lists the receiver; frames SondeHub refuses are counted as refused and its reason is shown in the feed status.
 - Discord requests: SITOR keeps its text across retunes and has Save and Clear; FM smart checks sit below the RDS details; WEFAX hand phasing and the JFX Kagoshima station; a Pluto+ RX1/RX2 and TX1/TX2 choice (not yet tested on hardware).
 
 ## Sensitivity
