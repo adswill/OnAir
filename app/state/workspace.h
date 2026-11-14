@@ -7,6 +7,7 @@
 // No DSP here: a restore goes through the same selectMode / tuneFreq / applyBandwidth that the controls use.
 #pragma once
 #include "../app.h"
+#include "workspace_record.h"
 #include <string>
 #include <vector>
 
@@ -21,6 +22,7 @@ struct Workspace {
     bool ampOn = false;
     std::string panels;       // comma-separated names of the open windows
     std::string modes;        // the Modes shown rules (modevis text, or "default"); empty in a workspace saved before 3.5: left as they are
+    wsrec::WindowState win;   // the main window: size, position, maximized; win.have false in an older record: the window is left as it is
 };
 
 Workspace workspaceCapture(const App& a, const std::string& name);    // the live settings of this receiver

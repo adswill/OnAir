@@ -6,6 +6,7 @@
 //   line 1: "clean 0" while running, "clean 1" after a normal exit
 //   line 2: the record of the session (the same fields as a workspace)
 #include "workspace.h"
+#include "workspace_record.h"
 #include "dect2/engine/retired_modes.h"
 #include "../platform/platform.h"
 #include <chrono>
@@ -26,37 +27,15 @@ const PanelFlag kPanels[] = {
     {"antenna-designer", &App::antdOpen},
 };
 
-std::string escapeField(const std::string& s) {
-    std::string o;
-    for (char c : s) {
-        if (c == '\\') o += "\\\\";
-        else if (c == '|') o += "\\p";
-        else if (c == '\n') o += "\\n";
-        else o += c;
-    }
-    return o;
-}
-
-std::vector<std::string> splitRecord(const std::string& line) {
-    std::vector<std::string> f(1);
-    for (size_t i = 0; i < line.size(); i++) {
-        const char c = line[i];
-        if (c == '|') { f.emplace_back(); continue; }
-        if (c == '\\' && i + 1 < line.size()) {
-            const char n = line[++i];
-            f.back() += n == 'p' ? '|' : n == 'n' ? '\n' : n;
-            continue;
-        }
-        f.back() += c;
-    }
-    return f;
-}
+using wsrec::escapeField;
+using wsrec::splitRecord;
 
 std::string encodeRecord(const Workspace& w) {
     char num[160];
     snprintf(num, sizeof num, "%.6f|%.0f|%d|%d|%d", w.freqMhz, w.sampleRateHz, w.lnaDb, w.vgaDb, w.ampOn ? 1 : 0);
     return escapeField(w.name) + "|" + escapeField(w.devName) + "|" + std::to_string(w.family) + "|" + escapeField(w.subId) + "|" + num
-         + "|" + escapeField(w.panels) + "|" + escapeField(w.modes);
+         + "|" + escapeField(w.panels) + "|" + escapeField(w.modes)
+         + "|" + wsrec::encodeWindow(w.win);
 }
 
 // name|device|family|sub|freq|rate|lna|vga|amp|panels|modes (the last two may be missing or empty)
@@ -68,6 +47,7 @@ bool decodeRecord(const std::string& line, Workspace& w) {
     w.lnaDb = atoi(f[6].c_str()); w.vgaDb = atoi(f[7].c_str()); w.ampOn = f[8] == "1";
     w.panels = f.size() > 9 ? f[9] : std::string();
     w.modes = f.size() > 10 ? f[10] : std::string();
+    w.win = wsrec::decodeWindow(f, 11);   // missing in a record saved before the window was kept: the window is left as it is
     return !w.name.empty();
 }
 
@@ -110,6 +90,8 @@ struct SessionState {
 };
 SessionState gSession;
 
+wsrec::WindowState gWinRequest;   // a window size and position to give after this frame (setting them in the middle of a frame is not safe)
+
 }  // namespace
 
 Workspace workspaceCapture(const App& a, const std::string& name) {
@@ -122,6 +104,12 @@ Workspace workspaceCapture(const App& a, const std::string& name) {
     w.sampleRateHz = a.tune.sampleRate;
     w.lnaDb = a.tune.lnaDb; w.vgaDb = a.tune.vgaDb; w.ampOn = a.tune.ampOn;
     w.modes = modeVisibilityText(a);
+    if (GLFWwindow* win = gWindow; win && !glfwGetWindowMonitor(win) && !glfwGetWindowAttrib(win, GLFW_ICONIFIED)) {
+        w.win.maximized = glfwGetWindowAttrib(win, GLFW_MAXIMIZED) != 0;
+        glfwGetWindowSize(win, &w.win.w, &w.win.h);
+        if (!gWayland) { glfwGetWindowPos(win, &w.win.x, &w.win.y); w.win.hasPos = true; }
+        w.win.have = w.win.w >= 200 && w.win.h >= 200;
+    }
     for (const PanelFlag& p : kPanels) {
         if (!(a.*(p.flag))) continue;
         if (!w.panels.empty()) w.panels += ',';
@@ -154,6 +142,7 @@ bool workspaceApply(App& a, const Workspace& w, std::string& why) {
         for (const PanelFlag& p : kPanels) a.*(p.flag) = rest.find("," + std::string(p.name) + ",") != std::string::npos;
     }
     if (!w.modes.empty()) modeVisibilityApplyText(a, w.modes);   // the modes it showed
+    if (w.win.have) gWinRequest = w.win;   // given by workspaceSessionTick, after the frame
     savePrefs(a);
     return true;
 }
@@ -188,7 +177,31 @@ void workspaceSessionStart(const App& a, bool offerRestore) {
     if (!gSession.pending) { writeSession(false, workspaceCapture(a, "last session")); gSession.haveWrite = true; gSession.lastWrite = std::chrono::steady_clock::now(); }
 }
 
+static void applyWindowRequest() {
+    if (!gWinRequest.have) return;
+    const wsrec::WindowState r = gWinRequest;
+    gWinRequest = wsrec::WindowState();
+    GLFWwindow* win = gWindow;
+    if (!win || glfwGetWindowMonitor(win)) return;   // no window, or fullscreen: left alone
+    if (r.maximized) { glfwMaximizeWindow(win); return; }
+    if (glfwGetWindowAttrib(win, GLFW_MAXIMIZED) || glfwGetWindowAttrib(win, GLFW_ICONIFIED)) glfwRestoreWindow(win);
+    std::vector<wsrec::Rect> areas;
+    int n = 0;
+    GLFWmonitor** mons = glfwGetMonitors(&n);
+    for (int i = 0; i < n; i++) { wsrec::Rect m; glfwGetMonitorWorkarea(mons[i], &m.x, &m.y, &m.w, &m.h); if (m.w > 0 && m.h > 0) areas.push_back(m); }
+    if (gWayland || !r.hasPos) {   // the compositor places the window: only the size, cut to the first work area when known
+        wsrec::Rect q{0, 0, r.w, r.h};
+        if (!areas.empty()) { q.x = areas[0].x; q.y = areas[0].y; q = wsrec::clampToWorkAreas(q, {areas[0]}); }
+        glfwSetWindowSize(win, q.w, q.h);
+        return;
+    }
+    const wsrec::Rect q = wsrec::clampToWorkAreas({r.x, r.y, r.w, r.h}, areas);
+    glfwSetWindowSize(win, q.w, q.h);
+    glfwSetWindowPos(win, q.x, q.y);
+}
+
 void workspaceSessionTick(const App& a) {
+    applyWindowRequest();
     if (!gSession.logging || gSession.pending) return;   // the crash record is kept until the dialog is answered
     const auto now = std::chrono::steady_clock::now();
     if (gSession.haveWrite && now - gSession.lastWrite < std::chrono::seconds(5)) return;
