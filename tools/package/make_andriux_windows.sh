@@ -61,6 +61,7 @@ for folder in "$PREFIX"/lib/SoapySDR/modules*/; do
     collect "$OUT/lib/SoapySDR/modules0.8/$(basename "$dll")"
   done
 done
+ls "$OUT"/avcodec-*.dll >/dev/null 2>&1 || { echo "ERROR: no avcodec-*.dll next to OnAir.exe (FFmpeg must be the shared build)" >&2; exit 1; }
 # OnAir loads native radio libraries dynamically, so ldd of OnAir.exe alone
 # cannot discover them.
 for name in librtlsdr libairspy libairspyhf libbladeRF libLimeSuite libiio libuhd; do

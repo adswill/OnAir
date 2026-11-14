@@ -19,6 +19,7 @@ if [ -z "$ONAIR_WIN_PARTIAL" ]; then
   [ -f "$P/lib/SoapySDR/modules0.8/libremoteSupport.dll" ] || missing="$missing lib/SoapySDR/modules0.8/libremoteSupport.dll"
   [ -f "$P/lib/libssl.a" ] && [ -f "$P/lib/libcrypto.a" ] || missing="$missing lib/libssl.a lib/libcrypto.a (OpenSSL: cross_deps_windows.sh builds it)"
   for f in libusb-1.0 libstdc++-6 libgcc_s_seh-1 libwinpthread-1; do [ -f "$P/redist/$f.dll" ] || missing="$missing redist/$f.dll"; done
+  for f in avutil swresample swscale avcodec avformat avdevice; do ls "$P"/bin/$f-*.dll >/dev/null 2>&1 || missing="$missing bin/$f-*.dll (FFmpeg is now the shared build)"; done
   [ -z "$missing" ] || { echo "error: not in $P:$missing"; echo "run tools/package/cross_deps_windows.sh first (or set ONAIR_WIN_PARTIAL=1 to package without them)"; exit 1; }
 fi
 # The RTL-SDR Blog V4 Lite needs librtlsdr 1.4.0 or later (#340): never package a prefix from before it
@@ -42,6 +43,12 @@ $S -o "$OUT/onair-server.exe" $BUILD/onair-server.exe   # the headless server (O
 [ -f "$OUT/onair-server.exe" ] || { echo "error: onair-server.exe is missing from $OUT"; exit 1; }
 mkdir -p "$OUT/web"; cp -R web/onair-web "$OUT/web/"   # the OnAir Web browser page (onair-server.exe looks in web\\onair-web next to it)
 cp -R web/onair-app "$OUT/web/"   # OnAir Web 3.9 (onair-server.exe looks in web\\onair-app next to it)
+# FFmpeg (LGPL, DLLs): next to the programs, like libSoapySDR.dll
+for n in avutil swresample swscale avcodec avformat avdevice; do
+  found=0
+  for f in "$P"/bin/$n-*.dll; do [ -f "$f" ] && { cp "$f" "$OUT/"; found=1; }; done
+  [ $found = 1 ] || { echo "error: no $n-*.dll in $P/bin (run cross_deps_windows.sh: FFmpeg is now the shared build)"; exit 1; }
+done
 # generic radios: SoapySDR (a DLL). Its RTL-SDR and Airspy modules are not shipped: the native drivers of the same name always win and hide them.
 cp "$P/bin/libSoapySDR.dll" "$OUT/"
 # the radios OnAir drives by itself: their libraries next to the program (nothing to install). FTD3XX.dll is FTDI's USB 3 driver library that the
@@ -90,8 +97,8 @@ tools/package/check_win_dlls.sh "$OUT" || { echo "error: the DLLs of $OUT do not
 cp LICENSE "$OUT/LICENSE.txt"
 # the camera stub (CMake found no libavdevice): the program would list no camera, as in the releases up to now
 if strings "$OUT/OnAir.exe" | grep -q "this build has no camera / capture-card support"; then echo "error: OnAir.exe has no camera support (libavdevice missing in $P: rerun cross_deps_windows.sh)"; exit 1; fi
-tools/package/check_lgpl_bundle.sh "$OUT/OnAir.exe" || exit 1   # fails if FFmpeg inside is a GPL build
-tools/package/check_lgpl_bundle.sh "$OUT/onair-server.exe" || exit 1
+tools/package/check_lgpl_bundle.sh "$OUT/OnAir.exe" "$OUT" || exit 1   # fails if the FFmpeg DLLs are a GPL build or missing
+tools/package/check_lgpl_bundle.sh "$OUT/onair-server.exe" "$OUT" || exit 1
 tools/package/add_license_files.sh "$OUT"   # THIRD_PARTY.md, LICENSES/, LICENSE-NOTICES-BINARIES.md (licence of every bundled DLL, source offer)
 cat > "$OUT/README.txt" <<'TXT'
 OnAir - DVB-T2 / DVB-T / ATSC / DAB receiver (Windows 10 or 11, 64-bit)

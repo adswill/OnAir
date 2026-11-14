@@ -54,13 +54,16 @@ Cflags: -I\${includedir}/libhackrf -DLIBHACKRF_STATIC
 PC
 }
 
+# FFmpeg as DLLs (avcodec-62.dll ... in bin/): make_windows_cross.sh puts them next to OnAir.exe. A prefix with the former static FFmpeg is rebuilt.
 # libavdevice with only the DirectShow input: the cameras and capture cards (core/src/audio/videoin_ffmpeg.cpp). Without it CMake builds the camera stub and
-# the program lists no camera at all. A prefix built before this has no libavdevice.a and is rebuilt.
-# Network: FFmpeg's own protocols (no TLS library), for the video generator's RTMP server input (core/src/tv/videogen_rtmp.cpp); a prefix
-# built without it (no rtmp protocol in libavformat.a) is rebuilt.
-if ! { [ -f "$P/lib/libavcodec.a" ] && [ -f "$P/lib/libavdevice.a" ] && $HOST-nm "$P/lib/libavformat.a" 2>/dev/null | grep -q ff_rtmp_protocol; }; then
-  step ffmpeg; rm -rf ffmpeg-build; unpack ffmpeg-8.0.tar.xz ffmpeg-8.0; mkdir -p ffmpeg-build; (cd ffmpeg-build && ../ffmpeg-8.0/configure --prefix=$P --enable-cross-compile --target-os=mingw32 --arch=x86_64 --cross-prefix=$HOST- \
-    --enable-static --disable-shared --disable-programs --disable-doc --disable-debug --disable-indevs --enable-indev=dshow --disable-outdevs --enable-network --pkg-config=pkg-config --extra-cflags="-I$P/include" --extra-ldflags="-L$P/lib" >/dev/null && make -j$JOBS >/dev/null && grep -qE '^#define CONFIG_GPL 0' config.h && grep -qE '^#define CONFIG_VERSION3 0' config.h && grep -qE '^#define CONFIG_NONFREE 0' config.h && grep -qE '^#define CONFIG_DSHOW_INDEV 1' config_components.h && grep -qE '^#define CONFIG_RTMP_PROTOCOL 1' config_components.h && make install >/dev/null) || { echo "FFmpeg for Windows failed or is not the LGPL build (GPL/version3/nonfree are not allowed) or has no DirectShow camera input or RTMP protocol"; exit 1; };
+# the program lists no camera at all.
+# Network: FFmpeg's own protocols (no TLS library), for the video generator's RTMP server input (core/src/tv/videogen_rtmp.cpp).
+# A prefix with another FFmpeg build (the former static one, or one without RTMP) is rebuilt: $P/.ffmpeg-id names the build in it.
+FFMPEG_ID=8.0-shared-dshow-rtmp
+if [ "$(cat "$P/.ffmpeg-id" 2>/dev/null)" != "$FFMPEG_ID" ] || [ ! -f "$P/lib/libavcodec.dll.a" ] || [ ! -f "$P/lib/libavdevice.dll.a" ]; then
+  step ffmpeg; rm -rf ffmpeg-build; for l in avutil swresample swscale avcodec avformat avdevice; do rm -f "$P/lib/lib$l.a"; done; unpack ffmpeg-8.0.tar.xz ffmpeg-8.0; mkdir -p ffmpeg-build; (cd ffmpeg-build && ../ffmpeg-8.0/configure --prefix=$P --enable-cross-compile --target-os=mingw32 --arch=x86_64 --cross-prefix=$HOST- \
+    --enable-shared --disable-static --disable-programs --disable-doc --disable-debug --disable-indevs --enable-indev=dshow --disable-outdevs --enable-network --pkg-config=pkg-config --extra-cflags="-I$P/include" --extra-ldflags="-L$P/lib" >/dev/null && make -j$JOBS >/dev/null && grep -qE '^#define CONFIG_GPL 0' config.h && grep -qE '^#define CONFIG_VERSION3 0' config.h && grep -qE '^#define CONFIG_NONFREE 0' config.h && grep -qE '^#define CONFIG_DSHOW_INDEV 1' config_components.h && grep -qE '^#define CONFIG_RTMP_PROTOCOL 1' config_components.h && make install >/dev/null) || { echo "FFmpeg for Windows failed or is not the LGPL build (GPL/version3/nonfree are not allowed) or has no DirectShow camera input or RTMP protocol"; exit 1; }
+  echo "$FFMPEG_ID" > "$P/.ffmpeg-id"
 fi
 
 # --- generic radios: SoapySDR (a DLL). Its RTL-SDR and Airspy modules are not built: the native drivers of the same name always win and hide them.
