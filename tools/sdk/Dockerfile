@@ -17,6 +17,8 @@ ARG GID=1000
 #   make perl nasm patch               the libraries' configure scripts, FFmpeg
 #   libwayland-bin                     wayland-scanner, for GLFW's Wayland support (Linux targets)
 #   gcc g++ libc6-dev zlib1g-dev liblzma-dev   the packaging tools libdmg-hfsplus and rcodesign, which run on the build machine
+# DL3008: the image is pinned by digest, and the versions of these packages are part of each SDK's key (check_host.sh --versions)
+# hadolint ignore=DL3008,DL3009
 RUN apt-get update \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       git \
@@ -30,7 +32,7 @@ RUN apt-get update \
       gcc g++ libc6-dev zlib1g-dev liblzma-dev
 
 # Not root, with the user's own ids so the files in the mounted folders stay theirs.
-RUN groupadd -o -g "$GID" sdkbuild && useradd -o -m -u "$UID" -g "$GID" sdkbuild
+RUN groupadd -o -g "$GID" sdkbuild && useradd -o -l -m -u "$UID" -g "$GID" sdkbuild
 USER sdkbuild
 ENV HOME=/home/sdkbuild USER=sdkbuild LOGNAME=sdkbuild
 WORKDIR /work
