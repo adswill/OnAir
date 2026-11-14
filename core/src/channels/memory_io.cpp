@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -227,7 +228,7 @@ bool fromCsv(const std::string& text, std::vector<Memory>& out, MemoryLoadReport
 
 bool readAll(const std::string& path, std::string& s, std::string& err) {
     std::ifstream f(u8file(path), std::ios::binary);
-    if (!f) { err = "cannot open " + path; return false; }
+    if (!f) { DIAG_DEBUG(685223, "The memory channel file %s could not be opened, so nothing was read.", path.c_str()); err = "cannot open " + path; return false; }
     std::stringstream ss;
     ss << f.rdbuf();
     s = ss.str();
@@ -239,13 +240,13 @@ bool writeAtomic(const std::string& path, const std::string& data, std::string* 
     if (p.has_parent_path()) std::filesystem::create_directories(p.parent_path(), ec);
     {
         std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
-        if (!f) { if (err) *err = "cannot write " + path + ".tmp"; return false; }
+        if (!f) { DIAG(369684, "The temporary memory channel file %s.tmp could not be created, so the channels were not saved.", path.c_str()); if (err) *err = "cannot write " + path + ".tmp"; return false; }
         f.write(data.data(), (std::streamsize)data.size());
         f.flush();
-        if (!f) { if (err) *err = "write failed: " + path + ".tmp"; std::filesystem::remove(tmp, ec); return false; }
+        if (!f) { DIAG(571401, "Writing the memory channel file %s.tmp failed (the disk may be full), so the channels were not saved.", path.c_str()); if (err) *err = "write failed: " + path + ".tmp"; std::filesystem::remove(tmp, ec); return false; }
     }
     std::filesystem::rename(tmp, p, ec);   // replaces an existing file
-    if (ec) { if (err) *err = "cannot replace " + path + ": " + ec.message(); std::filesystem::remove(tmp, ec); return false; }
+    if (ec) { DIAG(999339, "The memory channel file %s could not be replaced (%s), so the channels were not saved.", path.c_str(), ec.message().c_str()); if (err) *err = "cannot replace " + path + ": " + ec.message(); std::filesystem::remove(tmp, ec); return false; }
     return true;
 }
 } // namespace

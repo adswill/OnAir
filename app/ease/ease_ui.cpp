@@ -23,6 +23,7 @@
 #include <cmath>
 #include <map>
 #include <memory>
+#include "dect2/common/diag.h"
 
 namespace easeui {
 
@@ -136,12 +137,12 @@ void orStart(double lat, double lon, std::string key) {
             const size_t nl = body.rfind('\n');
             const std::string code = nl == std::string::npos ? "" : body.substr(nl + 1);
             if (nl != std::string::npos) body.resize(nl);
-            if (rc != 0) { err = "could not reach openrepeater.org"; break; }
-            if (code == "429") { err = "Open Repeater's daily limit for this key (30 requests) is used up; try again after midnight UTC"; break; }
-            if (code == "401" || code == "403") { err = "Open Repeater did not accept the API key"; break; }
+            if (rc != 0) { DIAG(637084, "The Open Repeater server could not be reached (code %d), so the repeater list was not updated.", rc); err = "could not reach openrepeater.org"; break; }
+            if (code == "429") { DIAG(701404, "Open Repeater refused the request because the daily limit of 30 requests for this key is used up."); err = "Open Repeater's daily limit for this key (30 requests) is used up; try again after midnight UTC"; break; }
+            if (code == "401" || code == "403") { DIAG(136185, "Open Repeater did not accept the API key (HTTP %s), so the repeater list was not updated.", code.c_str()); err = "Open Repeater did not accept the API key"; break; }
             int skipped = 0; std::string perr;
             const auto rows = dect2::ease::parseOpenRepeaterJson(body, skipped, perr);
-            if (!perr.empty()) { err = "Open Repeater: " + perr; break; }
+            if (!perr.empty()) { DIAG(734997, "The Open Repeater answer could not be parsed (%s), so the repeater list was not updated.", perr.c_str()); err = "Open Repeater: " + perr; break; }
             // keep the rows as a plain array of the fields the list uses
             for (const auto& r : rows) {
                 char b[64]; snprintf(b, sizeof b, "{\"frequency\":%.6f,\"lat\":%.5f,\"lng\":%.5f,", r.mhz, r.lat, r.lon);

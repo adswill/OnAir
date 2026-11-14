@@ -10,6 +10,7 @@
 #include <fstream>
 #include <random>
 #include <sstream>
+#include "dect2/common/diag.h"
 #ifdef _WIN32
 #include <windows.h>
 #include <sddl.h>
@@ -354,9 +355,9 @@ bool writeOwnerOnlyFile(const std::string& path, const std::string& data) {
     const std::string tmp = path + ".tmp";
     {
         std::ofstream out(pathOf(tmp), std::ios::binary | std::ios::trunc);
-        if (!out) return false;
+        if (!out) { DIAG(182907, "The private file %s could not be created, so its contents were not saved.", tmp.c_str()); return false; }
         out.write(data.data(), (std::streamsize)data.size());
-        if (!out) return false;
+        if (!out) { DIAG(843346, "Writing the private file %s failed (the disk may be full), so its contents were not saved.", tmp.c_str()); return false; }
     }
     if (!restrictToOwner(tmp, false)) { std::error_code ec; fs::remove(pathOf(tmp), ec); return false; }
     std::error_code ec;

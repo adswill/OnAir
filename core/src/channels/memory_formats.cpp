@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <map>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -150,7 +151,7 @@ std::string writeSdrpp(const std::vector<Memory>& v) {
 // ---- SDR#
 void parseSharp(const std::string& text, std::vector<Memory>& out, MemoryLoadReport& rep, const std::string& defGroup) {
     auto root = parseXml(text);
-    if (!root) { rep.ok = false; rep.error = "not valid XML"; return; }
+    if (!root) { DIAG(409315, "The memory channel import file is not valid XML, so no channels were imported."); rep.ok = false; rep.error = "not valid XML"; return; }
     size_t n = 0;
     for (const auto& e : root->all("MemoryEntry")) {
         n++;
@@ -340,7 +341,7 @@ std::vector<Memory> parseList(const std::string& text, ListFormat fmt, MemoryLoa
     switch (fmt) {
         case ListFormat::SdrppJson: {
             Value root; std::string err;
-            if (!mj::parse(text, root, err)) { rep.ok = false; rep.error = "not valid JSON: " + err; return out; }
+            if (!mj::parse(text, root, err)) { DIAG(401761, "The memory channel import file is not valid JSON (%s), so no channels were imported.", err.c_str()); rep.ok = false; rep.error = "not valid JSON: " + err; return out; }
             parseSdrpp(root, out, rep);
             for (Memory& m : out) if (m.group.empty()) m.group = defGroup;
             break;

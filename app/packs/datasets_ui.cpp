@@ -18,6 +18,7 @@
 #include <future>
 #include <mutex>
 #include <sstream>
+#include "dect2/common/diag.h"
 
 using namespace dect2::datasets;
 
@@ -154,15 +155,15 @@ void installWorker(UpdateOffer o, std::vector<std::string> sources) {
     bool ok = false;
     do {
         const Descriptor* d = find(o.entry.id);
-        if (!d || !d->replaceable) { err = "unknown dataset"; break; }
-        if (!urlAllowed(o.entry.url, sources)) { err = "the address is not in your list of sources"; break; }
+        if (!d || !d->replaceable) { DIAG_DEBUG(763022, "A dataset download was refused because dataset %s is not one that can be replaced.", o.entry.id.c_str()); err = "unknown dataset"; break; }
+        if (!urlAllowed(o.entry.url, sources)) { DIAG(852662, "The dataset address %s is not in your list of sources, so it was not downloaded.", o.entry.url.c_str()); err = "the address is not in your list of sources"; break; }
         const std::string tmp = plat::cacheDir() + "/dataset_" + o.entry.id + ".part";
         const int rc = fetch(o.entry.url, tmp, o.entry.size + 1, net.cancel, [] {});
-        if (rc != 0) { err = rc == -1 ? "cancelled" : "download failed"; break; }
+        if (rc != 0) { DIAG(159662, "Downloading the dataset %s failed (code %d), so nothing was installed.", o.entry.url.c_str(), rc); err = rc == -1 ? "cancelled" : "download failed"; break; }
         std::string body;
-        if (!readFile(tmp, body, 64u << 20)) { err = "unreadable download"; break; }
+        if (!readFile(tmp, body, 64u << 20)) { DIAG(573759, "The downloaded dataset file %s could not be read back, so nothing was installed.", tmp.c_str()); err = "unreadable download"; break; }
         std::remove(tmp.c_str());
-        if (!verifyDownload(o.entry, body, err)) { err = "checksum: " + err + " (nothing was installed)"; break; }
+        if (!verifyDownload(o.entry, body, err)) { DIAG(142327, "The downloaded dataset %s failed its checksum check (%s), so nothing was installed.", o.entry.id.c_str(), err.c_str()); err = "checksum: " + err + " (nothing was installed)"; break; }
         Validation v;
         if (!importText(*d, body, o.entry.url, o.entry.version, v, err)) break;
         ok = true;

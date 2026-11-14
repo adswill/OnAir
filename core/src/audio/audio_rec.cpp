@@ -17,6 +17,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -83,7 +84,7 @@ struct AudioRecorder::Impl {
         ch = st ? 2 : 1;
         const std::string p = nthPath(++fileN);
         f = fopen(p.c_str(), "wb");
-        if (!f) { fail("cannot write " + p); return; }
+        if (!f) { DIAG(861412, "The audio recording file %s could not be created, so the recording stops.", p.c_str()); fail("cannot write " + p); return; }
         std::vector<std::string> tags;
         if (!o.tag.empty()) tags.push_back("COMMENT=" + o.tag);
         bool ok = true;
@@ -92,7 +93,7 @@ struct AudioRecorder::Impl {
             ok = mp3.begin(f, (uint32_t)rate, o.mp3Kbps, tags, ch);
             if (!ok && ch == 2) { ch = 1; ok = mp3.begin(f, (uint32_t)rate, o.mp3Kbps, tags, 1); }   // no interleaved encoder: mono
         } else wavHeader();
-        if (!ok) { fclose(f); f = nullptr; fail("cannot start the encoder"); return; }
+        if (!ok) { DIAG(923855, "The audio encoder could not start for %s, so the recording stops.", p.c_str()); fclose(f); f = nullptr; fail("cannot start the encoder"); return; }
         if (ch == 2) stereoLatched = true;
         fileFrames = 0; sinceSync = 0;
         files.fetch_add(1); statCh = ch;
@@ -129,8 +130,8 @@ struct AudioRecorder::Impl {
         pend.clear();
         if (o.format == AudioRecFormat::Flac) flac.write(pcm.data(), n);
         else if (o.format == AudioRecFormat::Mp3) mp3.write(pcm.data(), n);
-        else if (fwrite(pcm.data(), 2 * (size_t)ch, n, f) != n) { fail("the disk is full or cannot be written"); fclose(f); f = nullptr; return; }
-        if (ferror(f)) { fail("the disk is full or cannot be written"); return; }
+        else if (fwrite(pcm.data(), 2 * (size_t)ch, n, f) != n) { DIAG(269737, "Writing audio data to the recording failed (the disk may be full), so the recording stops."); fail("the disk is full or cannot be written"); fclose(f); f = nullptr; return; }
+        if (ferror(f)) { DIAG(562871, "The audio recording file reported a write error (the disk may be full), so the recording stops."); fail("the disk is full or cannot be written"); return; }
         fileFrames += n; sinceSync += n; frames.fetch_add(n);
         if (sinceSync >= (uint64_t)rate) { sync(); liveBytes = fileSize(); }
         // WAV ends at 4 GB: go on in a new file
@@ -233,11 +234,11 @@ std::string AudioRecorder::fileName(const std::string& modeId, double freqHz, Au
 bool AudioRecorder::start(const std::string& path, const AudioRecOptions& o, std::string& err) {
     stop();   // joins a recording that ended by itself
     Impl& s = *p_;
-    if (o.format == AudioRecFormat::Mp3 && !Mp3Enc::available()) { err = "MP3 needs the LAME library (libmp3lame), which is not installed"; return false; }
+    if (o.format == AudioRecFormat::Mp3 && !Mp3Enc::available()) { DIAG(238129, "MP3 recording was requested but the LAME library is not installed, so the recording did not start."); err = "MP3 needs the LAME library (libmp3lame), which is not installed"; return false; }
     std::error_code ec;
     const auto parent = std::filesystem::path(path).parent_path();
     if (!parent.empty()) std::filesystem::create_directories(parent, ec);
-    if (ec) { err = "cannot create " + parent.string() + ": " + ec.message(); return false; }
+    if (ec) { DIAG(235054, "The recording folder %s could not be created (%s), so the recording did not start.", parent.string().c_str(), ec.message().c_str()); err = "cannot create " + parent.string() + ": " + ec.message(); return false; }
     s.o = o; s.basePath = path;
     if (s.ring.empty()) s.ring.assign(kRingFrames * 2, 0.f);
     s.w = 0; s.r = 0; s.owner = nullptr; s.lastMs = 0; s.ringRate = 0; s.wantRate = 0; s.dropped = 0;

@@ -13,6 +13,7 @@
 #include <fstream>
 #include <sstream>
 #include <system_error>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -35,9 +36,9 @@ bool writeFile(const std::filesystem::path& p, const std::string& data) {
     tmp += ".tmp";
     {
         std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
-        if (!f) return false;
+        if (!f) { DIAG(716622, "The results file %s.tmp could not be created, so the results were not saved.", p.string().c_str()); return false; }
         f.write(data.data(), (std::streamsize)data.size());
-        if (!f) return false;
+        if (!f) { DIAG(926519, "Writing the results file %s.tmp failed (the disk may be full), so the results were not saved.", p.string().c_str()); return false; }
     }
     std::error_code ec;
     std::filesystem::rename(tmp, p, ec);

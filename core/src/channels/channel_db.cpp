@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "dect2/common/str.h"
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 namespace chdb {
@@ -162,11 +163,11 @@ bool parseIssueBody(const std::string& body, Submission& out, std::string& err) 
         };
         key("mode", out.mode); key("country", out.country); key("city", out.city);
     }
-    if (!haveBlock) { err = "no csv block found"; return false; }
+    if (!haveBlock) { DIAG_DEBUG(840984, "The channel database text holds no CSV block, so no channels were read."); err = "no csv block found"; return false; }
     bool first = true;
     for (const auto& r : csvParse(csv)) {
         if (first) { first = false; if (!r.empty() && r[0] == "freq_mhz") continue; }
-        if (r.size() < 6) { err = "a row has fewer than 6 fields"; return false; }
+        if (r.size() < 6) { DIAG_DEBUG(218432, "A channel database row has fewer than 6 fields, so the channel file was rejected."); err = "a row has fewer than 6 fields"; return false; }
         Row w;
         w.freqMhz = atof(r[0].c_str()); w.bwMhz = atof(r[1].c_str()); w.standard = r[2]; w.network = r[3]; w.services = splitServices(r[4], '|'); w.snrDb = atof(r[5].c_str());
         out.rows.push_back(w);

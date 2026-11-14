@@ -9,3 +9,13 @@
 #
 # Example:
 #   482917 retired: the recording dialog no longer opens files itself (4.2)
+867922 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
+679876 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
+345151 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
+978054 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
+129305 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
+520329 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
+905644 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
+973362 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
+991877 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
+219666 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release

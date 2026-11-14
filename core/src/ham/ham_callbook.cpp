@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
+#include "dect2/common/diag.h"
 
 namespace dect2::ham {
 
@@ -286,9 +287,9 @@ bool CallbookClient::lookup(const std::string& call0, double now, CallbookEntry&
         const CallbookRequest rq = callbookLoginRequest(c);
         const UpResponse rs = tr_(rq.url, rq.body);
         { std::lock_guard<std::mutex> l(mu_); requests_++; }
-        if (rs.status < 200 || rs.status >= 300) { err = rs.err.empty() ? "login failed (HTTP " + std::to_string(rs.status) + ")" : rs.err; return false; }
+        if (rs.status < 200 || rs.status >= 300) { DIAG(122009, "The callbook login was refused (HTTP %d), so no callsign lookups are possible.", rs.status); err = rs.err.empty() ? "login failed (HTTP " + std::to_string(rs.status) + ")" : rs.err; return false; }
         const CallbookReply r = parse(rs.body);
-        if (r.sessionKey.empty()) { err = r.error.empty() ? "login failed" : r.error; return false; }
+        if (r.sessionKey.empty()) { DIAG(593831, "The callbook login answer held no session key, so no callsign lookups are possible."); err = r.error.empty() ? "login failed" : r.error; return false; }
         session = r.sessionKey;
         std::lock_guard<std::mutex> l(mu_);
         session_ = session;
@@ -299,7 +300,7 @@ bool CallbookClient::lookup(const std::string& call0, double now, CallbookEntry&
         const CallbookRequest rq = callbookLookupRequest(c, session, call);
         const UpResponse rs = tr_(rq.url, rq.body);
         { std::lock_guard<std::mutex> l(mu_); requests_++; }
-        if (rs.status < 200 || rs.status >= 300) { err = rs.err.empty() ? "lookup failed (HTTP " + std::to_string(rs.status) + ")" : rs.err; return false; }
+        if (rs.status < 200 || rs.status >= 300) { DIAG(436002, "The callbook lookup for %s failed (HTTP %d), so no details are shown.", call.c_str(), rs.status); err = rs.err.empty() ? "lookup failed (HTTP " + std::to_string(rs.status) + ")" : rs.err; return false; }
         const CallbookReply r = parse(rs.body);
         if (r.ok) {
             out = r.e;

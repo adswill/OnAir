@@ -10,6 +10,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include "dect2/common/diag.h"
 
 namespace dect2::vgen {
 
@@ -136,9 +137,9 @@ std::vector<std::string> splitArgs(const std::string& text, std::string& err) {
         else { cur += c; have = true; }
         if (cur.size() > 400) { err = "an argument is too long"; return {}; }
     }
-    if (q) { err = "a quote is not closed"; return {}; }
+    if (q) { DIAG_DEBUG(843555, "The video generator extra options contain a quote that is never closed, so they were refused."); err = "a quote is not closed"; return {}; }
     if (have) out.push_back(cur);
-    if (out.size() > 64) { err = "too many arguments"; return {}; }
+    if (out.size() > 64) { DIAG_DEBUG(501592, "The video generator extra options have more than 64 arguments, so they were refused."); err = "too many arguments"; return {}; }
     return out;
 }
 

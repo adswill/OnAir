@@ -26,6 +26,7 @@
 #include <mutex>
 #include <random>
 #include <thread>
+#include "dect2/common/diag.h"
 
 namespace {
 using namespace dect2::swarm;
@@ -75,17 +76,17 @@ struct AppHost : SwarmHost {
     std::string statusLine = "not ready";
 
     bool run(const std::function<bool(App&, std::string&)>& fn, std::string& err) {
-        if (shutdown) { err = "the application is closing"; return false; }
-        if (steadyNow() - lastTick > 1.5) { err = "the application is not responding"; return false; }
+        if (shutdown) { DIAG_DEBUG(620674, "A swarm request arrived while OnAir is closing, so it was refused."); err = "the application is closing"; return false; }
+        if (steadyNow() - lastTick > 1.5) { DIAG_DEBUG(800174, "A swarm request was refused because the OnAir window has not updated for 1.5 seconds."); err = "the application is not responding"; return false; }
         auto j = std::make_shared<Job>();
         j->fn = fn;
-        { std::lock_guard<std::mutex> lk(qMu); if (q.size() > 32) { err = "too many requests waiting"; return false; } q.push_back(j); }
+        { std::lock_guard<std::mutex> lk(qMu); if (q.size() > 32) { DIAG_DEBUG(947749, "More than 32 swarm requests are waiting, so a new one was refused."); err = "too many requests waiting"; return false; } q.push_back(j); }
         std::unique_lock<std::mutex> lk(j->m);
         if (!j->cv.wait_for(lk, std::chrono::seconds(3), [&] { return j->done || shutdown.load(); })) {
-            if (!j->running) { j->cancelled = true; err = "the application is busy"; return false; }
+            if (!j->running) { j->cancelled = true; DIAG_DEBUG(885977, "A swarm request waited without starting, so it was cancelled."); err = "the application is busy"; return false; }
             j->cv.wait(lk, [&] { return j->done; });
         }
-        if (!j->done) { err = "the application is closing"; return false; }
+        if (!j->done) { DIAG_DEBUG(534917, "A swarm request was dropped because OnAir closed before it finished."); err = "the application is closing"; return false; }
         err = j->err;
         return j->ok;
     }

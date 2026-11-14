@@ -14,6 +14,7 @@
 #include <cmath>
 #include <cstdio>
 #include <thread>
+#include "dect2/common/diag.h"
 
 namespace dect2::ham {
 
@@ -169,7 +170,7 @@ bool HamSlotTx::play(const std::vector<float>& a, size_t n, int rate, std::strin
     bool ok = true;
     while (pos < n && !abort_) {
         const int w = io_.write(a.data() + pos, (int)std::min<size_t>(n - pos, 4800));
-        if (w < 0) { ok = false; err = io_.lastError(); if (err.empty()) err = "the audio output failed"; break; }
+        if (w < 0) { DIAG(359151, "Writing audio to the ham transmit output failed, so the transmission stops."); ok = false; err = io_.lastError(); if (err.empty()) err = "the audio output failed"; break; }
         if (w > 0) { pos += (size_t)w; continue; }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }

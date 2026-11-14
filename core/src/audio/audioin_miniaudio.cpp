@@ -9,6 +9,7 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -94,6 +95,7 @@ bool audioInMicStart(AudioIn::Impl* I, int rate, const std::string& deviceId, st
         const char* backend = ma_get_backend_name(b->ctx.backend);
         ma_context_uninit(&b->ctx);
         delete b;
+        DIAG(297367, "The microphone could not be started by the %s backend (%s), so there is no audio input.", backend, ma_result_description(r));
         err = std::string("the microphone could not be started (") + backend + ": " + ma_result_description(r) + ")";
 #ifdef _WIN32
         err += winPrivacyMicHint();

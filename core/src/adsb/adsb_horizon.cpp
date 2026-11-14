@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -27,7 +28,7 @@ bool parseUpintheair(const std::string& text, std::vector<HorizonRing>& out, std
     js::Value root;
     if (!js::parse(text, root, err)) return false;
     const js::Value* rings = root.get("rings");
-    if (root.type != js::Value::Obj || !rings || rings->type != js::Value::Arr) { err = "not an upintheair.json file (no rings)"; return false; }
+    if (root.type != js::Value::Obj || !rings || rings->type != js::Value::Arr) { DIAG(400571, "The horizon file is not an upintheair.json file because it has no rings, so it was not loaded."); err = "not an upintheair.json file (no rings)"; return false; }
     std::vector<HorizonRing> v;
     for (const js::Value& r : rings->a) {
         HorizonRing h;
@@ -41,7 +42,7 @@ bool parseUpintheair(const std::string& text, std::vector<HorizonRing>& out, std
                 h.pts.push_back({p.a[0].n, p.a[1].n});
         if (h.pts.size() >= 3) v.push_back(std::move(h));
     }
-    if (v.empty()) { err = "the file has no usable rings"; return false; }
+    if (v.empty()) { DIAG(288956, "The horizon file has no usable rings, so it was not loaded."); err = "the file has no usable rings"; return false; }
     out = std::move(v);
     return true;
 }

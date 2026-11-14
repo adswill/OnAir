@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <string>
 #include <vector>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -168,6 +169,7 @@ bool audioBackendStart(AudioOut::Impl* I, int rate) {
     if (AudioUnitInitialize(unit) != noErr || AudioOutputUnitStart(unit) != noErr) {
         AudioComponentInstanceDispose(unit);
         delete ca;
+        DIAG(677231, "CoreAudio could not start the output unit, so sound falls back to the other audio backend.");
         return false;
     }
     I->backend = unit;

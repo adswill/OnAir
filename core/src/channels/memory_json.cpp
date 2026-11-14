@@ -5,6 +5,7 @@
 #include "dect2/common/u8file.h"
 #include <cstdio>
 #include <cstdlib>
+#include "dect2/common/diag.h"
 
 namespace dect2::mj {
 
@@ -114,7 +115,7 @@ struct P {
 } // namespace
 
 bool parse(const std::string& text, Value& out, std::string& err) {
-    if (text.size() > (16u << 20)) { err = "file too large"; return false; }
+    if (text.size() > (16u << 20)) { DIAG(225771, "The memory channel JSON file is larger than 16 MB, so it was not read."); err = "file too large"; return false; }
     P p(text);
     if (text.compare(0, 3, "\xEF\xBB\xBF") == 0) p.i = 3;   // a byte order mark
     const bool ok = p.val(out, 0);

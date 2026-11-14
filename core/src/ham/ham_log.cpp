@@ -13,6 +13,7 @@
 #include <ctime>
 #include <fstream>
 #include <sstream>
+#include "dect2/common/diag.h"
 
 namespace dect2::ham {
 
@@ -334,7 +335,7 @@ bool Logbook::load(const std::string& path, std::string& err) {
     clear();
     if (!f) return true;   // no log yet
     std::stringstream ss; ss << f.rdbuf();
-    if (f.bad()) { err = "cannot read " + path; return false; }
+    if (f.bad()) { DIAG(236999, "The ham log file %s could not be read, so the log was not loaded.", path.c_str()); err = "cannot read " + path; return false; }
     for (const AdifFields& r : adifReadRecords(ss.str())) {
         LogQso q = adifToQso(r);
         if (q.call.empty()) continue;
@@ -351,10 +352,10 @@ bool Logbook::save(const std::string& path, std::string& err) const {
         std::ofstream f(tmp, std::ios::binary | std::ios::trunc);
         if (!f) { err = "cannot write " + tmp; return false; }
         f << exportAdif();
-        if (!f) { err = "cannot write " + tmp; return false; }
+        if (!f) { DIAG(502881, "Writing the ham log file %s failed (the disk may be full), so the log was not saved.", tmp.c_str()); err = "cannot write " + tmp; return false; }
     }
     std::remove(path.c_str());   // Windows rename does not replace
-    if (std::rename(tmp.c_str(), path.c_str()) != 0) { err = "cannot replace " + path; return false; }
+    if (std::rename(tmp.c_str(), path.c_str()) != 0) { DIAG(505353, "The ham log file %s could not be replaced by the new copy, so the changes were not saved.", path.c_str()); err = "cannot replace " + path; return false; }
     return true;
 }
 

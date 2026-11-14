@@ -3,6 +3,7 @@
 
 // Native driver for the BladeRF: the radio's own library is loaded at run time when it is installed. See native_common.h.
 #include "native_common.h"
+#include "dect2/common/diag.h"
 #if !defined(_WIN32) && !defined(__APPLE__)
 #include <unistd.h>
 #endif
@@ -146,6 +147,7 @@ protected:
         const int r = blade().open(&dev_, id.empty() ? nullptr : id.c_str());
         if (r != 0 || !dev_) {
             dev_ = nullptr;
+            DIAG(828499, "The bladeRF library could not open the radio (code %d), so the radio is not available.", r);
             err = "bladeRF: cannot open the radio: " + blade().text(r);
             if (kOnWindows && (r == -5 || r == -7 || r == -8 || r == -17)) err += std::string(". ") + windowsUsbDriverHint();   // IO, NODEV, UNSUPPORTED, PERMISSION
             return false;
@@ -195,15 +197,15 @@ protected:
                 rmin = std::ceil(rr->min * sc); rmax = std::floor(rr->max * sc);
             }
             const unsigned want = (unsigned)std::llround(s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(std::max(s.sampleRate > 0 ? s.sampleRate : 10e6, rmin), rmax));   // (3.4: a chosen rate goes to libbladeRF as it is)
-            if (const int r = blade().set_sample_rate(dev_, ch, want, &actual); r != 0) { err = "bladeRF: the sample rate was refused: " + blade().text(r); return false; }
+            if (const int r = blade().set_sample_rate(dev_, ch, want, &actual); r != 0) { DIAG(312395, "The bladeRF refused the sample rate (code %d), so it did not start.", r); err = "bladeRF: the sample rate was refused: " + blade().text(r); return false; }
             rate_ = actual ? actual : want;
             requested_ = s.sampleRate;
             checkRate(s.sampleRate, err);
             unsigned bwActual = 0;
             blade().set_bandwidth(dev_, ch, (unsigned)std::llround(std::max(0.2e6, s.basebandFilterHz > 0 ? s.basebandFilterHz : rate_ * 0.95)), &bwActual);
             // 16 buffers of 16384 samples, 8 USB transfers in flight
-            if (const int r = blade().sync_config(dev_, BladeApi::kRxX1, BladeApi::kFormatSc16Q11, 16, 16384, 8, 3500); r != 0) { err = "bladeRF: cannot start the sample stream: " + blade().text(r); return false; }
-            if (const int r = blade().enable_module(dev_, ch, true); r != 0) { err = "bladeRF: cannot enable the receiver: " + blade().text(r); return false; }
+            if (const int r = blade().sync_config(dev_, BladeApi::kRxX1, BladeApi::kFormatSc16Q11, 16, 16384, 8, 3500); r != 0) { DIAG(693199, "The bladeRF sample stream could not be configured (code %d), so it did not start.", r); err = "bladeRF: cannot start the sample stream: " + blade().text(r); return false; }
+            if (const int r = blade().enable_module(dev_, ch, true); r != 0) { DIAG(205882, "The bladeRF receiver module could not be enabled (code %d), so it did not start.", r); err = "bladeRF: cannot enable the receiver: " + blade().text(r); return false; }
             enabled_ = true;
         }
         const double f = std::max(s.centerHz, 0.0);
@@ -211,7 +213,7 @@ protected:
         addNote(err, freqSpecNote("bladeRF", f, lo_, hi_));   // outside what it is specified for: asked all the same, the library says if it cannot
         // libbladeRF has no frequency correction in Hz (only the VCTCXO trim DAC): a correction the user set is taken out of the frequency
         const double tuneHz = std::max(ppmCorrectedHz(f, radioPpm(s)), 0.0);
-        if (const int r = blade().set_frequency(dev_, ch, (uint64_t)std::llround(tuneHz)); r != 0) { err = "bladeRF: the library refused " + mhz(f) + " MHz" + range + ": " + blade().text(r); openFailure_ = OpenFailure::Final; return false; }
+        if (const int r = blade().set_frequency(dev_, ch, (uint64_t)std::llround(tuneHz)); r != 0) { DIAG(363727, "The bladeRF library refused the frequency %.3f MHz (code %d), so the tuning failed.", f / 1e6, r); err = "bladeRF: the library refused " + mhz(f) + " MHz" + range + ": " + blade().text(r); openFailure_ = OpenFailure::Final; return false; }
         if (const int gm = gainModeOf(s); gm != gainMode_ && blade().set_gain_mode(dev_, ch, gm) == 0) gainMode_ = gm;
         double gmin = -15, gmax = 60;
         const BladeApi::range_t* r = nullptr;
@@ -267,11 +269,12 @@ private:
                     if (!fileExists(p)) continue;
                     fprintf(stderr, "bladeRF 1: loading the FPGA image %s\n", p.c_str());
                     fflush(stderr);
-                    if (const int r = blade().load_fpga(dev_, p.c_str()); r != 0) { err = "bladeRF 1: loading the FPGA image " + p + " failed: " + blade().text(r); return false; }
+                    if (const int r = blade().load_fpga(dev_, p.c_str()); r != 0) { DIAG(501842, "Loading the bladeRF 1 FPGA image %s failed (code %d), so the radio cannot start.", p.c_str(), r); err = "bladeRF 1: loading the FPGA image " + p + " failed: " + blade().text(r); return false; }
                     return true;
                 }
             }
         }
+        DIAG(854454, "No FPGA image for the bladeRF 1 was found next to OnAir, so the radio cannot start.");
         err = "bladeRF 1 needs its FPGA image (hostedx40.rbf or hostedx115.rbf): download it from nuand.com and put it next to OnAir";
         return false;
     }

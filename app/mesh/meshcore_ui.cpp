@@ -16,6 +16,7 @@
 // user); nothing is uploaded. Not tested on the air against a MeshCore radio yet: interoperability was checked against the firmware's own
 // code on a computer (tests/mesh/test_mesh_meshcore_node.cpp).
 #include "mesh_internal.h"
+#include "dect2/common/diag.h"
 #include "dect2/common/time_fmt.h"
 #include "dect2/engine/device_claims.h"
 #include "dect2/mesh/mesh_rx.h"
@@ -184,10 +185,10 @@ void sendTick(App& a) {
     if (D.node.nextDue() < 0 || D.node.nextDue() > now) { resumeRx(a); return; }
     if (D.askNotice) return;
     if (!plat::basePrefs().getB("txNoticeAccepted", false)) { D.askNotice = true; return; }
-    if (txActive()) { D.error = "the Transmit window is sending: stop it first"; return; }
+    if (txActive()) { DIAG(612942, "A MeshCore send was refused because the Transmit window is already sending."); D.error = "the Transmit window is sending: stop it first"; return; }
     bool same = false;
     const DeviceInfo* radio = txRadio(a, same);
-    if (!radio) { D.error = "no radio here can transmit (a HackRF, PlutoSDR, LimeSDR, USRP or bladeRF can)"; return; }
+    if (!radio) { DIAG(763078, "A MeshCore send was refused because no connected radio can transmit."); D.error = "no radio here can transmit (a HackRF, PlutoSDR, LimeSDR, USRP or bladeRF can)"; return; }
     const TxModeSpec* mode = txModeById("meshcore");
     if (!mode) { fail(a, "this build has no MeshCore transmitter"); return; }
     // the due frames, up to about four seconds of airtime in one burst

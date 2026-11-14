@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstring>
 #include <vector>
+#include "dect2/common/diag.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -23,7 +24,7 @@ using dect2::math::kPi;
 
 bool loadPcmWav(const std::string& path, std::vector<float>& stereo, int wantRate) {
     FILE* f = fopen(path.c_str(), "rb");
-    if (!f) return false;
+    if (!f) { DIAG_DEBUG(681036, "The WAV file %s could not be opened for audio input, so it was not loaded.", path.c_str()); return false; }
     char riff[12];
     if (fread(riff, 1, 12, f) != 12 || memcmp(riff, "RIFF", 4) || memcmp(riff + 8, "WAVE", 4)) { fclose(f); return false; }
     int16_t ch = 1, bits = 16;
@@ -252,6 +253,7 @@ bool AudioIn::start(Kind k, int sampleRate, const std::string& pathOrDevice, dou
     }
     if (k == File) {
         if (!loadFfmpeg(pathOrDevice, p_->file, rate_, p_->stream) && !loadPcmWav(pathOrDevice, p_->file, rate_)) {
+            DIAG(882253, "The audio file %s could not be opened as WAV or MP3, so no audio input started.", pathOrDevice.c_str());
             err = "could not open the audio file (WAV or MP3)";
             kind_ = None;
             return false;

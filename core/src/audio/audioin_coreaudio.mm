@@ -8,6 +8,7 @@
 #import <AVFoundation/AVFoundation.h>
 #include <string>
 #include <vector>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -115,7 +116,7 @@ bool audioInMicStart(AudioIn::Impl* I, int rate, const std::string& deviceId, st
     AudioComponentDescription d = {kAudioUnitType_Output, kAudioUnitSubType_HALOutput, kAudioUnitManufacturer_Apple, 0, 0};
     AudioComponent c = AudioComponentFindNext(nullptr, &d);
     AudioUnit unit = nullptr;
-    if (!c || AudioComponentInstanceNew(c, &unit) != noErr) { err = "CoreAudio would not open an input unit"; return false; }
+    if (!c || AudioComponentInstanceNew(c, &unit) != noErr) { DIAG(413296, "CoreAudio would not create an input unit, so the microphone is not available."); err = "CoreAudio would not open an input unit"; return false; }
     UInt32 one = 1, zero = 0;
     AudioUnitSetProperty(unit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Input, 1, &one, sizeof one);
     AudioUnitSetProperty(unit, kAudioOutputUnitProperty_EnableIO, kAudioUnitScope_Output, 0, &zero, sizeof zero);
@@ -136,6 +137,7 @@ bool audioInMicStart(AudioIn::Impl* I, int rate, const std::string& deviceId, st
     if (AudioUnitSetProperty(unit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, &f, sizeof f) != noErr) {
         AudioComponentInstanceDispose(unit);
         delete ctx; I->ctx = nullptr;
+        DIAG(387668, "The input device refused %d channels at %d Hz, so the microphone did not start.", (int)chans, (int)devRate);
         err = "this input device would not give " + std::to_string(chans) + " channel(s) at " + std::to_string((int)devRate) + " Hz";
         return false;
     }
@@ -145,6 +147,7 @@ bool audioInMicStart(AudioIn::Impl* I, int rate, const std::string& deviceId, st
     if (AudioUnitInitialize(unit) != noErr || AudioOutputUnitStart(unit) != noErr) {
         AudioComponentInstanceDispose(unit);
         delete ctx; I->ctx = nullptr;
+        DIAG(698729, "CoreAudio could not start the microphone (the Input permission in System Settings may be off), so there is no audio input.");
         err = "the microphone could not be started (check Input in System Settings)";
         return false;
     }

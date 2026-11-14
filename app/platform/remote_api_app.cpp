@@ -26,6 +26,7 @@
 #include <cstdio>
 #include <deque>
 #include <functional>
+#include "dect2/common/diag.h"
 
 using namespace dect2;
 
@@ -82,17 +83,17 @@ struct Host : RemoteApiHost {
     uint64_t telSeq = 0;
 
     bool run(const std::function<bool(App&, std::string&)>& fn, std::string& err) {
-        if (shutdown) { err = "the application is closing"; return false; }
-        if (steadyNow() - lastTick > 1.5) { err = "the application is not responding (is its window minimised or busy?)"; return false; }
+        if (shutdown) { DIAG_DEBUG(597189, "A remote control request arrived while OnAir is closing, so it was refused."); err = "the application is closing"; return false; }
+        if (steadyNow() - lastTick > 1.5) { DIAG_DEBUG(515742, "A remote control request was refused because the OnAir window has not updated for 1.5 seconds."); err = "the application is not responding (is its window minimised or busy?)"; return false; }
         auto j = std::make_shared<Job>();
         j->fn = fn;
-        { std::lock_guard<std::mutex> lk(qMu); if (q.size() > 64) { err = "too many requests waiting"; return false; } q.push_back(j); }
+        { std::lock_guard<std::mutex> lk(qMu); if (q.size() > 64) { DIAG_DEBUG(993766, "More than 64 remote control requests are waiting, so a new one was refused."); err = "too many requests waiting"; return false; } q.push_back(j); }
         std::unique_lock<std::mutex> lk(j->m);
         if (!j->cv.wait_for(lk, std::chrono::seconds(3), [&] { return j->done || shutdown.load(); })) {
-            if (!j->running) { j->cancelled = true; err = "the application is busy, try again"; return false; }
+            if (!j->running) { j->cancelled = true; DIAG_DEBUG(160769, "A remote control request waited 3 seconds without starting, so it was cancelled."); err = "the application is busy, try again"; return false; }
             j->cv.wait(lk, [&] { return j->done; });   // it has started: wait for its result rather than report a failure for something that happens
         }
-        if (!j->done) { err = "the application is closing"; return false; }
+        if (!j->done) { DIAG_DEBUG(876362, "A remote control request was dropped because OnAir closed before it finished."); err = "the application is closing"; return false; }
         err = j->err;
         return j->ok;
     }

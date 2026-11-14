@@ -24,6 +24,7 @@ extern char** environ;
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
 #endif
+#include "dect2/common/diag.h"
 
 namespace plat {
 
@@ -78,7 +79,7 @@ bool spawnProgram(const std::string& program, const std::vector<std::string>& ar
     STARTUPINFOW si{};
     si.cb = sizeof si;
     PROCESS_INFORMATION pi{};
-    if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) { err = "cannot start " + program; return false; }
+    if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) { DIAG(675776, "Windows could not start the program %s, so the helper does not run.", program.c_str()); err = "cannot start " + program; return false; }
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
     return true;
@@ -87,7 +88,7 @@ bool spawnProgram(const std::string& program, const std::vector<std::string>& ar
 long spawnChild(const std::string& program, const std::vector<std::string>& args, const std::string& logFile, std::string& err) {
     SECURITY_ATTRIBUTES sa{sizeof sa, nullptr, TRUE};
     HANDLE log = CreateFileW(wide(logFile).c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-    if (log == INVALID_HANDLE_VALUE) { err = "cannot write " + logFile; return 0; }
+    if (log == INVALID_HANDLE_VALUE) { DIAG(314863, "The log file %s for a helper program could not be created, so the helper is not started.", logFile.c_str()); err = "cannot write " + logFile; return 0; }
     std::wstring cmd = quoteArg(wide(program));
     for (const std::string& a : args) cmd += L" " + quoteArg(wide(a));
     STARTUPINFOW si{};
@@ -98,7 +99,7 @@ long spawnChild(const std::string& program, const std::vector<std::string>& args
     PROCESS_INFORMATION pi{};
     const BOOL ok = CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, TRUE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi);
     CloseHandle(log);
-    if (!ok) { err = "cannot start " + program; return 0; }
+    if (!ok) { DIAG(254812, "Windows could not start the helper program %s with a log file, so it does not run.", program.c_str()); err = "cannot start " + program; return 0; }
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
     return (long)pi.dwProcessId;
@@ -152,7 +153,7 @@ bool spawnProgram(const std::string& program, const std::vector<std::string>& ar
     argv.push_back(nullptr);
     pid_t pid;
     const int rc = posix_spawnp(&pid, program.c_str(), nullptr, nullptr, argv.data(), environ);
-    if (rc != 0) { err = "cannot start " + program; return false; }
+    if (rc != 0) { DIAG(868959, "The program %s could not be started (error %d), so the helper does not run.", program.c_str(), rc); err = "cannot start " + program; return false; }
     dect2::namedThread("onair-reap", [pid] { int st = 0; waitpid(pid, &st, 0); }).detach();   // reaped when it ends, nobody waits for it
     return true;
 }
@@ -170,7 +171,7 @@ long spawnChild(const std::string& program, const std::vector<std::string>& args
     pid_t pid = 0;
     const int rc = posix_spawnp(&pid, program.c_str(), &fa, nullptr, argv.data(), environ);
     posix_spawn_file_actions_destroy(&fa);
-    if (rc != 0) { err = "cannot start " + program; return 0; }
+    if (rc != 0) { DIAG(991998, "The helper program %s could not be started with a log file (error %d), so it does not run.", program.c_str(), rc); err = "cannot start " + program; return 0; }
     dect2::namedThread("onair-reap", [pid] { int st = 0; waitpid(pid, &st, 0); }).detach();
     return (long)pid;
 }

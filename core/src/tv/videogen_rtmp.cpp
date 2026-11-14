@@ -22,6 +22,7 @@ extern "C" {
 #include <mutex>
 #include <string_view>
 #include <thread>
+#include "dect2/common/diag.h"
 
 namespace dect2::vgen {
 
@@ -50,6 +51,7 @@ bool splitUrl(const std::string& url, std::string& host, int& port, std::string&
     while (!u.empty() && (u.back() == ' ' || u.back() == '\t' || u.back() == '/')) u.remove_suffix(1);
     constexpr std::string_view scheme = "rtmp://";
     if (u.size() < scheme.size() || !std::equal(scheme.begin(), scheme.end(), u.begin(), [](char a, char b) { return a == (char)std::tolower((unsigned char)b); })) {
+        DIAG_DEBUG(753354, "The video generator address does not start with rtmp://, so it was refused.");
         err = "the address must start with rtmp:// (rtmps and other protocols are not served)";
         return false;
     }
@@ -65,7 +67,7 @@ bool splitUrl(const std::string& url, std::string& host, int& port, std::string&
         port = std::stoi(std::string(p));
         host = std::string(hostPort.substr(0, colon));
     }
-    if (port < 1 || port > 65535) { err = "the port must be 1 to 65535"; return false; }
+    if (port < 1 || port > 65535) { DIAG_DEBUG(902196, "The video generator address has a port outside 1 to 65535, so it was refused."); err = "the port must be 1 to 65535"; return false; }
     if (host.find_first_of(" /?#@") != std::string::npos) { err = "the address is not a host name or IP address"; return false; }
     if (path.empty()) { err = "add the application name after the port, e.g. rtmp://0.0.0.0:1935/live/stream"; return false; }
     const size_t s2 = path.find('/');

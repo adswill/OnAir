@@ -195,7 +195,7 @@ target_sources(dect2core PRIVATE core/src/airports/airports.cpp)
 target_sources(dect2core PRIVATE core/src/engine/general_auto.cpp)   # General / Auto: labels, hysteresis, Decode and return-to-General (docs/GENERAL-AUTO.md)
 target_sources(dect2core PRIVATE core/src/fingerprint/rf_fingerprint.cpp)   # RF fingerprint of a transmitter (docs/RF-FINGERPRINT.md)
 target_sources(dect2core PRIVATE core/src/airports/airports.cpp core/src/common/radioid_db.cpp core/src/common/tg_dir.cpp)   # radioid_db: the DMR / NXDN radio ID name list (user-downloaded CSV)
-target_sources(dect2core PRIVATE core/src/common/diag.cpp)   # diagnostic codes, [E######] messages (docs/DIAGNOSTICS.md)
+target_link_libraries(dect2core PUBLIC dect2_diag)   # diagnostic codes, [E######] messages (docs/DIAGNOSTICS.md)
 target_sources(dect2core PRIVATE core/src/common/seen_store.cpp core/src/common/records.cpp core/src/image/gif_loop.cpp)   # heard over days and years (ADS-B, AIS): docs/SEEN-STORE-3.9.md
 target_sources(dect2core PRIVATE core/src/doctor/reception_doctor.cpp)   # Reception Doctor: why a mode is not decoding (docs/RECEPTION-DOCTOR.md)
 target_sources(dect2core PRIVATE core/src/station/station.cpp core/src/station/heard.cpp core/src/station/fun.cpp core/src/engine/wide_placed.cpp core/src/doctor/decode_progress.cpp)   # My station: radios, antennas, which mode can use what (docs/STATION-3.8.md)
@@ -391,12 +391,17 @@ target_include_directories(dect2_signallab PUBLIC core/include)
 target_compile_definitions(dect2_signallab PRIVATE _USE_MATH_DEFINES)
 target_link_libraries(dect2core PUBLIC dect2_signallab)
 
+# the diagnostic codes runtime (docs/DIAGNOSTICS.md): a library of its own so the small libraries below (automation, session) link it too
+add_library(dect2_diag STATIC core/src/common/diag.cpp)
+target_include_directories(dect2_diag PUBLIC core/include)
+
 # the automations (rules, expressions, Lua scripts, the engine): their own small library so its test builds without the receivers
 add_library(dect2_automation STATIC core/src/automation/catalog.cpp core/src/automation/expr.cpp core/src/automation/json_mini.cpp core/src/automation/rules.cpp core/src/automation/engine.cpp core/src/automation/script.cpp core/src/automation/recipes.cpp)
 target_include_directories(dect2_automation PUBLIC core/include)
 target_link_libraries(dect2_automation PUBLIC dect2_lua)
 find_package(Threads REQUIRED)
 target_link_libraries(dect2_automation PUBLIC Threads::Threads)
+target_link_libraries(dect2_automation PUBLIC dect2_diag)
 target_link_libraries(dect2core PUBLIC dect2_automation)
 # the Mode Builder (Tools > Mode Builder): a receiver, generator and frame decoder built from a JSON mode definition (docs/MODE-BUILDER.md).
 # The example definitions data/modes/*.json are compiled in as text (generated/modebuilder_examples.inc); a changed file configures again.
