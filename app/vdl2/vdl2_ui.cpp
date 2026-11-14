@@ -18,6 +18,8 @@
 #include <fstream>
 #include "dect2/adsb/adsb_tel.h"
 #include "dect2/vdl2/vdl2_tel.h"
+#include "dect2/vdl2/vdl2_gsname.h"
+#include <unordered_map>
 #include "../adsb/ac_card.h"
 #include <algorithm>
 #include <cctype>
@@ -60,6 +62,8 @@ struct State {
     adsbmap::View map;
     bool mapFollow = true;
     uint32_t selAir = 0;
+    bool showGs = true, showCov = true;   // map: ground stations, coverage circles (vdl2ShowGs / vdl2ShowCov)
+    std::unordered_map<uint32_t, std::pair<double, double>> estSmooth;   // drawn position of an estimated station (does not jump)
 };
 State S;
 vdl2log::Log gLog;   // every frame of the session, with its UTC date and time (the screen keeps 400)
@@ -72,6 +76,7 @@ void loadState() {
     plat::Prefs& d = plat::prefs();
     snprintf(S.chans, sizeof S.chans, "%s", d.getS("vdl2Chans", "").c_str());
     S.map.zoom = (int)d.getI("vdl2Zoom", 7);
+    S.showGs = d.getB("vdl2ShowGs", true); S.showCov = d.getB("vdl2ShowCov", true);
     S.map.lat = 51.47; S.map.lon = -0.45;
     if (const char* e = getenv("DECT2_VDL2_VIEW")) S.viewMode = std::max(0, std::min(4, atoi(e)));   // dev: open on a view (screenshots)
 }
@@ -352,26 +357,43 @@ void mapCanvas(App& a, ImVec2 size) {
     int placed = 0, predicted = 0;
     ImVec2 cardAt; adsbmap::AcCard card; bool haveCard = false;   // the picked aircraft's card (#394)
     if (on) {
-        for (const auto& g : t.stations) {   // estimated stations: an open square; every station with a coverage: its reach
-            if (!g.hasPos && !g.hasEstimate) continue;
-            const double la = g.hasPos ? g.lat : g.estLat, lo = g.hasPos ? g.lon : g.estLon;
+        const dect2::AirportDb& adb = dect2::AirportDb::builtin();
+        auto nameOf = [&](const dect2::Vdl2GroundStation& g) { std::string n = dect2::vdl2StationName(g, adb); return n.empty() ? hex6(g.addr) : n; };
+        auto tip = [&](const dect2::Vdl2GroundStation& g, const ImVec2& q, const char* kind) {   // hover: the address stays available here
+            const ImVec2 m = ImGui::GetIO().MousePos;
+            if (std::fabs(m.x - q.x) > 7 * gUi || std::fabs(m.y - q.y) > 7 * gUi) return;
+            ImGui::SetTooltip("%s\naddress %s, %u frames%s%s%s", nameOf(g).c_str(), hex6(g.addr).c_str(), g.messages, kind[0] ? "\n" : "", kind,
+                              g.posOutliers ? ("\n" + std::to_string(g.posOutliers) + " odd position report(s) ignored").c_str() : "");
+        };
+        for (const auto& g : t.stations) {   // estimated / unconfirmed stations: an open square; every station with a coverage: its reach
+            if (!g.hasPos && !g.hasEstimate && !g.hasPending) continue;
+            double la = g.hasPos ? g.lat : g.hasEstimate ? g.estLat : g.pendLat, lo = g.hasPos ? g.lon : g.hasEstimate ? g.estLon : g.pendLon;
+            if (!g.hasPos && g.hasEstimate) {   // estimates are smoothed so the square does not jump between frames
+                auto it = S.estSmooth.find(g.addr);
+                if (it == S.estSmooth.end() || std::fabs(it->second.second - lo) > 90) it = S.estSmooth.insert_or_assign(g.addr, std::make_pair(la, lo)).first;
+                else { it->second.first += 0.15 * (la - it->second.first); it->second.second += 0.15 * (lo - it->second.second); }
+                la = it->second.first; lo = it->second.second;
+            }
             const ImVec2 q = adsbmap::project(la, lo);
-            if (g.coverageNm > 1) {
+            if (S.showCov && g.coverageNm > 1) {
                 const ImVec2 e = adsbmap::project(la + g.coverageNm / 60.0, lo);
                 dl->AddCircle(q, std::fabs(q.y - e.y), IM_COL32(120, 170, 230, 70), 96);
             }
-            if (g.hasPos) continue;
+            if (g.hasPos || !S.showGs) continue;
             dl->AddRect(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(120, 170, 230, 230));
-            const std::string s = "~GS " + hex6(g.addr);
+            const char* what = g.hasEstimate ? "estimated from the aircraft that talk to it" : "position reported once, not confirmed yet";
+            const std::string s = std::string(g.hasEstimate ? "~GS " : "?GS ") + nameOf(g) + (g.hasEstimate ? " (estimate)" : " (unconfirmed)");
             if (adsbmap::labelsAt(S.map.zoom, false)) dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(200, 220, 245, 200), s.c_str());
+            tip(g, q, what);
         }
-        for (const auto& g : t.stations) {   // ground stations: squares
+        if (S.showGs) for (const auto& g : t.stations) {   // ground stations: squares at the confirmed position
             if (!g.hasPos) continue;
             const ImVec2 q = adsbmap::project(g.lat, g.lon);
             dl->AddRectFilled(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(120, 170, 230, 255));
             dl->AddRect(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(0, 0, 0, 160));
-            const std::string s = "GS " + hex6(g.addr) + (g.airports.empty() ? "" : " " + g.airports);
+            const std::string s = "GS " + nameOf(g);
             if (adsbmap::labelsAt(S.map.zoom, false)) dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(200, 220, 245, 255), s.c_str());
+            tip(g, q, "position confirmed by repeated reports");
         }
         for (const auto& c : t.aircraft) {
             double plat, plon;
@@ -431,6 +453,12 @@ void mapCanvas(App& a, ImVec2 size) {
     ImGui::SameLine(0, 6 * gUi);
     if (ImGui::Button("fit")) S.mapFollow = true;
     ImGui::PopStyleColor();
+    ImGui::SameLine(0, 6 * gUi);
+    if (ImGui::Checkbox(tr("Ground stations"), &S.showGs)) { plat::prefs().setB("vdl2ShowGs", S.showGs); plat::prefs().flush(); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Show the ground station squares. A filled square is a position confirmed by two agreeing reports; an open one is an estimate or a single report. The hex address is in the tooltip."));
+    ImGui::SameLine(0, 6 * gUi);
+    if (ImGui::Checkbox(tr("Coverage"), &S.showCov)) { plat::prefs().setB("vdl2ShowCov", S.showCov); plat::prefs().flush(); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Show the coverage circle of each ground station (the farthest aircraft heard through it)."));
     ImGui::SameLine(0, 6 * gUi);
     gPred.controls();
     ImGui::SameLine(0, 6 * gUi);
@@ -589,7 +617,7 @@ void stationView(const App& a) {
             ImGui::TableNextColumn(); ImGui::Text("%u", g.messages);
             ImGui::TableNextColumn(); if (g.freqHz > 0) ImGui::Text("%.3f", g.freqHz / 1e6); else ImGui::TextUnformatted("-");
             ImGui::TableNextColumn(); ImGui::TextUnformatted(ago(t.nowSec, g.lastHeardSec).c_str());
-            ImGui::TableNextColumn(); ImGui::TextUnformatted(g.airports.empty() ? "-" : g.airports.c_str());
+            ImGui::TableNextColumn(); { const std::string nm = dect2::vdl2StationName(g, dect2::AirportDb::builtin()); ImGui::TextUnformatted(nm.empty() ? (g.airports.empty() ? "-" : g.airports.c_str()) : nm.c_str()); }
             ImGui::TableNextColumn(); if (g.hasPos) ImGui::Text("%.1f %.1f", g.lat, g.lon); else ImGui::TextUnformatted("-");
         }
     }
