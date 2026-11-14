@@ -3,14 +3,14 @@
 The user guides and notes that live in the repository. The same text is on the [wiki](https://github.com/adswill/OnAir/wiki) and at [on-air.dev/docs](https://on-air.dev/docs/). The main README is [../README.md](../README.md); radios are in [../DEVICES.md](../DEVICES.md); the code layout is in [../ARCHITECTURE.md](../ARCHITECTURE.md).
 
 
-**Start here (OnAir 4.0.0):**
+**Start here (OnAir 4.1.0):**
 
-- Install and first run: [../README.md](../README.md) (assets: `OnAir-4.0.0-macos-arm64.dmg`, `-macos-x86_64.dmg`, `-windows-x64-setup.exe`, `-windows-x64.zip`, `onair_4.0.0_amd64.deb` / `_arm64.deb`, Linux portable `.tar.gz` and AppImage, the Android APK, `SHA256SUMS`).
+- Install and first run: [../README.md](../README.md) (assets: `OnAir-4.1.0-macos-arm64.dmg`, `-macos-x86_64.dmg`, `-windows-x64-setup.exe`, `-windows-x64.zip`, `onair_4.1.0_amd64.deb` / `_arm64.deb`, Linux portable `.tar.gz` and AppImage, the Android APK, `SHA256SUMS`).
 - Radios: [../DEVICES.md](../DEVICES.md), [NETWORK_RADIOS.md](NETWORK_RADIOS.md), [RASPBERRY_PI.md](RASPBERRY_PI.md). Every mode: [../MODES.md](../MODES.md).
 - Settings and keys: [SETTINGS.md](SETTINGS.md), [CONTROLS.md](CONTROLS.md), [SIMPLE-ADVANCED.md](SIMPLE-ADVANCED.md).
 - Voice codecs and optional libraries (you install them): [CODECS.md](CODECS.md), [OPTIONAL-LIBRARIES.md](OPTIONAL-LIBRARIES.md), [USERLIBS-3.8.md](USERLIBS-3.8.md).
 - Share, serve and automate: [HOST-A-RECEIVER.md](HOST-A-RECEIVER.md), [headless-server.md](headless-server.md), [REMOTE-API.md](REMOTE-API.md), [MCP.md](MCP.md), [INTEGRATIONS.md](INTEGRATIONS.md), [plugins.md](plugins.md).
-- What changed in each release: [CHANGELOG-4.0.md](CHANGELOG-4.0.md) (release notes: [RELEASE-NOTES-4.0.0.md](RELEASE-NOTES-4.0.0.md)), [CHANGELOG-3.9.md](CHANGELOG-3.9.md), [CHANGELOG-3.8.md](CHANGELOG-3.8.md) and the older `CHANGELOG-*.md` files. Dated files such as `*-3.7.md`, `*-3.8.md`, `*-3.9.md`, `*-4.0.md`, `ISSUES-*` and `PATHWAY.md` describe the version in their name.
+- What changed in each release: [CHANGELOG-4.1.md](CHANGELOG-4.1.md) (release notes: [RELEASE-NOTES-4.1.0.md](RELEASE-NOTES-4.1.0.md)), [CHANGELOG-4.0.md](CHANGELOG-4.0.md), [CHANGELOG-3.9.md](CHANGELOG-3.9.md), [CHANGELOG-3.8.md](CHANGELOG-3.8.md) and the older `CHANGELOG-*.md` files. Dated files such as `*-3.7.md`, `*-3.8.md`, `*-3.9.md`, `*-4.0.md`, `*-4.1.md`, `ISSUES-*` and `PATHWAY.md` describe the version in their name.
 
 The table below is the list of topic pages.
 
@@ -169,6 +169,26 @@ The table below is the list of topic pages.
 | [HOST-A-RECEIVER.md](HOST-A-RECEIVER.md) | Host a receiver | Put your radio on the internet and list it on web.on-air.dev. |
 | [OPTIONAL-LIBRARIES.md](OPTIONAL-LIBRARIES.md) | Optional libraries | Codecs and libraries you install yourself. |
 | [PLUGIN-SDK.md](PLUGIN-SDK.md) | Plug-in SDK | What exists for plug-in authors. |
+
+## Added in 4.1
+
+| File | Topic |
+|---|---|
+| [ANDROID-PLAYER-4.1.md](ANDROID-PLAYER-4.1.md) | Android player: analogue TV, full screen, touch size |
+| [BUGS2-4.1.md](BUGS2-4.1.md) | Bug fixes 4.1: #496, #495, #491, #488, #470 |
+| [CPU-4.1.md](CPU-4.1.md) | CPU per second of signal, every mode |
+| [GSC-4.1.md](GSC-4.1.md) | Golay paging (GSC) |
+| [MODEBUILDER-PLOTS-4.1.md](MODEBUILDER-PLOTS-4.1.md) | Mode Builder Signal tab plots |
+| [MY-LOCATION-MAPS-4.1.md](MY-LOCATION-MAPS-4.1.md) | Your own position on every map |
+| [NATIVE-FIX-4.1.md](NATIVE-FIX-4.1.md) | Native driver test fix |
+| [OOK-SCATTER-4.1.md](OOK-SCATTER-4.1.md) | On / off-time scatter plot for OOK bursts |
+| [RX888-RATES-4.1.md](RX888-RATES-4.1.md) | RX888 MkII sample rates up to 130 Msps |
+| [SCADA-4.1.md](SCADA-4.1.md) | SCADA radio telemetry (Modbus RTU, DNP3) |
+| [SENSITIVITY-4.1.md](SENSITIVITY-4.1.md) | Sensitivity 4.1: data and voice gaps |
+| [SENSITIVITY-4.1-TV.md](SENSITIVITY-4.1-TV.md) | Sensitivity 4.1: TV and DRM |
+| [SENSITIVITY-4.1-ALL.md](SENSITIVITY-4.1-ALL.md) | Sensitivity of every mode |
+| [STL-4.1.md](STL-4.1.md) | STL link (studio-to-transmitter) |
+| [TOUCH-SIZE-4.1.md](TOUCH-SIZE-4.1.md) | Touch control size |
 
 ## Added in 4.0
 

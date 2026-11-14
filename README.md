@@ -2,7 +2,7 @@
 
 <h1 align="center">OnAir</h1>
 
-<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->386<!-- /modecount --> modes with one software-defined radio.</b><br>
+<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->390<!-- /modecount --> modes with one software-defined radio.</b><br>
 Free and open source, for macOS, Windows, Linux and Android.</p>
 
 <p align="center">
@@ -34,7 +34,7 @@ Free and open source, for macOS, Windows, Linux and Android.</p>
 
 OnAir turns a low-cost software-defined radio (a HackRF, an RTL-SDR, an Airspy and many others) into a receiver for most of what is on the air. Plug in an antenna, pick a mode, and watch the spectrum, the sync, the error correction and the decoded data.
 
-- <!-- modecount -->386<!-- /modecount --> modes in 14 families, from TV and DAB to aircraft, ships, satellites, two-way radio, pagers and sensors.
+- <!-- modecount -->390<!-- /modecount --> modes in 14 families, from TV and DAB to aircraft, ships, satellites, two-way radio, pagers and sensors.
 - Works with HackRF, RTL-SDR, Airspy, SDRplay, BladeRF, LimeSDR, USRP, Pluto and more, plus network radios, sound cards and Hamlib rigs.
 - Runs on macOS, Windows, Linux and Android. Free and open source (GPL-3.0-or-later).
 - A receiver first. It can also send test signals through a transmit-capable radio into a dummy load (off by default, behind a licence notice; see [Transmit](docs/TRANSMIT.md)).
@@ -73,14 +73,14 @@ Counts are generated from the mode list in the app (`tools/release/gen_changelog
 | Family | Modes | Examples |
 |---|:---:|---|
 | **TV** | 17 | DVB-T/T2, DVB-S/S2/S2X, DVB-C, ATSC 1.0 and 3.0, ISDB-T, DTMB, analogue TV |
-| **Broadcast radio** | 9 | DAB+, DRM, HD Radio, AM and shortwave, FM with RDS |
+| **Broadcast radio** | 10 | DAB+, DRM, HD Radio, AM and shortwave, FM with RDS |
 | **Aviation** | 30 | ADS-B with a live map, ACARS, VDL2, HFDL, UAT, airband |
 | **Maritime** | 8 | AIS, VDES, NAVTEX, DSC, weather fax, marine VHF |
 | **Satellite and navigation** | 57 | Meteor, NOAA, GOES, MetOp pictures, Iridium, Inmarsat, QO-100, GNSS, COSPAS-SARSAT |
 | **Two-way radio** | 22 | DMR, P25, NXDN, D-STAR, M17, TETRA, CTCSS and DTMF decoders |
 | **Cellular and rail** | 12 | LTE, 5G NR and NB-IoT cells, GSM-R |
-| **Pagers** | 4 | POCSAG, FLEX, Multitone |
-| **IoT and sensors** | 43 | ISM sensors, LoRaWAN, Meshtastic, Bluetooth LE, Zigbee, Wi-Fi, DECT |
+| **Pagers** | 5 | POCSAG, FLEX, Multitone |
+| **IoT and sensors** | 45 | ISM sensors, LoRaWAN, Meshtastic, Bluetooth LE, Zigbee, Wi-Fi, DECT |
 | **Weather and science** | 56 | Radiosondes, Horus balloons, SAME alerts, time signals, radio astronomy |
 | **Amateur** | 52 | FT8, FT4, WSPR, JS8Call, RTTY, PSK, SSTV, FreeDV, APRS |
 | **HF utility** | 41 | ALE, beacons, STANAG 4539, Link 11, CODAR |
@@ -89,6 +89,16 @@ Counts are generated from the mode list in the app (`tools/release/gen_changelog
 <!-- modes-table:end -->
 
 Every receiver is built from published specifications and tested on generated signals and, where recordings exist, on real captures. The full numbered list is [MODES.md](MODES.md); notes per family are in [docs/MODES-DETAIL.md](docs/MODES-DETAIL.md). The KA family are modes designed for OnAir, measured in simulation only.
+
+## What is new in 4.1
+
+The full list, with what was measured and the known limits, is in [docs/CHANGELOG-4.1.md](docs/CHANGELOG-4.1.md) and in the 4.1 release notes on the [releases page](https://github.com/adswill/OnAir/releases/latest). Read the **Known limits** section: nearly everything new was tested on generated signals, not on the air.
+
+- **New modes** (390 in the app's list, 4 more than 4.0; [MODES.md](MODES.md) has 392 rows): Golay paging (GSC), STL link, ESP-NOW and SCADA radio telemetry.
+- **Devices**: Aaronia SPECTRAN V6, a native SDRplay RSP1 / MSi2500 driver, RX888 MkII up to 130 Msps (none of them tested on hardware).
+- **Sensitivity**: a measured table of every mode, and lower thresholds for CubeSat links, e-Czas, VDL4, KLW, TDCS, ATSC 3.0 and DRM (simulated signals).
+- **Maps**: your own position, range rings, distance and bearing to the pointer.
+- **Less CPU** in about 20 modes, diagnostic codes in log messages to make bug reports easier to trace, and the fixes for #496, #495, #491, #488 and #470.
 
 ## Radios
 
@@ -116,7 +126,7 @@ The full list: [docs/FEATURES.md](docs/FEATURES.md) and [docs/TOOLS-AND-NOTES.md
 - [Codecs](docs/CODECS.md) (voice and audio codecs you install yourself) and [optional libraries](docs/OPTIONAL-LIBRARIES.md)
 - [Plugins](docs/plugins.md) and the [plugin SDK](docs/PLUGIN-SDK.md)
 - [Updates and Discord status](docs/UPDATES.md)
-- Release history: [docs/CHANGELOG-4.0.md](docs/CHANGELOG-4.0.md) and the [releases page](https://github.com/adswill/OnAir/releases); older notes in [docs/CHANGELOG-0.2.md](docs/CHANGELOG-0.2.md)
+- Release history: [docs/CHANGELOG-4.0.md](docs/CHANGELOG-4.1.md), [4.0](docs/CHANGELOG-4.0.md) and the [releases page](https://github.com/adswill/OnAir/releases); older notes in [docs/CHANGELOG-0.2.md](docs/CHANGELOG-0.2.md)
 - The wiki, a page per mode: [on-air.dev/docs](https://on-air.dev/docs/)
 
 > [!NOTE]
