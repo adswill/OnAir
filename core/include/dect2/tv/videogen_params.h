@@ -138,6 +138,10 @@ Budget estimate(const Settings& s);
 // video bitrate to the highest (in steps of 10 kbit/s) whose suggested mux rate still fits; the audio stays as it is. False when even
 // the lowest video bitrate does not fit (the settings are then at that lowest bitrate).
 bool fitVideoToMux(Settings& s, int muxKbps);
+// Easy mode with OnAir's transmitter (#458): CBR at what the channel allows (fitVideoToMux). When that leaves a picture fewer than half
+// the bits the codec needs for a good picture at this size (bitsPerPixel), the frame rate comes down a step (25, 20, 15, 12, 10, 8, 6, 5
+// fps) until it does, or 5 fps is reached. Never above the frame rate set. false when even 5 fps does not fit.
+bool fitEasyToMux(Settings& s, int muxKbps);
 // Plain warnings for settings that will not work as asked (empty when fine)
 std::vector<std::string> checkSettings(const Settings& s, const Budget& b);
 

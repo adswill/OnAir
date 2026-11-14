@@ -246,6 +246,7 @@ struct VgLinkServer::Impl {
     std::thread th;
     std::vector<Peer> peers;
     VgTxInfo tx;
+    std::string ownToken;   // the token of the generator OnAir started
     std::function<void(const std::string&)>* onBye = nullptr;
 
     Peer* find(uint32_t ssrc) { for (auto& p : peers) if (p.ssrc == ssrc) return &p; return nullptr; }
@@ -265,6 +266,7 @@ struct VgLinkServer::Impl {
         kv["slot"] = std::to_string(p.info.slot);
         kv["raise"] = std::to_string(p.raise);
         kv["quit"] = std::to_string(p.quit);
+        kv["ours"] = !ownToken.empty() && p.info.token == ownToken ? "1" : "0";
         send(p.via, p.from, VgMsg::Reply, kv);
     }
     void drop(size_t i) {   // under mu
@@ -452,6 +454,11 @@ static bool bumpByToken(VgLinkServer::Impl& I, const std::string& token, bool qu
 }
 
 bool VgLinkServer::raise(const std::string& token) { return bumpByToken(*p_, token, false); }
+void VgLinkServer::setOwnToken(const std::string& token) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    p_->ownToken = token;
+    for (const auto& p : p_->peers) p_->reply(p);   // at once: the generator learns whether it is OnAir's own
+}
 bool VgLinkServer::quit(const std::string& token) { return bumpByToken(*p_, token, true); }
 void VgLinkServer::quitAll() {
     std::lock_guard<std::mutex> lk(p_->mu);
@@ -479,6 +486,7 @@ struct VgLinkClient::Impl {
     std::string status;
     VgTxInfo tx;
     double usable = 0;
+    bool ours = false;
     bool easy = true;
     std::vector<std::string> progs;
     double rate = 0;                // > 0: streaming
@@ -535,6 +543,7 @@ void VgLinkClient::Impl::run() {
                     refused = false;
                     slot = (int)vgKvNum(kv, "slot");
                     tx = vgTxInfoFromKv(kv, usable);
+                    ours = vgKvNum(kv, "ours") > 0.5;
                     lastReply = Clock::now();
                     if (!linked) status = "linked to OnAir " + at + " as generator:" + std::to_string(slot);
                     linked = true;
@@ -610,6 +619,7 @@ bool VgLinkClient::connected() const { return p_->linked; }
 int VgLinkClient::slot() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->slot; }
 std::string VgLinkClient::status() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->status; }
 VgTxInfo VgLinkClient::txInfo(double& usableBps) const { std::lock_guard<std::mutex> lk(p_->mu); usableBps = p_->usable; return p_->tx; }
+bool VgLinkClient::ours() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->ours && connected(); }
 
 void VgLinkClient::setStatus(bool easy, const std::vector<std::string>& programmes) {
     std::lock_guard<std::mutex> lk(p_->mu);

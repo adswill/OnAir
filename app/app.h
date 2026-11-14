@@ -1079,6 +1079,7 @@ void modeBuilderOpenText(const std::string& json);   // modebuilder_ui.cpp: open
 bool customModeSink(const float* iq, size_t nComplex, double rate);   // modebuilder_ui.cpp: the samples of a running custom mode (true: taken)
 void txStudioWindow(App& a);   // tx_studio.cpp: Tools > TX studio (a.txStudioOpen); no radio, nothing is transmitted
 void videoGenRequest(App& a);   // vg_launch.cpp: Tools > Digital video generator: starts onair-videogen, or brings it to the front
+void videoGenRequestLater();     // vg_launch.cpp: the same, on the next frame (for a button that has no App)
 void videoGenTick(App& a);      // vg_launch.cpp: every frame (the link server, the generator ending)
 void videoGenShutdown();        // vg_launch.cpp: OnAir closes: the generator it started quits
 const std::string& videoGenError();   // vg_launch.cpp: why the link or the program did not start (empty: fine)

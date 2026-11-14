@@ -101,13 +101,15 @@ Every message describes a **state**, not an event, so a lost datagram only delay
 | `raise`, `quit` | counters: come to the front (Tools > Digital video generator once more); quit (OnAir is closing the generator it started) |
 | `running` | `1` while the transmitter is on air |
 | `tv` | `1` when the transmitter's mode carries a transport stream (DVB-T/T2, DVB-S/S2, DVB-C, ATSC, ISDB-T, DTMB) |
-| `channel` | the channel's transport-stream rate in bit/s (0: not known) |
+| `channel` | the channel's transport-stream rate in bit/s (0: not known): worked out from the mode and its Advanced settings (`txTsRateFor`), on the air the rate of the signal made (`txTsBitrate`) |
 | `usable` | what this generator may use: 97 % of the channel, shared equally by the generators in the multiplex |
-| `system`, `params` | the transmitter's system and parameters, as text for the user ("DVB-T", "8 MHz") |
+| `system`, `params` | the transmitter's system and parameters, as text for the user ("DVB-T2", "8 MHz, 32K, 1/128, 256-QAM, 3/4": the width and the Modulation and Framing choices shown in the Transmit panel) |
 | `generators`, `inmux` | how many generators the multiplex uses; `1` when this one is among them |
 
-In Easy mode the generator fits its video bitrate to `usable`. In Advanced mode, `usable` is the capacity on its Muxing tab (unless a
-capacity is typed in there).
+Only a generator started by OnAir (one with a token) acts on `usable`; one started by hand shows the link but keeps its own rates.
+In Easy mode it then encodes CBR to fit `usable`, lowering the frame rate when the channel is narrow (`fitEasyToMux`), and shows
+`usable` as **Allowed bitrate** in its header. In Advanced mode, `usable` is the capacity on its Muxing tab (unless a capacity is typed
+in there).
 
 ### Refused (OnAir -> generator)
 

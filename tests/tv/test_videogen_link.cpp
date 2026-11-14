@@ -143,6 +143,12 @@ void testServerClient(bool local) {
     srv.setTxInfo(t);
     LCHECK(waitFor([&] { double u = 0; VgTxInfo x = a.txInfo(u); return x.running && x.system == "DVB-T2" && std::abs(u - 3.88e6) < 1; }), "TxInfo reaches the generators");
     LCHECK(waitFor([&] { double u = 0; b.txInfo(u); return std::abs(u - 3.88e6) < 1; }), "each one gets its share");
+    // OnAir's own generator (#458): only the one with the token OnAir spawned it with follows the transmitter's rate
+    LCHECK(!a.ours() && !b.ours(), "no generator is OnAir's own before OnAir names its token");
+    srv.setOwnToken("tok-other");
+    LCHECK(waitFor([&] { return !a.ours(); }, 1.5) && !a.ours() && !b.ours(), "a token OnAir did not give out is not OnAir's own");
+    srv.setOwnToken("tok-a");
+    LCHECK(waitFor([&] { return a.ours(); }) && !b.ours(), "the generator with OnAir's token is OnAir's own; one without a token is not");
     // Raise / Quit / Bye
     LCHECK(srv.raise("tok-a") && waitFor([&] { return a.takeRaise(); }) && !b.takeRaise(), "Raise goes to the generator with that token only");
     LCHECK(!srv.raise("") && !srv.raise("other"), "no generator with an empty or unknown token");

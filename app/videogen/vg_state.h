@@ -77,6 +77,8 @@ struct Gen {
     int linkPort = kVgLinkDefaultPort, slot = 1;
     bool startedByOnAir = false;
     bool standalone = false;     // started on its own: neither by OnAir (token) nor pointed at one (--onair)
+    int easyKbps = 0;            // Easy mode streaming: the video CBR and frame rate it runs with; a new channel rate re-fits them (#458)
+    double easyFps = 0, easyDiffAt = -1;
     MuxUi mux;
     int previewSrc = 0;
     bool previewOn = false;

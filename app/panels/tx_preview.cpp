@@ -7,6 +7,7 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/common/diag.h"
 #include "tx_state.h"
+#include "dect2/tv/videogen.h"
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
@@ -43,6 +44,8 @@ PreviewData make(TxRequest r, const TxModeSpec* mode, double rate) {
     r.videoSrc = 0;
     r.pullAudio = nullptr;
     r.pullVideo = nullptr;
+    int gid = 0;   // never the live stream: the preview would bind the UDP port, or take the generator's packets from the transmitter's queue
+    if (isTxUdpSpec(r.file) || dect2::vgen::parseGeneratorSpec(r.file, gid)) r.file.clear();
     try {
         std::string err;
         auto g = makeTxGenerator(*mode, r, rate, err);

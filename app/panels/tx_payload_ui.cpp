@@ -330,6 +330,11 @@ void tvSource(TxUi& s, bool running) {
     ImGui::SameLine();
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The transmitter sends a transport stream that is ready, as it is: a UDP stream (from VLC, FFmpeg, OBS or an encoder), or the multiplex of a Digital video generator (Tools > Digital video generator). Programme numbers, names and PIDs come from that stream."));
+    if (s.tvSrc == 1) {   // the generator itself, one click away (the same as Tools > Digital video generator)
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Open the generator##tvgenopen"))) videoGenRequestLater();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Starts the Digital video generator (its own window), or brings it to the front. It links to this transmitter by itself."));
+    }
     if (s.tvSrc == 0) {
         ImGui::BeginDisabled(running);
         ImGui::SetNextItemWidth(260 * gUi);

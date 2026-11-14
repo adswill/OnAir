@@ -6,11 +6,29 @@ goes to OnAir's transmitter, a `.ts` file, or the network as UDP or RTP. Every e
 bitrate the settings need, so the stream can be fitted to a DVB link before anything is encoded.
 
 The generator is **its own program**: `onair-videogen` (`onair_videogen.exe` on Windows), installed next to OnAir. **Tools > Digital
-video generator** starts it, or brings it to the front when it already runs. It has its own window, so it can sit on a second screen.
+video generator** starts it, or brings it to the front when it already runs; so does the **Open the generator** button next to
+**Transport stream: Digital video generator** in the Transmit panel. It has its own window, so it can sit on a second screen.
+
+### Why it is a separate program
+
+It was split from OnAir **for performance**. Encoding video (H.264, HEVC or MPEG-2, often several programmes, with an overlay on every
+picture) takes whole CPU cores and can stall for a moment when a camera or file is slow. Inside OnAir that load competed with the
+receivers, the waterfall and the transmitter, which must keep up with the radio in real time. As its own process it has its own
+threads, its own window and its own scheduling by the operating system: a slow encoder never slows OnAir down, and a busy OnAir window
+never makes the encoder drop pictures. It can also run on another computer and send over the network.
+
+### Running it on its own
+
+`onair-videogen` also runs **stand-alone**, without OnAir: start it from the start menu, a file manager or a terminal. It then opens in
+**Advanced** mode and streams over **UDP** (to 127.0.0.1:5000 unless the Muxing tab says otherwise; a file or RTP output chosen before is
+kept), so it works as a general encoder for VLC, another program, a hardware modulator or OnAir's **UDP stream** input. A generator
+started this way does not follow OnAir's transmitter rate (see below); set its bitrates on the Muxing tab.
+
 It keeps running when OnAir's window is busy, and OnAir keeps running when an encoder is slow. The two talk over a small link on this
 computer (RTP over a named pipe, no network port, see [VIDEOGEN-LINK.md](VIDEOGEN-LINK.md)): the generator sends its multiplex to the transmitter, and
 the transmitter tells the generator how much it may send. When OnAir closes, the generator it started closes too, and it starts again with
-OnAir next time. Closing the generator window yourself ends that. A generator started by hand (not from OnAir, and without `--onair`) is a stand-alone encoder: it opens in **Advanced** mode and streams over **UDP** (to 127.0.0.1:5000 unless the Muxing tab says otherwise; a file or RTP output chosen before is kept), and it still links to OnAir when OnAir runs. Started with `--onair local` or `--onair host:port`, it sends to OnAir's transmitter as before.
+OnAir next time. Closing the generator window yourself ends that. A generator started by hand still links to OnAir when OnAir runs, and with `--onair local` or `--onair host:port` it sends to OnAir's
+transmitter; but only a generator **OnAir started** (with its token) takes the transmitter's bitrate.
 
 - Program: `app/videogen/` (`vg_main.cpp` the window and command line, `vg_window.cpp` the tabs, Muxing and the link, `vg_sources.cpp`
   a source's rows, the estimate and the overlay editor). It shares OnAir's graphics, fonts, settings and translations (the `onair_uikit`
@@ -29,8 +47,8 @@ Every setting in the window has a (?) with a short version of what is written he
 
 1. Choose a digital TV mode in OnAir's transmitter (DVB-T, for example), then open **Tools > Digital video generator**.
 2. On the **Easy** tab, choose the input (Camera, Still picture, Video file, Test generator or RTMP server), the resolution and the
-   frame rate. Easy mode does the rest: it sends to OnAir's transmitter and fits the video bitrate to what the transmitter's channel
-   carries (the **Transmitter** panel on the right shows it).
+   frame rate. Easy mode does the rest: it sends to OnAir's transmitter and fits itself to what the transmitter's channel carries
+   (CBR, and a lower frame rate when the channel is narrow). The header shows the **Allowed bitrate**.
 3. Press **Start preview** to see the moving picture (nothing is encoded or sent).
 4. Press **Start streaming**. In OnAir's Transmit panel, the **Video generator** row lists the generator (`1: Video generator *`, where `*`
    means it is sending): click it, then start the transmitter.
@@ -139,7 +157,7 @@ transport stream that is ready, as it is. In the Transmit panel, **Transport str
 
 | Transport stream | What it is |
 |---|---|
-| **Digital video generator** (the default) | The multiplex of a linked generator, over the local pipe (no ports). Click it in the **Video generator** row (`*` = it is sending now); the first generator that links is taken until another is chosen. Below it, the transmitter shows that generator's programmes. |
+| **Digital video generator** (the default) | The multiplex of a linked generator, over the local pipe (no ports). **Open the generator** next to it starts the generator (or brings it to the front). Click it in the **Video generator** row (`*` = it is sending now); the first generator that links is taken until another is chosen. Below it, the transmitter shows that generator's programmes. |
 | **UDP stream** | A transport stream that arrives over UDP or RTP, from VLC, FFmpeg, OBS, a hardware encoder or this generator's UDP output. The address is written as in VLC: `udp://@:5004` (every network card, the default), `udp://@127.0.0.1:5004` (this computer only), `udp://@239.1.1.1:5004` (multicast), `rtp://@:5004` (RTP). |
 
 Output **Transmitter** (always in Easy mode) sends the multiplex to OnAir over the link instead of to a file or the network. OnAir gives
@@ -149,9 +167,33 @@ each linked generator a slot (1 to 8); the transmitter reads it as `generator:<s
 The programme numbers, names and PIDs are the stream's: in Easy mode the generator sends programme 1, in Advanced mode its Muxing tab
 sets them, with one programme per source. Several programmes in one channel are several sources of one generator in Advanced mode.
 
-The transmitter tells the generator the channel's rate, and the generator may use 97 % of it. Easy mode fits its video bitrate to that.
-Advanced mode uses it as the Muxing tab's capacity, unless one is typed there. Starting a generator empties its old queue, so the
+The transmitter tells the generator the channel's rate (see **The allowed bitrate** below). Starting a generator empties its old queue, so the
 transmitter never sends stale pictures; while it is not sending, the transmitter sends null packets.
+
+### The allowed bitrate
+
+The transmitter works out the transport-stream rate of the digital mode as it is set in the Transmit panel, **its Advanced settings
+included** (channel width, constellation, code rate, guard interval, FFT size, pilot pattern, roll-off ...), and sends it to the
+generator about twice a second; while it is on the air, the rate of the signal really made. The generator may use **97 %** of it.
+
+Only a generator that **OnAir started** (Tools > Digital video generator, or the **Open the generator** button) takes this rate. A
+generator started by hand shows that it is linked, but keeps its own bitrates.
+
+When OnAir started it, the generator's **header** (the first line of its window) shows in large letters **Allowed bitrate: ...**, with
+the mode and its settings and the channel's whole rate next to it, for example `Allowed bitrate: 21.7 Mbit/s  DVB-T2 (8 MHz, 32K,
+1/128, 256-QAM, 3/4 ...), channel 22.4 Mbit/s`. Without a digital mode in the Transmit panel it says so in orange.
+
+In **Easy** mode the generator fits itself to that rate:
+
+- The video is encoded **CBR**, at the highest bitrate whose multiplex (video, audio, PES and TS headers, PAT, PMT, SDT) fits in 98 % of
+  the allowed rate.
+- When that leaves each picture fewer than half the bits the codec needs for a good picture at this size, the **frame rate comes down**
+  a step at a time (25, 20, 15, 12, 10, 8, 6, 5 fps) until it does, or 5 fps is reached. It is never raised above the frame rate set.
+  The Easy tab shows the CBR rate and frame rate it uses.
+- When the allowed rate changes while it streams (another constellation or code rate in the Transmit panel), the source is started
+  again with the new rate once the setting has stayed the same for a second.
+
+In **Advanced** mode the allowed rate is the Muxing tab's capacity, unless a capacity is typed there; the encoder settings are yours.
 
 A UDP stream is taken as it comes: OnAir does not pace it. When it is faster than the channel, its oldest packets are dropped (about
 2.5 s are kept); while none arrives, null packets are sent. The panel counts both while on the air. Make the stream's rate fit the

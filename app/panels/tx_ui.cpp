@@ -189,6 +189,37 @@ void saveStr(const char* key, const char* v) {
     plat::basePrefs().setS(key, v);
 }
 
+// What the Digital video generator is told the channel carries (#458): on the air the rate of the signal really made, else the rate
+// of the settings now (the Advanced ones included), worked out at most twice a second (DVB-T2 builds its frame plan for it)
+static double channelRate(const TxUi& s, const TxModeSpec& m) {
+    if (s.session.running()) return txTsBitrate();
+    static double at = -1, bps = 0;
+    static std::string mode;
+    const double now = ImGui::GetTime();
+    if (mode != s.modeId || now - at > 0.5 || now < at) {
+        const TxRequest r = makeReq(s, m, false);
+        bps = txTsRateFor(m, r, txRequestRate(m, r, TxRateLimits{}));
+        at = now;
+        mode = s.modeId;
+    }
+    return bps;
+}
+
+// The channel as the user set it, for the generator's header: the shown choices of Modulation and Framing (constellation,
+// code rate, guard interval, FFT size, roll-off ...)
+static std::string channelParams(const TxUi& s, const TxModeSpec& m) {
+    (void)m;
+    std::string t;
+    for (const auto& d : s.params) {   // the channel width is one of them
+        if (d.type != dect2::TxPType::Choice || (d.group != dect2::TxPGroup::Modulation && d.group != dect2::TxPGroup::Framing) || d.choices.empty()) continue;
+        if (!dect2::txParamShown(d, s.params, s.pv)) continue;
+        const auto it = s.pv.find(d.key);
+        const int i = std::clamp((int)std::lround(it == s.pv.end() ? d.def : it->second), 0, (int)d.choices.size() - 1);
+        t += (t.empty() ? "" : ", ") + std::string(d.choices[(size_t)i]);
+    }
+    return t;
+}
+
 // Digital TV takes a ready transport stream (#458): the modes that carry one, and QO-100 on its DATV path
 bool tvTakesStream(const TxModeSpec& m, const TxUi& s) {
     switch (m.stdMode) {
@@ -503,9 +534,9 @@ void txTick(App& a) {
         t.running = s.session.running();
         t.digitalTv = m && (m->stdMode == 0 || m->stdMode == 3 || m->stdMode == 6 || m->stdMode == 8 || m->stdMode == 9 || m->stdMode == 42);
         if (t.digitalTv) {
-            t.channelBps = txTsBitrate();
+            t.channelBps = channelRate(s, *m);
             t.system = s.modeName.empty() && m && m->name ? m->name : s.modeName;
-            if (m->stdMode == 0) t.params = std::to_string((int)kTxBw[std::clamp(s.bwIdx, 0, 3)]) + " MHz";
+            t.params = channelParams(s, *m);
             if (s.tvSrc == 1 && s.tvGen > 0) t.slots.push_back(s.tvGen);
         }
         dect2::vgen::vgLinkServer().setTxInfo(t);

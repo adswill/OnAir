@@ -398,6 +398,24 @@ bool fitVideoToMux(Settings& s, int muxKbps) {
     return true;
 }
 
+bool fitEasyToMux(Settings& s, int muxKbps) {
+    s.rc = RateControl::Cbr;
+    const double set = std::max(1.0, s.fps);
+    static const double kSteps[] = {25, 20, 15, 12, 10, 8, 6, 5};
+    std::vector<double> rates{set};
+    for (double f : kSteps) if (f < set - 1e-9) rates.push_back(f);
+    bool fits = false;
+    for (double f : rates) {
+        Settings t = s;
+        t.fps = f;
+        fits = fitVideoToMux(t, muxKbps);
+        s = t;
+        const double goodKbps = bitsPerPixel(codecOf(t.videoEncoder), t.frames) * t.width * t.height * f / 1000.0;
+        if (fits && t.videoKbps >= goodKbps * 0.5) return true;
+    }
+    return fits;   // the lowest frame rate: the best this size can get
+}
+
 Budget estimate(const Settings& s) {
     Budget b;
     const double fps = std::max(0.1, s.fps);

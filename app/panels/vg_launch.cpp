@@ -64,9 +64,14 @@ std::string token() { std::lock_guard<std::mutex> lk(gTokenMu); return gToken; }
 
 bool spawn(App& a) {
     { std::lock_guard<std::mutex> lk(gTokenMu); gToken = newToken(); }
+    vgLinkServer().setOwnToken(token());   // only this generator follows the transmitter's rate (#458)
     std::string err;
     const std::string at = vgLinkServer().listeningLocal() || vgLinkServer().port() == 0 ? std::string("local") : "127.0.0.1:" + std::to_string(vgLinkServer().port());
-    const std::vector<std::string> args = {"--onair", at, "--token", token()};
+    std::vector<std::string> args = {"--onair", at, "--token", token()};
+    if (const char* shot = getenv("DECT2_VGSHOT")) {   // dev: the generator OnAir starts saves its window too (#458 screenshots)
+        const char* delay = getenv("DECT2_VGSHOTDELAY");
+        args.insert(args.end(), {"--hidden", "--no-first-run", "--shot", shot, "--shotdelay", delay ? delay : "12"});
+    }
     gPid = plat::spawnChild(generatorExe(), args, plat::cacheDir() + "/onair-videogen.log", err);
     if (gPid > 0) return true;
     a.videoGenOpen = false;
@@ -100,9 +105,14 @@ void videoGenRequest(App& a) {
     savePrefs(a);
 }
 
+// a button without the App at hand (the Transmit panel's "Open the generator"): the next frame opens it
+static std::atomic<bool> gOpenLater{false};
+void videoGenRequestLater() { gOpenLater = true; }
+
 // every frame
 void videoGenTick(App& a) {
     startServer();
+    if (gOpenLater.exchange(false)) videoGenRequest(a);
     if (gBye.exchange(false)) { a.videoGenOpen = false; savePrefs(a); return; }   // the user closed the generator
     if (gPid > 0 && !plat::childAlive(gPid)) {   // it ended without a BYE (crashed, or killed): not started again by itself
         gPid = 0;

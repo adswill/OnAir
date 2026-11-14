@@ -125,10 +125,13 @@ void saveSoon(Gen& g) {
 
 // ---- rates -------------------------------------------------------------------------------------------------------------------
 
+// OnAir started this generator: it was given a token, and OnAir's Reply confirms that token is the one it spawned it with (#458)
+bool followsOnAir(const Gen& g) { return g.startedByOnAir && g.link.connected() && g.link.ours(); }
+
 double usableBps(const Gen& g) {
     double u = 0;
     g.link.txInfo(u);
-    return g.link.connected() ? u : 0;
+    return followsOnAir(g) ? u : 0;   // only a generator OnAir started follows its transmitter (#458)
 }
 
 Output muxOutput(const Gen& g) { return g.advanced ? g.mux.output : Output::Transmitter; }
@@ -147,7 +150,7 @@ Settings easySettings(const Gen& g, const SourceTab& s, bool& fits) {
     Settings e = s.cfg.enc;
     fits = true;
     const double u = usableBps(g);
-    if (u > 0) fits = fitVideoToMux(e, (int)(u * 0.98 / 1000));
+    if (u > 0) fits = fitEasyToMux(e, (int)(u * 0.98 / 1000));   // CBR, and a lower frame rate when the channel is narrow
     return e;
 }
 
@@ -260,6 +263,45 @@ void linkLine(Gen& g) {
                              t.running ? "" : tr(" (transmitter stopped)"));
 }
 
+// The header (#458), when OnAir started this generator: what its transmitter allows now, for the digital mode set there (its Advanced
+// settings included), large, so it is never missed
+void rateHeader(Gen& g) {
+    if (!followsOnAir(g)) return;
+    double u = 0;
+    const VgTxInfo t = g.link.txInfo(u);
+    ImGui::SetWindowFontScale(1.25f);
+    if (!t.digitalTv || u <= 0) ImGui::TextColored(kOrange, "%s", tr("Allowed bitrate: none yet - choose a digital TV mode in OnAir's Transmit panel"));
+    else ImGui::TextColored(kGreen, "%s %s", tr("Allowed bitrate:"), kbpsText(u / 1000).c_str());
+    ImGui::SetWindowFontScale(1.0f);
+    if (t.digitalTv && u > 0) {
+        ImGui::SameLine();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextDisabled("%s%s%s%s, %s %s", t.system.c_str(), t.params.empty() ? "" : " (", t.params.c_str(), t.params.empty() ? "" : ")", tr("channel"),
+                            kbpsText(t.channelBps / 1000).c_str());
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("What OnAir's transmitter can carry for this generator: 97 % of the channel's transport-stream rate, worked out from the mode and its Advanced settings in the Transmit panel. Easy mode streams CBR at this rate and lowers the frame rate when it is narrow."));
+}
+
+// Easy mode streaming: a new rate from the transmitter (another constellation, code rate ...) re-fits the source, once it has been the
+// same for a second (no restart for every step while the user scrolls through the settings)
+void easyRefit(Gen& g) {
+    if (g.advanced || !g.ses.running() || g.src.empty()) { g.easyDiffAt = -1; return; }
+    bool fits = true;
+    const Settings e = easySettings(g, *g.src[0], fits);
+    if (g.easyKbps == 0) { g.easyKbps = e.videoKbps; g.easyFps = e.fps; return; }   // the run started with these
+    if (e.videoKbps == g.easyKbps && std::fabs(e.fps - g.easyFps) < 1e-9) { g.easyDiffAt = -1; return; }
+    const double now = ImGui::GetTime();
+    if (g.easyDiffAt < 0) { g.easyDiffAt = now; return; }
+    if (now - g.easyDiffAt < 1.0) return;
+    g.easyDiffAt = -1;
+    g.easyKbps = e.videoKbps;
+    g.easyFps = e.fps;
+    g.ses.setChannelBps(capacityBps(g));
+    g.ses.stopSource(0);
+    std::string err;
+    if (!g.ses.startSource(0, runConfig(g, *g.src[0]), g.src[0]->num, err)) g.msg = err;
+}
+
 void topBar(Gen& g) {
     const bool running = g.ses.running();
     const Output out = muxOutput(g);
@@ -328,9 +370,12 @@ void easyTab(Gen& g) {
     ImGui::SeparatorText(tr("Transmitter"));
     ImGui::PushTextWrapPos(0);
     if (!g.link.connected()) ImGui::TextColored(kOrange, "%s", tr("No transmitter linked: start OnAir; the generator links by itself. Easy mode sends to OnAir's transmitter only (Advanced also writes files and sends UDP / RTP)."));
+    else if (!followsOnAir(g)) ImGui::TextColored(kOrange, "%s", tr("Started by hand: the bitrate does not follow the transmitter (only a generator that OnAir starts does). Set it in Advanced."));
     else if (usableBps(g) <= 0) ImGui::TextColored(kOrange, "%s", tr("Choose a digital TV mode in OnAir's Transmit panel: the bitrate follows what it can carry."));
     else {
-        ImGui::Text("%s %s.", tr("The bitrate follows the transmitter:"), kbpsText(usableBps(g) / 1000).c_str());
+        ImGui::Text("%s %s: %s %s, %.4g fps.", tr("The bitrate follows the transmitter:"), kbpsText(usableBps(g) / 1000).c_str(), tr("video CBR"),
+                    kbpsText(e.videoKbps).c_str(), e.fps);
+        if (e.fps < s.cfg.enc.fps - 1e-9) ImGui::TextDisabled("%s", tr("The frame rate is lowered so each picture keeps enough bits for this channel."));
         if (!fits) ImGui::TextColored(kRed, "%s", tr("Even the lowest video bitrate does not fit: choose a smaller resolution, a lower frame rate or another mode in the transmitter."));
     }
     if (g.src.size() > 1) ImGui::TextColored(kOrange, tr("Easy mode sends Source 1 only; the other %d source(s) are kept for Advanced."), (int)g.src.size() - 1);
@@ -704,11 +749,14 @@ FrameResult frame() {
     g.previewSrc = std::clamp(g.previewSrc, 0, (int)g.src.size() - 1);
     applyDrops(*g.src[(size_t)(g.advanced ? (g.cur < (int)g.src.size() ? g.cur : 0) : 0)], g.ses.running());
     previewTick(g, g.previewSrc);
+    if (!g.ses.running()) g.easyKbps = 0;
+    easyRefit(g);
 
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(vp->WorkPos);
     ImGui::SetNextWindowSize(vp->WorkSize);
     ImGui::Begin("##vgmain", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoBringToFrontOnFocus);
+    rateHeader(g);
     topBar(g);
     ImGui::Separator();
     if (!g.advanced) {

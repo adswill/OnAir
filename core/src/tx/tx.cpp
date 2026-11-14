@@ -694,6 +694,42 @@ static std::function<void(uint8_t*)> generatorMux(const TxRequest& r, double br)
     return src;
 }
 
+// ISDB-T as the transmitter sends it: layer A one QPSK segment, layer B the other 12 with the chosen constellation and code rate
+static isdbt::Params isdbtTxParams(const SynthConfig& s) {
+    isdbt::Params p;
+    p.mode = s.isdbtMode >= 1 && s.isdbtMode <= 3 ? s.isdbtMode : 3; p.guard = s.isdbtGuard >= 0 && s.isdbtGuard <= 3 ? s.isdbtGuard : (int)isdbt::kGi8; p.partial = true;
+    p.layer[0].segments = 1; p.layer[0].mod = isdbt::kQpsk; p.layer[0].rate = isdbt::kR23; p.layer[0].ti = 2;
+    p.layer[1].segments = 12; p.layer[1].mod = s.isdbtMod >= 0 && s.isdbtMod <= 3 ? s.isdbtMod : (int)isdbt::k64Qam; p.layer[1].rate = s.isdbtRate >= 0 && s.isdbtRate <= 4 ? s.isdbtRate : (int)isdbt::kR34; p.layer[1].ti = 1;
+    p.bwMhz = s.isdbtBwMhz == 7 || s.isdbtBwMhz == 8 ? s.isdbtBwMhz : 6;
+    return p;
+}
+
+// The transport-stream rate the digital TV generators below carry (the rates namedTs gets), from the settings alone: no signal is made
+double txTsRateFor(const TxModeSpec& m, const TxRequest& r, double rateHz) {
+    const SynthConfig s = cleanSynth(r.synth, m.stdMode);
+    const double rr = rateHz > 0 ? rateHz : m.nominalRateHz;
+    switch (m.stdMode) {
+    case 0: {
+        const double native = nativeRateHz(r.bandwidthMhz > 0 ? r.bandwidthMhz : 8);
+        if (m.variant == 2) {
+            dvbt::Params tp;
+            tp.mode = s.dvbtMode; tp.guard = s.dvbtGuard; tp.mod = s.dvbtMod; tp.crHp = tp.crLp = s.dvbtRate;
+            return dvbt::netBitrate(tp, native);
+        }
+        TxParams tp = s.tx;
+        tp.payload = true;
+        return T2Generator(tp).tsBitrate(native);
+    }
+    case 3: return 19.39e6;
+    case 6: return isdbt::layerBitrate(isdbtTxParams(s), 1) * 0.9;
+    case 8: return dvbsNetBitrate(dvbs::dvbsConfigFromSynth(s, rr).tx);
+    case 9: return dtmbSynthNetBitrate(s);
+    case 42: return dvbcSynthNetBitrate(s, rr);
+    case 55: return r.variant == 1 ? dvbsNetBitrate(dvbs::dvbsConfigFromSynth(s, rr).tx) : 0;   // QO-100 on its DATV path
+    default: return 0;
+    }
+}
+
 static std::atomic<double> gTsBitrate{0};
 double txTsBitrate() { return gTsBitrate; }
 
@@ -790,11 +826,7 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
         native = rr;
     } else if (m.stdMode == 6) {
         const double rr = rateHz > 0 ? rateHz : m.nominalRateHz;
-        isdbt::Params p;
-        p.mode = s.isdbtMode >= 1 && s.isdbtMode <= 3 ? s.isdbtMode : 3; p.guard = s.isdbtGuard >= 0 && s.isdbtGuard <= 3 ? s.isdbtGuard : (int)isdbt::kGi8; p.partial = true;
-        p.layer[0].segments = 1; p.layer[0].mod = isdbt::kQpsk; p.layer[0].rate = isdbt::kR23; p.layer[0].ti = 2;
-        p.layer[1].segments = 12; p.layer[1].mod = s.isdbtMod >= 0 && s.isdbtMod <= 3 ? s.isdbtMod : (int)isdbt::k64Qam; p.layer[1].rate = s.isdbtRate >= 0 && s.isdbtRate <= 4 ? s.isdbtRate : (int)isdbt::kR34; p.layer[1].ti = 1;
-        p.bwMhz = s.isdbtBwMhz == 7 || s.isdbtBwMhz == 8 ? s.isdbtBwMhz : 6;
+        const isdbt::Params p = isdbtTxParams(s);
         auto src = isdbt::singleLayerSource(1, namedTs(fileTs, isdbt::layerBitrate(p, 1) * 0.9));
         auto gen = std::make_shared<isdbt::Generator>(p, src, 1);
         const double nativeIsdb = isdbt::sampleRateFor(p.bwMhz);

@@ -1026,6 +1026,63 @@ static void testStream(const fs::path& pic, bool rtp) {
 #endif
 
 
+// Easy mode with OnAir (#458): CBR at the allowed rate, the frame rate lowered step by step for a narrow channel, never raised
+static void testEasyFit(const fs::path& dir, const fs::path& pic) {
+    Settings s;
+    s.fps = 25;
+    Settings wide = s;
+    CHECK(fitEasyToMux(wide, 20000) && wide.rc == RateControl::Cbr && wide.fps == 25 && wide.videoKbps > 15000,
+          "a wide channel: CBR at 25 fps (%.4g fps, %d kbit/s)", wide.fps, wide.videoKbps);
+    Settings narrow = s;
+    narrow.rc = RateControl::Crf;
+    const bool nf = fitEasyToMux(narrow, 600);
+    CHECK(nf && narrow.rc == RateControl::Cbr && narrow.fps < 25 && narrow.fps >= 5 && estimate(narrow).suggestedMux <= 600,
+          "a narrow channel: a lower frame rate that fits (%.4g fps, %d kbit/s, mux %d)", narrow.fps, narrow.videoKbps, estimate(narrow).suggestedMux);
+    Settings slow = s;
+    slow.fps = 10;
+    CHECK(fitEasyToMux(slow, 20000) && slow.fps == 10, "the frame rate set is never raised (%.4g)", slow.fps);
+    Settings tiny = s;
+    tiny.videoEncoder = "mpeg2video";
+    CHECK(!fitEasyToMux(tiny, 60) && tiny.fps == 5, "MPEG-2 720x576 cannot fit 60 kbit/s, even at 5 fps (%.4g)", tiny.fps);
+    // the lowest steps encode: MPEG-2 has no 6 or 8 fps of its own (its frame-rate extension gives them)
+    for (double f : {6.0, 8.0, 12.0}) {
+        GenConfig c = pictureConfig(pic);
+        c.enc.videoEncoder = "mpeg2video";
+        c.enc.fps = f;
+        c.enc.rc = RateControl::Cbr;
+        c.seconds = 1;
+        c.tsPath = (dir / ("fps" + std::to_string((int)f) + ".ts")).string();
+        VideoGenerator g;
+        std::string err;
+        CHECK(g.start(c, err) && g.wait(60), "MPEG-2 at %.0f fps starts: %s", f, err.c_str());
+        CHECK(g.stats().error.empty() && g.stats().frames >= (uint64_t)f - 1, "MPEG-2 at %.0f fps: %s, %llu frames", f, g.stats().error.c_str(), (unsigned long long)g.stats().frames);
+    }
+}
+
+// What the Transmit panel tells the generator (tx.h txTsRateFor): the same TS rate the transmitter's generator is built with, from the
+// settings alone, and it follows an Advanced setting
+static void testTsRateFor() {
+    for (const char* id : {"dvbt2", "dvbt", "atsc", "isdbt", "dvbs", "dvbc", "dtmb"}) {
+        const dect2::TxModeSpec* m = dect2::txModeById(id);
+        CHECK(m != nullptr, "TX mode %s", id);
+        if (!m) continue;
+        dect2::TxRequest r;
+        r.modeId = id;
+        const double want = dect2::txTsRateFor(*m, r, 0);
+        std::string err;
+        auto gen = dect2::makeTxGenerator(*m, r, 0, err);
+        CHECK(gen && want > 1e6 && std::fabs(dect2::txTsBitrate() - want) < 1, "%s: %.0f bit/s worked out, %.0f built (%s)", id, want, dect2::txTsBitrate(), err.c_str());
+    }
+    const dect2::TxModeSpec* t2 = dect2::txModeById("dvbt2");
+    if (!t2) return;
+    dect2::TxRequest q, h;
+    q.modeId = h.modeId = "dvbt2";
+    q.synth.tx.plpMod = 0;   // QPSK
+    h.synth.tx.plpMod = 3;   // 256-QAM
+    const double rq = dect2::txTsRateFor(*t2, q, 0), rh = dect2::txTsRateFor(*t2, h, 0);
+    CHECK(rh > 3 * rq, "DVB-T2 256-QAM carries about four times QPSK (%.0f vs %.0f)", rh, rq);
+}
+
 // The transmitter's UDP input (tx.h txUdpTsSource, #458): the generator streams UDP or RTP to 127.0.0.1, the transmitter's source
 // gives whole TS packets of that stream in order, and null packets while none waits
 static void testTxUdpInput(const fs::path& pic, bool rtp) {
@@ -1580,7 +1637,9 @@ static void testGeneratorMux(const fs::path& dir, const fs::path& pic) {
     std::string found;
     for (const auto& [id, n] : names) found += " " + std::to_string(id) + "='" + n + "'";
     // each generator's own number and name (the transmitter's names and first service ID are not used for generators any more)
-    CHECK(names.size() == 2 && names[1] == "Gen five" && names[2] == "Gen six", "two programmes 1 and 2 with the generators' names:%s", found.c_str());
+    // both ask for programme 1: the one whose packets come first keeps it, the other is moved to 2 (which one depends on the start-up)
+    const bool fiveSix = names[1] == "Gen five" && names[2] == "Gen six", sixFive = names[1] == "Gen six" && names[2] == "Gen five";
+    CHECK(names.size() == 2 && (fiveSix || sixFive), "two programmes 1 and 2 with the generators' names:%s", found.c_str());
     CHECK(streams[1] == 2 && streams[2] == 2 && video == 2 && audio == 2, "each programme has its picture and sound (%d video, %d audio)", video, audio);
     CHECK(pictures > 50, "the pictures of both come through: %d", pictures);
     std::printf("generator multiplex: %zu packets, %d pictures\n", out.size() / 188, pictures);
@@ -1614,6 +1673,8 @@ int main() {
     testRtmpInput(dir);
     testRemuxSynthetic();
     testGeneratorMux(dir, pic);
+    testEasyFit(dir, pic);
+    testTsRateFor();
     testTxUdpInput(pic, false);
     testTxUdpInput(pic, true);
     failures += videogenLinkTests();

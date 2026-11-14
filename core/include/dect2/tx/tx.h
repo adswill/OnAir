@@ -256,6 +256,9 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& mode, const TxReq
 // The sample rate to ask the radio for: explicit tune.sampleRate, or the mode's own kept within the radio's limits.
 // Explicit requests are not clamped; TxSession rejects invalid or unsupported rates before opening the sink.
 double txRequestRate(const TxModeSpec& mode, const TxRequest& r, const TxRateLimits& lim);
+// The transport-stream rate (bit/s) mode `m` carries with request `r` at `rateHz` (0: the mode's nominal rate), from the settings alone
+// (no signal is made): what the Transmit panel tells a Digital video generator before it is on the air. 0 for a mode without a TS.
+double txTsRateFor(const TxModeSpec& m, const TxRequest& r, double rateHz);
 
 // The transmitter's radio. It is independent of the receivers: a radio a receiver (Engine) has open is refused here, in plain words, unless it is
 // genuinely full duplex (DeviceInfo::txFullDuplex: then nothing is claimed and both may use it); and a radio the transmitter holds is refused to the

@@ -109,6 +109,8 @@ public:
     std::vector<VgPeer> peers() const;
     void setTxInfo(const VgTxInfo& t);       // in every Reply; sent at once when it changes
     bool raise(const std::string& token);    // asks the generator started with this token to come to the front; false: none has it
+    // the token OnAir started its own generator with: that generator's Reply says ours=1, so only it follows the transmitter's rate (#458)
+    void setOwnToken(const std::string& token);
     bool quit(const std::string& token);     // asks it to quit
     void quitAll();
     // the user closed the generator window (BYE "closed"): its token. Called on the link thread.
@@ -136,6 +138,7 @@ public:
     int slot() const;                        // the slot OnAir gave it (0: not connected)
     std::string status() const;              // "linked to OnAir on this computer as generator:1", "... at host:5460 ...", "OnAir not found at ...", "refused: ..."
     VgTxInfo txInfo(double& usableBps) const;   // the last TxInfo (running false while not connected)
+    bool ours() const;                       // OnAir's Reply says OnAir started this generator (its token is the one OnAir spawned it with)
     void setStatus(bool easy, const std::vector<std::string>& programmes);   // in the State
     void startStream(double muxBps);         // a new stream at this mux rate (OnAir empties the slot's queue)
     void setRate(double muxBps);
