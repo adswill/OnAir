@@ -22,6 +22,7 @@
 #include <sstream>
 #include "dect2/marine/marine_wefax_stations.h"
 #include "dect2/marine/wefax_rotate.h"
+#include "dect2/marine/wefax_phase.h"
 #include "wefax_gallery.h"
 #include "incident_ui.h"
 #include "../panels/picsave_ui.h"
@@ -107,6 +108,7 @@ struct State {
     uint64_t imgSeq = 0, telImgSeq = ~0ull;
     dect2::FaxImage last;            // the copy kept for saving
     enhui::LiveTex enh;              // the Enhance control on the fax picture
+    int phase = 0;                   // fax picture: hand phasing, pixels every line is moved right (circular); per picture, back to 0 for a new one
     int rot = 0;                     // fax picture: quarter turns clockwise (0..3), saved as faxRotate; applies to the shown and the saved pictures
     bool faxShown = false;           // the Fax view was drawn this frame (the top "clear" button also clears the picture then)
     float zoom = 0;                  // 0 = fit the width
@@ -583,7 +585,15 @@ void dscView(App& a) {
 // ---------------------------------------------------------------- fax
 
 // The picture as the user wants it: S.last (the decoder's) turned by the Rotate setting. Used for the screen, PNG saves and the gallery.
-dect2::FaxImage rotatedFax(const dect2::FaxImage& im, int turns) {
+dect2::FaxImage rotatedFax(const dect2::FaxImage& im0, int turns) {
+    const dect2::FaxImage* src = &im0;
+    dect2::FaxImage ph;
+    if (S.phase != 0 && im0.width > 0 && im0.height > 0 && im0.pix.size() >= (size_t)im0.width * im0.height) {   // hand phasing first: it works on the lines as received
+        ph.width = im0.width; ph.height = im0.height;
+        dect2::wefaxPhaseShift(im0.pix.data(), im0.width, im0.height, S.phase, ph.pix);
+        src = &ph;
+    }
+    const dect2::FaxImage& im = *src;
     if (dect2::wefaxTurns(turns) == 0 || im.width <= 0 || im.height <= 0 || im.pix.size() < (size_t)im.width * im.height) return im;
     dect2::FaxImage o;
     dect2::wefaxRotate(im.pix.data(), im.width, im.height, turns, o.pix, o.width, o.height);
@@ -625,7 +635,7 @@ void uploadFax(App& a) {
     S.imgSeq = seq;
     S.telImgSeq = a.rx.marine.fax.imageSeq;
     if (im.width <= 0 || im.height <= 0 || im.pix.size() < (size_t)im.width * im.height) {
-        S.imgW = S.imgH = 0; S.last = dect2::FaxImage();      // the decoder started a new picture (cleared): drop the old one too
+        S.imgW = S.imgH = 0; S.last = dect2::FaxImage(); S.phase = 0;      // the decoder started a new picture (cleared): drop the old one too
         return;
     }
     S.last = std::move(im);
@@ -707,6 +717,25 @@ void faxView(App& a) {
         else if (ImGui::IsKeyPressed(ImGuiKey_Backslash, false)) setRotation(S.rot + 2);
     }
     flowEnd();
+    if (S.last.width > 0) {   // hand phasing: slide the picture sideways (every line, circular) until the black margin bar is at the left edge
+        ImGui::TextDisabled("%s", tr("phase"));
+        ImGui::SameLine();
+        const int pw = S.last.width;
+        auto setPhase = [&](int v) { v = dect2::wefaxPhaseWrap(v, pw); if (v != S.phase) { S.phase = v; presentLast(true); } };
+        if (ImGui::SmallButton("-##faxph-")) setPhase(S.phase - 1);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(220 * gUi);
+        int pv = S.phase;
+        if (ImGui::SliderInt("##faxphase", &pv, 0, pw - 1, "%d px")) setPhase(pv);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Slides the whole picture sideways, wrapping round, like the phase control of other fax programs. Use it when the black bar of the left margin sits in the middle. Shown at once and applied to the PNGs you save."));
+        ImGui::SameLine();
+        if (ImGui::SmallButton("+##faxph+")) setPhase(S.phase + 1);
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("auto##faxpha"))) setPhase(dect2::wefaxPhaseAuto(S.last.pix.data(), pw, S.last.height));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Finds the darkest vertical bar and moves it to the left edge."));
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("reset##faxphr"))) setPhase(0);
+    }
     S.enh.e.setSource("Weather fax");
     S.enh.controls("faxenh");
     static const char* const st[] = {"waiting for the start tone", "phasing", "receiving", "stopped"};
@@ -1637,7 +1666,7 @@ const ModeUi kMarineUi = {
 // the last weather fax picture for the results file (results_ui.cpp): shown again until a new one comes in
 // the picture on screen and the saved copy: empty (the engine side is MarineReceiver::clearFax). Also used by the top bar's Clear all.
 void marineFaxClearUi() {
-    S.last = dect2::FaxImage();
+    S.last = dect2::FaxImage(); S.phase = 0;
     S.imgW = S.imgH = 0;
     S.zoom = 0; S.pan = ImVec2(0, 0);
     S.saveMsg.clear();

@@ -6,6 +6,7 @@
 #include "platform/platform.h"
 #include "dect2/marine/wefax_archive.h"
 #include "dect2/marine/wefax_rotate.h"
+#include "dect2/marine/wefax_phase.h"
 #include "dect2/marine/marine_wefax_stations.h"
 #include "dect2/engine/updater.h"
 #include <algorithm>
@@ -179,6 +180,29 @@ void rotateSaved(const std::string& base, int turns) {
     g.dirty = true;
 }
 
+// Phases a saved chart: every line moves `shift` pixels to the right (circular); `automatic` searches the black margin bar instead.
+// The PNG is rewritten, so a wrong step is undone by the opposite shift.
+void phaseSaved(const std::string& base, int shift, bool automatic) {
+    int w = 0, h = 0; std::vector<uint32_t> px;
+    const fs::path png = P(folder()) / P(base + ".png");
+    if (!plat::decodeImage(U(png), w, h, px) || w <= 0 || h <= 0) { g.msg = "could not read the picture"; return; }
+    std::vector<uint8_t> grey(px.size());
+    for (size_t i = 0; i < px.size(); i++) grey[i] = (uint8_t)(px[i] & 0xFF);
+    if (automatic) shift = wefaxPhaseAuto(grey.data(), w, h);
+    if (wefaxPhaseWrap(shift, w) == 0) { g.msg = automatic ? "no black bar found" : ""; return; }
+    FaxImage o; o.width = w; o.height = h;
+    wefaxPhaseShift(grey.data(), w, h, shift, o.pix);
+    const fs::path tmp = P(folder()) / P(base + ".rot.png");
+    if (!writeGreyPng(tmp, o)) { g.msg = "could not write the phased picture"; return; }
+    std::error_code ec;
+    fs::rename(tmp, png, ec);
+    if (ec) { fs::remove(tmp, ec); g.msg = "could not replace the picture"; return; }
+    g.thumbs.erase(base);
+    g.bigBase.clear();                  // reloaded by the big view
+    g.msg = "phased";
+    g.dirty = true;
+}
+
 std::string when(long long t) {
     char b[40]; const time_t tt = (time_t)t; struct tm tmv;
 #ifdef _WIN32
@@ -221,6 +245,25 @@ void bigView(App&) {
     if (ImGui::SmallButton("left")) { rotateSaved(g.sel, 3); return; }
     ImGui::SameLine();
     if (ImGui::SmallButton("180")) { rotateSaved(g.sel, 2); return; }
+    ImGui::SameLine();
+    {   // hand phasing of the saved picture: the slider shows the step, it is applied when you let go (the PNG is rewritten)
+        static int step = 0; static std::string stepFor;
+        if (stepFor != g.sel) { step = 0; stepFor = g.sel; }
+        const int pw = g.bigW > 1 ? g.bigW : 2;
+        ImGui::TextDisabled("Phase");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("-##gph-")) { phaseSaved(g.sel, -1, false); return; }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(160);
+        ImGui::SliderInt("##gphase", &step, -(pw / 2), pw / 2, "%d px");
+        if (ImGui::IsItemDeactivatedAfterEdit()) { const int s = step; step = 0; phaseSaved(g.sel, s, false); return; }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Slide every line of this saved chart sideways (wrapping round), for a chart whose black margin bar is in the middle. Applied when you let go; the PNG on disk is rewritten, the opposite shift undoes it.");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("+##gph+")) { phaseSaved(g.sel, 1, false); return; }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Auto##gpha")) { phaseSaved(g.sel, 0, true); return; }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Finds the darkest vertical bar and moves it to the left edge.");
+    }
     ImGui::SameLine();
     if (ImGui::SmallButton("Copy path")) ImGui::SetClipboardText(U(P(folder()) / P(g.sel + ".png")).c_str());
     ImGui::SameLine();
