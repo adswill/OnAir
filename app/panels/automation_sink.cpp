@@ -3,6 +3,7 @@
 
 // The actions of the Automations inside OnAir: notification, sound (respects Mute), recording, tuning, memories, screenshot, webhook, run.
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "../app.h"
 #include "../memory/memory_options.h"
 #include "automation_internal.h"
@@ -118,7 +119,7 @@ void playSound(App& a, const std::string& file, std::string& note) {
     if (a.muted || a.volume <= 0.001f) { note = "muted: no sound"; return; }
     std::vector<float> pcm;
     if (!file.empty()) {
-        if (!readWav(file, pcm)) { note = "cannot read " + file + " (a 16 bit or float WAV file is needed)"; return; }
+        if (!readWav(file, pcm)) { DIAG(308279, "The automation sound file %s could not be read as a 16 bit or float WAV, so no sound was played for the rule.", file.c_str()); note = "cannot read " + file + " (a 16 bit or float WAV file is needed)"; return; }
     } else {   // three short beeps
         const int rate = 48000;
         for (int b = 0; b < 3; b++) {

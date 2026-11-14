@@ -5,6 +5,7 @@
 // to start) a moment after the last change of a setting, at the sample rate the radio would run. While a transmission or a test runs, the session's own
 // tap (the IQ really handed to the radio) is shown instead. The preview never opens a microphone, a camera or a radio.
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "tx_state.h"
 #include <algorithm>
 #include <chrono>
@@ -54,6 +55,7 @@ PreviewData make(TxRequest r, const TxModeSpec* mode, double rate) {
         txSoftLimit(d.iq.data(), n, &lim);   // the preview shows what the radio would get: after the limiter
     } catch (const std::exception& e) {   // a generator that throws must not take the program down through future::get()
         d.iq.clear();
+        DIAG(257228, "The transmit preview could not be made (%s), so no preview is shown.", e.what());
         d.error = std::string("the preview could not be made: ") + e.what();
     }
     d.ready = true;

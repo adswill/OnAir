@@ -5,6 +5,7 @@
 // plots, images, map points, log and the settings the plugin declared), and the glue to the host (core/src/plugin): discovery at start, a numbered row in
 // the mode list for every plugin mode, the IQ from the engine to the running plugin, and the automation events. docs/plugins.md explains the model.
 #include "app.h"
+#include "dect2/common/diag.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/plugin/host.h"
@@ -602,7 +603,7 @@ void pluginFrame(App& a) {
         if (P.startFailed) return;   // the user turns the plugin off and on again to retry
         std::string err;
         dp::Runner* r = P.mgr->start(pid, mid, err);
-        if (!r) { P.error = err; P.startFailed = true; return; }
+        if (!r) { DIAG(412174, "The plugin could not start (%s), so it stays off until you switch it off and on again.", err.c_str()); P.error = err; P.startFailed = true; return; }
         { std::lock_guard<std::mutex> lk(P.sinkMu); P.active = r; }
         P.activeId = pid; P.activeMode = mid; P.lastRate = 0;
     }

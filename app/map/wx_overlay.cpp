@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "wx_overlay.h"
+#include "dect2/common/diag.h"
 #include "../app.h"
 #include "../adsb/adsb_map.h"
 #include "gfx/gfx.h"
@@ -114,6 +115,7 @@ void exportFiles() {
     const bool png = gfx::writePng((base + ".png").c_str(), rgba.data(), g.w, g.h);
     const std::string kml = kmlGroundOverlay(S.label, std::filesystem::path(base + ".png").filename().string(), g, S.opacity);
     { std::ofstream o(std::filesystem::path(reinterpret_cast<const char8_t*>((base + ".kml").c_str()))); o << kml; }
+    if (!(good && png)) DIAG(940933, "Writing the weather overlay files in %s failed (the folder may be read-only or the disk full), so the export is incomplete.", dir.c_str());
     S.msg = good && png ? "saved " + base + ".tif / .kml / .png" : "could not write the files in " + dir;
 }
 

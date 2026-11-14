@@ -5,6 +5,7 @@
 // 4.0: every known launch site in view on the map with its name (the built-in IGRA 2 list and the user's <data folder>/sonde-sites-known.txt,
 // dect2/sonde/sonde_sites_known.h); a learned site takes the name of the known one it is at, instead of "Site 1". Core: dect2/sonde/sonde_sites.h.
 #include "app.h"
+#include "dect2/common/diag.h"
 #include "adsb/adsb_map.h"
 #include "dect2/sonde/sonde_sites.h"
 #include "dect2/sonde/sonde_launch_clock.h"
@@ -46,6 +47,7 @@ void save() {
     fs::create_directories(file().parent_path(), ec);
     std::ofstream o(file(), std::ios::binary | std::ios::trunc);
     o << G.st.serialize();
+    if (!o) DIAG(879182, "Writing the sonde sites file failed (the folder may be read-only or the disk full), so the latest site changes were not saved.");
     G.st.clearDirty();
 }
 }  // namespace
