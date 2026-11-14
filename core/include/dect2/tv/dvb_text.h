@@ -5,18 +5,21 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 namespace dect2::dvbsi {
 
 // Source bytes in the named character set ("ISO-8859-5", "UCS-2BE", "BIG5", "GB2312", "EUC-KR"...) to UTF-8 with iconv (code pages on Windows); the raw bytes
 // when the character set is unknown to the system. Never empty-handed: partial output is returned for input that stops converting.
 std::string convertCharset(const char* charset, const uint8_t* p, int n);
-// gbDefault: unprefixed GB 2312 pairs are decoded as GB 2312 (DTMB).
-std::string dvbText(const uint8_t* p, int n, bool gbDefault = false);
-// DTMB: every dvbText() call (service names, EPG, network name) also tries unprefixed GBK pairs, not only the callers that pass gbDefault.
-void setGbDefaultGlobal(bool on);
-// ISDB (ARIB STD-B24): unprefixed text is the 8-unit code. Automatic: text that looks like plain ASCII stays with the DVB rules (the Latin variant used in South America).
-void setAribDefaultGlobal(bool on);
+// DVB selectors take precedence over an unprefixed-text fallback. ARIB is a separate wire format; Isdb selects its profile from stream context.
+enum class TextEncoding : uint32_t { Dvb = 0, Gb2312 = 1, EucKr = 2, Big5 = 3, Utf8 = 4, Latin15 = 5, Arib = 6, Isdb = 7 };
+struct TextContext {
+    TextEncoding encoding = TextEncoding::Dvb;
+    std::string country;                    // one unambiguous broadcast country, not the interface locale
+    TextContext withLanguage(std::string_view language) const;
+};
+std::string dvbText(const uint8_t* p, int n, const TextContext& context = {});
 std::string aribText(const uint8_t* p, int n);
 bool looksArib(const uint8_t* p, int n);
 

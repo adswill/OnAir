@@ -2,6 +2,7 @@
 // (AIT, EN 102 809: HbbTV and MHP applications with their names, control codes and where they load from), SCTE-35 splice information (ad insertion cues), EBU data in
 // PES (teletext, subtitles, VPS/WSS data identified by their data_identifier), DSM-CC and MPE PIDs, and a label for every private PID that is not known otherwise.
 #pragma once
+#include "dvb_text.h"
 #include <cstdint>
 #include <map>
 #include <string>
@@ -44,7 +45,9 @@ public:
     void packet(const uint8_t* p188);
     TsDataSnapshot snapshot() const;
     void reset() { *this = TsDataScan(); }
+    void setTextContext(const dvbsi::TextContext& context) { textContext_ = context; }
 private:
+    dvbsi::TextContext textContext_;
     struct Pid { std::vector<uint8_t> partial; bool active = false; uint64_t packets = 0; std::string kind; bool pes = false; int tableSeen = -1; };
     void section(int pid, const uint8_t* s, int len);
     void ait(int pid, const uint8_t* s, int len);

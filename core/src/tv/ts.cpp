@@ -16,8 +16,6 @@ namespace dect2 {
 
 uint32_t mpegCrc32(const uint8_t* p, int n) { return tsp::crc32(p, n); }   // the section CRC-32 lives in ts_proto (Rust)
 
-std::string dvbText(const uint8_t* p, int n, bool gbDefault) { return dvbsi::dvbText(p, n, gbDefault); }   // the text fields: dvb_text.cpp (Rust)
-
 const char* TsService::typeName() const {
     switch (type) {
     case 0x01: case 0x11: case 0x16: case 0x17: case 0x19: case 0x1A: case 0x1F: case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: return "TV";
@@ -51,7 +49,7 @@ bool ServiceFilter::process(const uint8_t* in, const TsSnapshot* snap, uint8_t* 
     return false;
 }
 
-void TsDemux::reset() { const bool gb = gbText_; *this = TsDemux(); gbText_ = gb; }
+void TsDemux::reset() { const auto encoding = textEncoding_; *this = TsDemux(); setTextEncoding(encoding); }
 
 // A new transport stream id (or network id) on the same input means another multiplex: the services of the old one are dropped.
 void TsDemux::noteIds(int tsid, int onid) {
@@ -59,7 +57,7 @@ void TsDemux::noteIds(int tsid, int onid) {
     prev.tsid = tsid_; prev.onid = onid_;
     cur.tsid = tsid; cur.onid = onid;
     if (isDifferentMux(prev, cur)) {   // only the service state: the section being parsed lives in sec_ and must stay
-        psip_ = psip::State(); services_.clear(); pmtToService_.clear(); epg_.clear(); epgExt_.clear(); network_.clear();
+        psip_ = psip::State(); services_.clear(); pmtToService_.clear(); epg_.clear(); epgExt_.clear(); network_.clear(); si_.resetTextCountry();
     }
     tsid_ = tsid;
     if (onid > 0) onid_ = onid;
@@ -90,7 +88,7 @@ void TsDemux::feed(const uint8_t* p) {
         st.resync = false;
     } else if (afc == 2) st.resync = false;
     rcs_.packet(p, streamClock_);
-    if (afc & 1) { dsmcc_.packet(p); data_.packet(p); }   // carousels, AIT, SCTE-35, EBU data: clear payloads only (scrambled ones are skipped inside)
+    if (afc & 1) { dsmcc_.packet(p); data_.setTextContext(si_.textContext()); data_.packet(p); }   // clear payloads only
     if (!(afc & 1) || scr) return;
     const int off = hd.payloadOff;
     if (off < 0) return;
@@ -254,14 +252,15 @@ void TsDemux::parseSdt(const uint8_t* s, int len) {
     std::vector<tsp::SdtService> v;
     if (!tsp::parseSdt(s, len, tsid, onid, v)) return;
     noteIds(tsid, onid);
+    const auto context = si_.textContext();
     for (const tsp::SdtService& e : v) {
         TsService& sv = services_[e.sid];
         sv.id = e.sid;
         sv.haveSdt = true;
         sv.caFlag = sv.caFlag || e.freeCa;
         if (e.hasType) sv.type = e.type;
-        if (e.hasProvider) sv.provider = dvbText(s + e.provider.off, (int)e.provider.len, gbText_);
-        if (e.hasName) sv.name = dvbText(s + e.name.off, (int)e.name.len, gbText_);
+        if (e.hasProvider) sv.provider = dvbText(s + e.provider.off, (int)e.provider.len, context);
+        if (e.hasName) sv.name = dvbText(s + e.name.off, (int)e.name.len, context);
     }
     // linkage descriptors (0x4A) of the service loop; type 0x05 names the service that replaces this one (the HD simulcast), read here from the raw section
     const int end = len - 4;
@@ -286,7 +285,7 @@ void TsDemux::parseSdt(const uint8_t* s, int len) {
 void TsDemux::parseNit(const uint8_t* s, int len) {
     tsp::Nit nit;
     if (!tsp::parseNit(s, len, nit)) return;
-    if (nit.hasName) network_ = dvbText(s + nit.name.off, (int)nit.name.len, gbText_);
+    if (nit.hasName) network_ = dvbText(s + nit.name.off, (int)nit.name.len, si_.textContext());
     for (const tsp::NitLcn& e : nit.lcn) {   // logical channel numbers (descriptor 0x83 in private data, e.g. EACEM / UK)
         services_[e.sid].id = e.sid;
         services_[e.sid].lcn = e.lcn;
@@ -297,6 +296,7 @@ void TsDemux::parseEit(const uint8_t* s, int len) {
     tsp::Eit eit;
     if (!tsp::parseEit(s, len, eit)) return;
     const int sid = eit.sid;
+    const auto context = si_.textContext();
     // the guide language the user prefers (#268): where the texts of that language sit, per event
     std::map<int, EpgLangPick> picks;
     { const std::string want = epgPreferredLanguage(); if (!want.empty()) epgPickLanguage(s, len, want, picks); }
@@ -304,10 +304,11 @@ void TsDemux::parseEit(const uint8_t* s, int len) {
     if (eit.legacy) {
         TsService& sv = services_[sid];
         sv.id = sid;
-        std::string nm = eit.hasName ? dvbText(s + eit.nowNextName.off, (int)eit.nowNextName.len, gbText_) : std::string();
+        const auto eventContext = eit.events.empty() ? context : context.withLanguage(eit.events[0].lang);
+        std::string nm = eit.hasName ? dvbText(s + eit.nowNextName.off, (int)eit.nowNextName.len, eventContext) : std::string();
         if (!eit.events.empty()) {
             auto pk = picks.find(eit.events[0].eventId);
-            if (pk != picks.end() && pk->second.hasShort) nm = dvbText(s + pk->second.titleOff, pk->second.titleLen, gbText_);
+            if (pk != picks.end() && pk->second.hasShort) nm = dvbText(s + pk->second.titleOff, pk->second.titleLen, context.withLanguage(pk->second.lang));
         }
         (eit.secNum == 0 ? sv.now : sv.next) = nm;
     }
@@ -316,16 +317,18 @@ void TsDemux::parseEit(const uint8_t* s, int len) {
     for (const tsp::EitEvent& pe : eit.events) {
         EpgEvent ev;
         ev.eventId = pe.eventId; ev.start = pe.start; ev.duration = pe.duration; ev.running = pe.running; ev.genre = pe.genre; ev.lang = pe.lang;
-        if (pe.hasTitle) ev.title = dvbText(s + pe.title.off, (int)pe.title.len, gbText_);
-        if (pe.hasText) ev.text = dvbText(s + pe.text.off, (int)pe.text.len, gbText_);
-        for (int n = 0; n < 16; n++) if (pe.extMask & (1u << n)) ev.extended += dvbText(s + pe.ext[n].off, (int)pe.ext[n].len, gbText_);   // pieces in descriptor_number order
+        const auto eventContext = context.withLanguage(pe.lang);
+        if (pe.hasTitle) ev.title = dvbText(s + pe.title.off, (int)pe.title.len, eventContext);
+        if (pe.hasText) ev.text = dvbText(s + pe.text.off, (int)pe.text.len, eventContext);
+        for (int n = 0; n < 16; n++) if (pe.extMask & (1u << n)) ev.extended += dvbText(s + pe.ext[n].off, (int)pe.ext[n].len, eventContext);
         {
             auto pk = picks.find(ev.eventId);
             if (pk != picks.end()) {
                 const EpgLangPick& k = pk->second;
                 if (!k.lang.empty()) ev.lang = k.lang;
-                if (k.hasShort) { ev.title = dvbText(s + k.titleOff, k.titleLen, gbText_); ev.text = dvbText(s + k.textOff, k.textLen, gbText_); }
-                if (!k.ext.empty()) { ev.extended.clear(); for (auto& e : k.ext) ev.extended += dvbText(s + e.first, e.second, gbText_); }
+                const auto selectedContext = context.withLanguage(ev.lang);
+                if (k.hasShort) { ev.title = dvbText(s + k.titleOff, k.titleLen, selectedContext); ev.text = dvbText(s + k.textOff, k.textLen, selectedContext); }
+                if (!k.ext.empty()) { ev.extended.clear(); for (auto& e : k.ext) ev.extended += dvbText(s + e.first, e.second, selectedContext); }
             }
         }
         auto it = evs.find(ev.eventId);
@@ -374,6 +377,7 @@ void TsDemux::advance(double dt) {
 
 TsSnapshot TsDemux::snapshot() const {
     TsSnapshot sn;
+    sn.textEncoding = textEncoding_;
     sn.networkName = network_; sn.utc = utc_; sn.onid = onid_; sn.tsid = tsid_;
     sn.totalPackets = total_; sn.nullPackets = nulls_; sn.teiPackets = tei_; sn.ccErrors = ccErr_;
     sn.muxKbps = muxKbps_; sn.nullKbps = nullKbps_;

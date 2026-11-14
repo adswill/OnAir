@@ -114,7 +114,12 @@ pub unsafe extern "C" fn onair_dvbsi_clean(p: *const u8, n: usize, out: *mut u8,
 /// A DVB text field to clean UTF-8 (needs 4 * n + 16 bytes).
 #[no_mangle]
 pub unsafe extern "C" fn onair_dvbsi_dvb_text(p: *const u8, n: usize, gb_default: u32, out: *mut u8, cap: usize) -> usize {
-    let gb_default = gb_default != 0;
+    onair_dvbsi_dvb_text_with_encoding(p, n, if gb_default != 0 { 1 } else { 0 }, out, cap)
+}
+
+/// A DVB field with a generic unprefixed fallback (see charset::Encoding).
+#[no_mangle]
+pub unsafe extern "C" fn onair_dvbsi_dvb_text_with_encoding(p: *const u8, n: usize, encoding: u32, out: *mut u8, cap: usize) -> usize {
     let conv = |name: &[u8], src: &[u8], dst: &mut [u8]| -> Option<usize> {
         let f = CONVERT.load(Ordering::SeqCst);
         if f == 0 {
@@ -132,7 +137,7 @@ pub unsafe extern "C" fn onair_dvbsi_dvb_text(p: *const u8, n: usize, gb_default
             Some(r.min(dst.len()))
         }
     };
-    charset::dvb_text(rd(p, n), gb_default, Some(&conv), wr(out, cap))
+    charset::dvb_text(rd(p, n), charset::Encoding::from_code(encoding), Some(&conv), wr(out, cap))
 }
 
 /// Hamming 8/4 decode: nibble or -1.

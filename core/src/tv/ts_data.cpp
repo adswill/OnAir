@@ -124,7 +124,7 @@ void TsDataScan::ait(int pid, const uint8_t* s, int len) {
             } else if (tag == 0x01 && n >= 4) {   // application name
                 a.lang.assign((const char*)b, 3);
                 const int nl = b[3];
-                if (4 + nl <= n) a.name = dvbText(b + 4, nl);
+                if (4 + nl <= n) a.name = dvbText(b + 4, nl, textContext_.withLanguage(a.lang));
             } else if (tag == 0x02 && n >= 3) {   // transport protocol
                 const int proto = b[0] << 8 | b[1];
                 if (proto == 1 && n >= 5) {   // object carousel: remote flag, (component tag), ...

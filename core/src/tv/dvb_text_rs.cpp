@@ -1,6 +1,5 @@
 // dvbText() on top of the Rust crate rust/onair_dvbsi: the prefix dispatch, ISO/IEC 6937 and the clean-up are Rust; the character set tables
 // the system provides come back through convertCharset() (dvb_text.cpp), registered with the crate before main.
-#include <atomic>
 #include "dect2/tv/dvb_text.h"
 #include "dect2/rs/dvbsi.h"
 #include <algorithm>
@@ -20,16 +19,45 @@ size_t convertCb(const uint8_t* charset, const uint8_t* src, size_t n, uint8_t* 
 struct Register { Register() { onair_dvbsi_set_convert(convertCb); } } registerConvert;
 } // namespace
 
-static std::atomic<bool> gGbDefault{false};
-void setGbDefaultGlobal(bool on) { gGbDefault.store(on); }
-static std::atomic<bool> gArib{false};
-void setAribDefaultGlobal(bool on) { gArib.store(on); }
+TextContext TextContext::withLanguage(std::string_view language) const {
+    TextContext result = *this;
+    auto lower = [](std::string_view s) {
+        std::string v(s);
+        for (char& c : v) if (c >= 'A' && c <= 'Z') c += 'a' - 'A';
+        return v;
+    };
+    const std::string lang = lower(language), region = lower(country);
+    if (encoding == TextEncoding::Isdb) {
+        if (region == "jpn" || lang == "jpn") result.encoding = TextEncoding::Arib;
+        else if (region == "bra") result.encoding = TextEncoding::Latin15;
+        else if (region == "phl") result.encoding = TextEncoding::Utf8;
+        return result;
+    }
+    if (encoding != TextEncoding::Dvb) return result;   // a receiver/profile override is already specific
+    if (lang == "chi" || lang == "zho") result.encoding = region == "twn" ? TextEncoding::Big5 : TextEncoding::Gb2312;
+    else if (lang == "kor") result.encoding = TextEncoding::EucKr;
+    else if (lang.empty()) { // country is only a fallback when the field has no language
+        if (region == "twn") result.encoding = TextEncoding::Big5;
+        else if (region == "chn") result.encoding = TextEncoding::Gb2312;
+        else if (region == "kor") result.encoding = TextEncoding::EucKr;
+    }
+    if (!lang.empty()) result.country.clear(); // resolved for this field; do not reapply the country in dvbText()
+    return result;
+}
 
-std::string dvbText(const uint8_t* p, int n, bool gbDefault) {
-    if (n <= 0) return {};
-    if (gArib.load() && looksArib(p, n)) return aribText(p, n);
+std::string dvbText(const uint8_t* p, int n, const TextContext& context) {
+    if (!p || n <= 0) return {};
+    TextEncoding encoding = context.withLanguage("").encoding;
+    if (encoding == TextEncoding::Arib) return aribText(p, n);
+    if (encoding == TextEncoding::Isdb) {
+        // Latin ISDB deployments can use DVB selectors. Do not feed tagged UTF-8 through the ARIB state machine.
+        const int first = p[0];
+        const bool selector = (first >= 1 && first <= 0x0B && first != 8) || (first >= 0x10 && first <= 0x15);
+        if (!selector && looksArib(p, n)) return aribText(p, n);
+        encoding = TextEncoding::Dvb;
+    }
     std::vector<uint8_t> b((size_t)n * 4 + 16);
-    const size_t len = onair_dvbsi_dvb_text(p, (size_t)n, gbDefault || gGbDefault.load(), b.data(), b.size());
+    const size_t len = onair_dvbsi_dvb_text_with_encoding(p, (size_t)n, (uint32_t)encoding, b.data(), b.size());
     return len > b.size() ? std::string() : std::string((const char*)b.data(), len);
 }
 
