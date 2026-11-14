@@ -1,0 +1,59 @@
+# The licence of each part of the SDK that does not state it in a form make_licenses.py can read (MSYS2's .PKGINFO and the
+# macOS lock file do). SPDX expressions where one fits; the licence texts in the SDK are what counts, this is the summary
+# LICENSES.txt shows. make_licenses.py stops when a part of an SDK is missing here: add it after reading its licence.
+#   tool <name> <licence>         the tools that run on the build machine (share/licenses/<name>, pkgtools/share/licenses/<name>)
+#   ubuntu <source> <licence>     Ubuntu packages, by source package (the Source: field of the .deb)
+#   src <name> <licence>          the libraries built from source (sources/sources.lock)
+#   msys2-dir <package> <folder>  MSYS2 packages without their own share/licenses folder: the folder that covers them (- : none needed)
+
+tool llvm                 Apache-2.0 WITH LLVM-exception
+tool rust                 MIT OR Apache-2.0
+tool binutils-mingw-w64   GPL-3.0-or-later
+tool nsis                 Zlib AND bzip2-1.0.6 AND CPL-1.0 (7-Zip LZMA) AND MIT
+tool hfsprogs             APSL-2.0 AND MIT
+tool libdmg-hfsplus       GPL-3.0-only
+tool bzip2                bzip2-1.0.6
+tool apple-codesign       MPL-2.0
+
+ubuntu gcc-16             GPL-3.0-or-later WITH GCC-exception-3.1
+ubuntu glibc              LGPL-2.1-or-later
+ubuntu libffi             MIT
+ubuntu libglvnd           MIT-style
+ubuntu libx11             MIT-style (X11)
+ubuntu libxau             MIT-style (X11)
+ubuntu libxcb             MIT-style (X11)
+ubuntu libxcursor         MIT-style (X11)
+ubuntu libxdmcp           MIT-style (X11)
+ubuntu libxext            MIT-style (X11)
+ubuntu libxfixes          MIT-style (X11)
+ubuntu libxi              MIT-style (X11)
+ubuntu libxinerama        MIT-style (X11)
+ubuntu libxkbcommon       MIT-style
+ubuntu libxrandr          MIT-style (X11)
+ubuntu libxrender         MIT-style (X11)
+ubuntu linux              GPL-2.0-only WITH Linux-syscall-note (kernel headers)
+ubuntu wayland            MIT
+ubuntu xorgproto          MIT-style (X11)
+ubuntu xtrans             MIT-style (X11)
+ubuntu zlib               Zlib
+
+src libusb                LGPL-2.1-or-later
+src openssl               Apache-2.0
+src glfw                  Zlib
+src hackrf                BSD-3-Clause (libhackrf)
+src ffmpeg                LGPL-2.1-or-later (built without GPL and nonfree parts)
+src rtlsdr                GPL-2.0-or-later
+src airspy                BSD-3-Clause
+src soapysdr              BSL-1.0
+src soapyremote           BSL-1.0
+src libxml2               MIT
+src libiio                LGPL-2.1-or-later
+src bladerf               LGPL-2.1-or-later (libbladeRF)
+src no-os                 BSD-style (Analog Devices: patent notice; only for use with Analog Devices parts) - the AD9361 driver in libbladeRF
+src limesuite             Apache-2.0
+src hamlib                LGPL-2.1-or-later
+src airspyhf              BSD-3-Clause
+src ftd3xx                proprietary (FTDI's driver licence terms: https://ftdichip.com/driver-licence-terms-details/)
+
+msys2-dir cc-libs                   gcc
+msys2-dir windows-default-manifest  -

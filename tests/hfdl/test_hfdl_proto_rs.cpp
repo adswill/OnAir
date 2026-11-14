@@ -132,7 +132,7 @@ static std::vector<uint8_t> rndHfnpdu() {
     std::vector<uint8_t> h;
     const int kind = (int)(g() % 8);
     const std::string fl = RS(g() % 8, "ABCDEFGHJKLMNPRSTUVWXYZ0123456789 ");
-    const std::vector<D::HfdlSquitterGs> heard = {{(int)(g() % 20), true, g() & 0xFFFFF}, {(int)(g() % 20), true, g() & 0xFFFFF}, {(int)(g() % 130), false, g() & 0xFFFFF}};
+    const std::vector<D::HfdlSquitterGs> heard = {{(int)(g() % 20), true, (uint32_t)(g() & 0xFFFFF)}, {(int)(g() % 20), true, (uint32_t)(g() & 0xFFFFF)}, {(int)(g() % 130), false, (uint32_t)(g() & 0xFFFFF)}};
     switch (kind) {
     case 0: h = ORD_CALL(D::hfdlPerfData, fl, rndCoord(90), rndCoord(180), (int)(g() % 90000), (int)(g() % 130), (int)(g() % 9)); break;
     case 1: h = ORD_CALL(D::hfdlFreqData, fl, rndCoord(90), rndCoord(180), (int)(g() % 90000), heard); break;
@@ -162,7 +162,7 @@ static std::vector<uint8_t> rndPdu() {
     case 0: {
         D::HfdlSquitterSpec s;
         s.gsId = (int)(g() % 130); s.utc = g() % 2; s.frameIndex = (int)(g() % 5000); s.changeNote = (int)(g() % 4); s.version = (int)(g() % 4); s.mask = g() & 0xFFFFF;
-        s.systable = (int)(g() % 4096); s.other[0] = {(int)(g() % 130), g() % 2 == 0, g() & 0xFFFFF}; s.other[1] = {(int)(g() % 130), g() % 2 == 0, g() & 0xFFFFF};
+        s.systable = (int)(g() % 4096); s.other[0] = {(int)(g() % 130), g() % 2 == 0, (uint32_t)(g() & 0xFFFFF)}; s.other[1] = {(int)(g() % 130), g() % 2 == 0, (uint32_t)(g() & 0xFFFFF)};
         auto b = D::hfdlSpdu(s);
         if (g() % 4 == 0) { b[0] = (uint8_t)(b[0] | (g() % 2 ? 0 : 0x20)); const uint16_t f = D::hfdlFcs(b.data(), 64); b[64] = (uint8_t)f; b[65] = (uint8_t)(f >> 8); }
         if (g() % 3 == 0) b.resize(66 + g() % 10, 0);

@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Source this file (it sits in the SDK's top folder) to cross-build for macOS x86_64 in this shell:
+#     . <sdk>/environment-setup-x86_64-apple-darwin
+# Then a plain `cmake -S . -B build -G Ninja` uses the SDK (CMake 3.21+ reads CMAKE_TOOLCHAIN_FILE from the environment).
+# Like a Yocto SDK's environment-setup-* script; nothing outside the SDK folder is changed.
+
+if [ -n "${BASH_SOURCE:-}" ]; then _mac_sdk_self=${BASH_SOURCE[0]}; elif [ -n "${ZSH_VERSION:-}" ]; then _mac_sdk_self=${(%):-%x}; else _mac_sdk_self=$0; fi
+MAC_SDK=$(cd "$(dirname "$_mac_sdk_self")" && pwd); unset _mac_sdk_self
+export MAC_SDK
+export MAC_SYSROOT="$MAC_SDK/sysroots/x86_64-apple-darwin"            # the target sysroot (Apple's SDK; conda-forge in usr/local)
+export MAC_NATIVE_SYSROOT="$MAC_SDK/sysroots/x86_64-sdk-linux"     # the tools that run on this machine
+case ":$PATH:" in *":$MAC_NATIVE_SYSROOT/bin:"*) ;; *) export PATH="$MAC_NATIVE_SYSROOT/bin:$PATH";; esac
+export CMAKE_TOOLCHAIN_FILE="$MAC_SDK/toolchain-x86_64-apple-darwin.cmake"
+export MACOSX_DEPLOYMENT_TARGET=$(sed -n 's/^deployment: *macOS \([0-9.]*\).*/\1/p' "$MAC_SYSROOT/SYSROOT-MANIFEST.txt")
+# for builds that do not use CMake (make, configure scripts)
+# (x86_64-apple-darwin-clang: clang with this SDK's target, sysroot, deployment target, libc++ and ld64.lld, from
+#  llvm/bin/x86_64-apple-darwin.cfg)
+export CC=x86_64-apple-darwin-clang CXX=x86_64-apple-darwin-clang++
+export AR=llvm-ar RANLIB=llvm-ranlib NM=llvm-nm STRIP=llvm-strip OBJDUMP=llvm-objdump LIPO=llvm-lipo OTOOL=llvm-otool
+export INSTALL_NAME_TOOL=llvm-install-name-tool LIBTOOL=llvm-libtool-darwin DSYMUTIL=dsymutil
+export PKG_CONFIG_LIBDIR="$MAC_SYSROOT/usr/local/lib/pkgconfig:$MAC_SYSROOT/usr/local/share/pkgconfig" PKG_CONFIG_PATH=""
+unset PKG_CONFIG_SYSROOT_DIR
+export RUSTC="$MAC_NATIVE_SYSROOT/bin/rustc" CARGO="$MAC_NATIVE_SYSROOT/bin/cargo"
+echo "macOS x86_64 cross SDK: $MAC_SDK (macOS $MACOSX_DEPLOYMENT_TARGET or newer)"
+# the parts of this SDK, their licences and where the licence texts are (LICENSES.txt); ONAIR_SDK_QUIET=1 leaves this out
+if [ -z "${ONAIR_SDK_QUIET:-}" ] && [ -f "$MAC_SDK/LICENSES.txt" ]; then
+  echo
+  cat "$MAC_SDK/LICENSES.txt"
+  echo
+  echo "Licence texts: in the folders above, relative to $MAC_SDK"
+  echo "  the standard texts (GPL, LGPL, Apache, MPL ...): $MAC_SDK/licenses/common-licenses/"
+  echo "  this list: $MAC_SDK/LICENSES.txt   (ONAIR_SDK_QUIET=1 before sourcing leaves it out)"
+fi

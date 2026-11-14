@@ -1,0 +1,23 @@
+# fetch_sysroot.sh lock file: the exact MSYS2 UCRT64 packages of the sysroot. Rewrite with: fetch_sysroot.sh --update
+# resolved 2026-11-08T00:58:41Z from https://repo.msys2.org/mingw/ucrt64
+asked mingw-w64-ucrt-x86_64-crt mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-headers mingw-w64-ucrt-x86_64-libiconv mingw-w64-ucrt-x86_64-libwinpthread mingw-w64-ucrt-x86_64-zlib
+keyring msys2-keyring-1~20260814-1-any.pkg.tar.zst a9a02c41bc14eb0965fb23b7e7d43a1d0eb20d9e70cbfeb193fcbf68bb0dc5d0
+pkg mingw-w64-ucrt-x86_64-binutils 2.47-4 mingw-w64-ucrt-x86_64-binutils-2.47-4-any.pkg.tar.zst c18a40b871bfddb5da030f015003479ca85625afde1cb89f7313945e6151397d
+pkg mingw-w64-ucrt-x86_64-cc-libs 16.2.0-6 mingw-w64-ucrt-x86_64-cc-libs-16.2.0-6-any.pkg.tar.zst d8fff9e62443168bcda8ce746697243519c4f090ea607357ce94feac0bd10a50
+pkg mingw-w64-ucrt-x86_64-crt 14.0.0.r598.ge3d18511f-1 mingw-w64-ucrt-x86_64-crt-14.0.0.r598.ge3d18511f-1-any.pkg.tar.zst e863d0d1c5cef1269738f23dcc155b9b0d161d198b93d9d5aa481cb3a2f2cf53
+pkg mingw-w64-ucrt-x86_64-gcc 16.2.0-6 mingw-w64-ucrt-x86_64-gcc-16.2.0-6-any.pkg.tar.zst 0290e91f5a9a8a3699bcea6221a899403bb9bd5d6f7dbd98c883d74e2ef36338
+pkg mingw-w64-ucrt-x86_64-gettext-runtime 1.0-1 mingw-w64-ucrt-x86_64-gettext-runtime-1.0-1-any.pkg.tar.zst ba693dda4ac375af76ce481ff3a6e7481286546cc7dc6d56c7021dae34084157
+pkg mingw-w64-ucrt-x86_64-gmp 6.3.0-2 mingw-w64-ucrt-x86_64-gmp-6.3.0-2-any.pkg.tar.zst e82a75968a556484a50084578238a84eb60fb93e34986fd6695c537975bd39ea
+pkg mingw-w64-ucrt-x86_64-headers 14.0.0.r598.ge3d18511f-1 mingw-w64-ucrt-x86_64-headers-14.0.0.r598.ge3d18511f-1-any.pkg.tar.zst b3cec87298555a7c6694bd4d421d586d08a1cb47bc5bc76e79602cbf4421d3c9
+pkg mingw-w64-ucrt-x86_64-isl 0.28-1 mingw-w64-ucrt-x86_64-isl-0.28-1-any.pkg.tar.zst 8594e01a253d5a72646c586cf5a1626c1b1c2be7c30060fe67abd9bebe3fe223
+pkg mingw-w64-ucrt-x86_64-libgcc 16.2.0-6 mingw-w64-ucrt-x86_64-libgcc-16.2.0-6-any.pkg.tar.zst 80b2497f019977dd9528b1abc8621b1328a0115ab1f724047ccbb56bf323f11d
+pkg mingw-w64-ucrt-x86_64-libiconv 1.19.1-1 mingw-w64-ucrt-x86_64-libiconv-1.19.1-1-any.pkg.tar.zst 8a45dc317a285a036bddd79e01505d67b79e44ff49fc3f6e7177a5ea98d098cf
+pkg mingw-w64-ucrt-x86_64-libstdc++ 16.2.0-6 mingw-w64-ucrt-x86_64-libstdc++-16.2.0-6-any.pkg.tar.zst 33c5e58a85a538cf843a8672991cce591f0231d66da3b66a57629712d64be17f
+pkg mingw-w64-ucrt-x86_64-libwinpthread 14.0.0.r598.ge3d18511f-1 mingw-w64-ucrt-x86_64-libwinpthread-14.0.0.r598.ge3d18511f-1-any.pkg.tar.zst c35d6be83d141c8cfbb61f1637dd4b53aac8f5562d766aa26d0741c40bad4e4d
+pkg mingw-w64-ucrt-x86_64-mpc 1.4.1-1 mingw-w64-ucrt-x86_64-mpc-1.4.1-1-any.pkg.tar.zst f06556e811c711ce91609484e31d358e4f495811ba29813bf2284a3b236d82ce
+pkg mingw-w64-ucrt-x86_64-mpfr 4.2.2-3 mingw-w64-ucrt-x86_64-mpfr-4.2.2-3-any.pkg.tar.zst 6b70a275d2ec75c70aa50a236c218e6b7ee9a5ab4c6d52cb0b580267b7d200fe
+pkg mingw-w64-ucrt-x86_64-tzdata 2026f-1 mingw-w64-ucrt-x86_64-tzdata-2026f-1-any.pkg.tar.zst dd8af2f770b3241d8c299343c12cd4d7e3b94c47195608158d28788a01575323
+pkg mingw-w64-ucrt-x86_64-windows-default-manifest 20260815-1 mingw-w64-ucrt-x86_64-windows-default-manifest-20260815-1-any.pkg.tar.zst b39039f754a600cc0dec49df7d675a59a3cb2b63691d91b4ae60735ee7075eca
+pkg mingw-w64-ucrt-x86_64-winpthreads 14.0.0.r598.ge3d18511f-1 mingw-w64-ucrt-x86_64-winpthreads-14.0.0.r598.ge3d18511f-1-any.pkg.tar.zst 282485a1e453e972b86639cedcf43686e0000dfe5eff0421e47a4405ecdd85ce
+pkg mingw-w64-ucrt-x86_64-zlib 1.4-2 mingw-w64-ucrt-x86_64-zlib-1.4-2-any.pkg.tar.zst 172541cf5e2391a402f092104988699b0163129d22be1d6b4b201bfb84af6fcf
+pkg mingw-w64-ucrt-x86_64-zstd 1.5.7-2 mingw-w64-ucrt-x86_64-zstd-1.5.7-2-any.pkg.tar.zst dbdb8427280046a2b41697780aa4c52983b708082b0da4755951dc3bea96ca89

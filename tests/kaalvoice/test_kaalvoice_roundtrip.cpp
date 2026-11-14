@@ -5,6 +5,7 @@
 #include "dect2/kaal/kaal_codec3.h"
 #include "kv_test_common.h"
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include "../common/test_util.h"
 

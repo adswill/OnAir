@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Source this file (it sits in the SDK's top folder) to build for Linux x86-64 (Ubuntu 26.04) in this shell:
+#     . <sdk>/environment-setup-x86_64-linux-gnu
+# Then a plain `cmake -S . -B build -G Ninja` uses the SDK (CMake 3.21+ reads CMAKE_TOOLCHAIN_FILE from the environment).
+# Like a Yocto SDK's environment-setup-* script; nothing outside the SDK folder is changed.
+
+if [ -n "${BASH_SOURCE:-}" ]; then _lin_sdk_self=${BASH_SOURCE[0]}; elif [ -n "${ZSH_VERSION:-}" ]; then _lin_sdk_self=${(%):-%x}; else _lin_sdk_self=$0; fi
+LINUX_SDK=$(cd "$(dirname "$_lin_sdk_self")" && pwd); unset _lin_sdk_self
+export LINUX_SDK
+export LINUX_SYSROOT="$LINUX_SDK/sysroots/x86_64-linux-gnu"         # the target sysroot (Ubuntu 26.04)
+export LINUX_NATIVE_SYSROOT="$LINUX_SDK/sysroots/x86_64-sdk-linux"  # the tools that run on this machine
+case ":$PATH:" in *":$LINUX_NATIVE_SYSROOT/bin:"*) ;; *) export PATH="$LINUX_NATIVE_SYSROOT/bin:$PATH";; esac
+export CMAKE_TOOLCHAIN_FILE="$LINUX_SDK/toolchain-x86_64-linux-gnu.cmake"
+# for builds that do not use CMake (make, configure scripts)
+# (x86_64-linux-gnu-clang: clang with this SDK's target, sysroot and lld, from llvm/bin/x86_64-unknown-linux-gnu.cfg)
+export CC=x86_64-linux-gnu-clang CXX=x86_64-linux-gnu-clang++
+export AR=llvm-ar RANLIB=llvm-ranlib NM=llvm-nm STRIP=llvm-strip OBJDUMP=llvm-objdump OBJCOPY=llvm-objcopy
+export PKG_CONFIG_LIBDIR="$LINUX_SYSROOT/usr/local/lib/pkgconfig:$LINUX_SYSROOT/usr/lib/x86_64-linux-gnu/pkgconfig:$LINUX_SYSROOT/usr/lib/pkgconfig:$LINUX_SYSROOT/usr/share/pkgconfig"
+export PKG_CONFIG_PATH="" PKG_CONFIG_SYSROOT_DIR="$LINUX_SYSROOT"
+export RUSTC="$LINUX_NATIVE_SYSROOT/bin/rustc" CARGO="$LINUX_NATIVE_SYSROOT/bin/cargo"
+echo "Linux x86-64 (Ubuntu 26.04) SDK: $LINUX_SDK"
+# the parts of this SDK, their licences and where the licence texts are (LICENSES.txt); ONAIR_SDK_QUIET=1 leaves this out
+if [ -z "${ONAIR_SDK_QUIET:-}" ] && [ -f "$LINUX_SDK/LICENSES.txt" ]; then
+  echo
+  cat "$LINUX_SDK/LICENSES.txt"
+  echo
+  echo "Licence texts: in the folders above, relative to $LINUX_SDK"
+  echo "  the standard texts (GPL, LGPL, Apache, MPL ...): $LINUX_SDK/licenses/common-licenses/"
+  echo "  this list: $LINUX_SDK/LICENSES.txt   (ONAIR_SDK_QUIET=1 before sourcing leaves it out)"
+fi

@@ -40,6 +40,10 @@
 #elif defined(__APPLE__)
 #include <mach-o/dyld.h>
 #include <unistd.h>
+#elif defined(__linux__)
+#include <cstdlib>
+#include <filesystem>
+#include <system_error>
 #endif
 
 namespace dect2 {
@@ -84,6 +88,22 @@ void soapyLocateModules() {
                     setenv("SOAPY_SDR_PLUGIN_PATH", v.c_str(), 1);
                 }
             }
+        }
+        return true;
+    }();
+    (void)once;
+#elif defined(__linux__)
+    // A package that carries its own SoapySDR: its modules are in ../lib/onair/SoapySDR/modules0.8 next to the program, not where that SoapySDR was built for.
+    // A folder that does not exist (a build that uses the system's SoapySDR) changes nothing.
+    static const bool once = [] {
+        std::error_code ec;
+        const std::filesystem::path exe = std::filesystem::read_symlink("/proc/self/exe", ec);
+        if (ec) return true;
+        const std::string mods = (exe.parent_path() / ".." / "lib" / "onair" / "SoapySDR" / "modules0.8").string();
+        if (std::filesystem::is_directory(mods, ec)) {
+            const char* old = getenv("SOAPY_SDR_PLUGIN_PATH");
+            const std::string v = old && *old ? mods + ":" + old : mods;
+            setenv("SOAPY_SDR_PLUGIN_PATH", v.c_str(), 1);
         }
         return true;
     }();

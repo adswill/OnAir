@@ -1,0 +1,9 @@
+# build_pkgtools.sh lock file: the tools that make the packages (which platform uses which: NAMES in build_pkgtools.sh). Ubuntu's packages are unpacked, not installed; the others are built from source.
+# kind name version file sha256 (src: file, url, sha256)
+deb nsis 3.10-2ubuntu2 nsis_3.10-2ubuntu2_amd64.deb a467b73f6498fa77eb7f5e69dbb3a740bff67fb5a136b74e2d85d5f077478538
+deb nsis-common 3.10-2ubuntu2 nsis-common_3.10-2ubuntu2_all.deb 85235ccadf16de6ea9d9893f06e37e4767fba23c18030a0b6f29e484adb57bf8
+deb hfsprogs 540.1.linux3-6build1 hfsprogs_540.1.linux3-6build1_amd64.deb b00c8ffa61541c8809a637ff080afee28836440730c1b192b6ca5a266f6948e6
+deb libbz2-dev 1.0.8-6ubuntu0.1 libbz2-dev_1.0.8-6ubuntu0.1_amd64.deb a983927bd8f7952d742814b53cef35c21b1836c920fa2e5002e48f2e6f46905e
+deb libbz2-1.0 1.0.8-6ubuntu0.1 libbz2-1.0_1.0.8-6ubuntu0.1_amd64.deb f4a008f8219118acb7d5e0356d615f4fc6829a9f5a838394d0f7e101e9c5ebf8
+src libdmg-hfsplus e18579b391950589b9ed16ee630c54ce4319bb29 libdmg-hfsplus-e18579b.tar.gz https://github.com/mozilla/libdmg-hfsplus/archive/e18579b391950589b9ed16ee630c54ce4319bb29.tar.gz f86ff29e206b1ebe68cd30bb88c2e32aeabd28eb2c0cd18aa09045c5ae3d879c
+crate apple-codesign 0.29.0 crates.io

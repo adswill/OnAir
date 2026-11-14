@@ -5,6 +5,7 @@
 !include "MUI2.nsh"
 !include "x64.nsh"
 Name "OnAir"
+SetCompressor /SOLID lzma
 OutFile "${OUTFILE}"
 InstallDir "$PROGRAMFILES64\OnAir"
 InstallDirRegKey HKLM "Software\OnAir" "Install_Dir"

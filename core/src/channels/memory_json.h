@@ -7,15 +7,18 @@
 
 namespace dect2::mj {
 
+struct ValueKV;   // an object member; not std::pair<std::string, Value>, which clang rejects while Value is incomplete
 struct Value {
     enum Kind { Null, Bool, Num, Str, Arr, Obj } kind = Null;
     bool b = false;
     double num = 0;
     std::string str;
     std::vector<Value> arr;
-    std::vector<std::pair<std::string, Value>> obj;   // in file order
-    const Value* get(const std::string& k) const { for (const auto& kv : obj) if (kv.first == k) return &kv.second; return nullptr; }
+    std::vector<ValueKV> obj;   // in file order
+    const Value* get(const std::string& k) const;
 };
+struct ValueKV { std::string first; Value second; };
+inline const Value* Value::get(const std::string& k) const { for (const auto& kv : obj) if (kv.first == k) return &kv.second; return nullptr; }
 
 // false (with err) on a syntax error; `out` is then whatever was read before it (an object cut off at the end still has its first members)
 bool parse(const std::string& text, Value& out, std::string& err);

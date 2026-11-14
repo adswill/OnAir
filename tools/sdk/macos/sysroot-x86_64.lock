@@ -1,0 +1,11 @@
+# fetch_sysroot.sh lock file: Apple's SDK and the exact conda-forge osx-64 packages of the macOS x86_64 sysroot.
+# Rewrite with: fetch_sysroot.sh --arch x86_64 --update. Resolved 2026-11-08T00:58:51Z
+asked libcxx libcxx-devel libzlib compiler-rt_osx-64=23.*
+macos-min 12.0
+sdk 140-17812 Command_Line_Tools_for_Xcode_26.6 https://swcdn.apple.com/content/downloads/33/19/140-17812-A_21ZLMMLY4E/zu3xwktttpoe71qiawhzgzvqss6rovawsa/CLTools_macOSNMOS_SDK.pkg debe353b27a13cd678b26ab216a040acf07b62c0639d8ac522df4ca07d121eb2
+pkg compiler-rt23_osx-64 23.1.4 h8d5f570_0 noarch/compiler-rt23_osx-64-23.1.4-h8d5f570_0.conda 9448adcfd354860de1697186fde30e573a440fd756cb2fa8f77fffd5deb0db04 Apache-2.0_WITH_LLVM-exception
+pkg compiler-rt_osx-64 23.1.4 h694c41f_0 noarch/compiler-rt_osx-64-23.1.4-h694c41f_0.conda c94122be8d98e65b22d7392ce70b6100a50003cf85969cd1590b304146db3d1c Apache-2.0_WITH_LLVM-exception
+pkg libcxx 23.1.5 h19cb2f5_0 osx-64/libcxx-23.1.5-h19cb2f5_0.conda 175d8a9b3a6a035fba07d9b44a75c85957b84bafc834d1aeeda87cf57f764917 Apache-2.0_WITH_LLVM-exception
+pkg libcxx-devel 23.1.5 h7c275be_0 osx-64/libcxx-devel-23.1.5-h7c275be_0.conda d5d03da42dfedac49ff433f6b22268fb71f78f5c71c1bb7769e6c861b9930fdd Apache-2.0_WITH_LLVM-exception
+pkg libcxx-headers 23.1.5 h707e725_0 noarch/libcxx-headers-23.1.5-h707e725_0.conda bd3ab5ebe696000bb4b837571eff02c5bc2b9582932b67b5b9faa90488c990d7 Apache-2.0_WITH_LLVM-exception
+pkg libzlib 1.3.2 hbb4bfdb_3 osx-64/libzlib-1.3.2-hbb4bfdb_3.conda b2dba286dd6632292b12296e761193b5ef9fb0eaeecaa481f5ba9af72c0c18e1 Zlib

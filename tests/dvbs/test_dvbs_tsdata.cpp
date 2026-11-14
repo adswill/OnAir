@@ -4,6 +4,7 @@
 #include "dect2/tv/ts.h"
 #include "dect2/tv/ts_data.h"
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 using namespace dect2;
 #include "../common/test_util.h"
