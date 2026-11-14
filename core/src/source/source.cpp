@@ -12,6 +12,7 @@
 #include "native_common.h"
 #include "dect2/net/netradio.h"
 #include "dect2/source/synth_group.h"
+#include "dect2/source/synth_media.h"
 #include "dect2/dsp/gen_util.h"
 #include "dect2/tv/demo_ts.h"
 #include "dect2/dvbt/dvbt_gen.h"
@@ -449,6 +450,7 @@ protected:
 
     size_t produceMode(cf32* dst, size_t maxN) {   // the test signal of a mode added after FM
         if (regen_ || !ms_ || msMode_ != cfg_.mode) {
+            SynthMediaScope media(cfg_);   // Synthetic content: the picture and sound of the user's files (synth_media.h), built-in when none
             ms_ = makeModeSynth(cfg_.mode, cfg_, rate_);
             msMode_ = cfg_.mode;
             regen_ = false;
@@ -471,7 +473,8 @@ protected:
                 atsc::ChannelConfig cc;
                 cc.snrDb = cfg_.snrDb; cc.cfoHz = cfg_.cfoHz; cc.sroPpm = cfg_.sroPpm;
                 if (cfg_.echoDb > 0) cc.echoes.push_back({cfg_.echoDelay / rate_ * 1e6, -cfg_.echoDb, 0});
-                agen_ = std::make_unique<atsc::Generator>(cfg_.demoTv ? demoTsSource(19.39e6) : dvbt::testTsSource(), cc, rate_);
+                SynthMediaScope media(cfg_);
+                agen_ = std::make_unique<atsc::Generator>(cfg_.demoTv || SynthMediaScope::current() ? demoTsSource(19.39e6) : dvbt::testTsSource(), cc, rate_);
                 regen_ = false;
             }
             atmp_.clear();
@@ -482,11 +485,22 @@ protected:
             return maxN;
         }
         if (regen_) {
+            SynthMediaScope media(cfg_);
+            const bool withMedia = SynthMediaScope::current() != nullptr;
             if (cfg_.dvbt) {
                 dvbt::Params tp;
                 tp.mode = cfg_.dvbtMode; tp.guard = cfg_.dvbtGuard; tp.mod = cfg_.dvbtMod; tp.crHp = tp.crLp = cfg_.dvbtRate;
-                tgen_ = std::make_unique<dvbt::Generator>(tp, cfg_.demoTv ? demoTsSource(dvbt::netBitrate(tp, 64e6 / 7)) : dvbt::testTsSource());
+                tgen_ = std::make_unique<dvbt::Generator>(tp, cfg_.demoTv || withMedia ? demoTsSource(dvbt::netBitrate(tp, 64e6 / 7)) : dvbt::testTsSource());
                 gen_.reset();
+            } else if (withMedia) {   // DVB-T2: PLP 0 carries the transport stream made from the user's files, as the transmitter's does
+                TxParams tp = cfg_.tx;
+                tp.payload = true;
+                auto ts = std::make_shared<std::function<void(uint8_t*)>>();   // the padding needs the bit rate, which the generator knows once built
+                tp.tsSource = [ts](uint8_t* pk) { (*ts)(pk); };
+                gen_ = std::make_unique<T2Generator>(tp);
+                const double br = gen_->tsBitrate(rate_);
+                *ts = demoTsSource(br > 1e6 ? br : 20e6);
+                tgen_.reset();
             } else { gen_ = std::make_unique<T2Generator>(cfg_.tx); tgen_.reset(); }
             sbuf_.assign(4, cf32(0, 0));
             pos_ = 1;

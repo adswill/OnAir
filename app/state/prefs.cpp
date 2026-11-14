@@ -168,6 +168,9 @@ const std::vector<PrefKey>& keyTable() {
         shared(numFix("dtmbBw", AT(a.dtmbBwMhz), 8, fixDtmbBw)),
         shared(numFix("isdbtBw", AT(a.isdbtBwMhz), 0, fixIsdbtBw)),
         shared(flagI("atvFm", AT(a.atvFm), false)),
+        shared(num("synthMediaKind", AT(a.tune.synth.mediaKind), 0, 0, 2, true)),   // Synthetic content (synth_media.h): built-in, a picture or a video file
+        shared(text("synthMediaPath", AT(a.tune.synth.mediaPath))),
+        shared(text("synthMediaAudio", AT(a.tune.synth.mediaAudio))),
         shared(num("atvNbtv", AT(a.atvNbtv), 0, 0, 2, true)),
         shared(num("atvNbtvLines", AT(a.atvNbtvLines), 32, 24, 240, true)),
         shared(scaled("atvNbtvFps", AT(a.atvNbtvFps), 10, 125, 1, 60, true)),
