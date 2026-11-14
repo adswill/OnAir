@@ -439,11 +439,37 @@ void statusLine(App& a) {
     const SampleLoss sl = a.engine.sampleLoss();
     const ImVec2 o = ImGui::GetCursorScreenPos();
     const float R = o.x + ImGui::GetContentRegionAvail().x;
-    const float rowH = statusStripBlockHeight(), lh = ImGui::GetTextLineHeight(), ty = o.y + (rowH - lh) * 0.5f;
-    const float fs = ImGui::GetFontSize(), pad = 8 * gUi, divW = 2 * pad + 1, lamp = 10 * gUi, sparkW = 28 * gUi;
-    ImFont* mono = typo::fonts().mono ? typo::fonts().mono : a.mono;
-    const auto textW = [&](const std::string& t, ImFont* f) { ImGui::PushFont(f, fs); const float w = ImGui::CalcTextSize(t.c_str()).x; ImGui::PopFont(); return w; };
-    const auto put = [&](float x, ImFont* f, ImU32 c, const std::string& t) { ImGui::PushFont(f, fs); dl->AddText(ImVec2(x, ty), c, t.c_str()); const float w = ImGui::CalcTextSize(t.c_str()).x; ImGui::PopFont(); return x + w; };
+
+    const float rowH = statusStripBlockHeight();
+
+    constexpr float footerScale = 1.00f;
+    const float fs = ImGui::GetFontSize() * footerScale;
+    const float ty = o.y + (rowH - fs) * 0.5f;
+
+    const float pad = 8 * gUi;
+    const float divW = 2 * pad + 1;
+    const float lamp = 10 * gUi;
+    const float sparkW = 28 * gUi;
+
+    ImFont* mono = typo::fonts().mono
+        ? typo::fonts().mono : a.mono;
+
+    const auto textW = [&](const std::string& t, ImFont* f) {
+        if (!f) f = ImGui::GetFont();
+        return f->CalcTextSizeA(
+            fs, FLT_MAX, 0.f, t.c_str()
+        ).x;
+    };
+
+    const auto put = [&](float x, ImFont* f, ImU32 c, const std::string& t) {
+        if (!f) f = ImGui::GetFont();
+        dl->AddText(
+            f, fs, ImVec2(x, ty),
+            c, t.c_str()
+        );
+        return x + textW(t, f);
+    };
+
     // the state word: Locked / Searching / Running while the receiver runs (from the mode's own summary line), else Stopped or Channel scan
     std::string stateTxt = tr(scanning ? "Channel scan" : "Stopped");
     ImVec4 stateCol = scanning ? pal::warnAmber() : pal::grey();
@@ -550,7 +576,7 @@ void statusLine(App& a) {
         if (!lines.empty() && room > 60 * gUi) {
             divider(x + pad);
             const std::string t = ellipsize(lines.back(), room, fs);
-            dl->AddText(ImVec2(x + divW, ty), u32(T.dim), t.c_str());
+            dl->AddText(ImGui::GetFont(), fs, ImVec2(x + divW, ty), u32(T.dim), t.c_str());
         }
     }
     if (showClock) {
