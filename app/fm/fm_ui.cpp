@@ -500,7 +500,6 @@ void fmRadioPanel(App& a) {
     }
     ImGui::Spacing();
     if (live) d40FmCard(a);   // 4.0: station names, DX opening alarm (app/d40)
-    if (live) smart5FmCard(a);   // round-5 smart checks: watchdog, BS.412 power, transmitter fingerprint (app/smart5)
     if (live && fm.rdsSync && (!fm.rds.afMhz.empty() || fm.rds.language >= 0 || !fm.rds.ptyn.empty() || fm.rds.clockUtc || fm.rds.ecc >= 0 || !fm.rds.eon.empty() || !fm.rds.oda.empty())) {
         // the rest of RDS: what the station sends beyond the name and the text
         if (typo::collapsingHeader(trw("RDS details"), 0)) {
@@ -556,6 +555,7 @@ void fmRadioPanel(App& a) {
         }
         ImGui::Spacing();
     }
+    if (live) smart5FmCard(a);   // round-5 smart checks: watchdog, BS.412 power, transmitter fingerprint (app/smart5), below the RDS information
     {
         const float h = ImGui::GetCursorPosY() - rdsBlockY0;
         if (h < rdsBlockMaxH) ImGui::Dummy(ImVec2(1, rdsBlockMaxH - h));
