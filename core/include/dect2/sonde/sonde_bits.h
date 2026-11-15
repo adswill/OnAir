@@ -27,6 +27,7 @@ struct SondeFix {
     int sats = -1;
     bool hasTime = false;
     double unixTime = 0;                // UTC seconds since 1970 from the sonde
+    double sondeAheadS = 0;             // sonde's own time minus unixTime (RS41 sends GPS time: 18), see SondeInfo
     bool hasTemp = false, hasHumidity = false, hasPressure = false;
     double tempC = 0, humidity = 0, pressureHpa = 0;
     double batteryV = -1;

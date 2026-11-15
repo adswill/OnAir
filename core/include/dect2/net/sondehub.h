@@ -15,6 +15,10 @@
 //    reports them), the sonde's own date and time (never the computer clock: DO NOT USE LOCAL SYSTEM TIME, says the format page) within one
 //    hour of now (no replays of old recordings), and a serial number. iMet-1/4 are not sent: auto_rx makes up their serial from the power-on
 //    time and an iMet-1 / iMet-4 distinction OnAir does not have, so the same sonde would show up twice.
+// 4.2: switched off in the app until SondeHub has validated OnAir's decoders (issue #526). The code stays; only developers can switch it on
+// with the environment variable ONAIR_SONDEHUB=1, and ONAIR_SONDEHUB_LOG=<file> then writes every telemetry object exactly as it is submitted,
+// one JSON per line, for SondeHub's validation (wiki "Sonde Telemetry Validation"). The datetime is the sonde's own time as sent (GPS time for
+// an RS41), never converted to UTC by us.
 // Off until the user ticks it; nothing is connected or sent otherwise. software_name is "OnAir", software_version the OnAir version.
 #pragma once
 #include "dect2/net/sonde_upload.h"
@@ -45,7 +49,10 @@ struct SondeHubStation { bool set = false; double lat = 0, lon = 0, altM = 0; bo
 namespace sondehub {
 constexpr const char* kSoftwareName = "OnAir";
 const char* softwareVersion();        // ONAIR_VERSION
-std::string userAgent();              // "OnAir-<version>"
+std::string userAgent();
+bool allowed();                       // ONAIR_SONDEHUB=1 (developers): without it nothing is ever uploaded, whatever the settings say
+extern const char* const kOffNote;    // the one-line text shown instead of the settings
+std::string logPath();                // ONAIR_SONDEHUB_LOG, only while allowed()              // "OnAir-<version>"
 
 struct Ident {
     std::string manufacturer, type, subtype, serial;

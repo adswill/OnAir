@@ -101,6 +101,13 @@ std::string firstObject(const std::string& arr) {   // the first object of the u
 }
 void sondeHubEntry(dect2::FeedConfig& c, bool& changed) {
     dect2::SondeHubConfig& h = c.sondeHub;
+    if (!dect2::sondehub::allowed()) {   // 4.2: switched off until SondeHub has validated the decoders (issue #526); code kept, developers use ONAIR_SONDEHUB=1
+        h.enabled = false;
+        ImGui::PushTextWrapPos(460 * gUi);
+        ImGui::TextDisabled("%s", tr("SondeHub upload is switched off until SondeHub has validated OnAir's decoders (see issue #526)"));
+        ImGui::PopTextWrapPos();
+        return;
+    }
     ImGui::PushID("sondehub");
     if (ImGui::Checkbox(tr("SondeHub (tracker.sondehub.org)"), &h.enabled)) {
         changed = true;
@@ -257,6 +264,7 @@ void loadFeedPrefs(App& a) {
         h.sharePos = d.getB("sondeHubPos", true); h.mobile = d.getB("sondeHubMobile", false);
         h.uploadS = std::max(10, std::min(60, (int)d.getI("sondeHubEvery", 15))); h.server = d.getS("sondeHubServer", h.server);
         if (h.server.empty()) h.server = dect2::SondeHubConfig().server;
+        if (!dect2::sondehub::allowed()) h.enabled = false;   // a saved "on" does not upload after the 4.2 update (issue #526)
     }
     bool any = c.sondeHub.enabled;
     for (bool o : c.on) any = any || o;

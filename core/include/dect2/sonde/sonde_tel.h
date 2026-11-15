@@ -53,6 +53,7 @@ struct SondeInfo {
     int frame = -1;              // frame counter of the last frame
     bool hasTime = false;
     double unixTime = 0;         // UTC seconds since 1970 sent by the sonde
+    double sondeAheadS = 0;      // how far the sonde's own time runs ahead of unixTime (RS41: GPS - UTC = 18 s), for the SondeHub upload only
     bool hasPos = false;
     double lat = 0, lon = 0, altM = 0;
     bool hasVel = false;

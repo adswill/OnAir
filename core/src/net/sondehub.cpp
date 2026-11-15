@@ -103,6 +103,10 @@ bool identify(const SondeInfo& s, Ident& id, std::string* why) {
     return true;
 }
 
+const char* const kOffNote = "SondeHub upload is switched off until SondeHub has validated OnAir's decoders (see issue #526)";
+bool allowed() { const char* e = std::getenv("ONAIR_SONDEHUB"); return e && std::string(e) == "1"; }
+std::string logPath() { const char* e = std::getenv("ONAIR_SONDEHUB_LOG"); return allowed() && e ? std::string(e) : std::string(); }
+
 std::string isoTime(double t) {
     const double f = std::floor(t);
     struct tm g; gmTime((time_t)f, &g);
@@ -167,7 +171,9 @@ std::string telemetryJson(const SondeHubConfig& c, const SondeHubStation& st, co
     if (!id.subtype.empty()) o += ",\"subtype\":\"" + jsonEscape(id.subtype) + "\"";
     o += ",\"serial\":\"" + jsonEscape(id.serial) + "\"";
     o += ",\"frame\":" + std::to_string(id.frame);
-    o += ",\"datetime\":\"" + isoTime(s.unixTime) + "\"";
+    // the sonde's own time as sent (SondeHub wiki: "use whatever time is provided by the sonde as-is"): an RS41 sends GPS time without leap
+    // seconds, so s.sondeAheadS (GPS - UTC) is added back to our UTC value; sondes that send UTC or their own leap seconds have 0
+    o += ",\"datetime\":\"" + isoTime(s.unixTime + s.sondeAheadS) + "\"";
     o += ",\"lat\":" + num(s.lat, 6) + ",\"lon\":" + num(s.lon, 6) + ",\"alt\":" + num(s.altM, 1);
     if (s.hasTemp && finite(s.tempC) && s.tempC > -273) o += ",\"temp\":" + num(s.tempC, 1);
     if (s.hasHumidity && finite(s.humidity) && s.humidity >= 0) o += ",\"humidity\":" + num(s.humidity, 1);
@@ -436,7 +442,9 @@ struct SondeHub::Impl {
 SondeHub& SondeHub::get() { static SondeHub* h = new SondeHub(); return *h; }   // never destroyed: the receiver may still report at exit
 SondeHub::SondeHub() : impl_(new Impl) {}
 
-void SondeHub::configure(const SondeHubConfig& c) {
+void SondeHub::configure(const SondeHubConfig& in) {
+    SondeHubConfig c = in;
+    if (!sondehub::allowed()) c.enabled = false;   // 4.2: saved settings that had it on do not upload (issue #526)
     Impl& I = *impl_;
     {
         std::lock_guard<std::mutex> lk(I.mu);
@@ -470,7 +478,11 @@ void SondeHub::frame(const SondeInfo& s, double wallUtc) {
     sondehub::Ident id;
     const std::string js = sondehub::telemetryJson(I.cfg, I.st, s, wallUtc, &why, &id);
     if (js.empty()) { I.stat.skipped++; I.stat.skipWhy = (s.serial.empty() ? std::string(sondeKindName(s.kind)) : s.serial) + ": " + why; return; }
-    if (I.batch.add(id.serial, id.frame, js, id.slow, steadyNowSec())) I.sondesInBatch.insert(id.type + ":" + id.serial);
+    if (I.batch.add(id.serial, id.frame, js, id.slow, steadyNowSec())) {
+        I.sondesInBatch.insert(id.type + ":" + id.serial);
+        const std::string lp = sondehub::logPath();   // developers: every submitted object, one JSON per line
+        if (!lp.empty()) { if (FILE* f = fopen(lp.c_str(), "ab")) { fputs(js.c_str(), f); fputc('\n', f); fclose(f); } }
+    }
     else if (I.batch.size() >= sondehub::Batch::kMax) I.stat.dropped++;
 }
 
