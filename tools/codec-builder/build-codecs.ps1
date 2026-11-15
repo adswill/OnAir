@@ -28,6 +28,7 @@ Write-Host '  ambe2  AMBE+2 for DMR, NXDN, dPMR'
 Write-Host '  ambe   AMBE for D-STAR'
 Write-Host '  imbe   IMBE for P25'
 Write-Host '  ysf    Yaesu System Fusion (only the 7-byte V/D mode 2 frames)'
+Write-Host 'Not made by this helper: aeroambe (build tools/addons/aeroambe, docs/CODECS.md), iridium and tetrapol (no source in OnAir: bring your own plug-in).'
 Write-Host ''
 $choice = Read-Host 'Which ones? Type ids separated by spaces, or "all"'
 if ($choice.Trim() -eq 'all') { $choice = 'tetra ambe2 ambe imbe ysf' }

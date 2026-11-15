@@ -107,7 +107,7 @@ void header(App& a) {
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Show these aircraft on the map (Aircraft view).");
         } else {
             ImGui::TextDisabled("waiting for position reports (%zu aircraft heard)", t.aircraft.size());
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Aero channels carry only what the aircraft report: an ADS-C position every few minutes, or ACARS messages with a position.\nAircraft appear on the map as their reports arrive; that can take several minutes.");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Aero P channels are what the ground stations send TO the aircraft. The aircraft's own ADS-C position reports go the other way (R and T channels, 1626 to 1660 MHz) and cannot be heard from the ground, so a position shows up only when a ground-to-aircraft message happens to carry one.\nMany hours with aircraft heard and no position is normal for this mode.");
         }
     }
     flowEnd();
@@ -407,7 +407,7 @@ void mapCanvas(App& a, ImVec2 size) {
         ImGui::PushTextWrapPos(420 * gUi);
         ImGui::TextUnformatted("Where the aircraft are");
         ImGui::Separator();
-        ImGui::TextWrapped("%s", "Inmarsat Aero channels carry only what an aircraft reports about itself: an ADS-C position report every few minutes, plus ACARS messages with a position in the text (POS and label 16 / 20 reports, weather reports). So aircraft appear one by one, minutes apart: a map with few planes after a short time is normal, not broken.");
+        ImGui::TextWrapped("%s", "The Aero P channels OnAir decodes are the ground-to-aircraft direction: log-ons, ACARS and ADS-C requests sent to the aircraft. An aircraft's own ADS-C position reports travel on the R and T channels (1626 to 1660 MHz), which a ground receiver does not hear. So an aircraft gets a position only when a message sent to it carries one (a POS, label 16 / 20 or weather text with a position); many hours with aircraft listed and no position is normal, not broken.");
         ImGui::Spacing();
         ImGui::TextWrapped("%s", "An arrow points the way the aircraft was heading; a dot means no direction is known. The shade fades as the last position gets old (full for 5 minutes, faint after 40). The line behind it is its trail, the thin line ahead is the route in its last ADS-C report. Click an aircraft (or a row below) for its details and messages.");
         ImGui::Spacing();
@@ -419,7 +419,7 @@ void mapCanvas(App& a, ImVec2 size) {
     adsbmap::tileControls("never the position itself");
     if (!placed) {   // never an empty, silent map: say what is happening
         const char* msg = "waiting for position reports";
-        const char* sub = "ADS-C and ACARS position reports come every few minutes per aircraft";
+        const char* sub = "Aero P channels carry messages to the aircraft; their own position reports are not heard from the ground";
         const ImVec2 a1 = ImGui::CalcTextSize(msg), a2 = ImGui::CalcTextSize(sub);
         const float bw = std::max(a1.x, a2.x) + 24 * gUi, bh = a1.y + a2.y + 18 * gUi;
         const ImVec2 b0(p0.x + (size.x - bw) / 2, p0.y + (size.y - bh) / 2);

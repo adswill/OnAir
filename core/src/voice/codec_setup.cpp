@@ -4,6 +4,7 @@
 #include "dect2/voice/codec_setup.h"
 #include "dect2/codec/codec_registry.h"
 #include "dect2/codec/speech_codec.h"
+#include <cctype>
 
 namespace dect2::voice {
 
@@ -23,6 +24,20 @@ const char* setupOsName(SetupOs os) {
     case SetupOs::MacOS: return "macOS";
     default: return "Linux";
     }
+}
+
+namespace {
+std::string lowerS(std::string s) { for (char& c : s) c = (char)std::tolower((unsigned char)c); return s; }
+}
+
+// How a plug-in gets made: the build helper (tools/codec-builder) only knows these ids.
+bool setupHelperBuilds(const std::string& id) { return id == "tetra" || id == "ambe2" || id == "ambe" || id == "imbe" || id == "ysf"; }
+
+std::string setupHowToGet(const std::string& id) {
+    if (setupHelperBuilds(id)) return "build it with the build helper (type " + id + " or all)";
+    if (id == "aeroambe") return "the build helper does not make it: build tools/addons/aeroambe against libaeroambe's mbelib (docs/CODECS.md, AMBE (Inmarsat Aero voice))";
+    if (id == "iridium" || id == "tetrapol") return "the build helper does not make it and OnAir has no source for it: you need a plug-in of your own with the four onair_speech_* functions (docs/CODECS.md), or a file somebody gave you";
+    return "see docs/CODECS.md";
 }
 
 std::vector<SetupItem> codecSetupStatus(const std::vector<codec::CodecDir>& dirs, const SetupProbe& p) {
@@ -51,7 +66,22 @@ std::vector<SetupItem> codecSetupStatus(const std::vector<codec::CodecDir>& dirs
             }
         } else {
             it.state = SetupState::Missing;
-            it.detail = "not installed: needs " + it.fileName;
+            std::string list;
+            for (const auto& d : dirs) list += (list.empty() ? "" : ", ") + d.path;
+            it.detail = "not installed: OnAir looked for exactly " + it.fileName + " in " + (list.empty() ? std::string("(no folder)") : list) + "; " + setupHowToGet(it.id);
+            // a file that is nearly right (Windows hides extensions: "x.dll.dll", a browser adds " (1)", the dll is in a sub-folder name...)
+            if (p.listDir) {
+                const std::string stem = "onair-codec-" + it.id;
+                for (const auto& d : dirs) {
+                    for (const auto& f : p.listDir(d.path)) {
+                        const std::string lf = lowerS(f);
+                        if (lf.find(lowerS(it.id)) == std::string::npos || lf == lowerS(it.fileName)) continue;
+                        if (lf.find("onair") == std::string::npos && lf.find("codec") == std::string::npos && lf.find(stem) == std::string::npos) continue;
+                        it.detail += ". Found a file with a different name in " + d.path + ": \"" + f + "\" (rename it to exactly " + it.fileName + ")";
+                        break;
+                    }
+                }
+            }
         }
         out.push_back(it);
     }

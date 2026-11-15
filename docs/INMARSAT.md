@@ -9,11 +9,11 @@ One mode that finds and decodes every Inmarsat L-band carrier of a wide capture 
 1. Pick **Inmarsat (all carriers)**, tune to the middle of your satellite's L-band channels (about 1545.6 MHz) and use a sample rate of **6 Msps or more** if your radio does it. An L-band antenna (patch or helix, with an LNA) is needed.
 2. Press nothing: the search runs by itself (**Auto**; the Auto button forgets the carriers and searches again).
 3. **Carriers** shows the whole capture as a strip and a table: frequency, type, bit rate, level, Eb/N0, state, last activity, ocean region for Inmarsat-C. Click a row to focus it (a focused carrier is never parked).
-4. **Messages** lists ACARS and ADS-C from all P channels and Inmarsat-C EGC broadcasts, with a filter. **Aircraft** shows the aircraft with a position on a map (reports come every few minutes; see below). The screen opens on it by itself the first time a position is decoded, and the header always says how many aircraft have one (click it to jump there). **Voice** is described below.
+4. **Messages** lists ACARS and ADS-C from all P channels and Inmarsat-C EGC broadcasts, with a filter. **Aircraft** shows the aircraft with a position on a map (positions are rare in this mode; see below). The screen opens on it by itself the first time a position is decoded, and the header always says how many aircraft have one (click it to jump there). **Voice** is described below.
 
 ## Where the aircraft are
 
-Aero P channels carry only what an aircraft reports about itself, so planes appear slowly: an ADS-C position report every few minutes (a default contract is 3 to 15 minutes), and ACARS messages with a position in the text. Until the first one arrives the map says "waiting for position reports". That is normal, not a fault.
+Aero P channels are the ground-to-aircraft direction: what the ground stations send to the aircraft (log-ons, ACARS, ADS-C contract requests). An aircraft's own ADS-C position reports go the other way, on R and T channels (1626.5 to 1660.5 MHz), which a ground receiver does not hear (see "What it does not do"). So an aircraft gets a position only when a message *sent to it* carries one. **Hours with hundreds of aircraft listed and no position is normal in this mode** (issue #508), not a decode fault: the Aircraft map says "waiting" and the header counts the ones with a position. The map and the position decoders work on every source below and are tested with synthetic downlinks (OnAir's own test signal sends them, a real P channel does not).
 
 Positions are taken from every source the receiver decodes: ADS-C reports (basic, with the earth and air reference groups for speed and track, and the predicted route), ARINC 702 "POS" and "/PS" position reports (also the position inside weather and flight reports that use that field), label 20 and label 16 / 12 reports. Log-on and log-off messages give an aircraft's ICAO address and ground station but no position; CPDLC position reports are ASN.1-encoded and are not decoded yet. Positions outside the globe (latitude beyond 90, longitude beyond 360, or exactly 0, 0) are dropped; a longitude past 180 wraps to the other side.
 
@@ -38,7 +38,7 @@ The 34 MHz downlink (1525 to 1559 MHz) never fits in one capture. Retune to see 
 ## What is decoded
 
 - **Aero P channels** at 600, 1200 and 10500 bit/s (ACARS, ADS-C, log-ons, positions): all carriers at once, one window of about 160 kHz per group of carriers, cut from the capture with a single shared FFT.
-- **Inmarsat-C** (EGC safety and news broadcasts) on the 2 kHz channels, with the ocean region and station from the bulletin board.
+- **Inmarsat-C** (EGC safety and news broadcasts) on the 2 kHz channels (since #508 a window gets an Inmarsat-C receiver for any carrier 0.9 to 4.5 kHz wide, not only the 1.5 to 4.5 kHz ones, and a window is no longer restarted when another window opens, which used to break the 8.64 s frame lock on a busy band), with the ocean region and station from the bulletin board.
 - A **CPU budget** (Advanced) limits the windows. Carriers that do not fit are listed as *parked: CPU*.
 
 ## Voice (Aero C channels)
@@ -48,6 +48,8 @@ C channels carry circuit-mode voice from the ground station to the aircraft: 840
 What was verified: a real recording of a C channel (14 s of the 8400 bit/s sample in JAERO's repository; all signal units pass their CRC-16, the call-progress unit names aircraft 7812E7 and ground station 90), synthetic signals with offsets, clock errors, drift, level steps, noise (down to about 2.5 dB Eb/N0 per channel bit, within about 1 dB of an ideal soft decoder), two simultaneous calls in one 2.4 Msps capture. **Needs a user test with a real capture** from your own antenna: nothing has been played live yet, and sound needs the codec.
 
 Sound: the AMBE vocoder is patented and **never shipped**. You build the plug-in `onair-codec-aeroambe` yourself from `tools/addons/aeroambe` and libaeroambe's copy of mbelib ([CODECS.md](CODECS.md)); without it the calls are listed and the coded frames saved. Only unencrypted traffic is ever played.
+
+**How a call gets from the carrier to the Voice tab.** An Aero C channel exists only while a call is up: the ground station switches a 8400 bit/s carrier on when a voice call is set up and off when it ends, so the Carriers table shows a wide carrier (flagged as a voice candidate until it locks) only during the call, and the Voice tab has a row only from the first frame that locks (the call-progress unit then names aircraft and ground station). Nothing connects it by itself to a P channel. To hear it, build the `onair-codec-aeroambe` plug-in ([CODECS.md](CODECS.md)) and put it in the codecs folder (Help > Voice codecs shows the exact file and folders and a Rescan button; a file named differently is reported there), accept the notice once, then leave the mode running and pick the call in the Voice tab. Without the plug-in the call is listed and its coded frames are saved to a `.bits` file.
 
 ## What is not decoded
 

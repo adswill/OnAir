@@ -49,6 +49,7 @@ echo "  ambe2  AMBE+2 for DMR, NXDN, dPMR"
 echo "  ambe   AMBE for D-STAR"
 echo "  imbe   IMBE for P25"
 echo "  ysf    Yaesu System Fusion (only the 7-byte V/D mode 2 frames)"
+echo "Not made by this helper: aeroambe (build tools/addons/aeroambe, docs/CODECS.md), iridium and tetrapol (no source in OnAir: bring your own plug-in)."
 echo
 if [ -n "$ARG_IDS" ]; then CHOICE="$ARG_IDS"; else
 printf 'Which ones? Type ids separated by spaces, or "all": '

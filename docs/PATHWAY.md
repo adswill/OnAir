@@ -2339,3 +2339,10 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - The DRM panel has an SW 49 m (5.9 - 6.2 MHz) band button (#507).
 - General receiver: a click or short drag on the bandwidth slider that ended over the spectrum could tune the radio to the frequency under the mouse; the spectrum now tunes only when the press began on it. Found by reading the code and the report log, not reproduced with a radio (#514).
 - Shortwave RTTY Auto now also finds 200 and 450 Hz shifts (weather RTTY such as DDK9 is 50 baud / 450 Hz), and a half-fixed baud/shift pair no longer falls back to 45.45 baud / 170 Hz silently. Tested on simulated signals only; the exact cause of the reporter's "starting" line is not confirmed (#506).
+
+## 2026-11-15: Inmarsat all-carriers fixes (#508) and codec status text (#533)
+
+- Inmarsat all-carriers: opening or closing one window no longer restarts the receivers of the other windows (it dropped Aero locks, half-received multi-block messages and the Inmarsat-C frame search on a busy band). An Inmarsat-C receiver is now also started for carriers 0.9 to 1.5 kHz wide, which the width classifier called narrow.
+- Positions: Aero P channels are the ground-to-aircraft direction, so an aircraft's own position reports are not heard from the ground; the mode text and docs now say so. Position decoding in a multi-carrier capture is covered by a new simulated-signal test (the test signal sends downlinks, a real P channel does not).
+- Codec setup: a missing plug-in row now names the exact file, every folder searched and how to get that plug-in (the build helper makes only tetra, ambe2, ambe, imbe, ysf, not aeroambe, iridium or tetrapol), and reports a near-miss file name. Tested with a fake folder listing.
+- Simulated signals only; no real capture was used.
