@@ -38,7 +38,7 @@ namespace dect2 {
 namespace sondehub {
 
 const char* softwareVersion() { return ONAIR_VERSION; }
-std::string userAgent() { return std::string("OnAir-") + ONAIR_VERSION; }
+std::string userAgent() { return std::string("OnAir/") + ONAIR_VERSION; }
 
 namespace {
 std::string trimmed(std::string s) {
@@ -368,12 +368,23 @@ struct SondeHub::Impl {
         return 0;   // gave up: err says why
     }
 
+    // developers (ONAIR_SONDEHUB_LOG): what was sent and the HTTP status code and body that came back, as "# ..." lines in the log
+    static void logAnswer(const std::string& what, int code, const std::string& ans, const std::string& err) {
+        const std::string lp = sondehub::logPath();
+        if (lp.empty()) return;
+        std::string a = ans.size() > 2000 ? ans.substr(0, 2000) + "..." : ans;
+        for (char& ch : a) if (ch == '\n' || ch == '\r') ch = ' ';
+        if (FILE* f = fopen(lp.c_str(), "ab")) { fprintf(f, "# %s: %s%s%s\n", what.c_str(), code ? ("HTTP " + std::to_string(code)).c_str() : "no answer", a.empty() ? "" : " ", a.empty() ? err.c_str() : a.c_str()); fclose(f); }
+    }
+
     void doListener(const SondeHubConfig& c, const SondeHubStation& s, uint64_t myGen) {
         const std::string js = sondehub::listenerJson(c, s);
         std::string ans, err;
         const int code = put("/listeners", js, false, ans, err, myGen);
         std::lock_guard<std::mutex> lk(mu);
         lastListener = js;
+        stat.lastListenerLine = "PUT /listeners: " + (code ? "HTTP " + std::to_string(code) : std::string("no answer")) + (ans.empty() ? (err.empty() ? "" : " (" + err + ")") : ": " + (ans.size() > 300 ? ans.substr(0, 300) + "..." : ans));
+        logAnswer("PUT /listeners", code, ans, err);
         if (code == 200 || code == 201 || code == 202) {
             stat.beacons++;
             if (stat.lastError.compare(0, 18, "station position: ") == 0) stat.lastError.clear();
@@ -392,6 +403,7 @@ struct SondeHub::Impl {
         char b[200];
         snprintf(b, sizeof b, "PUT /sondes/telemetry: %zu frames of %zu sonde%s, %zu bytes JSON, %zu bytes gzip, ", objs.size(), sondes, sondes == 1 ? "" : "s", js.size(), gz.size());
         stat.lastLine = b + (code ? "HTTP " + std::to_string(code) : std::string("no answer"));
+        logAnswer("PUT /sondes/telemetry", code, ans, err);
         if (code >= 200 && code <= 299) {
             // 200, 201 and 202 can all carry refused payloads: count only what SondeHub took
             const sondehub::Reply rp = sondehub::analyseReply(ans);

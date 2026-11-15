@@ -419,17 +419,18 @@ static void testUploader() {
     for (const Req& r : rq) {
         if (r.path == "/listeners") {
             CHECK(r.method == "PUT" && r.header("content-encoding").empty() && r.header("content-type") == "application/json", "listener: PUT, plain JSON");
+            CHECK(!r.body.empty() && r.body.front() == '{' && r.body.back() == '}', "the listener body is ONE object, not an array");
             CHECK(validJson(r.body) && field(r.body, "uploader_callsign") == "DL1ABC" && field(r.body, "mobile") == "false" && field(r.body, "uploader_antenna") == "Yagi", "listener body %s", r.body.c_str());
         }
         if (r.path == "/sondes/telemetry") {
             telem++;
             CHECK(r.method == "PUT" && r.header("content-encoding") == "gzip" && r.header("content-type") == "application/json", "telemetry: PUT gzip JSON");
-            CHECK(r.header("user-agent") == sondehub::userAgent() && has(r.header("user-agent"), "OnAir-"), "user agent %s", r.header("user-agent").c_str());
+            CHECK(r.header("user-agent") == sondehub::userAgent() && has(r.header("user-agent"), "OnAir/"), "user agent %s", r.header("user-agent").c_str());
             const std::string d = r.header("date");
             CHECK(d.size() == 29 && d.compare(d.size() - 4, 4, " GMT") == 0 && d[3] == ',', "Date header RFC 7231: '%s'", d.c_str());
             bool ok = false;
             const std::string js = gunzip(r.body, ok);
-            CHECK(ok && validJson(js) && js[0] == '[', "body gunzips to a JSON array");
+            CHECK(ok && validJson(js) && js[0] == '[' && js.back() == ']', "body gunzips to a JSON array");
             size_t n = 0; for (size_t p = 0; (p = js.find("\"serial\":", p)) != std::string::npos; p++) n++;
             CHECK(n == 6, "6 frames in the upload (duplicate and the bad fix left out): %zu", n);
         }
@@ -438,6 +439,7 @@ static void testUploader() {
     SondeHubStatus s = h.status();
     CHECK(s.reconnects == 1 && s.uploads == 1 && s.skipped == 1 && has(s.skipWhy, "satellites") && s.lastError.empty(), "status: 1 retry, 1 upload, 1 kept back (%llu %llu %llu '%s' '%s')", (unsigned long long)s.reconnects, (unsigned long long)s.uploads, (unsigned long long)s.skipped, s.skipWhy.c_str(), s.lastError.c_str());
     CHECK(has(s.lastLine, "6 frames of 1 sonde") && has(s.lastLine, "HTTP 200"), "last line: %s", s.lastLine.c_str());
+    CHECK(has(s.lastListenerLine, "PUT /listeners: HTTP 200"), "the station record's status code is shown: %s", s.lastListenerLine.c_str());
     CHECK(has(h.lastJson(), "\"frame\":100") && validJson(h.lastJson()), "what was sent is kept for the panel");
     // a 400: shown, not retried, the frames counted as dropped
     for (int i = 0; i < 3; i++) { SondeInfo x = rs41(now + i); x.frame = 300 + i; h.frame(x, now); }
