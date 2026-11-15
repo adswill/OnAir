@@ -2332,3 +2332,10 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
 - Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.
+
+## 2026-11-15: four reported bugs (#534, #507, #514, #506)
+
+- FT8 / FT4 / WSPR and the other sideband-only HF digital entries no longer fall to narrow FM on 6, 4 and 2 m: Auto now means upper sideband for them at every dial (#534).
+- The DRM panel has an SW 49 m (5.9 - 6.2 MHz) band button (#507).
+- General receiver: a click or short drag on the bandwidth slider that ended over the spectrum could tune the radio to the frequency under the mouse; the spectrum now tunes only when the press began on it. Found by reading the code and the report log, not reproduced with a radio (#514).
+- Shortwave RTTY Auto now also finds 200 and 450 Hz shifts (weather RTTY such as DDK9 is 50 baud / 450 Hz), and a half-fixed baud/shift pair no longer falls back to 45.45 baud / 170 Hz silently. Tested on simulated signals only; the exact cause of the reporter's "starting" line is not confirmed (#506).
