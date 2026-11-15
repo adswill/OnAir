@@ -230,6 +230,9 @@ constexpr double kEcoClockHz = 61.44e6;
 const wchar_t* const kDecimation[] = {L"Full", L"1 / 2", L"1 / 4", L"1 / 8", L"1 / 16", L"1 / 32", L"1 / 64", L"1 / 128", L"1 / 256", L"1 / 512"};
 constexpr int kDecimations = 10;
 constexpr double kIqRateOverSpan = 1.5;    // iqreceiver: the packets come at 1.5 x main/spanfreq (RTSA-API-Samples README)
+// transmit: with a narrower main/spanfreq the device takes the packets and sends nothing. Measured on a V6 ECO 150XA-6 (RTSA-Suite PRO
+// 3.0.3, a 1 Msps tone at 433.92 MHz heard by a second receiver on the TX output): silent at 1 and 10 MHz, there at 20 and 50 MHz.
+constexpr double kTxMinSpanHz = 20e6;
 constexpr double kRefTopDbm = 10;          // gain 0 dB = this reference level
 constexpr double kGainMaxDb = 60;
 constexpr double kZeroDbmAmp = 0.22360679774997896;   // sqrt(0.05): 0 dBm into 50 ohm, as the SDK's samples count
@@ -597,8 +600,8 @@ public:
         const double f = ppmCorrectedHz(txRadioHz(t), ppmOf(t));
         aa::Result r = dev_.setNum(L"main/centerfreq", f);
         if (aa::failed(r)) { err = "SPECTRAN: the transmitter refused " + mhz(f) + " (" + hexResult(r) + ")"; dev_.close(); return false; }
-        // the span is the band the SDK's modulator covers: the signal's rate (or the radio setting), the device widens it where it must
-        double span = rate_;
+        // the span is the band the SDK's modulator covers: the signal's rate (or the radio setting), and never less than kTxMinSpanHz
+        double span = std::max(rate_, kTxMinSpanHz);
         {
             const auto it = t.radio.find("txspan");
             if (it != t.radio.end()) { const double v = atof(it->second.c_str()); if (v > 0) span = v; }

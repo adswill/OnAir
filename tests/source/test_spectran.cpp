@@ -211,7 +211,7 @@ int main(int argc, char** argv) {
         CHECK(tx->open(tt, err));
         if (!err.empty()) std::cerr << "tx open: " << err << '\n';
         CHECK(std::string(str("opentype")) == "spectranv6eco/iqtransmitter");
-        CHECK(num("cfg:main/centerfreq") == 145.501e6 && num("cfg:main/transgain") == -10 && num("cfg:main/spanfreq") == 1e6);
+        CHECK(num("cfg:main/centerfreq") == 145.501e6 && num("cfg:main/transgain") == -10 && num("cfg:main/spanfreq") == 20e6);   // 1 Msps: the span is not left below 20 MHz
         CHECK(tx->sampleRate() == 1e6);
         std::vector<cf32> x(10000, cf32(1.f, 0.f));
         x[5] = cf32(3.f, 0.f);   // beyond full scale: clipped
