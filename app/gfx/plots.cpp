@@ -1664,8 +1664,26 @@ static std::string stepText(int hz) {
 // others (tune, pan, scroll, nothing) are done here and take the wheel away from the plot. With the default settings: nothing is changed.
 static void wheelPolicy(App& a, inputmap::Area area, ImVec2 size) {
     const inputmap::Settings& st = inputmap::settings();
-    if (st.wheelIsDefault()) return;
     ImGuiIO& io = ImGui::GetIO();
+    // This simple, unmodified-wheel preference takes precedence over the advanced Controls mappings.
+    // Modified-wheel shortcuts (Ctrl/Shift/Alt) still follow their existing mappings.
+    if (!io.KeyCtrl && !io.KeyShift && !io.KeyAlt && !io.KeySuper) {
+        if (a.specWheelAction == 2) { plt::SetNextWheelAxes(3); return; } // always zoom, including on the VFO
+        if (a.specWheelAction == 1) {
+            plt::SetNextWheelAxes(0); // never let BeginPlot zoom with a tuning notch
+            if (io.MouseWheel == 0) return;
+            const ImVec2 p0 = ImGui::GetCursorScreenPos();
+            if (!ImGui::IsMouseHoveringRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), false)
+                || !ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem)
+                || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId) || ImGui::IsAnyItemActive()
+                || mouseOnScaleBar()) return;
+            static float acc[2] = {};
+            tuneBySteps(a, inputmap::wheelSteps(acc[(int)area], io.MouseWheel, st.wheelNotch));
+            io.MouseWheel = 0; // consume even fractional notches so they cannot also zoom
+            return;
+        }
+    }
+    if (st.wheelIsDefault()) return;
     const inputmap::Wheel w = st.wheelFor(area, inputmap::comboOf(io.KeyShift, io.KeyCtrl, io.KeyAlt));
     plt::SetNextWheelAxes(inputmap::zoomAxes(w));
     const float wheel = io.MouseWheel != 0 ? io.MouseWheel : (io.KeyShift ? io.MouseWheelH : 0.f);
@@ -1752,7 +1770,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
     const slook::LookSet& L = curLook(a);
     plt::SetNextPlotLook(plotLook(a, true));
     wheelPolicy(a, inputmap::Area::Spectrum, size);
-    if (isGeneralFamily(a.family)) generalVfoWheel(a, ImGui::GetCursorScreenPos(), size, gXLo, gXHi);   // the wheel over the VFO steps it
+    if (a.specWheelAction == 0 && isGeneralFamily(a.family)) generalVfoWheel(a, ImGui::GetCursorScreenPos(), size, gXLo, gXHi);   // default: wheel over VFO tunes
     plt::SetNextZoomMarker(a.freqMhz, 10 * gUi);
     plt::SetNextDragTune(specDragTunes(a), std::round(ImGui::GetFontSize() * 1.5f));   // the frequency labels along the bottom edge are the scale that pans
     if (plt::BeginPlot("##spec", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | plt::Flags_NoDoubleReset | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | ((isGeneralFamily(a.family) && generalDragging(0)) || bandEdgeDragging(0) || fileBoxDragging(0) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
@@ -2094,7 +2112,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
     const bool look = lookOn(a);
     plt::SetNextPlotLook(plotLook(a, false));
     wheelPolicy(a, inputmap::Area::Waterfall, size);
-    if (isGeneralFamily(a.family)) generalVfoWheel(a, ImGui::GetCursorScreenPos(), size, gXLo, gXHi);
+    if (a.specWheelAction == 0 && isGeneralFamily(a.family)) generalVfoWheel(a, ImGui::GetCursorScreenPos(), size, gXLo, gXHi);
     plt::SetNextZoomMarker(a.freqMhz, 10 * gUi);
     plt::SetNextDragTune(specDragTunes(a), 0);   // no frequency labels of its own: right or middle drag pans
     if (plt::BeginPlot("##wf", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | plt::Flags_NoDoubleReset | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | ((isGeneralFamily(a.family) && generalDragging(1)) || bandEdgeDragging(1) || fileBoxDragging(1) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {

@@ -111,7 +111,7 @@ const std::map<std::string, Bind>& binds() {
         m["wfRate"] = Bind{[](App& a) -> double { return a.wf.rowsPerSec; }, [](App& a, double v) { a.wf.setRate((float)v); }, nullptr, nullptr};
         NB("specHold", a.peakHold); NB("minHold", a.minHold); NB("specNfMarker", a.specNfMarker); NB("specLabels", a.specLabels);
         NB("traceColor", a.traceColor); NB("holdColor", a.holdColor); NB("specSmoothTrace", a.specSmoothTrace); NB("specAxisLabels", a.specAxisLabels);
-        NB("specLabelSize", a.specLabelSize); NB("specSmoothZoom", a.specSmoothZoom); NB("wfFloorBelow", a.wf.autoBelow); NB("wfFloorSpan", a.wf.autoSpan);
+        NB("specLabelSize", a.specLabelSize); NB("specSmoothZoom", a.specSmoothZoom); NB("specWheelAction", a.specWheelAction); NB("wfFloorBelow", a.wf.autoBelow); NB("wfFloorSpan", a.wf.autoSpan);
         SW_PF("specDefLo", -110); SW_PF("specDefHi", -30); SW_PF("dbKeyStep", 5);
         SW_NBA("agcOn", a.agcOn, if (a.agcOn) agcReset(a));
         SW_FB("dcRemove", a.engine.iqFix().dc.load(), a.engine.iqFix().dc = on); SW_FB("iqCorrect", a.engine.iqFix().iq.load(), a.engine.iqFix().iq = on);
