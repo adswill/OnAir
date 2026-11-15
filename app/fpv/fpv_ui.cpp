@@ -4,6 +4,7 @@
 // Analog FPV video screens: the live picture (with snapshot and recording), the channel grid with the scan, and the capture's spectrum.
 // The receiver (FpvReceiver) measures the channels and makes the pictures; the telemetry carries the levels and the numbers. The on-screen display
 // of the flight controller is part of the picture: it is shown, not decoded.
+#include "ui/video_adjust.h"
 #include "app.h"
 #include "../d40/d40_ui.h"
 #include "dect2/atv/atv_aspect.h"
@@ -40,6 +41,7 @@ struct State {
     int aspect = 0;                             // picture format: 0 Auto, 1 4:3, 2 16:9 (atv_aspect.h; saved)
     int sysHint = -1;                           // -1 automatic, 0 PAL, 1 NTSC
     bool colourOn = true;
+    vadj::Control adjust;                       // display brightness and contrast (#239)
     float saturation = 1.f;
     int sub = 0;                                // 0 automatic, 1 6.0 MHz, 2 6.5 MHz
     int pushedDeint = -1, pushedSys = -2, pushedSub = -1;
@@ -204,6 +206,8 @@ void upload() {
     }
     std::vector<uint32_t> px((size_t)f.width * f.height);
     memcpy(px.data(), f.rgba.data(), px.size() * 4);
+    S.adjust.load("fpv");
+    dect2::video::apply(px.data(), px.size(), S.adjust.adj);   // display only: the frame itself (and the recorded pictures) are not changed
     S.img->update(0, 0, f.width, f.height, px.data());
 }
 
@@ -520,6 +524,7 @@ void decoder(App& a, bool&) {
     nextIf(220);
     ImGui::TextDisabled("%s", tr("Saturation")); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(90));
     ImGui::SliderFloat("##fpvsat", &S.saturation, 0.f, 2.f, "%.2f");
+    if (S.adjust.controls("fpv", fit(90))) S.frameDirty = true;
     ImGui::TextDisabled("%s", tr("Fields")); ImGui::SameLine(0, 5 * gUi);
     if (pillButton(tr("Weave"), S.deint == 0)) { S.deint = 0; plat::prefs().setI("fpvDeint", 0); savePrefs(a); }
     ImGui::SameLine(0, 4 * gUi);

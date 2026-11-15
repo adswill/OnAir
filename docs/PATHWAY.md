@@ -2337,3 +2337,8 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - Settings > Location now holds one station position (latitude, longitude, height, locator, name). PSK Reporter, WSPRnet and Winlink follow it and show "using the global location" with a change link; a screen can still keep its own locator. Older saved positions are folded in once at start-up (first non-empty wins, differing locators stay as that screen's own).
 - Branch feat42-ui3. Helpers and migration rules tested by `station_location` (not yet run on CI); the screens were only syntax-checked.
+
+## 2026-11-15: brightness and contrast for analog TV and FPV (issue #239)
+
+- Analog TV and FPV got Brightness and Contrast sliders with a Reset button, saved per mode and applied only to the picture on the screen (snow and full screen included); decoding and saved frames are unchanged.
+- Branch feat42-ui3. The table maths is tested by `display_adjust` (not yet run on CI); the screens were only syntax-checked.

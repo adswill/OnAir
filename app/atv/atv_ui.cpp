@@ -7,6 +7,7 @@
 #include "dect2/atv/atv_aspect.h"
 #include "dect2/atv/atv_ghost.h"
 #include "panels/enhance_ui.h"
+#include "ui/video_adjust.h"
 #include "dect2/atv/atv_std.h"
 #include <algorithm>
 #include <cmath>
@@ -17,6 +18,7 @@ namespace {
 struct State {
     bool loaded = false, wasRunning = false;
     gfx::Image* img = nullptr;                  // the picture as a texture
+    vadj::Control adjust;                       // display brightness and contrast (#239)
     enhui::LiveTex enh;                         // the Enhance control on the frame grab (worked on the newest frame when the last is done)
     int imgW = 0, imgH = 0;
     uint64_t frameSeq = 0;
@@ -225,6 +227,8 @@ void uploadFrame(App& a) {
     }
     std::vector<uint32_t> px((size_t)f->width * f->height);
     memcpy(px.data(), f->rgba.data(), px.size() * 4);
+    S.adjust.load("atv");
+    dect2::video::apply(px.data(), px.size(), S.adjust.adj);   // display only: the frame itself is not changed
     S.img->update(0, 0, f->width, f->height, px.data());
     S.enh.e.setSource("Analog TV frame");
     if (S.enh.e.on()) S.enh.feed(px.data(), f->width, f->height, false);
@@ -550,6 +554,8 @@ void decoder(App& a, bool&) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Always use the envelope detector. The default locks to the carrier (synchronous detection), which\nsurvives ghosts and overmodulation better, and falls back to the envelope detector by itself.");
     ImGui::TextDisabled("Saturation"); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(90));
     ImGui::SliderFloat("##atvsat", &S.saturation, 0.f, 2.f, "%.2f");
+    nextIf(240);
+    if (S.adjust.controls("atv", fit(90))) S.frameSeq = 0;   // the newest frame again, so a still picture changes at once
     if (ImGui::Checkbox("Show snow when there is no picture", &S.snow)) { plat::prefs().setI("atvSnow", S.snow ? 1 : 0); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Without a picture signal, draw the noise of the channel as a TV does with no station (snow) instead of nothing.\nA weak carrier shows up in it before the picture locks. Off by default.");
     if (a.rx.atv.modulation == 0 || a.rx.atv.modulation == 1) {   // not the NBTV pictures, which have their own shape
