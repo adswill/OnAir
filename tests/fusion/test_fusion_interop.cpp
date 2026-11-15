@@ -5,6 +5,7 @@
 // FICH and header decoded for header and terminator frames.)
 #include "dect2/fusion/fusion_proto.h"
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <vector>
