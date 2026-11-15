@@ -76,6 +76,7 @@ const std::vector<RigHint>& commonRigs() {
         {"Kenwood", "TS-2000", {57600, 9600}}, {"Elecraft", "K3", {38400}},           {"Elecraft", "KX3", {38400}},
         {"Elecraft", "KX2", {38400}},          {"Elecraft", "K4", {38400}},           {"Xiegu", "G90", {19200}},
         {"Xiegu", "X6100", {19200, 115200}},   {"QRP Labs", "QDX", {115200, 9600}},   {"Kenwood", "TS-480", {115200, 9600}},
+        {"Elad", "FDM-DUO", {115200, 57600, 38400, 9600}},   // CAT baud rates from the FDM-DUO manual (8N1)
     };
     return v;
 }
@@ -94,9 +95,11 @@ std::vector<RigHint> rigHintsForPort(const SerialPortInfo& p) {
         {"ft891", "Yaesu", "FT-891"},    {"ts590", "Kenwood", "TS-590SG"},  {"ts890", "Kenwood", "TS-890S"}, {"ts2000", "Kenwood", "TS-2000"},
         {"kx3", "Elecraft", "KX3"},      {"kx2", "Elecraft", "KX2"},        {"elecraftk4", "Elecraft", "K4"}, {"x6100", "Xiegu", "X6100"},
         {"xiegu", "Xiegu", "G90"},       {"qdx", "QRP Labs", "QDX"},        {"qmx", "QRP Labs", "QDX"},
+        {"fdmduo", "Elad", "FDM-DUO"},   {"eladfdm", "Elad", "FDM-DUO"},
     };
     for (const auto& n : kNamed) if (has(s, n.key)) add(n.mfg, n.model);
     if (has(s, "qdx") || has(s, "qmx") || has(s, "qrplabs")) add("Kenwood", "TS-480");   // the QRP Labs rigs speak TS-480 CAT
+    if (has(s, "fdmduo") || has(s, "eladfdm")) add("Kenwood", "TS-480");   // the FDM-DUO's CAT is a TS-480 subset plus its own commands (manual)
     if (has(s, "elecraft")) { add("Elecraft", "K3"); add("Elecraft", "KX3"); add("Elecraft", "KX2"); add("Elecraft", "K4"); }
     if (has(s, "cp2105")) { add("Yaesu", "FT-991"); add("Yaesu", "FTDX-10"); add("Yaesu", "FT-710"); add("Yaesu", "FT-891"); }   // Yaesu's dual UART
     if (has(s, "cp210") && !has(s, "cp2105")) { add("Icom", "IC-7300"); add("Icom", "IC-9700"); add("Icom", "IC-7610"); add("Kenwood", "TS-590SG"); }

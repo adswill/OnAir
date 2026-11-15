@@ -187,6 +187,12 @@ class ReceiverViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Use a saved network radio: its kind becomes the source and its address the endpoint. */
     fun useNetworkRadio(r: NetworkRadio) {
+        if (r.kind == SourceKind.NETWORK) {   // a type of the core's network list (SDR++ server): the list holds it, the source is "network"
+            val t = io.github.adswill.onair.netradio.NetRadioType.ofKey(r.netKey) ?: return
+            repo.radios.addNetworkRadio(io.github.adswill.onair.netradio.AddNetworkRadioForm(t, r.host, r.port.toString(), label = r.name))
+            if (settings.value.source != SourceKind.NETWORK) repo.chooseSource(SourceKind.NETWORK) else repo.refreshCaps()
+            return
+        }
         repo.setEndpoint(r.kind, r.host, r.port)
         if (settings.value.source != r.kind) repo.chooseSource(r.kind) else repo.refreshCaps()
     }

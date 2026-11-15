@@ -160,7 +160,11 @@ int main() {
         p.display = "Silicon Labs Dual CP2105 USB to UART Bridge"; p.path = "COM5";
         h = rigHintsForPort(p);
         CHECK(!h.empty() && h[0].mfg == "Yaesu", "CP2105: Yaesu first");
-        p.display = "USB-SERIAL CH340"; h = rigHintsForPort(p);
+        p.path = "/dev/serial/by-id/usb-ELAD_FDM-DUO_CAT-if00"; p.display = "";
+        h = rigHintsForPort(p);
+        bool ts480e = false; for (auto& x : h) ts480e |= x.model == "TS-480";
+        CHECK(!h.empty() && h[0].model == "FDM-DUO" && h[0].mfg == "Elad" && ts480e, "FDM-DUO by name: its own model, then TS-480");
+        p.path = "COM5"; p.display = "USB-SERIAL CH340"; h = rigHintsForPort(p);
         CHECK(!h.empty() && h[0].mfg == "Xiegu", "CH340: Xiegu");
         p.display = "Some modem"; p.path = "/dev/cu.Bluetooth"; CHECK(rigHintsForPort(p).empty(), "no hint from an unrelated name");
         p.path = "/dev/serial/by-id/usb-Silicon_Labs_CP2102_IC-7300"; p.display = "";

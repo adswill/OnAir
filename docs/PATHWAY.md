@@ -2332,3 +2332,8 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
 - Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.
+
+## 2026-11-15: SDR++ server on Android, ELAD FDM-DUO rig hint
+
+- Android: the "Add a network radio" dialog now offers SDR++ server (default port 5259) next to rtl_tcp and SpyServer, and mDNS discovery (opt-in) lists `_sdrpp._tcp` servers. The core's SDR++ client (test_sdrpp) was already in the Android library; only the screen did not offer it (#473). Kotlin tests added, not run locally.
+- ELAD FDM-DUO (#251): no public IQ protocol or SDK exists, so no native driver. The DUO's CAT (documented in its manual) is a Hamlib/TS-480 rig: a port named ELAD / FDM-DUO now gets the FDM-DUO model first, then TS-480 (test rig_control); IQ stays on its USB sound card. DEVICES.md rewritten with the recipe and what is missing.

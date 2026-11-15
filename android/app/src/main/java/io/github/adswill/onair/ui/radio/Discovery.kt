@@ -18,10 +18,10 @@ import io.github.adswill.onair.ui.NetworkRadio
 import java.util.concurrent.ConcurrentHashMap
 
 /** The mDNS service types of the network radios OnAir can use. */
-private val serviceTypes = listOf("_rtl_tcp._tcp." to SourceKind.RTL_TCP, "_spyserver._tcp." to SourceKind.SPYSERVER)
+private val serviceTypes = listOf("_rtl_tcp._tcp." to SourceKind.RTL_TCP, "_spyserver._tcp." to SourceKind.SPYSERVER, "_sdrpp._tcp." to SourceKind.NETWORK)
 
 /**
- * Looks for rtl_tcp and SpyServer servers on the local network with Android's NsdManager (mDNS), only while [enabled] (the user
+ * Looks for rtl_tcp, SpyServer and SDR++ servers on the local network with Android's NsdManager (mDNS), only while [enabled] (the user
  * opted in; off by default) and only while the caller is on screen. Nothing is sent anywhere but the local network's multicast
  * queries. Servers that do not announce themselves are added by address.
  */
@@ -51,7 +51,7 @@ fun rememberDiscovery(enabled: Boolean): State<List<NetworkRadio>> {
                             override fun onServiceResolved(i: NsdServiceInfo) {
                                 @Suppress("DEPRECATION")
                                 val host = i.host?.hostAddress ?: return
-                                seen[i.serviceName + kind.code] = NetworkRadio(kind, i.serviceName, host, i.port)
+                                seen[i.serviceName + kind.code] = NetworkRadio(kind, i.serviceName, host, i.port, if (kind == SourceKind.NETWORK) "sdrpp" else "")
                                 publish()
                             }
                         })

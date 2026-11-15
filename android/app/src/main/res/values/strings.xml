@@ -37,6 +37,7 @@
     <string name="source_synth">Test signal</string>
     <string name="source_rtltcp">rtl_tcp</string>
     <string name="source_spy">SpyServer</string>
+    <string name="source_sdrpp">SDR++ server</string>
     <string name="source_file">IQ file</string>
     <string name="source_synth_note">A built-in test signal for the selected mode. Nothing is received or transmitted: use it to try the app without a radio.</string>
     <string name="host">Host</string>
@@ -46,6 +47,7 @@
     <string name="open_fdroid">F-Droid</string>
     <string name="open_driver">Open driver</string>
     <string name="driver_missing">The driver app is not installed.</string>
+    <string name="sdrpp_hint">SDR++ running as a server (sdrpp --server, default port 5259). It takes one client at a time: close other clients first.</string>
     <string name="spy_hint">A SpyServer on your network (an Airspy or RTL-SDR shared by a PC or a Raspberry Pi).</string>
     <string name="choose_file">Choose IQ file</string>
     <string name="no_file">No file chosen</string>
