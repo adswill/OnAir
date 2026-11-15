@@ -14,6 +14,7 @@
 #include "aartsa_min.h"
 #include "native_realddc.h"
 #include <cwchar>
+#include <map>
 
 namespace dect2 {
 namespace native {
@@ -327,6 +328,7 @@ struct Dev {
     aa::Config root{nullptr};
     bool open = false, connected = false, started = false;
     std::string warn;   // values the API adjusted, for the start message
+    bool resetFirst = false;   // the next openAs() resets the device first (after a start that did not run)
 
     bool openAs(const std::string& type, const std::string& mode, const std::string& serial, std::string& err) {
         auto& api = rtsa();
@@ -337,8 +339,31 @@ struct Dev {
         // "not found" or connects and never streams). Not while this program has another device open: its stream would be disturbed.
         bool othersOpen;
         { std::lock_guard<std::mutex> g(gKnownMu); othersOpen = gOpenCount > 0; }
-        if (!othersOpen) api.RescanDevices(&api.h, 500);
-        aa::Result r = api.OpenDevice(&api.h, &d, wtype.c_str(), wserial.c_str());
+        // A V6 ECO that was last opened as a receiver mostly does not start as a transmitter, and the other way round (measured: it
+        // stays in its starting state, or runs and delivers nothing); AARTSAAPI_ResetDevices before the open cures it. The device is
+        // back on the bus about 3 s later.
+        static std::map<std::string, bool> lastWasTx;   // (api.mu) by serial
+        const bool tx = mode == "iqtransmitter";
+        const auto last = lastWasTx.find(serial);
+        const bool changed = last != lastWasTx.end() && last->second != tx;
+        lastWasTx[serial] = tx;
+        aa::Result r = aa::kErrorNotFound;
+        if ((changed || resetFirst) && !othersOpen && api.ResetDevices) {
+            fprintf(stderr, "SPECTRAN: %s is reset before it is opened as a %s\n", serial.c_str(), tx ? "transmitter" : "receiver");
+            fflush(stderr);
+            resetFirst = false;
+            api.ResetDevices(&api.h);
+            std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+            for (int i = 0; i < 12; i++) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                api.RescanDevices(&api.h, 500);
+                r = api.OpenDevice(&api.h, &d, wtype.c_str(), wserial.c_str());
+                if (!aa::failed(r)) break;
+            }
+        } else {
+            if (!othersOpen) api.RescanDevices(&api.h, 500);
+            r = api.OpenDevice(&api.h, &d, wtype.c_str(), wserial.c_str());
+        }
         if (aa::failed(r)) { err = "SPECTRAN " + serial + ": cannot open it as " + type + "/" + mode + " (" + hexResult(r) + ")"; return false; }
         open = true;
         { std::lock_guard<std::mutex> g(gKnownMu); gOpenCount++; }
@@ -754,6 +779,17 @@ public:
     ~SpectranTx() override { close(); }
 
     bool open(const TxTune& t, std::string& err) override {
+        stuck_ = false;
+        if (openOnce(t, err)) return true;
+        if (!stuck_ || !rtsa().ResetDevices) return false;
+        // (the same as for the receiver: a start that stays in its starting state is cured by a reset)
+        fprintf(stderr, "SPECTRAN: the transmitter did not start running: once more after a reset\n");
+        fflush(stderr);
+        err.clear();
+        dev_.resetFirst = true;
+        return openOnce(t, err);
+    }
+    bool openOnce(const TxTune& t, std::string& err) {
         close();
         if (!rtsa().ok) { err = kRtsaMissingMsg; return false; }
         if (!rtsa().SendPacket || !rtsa().GetMasterStreamTime) { err = "SPECTRAN: this RTSA API library has no transmit functions (AARTSAAPI_SendPacket): install the current RTSA-Suite PRO"; return false; }
@@ -787,7 +823,7 @@ public:
         if (rtsa().GetDeviceState) {
             const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(5);
             while (rtsa().GetDeviceState(&dev_.d) != aa::kRunning) {
-                if (std::chrono::steady_clock::now() > end) { err = "SPECTRAN: the transmitter did not start running within 5 s (is the TX option enabled on this device?)"; dev_.close(); return false; }
+                if (std::chrono::steady_clock::now() > end) { err = "SPECTRAN: the transmitter did not start running within 5 s (is the TX option enabled on this device?)"; stuck_ = true; dev_.close(); return false; }
                 std::this_thread::sleep_for(std::chrono::milliseconds(20));
             }
         }
@@ -871,6 +907,7 @@ private:
     std::string type_, serial_;
     bool eco_ = false;
     Dev dev_;
+    bool stuck_ = false;   // the last openOnce() failed because the device did not reach its running state
     double rate_ = 0, centerHz_ = 0, lead_ = 0.05, next_ = 0;
     bool first_ = true;
     std::vector<float> buf_;
