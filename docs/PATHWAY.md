@@ -2332,3 +2332,9 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
 - Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.
+
+## 2026-11-15: Bug batch D (issues 249, 223, 435)
+
+- Pack downloads (such as the DAB transmitter lists) retry twice and say why they failed (missing file, DNS, TLS, timeout) with the address, instead of "error 22".
+- The COSPAS-SARSAT whole-capture search has a channel cap (1, 2, 4, 8 or all 90 kHz finders) for slow computers.
+- Android: the radio screen now lists every plugged-in USB radio and can select it; generic RTL-SDR sticks are named by their chip family, not always R820T.
