@@ -28,6 +28,7 @@ KEEP long av_frame_unref(void) { return -1; }
 KEEP long av_frame_ref(void) { return -1; }
 KEEP long av_free(void) { return -1; }
 KEEP long av_freep(void) { return -1; }
+KEEP void* av_guess_format(void) { return NULL; }
 KEEP int64_t av_guess_sample_aspect_ratio(void) { return 0; }
 KEEP long av_interleaved_write_frame(void) { return -1; }
 KEEP int64_t av_log_get_level(void) { return 0; }
@@ -49,11 +50,13 @@ KEEP int64_t av_rescale(void) { return 0; }
 KEEP int64_t av_rescale_q(void) { return 0; }
 KEEP long av_seek_frame(void) { return -1; }
 KEEP long av_strerror(void) { return -1; }
+KEEP const char* av_version_info(void) { return "unavailable"; }
 KEEP long av_write_frame(void) { return -1; }
 KEEP long av_write_trailer(void) { return -1; }
 KEEP void* avcodec_alloc_context3(void) { return NULL; }
 KEEP long avcodec_decode_subtitle2(void) { return -1; }
 KEEP void* avcodec_find_decoder(void) { return NULL; }
+KEEP void* avcodec_find_decoder_by_name(void) { return NULL; }
 KEEP void* avcodec_find_encoder(void) { return NULL; }
 KEEP void* avcodec_find_encoder_by_name(void) { return NULL; }
 KEEP long avcodec_flush_buffers(void) { return -1; }
