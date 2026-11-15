@@ -42,6 +42,10 @@ When an Aaronia USB device (vendor id 2f72) is plugged in but the library is mis
   smallest of those rates at or above what the mode asks for. The V6 ECO runs at 61.44 MHz in this mode.
 - **Gain** sets the reference level (`main/reflevel`, the level that fills the converter): 0 dB = +10 dBm, each dB more is 1 dB lower
   (30 dB = -20 dBm). It changes while the stream runs. The samples arrive in volts; OnAir scales them so that the reference level is 1.0.
+  The V6 has no plain gain: the RTSA API takes the reference level together with the RF amplifier (`calibration/preamp`, a radio setting),
+  and the reference level is only taken while `device/gaincontrol` is Manual (the V6's default, and OnAir writes it at every start; the V6 ECO
+  has no such item). OnAir reads the level back after setting it: when the device kept another one (a Peak / Power gain control, a refused or
+  clipped value) the start / retune message says so and the log has the reason. Auto gain uses the same slider.
 - **Radio settings:** frequency correction (ppm), Mode, RF amplifier (`calibration/preamp`), USB compression, stream clock source (GPS,
   PPS, 10 MHz reference), TX lead time; on the V6 also the receiver clock, the RX 1 / RX 2 input and the gain control (manual, peak, power).
   "Keep" leaves the device's own setting alone.

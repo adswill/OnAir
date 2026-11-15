@@ -1050,6 +1050,9 @@ bool autogainStep(App& a);                     // every frame (gainControl): tru
 void autogainSetTrace(const char* path);        // --autogain-trace file.csv: one line per second with the gain, the objective and the reason (bug reports)
 void autogainMeterOnly(App& a);                // every frame while it is off: the meters keep running
 void autogainControl(App& a, bool vertical, bool running);   // the "Auto gain" control (Off / Auto / Optimise once / Safe start), gear popup, Stop / Undo
+// Per-stage manual gain (#233): one slider per stage of the radio's chain that the driver lets one set by hand (LNA / mixer / VGA / IF ...), the step table and
+// what each does, "Reset to overall gain". True when a stage changed (the caller retunes and turns Auto off). Draws nothing for a radio with a single gain.
+bool manualStageControls(App& a, bool vertical);
 void autogainMeters(App& a);                   // the meter strip: ADC headroom bar + clip lamp, noise floor, warnings with advice
 bool autogainStatus(App& a);                   // the progress / result line of a one-shot; true when it drew something
 // The integration API (first-run wizard, automations): how 1 = Auto, 2 = Optimise once, 3 = Safe start. False when no radio is running.

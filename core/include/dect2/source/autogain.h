@@ -57,6 +57,8 @@ struct GainStage {
     std::string settingKey;       // a stage reached through a radio setting (TuneSettings::radio[settingKey]); empty: a gain field of TuneSettings
     bool settingIsIndex = false;  // the setting holds the step index (SDRplay rfgr: state 0 = most gain), not dB
     std::string note;             // what this gain does, for the user
+    std::string manualKey;        // the driver setting (TuneSettings::radio[manualKey], "-1" = follow the overall gain) that sets this stage by hand (#233);
+                                  // the Auto modes never move it. Empty: the stage cannot be set by hand
     std::vector<double> actualDb; // measured real gain of each step (same size as steps; empty: the nominal steps are right), from GainCalibration
 
     double minDb() const { return steps.empty() ? 0 : steps.front(); }
@@ -102,6 +104,18 @@ const RadioProfile* radioProfileById(const std::string& id);
 // single overall gain over its reported range (DeviceInfo::gainMinDb .. gainMaxDb). The ranges of generic radios follow the driver's.
 RadioProfile radioProfileFor(const DeviceInfo& d);
 RadioProfile genericProfile(const std::string& name, double minDb, double maxDb, double stepDb);
+
+// ---- manual stage controls (#233): one slider per stage the driver lets the user set by hand (the Advanced area of the gain row)
+constexpr const char* kManualFollow = "-1";                       // a stage's setting value: follow the overall gain
+std::vector<int> manualStages(const RadioProfile& r);             // indexes of the stages with a manualKey
+// Sets a stage by hand: the dB snaps to the stage's steps and goes to TuneSettings::radio[manualKey]. False: the stage has no manual control
+bool setManualStage(const RadioProfile& r, int stage, double db, TuneSettings& tune);
+// The stage's manual value in dB; false when it follows the overall gain
+bool manualStageValue(const RadioProfile& r, int stage, const TuneSettings& tune, double& db);
+// "Reset to overall gain": every manual stage follows the overall gain again
+void resetManualStages(const RadioProfile& r, TuneSettings& tune);
+// True when any manual stage is set
+bool anyManualStage(const RadioProfile& r, const TuneSettings& tune);
 
 enum class Policy { Sensitivity, Balanced, Linearity };
 const char* policyName(Policy p);

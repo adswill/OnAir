@@ -262,6 +262,8 @@ static void toolbarGain(App& a, bool vertical, bool running, bool& retune) {
         a.tune.gainDb = std::round(gdb);
         if (!curDev.gainNote.empty() && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", curDev.gainNote.c_str());
         if (ImGui::IsItemDeactivatedAfterEdit()) retune = true, a.agcOn = false;
+        if (!vertical) flowNext();
+        if (manualStageControls(a, vertical)) retune = true, a.agcOn = false;   // the stages of the chain (Airspy, USRP, E4000), where the driver has them
     } else {
     gainLabel(tr("LNA"), tr("The RF amplifier's gain (the radio sets it in 8 dB steps)"), 78);
     int lna = a.tune.lnaDb;

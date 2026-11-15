@@ -57,6 +57,7 @@ struct UhdApi {
     err_t (DECT2_CALL* get_rx_num_channels)(usrp_t*, size_t*) = nullptr;
     err_t (DECT2_CALL* get_rx_antennas)(usrp_t*, size_t, strvec_t**) = nullptr;
     err_t (DECT2_CALL* set_rx_antenna)(usrp_t*, const char*, size_t) = nullptr;
+    err_t (DECT2_CALL* get_rx_gain_names)(usrp_t*, size_t, strvec_t**) = nullptr;   // optional: the gain elements of a channel (#233)
     err_t (DECT2_CALL* set_clock_source)(usrp_t*, const char*, size_t) = nullptr;   // optional: the reference clock of a motherboard
     err_t (DECT2_CALL* set_time_source)(usrp_t*, const char*, size_t) = nullptr;    // optional: where the PPS (time) comes from
     // optional: what the motherboard offers (get_clock_sources / get_time_sources) and the "ref_locked" sensor
@@ -104,7 +105,7 @@ struct UhdApi {
              lib.get(meta_range_free, "uhd_meta_range_free") && lib.get(meta_range_start, "uhd_meta_range_start") && lib.get(meta_range_stop, "uhd_meta_range_stop");
         if (ok) {
             lib.opt(get_last_error, "uhd_get_last_error"); lib.opt(usrp_last_error, "uhd_usrp_last_error"); lib.opt(get_rx_freq_range, "uhd_usrp_get_rx_freq_range");
-            lib.opt(get_rx_num_channels, "uhd_usrp_get_rx_num_channels"); lib.opt(get_rx_antennas, "uhd_usrp_get_rx_antennas"); lib.opt(set_rx_antenna, "uhd_usrp_set_rx_antenna");
+            lib.opt(get_rx_num_channels, "uhd_usrp_get_rx_num_channels"); lib.opt(get_rx_antennas, "uhd_usrp_get_rx_antennas"); lib.opt(set_rx_antenna, "uhd_usrp_set_rx_antenna"); lib.opt(get_rx_gain_names, "uhd_usrp_get_rx_gain_names");
             lib.opt(set_clock_source, "uhd_usrp_set_clock_source"); lib.opt(set_time_source, "uhd_usrp_set_time_source");
             lib.opt(rx_metadata_has_time_spec, "uhd_rx_metadata_has_time_spec"); lib.opt(rx_metadata_time_spec, "uhd_rx_metadata_time_spec"); lib.opt(set_time_next_pps, "uhd_usrp_set_time_next_pps");
             lib.opt(get_clock_sources, "uhd_usrp_get_clock_sources"); lib.opt(get_time_sources, "uhd_usrp_get_time_sources");
@@ -154,6 +155,9 @@ std::mutex gRangeMu;
 std::map<std::string, std::pair<double, double>> gRange;
 // ... and the receive inputs (channel, antenna) it reported then: the radios other than the B2xx, whose inputs are not known before
 std::map<std::string, std::vector<std::pair<size_t, std::string>>> gInputs;
+// ... and the receive gain elements of channel 0 with their ranges (#233): each is a manual gain stage ("gain.<element>") once the radio has been opened
+struct GainElem { std::string name; double lo = 0, hi = 0; };
+std::map<std::string, std::vector<GainElem>> gElems;
 
 std::string usrpDeviceArgs(const std::string& args_, bool warn) {
     std::string dargs = args_;
@@ -274,6 +278,7 @@ protected:
         }
         if (radioOption(s, "clock", "default") != "default") lockNote_ = refLockNote(); else lockNote_.clear();
         rememberInputs();
+        rememberGainElements();
         if (size_t n = 0; ch_ > 0 && uhd().get_rx_num_channels && uhd().get_rx_num_channels(dev_, &n) == 0 && ch_ >= n) {
             DIAG_ERROR(565007, "The USRP has %d receive channels but channel %d was picked, so the radio is not started.", (int)n, (int)ch_ + 1); err = "USRP: this radio has " + std::to_string(n) + " receive channel(s), channel " + std::to_string(ch_ + 1) + " was picked";
             openFailure_ = OpenFailure::Final;
@@ -339,6 +344,7 @@ protected:
             uhd().meta_range_free(&rg);
         }
         uhd().set_rx_gain(dev_, std::min(std::max(s.gainDb, gmin), gmax), ch, "");
+        applyGainElements(s, ch);
         if (!live && !startReceiving(err)) return false;
         return true;
     }
@@ -452,6 +458,42 @@ private:
             if (i < 11) std::this_thread::sleep_for(std::chrono::milliseconds(250));
         }
         return "the reference clock is NOT locked (check the 10 MHz / GPSDO cable and that the signal is present)";
+    }
+    // the gain elements of channel 0 ("PGA", "LNA", "ADC", ...) and their ranges, for the next listing (several: each is a manual stage)
+    void rememberGainElements() {
+        if (!uhd().get_rx_gain_names) return;
+        UhdApi::strvec_t* v = nullptr;
+        if (uhd().strvec_make(&v) != 0 || !v) return;
+        std::vector<GainElem> el;
+        size_t k = 0;
+        if (uhd().get_rx_gain_names(dev_, ch_, &v) == 0 && uhd().strvec_size(v, &k) == 0) {
+            for (size_t i = 0; i < k && i < 12; i++) {
+                char b[128] = {0};
+                if (uhd().strvec_at(v, i, b, sizeof b) != 0 || !b[0]) continue;
+                GainElem e;
+                e.name = trimmed(b, sizeof b);
+                if (UhdApi::range_t_* rg = nullptr; uhd().meta_range_make(&rg) == 0 && rg) {
+                    if (uhd().get_rx_gain_range(dev_, e.name.c_str(), ch_, rg) == 0) { uhd().meta_range_start(rg, &e.lo); uhd().meta_range_stop(rg, &e.hi); }
+                    uhd().meta_range_free(&rg);
+                }
+                if (e.hi > e.lo) el.push_back(e);
+            }
+        }
+        uhd().strvec_free(&v);
+        std::lock_guard<std::mutex> lk(gRangeMu);
+        gElems[args_] = el;
+    }
+    // an element set by hand (setting "gain.<element>", empty or -1 = follow the overall gain) goes after the overall gain
+    void applyGainElements(const TuneSettings& s, size_t ch) {
+        std::vector<GainElem> el;
+        { std::lock_guard<std::mutex> lk(gRangeMu); const auto it = gElems.find(args_); if (it != gElems.end()) el = it->second; }
+        for (const auto& e : el) {
+            const std::string v = radioOption(s, "gain." + e.name, "");
+            if (v.empty()) continue;
+            const double db = atof(v.c_str());
+            if (db == -1) continue;   // -1: follow the overall gain
+            uhd().set_rx_gain(dev_, std::min(std::max(db, e.lo), e.hi), ch, e.name.c_str());
+        }
     }
     // the inputs of each channel, for the next listing (a radio is only opened when it is started)
     void rememberInputs() {
@@ -669,6 +711,19 @@ void listUsrp(std::vector<DeviceInfo>& out) {
                                         "The sample format between the USRP and the computer. sc16: 16-bit samples (default). sc8: 8-bit samples, half the\n"
                                         "Ethernet/USB load: use it when a network USRP drops samples at high rates. Takes effect when the radio is started.",
                                         {"sc16", "sc8"}, {"sc16 (16-bit)", "sc8 (8-bit, half the load)"}, "sc16", true)};
+            {   // the gain elements the radio reported when it was last opened: one manual stage each (only where there are several; one is the overall gain)
+                std::lock_guard<std::mutex> lk(gRangeMu);
+                const auto ge = gElems.find(args);
+                if (ge != gElems.end() && ge->second.size() > 1)
+                    for (const auto& e : ge->second) {
+                        RadioSetting r;
+                        r.type = RadioSetting::Number; r.key = "gain." + e.name; r.label = "Gain stage: " + e.name; r.unit = "dB";
+                        r.help = "The USRP's gain element \"" + e.name + "\" by hand (" + std::to_string((int)std::lround(e.lo)) + " to " + std::to_string((int)std::lround(e.hi)) +
+                                 " dB). -1: follow the overall gain (the default). Set by hand it replaces what the overall gain gives this element.";
+                        r.minV = -1; r.maxV = e.hi; r.step = 1; r.def = "-1";
+                        d.settings.push_back(r);
+                    }
+            }
             {
                 std::lock_guard<std::mutex> lk(gRangeMu);
                 auto it = gRange.find(args);

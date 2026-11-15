@@ -29,6 +29,7 @@ struct RtlApi {
     int (DECT2_CALL* get_tuner_gains)(rtlsdr_dev_t*, int*) = nullptr;
     int (DECT2_CALL* set_tuner_gain)(rtlsdr_dev_t*, int) = nullptr;
     int (DECT2_CALL* set_agc_mode)(rtlsdr_dev_t*, int) = nullptr;
+    int (DECT2_CALL* set_tuner_if_gain)(rtlsdr_dev_t*, int, int) = nullptr;   // optional (stage 1-6, tenths of a dB): the E4000's six IF stages only
     int (DECT2_CALL* reset_buffer)(rtlsdr_dev_t*) = nullptr;
     int (DECT2_CALL* read_async)(rtlsdr_dev_t*, cb_t, void*, uint32_t, uint32_t) = nullptr;
     int (DECT2_CALL* cancel_async)(rtlsdr_dev_t*) = nullptr;
@@ -98,7 +99,7 @@ struct RtlApi {
         if (ok) {
             lib.opt(get_tuner_type, "rtlsdr_get_tuner_type"); lib.opt(set_direct_sampling, "rtlsdr_set_direct_sampling"); lib.opt(set_bias_tee, "rtlsdr_set_bias_tee");
             lib.opt(set_freq_correction, "rtlsdr_set_freq_correction"); lib.opt(set_offset_tuning, "rtlsdr_set_offset_tuning");
-            lib.opt(read_sync, "rtlsdr_read_sync");
+            lib.opt(read_sync, "rtlsdr_read_sync"); lib.opt(set_tuner_if_gain, "rtlsdr_set_tuner_if_gain");
             lib.opt(check_dongle_model, "rtlsdr_check_dongle_model");
             blogLib = check_dongle_model != nullptr;
         }
@@ -187,6 +188,20 @@ std::vector<RadioSetting> rtlSettings(int tuner, RtlModel m) {
     // signals in direct sampling (V3 Q branch), where the tuner gain does nothing.
     v.push_back(boolSetting("rtlagc", "RTL AGC (chip gain)", "The RTL2832U chip's own automatic gain, after the tuner. Mostly for HF with direct sampling (RTL-SDR Blog V3 Q branch),\n"
                             "where the tuner gain has no effect and weak signals stay low. On VHF/UHF leave it off: it can overload on strong signals."));
+    // #233: the E4000's six IF gain stages by hand (librtlsdr rtlsdr_set_tuner_if_gain; the R820T family has no such stages). -1: left as the library sets them.
+    if (tuner == kE4000 && rtl().set_tuner_if_gain) {
+        struct If { int n; double lo, hi, step; const char* what; };
+        static const If kIf[] = {{1, -3, 6, 9, "after the mixer: -3 or 6 dB"}, {2, 0, 9, 3, "0 to 9 dB in 3 dB steps"}, {3, 0, 9, 3, "0 to 9 dB in 3 dB steps"},
+                                 {4, 0, 2, 1, "0 to 2 dB in 1 dB steps"}, {5, 3, 15, 3, "3 to 15 dB in 3 dB steps"}, {6, 3, 15, 3, "3 to 15 dB in 3 dB steps"}};
+        for (const If& f : kIf) {
+            RadioSetting r;
+            r.type = RadioSetting::Number; r.key = "gain.if" + std::to_string(f.n); r.label = "Gain stage: IF " + std::to_string(f.n); r.unit = "dB";
+            r.help = std::string("The E4000's IF amplifier stage ") + std::to_string(f.n) + " by hand (" + f.what + "). -1: left as it is (the default). "
+                     "A stage set by hand is written on the next start or retune and stays until the radio is opened again.";
+            r.minV = f.lo; r.maxV = f.hi; r.step = f.step; r.def = "-1";
+            v.push_back(r);
+        }
+    }
     if (m != kBlogV4 && m != kBlogV3)
         v.push_back(boolSetting("dxp", "Treat as DXpatrol SDR", "For a DXpatrol that shows up under a generic name: use its HF input (direct sampling, Q branch) below 28 MHz and the 100 kHz lower limit.\n(Tick it on the radio list entry of the DXpatrol; takes effect on the next start.)", m == kDxPatrol));
     return v;
@@ -364,6 +379,11 @@ protected:
             for (int v : g) if (std::abs(v - (int)std::lround(s.gainDb * 10)) < std::abs(best - (int)std::lround(s.gainDb * 10))) best = v;
             rtl().set_tuner_gain(dev_, best);
         }
+        if (tuner_ == kE4000 && rtl().set_tuner_if_gain)   // the IF stages set by hand (#233), after the tuner gain; -1 = not touched
+            for (int st = 1; st <= 6; st++) {
+                const double v = radioNumber(s, "gain.if" + std::to_string(st), -1);
+                if (v != -1) rtl().set_tuner_if_gain(dev_, st, (int)std::lround(v * 10));
+            }
         return true;
     }
     void closeDevice() override {

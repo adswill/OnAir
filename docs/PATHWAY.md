@@ -2382,3 +2382,9 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 ## 2026-11-15: DRM xHE-AAC sound on Android (#516)
 Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC decoder (drm_usac_ext.h: compressed frames out, PCM in, tried after libfdk-aac and before FFmpeg). Android registers its MediaCodec decoder there (audio/XheAacDecoder.kt, native/src/jni_xhe.cpp), using the ASC the DRM decoder already builds; a phone without a USAC decoder shows a plain status line on the DRM Audio card instead of silence.
 - Tested on the host with a fake decoder (test drm_xhe_ext: the hand-off, loss handling, the no-decoder line) and ASC bytes written out by hand from the specs. Kotlin and JNI were only syntax reviewed and compiled by the Android CI; nothing was tried on a phone, so real USAC decoding through MediaCodec (buffer timing, output format, which phones accept the config) is untested.
+
+## 2026-11-15: SPECTRAN gain fix and per-stage gain controls
+
+- SPECTRAN V6 / V6 ECO: the gain slider (the reference level) is now checked against what the device took, read back after every set. A gain control left on Peak / Power, a refused or clipped value is reported in the start / retune message and the log, and the V6's gain control is written as Manual at every start. The slider and Auto gain have a radio profile of their own (reference level plus the RF amplifier setting). Only tested against the fake RTSA API. The receive thread no longer starves a retune that waits for the device.
+- Gain row, Advanced: one slider per stage the driver lets you set by hand (Airspy LNA / mixer / VGA, the RTL-SDR E4000's six IF stages, the gain elements a USRP reports), with the step table, what each does, and "Reset to overall gain". A stage set by hand turns Auto gain off and is remembered with the radio (#233).
+
