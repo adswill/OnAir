@@ -98,7 +98,7 @@ void radar(App& a, ImVec2 size) {
     if (!t.refValid) dl->AddText(ImVec2(p0.x + 6 * gUi, p0.y + 36 * gUi), IM_COL32(150, 154, 158, 255), "no reference position");
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + 8 * gUi));
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
-    if (adsbmap::fullButton(S.full, "radar")) S.full = !S.full;
+    if (adsbmap::fullButton(S.full, "radar")) { S.full = !S.full; S.fullView = 2; }
     ImGui::PopStyleColor();
     ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + size.y));
     ImGui::Dummy(ImVec2(0, 0));   // an item after SetCursorScreenPos: ImGui otherwise reports "extend window/parent boundaries"
@@ -324,7 +324,7 @@ static void mapCorner(App& a, ImVec2 p0, ImVec2 size, bool wrongRef, double area
     });
     flow.item("full", [&] {
         ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
-        if (adsbmap::fullButton(S.full, "map")) S.full = !S.full;
+        if (adsbmap::fullButton(S.full, "map")) { S.full = !S.full; S.fullView = 0; }
         ImGui::PopStyleColor();
     });
     const bool small = size.y < 330 * gUi;   // a short map (the Unified layout gives the height to the spectrum): the options go behind one button
@@ -433,10 +433,9 @@ void mapView(App& a, ImVec2 size) {
 bool adsbFullMap(App& a, ImVec2 disp) {
     if (!S.full) return false;
     if (modeUi(a.family) != &kAdsbUi && modeUi(a.family) != &kModeAcUi) { S.full = false; return false; }   // Mode A/C draws this map too (#235: its full screen button did nothing)
-    // Mode A/C always shows the map; the ADS-B screen's own view (Live table by default) must not decide for it. It did, so the button in Mode A/C
-    // still did nothing unless the ADS-B screen had been left on Map or Radar (#442)
-    const int view = modeUi(a.family) == &kModeAcUi ? 0 : S.viewMode;
-    if (view != 0 && view != 2) { S.full = false; return false; }
+    // the map or radar whose button was pressed, not the ADS-B screen's own view: the Simple view's map pane and Mode A/C show the map while that
+    // view is on the Live table (its default), and taking it made their button do nothing (#442 for Mode A/C, #521 for the Simple view)
+    const int view = S.fullView == 2 ? 2 : 0;
     if (!ImGui::GetIO().WantTextInput && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId) && ImGui::IsKeyPressed(ImGuiKey_Escape, false)) { S.full = false; return false; }
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(disp);
