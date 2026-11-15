@@ -36,7 +36,9 @@ struct Device { void* d; };
 struct Config { void* d; };
 
 // One block of samples. IQ: num complex samples, fp32[k * stride] = I, fp32[k * stride + 1] = Q; the band starts at startFrequency and
-// stepFrequency is the sample rate (the centre is startFrequency + stepFrequency / 2). Times are the device's stream clock in seconds.
+// stepFrequency is the sample rate. In the iqreceiver mode the band is spanFrequency wide (stepFrequency / 1.5), so the centre is
+// startFrequency + spanFrequency / 2 (measured on a V6 ECO: step 3 MHz, span 2 MHz, start 4 MHz at a centre of 5 MHz). Times are the
+// device's stream clock in seconds.
 struct Packet {
     int64_t cbsize;   // sizeof(Packet): set before every call
     uint64_t streamID;

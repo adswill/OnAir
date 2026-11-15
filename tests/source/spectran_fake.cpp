@@ -302,9 +302,9 @@ FAKE_EXPORT Result AARTSAAPI_GetPacket(Device* d, int32_t channel, int32_t index
     p->cbsize = sizeof *p;
     p->startTime = f->startT + double(f->produced * n) / rate;
     p->endTime = p->startTime + double(n) / rate;
-    p->startFrequency = cf - rate / 2;
     p->stepFrequency = rate;
     p->spanFrequency = f->mode == "raw" ? rate : rate / 1.5;
+    p->startFrequency = cf - p->spanFrequency / 2;   // (as a V6 ECO: the band of the packet is the span, not the rate)
     p->num = n;
     p->size = 2;
     p->stride = 2;

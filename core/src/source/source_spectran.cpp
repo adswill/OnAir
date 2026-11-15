@@ -241,6 +241,11 @@ constexpr double kTxMinSpanHz = 20e6;
 // device stays at 5 MHz): the device stays at its lowest centre and runs `decim` times the rate, and the driver shifts the wanted
 // frequency to zero, filters and decimates. kEcoIqTopRateHz is where the ECO's iqreceiver rate stops growing (measured: 59.2137 Msps).
 constexpr int kLowMaxDecim = 4096;
+// A V6 ECO that was started above this and is then tuned below it while it streams often stays set up for where it started: what is
+// below about 4 MHz is then gone or weak and other carriers stand in its place (measured: started at 10.1 or 9 MHz and tuned to 5.5 or
+// 5 MHz, a broadcast carrier on 3.955 MHz was missing in 11 of 21 tries; started at 8 MHz or lower, or on the frequency itself, in
+// none of 19). Small steps afterwards do not cure it. So a retune down across it closes the device and starts it on the new frequency.
+constexpr double kEcoLowBandHz = 8e6;
 constexpr double kEcoIqTopRateHz = 59.2e6;
 constexpr double kRefTopDbm = 10;          // gain 0 dB = this reference level
 constexpr double kGainMaxDb = 60;
@@ -339,31 +344,42 @@ struct Dev {
         // "not found" or connects and never streams). Not while this program has another device open: its stream would be disturbed.
         bool othersOpen;
         { std::lock_guard<std::mutex> g(gKnownMu); othersOpen = gOpenCount > 0; }
-        // A V6 ECO that was last opened as a receiver mostly does not start as a transmitter, and the other way round (measured: it
-        // stays in its starting state, or runs and delivers nothing); AARTSAAPI_ResetDevices before the open cures it. The device is
-        // back on the bus about 3 s later.
+        // A V6 ECO that was last opened as a transmitter starts as a receiver and delivers nothing, and one that was last a receiver
+        // does not reach the running state as a transmitter at about every second start (both measured); AARTSAAPI_ResetDevices
+        // before the open in the other of the two cures it. The device is ready again about 3 s later.
         static std::map<std::string, bool> lastWasTx;   // (api.mu) by serial
         const bool tx = mode == "iqtransmitter";
         const auto last = lastWasTx.find(serial);
         const bool changed = last != lastWasTx.end() && last->second != tx;
         lastWasTx[serial] = tx;
-        aa::Result r = aa::kErrorNotFound;
         if ((changed || resetFirst) && !othersOpen && api.ResetDevices) {
             fprintf(stderr, "SPECTRAN: %s is reset before it is opened as a %s\n", serial.c_str(), tx ? "transmitter" : "receiver");
             fflush(stderr);
-            resetFirst = false;
             api.ResetDevices(&api.h);
-            std::this_thread::sleep_for(std::chrono::milliseconds(2500));
-            for (int i = 0; i < 12; i++) {
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                api.RescanDevices(&api.h, 500);
-                r = api.OpenDevice(&api.h, &d, wtype.c_str(), wserial.c_str());
-                if (!aa::failed(r)) break;
-            }
-        } else {
-            if (!othersOpen) api.RescanDevices(&api.h, 500);
-            r = api.OpenDevice(&api.h, &d, wtype.c_str(), wserial.c_str());
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
         }
+        resetFirst = false;
+        // The library looks for the devices again, and the device has to be in its list and ready, before every open. Measured on a V6
+        // ECO: an open while the library is still looking (kRetry), or while the device is not ready yet (right after it was closed,
+        // reset or plugged in), fails with "not found" or connects and delivers nothing. Ready comes 2.7 s after a reset.
+        if (!othersOpen) {
+            const std::wstring wfamily = widen(type);
+            const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(8000);
+            for (;;) {
+                const bool done = api.RescanDevices(&api.h, 500) != aa::kRetry;
+                bool ready = false;
+                for (int32_t i = 0; i < 8 && !ready; i++) {
+                    aa::DeviceInfo di;
+                    memset(&di, 0, sizeof di);
+                    di.cbsize = sizeof di;
+                    if (api.EnumDevice(&api.h, wfamily.c_str(), i, &di) != aa::kOk) break;
+                    if (wserial == di.serialNumber) ready = di.ready;
+                }
+                if ((done && ready) || std::chrono::steady_clock::now() > end) break;
+                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            }
+        }
+        aa::Result r = api.OpenDevice(&api.h, &d, wtype.c_str(), wserial.c_str());
         if (aa::failed(r)) { err = "SPECTRAN " + serial + ": cannot open it as " + type + "/" + mode + " (" + hexResult(r) + ")"; return false; }
         open = true;
         { std::lock_guard<std::mutex> g(gKnownMu); gOpenCount++; }
@@ -494,10 +510,33 @@ protected:
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
         { std::lock_guard<std::mutex> lk(api_); lastSet_ = s; }
         if (live) {
+            bool startAgain = false;
             {
                 std::lock_guard<std::mutex> lk(api_);
                 if (!dev_.open) return false;
-                if (plan(s).decim == decim_) return apply(s, err, true);
+                const Plan p = plan(s);
+                startAgain = eco_ && mode_ == "iq" && startedHz_ > kEcoLowBandHz && p.centre < kEcoLowBandHz;
+                if (!startAgain && p.decim == decim_) return apply(s, err, true);
+            }
+            if (startAgain) {
+                // (see kEcoLowBandHz; the stream thread itself calls this after it reopened a lost device: then it was just started there)
+                const bool self = std::this_thread::get_id() == th_.get_id();
+                if (self) { std::lock_guard<std::mutex> lk(api_); return apply(s, err, true); }
+                fprintf(stderr, "SPECTRAN: tuned from above %s to below it: the device is started again on the new frequency\n", mhz(kEcoLowBandHz).c_str());
+                fflush(stderr);
+                stopStream();
+                closeDevice();
+                // (an open right after the close mostly delivers nothing, which is found out only 6 s later: the reset comes first)
+                { std::lock_guard<std::mutex> lk(api_); dev_.resetFirst = true; }
+                bool ok = false;
+                for (int i = 0; i < 3 && !ok; i++) {
+                    err.clear();
+                    ok = openDevice(s, err);
+                    if (!ok) { closeDevice(); std::this_thread::sleep_for(std::chrono::milliseconds(500)); }
+                }
+                if (!ok) return false;
+                startStream();
+                return waitForStreamStart(err);
             }
             // across the device's lowest centre, or far enough below it for another span: the stream is stopped for it, as for a new rate
             // (the stream thread itself calls this after it reopened a lost device: nothing to stop then)
@@ -660,8 +699,13 @@ private:
         }
         aa::Result r = dev_.setNum(L"main/centerfreq", f);
         if (aa::failed(r)) { err = "SPECTRAN: the device refused " + mhz(f) + " (" + hexResult(r) + ")"; return false; }
+        if (!live && !dev_.started) startedHz_ = f;   // (a set-up before the start: where the device will be started)
         shift_ = lowPlan.shift;
+        wantedHz_ = lowPlan.centre + lowPlan.shift;
+        deviceHz_ = f;
         ddcRate_ = 0;   // (the next packet tunes the shift)
+        saidOff_ = false;
+        if (live) expectUntil_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
         if (const Model* m = modelOf(type_)) addNote(err, freqSpecNote(eco_ ? "SPECTRAN V6 ECO" : "SPECTRAN V6", s.centerHz, m->minHz, m->maxHz));
         const std::string agc = radioOption(s, "agc", "keep");
         if (agc != "keep") dev_.setStr(L"device/gaincontrol", widen(agc));
@@ -726,13 +770,30 @@ private:
         const int64_t stride = pk.stride >= 2 ? pk.stride : 2;
         float sc;
         { std::lock_guard<std::mutex> g(scaleMu_); sc = scale_; }
+        // where the device is, by its own word: the centre and the rate of this packet. Half a second after a set-up or a retune they
+        // have to be what was asked for; when they are not, the log says so once (the picture is then on another frequency or scale).
+        const double at = pk.spanFrequency > 0 && pk.startFrequency > 0 ? pk.startFrequency + pk.spanFrequency / 2 : 0;
+        if (!saidOff_ && mode_ == "iq" && std::chrono::steady_clock::now() > expectUntil_) {
+            const bool rateOff = expectRate_ > 0 && pk.stepFrequency > 0 && std::fabs(pk.stepFrequency - expectRate_) > 1.0;
+            const bool centreOff = at > 0 && deviceHz_ > 0 && std::fabs(at - deviceHz_) > 1000.0;
+            if (rateOff || centreOff) {
+                saidOff_ = true;
+                fprintf(stderr, "SPECTRAN: the device is at %s and %.6g Msps, where %s and %.6g Msps were asked for\n", mhz(at).c_str(), pk.stepFrequency / 1e6,
+                        mhz(deviceHz_).c_str(), expectRate_ / 1e6);
+                fflush(stderr);
+            }
+        }
         if (decim_ > 1) {
             // below the device's lowest centre: shifted to zero and decimated. The filter takes real samples, so I and Q go through it one
             // after the other, each at half the gain: out = F(I) + j F(Q)
-            if (pk.stepFrequency > 0 && pk.stepFrequency != ddcRate_) {
+            // (the shift is the wanted frequency against the centre this packet says it has, which is the device's lowest one unless
+            // the packet is still from before a change)
+            const double shift = at > 0 ? wantedHz_ - at : shift_;
+            if (pk.stepFrequency > 0 && (pk.stepFrequency != ddcRate_ || std::fabs(shift - ddcShift_) > 0.5)) {
                 ddcRate_ = pk.stepFrequency;
-                ddcI_.tune(ddcRate_, shift_, 0.5);
-                ddcQ_.tune(ddcRate_, shift_, 0.5);
+                ddcShift_ = shift;
+                ddcI_.tune(ddcRate_, shift, 0.5);
+                ddcQ_.tune(ddcRate_, shift, 0.5);
             }
             if (!(ddcRate_ > 0)) return;
             ddcI_.process(pk.fp32, (size_t)pk.num, (size_t)stride, partI_);
@@ -760,6 +821,9 @@ private:
     // below the device's lowest centre (api_): that centre (0: not known, nothing is shifted), the wanted frequency against it, the
     // decimation (1: the device is on the frequency) and the packet rate the shift was last tuned for
     double centreMin_ = 0, shift_ = 0, ddcRate_ = 0;
+    double startedHz_ = 0;                                   // the device's centre when it was last started (kEcoLowBandHz)
+    double wantedHz_ = 0, deviceHz_ = 0, ddcShift_ = 0;     // the frequency asked for, the device's centre for it, the shift last tuned
+    bool saidOff_ = false;                                   // the log already says that the device is not where it was asked to be
     TuneSettings lastSet_;                                   // (api_) what was last asked for: for the open after a reset
     double expectRate_ = 0;                                  // the packet rate planned at the last set-up (0: any)
     std::chrono::steady_clock::time_point expectUntil_{};
