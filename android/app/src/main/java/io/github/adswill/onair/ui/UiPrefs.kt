@@ -28,18 +28,24 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.IOException
 
-/** A network radio the user added (rtl_tcp or SpyServer), shown in the radio picker. */
-data class NetworkRadio(val kind: SourceKind, val name: String, val host: String, val port: Int) {
-    val id: String get() = "${kind.code}|$host|$port"
-    fun encode(): String = listOf(kind.code.toString(), name.replace('|', '/').replace(';', ','), host, port.toString()).joinToString("|")
+/**
+ * A network radio the user added (rtl_tcp, SpyServer, SDR++ server), shown in the radio picker. rtl_tcp and SpyServer have their own source
+ * kinds; other types go through [SourceKind.NETWORK] and [netKey] is the core's type key ("sdrpp", netradio/NetRadioType.key).
+ */
+data class NetworkRadio(val kind: SourceKind, val name: String, val host: String, val port: Int, val netKey: String = "") {
+    val id: String get() = "${kind.code}$netKey|$host|$port"
+    fun encode(): String = listOf(kind.code.toString(), name.replace('|', '/').replace(';', ','), host, port.toString()).joinToString("|") +
+        if (netKey.isNotEmpty()) "|$netKey" else ""
 
     companion object {
         fun decode(s: String): NetworkRadio? {
             val f = s.split('|')
-            if (f.size != 4) return null
+            if (f.size != 4 && f.size != 5) return null
             val kind = SourceKind.of(f[0].toIntOrNull() ?: return null)
             if (!kind.isNetwork) return null
-            return NetworkRadio(kind, f[1], f[2], f[3].toIntOrNull()?.takeIf { it in 1..65535 } ?: return null)
+            val key = if (f.size == 5) f[4] else ""
+            if ((kind == SourceKind.NETWORK) != key.isNotEmpty()) return null
+            return NetworkRadio(kind, f[1], f[2], f[3].toIntOrNull()?.takeIf { it in 1..65535 } ?: return null, key)
         }
         fun decodeAll(s: String): List<NetworkRadio> = s.split(";;").mapNotNull { if (it.isBlank()) null else decode(it) }
         fun encodeAll(l: List<NetworkRadio>): String = l.joinToString(";;") { it.encode() }

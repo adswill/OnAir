@@ -80,6 +80,7 @@ is listed but refused: it needs SoapySDR, which the app does not have). The list
 (`rtltcp,host,port;kiwisdr,host,port,password`) plus the user's labels (`Settings.netRadios`, `netSelected`), so the format is the one
 the desktop and the Rust parser use. `AddNetworkRadioForm` is the data model of the "Add network radio" dialog (fields, `withType`
 keeps the default port in step, `validate` gives per-field plain-language errors; "host:port" pasted into the host field is split).
+The radio screen's "Add a network radio" dialog offers rtl_tcp, SpyServer and SDR++ server; an SDR++ server is stored in the UI list with source kind NETWORK and type key `sdrpp` (`ui/UiPrefs.kt`), and choosing it adds it to the core's list (`ReceiverViewModel.useNetworkRadio`). Default port 5259; the server takes one client at a time.
 `RadioRepository.addNetworkRadio / removeNetworkRadio / selectNetworkRadio / probe / describe`. The connect timeout is the core's
 8 s (`source_rtltcp.cpp` `kConnectMs`); `probe` uses the same.
 

@@ -2388,3 +2388,8 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 - SPECTRAN V6 / V6 ECO: the gain slider (the reference level) is now checked against what the device took, read back after every set. A gain control left on Peak / Power, a refused or clipped value is reported in the start / retune message and the log, and the V6's gain control is written as Manual at every start. The slider and Auto gain have a radio profile of their own (reference level plus the RF amplifier setting). Only tested against the fake RTSA API. The receive thread no longer starves a retune that waits for the device.
 - Gain row, Advanced: one slider per stage the driver lets you set by hand (Airspy LNA / mixer / VGA, the RTL-SDR E4000's six IF stages, the gain elements a USRP reports), with the step table, what each does, and "Reset to overall gain". A stage set by hand turns Auto gain off and is remembered with the radio (#233).
 
+
+## 2026-11-15: SDR++ server on Android, ELAD FDM-DUO rig hint
+
+- Android: the "Add a network radio" dialog now offers SDR++ server (default port 5259) next to rtl_tcp and SpyServer, and mDNS discovery (opt-in) lists `_sdrpp._tcp` servers. The core's SDR++ client (test_sdrpp) was already in the Android library; only the screen did not offer it (#473). Kotlin tests added, not run locally.
+- ELAD FDM-DUO (#251): no public IQ protocol or SDK exists, so no native driver. The DUO's CAT (documented in its manual) is a Hamlib/TS-480 rig: a port named ELAD / FDM-DUO now gets the FDM-DUO model first, then TS-480 (test rig_control); IQ stays on its USB sound card. DEVICES.md rewritten with the recipe and what is missing.

@@ -102,14 +102,14 @@ fun RadioScreen(vm: ReceiverViewModel, pickFile: () -> Unit, modifier: Modifier 
         SourceRow(OnAirIcons.Wave, stringResource(R.string.source_synth), stringResource(R.string.source_synth_short), s.source == SourceKind.TEST_SIGNAL) { vm.chooseSource(SourceKind.TEST_SIGNAL) }
         UsbSection()
         for (r in ui.networkRadios) {
-            val sel = s.source == r.kind && endpointOf(s.source, s.rtlHost, s.rtlPort, s.spyHost, s.spyPort) == (r.host to r.port)
+            val sel = isSelected(r, s)
             SourceRow(
-                OnAirIcons.Network, r.name.ifBlank { r.host }, kindName(r.kind) + "  " + r.host + ":" + r.port, sel,
+                OnAirIcons.Network, r.name.ifBlank { r.host }, kindName(r) + "  " + r.host + ":" + r.port, sel,
                 trailing = { OnAirIconButton(OnAirIcons.Close, stringResource(R.string.cd_remove_radio, r.name.ifBlank { r.host }), framed = false) { vm.removeNetworkRadio(r) } },
             ) { vm.useNetworkRadio(r) }
         }
-        val unsaved = s.source.isNetwork && ui.networkRadios.none { it.kind == s.source && (it.host to it.port) == endpointOf(s.source, s.rtlHost, s.rtlPort, s.spyHost, s.spyPort) }
-        if (unsaved) SourceRow(OnAirIcons.Network, kindName(s.source), stringResource(R.string.network_unsaved), true) {}
+        val unsaved = s.source.isNetwork && ui.networkRadios.none { isSelected(it, s) }
+        if (unsaved) SourceRow(OnAirIcons.Network, kindName(NetworkRadio(s.source, "", "", 0, if (s.source == SourceKind.NETWORK) "sdrpp" else "")), stringResource(R.string.network_unsaved), true) {}
         SourceRow(OnAirIcons.File, stringResource(R.string.source_file), st.file?.name ?: stringResource(R.string.no_file), s.source == SourceKind.IQ_FILE) { vm.chooseSource(SourceKind.IQ_FILE) }
         Spacer(Modifier.height(6.dp))
         PanelButton(stringResource(R.string.add_network_radio), modifier = Modifier.fillMaxWidth()) { adding = true }
@@ -188,11 +188,20 @@ fun RadioScreen(vm: ReceiverViewModel, pickFile: () -> Unit, modifier: Modifier 
     ) { r -> vm.addNetworkRadio(r); vm.useNetworkRadio(r); adding = false }
 }
 
+/** Whether the saved radio is the one in use: rtl_tcp and SpyServer by their endpoint, a type of the core's list by the list's selected radio. */
+private fun isSelected(r: NetworkRadio, s: io.github.adswill.onair.settings.Settings): Boolean {
+    if (s.source != r.kind) return false
+    if (r.kind != SourceKind.NETWORK) return endpointOf(s.source, s.rtlHost, s.rtlPort, s.spyHost, s.spyPort) == (r.host to r.port)
+    val list = io.github.adswill.onair.netradio.NetworkRadioList.decode(s.netRadios)
+    val cur = list.getOrNull(s.netSelected) ?: list.firstOrNull() ?: return false
+    return cur.type.key == r.netKey && cur.host == r.host && cur.portOrDefault == r.port
+}
+
 private fun endpointOf(kind: SourceKind, rh: String, rp: Int, sh: String, sp: Int): Pair<String, Int> =
     if (kind == SourceKind.SPYSERVER) sh to sp else rh to rp
 
 @Composable
-private fun kindName(k: SourceKind): String = stringResource(if (k == SourceKind.SPYSERVER) R.string.source_spy else R.string.source_rtltcp)
+private fun kindName(r: NetworkRadio): String = stringResource(when { r.kind == SourceKind.NETWORK -> R.string.source_sdrpp; r.kind == SourceKind.SPYSERVER -> R.string.source_spy; else -> R.string.source_rtltcp })
 
 /** One selectable source: icon, name, a line of detail, the selected mark; the whole row is the target (radio-button semantics). */
 @Composable
@@ -286,6 +295,7 @@ private fun SettingRow(vm: ReceiverViewModel, kind: SourceKind, radio: RadioOpti
 fun AddNetworkRadioDialog(discoveryOn: Boolean, onDiscovery: (Boolean) -> Unit, onDismiss: () -> Unit, onAdd: (NetworkRadio) -> Unit) {
     val p = LocalPalette.current
     var kind by remember { mutableStateOf(SourceKind.RTL_TCP) }
+    var netKey by remember { mutableStateOf("") }   // "sdrpp" for an SDR++ server (kind NETWORK), else ""
     var name by remember { mutableStateOf("") }
     var host by remember { mutableStateOf("") }
     var port by remember { mutableStateOf("1234") }
@@ -297,12 +307,13 @@ fun AddNetworkRadioDialog(discoveryOn: Boolean, onDiscovery: (Boolean) -> Unit, 
         title = { Text(stringResource(R.string.add_network_radio)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                val kinds = listOf(SourceKind.RTL_TCP, SourceKind.SPYSERVER)
-                Dropdown(kinds.map { kindName(it) }, kinds.indexOf(kind), {
-                    val was = kind
+                val kinds = listOf(SourceKind.RTL_TCP, SourceKind.SPYSERVER, SourceKind.NETWORK)
+                Dropdown(kinds.map { kindName(NetworkRadio(it, "", "", 0, if (it == SourceKind.NETWORK) "sdrpp" else "")) }, kinds.indexOf(kind), {
                     kind = kinds[it]
-                    if (was != kind && (port == "1234" || port == "5555")) port = if (kind == SourceKind.SPYSERVER) "5555" else "1234"
+                    netKey = if (kind == SourceKind.NETWORK) "sdrpp" else ""
+                    if (port == "1234" || port == "5555" || port == "5259") port = when (kind) { SourceKind.SPYSERVER -> "5555"; SourceKind.NETWORK -> "5259"; else -> "1234" }
                 }, label = stringResource(R.string.network_kind))
+                if (kind == SourceKind.NETWORK) Label(stringResource(R.string.sdrpp_hint), color = p.muted)
                 Spacer(Modifier.height(6.dp))
                 TextBox(name, { name = it }, label = stringResource(R.string.network_name), placeholder = stringResource(R.string.network_name_hint))
                 Spacer(Modifier.height(6.dp))
@@ -314,14 +325,14 @@ fun AddNetworkRadioDialog(discoveryOn: Boolean, onDiscovery: (Boolean) -> Unit, 
                 SwitchRow(stringResource(R.string.discovery_title), discoveryOn, onDiscovery, help = stringResource(R.string.discovery_help))
                 if (discoveryOn) {
                     if (found.isEmpty()) Label(stringResource(R.string.discovery_searching))
-                    for (r in found) SourceRow(OnAirIcons.Network, r.name, kindName(r.kind) + "  " + r.host + ":" + r.port, r.host == host && portN == r.port) {
-                        kind = r.kind; name = r.name; host = r.host; port = r.port.toString()
+                    for (r in found) SourceRow(OnAirIcons.Network, r.name, kindName(r) + "  " + r.host + ":" + r.port, r.host == host && portN == r.port) {
+                        kind = r.kind; netKey = r.netKey; name = r.name; host = r.host; port = r.port.toString()
                     }
                 }
                 Label(stringResource(R.string.network_privacy), Modifier.padding(top = 6.dp), color = p.muted)
             }
         },
-        confirmButton = { TextButton({ if (ok) onAdd(NetworkRadio(kind, name.trim(), host.trim(), portN!!)) }, enabled = ok) { Text(stringResource(R.string.add)) } },
+        confirmButton = { TextButton({ if (ok) onAdd(NetworkRadio(kind, name.trim(), host.trim(), portN!!, netKey)) }, enabled = ok) { Text(stringResource(R.string.add)) } },
         dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
