@@ -52,14 +52,16 @@ class GthDecoder : public SondeBitDecoder {
 public:
     const char* type() const override { return "GTH"; }
     double symbolRate() const override { return 2400; }
+    bool midpointSlicer() const override { return true; }   // the short preamble does not settle the mean: slice between the extremes
     void reset() override { hdr_ = 0; run_ = false; bits_.clear(); }
     void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override {
         for (size_t i = 0; i < n; i++) {
             if (!run_) {
                 hdr_ = (hdr_ << 1) | (uint64_t)(sym[i] & 1);
-                const uint64_t v = hdr_ ^ headerWord();
-                if (__builtin_popcountll(v) <= 4) { run_ = true; inv_ = false; bits_.clear(); }
-                else if (__builtin_popcountll(~v) <= 4) { run_ = true; inv_ = true; bits_.clear(); }
+                // the last 32 bits (AA 2D D4 63) decide: the 40 bit preamble is short and its first bits are often lost while the slicer settles
+                const uint64_t v = (hdr_ ^ headerWord()) & 0xFFFFFFFFull;
+                if (__builtin_popcountll(v) <= 3) { run_ = true; inv_ = false; bits_.clear(); }
+                else if (__builtin_popcountll(~v & 0xFFFFFFFFull) <= 3) { run_ = true; inv_ = true; bits_.clear(); }
                 continue;
             }
             bits_.push_back((uint8_t)((sym[i] & 1) ^ (inv_ ? 1 : 0)));

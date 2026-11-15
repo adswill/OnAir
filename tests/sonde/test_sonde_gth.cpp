@@ -43,7 +43,7 @@ int main() {
         std::vector<uint8_t> s;
         for (int i = 0; i < 300; i++) s.push_back((uint8_t)((i * 7 + i / 3) & 1));
         std::vector<uint8_t> a = gthSymbols(t, 100, 0x26407413u), b = gthSymbols(t, 101, 0x26407413u);
-        b[3] ^= 1; b[20] ^= 1;
+        b[3] ^= 1; b[30] ^= 1;
         for (auto& v : b) v ^= (uint8_t)inv;
         s.insert(s.end(), a.begin(), a.end());
         for (int i = 0; i < 100; i++) s.push_back((uint8_t)(i & 1));
