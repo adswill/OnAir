@@ -386,12 +386,12 @@ void synth(App&, bool&) {
 }
 
 // the whole-capture search: on by itself on the L-band downlink (each satellite somewhere in 1544 - 1545 MHz), or by hand
-bool gWideSet = false, gWideLoaded = false;
+bool gWideSet = false, gWideLoaded = false, gExportSet = false;
 bool wideWanted(const App& a) { return gWideSet || (a.freqMhz > 1543.5 && a.freqMhz < 1546.0); }
 
 void tick(App& a) {
-    if (!gWideLoaded) { gWideLoaded = true; gWideSet = plat::prefs().getB("sarsatWide", false); }
-    if (a.engine.running()) a.engine.sarsat().setWideSearch(wideWanted(a));
+    if (!gWideLoaded) { gWideLoaded = true; gWideSet = plat::prefs().getB("sarsatWide", false); gExportSet = plat::prefs().getB("sarsatExport", false); }
+    if (a.engine.running()) { a.engine.sarsat().setWideSearch(wideWanted(a)); a.engine.sarsat().setBurstExport(gExportSet ? plat::dataDir() + "/sarsat" : std::string()); }
 }
 
 // issue #214: the satellites repeat the 406.0 - 406.1 MHz band on their L-band downlink (each one at its own place in 1544 - 1545 MHz)
@@ -418,6 +418,12 @@ void tuner(App& a, bool& retune) {
     if (automatic) { flowNext(4 * gUi); ImGui::TextDisabled("%s", tr("(on by itself for the downlink)")); }
     if (live(a) && a.rx.sarsat.wideSpanHz > 0) { flowNext(6 * gUi); ImGui::TextDisabled(tr("%.0f kHz searched"), a.rx.sarsat.wideSpanHz / 1e3); }
     flowEnd();
+    // issue #214: the burst's baseband as a WAV file (I/Q, 32 kHz, carrier at zero), to study the signal elsewhere
+    const std::string dir = plat::dataDir() + "/sarsat";
+    bool ex = gExportSet;
+    if (ImGui::Checkbox(tr("Save every burst as a baseband file##sarexp"), &ex)) { gExportSet = ex; plat::prefs().setB("sarsatExport", ex); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("Each burst that looks like a beacon, decoded or not, is saved as a WAV file (I and Q, 32 kHz, the carrier at zero, 400 bit/s phase modulation) in %s"), dir.c_str());
+    if (live(a) && a.rx.sarsat.exportedBursts > 0) { ImGui::SameLine(); ImGui::TextDisabled(tr("%llu saved, last: %s"), (unsigned long long)a.rx.sarsat.exportedBursts, a.rx.sarsat.lastExport.c_str()); }
 }
 
 } // namespace

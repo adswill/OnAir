@@ -921,6 +921,8 @@ case 93: {
     cardIf(o, "Input Rate", t.inputRate);
     cardIf(o, "Wide Span Hz", t.wideSpanHz);
     cardIf(o, "Wide Channels", t.wideChannels);
+    cardIf(o, "Exported Bursts", t.exportedBursts);
+    cardIf(o, "Last Export", t.lastExport);
     { Table tb({"Wall Time", "Time Sec", "Snr Db", "Level Db", "Cfo Hz", "Combined"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.timeSec), cell(e.snrDb), cell(e.levelDb), cell(e.cfoHz), cell(e.combined)}); } if (n) addTable(o, "Log", tb); }
     break;
 }

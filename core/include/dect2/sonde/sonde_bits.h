@@ -59,6 +59,7 @@ std::unique_ptr<SondeBitDecoder> makeImetDecoder();     // iMet-1 / iMet-4
 std::unique_ptr<SondeBitDecoder> makeImet54Decoder();
 std::unique_ptr<SondeBitDecoder> makeMrzDecoder();
 std::unique_ptr<SondeBitDecoder> makeMeiseiDecoder();   // iMS-100
+std::unique_ptr<SondeBitDecoder> makeGthDecoder();      // Chinese GTH family: HT03G-1U / GTH3 / GTH6 (2400 baud, 109 byte frames)
 
 // What the test signal wants a sonde to send
 struct SondeTruth {
@@ -112,6 +113,9 @@ std::vector<uint8_t> mrzSymbols(const SondeTruth& t, int sub, bool latLon);
 std::vector<uint8_t> imet54FrameBytes(const SondeTruth& t, int serial);
 std::vector<uint8_t> imet54Symbols(const SondeTruth& t, int serial);
 std::vector<uint8_t> meiseiSymbols(const SondeTruth& t, int cnt, int serial);
+bool gthParseFrame(const uint8_t* f, size_t n, SondeFix& out);                 // a whole 109 byte frame (preamble, sync, data); true when the CRC is right
+std::vector<uint8_t> gthFrameBytes(const SondeTruth& t, int frame, uint32_t sn);   // 109 bytes
+std::vector<uint8_t> gthSymbols(const SondeTruth& t, int frame, uint32_t sn);      // on-air bits, 2400 a second
 uint16_t sondeM10Checksum(const uint8_t* msg, size_t len);
 // Hamming(8,4) of the DFM frames: codeword = d0 d1 d2 d3 p0 p1 p2 p3 (d0 first on air), nibble bit 3 = d0.
 uint8_t sondeHamming84Encode(uint8_t nibble);

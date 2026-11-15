@@ -2332,3 +2332,10 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
 - Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.
+
+## 2026-11-15: Android update banner, pager scan, GTH sondes, SARSAT baseband export
+
+- #183: the phone's in-app update (check, mirror fallback, SHA-256 and signature check, system installer) already lived in Settings > Updates; a banner on the main screen now shows when a newer version is available or downloaded and opens it. Kotlin was only syntax reviewed; the android workflow compiles it.
+- #269: "Scan the span for pagers" in the pager screens (wide captures). A PagerFinder runs the whole-span pager bank beside the mode for up to 90 s and lists each carrier with the speed that decoded most pages (POCSAG 512 / 1200 / 2400, FLEX 1600 / 3200 / 6400) and its page count; click to tune. Test pager_find, simulated signals only.
+- #214 (a): new sonde type "GTH" for the Huayuntianyi HT03G / GTH3 and the Changwang GTH6 frame (2400 baud, 109 bytes, CRC-16): position, speed, time and, when the fields look plausible, temperature, humidity and pressure. Frame layout from the public rs1729 decoder (GPL-3, credited). The CF-06-AH frame (Reed-Solomon, GPS week) is not decoded. Test sonde_gth, simulated frames only: no recording of a GTH sonde was available; what the GTH6 PTU fields mean in the 2026 batch is not confirmed.
+- #214 (b): "Save every burst as a baseband file" in the SARSAT screen writes each beacon-like burst (decoded or not) as a 2 channel float WAV at 32 kHz with the carrier at zero, to the sarsat folder of the data directory. Test sarsat_export, simulated signal.

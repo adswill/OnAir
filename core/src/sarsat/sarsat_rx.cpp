@@ -17,6 +17,9 @@
 #include <cmath>
 #include <complex>
 #include <ctime>
+#include <cstdio>
+#include <filesystem>
+#include <memory>
 #include <mutex>
 
 namespace dect2 {
@@ -413,6 +416,34 @@ bool demodBurst2(const std::vector<cf32>& x, double carrierHz, Beacon& out, Soft
 
 }  // namespace sarsat
 
+namespace {
+// The shared state of the baseband export: one per receiver, handed to the children of the whole-capture search.
+struct ExportState {
+    std::mutex mu;
+    std::string dir, last;
+    uint64_t count = 0, seq = 0;
+};
+
+// 2 channel IEEE float WAV, peak scaled to 0.9; returns false on any write error
+bool writeBasebandWav(const std::string& path, const std::vector<cf32>& y, double rate) {
+    float peak = 0;
+    for (const cf32& v : y) peak = std::max(peak, std::max(std::fabs(v.real()), std::fabs(v.imag())));
+    const float g = peak > 0 ? 0.9f / peak : 1.f;
+    FILE* fp = std::fopen(path.c_str(), "wb");
+    if (!fp) return false;
+    auto u32 = [&](uint32_t v) { uint8_t b[4] = {(uint8_t)v, (uint8_t)(v >> 8), (uint8_t)(v >> 16), (uint8_t)(v >> 24)}; return std::fwrite(b, 1, 4, fp) == 4; };
+    auto u16 = [&](uint16_t v) { uint8_t b[2] = {(uint8_t)v, (uint8_t)(v >> 8)}; return std::fwrite(b, 1, 2, fp) == 2; };
+    const uint32_t dataBytes = (uint32_t)(y.size() * 8), sr = (uint32_t)std::lround(rate);
+    bool ok = std::fwrite("RIFF", 1, 4, fp) == 4 && u32(4 + 26 + 12 + 8 + dataBytes) && std::fwrite("WAVEfmt ", 1, 8, fp) == 8 && u32(18) && u16(3) && u16(2) && u32(sr) && u32(sr * 8) && u16(8) && u16(32) && u16(0)
+              && std::fwrite("fact", 1, 4, fp) == 4 && u32(4) && u32((uint32_t)y.size()) && std::fwrite("data", 1, 4, fp) == 4 && u32(dataBytes);
+    std::vector<float> buf;
+    buf.reserve(y.size() * 2);
+    for (const cf32& v : y) { buf.push_back(v.real() * g); buf.push_back(v.imag() * g); }   // little endian host (every supported platform)
+    ok = ok && std::fwrite(buf.data(), sizeof(float), buf.size(), fp) == buf.size();
+    return std::fclose(fp) == 0 && ok;
+}
+} // namespace
+
 struct SarsatReceiver::Impl {
     std::mutex mu;
     SarsatTelemetry tel;
@@ -426,6 +457,7 @@ struct SarsatReceiver::Impl {
     std::vector<uint64_t> kidSeq;
     std::vector<SarsatEntry> pending;          // decoded in some channel, waiting 1.5 s for a better copy of the same burst
     double wideSpan = 0;
+    std::shared_ptr<ExportState> ex = std::make_shared<ExportState>();
 
     // mixer and the average down to 32 kHz
     double loRe = 1, loIm = 0, stRe = 1, stIm = 0;
@@ -564,9 +596,33 @@ struct SarsatReceiver::Impl {
 
     double timeSec() const { return (double)n32 / kDet; }
 
+    void exportBurst(const std::vector<cf32>& y, const std::string& hexId, double carrier) {
+        std::string dir;
+        uint64_t n;
+        { std::lock_guard<std::mutex> lk(ex->mu); dir = ex->dir; n = ++ex->seq; }
+        if (dir.empty()) return;
+        std::error_code ec;
+        std::filesystem::create_directories(dir, ec);
+        const time_t now = std::time(nullptr);
+        struct tm g;
+#ifdef _WIN32
+        gmtime_s(&g, &now);
+#else
+        gmtime_r(&now, &g);
+#endif
+        char name[200];
+        snprintf(name, sizeof name, "sarsat-%04d%02d%02d-%02d%02d%02d-%03llu-c%+.0fHz-%s.wav", g.tm_year + 1900, g.tm_mon + 1, g.tm_mday, g.tm_hour, g.tm_min, g.tm_sec,
+                 (unsigned long long)(n % 1000), offHz + carrier, hexId.empty() ? "undecoded" : hexId.c_str());
+        const std::string path = dir + "/" + name;
+        if (!writeBasebandWav(path, y, sarsat::kFs)) { std::remove(path.c_str()); if (log) log("COSPAS-SARSAT: the baseband file could not be written to " + dir); return; }
+        std::lock_guard<std::mutex> lk(ex->mu);
+        ex->count++; ex->last = path;
+    }
+
     void publish() {
         tel.timeSec = timeSec();
         tel.state = rateSet ? (timeSec() - lastDecodeSec < 300 ? 2 : 1) : 0;
+        { std::lock_guard<std::mutex> lk(ex->mu); tel.exportedBursts = ex->count; tel.lastExport = ex->last; }
         tel.seq++;
     }
 
@@ -683,6 +739,7 @@ struct SarsatReceiver::Impl {
             } else if (plausible) {
                 tel.blocksBad++;
             }
+            if (plausible || got) exportBurst(y, got ? b.hexId : std::string(), carrier);
             if (!plausible) falseBank += std::chrono::duration<double>(std::chrono::steady_clock::now() - wall0).count();
             tel.cfoHz = carrier; tel.snrDb = peakSnr; tel.levelDb = peakLevel;
         }
@@ -875,6 +932,7 @@ void SarsatReceiver::setRepairCostLimit(double perBit) {
     p_->costPerBit = perBit;
     for (auto& k : p_->kids) k->setRepairCostLimit(perBit);
 }
+void SarsatReceiver::setBurstExport(const std::string& dir) { std::lock_guard<std::mutex> lk(p_->mu); std::lock_guard<std::mutex> lk2(p_->ex->mu); p_->ex->dir = dir; }
 void SarsatReceiver::setWideSearch(bool on) { std::lock_guard<std::mutex> lk(p_->mu); if (on != p_->wide) { p_->wide = on; p_->kidsDirty = true; } }
 bool SarsatReceiver::wideSearch() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->wide; }
 double SarsatReceiver::wideSpanHz() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->wide ? p_->wideSpan : 0; }
@@ -899,6 +957,7 @@ void SarsatReceiver::feed(const cf32* x, size_t n) {
                 r->setRepeatCombining(m.combineOn, m.perMin, m.perMax);
                 r->setWeakBurstPath(m.fullWindow, m.coherentOn);
                 r->setRepairCostLimit(m.costPerBit);
+                r->p_->ex = m.ex;
                 m.kids.push_back(std::move(r)); m.kidShift.push_back(d); m.kidSeq.push_back(0);
             }
             m.tel.wideSpanHz = m.wideSpan; m.tel.wideChannels = k;

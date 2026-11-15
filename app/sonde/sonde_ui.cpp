@@ -59,8 +59,8 @@ dect2::SondePredictor& predictor() { static dect2::SondePredictor* p = new dect2
 bool live(const App& a) { return a.rx.standard == 14; }
 
 // the type filter: only the sondes of one type are listed (SondeReceiver::setKindMask; uploads still see every sonde)
-const char* const kTypeNames[] = {"every type", "Vaisala RS41", "Vaisala RS92", "Graw DFM", "Meteomodem M10", "Meteomodem M20", "Lockheed Martin LMS6", "InterMet iMet-4", "InterMet iMet-54", "Russian MRZ", "Meisei iMS-100"};
-int& typeFilter() { static int v = std::clamp((int)plat::prefs().getI("sondeTypeFilter", 0), 0, 10); return v; }   // SondeKind, 0 every type
+const char* const kTypeNames[] = {"every type", "Vaisala RS41", "Vaisala RS92", "Graw DFM", "Meteomodem M10", "Meteomodem M20", "Lockheed Martin LMS6", "InterMet iMet-4", "InterMet iMet-54", "Russian MRZ", "Meisei iMS-100", "Chinese GTH (HT03G, GTH3, GTH6)"};
+int& typeFilter() { static int v = std::clamp((int)plat::prefs().getI("sondeTypeFilter", 0), 0, 11); return v; }   // SondeKind, 0 every type
 void pushTypeFilter(App& a) { const int k = typeFilter(); a.engine.sonde().setKindMask(k ? 1u << k : 0u); }   // every frame (an atomic store): each receiver gets it
 
 void loadState() {
@@ -684,10 +684,10 @@ void synth(App& a, bool& changed) {
     SynthConfig& sc = a.tune.synth;
     ImGui::TextDisabled("simulated sondes");
     // type mask: 0 means RS41, DFM and M10
-    static const char* names[10] = {"RS41", "DFM", "M10", "M20", "RS92", "LMS6", "iMet", "iMet-54", "MRZ", "iMS-100"};
+    static const char* names[11] = {"RS41", "DFM", "M10", "M20", "RS92", "LMS6", "iMet", "iMet-54", "MRZ", "iMS-100", "GTH"};
     int mask = (int)sc.modeOpt[0];
     if (mask == 0) mask = 7;
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 11; i++) {
         flowNext();
         const int bit = 1 << i;
         bool on = (mask & bit) != 0;
