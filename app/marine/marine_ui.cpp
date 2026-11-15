@@ -854,16 +854,20 @@ void stationsView(App& a) {
     ImGui::SetNextItemWidth(140 * gUi);
     ImGui::Combo("##wfreg", &S.region, kFaxRegions, 7);
     const std::string reg = S.region > 0 ? kFaxRegions[S.region] : "";
-    ImGui::SameLine();
-    ImGui::PushTextWrapPos(0);
+    ImGui::PushTextWrapPos(0);   // on its own line: beside the combo its first letters sat under the box and the text ran off the edge
     ImGui::TextDisabled("Frequencies are the carriers; a click tunes the USB dial 1.9 kHz lower. Times (UTC) marked ~ are approximate: "
                         "schedules change, check the NOAA Worldwide Marine Radiofacsimile Broadcast Schedules or the station.");
     ImGui::PopTextWrapPos();
     const float H = ImGui::GetContentRegionAvail().y, W = ImGui::GetContentRegionAvail().x;
     const long long now = (long long)time(nullptr);
-    ImGui::BeginChild("##wfnext", ImVec2(std::min(460.f * gUi, W * 0.5f), H), ImGuiChildFlags_Borders);
+    ImGui::BeginChild("##wfnext", ImVec2(std::min(520.f * gUi, W * 0.55f), H), ImGuiChildFlags_Borders);
     ImGui::TextColored(pal::heading(), "Next broadcasts");
-    if (ImGui::BeginTable("##wfnt", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) {
+    if (ImGui::BeginTable("##wfnt", 4, ImGuiTableFlags_RowBg)) {
+        // the product column takes what is left and is clipped, the frequency button column keeps its width so the button is always whole
+        ImGui::TableSetupColumn("##wfnt0", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("##wfnt1", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("##wfnt2", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("##wfnt3", ImGuiTableColumnFlags_WidthFixed, 64 * gUi);
         for (const WefaxNext& n : wefaxNext(now, 40, reg)) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
@@ -874,6 +878,7 @@ void stationsView(App& a) {
             ImGui::Text("%s%02d:%02d %s", n.b->approximate ? "~" : " ", n.b->utcMin / 60, n.b->utcMin % 60, t);
             ImGui::TableNextColumn(); ImGui::TextUnformatted(n.s->callsign);
             ImGui::TableNextColumn(); ImGui::TextUnformatted(n.b->product);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", n.b->product);
             ImGui::TableNextColumn();
             char b[48]; snprintf(b, sizeof b, "%.1f##wfn%p", n.s->carrierKhz.empty() ? 0.0 : n.s->carrierKhz[0], (const void*)n.b);
             if (!n.s->carrierKhz.empty() && ImGui::SmallButton(b)) tuneStation(a, n.s->carrierKhz[0]);
