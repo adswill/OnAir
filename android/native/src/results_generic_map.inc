@@ -1948,7 +1948,7 @@ case 341: {
     { Table tb({"Key", "Number", "Label", "Name", "Mhz", "Tx Mhz", "Level Db", "Demod"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.key), cell(e.number), cell(e.label), cell(e.name), cell(e.mhz), cell(e.txMhz), cell(e.levelDb), cell(e.demod)}); } if (n) addTable(o, "Rows", tb); }
     { Table tb({"Serial", "Key", "Number", "Label", "Mhz", "Wall Time", "Start Sec", "File"}); int n = 0; for (auto it = t.calls.rbegin(); it != t.calls.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.key), cell(e.number), cell(e.label), cell(e.mhz), cell(e.wallTime), cell(e.startSec), cell(e.file)}); } if (n) addTable(o, "Calls", tb); }
     { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Op", "Arg", "Text"}); int n = 0; for (auto it = t.mdc.rbegin(); it != t.mdc.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.op), cell(e.arg), cell(e.text)}); } if (n) addTable(o, "Mdc", tb); }
-    { Table tb({"Id", "Mhz", "Width Khz", "Level Db", "Snr Db", "Dev Khz", "Age Sec", "Band"}); int n = 0; for (auto it = t.mics.rbegin(); it != t.mics.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.mhz), cell(e.widthKhz), cell(e.levelDb), cell(e.snrDb), cell(e.devKhz), cell(e.ageSec), cell(e.band)}); } if (n) addTable(o, "Mics", tb); }
+    { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Fleet", "Unit", "Text"}); int n = 0; for (auto it = t.fsync.rbegin(); it != t.fsync.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.fleet), cell(e.unit), cell(e.text)}); } if (n) addTable(o, "Fsync", tb); }
     break;
 }
 case 342: {
@@ -1968,7 +1968,7 @@ case 342: {
     { Table tb({"Key", "Number", "Label", "Name", "Mhz", "Tx Mhz", "Level Db", "Demod"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.key), cell(e.number), cell(e.label), cell(e.name), cell(e.mhz), cell(e.txMhz), cell(e.levelDb), cell(e.demod)}); } if (n) addTable(o, "Rows", tb); }
     { Table tb({"Serial", "Key", "Number", "Label", "Mhz", "Wall Time", "Start Sec", "File"}); int n = 0; for (auto it = t.calls.rbegin(); it != t.calls.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.key), cell(e.number), cell(e.label), cell(e.mhz), cell(e.wallTime), cell(e.startSec), cell(e.file)}); } if (n) addTable(o, "Calls", tb); }
     { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Op", "Arg", "Text"}); int n = 0; for (auto it = t.mdc.rbegin(); it != t.mdc.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.op), cell(e.arg), cell(e.text)}); } if (n) addTable(o, "Mdc", tb); }
-    { Table tb({"Id", "Mhz", "Width Khz", "Level Db", "Snr Db", "Dev Khz", "Age Sec", "Band"}); int n = 0; for (auto it = t.mics.rbegin(); it != t.mics.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.mhz), cell(e.widthKhz), cell(e.levelDb), cell(e.snrDb), cell(e.devKhz), cell(e.ageSec), cell(e.band)}); } if (n) addTable(o, "Mics", tb); }
+    { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Fleet", "Unit", "Text"}); int n = 0; for (auto it = t.fsync.rbegin(); it != t.fsync.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.fleet), cell(e.unit), cell(e.text)}); } if (n) addTable(o, "Fsync", tb); }
     break;
 }
 case 343: {
@@ -1988,7 +1988,7 @@ case 343: {
     { Table tb({"Key", "Number", "Label", "Name", "Mhz", "Tx Mhz", "Level Db", "Demod"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.key), cell(e.number), cell(e.label), cell(e.name), cell(e.mhz), cell(e.txMhz), cell(e.levelDb), cell(e.demod)}); } if (n) addTable(o, "Rows", tb); }
     { Table tb({"Serial", "Key", "Number", "Label", "Mhz", "Wall Time", "Start Sec", "File"}); int n = 0; for (auto it = t.calls.rbegin(); it != t.calls.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.key), cell(e.number), cell(e.label), cell(e.mhz), cell(e.wallTime), cell(e.startSec), cell(e.file)}); } if (n) addTable(o, "Calls", tb); }
     { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Op", "Arg", "Text"}); int n = 0; for (auto it = t.mdc.rbegin(); it != t.mdc.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.op), cell(e.arg), cell(e.text)}); } if (n) addTable(o, "Mdc", tb); }
-    { Table tb({"Id", "Mhz", "Width Khz", "Level Db", "Snr Db", "Dev Khz", "Age Sec", "Band"}); int n = 0; for (auto it = t.mics.rbegin(); it != t.mics.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.mhz), cell(e.widthKhz), cell(e.levelDb), cell(e.snrDb), cell(e.devKhz), cell(e.ageSec), cell(e.band)}); } if (n) addTable(o, "Mics", tb); }
+    { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Fleet", "Unit", "Text"}); int n = 0; for (auto it = t.fsync.rbegin(); it != t.fsync.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.fleet), cell(e.unit), cell(e.text)}); } if (n) addTable(o, "Fsync", tb); }
     break;
 }
 case 344: {
@@ -2008,7 +2008,7 @@ case 344: {
     { Table tb({"Key", "Number", "Label", "Name", "Mhz", "Tx Mhz", "Level Db", "Demod"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.key), cell(e.number), cell(e.label), cell(e.name), cell(e.mhz), cell(e.txMhz), cell(e.levelDb), cell(e.demod)}); } if (n) addTable(o, "Rows", tb); }
     { Table tb({"Serial", "Key", "Number", "Label", "Mhz", "Wall Time", "Start Sec", "File"}); int n = 0; for (auto it = t.calls.rbegin(); it != t.calls.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.key), cell(e.number), cell(e.label), cell(e.mhz), cell(e.wallTime), cell(e.startSec), cell(e.file)}); } if (n) addTable(o, "Calls", tb); }
     { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Op", "Arg", "Text"}); int n = 0; for (auto it = t.mdc.rbegin(); it != t.mdc.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.op), cell(e.arg), cell(e.text)}); } if (n) addTable(o, "Mdc", tb); }
-    { Table tb({"Id", "Mhz", "Width Khz", "Level Db", "Snr Db", "Dev Khz", "Age Sec", "Band"}); int n = 0; for (auto it = t.mics.rbegin(); it != t.mics.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.mhz), cell(e.widthKhz), cell(e.levelDb), cell(e.snrDb), cell(e.devKhz), cell(e.ageSec), cell(e.band)}); } if (n) addTable(o, "Mics", tb); }
+    { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Fleet", "Unit", "Text"}); int n = 0; for (auto it = t.fsync.rbegin(); it != t.fsync.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.fleet), cell(e.unit), cell(e.text)}); } if (n) addTable(o, "Fsync", tb); }
     break;
 }
 case 345: {
@@ -2028,7 +2028,7 @@ case 345: {
     { Table tb({"Key", "Number", "Label", "Name", "Mhz", "Tx Mhz", "Level Db", "Demod"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.key), cell(e.number), cell(e.label), cell(e.name), cell(e.mhz), cell(e.txMhz), cell(e.levelDb), cell(e.demod)}); } if (n) addTable(o, "Rows", tb); }
     { Table tb({"Serial", "Key", "Number", "Label", "Mhz", "Wall Time", "Start Sec", "File"}); int n = 0; for (auto it = t.calls.rbegin(); it != t.calls.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.key), cell(e.number), cell(e.label), cell(e.mhz), cell(e.wallTime), cell(e.startSec), cell(e.file)}); } if (n) addTable(o, "Calls", tb); }
     { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Op", "Arg", "Text"}); int n = 0; for (auto it = t.mdc.rbegin(); it != t.mdc.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.op), cell(e.arg), cell(e.text)}); } if (n) addTable(o, "Mdc", tb); }
-    { Table tb({"Id", "Mhz", "Width Khz", "Level Db", "Snr Db", "Dev Khz", "Age Sec", "Band"}); int n = 0; for (auto it = t.mics.rbegin(); it != t.mics.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.mhz), cell(e.widthKhz), cell(e.levelDb), cell(e.snrDb), cell(e.devKhz), cell(e.ageSec), cell(e.band)}); } if (n) addTable(o, "Mics", tb); }
+    { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Fleet", "Unit", "Text"}); int n = 0; for (auto it = t.fsync.rbegin(); it != t.fsync.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.fleet), cell(e.unit), cell(e.text)}); } if (n) addTable(o, "Fsync", tb); }
     break;
 }
 case 346: {
@@ -2048,7 +2048,7 @@ case 346: {
     { Table tb({"Key", "Number", "Label", "Name", "Mhz", "Tx Mhz", "Level Db", "Demod"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.key), cell(e.number), cell(e.label), cell(e.name), cell(e.mhz), cell(e.txMhz), cell(e.levelDb), cell(e.demod)}); } if (n) addTable(o, "Rows", tb); }
     { Table tb({"Serial", "Key", "Number", "Label", "Mhz", "Wall Time", "Start Sec", "File"}); int n = 0; for (auto it = t.calls.rbegin(); it != t.calls.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.key), cell(e.number), cell(e.label), cell(e.mhz), cell(e.wallTime), cell(e.startSec), cell(e.file)}); } if (n) addTable(o, "Calls", tb); }
     { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Op", "Arg", "Text"}); int n = 0; for (auto it = t.mdc.rbegin(); it != t.mdc.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.op), cell(e.arg), cell(e.text)}); } if (n) addTable(o, "Mdc", tb); }
-    { Table tb({"Id", "Mhz", "Width Khz", "Level Db", "Snr Db", "Dev Khz", "Age Sec", "Band"}); int n = 0; for (auto it = t.mics.rbegin(); it != t.mics.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.mhz), cell(e.widthKhz), cell(e.levelDb), cell(e.snrDb), cell(e.devKhz), cell(e.ageSec), cell(e.band)}); } if (n) addTable(o, "Mics", tb); }
+    { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Fleet", "Unit", "Text"}); int n = 0; for (auto it = t.fsync.rbegin(); it != t.fsync.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.fleet), cell(e.unit), cell(e.text)}); } if (n) addTable(o, "Fsync", tb); }
     break;
 }
 case 347: {
@@ -2068,7 +2068,27 @@ case 347: {
     { Table tb({"Key", "Number", "Label", "Name", "Mhz", "Tx Mhz", "Level Db", "Demod"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.key), cell(e.number), cell(e.label), cell(e.name), cell(e.mhz), cell(e.txMhz), cell(e.levelDb), cell(e.demod)}); } if (n) addTable(o, "Rows", tb); }
     { Table tb({"Serial", "Key", "Number", "Label", "Mhz", "Wall Time", "Start Sec", "File"}); int n = 0; for (auto it = t.calls.rbegin(); it != t.calls.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.key), cell(e.number), cell(e.label), cell(e.mhz), cell(e.wallTime), cell(e.startSec), cell(e.file)}); } if (n) addTable(o, "Calls", tb); }
     { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Op", "Arg", "Text"}); int n = 0; for (auto it = t.mdc.rbegin(); it != t.mdc.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.op), cell(e.arg), cell(e.text)}); } if (n) addTable(o, "Mdc", tb); }
-    { Table tb({"Id", "Mhz", "Width Khz", "Level Db", "Snr Db", "Dev Khz", "Age Sec", "Band"}); int n = 0; for (auto it = t.mics.rbegin(); it != t.mics.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.mhz), cell(e.widthKhz), cell(e.levelDb), cell(e.snrDb), cell(e.devKhz), cell(e.ageSec), cell(e.band)}); } if (n) addTable(o, "Mics", tb); }
+    { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Fleet", "Unit", "Text"}); int n = 0; for (auto it = t.fsync.rbegin(); it != t.fsync.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.fleet), cell(e.unit), cell(e.text)}); } if (n) addTable(o, "Fsync", tb); }
+    break;
+}
+case 348: {
+    const auto& t = rx.chanvoice; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Time Sec", t.timeSec);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Center Hz", t.centerHz);
+    cardIf(o, "Service", t.service);
+    cardIf(o, "Region", t.region);
+    cardIf(o, "Carriers", t.carriers);
+    cardIf(o, "Playing Key", t.playingKey);
+    cardIf(o, "Playing Label", t.playingLabel);
+    { Table tb({"Key", "Number", "Label", "Name", "Mhz", "Tx Mhz", "Level Db", "Demod"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.key), cell(e.number), cell(e.label), cell(e.name), cell(e.mhz), cell(e.txMhz), cell(e.levelDb), cell(e.demod)}); } if (n) addTable(o, "Rows", tb); }
+    { Table tb({"Serial", "Key", "Number", "Label", "Mhz", "Wall Time", "Start Sec", "File"}); int n = 0; for (auto it = t.calls.rbegin(); it != t.calls.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.key), cell(e.number), cell(e.label), cell(e.mhz), cell(e.wallTime), cell(e.startSec), cell(e.file)}); } if (n) addTable(o, "Calls", tb); }
+    { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Op", "Arg", "Text"}); int n = 0; for (auto it = t.mdc.rbegin(); it != t.mdc.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.op), cell(e.arg), cell(e.text)}); } if (n) addTable(o, "Mdc", tb); }
+    { Table tb({"Serial", "Wall Time", "Key", "Label", "Mhz", "Fleet", "Unit", "Text"}); int n = 0; for (auto it = t.fsync.rbegin(); it != t.fsync.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.wallTime), cell(e.key), cell(e.label), cell(e.mhz), cell(e.fleet), cell(e.unit), cell(e.text)}); } if (n) addTable(o, "Fsync", tb); }
     break;
 }
 case 361: {

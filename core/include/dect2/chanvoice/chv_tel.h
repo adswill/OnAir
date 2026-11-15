@@ -78,6 +78,18 @@ struct ChvMdcEvent {
     std::string text;
 };
 
+struct ChvFsyncEvent {
+    uint64_t serial = 0;
+    int64_t wallTime = 0;
+    int key = -1;
+    std::string label;
+    double mhz = 0;
+    int fleet = 0, unit = 0;
+    bool fs2 = false;                 // FleetSync II (error corrected)
+    uint32_t word1 = 0, word2 = 0;    // the raw words (message type, status and position are not decoded)
+    std::string text;
+};
+
 // A wireless microphone candidate (the Mic service)
 struct ChvMicRow {
     int id = 0;
@@ -115,14 +127,17 @@ struct ChvTelemetry {
     int recordedFiles = 0;
     uint64_t callsTotal = 0;
     uint64_t mdcTotal = 0;
+    uint64_t fsyncTotal = 0;
     std::vector<ChvChannelRow> rows;  // the plan in order, then carriers off the plan
     std::vector<ChvCall> calls;       // newest first
     std::vector<ChvMdcEvent> mdc;     // newest first
+    std::vector<ChvFsyncEvent> fsync; // newest first
     std::vector<ChvMicRow> mics;
 };
 
 constexpr size_t kChvCallMax = 600;
 constexpr size_t kChvMdcMax = 400;
+constexpr size_t kChvFsyncMax = 400;
 
 inline std::string chvSummary(const ChvTelemetry& t) {
     char b[200];

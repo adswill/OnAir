@@ -47,6 +47,7 @@ std::vector<cf32> makeChanVoiceScene(const GenScene& sc) {
         double voiceStart = 0;
         std::vector<float> mdcAudio;
         if (t.mdc) { mdcAudio = mdcEncode(t.mdcPacket, 48000, 0.2); voiceStart = (double)mdcAudio.size() / 48000.0 + 0.15; }
+        if (t.fsync) { mdcAudio = fsyncEncode(t.fsFleet, t.fsUnit, t.fsFs2, 48000, 0.2); voiceStart = (double)mdcAudio.size() / 48000.0 + 0.15; }
         if (voiceStart < t.durSec - 0.2) {
             if (t.speech) { ts.noise(voiceStart, t.durSec - voiceStart, 0.01); ts.speech(voiceStart, t.durSec - voiceStart, t.mod == Demod::Am || t.mod == Demod::Usb || t.mod == Demod::Lsb ? 0.4 : 0.35); }
             else for (double hz : t.tones) ts.tone(hz, voiceStart, t.durSec - voiceStart, 0.3 / (double)std::max<size_t>(1, t.tones.size()));
@@ -192,6 +193,10 @@ GenScene chanVoiceDemoScene(Service sv, int region, double rate, double snrDb) {
         GenTx a = tx(sc.centreMhz - 0.0375, Demod::Nfm, 0.3, 2.2), b = tx(sc.centreMhz + 0.0625, Demod::Nfm, 2.0, 2.4);
         a.devScale = b.devScale = 0.7; a.mdc = true; a.mdcPacket.op = 0x01; a.mdcPacket.arg = 0x80; a.mdcPacket.unitId = 0x1A2B;
         b.mdc = true; b.mdcPacket.op = 0x01; b.mdcPacket.arg = 0x00; b.mdcPacket.unitId = 0xC0DE; sc.tx = {a, b}; break; }
+    case Service::Fsync: {
+        GenTx a = tx(sc.centreMhz - 0.0375, Demod::Nfm, 0.3, 2.2), b = tx(sc.centreMhz + 0.0625, Demod::Nfm, 2.0, 2.4);
+        a.devScale = b.devScale = 0.7; a.fsync = true; a.fsFleet = 107; a.fsUnit = 1772; a.fsFs2 = false;
+        b.fsync = true; b.fsFleet = 215; b.fsUnit = 3041; b.fsFs2 = true; sc.tx = {a, b}; break; }
     default: {   // wireless microphones
         sc.durSec = std::min(6.0, 20e6 / rate);   // a wide span is big: the loop is shorter
         const double dl = sc.durSec - 0.3;

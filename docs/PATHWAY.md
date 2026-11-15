@@ -2327,3 +2327,8 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - Digital TV transmit modes can now read a live MPEG-TS stream from UDP (udp://@:1234, a multicast group, or RTP) in place of a file, for streaming from OBS, ffmpeg or VLC. A jitter buffer with null-packet stuffing and drop-oldest keeps the modulator fed; counters are shown in the transmit panel. Modes: DVB-T, T2, S, S2 (also QO-100), C, ATSC, ISDB-T, DTMB. docs/TS-UDP-IN.md, test ts_udp_in (alignment recovery, RTP, nulls, overflow, loopback socket).
 - Live RDS changes (PS, RadioText, PTY, TP/TA, music/speech) already existed since the earlier RDS-live work (panel, REST /api/v1/x/rds, MCP rds_set, text port); see docs/RDS-LIVE.md.
+
+## 2026-11-15: Kenwood FleetSync receive mode (family 347)
+
+- New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
+- Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.

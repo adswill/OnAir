@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// Channelised voice modes (families 340 - 346): the engine tunings are registered under their numbers, the mode rows, the family count, the
+// Channelised voice modes (families 340 - 347): the engine tunings are registered under their numbers, the mode rows, the family count, the
 // screen mapping, the engine cases and the test-signal cases agree.
 #include "dect2/chanvoice/chv_plan.h"
 #include "dect2/chanvoice/chv_rx.h"
@@ -24,7 +24,7 @@ static std::string readFile(const std::string& rel) {
 
 int main() {
     using namespace dect2;
-    const char* ids[] = {"cb", "frs", "pmr446", "hamfm", "hfvoice", "mdc1200", "wmic"};
+    const char* ids[] = {"cb", "frs", "pmr446", "hamfm", "hfvoice", "mdc1200", "wmic", "fleetsync"};
     for (int i = 0; i < chv::kServiceCount; i++) {
         const int fam = 340 + i;
         const ModeTuning* m = modeTuning(fam + 2);
@@ -35,20 +35,20 @@ int main() {
         CHECK(chv::familyOf((chv::Service)i) == fam, "familyOf %d", i);
     }
     const std::string table = readFile("app/ui/mode_table.cpp");
-    for (const char* n : {"{340, \"CB radio\", 5,", "{341, \"FRS / GMRS\", 5,", "{342, \"PMR446 analog\", 5,", "{343, \"Ham FM repeaters\", 11,", "{344, \"HFGCS / HF voice\", 12,", "{345, \"MDC-1200\", 5,", "{346, \"Wireless mic finder\", 5,"})
+    for (const char* n : {"{340, \"CB radio\", 5,", "{341, \"FRS / GMRS\", 5,", "{342, \"PMR446 analog\", 5,", "{343, \"Ham FM repeaters\", 11,", "{344, \"HFGCS / HF voice\", 12,", "{345, \"MDC-1200\", 5,", "{346, \"Wireless mic finder\", 5,", "{347, \"Kenwood FleetSync\", 5,"})
         CHECK(table.find(n) != std::string::npos, "mode row missing: %s", n);
     const std::string appH = readFile("app/app.h");
-    { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) >= 347, "kNumFamilies does not cover family 346"); }
+    { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) >= 348, "kNumFamilies does not cover family 347"); }
     const std::string modeUi = readFile("app/panels/modeui.cpp");
-    CHECK(modeUi.find("case 340: case 341: case 342: case 343: case 344: case 345: case 346: return &kChanVoiceUi;") != std::string::npos, "families 340 - 346 not mapped");
+    CHECK(modeUi.find("case 340: case 341: case 342: case 343: case 344: case 345: case 346: case 347: return &kChanVoiceUi;") != std::string::npos, "families 340 - 347 not mapped");
     const std::string cm = readFile("CMakeLists.txt");
     CHECK(cm.find("DECT2_MODES chanvoice") != std::string::npos, "chanvoice not in DECT2_MODES");
     const std::string tel = readFile("core/src/engine/engine_telemetry.cpp");
-    CHECK(tel.find("case 341: case 342: case 343: case 344: case 345: case 346: case 347: return pollStd(rxChv_, a,") != std::string::npos, "engine poll case");
+    CHECK(tel.find("case 341: case 342: case 343: case 344: case 345: case 346: case 347: case 348: return pollStd(rxChv_, a,") != std::string::npos, "engine poll case");
     const std::string modes = readFile("core/src/engine/modes.cpp");
-    CHECK(modes.find("case 342: case 343: case 344: case 345: case 346: case 347: case 348: return makeChanVoiceSynth") != std::string::npos, "test signal cases");
+    CHECK(modes.find("case 342: case 343: case 344: case 345: case 346: case 347: case 348: case 349: return makeChanVoiceSynth") != std::string::npos, "test signal cases");
     const std::string ui = readFile("app/chanvoice/chanvoice_ui.cpp");
-    for (const char* s : {"Automatic: the strongest open channel", "Auto: follow the location setting", "MDC-1200 IDs", "Call log", "Record##chvrec", "FleetSync (Kenwood) is not decoded"})
+    for (const char* s : {"Automatic: the strongest open channel", "Auto: follow the location setting", "MDC-1200 IDs", "Call log", "Record##chvrec", "FleetSync (Kenwood) has its own mode", "FleetSync IDs", "no FleetSync burst heard yet"})
         CHECK(ui.find(s) != std::string::npos, "screen string missing: %s", s);
     std::printf("%s: %d failure(s)\n", fails ? "test_chanvoice_mode FAILED" : "test_chanvoice_mode OK", fails);
     return fails ? 1 : 0;

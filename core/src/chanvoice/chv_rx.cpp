@@ -4,6 +4,7 @@
 // Channelised analog voice receiver (see chv_rx.h).
 #include "dect2/chanvoice/chv_rx.h"
 #include "dect2/chanvoice/chv_mdc.h"
+#include "dect2/chanvoice/chv_fsync.h"
 #include "dect2/chanvoice/chv_subtone.h"
 #include "dect2/chanvoice/chv_tel.h"
 #include "dect2/audio/audioout.h"
@@ -78,6 +79,7 @@ struct Act {
 
 struct CallRec { int key; std::string label; double mhz; int64_t wall; double startSec, durSec, peakDb, meanDb; int demod; chv::SubTone tone; std::string file; };
 struct MdcRec { int key; std::string label; double mhz; chv::MdcPacket p; };
+struct FsyncRec { int key; std::string label; double mhz; chv::FsyncMessage m; };
 
 // What the channel receivers share with the receiver that owns them. Outlives them.
 struct Ctx {
@@ -96,6 +98,7 @@ struct Ctx {
     std::function<void(int key, const float* x, size_t n)> audio;
     std::function<void(const CallRec&)> callSink;
     std::function<void(const MdcRec&)> mdcSink;
+    std::function<void(const FsyncRec&)> fsyncSink;
     std::function<void(int key, int demod, const float* x, size_t n)> tap;
     std::string dir() { std::lock_guard<std::mutex> lk(dirMu); return recDir; }
 };
@@ -123,6 +126,7 @@ public:
         aDe_ = 1.0 - std::exp(-1.0 / (kRate * kDeemphTau));
         envOnly_ = svc == Service::HfVoice;
         if (svc == Service::Mdc) mdc_ = std::make_unique<chv::MdcDecoder>(kRate), mdc_->setCallback([this](const chv::MdcPacket& p) { if (ctx_ && ctx_->mdcSink) ctx_->mdcSink(MdcRec{key_, label_, mhz_, p}); });
+        if (svc == Service::Fsync) fsync_ = std::make_unique<chv::FsyncDecoder>(kRate), fsync_->setCallback([this](const chv::FsyncMessage& m) { if (ctx_ && ctx_->fsyncSink) ctx_->fsyncSink(FsyncRec{key_, label_, mhz_, m}); });
         wr_ = 0;
         for (int i = 0; i < kBlock; i++) rot_[(size_t)i] = 0;
     }
@@ -296,6 +300,7 @@ private:
         if (mdc_ && b.gate) {   // the flat audio: MDC data is not pre-emphasised
             mdc_->feed(b.raw.data(), kBlock);
         }
+        if (fsync_ && b.gate) fsync_->feed(b.raw.data(), kBlock);   // FleetSync is flat audio as well
         if (callActive_) {
             if (b.gate && !recStarted_) recStarted_ = true;
             if (recStarted_ && rec_.size() < (size_t)(kMaxRecSec * kRate)) {
@@ -361,6 +366,7 @@ private:
     chv::SubToneReader tone_;
     chv::SubTone callTone_;
     std::unique_ptr<chv::MdcDecoder> mdc_;
+    std::unique_ptr<chv::FsyncDecoder> fsync_;
 };
 
 // ---- one wireless microphone candidate: wide FM at 192 kHz
@@ -467,8 +473,9 @@ struct ChanVoiceReceiver::Impl {
     // results
     std::deque<ChvCall> calls;
     std::deque<ChvMdcEvent> mdcList;
+    std::deque<ChvFsyncEvent> fsyncList;
     std::map<int, Stat> stats;
-    uint64_t callSerial = 0, mdcSerial = 0;
+    uint64_t callSerial = 0, mdcSerial = 0, fsyncSerial = 0;
     int recFiles = 0;
     std::mutex audioMu;
     std::unique_ptr<AudioOut> audioOut;
@@ -481,6 +488,7 @@ struct ChanVoiceReceiver::Impl {
         ctx.audio = [this](int key, const float* x, size_t n) { audioWrite(key, x, n); };
         ctx.callSink = [this](const CallRec& c) { callDone(c); };
         ctx.mdcSink = [this](const MdcRec& m) { mdcDone(m); };
+        ctx.fsyncSink = [this](const FsyncRec& m) { fsyncDone(m); };
         scan.setConfig(scanCfg());
     }
     int region() const { return regionOf[(int)svc]; }
@@ -496,7 +504,7 @@ struct ChanVoiceReceiver::Impl {
         switch (svc) { case Service::Cb: return region() == 2 ? 4500 : 4500; case Service::Frs: return 5500; case Service::Pmr: return 5500; case Service::Ham: return region() == 1 ? 7000 : 6000; case Service::HfVoice: return 4000; default: return 6000; }
     }
     Demod planDemod(const chv::Channel* c) const {
-        switch (svc) { case Service::Mdc: return Demod::Nfm; case Service::HfVoice: return Demod::Usb; default: return c ? c->demod : Demod::Nfm; }
+        switch (svc) { case Service::Mdc: case Service::Fsync: return Demod::Nfm; case Service::HfVoice: return Demod::Usb; default: return c ? c->demod : Demod::Nfm; }
     }
 
     marinevhf::ScanConfig scanCfg() const {
@@ -511,7 +519,7 @@ struct ChanVoiceReceiver::Impl {
         const double step = isMic() ? chv::micStepHz(c / 1e6, region()) : chv::rasterHz(svc, region());   // microphones: 100 kHz cells in the UHF bands, 25 kHz channels in the VHF ones
         double origin;
         double ref = 0;   // a channel of the plan: the raster passes through it (the CB channels sit 5 kHz off the 10 kHz multiples)
-        if (!isMic() && svc != Service::Mdc && !plan().empty()) ref = plan()[0].mhz * 1e6;
+        if (!isMic() && !chv::isIdService(svc) && !plan().empty()) ref = plan()[0].mhz * 1e6;
         if (c > 0) origin = std::fmod(ref - c, step); else origin = std::fmod(offHz, step);
         if (origin < 0) origin += step;
         if (cfgDone && std::fabs(origin - gridOrigin) < 1.0 && std::fabs(step - gridStep) < 1.0) { priors(); return; }
@@ -530,13 +538,13 @@ struct ChanVoiceReceiver::Impl {
     void priors() {
         std::vector<double> rel;
         const double c = centerAbs();
-        if (c > 0 && !isMic() && svc != Service::Mdc && svc != Service::HfVoice) for (const auto& ch : plan()) rel.push_back(ch.mhz * 1e6 - c);
+        if (c > 0 && !isMic() && !chv::isIdService(svc) && svc != Service::HfVoice) for (const auto& ch : plan()) rel.push_back(ch.mhz * 1e6 - c);
         finder.setPriors(rel, false);
     }
 
     int planKeyFor(double absHz, bool* inPlan) {
         *inPlan = false;
-        if (svc == Service::Mdc || isMic() || centerAbs() <= 0) return -1;
+        if (chv::isIdService(svc) || isMic() || centerAbs() <= 0) return -1;
         const auto& v = plan();
         int best = -1; double bd = matchTolHz();
         for (int k = 0; k < planSize(); k++) {
@@ -620,6 +628,22 @@ struct ChanVoiceReceiver::Impl {
             const std::string tl = chv::toneLabel(c.tone.ctcssHz, c.tone.dcsCode, c.tone.dcsInverted);
             snprintf(b, sizeof b, "%s %s (%.4f MHz, %s%s%s): %.1f s, peak %.0f dB%s", chv::serviceName(svc), c.label.empty() ? "carrier" : c.label.c_str(), c.mhz, chv::demodName((Demod)c.demod),
                      tl.empty() ? "" : ", tone ", tl.c_str(), c.durationSec, c.peakDb, c.file.empty() ? "" : ", recorded");
+            line = b;
+        }
+        if (log) log(line);
+    }
+    void fsyncDone(const FsyncRec& m) {
+        std::string line;
+        {
+            std::lock_guard<std::mutex> lk(callMu);
+            ChvFsyncEvent e;
+            e.serial = ++fsyncSerial; e.wallTime = unixNow(); e.key = m.key; e.label = m.label; e.mhz = m.mhz;
+            e.fleet = m.m.fleet; e.unit = m.m.unit; e.fs2 = m.m.fs2; e.word1 = m.m.word1; e.word2 = m.m.word2;
+            e.text = chv::fsyncText(m.m);
+            fsyncList.push_front(e);
+            if (fsyncList.size() > kChvFsyncMax) fsyncList.pop_back();
+            char b[200];
+            snprintf(b, sizeof b, "FleetSync %.4f MHz: fleet %d unit %d%s", m.mhz, m.m.fleet, m.m.unit, m.m.fs2 ? " (FleetSync II)" : "");
             line = b;
         }
         if (log) log(line);
@@ -805,7 +829,7 @@ void ChanVoiceReceiver::feed(const cf32* x, size_t n) {
 
 void ChanVoiceReceiver::clearResults() {
     std::lock_guard<std::mutex> lk(p_->callMu);
-    p_->calls.clear(); p_->mdcList.clear(); p_->stats.clear(); p_->recFiles = 0; p_->callSerial = 0; p_->mdcSerial = 0;
+    p_->calls.clear(); p_->mdcList.clear(); p_->fsyncList.clear(); p_->fsyncSerial = 0; p_->stats.clear(); p_->recFiles = 0; p_->callSerial = 0; p_->mdcSerial = 0;
 }
 
 void ChanVoiceReceiver::setService(chv::Service s) {
@@ -908,8 +932,8 @@ bool ChanVoiceReceiver::telemetry(ChvTelemetry& out, uint64_t lastSeq) {
         for (int k : scanned) if (k >= 0 && k < planN) inScan[(size_t)k] = true;
         {
             std::lock_guard<std::mutex> lk(I.callMu);
-            t.callsTotal = I.callSerial; t.mdcTotal = I.mdcSerial; t.recordedFiles = I.recFiles;
-            if (svc != Service::Mic && svc != Service::Mdc) {
+            t.callsTotal = I.callSerial; t.mdcTotal = I.mdcSerial; t.fsyncTotal = I.fsyncSerial; t.recordedFiles = I.recFiles;
+            if (svc != Service::Mic && !chv::isIdService(svc)) {
                 for (int k = 0; k < planN; k++) {
                     ChvChannelRow r; const chv::Channel& c = chs[(size_t)k];
                     r.key = k; r.number = c.number; r.label = c.label; r.name = c.name; r.mhz = c.mhz; r.txMhz = c.txMhz; r.demod = (int)c.demod;
@@ -934,7 +958,7 @@ bool ChanVoiceReceiver::telemetry(ChvTelemetry& out, uint64_t lastSeq) {
                 }
             }
             if (svc != Service::Mic) {
-                for (auto& v : sv) if (v.key >= planN || svc == Service::Mdc) {   // carriers off the plan
+                for (auto& v : sv) if (v.key >= planN || chv::isIdService(svc)) {   // carriers off the plan
                     ChvChannelRow r; r.key = v.key; r.label = v.label; r.mhz = v.mhz; r.active = v.active; r.open = v.key >= 0 && I.ctx.act[v.key].open.load() != 0; r.levelDb = v.level; r.demod = v.demod; r.tone = v.tone;
                     r.playing = v.key == playKey;
                     auto it = I.stats.find(v.key);
@@ -952,6 +976,7 @@ bool ChanVoiceReceiver::telemetry(ChvTelemetry& out, uint64_t lastSeq) {
             }
             for (const ChvCall& c : I.calls) t.calls.push_back(c);
             for (const ChvMdcEvent& e : I.mdcList) t.mdc.push_back(e);
+            for (const ChvFsyncEvent& e : I.fsyncList) t.fsync.push_back(e);
         }
         for (const auto& r : t.rows) if (r.open) { t.state = 2; break; }
         if (t.state == 0) t.state = (I.rate >= chanVoiceTuning(svc).minSampleRate - 1 && I.cfgDone) ? 1 : 0;
@@ -981,6 +1006,7 @@ ModeTuning chanVoiceTuning(chv::Service s) {
     case chv::Service::Pmr:     t.minMhz = 446.0; t.maxMhz = 446.2; t.defMhz = 446.1; t.sampleRate = 1000000; t.bandwidthMhz = 0.5; t.minSampleRate = 250000; t.tuneOffsetHz = 25000; break;
     case chv::Service::Ham:     t.minMhz = 144.0; t.maxMhz = 450.0; t.defMhz = 145.7; t.sampleRate = 2000000; t.bandwidthMhz = 1.0; t.tuneOffsetHz = 25000; break;
     case chv::Service::HfVoice: t.minMhz = 2.8; t.maxMhz = 23.4; t.defMhz = 11.175; t.sampleRate = 250000; t.bandwidthMhz = 0.1; t.minSampleRate = 48000; t.tuneOffsetHz = 12000; break;
+    case chv::Service::Fsync:
     case chv::Service::Mdc:     t.minMhz = 30.0; t.maxMhz = 960.0; t.defMhz = 155.0; t.sampleRate = 2000000; t.bandwidthMhz = 1.0; t.tuneOffsetHz = 25000; break;
     default:                    t.minMhz = 169.0; t.maxMhz = 960.0; t.defMhz = 590.0; t.sampleRate = 10000000; t.bandwidthMhz = 8.0; t.minSampleRate = 1000000; t.tuneOffsetHz = 0; break;
     }

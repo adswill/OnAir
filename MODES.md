@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**393 modes.**
+**394 modes.**
 
 ## TV (17)
 
@@ -141,7 +141,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Inmarsat (all carriers)** - Inmarsat: all Aero P and Inmarsat-C carriers at once, needs an L-band antenna and a wide radio (needs a user test)
 - **Inmarsat BGAN** - Inmarsat BGAN: forward carriers, bearer types, spot beams and network from the broadcast signalling (needs a user test, signalling only)
 
-## Two-way Radio (22)
+## Two-way Radio (23)
 
 - **DMR** - DMR (Digital Mobile Radio), two-slot TDMA
 - **Digital voice (auto)** - Digital voice, automatic: every system in the span found from the signal itself, with how sure
@@ -152,8 +152,9 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CB radio** - CB radio: channel 9 and 19, AM / FM / USB / LSB per transmission, a busy-channel list, call log and recording (receive only)
 - **FRS / GMRS** - FRS / GMRS: channels 1 to 22, the CTCSS / DCS tone heard on each, call log and recording (receive only)
 - **PMR446 analog** - PMR446 analog: channels 1 to 16, the CTCSS / DCS tone heard on each, call log and recording (receive only)
-- **MDC-1200** - MDC-1200: unit ID, opcode and argument of each burst, with the carrier it came on (receive only; no public FleetSync format)
+- **MDC-1200** - MDC-1200: unit ID, opcode and argument of each burst, with the carrier it came on (receive only; Kenwood FleetSync is a separate mode)
 - **Wireless mic finder** - Wireless mic finder: candidates in the microphone bands, analog FM or not, audio of the one you pick (needs a wide radio)
+- **Kenwood FleetSync** - Kenwood FleetSync: fleet and unit number of each burst, with the carrier it came on (receive only)
 - **Tone decoders (CTCSS, DCS, DTMF, selcall)** - Tone decoders: CTCSS, DCS, DTMF, ZVEI / CCIR / EEA selcall, SELCAL and two-tone pages from FM audio or a sound card
 - **TETRA** - TETRA: the public broadcast information of TETRA cells
 - **TETRAPOL** - TETRAPOL: system information and clear-call voice (receive only)
