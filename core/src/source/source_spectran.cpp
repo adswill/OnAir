@@ -12,6 +12,8 @@
 // stream clock. Full scale 1.0 is sent as 0 dBm before main/transgain.
 #include "native_common.h"
 #include "aartsa_min.h"
+#include "dect2/common/diag.h"
+#include <atomic>
 #include <cwchar>
 
 namespace dect2 {
@@ -278,8 +280,8 @@ std::vector<RadioSetting> spectranSettings(bool eco) {
                                   {"Auto", "46.08 MHz", "61.44 MHz", "76.80 MHz", "92.16 MHz", "122.88 MHz", "184.32 MHz", "245.76 MHz"}, "auto", true));
         v.push_back(choiceSetting("rxchan", "Input", "device/receiverchannel: the RF input the samples come from.", {"Rx1", "Rx2"}, {"RX 1", "RX 2"}, "Rx1", true));
         v.push_back(choiceSetting("agc", "Gain control",
-                                  "device/gaincontrol. Manual: the reference level follows the gain slider. Peak / Power: the device sets it itself.",
-                                  {"keep", "manual", "peak", "power"}, {"Keep", "Manual", "Peak", "Power"}, "keep"));
+                                  "device/gaincontrol. Manual (default): the reference level follows the gain slider. Peak / Power: the device sets the reference level itself and the gain slider has no effect.",
+                                  {"keep", "manual", "peak", "power"}, {"Keep", "Manual", "Peak", "Power"}, "manual"));
     }
     v.push_back(choiceSetting("usbcomp", "USB compression",
                               "device/usbcompression. Compressed: less USB traffic for the high rates; Raw: the samples as the converter makes them.",
@@ -351,6 +353,10 @@ struct Dev {
         aa::Result r = api.ConfigFind(&d, &root, &c, path);
         if (aa::failed(r)) return r;
         r = api.ConfigSetFloat(&d, &c, value);
+        if (got && !aa::failed(r) && api.ConfigGetFloat) {   // what the device took, also when it says nothing (a device-side gain control or a quantised step)
+            double v = value;
+            if (!aa::failed(api.ConfigGetFloat(&d, &c, &v))) *got = v;
+        }
         if (r == aa::kWarningValueAdjusted || r == aa::kWarningValueDisabled) {
             double v = value;
             if (got && api.ConfigGetFloat && !aa::failed(api.ConfigGetFloat(&d, &c, &v))) *got = v;
@@ -442,7 +448,9 @@ protected:
         return apply(s, err, false) && dev_.connectStart(err);
     }
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
+        cfgWaiting_++;   // the stream thread steps aside (a std::mutex is not fair: it would take api_ again at once)
         std::lock_guard<std::mutex> lk(api_);
+        cfgWaiting_--;
         if (!dev_.open) return false;
         if (live) return apply(s, err, true);
         // a new rate (the stream thread is stopped): the device is stopped, set up again and started
@@ -485,7 +493,10 @@ protected:
                     rtsa().ConsumePackets(&dev_.d, 0, 1);
                 }
             }
-            if (r == aa::kOk) continue;
+            if (r == aa::kOk) {
+                if (cfgWaiting_.load() > 0) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
+            }
             if (r == aa::kEmpty || r == aa::kRetry) { std::this_thread::sleep_for(std::chrono::milliseconds(1)); continue; }
             if (run_) { fprintf(stderr, "SPECTRAN: the stream ended (%s)\n", hexResult(r).c_str()); fflush(stderr); }
             return;   // (NativeSource opens it again every second until it is back)
@@ -535,7 +546,7 @@ private:
         aa::Result r = dev_.setNum(L"main/centerfreq", f);
         if (aa::failed(r)) { err = "SPECTRAN: the device refused " + mhz(f) + " (" + hexResult(r) + ")"; return false; }
         if (const Model* m = modelOf(type_)) addNote(err, freqSpecNote(eco_ ? "SPECTRAN V6 ECO" : "SPECTRAN V6", s.centerHz, m->minHz, m->maxHz));
-        const std::string agc = radioOption(s, "agc", "keep");
+        const std::string agc = radioOption(s, "agc", eco_ ? "keep" : "manual");   // the gain slider needs the device's manual gain control
         if (agc != "keep") dev_.setStr(L"device/gaincontrol", widen(agc));
         const std::string pre = radioOption(s, "preamp", "keep");
         if (pre != "keep") dev_.setStr(L"calibration/preamp", widen(pre));
@@ -546,6 +557,19 @@ private:
         if (!aa::failed(r)) {
             std::lock_guard<std::mutex> g(scaleMu_);
             scale_ = float(1.0 / ampForDbm(took));
+            if (std::fabs(took - ref) > 0.5) {
+                char b[200];
+                if (agc == "peak" || agc == "power")
+                    snprintf(b, sizeof b, "SPECTRAN: the gain control is %s, so the device keeps its own reference level (%.3g dBm) and the gain slider has no effect; choose Manual in the radio settings", agc.c_str(), took);
+                else
+                    snprintf(b, sizeof b, "SPECTRAN: the reference level is %.3g dBm, not the %.3g dBm the gain slider asked for (the device's range or steps)", took, ref);
+                addNote(err, b);
+            }
+        } else if (r != aa::kErrorNotFound) {
+            fprintf(stderr, "SPECTRAN: main/reflevel %.3g dBm was refused (%s)\n", ref, hexResult(r).c_str());
+            fflush(stderr);
+            DIAG(284064, "The SPECTRAN refused the reference level of %.3g dBm with code %s, so the gain slider has no effect.", ref, hexResult(r).c_str());
+            addNote(err, "SPECTRAN: the device refused the reference level (" + hexResult(r) + "): the gain slider has no effect");
         }
         if (!dev_.warn.empty() && !live) addNote(err, "SPECTRAN: " + dev_.warn);
         return true;
@@ -576,6 +600,7 @@ private:
     std::atomic<double> firstRate_{0};
     std::mutex scaleMu_;
     float scale_ = 1;
+    std::atomic<int> cfgWaiting_{0};
 };
 
 // ------------------------------------------------------------------ transmit

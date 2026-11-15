@@ -223,6 +223,10 @@ FAKE_EXPORT Result AARTSAAPI_ConfigSetFloat(Device* d, Config* c, double v) {
     if (p == "main/reflevel") {
         const double lo = f->eco ? -40 : -20, hi = 10;
         if (v < lo || v > hi) { v = v < lo ? lo : hi; r = kWarningValueAdjusted; }
+        // a device whose gain control is peak / power keeps its own reference level (-10 dBm) and says nothing ("agc_start": it comes up in power)
+        const auto g = f->cfg.find("device/gaincontrol");
+        const std::string gc = g != f->cfg.end() ? g->second : (get("agc_start") > 0 ? "power" : "manual");
+        if (gc != "manual" && !f->eco) v = -10;
     }
     if (p == "main/spanfreq" && f->mode != "iqtransmitter") {
         const double top = clockHz(*f) / 1.5;

@@ -22,7 +22,7 @@ static RadioProfile prof(const char* id) { const RadioProfile* p = radioProfileB
 // ------------------------------------------------------------------------------------------------------------------------------ models
 static void testProfiles() {
     const char* ids[] = {"hackrf", "rtl-r820t", "rtl-blog-v3", "rtl-r828d", "rtl-blog-v4", "rtl-blog-v4l", "rtl-e4000", "rtltcp", "airspy", "airspyhf",
-                         "sdrplay", "pluto", "lime", "usrp", "bladerf", "fobos", "rx888", "spyserver", "kiwisdr", "generic"};
+                         "sdrplay", "pluto", "lime", "usrp", "spectran", "bladerf", "fobos", "rx888", "spyserver", "kiwisdr", "generic"};
     for (const char* id : ids) {
         const RadioProfile* p = radioProfileById(id);
         CHECK(p != nullptr, "profile %s missing", id);
@@ -534,6 +534,70 @@ static void testHackrfSweep() {
     }
 }
 
+// ------------------------------------------------------------------------------------------------------------------------------ manual stages (#233)
+static RadioSetting numSet(const char* key, const char* label, double lo, double hi, double step) {
+    RadioSetting r; r.type = RadioSetting::Number; r.key = key; r.label = label; r.minV = lo; r.maxV = hi; r.step = step; r.def = "-1"; r.help = "help";
+    return r;
+}
+static void testManualStages() {
+    // Airspy: LNA / mixer / VGA, the driver's keys (source_airspy.cpp kStages)
+    {
+        DeviceInfo d; d.board = "airspy"; d.name = "Airspy Mini"; d.kind = DeviceInfo::Native;
+        for (const char* k : {"gain.lna", "gain.mixer", "gain.vga"}) d.settings.push_back(numSet(k, k, -1, 15, 1));
+        const RadioProfile p = radioProfileFor(d);
+        const std::vector<int> ms = manualStages(p);
+        CHECK(ms.size() == 3, "airspy: three manual stages (%zu)", ms.size());
+        TuneSettings t;
+        const int mix = p.stageIndex("amix");
+        CHECK(mix >= 0 && p.stages[(size_t)mix].manualKey == "gain.mixer", "airspy mixer -> gain.mixer");
+        CHECK(setManualStage(p, mix, 7.4, t) && t.radio["gain.mixer"] == "7", "airspy mixer 7.4 snaps to 7 (%s)", t.radio["gain.mixer"].c_str());
+        CHECK(setManualStage(p, p.stageIndex("avga"), 99, t) && t.radio["gain.vga"] == "15", "airspy VGA clamps to 15");
+        double v = 0;
+        CHECK(manualStageValue(p, mix, t, v) && v == 7, "reads back 7");
+        CHECK(!manualStageValue(p, p.stageIndex("alna"), t, v), "LNA still follows");
+        CHECK(anyManualStage(p, t), "any manual stage");
+        resetManualStages(p, t);
+        CHECK(!anyManualStage(p, t) && t.radio["gain.mixer"] == "-1" && t.radio["gain.lna"] == "-1", "reset to overall gain");
+        CHECK(p.settableCount() == 1, "the Auto planner still sees one overall gain (%d)", p.settableCount());
+        CHECK(!setManualStage(p, 0, 3, t), "the overall stage has no manual key");
+    }
+    // RTL-SDR E4000: six IF stages with their own step tables (source_rtlsdr.cpp), the tuner gain stays the overall gain
+    {
+        DeviceInfo d; d.board = "rtlsdr"; d.name = "Generic RTL2832U E4000"; d.kind = DeviceInfo::Native;
+        d.settings.push_back(numSet("gain.if1", "Gain stage: IF 1", -3, 6, 9));
+        d.settings.push_back(numSet("gain.if4", "Gain stage: IF 4", 0, 2, 1));
+        d.settings.push_back(numSet("gain.if5", "Gain stage: IF 5", 3, 15, 3));
+        const RadioProfile p = radioProfileFor(d);
+        TuneSettings t;
+        const int s1 = p.stageIndex("gain.if1"), s4 = p.stageIndex("gain.if4"), s5 = p.stageIndex("gain.if5");
+        CHECK(s1 >= 0 && s4 >= 0 && s5 >= 0 && manualStages(p).size() == 3, "E4000 IF stages present");
+        CHECK(p.id == "rtl-e4000", "E4000 profile (%s)", p.id.c_str());
+        CHECK(setManualStage(p, s1, 5, t) && t.radio["gain.if1"] == "6", "IF1 snaps -3 / 6 (%s)", t.radio["gain.if1"].c_str());
+        CHECK(setManualStage(p, s5, 10, t) && t.radio["gain.if5"] == "9", "IF5 snaps to the 3 dB grid (%s)", t.radio["gain.if5"].c_str());
+        CHECK(setManualStage(p, s4, 1.2, t) && t.radio["gain.if4"] == "1", "IF4 0..2");
+        CHECK(p.settableCount() == 1, "tuner gain is the one automatic stage");
+    }
+    // USRP: gain elements named by UHD (source_usrp.cpp: "gain.<element>"); a B200 with one element has no manual stage
+    {
+        DeviceInfo d; d.board = "usrp"; d.name = "USRP N310"; d.kind = DeviceInfo::Native; d.gainMinDb = 0; d.gainMaxDb = 76;
+        d.settings.push_back(numSet("gain.LNA1", "Gain stage: LNA1", -1, 30, 1));
+        d.settings.push_back(numSet("gain.DSA1", "Gain stage: DSA1", -1, 31.5, 0.5));
+        const RadioProfile p = radioProfileFor(d);
+        TuneSettings t;
+        const int lna = p.stageIndex("gain.LNA1"), dsa = p.stageIndex("gain.DSA1");
+        CHECK(lna >= 0 && dsa >= 0, "USRP elements become stages");
+        if (lna >= 0 && dsa >= 0) {
+            CHECK(p.stages[(size_t)lna].kind == StageKind::Lna && p.stages[(size_t)dsa].kind == StageKind::Atten, "kinds from the names");
+            CHECK(p.stages[(size_t)lna].minDb() == 0 && p.stages[(size_t)lna].maxDb() == 30, "the follow value is not a step");
+            CHECK(setManualStage(p, dsa, 10.3, t) && t.radio["gain.DSA1"] == "10.5", "DSA 10.3 -> 10.5 (%s)", t.radio["gain.DSA1"].c_str());
+            CHECK(setManualStage(p, lna, 12, t) && t.radio["gain.LNA1"] == "12", "LNA 12");
+        }
+        CHECK(p.id == "usrp" && p.settableCount() == 1, "overall gain stays the one automatic stage");
+        DeviceInfo b; b.board = "usrp"; b.name = "USRP B200"; b.kind = DeviceInfo::Native; b.gainMinDb = 0; b.gainMaxDb = 76;
+        CHECK(manualStages(radioProfileFor(b)).empty(), "a single-element USRP shows no stage controls");
+    }
+}
+
 int main(int argc, char** argv) {
     verbose = argc > 1 && !strcmp(argv[1], "-v");
     testProfiles();
@@ -550,6 +614,7 @@ int main(int argc, char** argv) {
     testRunner();
     testSingleControl();
     testHackrfSweep();
+    testManualStages();
     if (fails) { printf("%d FAILED\n", fails); return 1; }
     printf("autogain: all tests passed\n");
     return 0;

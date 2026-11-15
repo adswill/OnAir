@@ -2332,3 +2332,9 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
 - Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.
+
+## 2026-11-15: SPECTRAN gain fix and per-stage gain controls
+
+- SPECTRAN V6 / V6 ECO: the gain slider (the reference level) is now checked against what the device took, read back after every set. A gain control left on Peak / Power, a refused or clipped value is reported in the start / retune message and the log, and the V6's gain control is written as Manual at every start. The slider and Auto gain have a radio profile of their own (reference level plus the RF amplifier setting). Only tested against the fake RTSA API. The receive thread no longer starves a retune that waits for the device.
+- Gain row, Advanced: one slider per stage the driver lets you set by hand (Airspy LNA / mixer / VGA, the RTL-SDR E4000's six IF stages, the gain elements a USRP reports), with the step table, what each does, and "Reset to overall gain". A stage set by hand turns Auto gain off and is remembered with the radio (#233).
+

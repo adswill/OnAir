@@ -11,6 +11,7 @@
 // amp in the popup ("Let auto gain switch the amp", saved per radio as before: agcamp.<radio>).
 #include "../app.h"
 #include "../ui/panel_layout.h"
+#include "../ui/touch.h"
 #include "../state/per_receiver.h"
 #include "../state/receivers.h"
 #include "dect2/source/autogain.h"
@@ -529,6 +530,59 @@ void autogainMeterOnly(App& a) {   // Off: the meters still run
     syncContext(a);
     ag::AgCommand cmd;
     s.c.tick(input(a), cmd);
+}
+
+bool manualStageControls(App& a, bool vertical) {
+    if (a.devIdx < 0 || a.devIdx >= (int)a.devices.size()) return false;
+    const DeviceInfo& d = a.devices[(size_t)a.devIdx];
+    // the profile of this radio, rebuilt only when another radio (or another list of its settings) is selected
+    static std::string key;
+    static ag::RadioProfile prof;
+    const std::string k = d.name + "|" + d.board + "|" + std::to_string(d.settings.size());
+    if (k != key) { key = k; prof = ag::radioProfileFor(d); }
+    const std::vector<int> stages = ag::manualStages(prof);
+    if (stages.empty()) return false;
+    bool changed = false;
+    ImGui::PushID("manualstages");
+    panel::subHeading(tr("Stages"));
+    for (int i : stages) {
+        const ag::GainStage& st = prof.stages[(size_t)i];
+        if (st.steps.empty()) continue;
+        ImGui::PushID(i);
+        const float w = panel::rowLabel(st.label.c_str(), st.note.empty() ? nullptr : st.note.c_str());
+        ImGui::SetNextItemWidth(touch::on() ? -FLT_MIN : w);
+        double v = 0;
+        const bool by = ag::manualStageValue(prof, i, a.tune, v);
+        int idx = by ? st.indexOf(v) : 0;
+        char fmt[48];
+        if (by) snprintf(fmt, sizeof fmt, "%g dB", st.steps[(size_t)idx]); else snprintf(fmt, sizeof fmt, "%s", tr("follows overall"));
+        if (ImGui::SliderInt("##st", &idx, 0, (int)st.steps.size() - 1, fmt, ImGuiSliderFlags_NoInput)) {
+            ag::setManualStage(prof, i, st.steps[(size_t)std::max(0, std::min(idx, (int)st.steps.size() - 1))], a.tune);
+            changed = true;
+        }
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+            std::string tip = st.note.empty() ? st.label : st.note;
+            tip += "\n\n";
+            tip += tr("Steps (dB):");
+            tip += " ";
+            for (size_t j = 0; j < st.steps.size() && j < 40; j++) { char b[24]; snprintf(b, sizeof b, "%s%g", j ? ", " : "", st.steps[j]); tip += b; }
+            if (st.steps.size() > 40) tip += " ...";
+            tip += "\n";
+            tip += tr("Set by hand it replaces what the overall gain gives this stage. Touching it turns Auto gain off.");
+            ImGui::SetTooltip("%s", tip.c_str());
+        }
+        ImGui::PopID();
+    }
+    ImGui::BeginDisabled(!ag::anyManualStage(prof, a.tune));
+    if (ImGui::SmallButton(tr("Reset to overall gain"))) {
+        ag::resetManualStages(prof, a.tune);
+        changed = true;
+    }
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Every stage follows the overall gain again."));
+    ImGui::PopID();
+    if (changed) saveRadioSettings(a);   // remembered with this radio
+    return changed;
 }
 
 void autogainControl(App& a, bool vertical, bool running) {

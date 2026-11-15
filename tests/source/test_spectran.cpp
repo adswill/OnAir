@@ -7,8 +7,10 @@
 // Only simulated: the fake follows Aaronia's public documentation, not a measured device (docs/SPECTRAN-V6.md).
 #include "../../core/src/source/native_common.h"
 #include <filesystem>
+#include "dect2/source/autogain.h"
 #include <iostream>
 using namespace dect2;
+namespace ag = dect2::ag;
 
 namespace dect2 { namespace native {
 void listSpectran(std::vector<DeviceInfo>& out);
@@ -201,6 +203,32 @@ int main(int argc, char** argv) {
         CHECK(!rx2->start(t, ring, err));
         CHECK(err.find("did not connect") != std::string::npos);
         setv("fail_connect", 0);
+    }
+    {
+        // ---- the gain slider against a device that comes up in an automatic gain control (the reference level is only taken in Manual)
+        setv("agc_start", 1);
+        auto rx = native::makeSpectran(v6);
+        t = TuneSettings();
+        t.centerHz = 433.92e6; t.sampleRate = 2e6; t.gainDb = 25;
+        err.clear();
+        CHECK(rx->start(t, ring, err));
+        CHECK(std::string(str("cfg:device/gaincontrol")) == "manual");   // the default writes Manual first
+        CHECK(num("cfg:main/reflevel") == -15);
+        CHECK(err.find("no effect") == std::string::npos);
+        t.gainDb = 5; err.clear();
+        CHECK(rx->retune(t, err));
+        CHECK(num("cfg:main/reflevel") == 5);
+        rx->stop();
+        // the user chose Power: the device keeps its level, and the message says the slider has no effect
+        auto rx2 = native::makeSpectran(v6);
+        t.radio = {{"agc", "power"}}; t.gainDb = 25; err.clear();
+        CHECK(rx2->start(t, ring, err));
+        CHECK(err.find("gain slider has no effect") != std::string::npos);
+        rx2->stop();
+        setv("agc_start", 0);
+        // the profile the Auto gain and the UI use: one reference-level stage, the amplifier listed as a note
+        const auto prof = ag::radioProfileFor(v6);
+        CHECK(prof.id == "spectran" && prof.settableCount() == 1 && prof.stageIndex("sprea") >= 0);
     }
     {
         // ---- transmit on the V6 ECO: timed packets, kept ahead of the device clock, no gaps, 1.0 = 0 dBm, the end flags at close
