@@ -4,7 +4,9 @@
 // A fake Aaronia RTSA API (AaroniaRTSAAPI) for tests/source/test_spectran.cpp: the functions source_spectran.cpp loads, with the same names
 // and the declarations of core/src/source/aartsa_min.h. It lists SPECTRAN V6 and V6 ECO devices, keeps their config trees, plays a tone in
 // timed IQ packets (an eighth of a turn per sample: +rate/8, at half the reference level) and records what is sent to the transmitter.
-// fake_spectran_num / fake_spectran_set / fake_spectran_str let the test look at the state and steer it.
+// fake_spectran_num / fake_spectran_set / fake_spectran_str let the test look at the state and steer it. "eco_real" makes the V6 ECO
+// behave as the measured one (its lowest centres, a span that changes while it streams), "tone_hz" puts the tone on a frequency of its
+// own, "stuck_starts" makes starts that deliver nothing.
 #include "../../core/src/source/aartsa_min.h"
 #include <chrono>
 #include <cmath>
@@ -50,6 +52,7 @@ struct FakeDev {
     long long produced = 0, consumedSamples = 0;
     std::vector<float> buf;
     bool pending = false;       // a packet was handed out and not consumed yet
+    bool stuck = false;         // "stuck_starts": this start runs and delivers nothing
     double lastEnd = -1;
 };
 FakeDev* gOpen[32] = {nullptr};   // open devices, by the order the test lists them
@@ -111,6 +114,8 @@ FAKE_EXPORT Result AARTSAAPI_Shutdown(void) { std::lock_guard<std::recursive_mut
 FAKE_EXPORT uint32_t AARTSAAPI_Version(void) { return 0x00010203; }
 FAKE_EXPORT Result AARTSAAPI_Open(Handle* h) { std::lock_guard<std::recursive_mutex> l(mu); if (!h) return kErrorInvalidParameter; h->d = (void*)&num; bump("open"); return kOk; }
 FAKE_EXPORT Result AARTSAAPI_Close(Handle* h) { std::lock_guard<std::recursive_mutex> l(mu); if (h) h->d = nullptr; bump("close"); return kOk; }
+// (the driver resets the devices before a change between receiving and transmitting and after a start without samples)
+FAKE_EXPORT Result AARTSAAPI_ResetDevices(Handle* h) { std::lock_guard<std::recursive_mutex> l(mu); if (!h || !h->d) return kErrorNotInitialized; bump("resets"); return kOk; }
 FAKE_EXPORT Result AARTSAAPI_RescanDevices(Handle* h, int) { std::lock_guard<std::recursive_mutex> l(mu); if (!h || !h->d) return kErrorNotInitialized; bump("rescan"); return kOk; }
 
 static std::string serialFor(bool eco, int i) { return std::string(eco ? "ECO-" : "V6-") + std::to_string(1000 + i); }
@@ -189,6 +194,8 @@ FAKE_EXPORT Result AARTSAAPI_StartDevice(Device* d) {
     f->startT = nowSec();
     f->produced = 0;
     f->pending = false;
+    f->stuck = get("stuck_starts") > 0;   // the next "stuck_starts" starts reach the running state and deliver nothing
+    if (f->stuck) num["stuck_starts"] = get("stuck_starts") - 1;
     bump("start");
     num["rate"] = rateOf(*f);
     return kOk;
@@ -218,8 +225,15 @@ FAKE_EXPORT Result AARTSAAPI_ConfigSetFloat(Device* d, Config* c, double v) {
     if (!f || !c) return kErrorNotOpen;
     const std::string p = pathOf(c->d);
     if (p.empty()) return kErrorInvalidConfig;
-    if (f->started && rateItem(p)) { bump("rate_change_while_streaming"); return kErrorBusy; }
+    // "eco_real": what was measured on a V6 ECO 150XA-6 (docs/SPECTRAN-V6.md). Its iqreceiver takes main/spanfreq while it streams,
+    // and a main/centerfreq below 5 MHz (iqreceiver) or 22 MHz (iqtransmitter) comes back adjusted to that.
+    const bool real = f->eco && get("eco_real") > 0;
+    if (f->started && rateItem(p) && !(real && f->mode == "iqreceiver" && p == "main/spanfreq")) { bump("rate_change_while_streaming"); return kErrorBusy; }
     Result r = kOk;
+    if (real && p == "main/centerfreq") {
+        const double lo = f->mode == "iqtransmitter" ? 22e6 : f->mode == "iqreceiver" ? 5e6 : 0;
+        if (v < lo) { v = lo; r = kWarningValueAdjusted; }
+    }
     if (p == "main/reflevel") {
         const double lo = f->eco ? -40 : -20, hi = 10;
         if (v < lo || v > hi) { v = v < lo ? lo : hi; r = kWarningValueAdjusted; }
@@ -277,6 +291,7 @@ FAKE_EXPORT Result AARTSAAPI_GetPacket(Device* d, int32_t channel, int32_t index
     if (p->cbsize != (int64_t)sizeof(Packet)) { bump("bad_cbsize"); return kErrorInvalidSize; }
     if (channel != 0 || index != 0) return kErrorInvalidChannel;
     if (!f->started) return kErrorNotConnected;
+    if (f->stuck) return kEmpty;
     if (get("fail_after") > 0 && f->produced >= (long long)get("fail_after")) {
         num["fail_after"] = 0;
         f->started = f->connected = false;
@@ -290,8 +305,10 @@ FAKE_EXPORT Result AARTSAAPI_GetPacket(Device* d, int32_t channel, int32_t index
         const double amp = 0.5 * std::sqrt(0.05) * std::pow(10.0, ref / 20.0);
         f->buf.resize(2 * n);
         const double base = double(f->produced) * double(n);
+        // the tone: at +rate/8, or ("tone_hz") a carrier on that frequency, wherever the device is tuned
+        const double cycles = get("tone_hz") > 0 ? (get("tone_hz") - numCfg(*f, "main/centerfreq", 0)) / rateOf(*f) : 1.0 / 8.0;
         for (int64_t k = 0; k < n; k++) {
-            const double ph = 2 * kPi * std::fmod((base + double(k)) / 8.0, 1.0);
+            const double ph = 2 * kPi * std::fmod((base + double(k)) * cycles, 1.0);
             f->buf[2 * k] = float(amp * std::cos(ph));
             f->buf[2 * k + 1] = float(amp * std::sin(ph));
         }
