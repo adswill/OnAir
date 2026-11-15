@@ -59,10 +59,10 @@ int main() {
         mgr.feed(mix.data(), chunk);
         if (!mgr.snapshot(snap, last)) continue;
         last = snap.seq;
-        int near = 0;      // carriers of the first group (inside +-300 kHz of the centre) in sync
-        for (const auto& c : snap.carriers) near += std::fabs(c.offsetHz) < 300e3 && c.type == CarrierType::AeroP && c.state >= 2;
-        if (t < churnAt - 1) { inSyncBefore = near; windowsBefore = (int)snap.windows.size(); posBefore = snap.positionsTotal; }
-        else if (t > churnAt + 0.6 && t < churnAt + 8) { minAfter = std::min(minAfter, near); windowsAfter = std::max(windowsAfter, (int)snap.windows.size()); }
+        int nearIn = 0;      // carriers of the first group (inside +-300 kHz of the centre) in sync
+        for (const auto& c : snap.carriers) nearIn += std::fabs(c.offsetHz) < 300e3 && c.type == CarrierType::AeroP && c.state >= 2;
+        if (t < churnAt - 1) { inSyncBefore = nearIn; windowsBefore = (int)snap.windows.size(); posBefore = snap.positionsTotal; }
+        else if (t > churnAt + 0.6 && t < churnAt + 8) { minAfter = std::min(minAfter, nearIn); windowsAfter = std::max(windowsAfter, (int)snap.windows.size()); }
     }
     printf("churn: Aero carriers in sync before %d, lowest after the new window %d, windows %d -> %d, positions before %llu, total %llu\n", inSyncBefore, minAfter, windowsBefore, windowsAfter,
            (unsigned long long)posBefore, (unsigned long long)snap.positionsTotal);

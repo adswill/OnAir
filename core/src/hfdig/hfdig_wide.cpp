@@ -91,7 +91,7 @@ private:
     double sec_ = 0;
     std::vector<Track> tracks_;
     std::vector<RttyWideSignal> gone_;               // finished signals, lowHz from this channel's dial (centre added in snapshot)
-    struct Cand { double lo; int shift; int frames; };
+    struct Cand { double lo; int shift; int frames; double err = 0; };
     std::vector<Cand> cands_;
     std::vector<std::pair<double, double>> hold_;    // (lowHz, until sec): a pair that was no RTTY, not tried again for a while
 
@@ -208,8 +208,18 @@ private:
                 if (taken.size() >= 3) break;
                 const double fa = centroid(c.second, fl), fb = centroid(c.second + ds, fl);
                 if (std::fabs((fb - fa) - kShiftHz[si]) > 9.0) continue;   // the tones are not this shift apart (425 and 450 Hz lie 25 Hz from each other)
-                now.push_back({0.5 * (fa + (fb - kShiftHz[si])), si, 1});
+                now.push_back({0.5 * (fa + (fb - kShiftHz[si])), si, 1, std::fabs((fb - fa) - kShiftHz[si])});
             }
+        }
+        // one pair seen as two shifts (a keying sideband next to a tone makes a false 425 Hz pair beside a true 450 Hz one): keep the shift the measured spacing fits best
+        for (size_t i = 0; i < now.size();) {
+            bool worse = false;
+            for (size_t j = 0; j < now.size() && !worse; j++) {
+                if (j == i || now[j].shift == now[i].shift || now[j].err >= now[i].err) continue;
+                const double ih = now[i].lo + kShiftHz[now[i].shift], jh = now[j].lo + kShiftHz[now[j].shift];
+                worse = std::fabs(now[i].lo - now[j].lo) < 40 || std::fabs(ih - jh) < 40;
+            }
+            if (worse) now.erase(now.begin() + (long)i); else i++;
         }
         std::vector<Cand> next;
         for (Cand c : now) {
