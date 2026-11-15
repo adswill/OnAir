@@ -71,6 +71,9 @@ struct HfdlAircraft {
     std::vector<HfdlTrackPoint> track;   // oldest first, at most 24
 };
 
+// how many of the aircraft have a position (the "212 with a position" of the HFDL header)
+inline int hfdlCountWithPos(const std::vector<HfdlAircraft>& v) { int n = 0; for (const auto& a : v) n += a.hasPos ? 1 : 0; return n; }
+
 struct HfdlGroundStation {
     int id = 0;
     std::string name;            // from the built-in table ("" not known)

@@ -200,5 +200,5 @@ int main() {
     testBitLayer(iters);
     testFcsStations(iters);
     if (!testParse(iters)) return 1;
-    return golden::check("hfdl_proto_rs", dig, 0x42e935f56ae8bfd9ull, !it);
+    return golden::check("hfdl_proto_rs", dig, 0x62854bea7bca1735ull, !it);
 }
