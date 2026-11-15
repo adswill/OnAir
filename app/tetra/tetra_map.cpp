@@ -3,6 +3,7 @@
 
 // TETRA Map sub-tab, see tetra_map.h. The positions come from the clear SDS messages the receiver decoded (tetra_sds.cpp); nothing is decrypted.
 #include "tetra_map.h"
+#include "tetra_names_ui.h"
 #include "map/my_location.h"
 #include "app.h"
 #include "../adsb/adsb_map.h"
@@ -56,6 +57,8 @@ ImU32 colourOf(int issi) {
 }
 
 std::string idText(int issi) { return issi >= 0 ? std::to_string(issi) : std::string("?"); }
+// "1234" or "1234 Name": the name from the user's TETRA name book
+std::string idNamed(int issi) { if (issi < 0) return "?"; const std::string n = tetranames::nameOf(dect2::TetraIdKind::Issi, (uint32_t)issi); return n.empty() ? std::to_string(issi) : std::to_string(issi) + " " + n; }
 
 bool pass(const dect2::TetraPos& p, double now) {
     if (S.issiBuf[0]) { char* e = nullptr; const long f = std::strtol(S.issiBuf, &e, 10); if (e && !*e && p.issi != (int)f) return false; }
@@ -67,8 +70,8 @@ struct Unit { int issi; const dect2::TetraPos* last; std::vector<ImVec2> track; 
 
 // "<what the report was> from <issi> to <address>": the one line a click shows as the source message
 std::string sourceLine(const dect2::TetraPos& p) {
-    char b[200];
-    snprintf(b, sizeof b, "D-SDS-DATA from %s to %s on %.4f MHz", idText(p.issi).c_str(), p.toAddr >= 0 ? std::to_string(p.toAddr).c_str() : "?", p.freqHz / 1e6);
+    char b[300];
+    snprintf(b, sizeof b, "D-SDS-DATA from %s to %s on %.4f MHz", idNamed(p.issi).c_str(), p.toAddr >= 0 ? std::to_string(p.toAddr).c_str() : "?", p.freqHz / 1e6);
     return std::string(p.source.empty() ? "LIP report" : p.source) + "; " + b;
 }
 
@@ -165,7 +168,7 @@ void tetraMap(App& a) {
         }
         dl->AddCircleFilled(q, 6.f * gUi, col, 20);
         dl->AddCircle(q, 6.f * gUi, sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(20, 24, 26, 220), 20, sel ? 2.2f : 1.2f);
-        if (adsbmap::labelsAt(S.map.zoom, sel)) dl->AddText(ImVec2(q.x + 10 * gUi, q.y - 7 * gUi), IM_COL32(235, 238, 240, 255), idText(u.issi).c_str());
+        if (adsbmap::labelsAt(S.map.zoom, sel)) dl->AddText(ImVec2(q.x + 10 * gUi, q.y - 7 * gUi), IM_COL32(235, 238, 240, 255), idNamed(u.issi).c_str());
         hits.push_back({q, u.issi});
     }
     dl->PopClipRect();
@@ -208,7 +211,7 @@ void tetraMap(App& a) {
             ImGui::SetNextWindowSizeConstraints(ImVec2(0, 0), ImVec2(std::min(300.f * gUi, std::max(1.f, size.x - 2 * margin)), std::max(1.f, size.y - 2 * margin)));
             ImGui::SetNextWindowBgAlpha(0.94f);
             if (ImGui::Begin("##tetracard", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings)) {
-                ImGui::TextColored(ImVec4(1, 1, 1, 1), "ISSI %s", idText(p.issi).c_str());
+                ImGui::TextColored(ImVec4(1, 1, 1, 1), "ISSI %s", idNamed(p.issi).c_str());
                 ImGui::Separator();
                 if (ImGui::BeginTable("##tetracardg", 2, ImGuiTableFlags_SizingFixedFit)) {
                     cardRow(tr("Received"), clockText(p.wallTime) + "  (" + dect2::ageText(std::max(0.0, now - (double)p.wallTime)) + " " + tr("ago") + ")");
@@ -250,8 +253,8 @@ void tetraMap(App& a) {
         const ImVec2 rp = ImGui::GetCursorScreenPos();
         ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(rp.x + 6 * gUi, rp.y + ImGui::GetTextLineHeight() * 0.5f), 4 * gUi, colourOf(u->issi));
         ImGui::SetCursorScreenPos(ImVec2(rp.x + 14 * gUi, rp.y));
-        char b[96];
-        snprintf(b, sizeof b, "ISSI %s##tm%d", idText(u->issi).c_str(), u->issi);
+        char b[160];
+        snprintf(b, sizeof b, "ISSI %s##tm%d", idNamed(u->issi).c_str(), u->issi);
         if (ImGui::Selectable(b, S.sel == u->issi)) { S.sel = u->issi; S.map.lat = p.lat; S.map.lon = p.lon; S.map.zoom = std::max(S.map.zoom, 13); }
         ImGui::TextDisabled("%.5f, %.5f", p.lat, p.lon);
         mylocmap::infoLine(p.lat, p.lon);
