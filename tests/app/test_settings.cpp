@@ -41,6 +41,17 @@ int main() {
     check(filter(t, "zzzqqq", "").empty(), "no match");
     check(!in(filter(t, "", kAudioC), "updCheck") && in(filter(t, "", kAudioC), "popTop"), "category filter");
 
+    // Unmodified wheel action is a persisted three-way choice in the Spectrum and waterfall page.
+    const Info* wheelAction = nullptr;
+    for (const Info& i : t) if (!strcmp(i.key, "specWheelAction")) wheelAction = &i;
+    check(wheelAction && wheelAction->kind == Kind::Choice && std::string(wheelAction->cat) == kDisplay,
+          "mouse wheel action is a spectrum/waterfall choice");
+    if (wheelAction) {
+        check(wheelAction->def == 0 && split(wheelAction->choices, '|').size() == 3,
+              "wheel action defaults to current VFO-band behaviour and has three options");
+        check(clampTo(*wheelAction, -1) == 0 && clampTo(*wheelAction, 9) == 2,
+              "wheel action rejects invalid saved values");
+    }
     // reset and changed marker
     const Info* gamma = nullptr;
     for (const Info& i : t) if (!strcmp(i.key, "wfGamma")) gamma = &i;

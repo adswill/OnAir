@@ -134,7 +134,7 @@ const std::vector<PrefKey>& keyTable() {
         flagB("specReadout", AT(a.specReadout), false, false, true), flagB("specDbm", AT(a.specDbm), false, false, true),
         num("specLook", AT(a.specLook), 1, 0, slook::NumLooks - 1, true), num("tunerLook", AT(a.tunerStyle), 1, 0, 1, true), num("specAxisLabels", AT(a.specAxisLabels), -1, -1, 1, true),
         real("specLabelSize", AT(a.specLabelSize), 0.7, 1.6), num("specSmoothTrace", AT(a.specSmoothTrace), -1, -1, 4, true),
-        num("videoFit", AT(a.video.fit), 0, 0, 3, true), flagB("specNfMarker", AT(a.specNfMarker), false, false, true), flagB("specSmoothZoom", AT(a.specSmoothZoom), true, false, true),
+        num("videoFit", AT(a.video.fit), 0, 0, 3, true), flagB("specNfMarker", AT(a.specNfMarker), false, false, true), flagB("specSmoothZoom", AT(a.specSmoothZoom), true, false, true), num("specWheelAction", AT(a.specWheelAction), 0, 0, 2, true),
         num("specSnapHz", AT(a.specSnapHz), 0, 0, 1000000, true), flagB("wfLowPass", AT(a.wfLowPass), false, false, true), flagB("specZoomFft", AT(a.specZoomFft), true, false, true), num("specZoomMax", AT(a.specZoomMaxBins), 65536, 512, 1048576, true),
         num("specWindow", AT(a.specWindow), 0, 0, 4, true), real("specOverlap", AT(a.specOverlap), -1, 0.95), flagB("specResReadout", AT(a.specResReadout), true, false, true), flagB("wfSoft", AT(a.wfSoft), false, false, true),
         real("wfFloorBelow", AT(a.wf.autoBelow), 0, 40), real("wfFloorSpan", AT(a.wf.autoSpan), 20, 120),

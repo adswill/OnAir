@@ -503,6 +503,7 @@ struct App {
     int ghostAutoH = 6;        // a rolling snapshot every this many hours while receiving (0 = off)
     int ghostKeep = 28;        // how many snapshots the rolling set keeps
     bool specNfMarker = false; // the noise-floor line with its level on the spectrum
+    int specWheelAction = 0;  // 0: VFO band tunes, elsewhere zoom; 1: tune anywhere; 2: zoom anywhere
     bool specSmoothZoom = true;// the wheel zoom eases in over a few frames
     int specSnapHz = 0;        // a click tunes to a multiple of this (0: the mode's own step)
     bool wfLowPass = false;    // the waterfall's 2D noise reduction (off by default)
