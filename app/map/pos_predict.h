@@ -54,6 +54,15 @@ struct Layer {
         if (!predict) return false;
         return hub.estimate(k, now, pe, !ellipses && posAgeSec < 10);
     }
+    // forget every track (estimates, ground stations, route hints) so the map starts empty
+    void clear() { hub = dect2::track::TrackHub(hub.options()); lastFed_.clear(); }
+    // the map toolbar's "Clear": true when pressed (the caller empties the receiver's results too, then this clears the tracks)
+    bool clearButton() {
+        const bool hit = ImGui::Button((std::string(tr("Clear")) + "##mapclear").c_str());
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Remove the plotted aircraft, ground stations and lines from the map (the decoded lists are emptied too)."));
+        if (hit) clear();
+        return hit;
+    }
     // the two switches, on the screen's own button line
     void controls() {
         if (ImGui::Checkbox(tr("Predict positions"), &predict)) { plat::prefs().setB(keyPredict.c_str(), predict); plat::prefs().flush(); }

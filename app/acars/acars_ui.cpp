@@ -375,6 +375,8 @@ void mapCanvas(App& a, ImVec2 size) {
     ImGui::SameLine(0, 6 * gUi);
     gPred.controls();
     ImGui::SameLine(0, 6 * gUi);
+    if (gPred.clearButton()) a.engine.acars().clearResults();
+    ImGui::SameLine(0, 6 * gUi);
     adsbmap::tileControls("never the position itself");
     plat::prefs().setI("acarsZoom", S.map.zoom);
     ImGui::SetCursorScreenPos(ImVec2(p0.x + 8 * gUi, p0.y + size.y - ImGui::GetTextLineHeight() - 6 * gUi));
