@@ -2424,3 +2424,11 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 - Research pass on what is public for PACTOR-I to -IV (docs/PACTOR-RESEARCH.md): the signals are documented, the channel coding of PACTOR-II, -III and -IV (code polynomials, puncturing, interleaver, CRC, frame layout) is not, so text cannot be decoded from them and OnAir does not guess.
 - The PACTOR-I screen now also runs the signal-level analysis and names a PACTOR-II or PACTOR-III signal on the channel (carriers, speed level), "data not decodable (proprietary)". Tested on generator signals only (test pactor_hfid).
+
+## 2026-11-16: OnAir 4.2 released
+
+- Published v4.2.0 from d3999ecd0 with 12 assets (Windows zip and installer, two macOS dmg, two deb, two portable tarballs, two AppImages, signed APK, SHA256SUMS). The APK certificate is the same as 4.0 and 4.1. `main` is at the release commit and the site is deployed.
+- Release builds first failed to link (map colour settings sat in an anonymous namespace); the full test run then found three real bugs before publishing: RTTY Auto took a 450 Hz pair as 425 Hz (a keying sideband made a false pair that was tried first, now the best-fitting shift wins), `near` is a macro on Windows (test variable renamed), and the sonde NMEA sender added the `\\.\` prefix to every Windows path, not only COM names.
+- Flaky tests seen and passing on re-run: audio_engine (Windows timeout), sarsat_engine (Linux CPU budget), dtmb_threads (macOS under load).
+- PRs 523, 525, 528, 531, 532, 535, 538 are in; 528 went in on rebased commits, so it was closed with a note. 512 and 527 stay drafts. Thank-you comments and issue replies posted. Detachable windows (#242) left for 4.3 on feat42-windows.
+- Open: RX888 MkII rates above 64 Msps reported as not reachable by some users (no log yet, likely USB 3 or CPU limits).
