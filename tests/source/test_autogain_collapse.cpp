@@ -50,10 +50,11 @@ static void dynamic() {
                     if (d.burstEvery < 1e8 && std::fmod(t, d.burstEvery) < d.burstOn && t > 30) sim.blockers.push_back({600e3, d.burstDbm});
                     if (d.midEvery < 1e8 && std::fmod(t + 17, d.midEvery) < d.midOn) sim.blockers.push_back({-450e3, d.midDbm});
                     sim.blockers.push_back({250e3, -64});   // a steady mid-strength signal
-                    if (t > 600) { total += 0.05; sumG += c.current().totalDb; if (c.current().totalDb <= lo + 3) atMin += 0.05; }
+                    if (t > 600) { total += 0.05; sumG += c.current().totalDb * 0.05; if (c.current().totalDb <= lo + 3) atMin += 0.05; }
                     if (std::fmod(t, 300) < 0.05) { char b[32]; snprintf(b, sizeof b, " %.0f", c.current().totalDb); trace += b; }
                 });
                 printf("DYN %-10s v2=%d %-50s mean gain after 10 min %.1f (range %.0f..%.0f), %.0f %% of the time within 3 dB of the minimum; every 5 min:%s\n", id, v2, d.name, sumG / total, lo, hi, 100 * atMin / total, trace.c_str());
+                if (getenv("AGLOG") && !strcmp(id, "rtl-r820t") && v2 && strstr(d.name, "-35")) { int n = 0; for (const auto& e : c.log()) if (n++ < 120) printf("LOG %.1f %.1f -> %.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str()); }
                 CHECK(atMin / total < 0.5, "%s v2=%d '%s': %.0f %% of the time at the minimum gain", id, v2, d.name, 100 * atMin / total);
             }
         }
