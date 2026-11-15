@@ -146,6 +146,8 @@ void videoInCameraStop(VideoIn::Impl* I) {
     }
 }
 
+bool videoInCameraSupported() { return true; }   // AVFoundation is part of macOS
+
 std::vector<VideoInputDevice> videoInListCameras() {
     std::vector<VideoInputDevice> v;
     @autoreleasepool {

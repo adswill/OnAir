@@ -200,6 +200,12 @@ void videoInCameraStop(VideoIn::Impl* I) {
     I->backend = nullptr;
 }
 
+// the capture input of this FFmpeg (v4l2 on Linux, dshow on Windows): missing when FFmpeg was built without it
+bool videoInCameraSupported() {
+    avdevice_register_all();
+    return av_find_input_format(inputFmt()) != nullptr;
+}
+
 std::vector<VideoInputDevice> videoInListCameras() {
     std::vector<VideoInputDevice> v;
 #ifdef _WIN32

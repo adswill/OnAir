@@ -54,6 +54,7 @@ std::vector<Cmd> collect(App& a) {
     c.push_back({"Modes shown", "Action", [](App& x) { x.modeVisOpen = true; }});
     for (int i = 0; i < kNumModes; i++) c.push_back({modeHiddenNow(a, kModes[i]) ? std::string(kModes[i].name) + " (hidden)" : std::string(kModes[i].name), "Mode", [f = kModes[i].family, s = kModes[i].subId](App& x) { selectMode(x, f, s); }, modeHiddenNow(a, kModes[i])});
     c.push_back({"Voice codecs", "Action", [](App& x) { x.voiceCodecsOpen = true; }});
+    c.push_back({"Hardware", "Action", [](App& x) { x.hardwareOpen = true; }});   // Help > Hardware
     c.push_back({"Voice monitor", "Action", [](App&) { voiceui::open(); }});
     c.push_back({"Voice keys", "Action", [](App& x) { x.voiceKeysOpen = true; }});
     c.push_back({"Credits", "Action", [](App& x) { x.creditsOpen = true; x.creditsTab = 0; }});

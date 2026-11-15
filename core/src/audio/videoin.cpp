@@ -221,5 +221,6 @@ bool VideoIn::copyYuv420(int dw, int dh, uint8_t* y, uint8_t* u, uint8_t* v, int
 }
 
 std::vector<VideoInputDevice> listVideoInputs() { return videoInListCameras(); }
+bool videoInputSupported() { return videoInCameraSupported(); }
 
 } // namespace dect2

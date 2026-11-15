@@ -39,5 +39,6 @@ struct VideoIn::Impl {
 bool videoInCameraStart(VideoIn::Impl* impl, const std::string& deviceId, std::string& err);
 void videoInCameraStop(VideoIn::Impl* impl);
 std::vector<VideoInputDevice> videoInListCameras();
+bool videoInCameraSupported();
 
 } // namespace dect2
