@@ -36,6 +36,8 @@ struct SarsatTelemetry {
     double timeSec = 0, inputRate = 0;
     double wideSpanHz = 0;         // the whole-capture search covers this much (0: off)
     int wideChannels = 0;
+    uint64_t exportedBursts = 0;   // baseband files written (setBurstExport)
+    std::string lastExport;        // path of the newest one
     std::vector<SarsatEntry> log;  // newest first
 };
 

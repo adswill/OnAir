@@ -33,6 +33,7 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -149,6 +150,12 @@ private fun MainShell(
         Column(m) {
             if (crashBanner) Banner(stringResource(R.string.crash_banner), p.bad) { CrashLog.markSeen(ctx); onCrashSeen(); nav.navigate(Dest.LOG) }
             if (st.error.isNotEmpty()) Banner(st.error, p.bad) { vm.clearError(); nav.navigate(Dest.LOG) }
+            if (!LocalInspectionMode.current) {
+                val up by io.github.adswill.onair.AppGraph.updates.state.collectAsStateWithLifecycle()
+                val ver = up.release?.version ?: ""
+                if (up.phase == io.github.adswill.onair.update.UpdatePhase.AVAILABLE) Banner(stringResource(R.string.update_banner, ver), p.accent) { nav.navigate(Dest.SETTINGS) }
+                else if (up.phase == io.github.adswill.onair.update.UpdatePhase.READY) Banner(stringResource(R.string.update_ready, ver), p.accent) { nav.navigate(Dest.SETTINGS) }
+            }
             val ui by vm.ui.collectAsStateWithLifecycle()
             if (st.running && !ui.batteryHintShown && !Battery.exempt(ctx)) Banner(stringResource(R.string.battery_hint), p.accent) { vm.markBatteryHintShown(); Battery.request(ctx) }
             Destination(vm, nav, pickFile, toggle, Modifier.weight(1f).fillMaxWidth())

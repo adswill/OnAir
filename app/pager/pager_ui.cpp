@@ -802,8 +802,47 @@ void findPagersRow(App& a) {
     }
 }
 
+// "Scan the span" (issue #269): lists the pager carriers of the whole capture with the speed they send and how many pages each gave; click to tune.
+void spanScanRows(App& a) {
+    if (!a.engine.running() || a.rx.standard != a.family + 1) return;
+    const bool wide = a.rx.pager.inputRate >= 400e3;
+    if (!wide && !a.engine.pagerFindOn()) return;   // a narrow radio sees one channel: nothing to scan
+    const bool on = a.engine.pagerFindOn();
+    if (!on) {
+        if (ImGui::SmallButton(tr("Scan the span for pagers"))) a.engine.setPagerFind(true);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Looks at every 25 kHz channel of the capture for a minute and a half and lists those that send POCSAG or FLEX with their speed and page count. Click a row to tune to it."));
+        return;
+    }
+    const bool done = a.engine.pagerFindDone();
+    if (ImGui::SmallButton(done ? tr("Scan again##pgscan") : tr("Stop scanning##pgscan"))) { a.engine.setPagerFind(done); return; }   // finished: scan again; running: stop
+    ImGui::SameLine();
+    ImGui::TextDisabled(done ? tr("Scan finished (%.0f s of signal).") : tr("Scanning the span: %.0f s of signal. Pages come in bursts, so give it a minute."), a.engine.pagerFindSeconds());
+    const auto rows = a.engine.pagerFindRows();
+    if (rows.empty()) return;
+    if (!ImGui::BeginTable("##pgscan", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY, ImVec2(0, std::min<float>(200.f, 26.f + 20.f * (float)rows.size()) * gUi))) return;
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn(tr("Frequency MHz")); ImGui::TableSetupColumn(tr("Speed")); ImGui::TableSetupColumn(tr("Pages")); ImGui::TableSetupColumn("SNR dB"); ImGui::TableSetupColumn("");
+    ImGui::TableHeadersRow();
+    for (const auto& c : rows) {
+        const double mhz = c.absHz > 0 ? c.absHz / 1e6 : radioCenterMhz(a) + c.hz / 1e6;
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        char b[40]; snprintf(b, sizeof b, "%.4f##pgs%.0f", mhz, c.hz);
+        if (ImGui::Selectable(b, false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap)) { a.engine.setPagerFind(false); tuneFreq(a, mhz); }   // the radio moves: the list would restart, so the scan ends here
+        ImGui::TableNextColumn(); if (c.speed >= 0) ImGui::TextUnformatted(dect2::pagerSpeedName(c.speed)); else ImGui::TextDisabled("%s", tr("no pages yet"));
+        ImGui::TableNextColumn(); if (c.pages) ImGui::Text("%llu", (unsigned long long)c.pages); else ImGui::TextDisabled("0");
+        ImGui::TableNextColumn(); ImGui::Text("%.0f", c.snrDb);
+        ImGui::TableNextColumn();
+        ImGui::PushID((int)c.hz);
+        if (ImGui::SmallButton(tr("Tune"))) { a.engine.setPagerFind(false); tuneFreq(a, mhz); }
+        ImGui::PopID();
+    }
+    ImGui::EndTable();
+}
+
 void receiver(App& a) {
     findPagersRow(a);
+    spanScanRows(a);
     wideCarriersTable(a, 0);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
     const dect2::PagerTelemetry& t = a.rx.pager;

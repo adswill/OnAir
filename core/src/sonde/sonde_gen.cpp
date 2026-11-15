@@ -30,7 +30,7 @@ struct Spec {
     const char* serial;
 };
 
-const Spec kSpecs[12] = {
+const Spec kSpecs[13] = {
     {SondeRs41, 403.000e6, 25.20, 55.36, 12000, 5.0, 0, 2400, "N4750123"},
     {SondeDfm, 402.200e6, 25.30, 55.50, 22000, -15.0, 17, 2400, "17012345"},
     {SondeM10, 404.100e6, 25.10, 55.20, 8000, 5.0, 0, 4800, "310-2-11329"},
@@ -43,6 +43,7 @@ const Spec kSpecs[12] = {
     {SondeImet54, 404.700e6, 25.05, 55.15, 9000, 5.0, 0, 2400, "iMet54-100123"},
     {SondeMrz, 403.800e6, 25.35, 55.35, 8000, 5.0, 0, 2400, "MRZ-11223-4455"},
     {SondeMeisei, 401.300e6, 25.22, 55.42, 7000, 5.0, 0, 2400, "12345678"},
+    {SondeGth, 400.563e6, 25.28, 55.38, 9000, 5.0, 0, 2400, "GTH-26407413"},
 };
 
 double baudOf(int kind) {
@@ -53,7 +54,7 @@ double baudOf(int kind) {
     case SondeLms6: return 9616;
     case SondeImet: return 26400;
     case SondeImet54: return 4800;
-    case SondeMrz: case SondeMeisei: return 2400;
+    case SondeMrz: case SondeMeisei: case SondeGth: return 2400;
     default: return 9600;
     }
 }
@@ -68,6 +69,7 @@ const char* typeOf(int kind) {
     case SondeImet54: return "iMet-54";
     case SondeMrz: return "MRZ";
     case SondeMeisei: return "iMS-100";
+    case SondeGth: return "GTH";
     default: return "M20";
     }
 }
@@ -84,6 +86,7 @@ int specMaskBit(int kind) {
     case SondeImet54: return 128;
     case SondeMrz: return 256;
     case SondeMeisei: return 512;
+    case SondeGth: return 1024;
     default: return 0;
     }
 }
@@ -126,12 +129,12 @@ public:
         : rate_(rate), cfg_(cfg), noise_(cfg.modeOpt[2] ? (uint32_t)cfg.modeOpt[2] : 1u) {
         const int mask = cfg.modeOpt[0] ? cfg.modeOpt[0] : 0x7;
         centreHz_ = (mask & 32) ? 1680.0e6 : kCentreHz;
-        int want = cfg.modeOpt[1] > 0 ? std::min(cfg.modeOpt[1], 12) : 3;
+        int want = cfg.modeOpt[1] > 0 ? std::min(cfg.modeOpt[1], 13) : 3;
         east_ = cfg.modeVal[0] != 0 ? cfg.modeVal[0] : 10.0;
         driftHzPerMin_ = cfg.modeVal[1];
         const double off2 = cfg.modeVal[2] != 0 ? cfg.modeVal[2] : 450000.0;
         std::mt19937 rng(cfg.modeOpt[2] ? (uint32_t)cfg.modeOpt[2] : 1u);
-        for (int i = 0; i < 12 && (int)sondes_.size() < want; i++) {
+        for (int i = 0; i < 13 && (int)sondes_.size() < want; i++) {
             const int bit = specMaskBit(kSpecs[i].kind);
             if (!(mask & bit)) continue;
             Sonde s;
@@ -245,6 +248,7 @@ private:
             else if (s.spec.kind == SondeImet54) sy = imet54Symbols(tr, 100123);
             else if (s.spec.kind == SondeMrz) { static const int subs[4] = {0xC, 0xD, 1, 2}; sy = mrzSymbols(tr, subs[s.frameCount & 3], false); }
             else if (s.spec.kind == SondeMeisei) sy = meiseiSymbols(tr, s.frameCount, 12345678);
+            else if (s.spec.kind == SondeGth) sy = gthSymbols(tr, s.frameCount, 0x26407413u);
             else sy = m20Symbols(tr);
             s.frameCount++;
             s.nextBurstT += s.period;

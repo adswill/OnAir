@@ -80,6 +80,10 @@ public:
     void setWeakBurstPath(bool fullWindow, bool coherentBits);
     // the repair-cost limit of the coherent path (kRepairCostPerBit; a large value turns the check off: measurement only)
     void setRepairCostLimit(double perBit);
+    // Baseband export (issue #214): every burst that looks like a beacon (decoded or not) is saved to dir as a WAV file: the burst at 32 kHz, the
+    // carrier mixed to zero, 2 channels (I, Q) of 32 bit float, scaled to a peak of 0.9. The name carries the time, the carrier's offset from the dial
+    // and the identification when it decoded. "" switches it off. In the whole-capture search a burst heard in two neighbouring channels can be saved twice.
+    void setBurstExport(const std::string& dir);
     bool wideSearch() const;
     double wideSpanHz() const;          // what the bank covers now (0: off)
 

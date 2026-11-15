@@ -68,6 +68,7 @@ int kindOfType(const std::string& t) {
     if (t == "iMet-54") return SondeImet54;
     if (t == "MRZ") return SondeMrz;
     if (t == "iMS-100") return SondeMeisei;
+    if (t == "GTH") return SondeGth;
     return SondeUnknown;
 }
 
@@ -159,6 +160,7 @@ public:
             addDec(makeImet54Decoder(), SondeImet54, nullptr);
             addDec(makeMrzDecoder(), SondeMrz, nullptr);
             addDec(makeMeiseiDecoder(), SondeMeisei, nullptr);
+            addDec(makeGthDecoder(), SondeGth, nullptr);
         }
         syms.assign(chains.size(), {});
         softs.assign(chains.size(), {});

@@ -32,6 +32,7 @@
 #include "dect2/fm/fm_census.h"
 #include "dect2/dab/dab_census.h"
 #include "dect2/general/am_census.h"
+#include "dect2/pager/pager_find.h"
 #include "dect2/general/am_diversity.h"
 #include "dect2/dvbs/dvbs_rx.h"
 #include "dect2/dtmb/dtmb_rx.h"
@@ -526,6 +527,13 @@ public:
     bool amCensusOn() const { return amCensusOn_.load(); }
     std::vector<AmCensusRow> amCensusRows() const { return amCensus_.rows(); }
     double amCensusStepHz() const { return amCensus_.stepHz(); }
+    // Pager scan (issue #269): while on (pager mode), the capture also goes to a PagerFinder that lists the pager carriers of the span with their speed
+    // and page count. Stops feeding by itself after maxSec seconds of signal; turning it off and on starts a new scan.
+    void setPagerFind(bool on) { if (on) pagerFindReady_ = false; pagerFindOn_ = on; }
+    bool pagerFindOn() const { return pagerFindOn_.load(); }
+    std::vector<PagerCandidate> pagerFindRows() const { return pagerFind_.rows(); }
+    double pagerFindSeconds() const { return pagerFind_.seconds(); }
+    bool pagerFindDone() const { return pagerFind_.done(); }
     // AM frequency diversity: general() and generalExtra(0) (the partner frequency) play through AmDiversity; offsetHz is the partner from the dial, the extra channel carries the same demodulator
     void setAmDiversity(bool on, double offsetHz = 0);
     bool amDiversityOn() const { return amDivOn_.load(); }
@@ -953,6 +961,7 @@ private:
     FmCensus fmCensus_;
     DabCensus dabCensus_; std::atomic<bool> dabCensusOn_{false}; bool dabCensusReady_ = false; double dabCensusC_ = 0, dabCensusR_ = 0;
     AmCensus amCensus_;
+    PagerFinder pagerFind_; std::atomic<bool> pagerFindOn_{false}; bool pagerFindReady_ = false; double pagerFindC_ = 0, pagerFindR_ = 0;
     std::atomic<bool> fmCensusOn_{false}, amCensusOn_{false}, amDivOn_{false};
     bool fmCensusReady_ = false, amCensusReady_ = false;
     double fmCensusC_ = 0, fmCensusR_ = 0, amCensusC_ = 0, amCensusR_ = 0;
