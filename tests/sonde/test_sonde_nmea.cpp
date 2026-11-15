@@ -68,7 +68,7 @@ int main() {
 
     // the sender: a file stands in for the serial port (a pty or a plain file takes the same writes)
     const std::string path = "sonde_nmea_test_out.txt";
-    std::remove(path.c_str());
+    { std::ofstream mk(path, std::ios::binary); }   // a port exists before it is opened: the sender never creates one
     SondeNmeaConfig c; c.enabled = true; c.kind = 0; c.path = path; c.baud = 4800;
     SondeNmeaOut& o = SondeNmeaOut::get();
     o.configure(c);
