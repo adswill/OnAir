@@ -24,6 +24,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -616,6 +617,30 @@ bool usbDevicePresent(uint16_t vid, uint16_t pid) {
     }
     if (n >= 0) libusb_free_device_list(list, 1);
     return found;
+}
+
+// Every device on the bus in one pass (Help > Hardware, usb_diag.cpp usbRadiosPresent): f(vid, pid, openError). A device tryOpen(vid, pid)
+// accepts is opened for a moment and closed: openError is libusb's error, 0 when it opened (Windows: LIBUSB_ERROR_NOT_SUPPORTED means no
+// WinUSB driver). Not tried: openError 1.
+void usbForEachDevice(const std::function<void(uint16_t, uint16_t, int)>& f, const std::function<bool(uint16_t, uint16_t)>& tryOpen) {
+    if (usbFdPlatform()) { for (const auto& r : usbFdList()) f(r.vid, r.pid, 1); return; }
+    std::string err;
+    libusb_context* ctx = acquireContext(err);
+    if (!ctx) return;
+    libusb_device** list = nullptr;
+    const ssize_t n = libusb_get_device_list(ctx, &list);
+    for (ssize_t i = 0; i < n; i++) {
+        libusb_device_descriptor d{};
+        if (libusb_get_device_descriptor(list[i], &d) != 0) continue;
+        int openError = 1;
+        if (tryOpen && tryOpen(d.idVendor, d.idProduct)) {
+            libusb_device_handle* h = nullptr;
+            openError = libusb_open(list[i], &h);
+            if (openError == 0 && h) libusb_close(h);
+        }
+        f(d.idVendor, d.idProduct, openError);
+    }
+    if (n >= 0) libusb_free_device_list(list, 1);
 }
 
 // Android: the entry of one HackRF the app handed over (h: wrapped for a moment to ask its board; null: named by `why`)

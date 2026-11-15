@@ -17,6 +17,7 @@ struct VideoInputDevice {
 };
 
 std::vector<VideoInputDevice> listVideoInputs();   // cameras and capture cards; default first when the OS has one
+bool videoInputSupported();                        // this build can open cameras at all (libavdevice v4l2 / dshow, or AVFoundation); Help > Hardware
 
 class VideoIn {
 public:

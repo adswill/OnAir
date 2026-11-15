@@ -964,6 +964,8 @@ float menuBar(App& a) {
             ImGui::Separator();
             if (ImGui::MenuItem(tr("Documentation"))) dect2::openUrl("https://on-air.dev/docs/");
             if (ImGui::MenuItem(tr("Troubleshooting"))) dect2::openUrl("https://on-air.dev/docs/troubleshooting/");
+            if (ImGui::MenuItem(tr("Hardware"))) a.hardwareOpen = true;
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("This computer, the minimum requirements and which video and audio formats work here"));
             if (ImGui::MenuItem(tr("Voice codecs"))) a.voiceCodecsOpen = true;
             if (ImGui::MenuItem(tr("Voice monitor"))) voiceui::open();
             if (ImGui::MenuItem(tr("Website"))) dect2::openUrl("https://on-air.dev/");
@@ -981,6 +983,7 @@ float menuBar(App& a) {
     workspaceDialogs(a);
     creditsWindow(a);
     appcodec::voiceCodecsWindow(a);
+    hardwareWindow(a);
     voiceui::window(a);
     voiceKeysWindow(a);
     inputmap::window();

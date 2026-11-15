@@ -11,5 +11,6 @@ bool videoInCameraStart(VideoIn::Impl*, const std::string&, std::string& err) {
 }
 void videoInCameraStop(VideoIn::Impl*) {}
 std::vector<VideoInputDevice> videoInListCameras() { return {}; }
+bool videoInCameraSupported() { return false; }
 
 } // namespace dect2

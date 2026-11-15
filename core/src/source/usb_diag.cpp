@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <string>
 #include <system_error>
 #ifdef _WIN32
@@ -22,6 +23,7 @@
 namespace dect2 {
 bool usbVendorPresent(uint16_t vid);   // hackrf_usb.cpp
 bool usbDevicePresent(uint16_t vid, uint16_t pid);
+void usbForEachDevice(const std::function<void(uint16_t, uint16_t, int)>& f, const std::function<bool(uint16_t, uint16_t)>& tryOpen);
 namespace {
 
 namespace fs = std::filesystem;
@@ -133,6 +135,29 @@ std::vector<std::string> usbRadioHints() {
     if (root && *root) return hintsUnder(root);
     return {};
 #endif
+}
+
+std::vector<UsbRadio> usbRadiosPresent() {
+    std::vector<UsbRadio> out;
+    const auto tryOpen = [](uint16_t vid, uint16_t pid) {
+#ifdef _WIN32
+        // only the radios that use WinUSB: an SDRplay RSP has the SDRplay API's driver, the LimeSDR Mini FTDI's, the PlutoSDR its own (network)
+        return radioOf(vid, pid) != nullptr && vid != 0x1df7 && vid != 0x0403 && vid != 0x0456;
+#else
+        (void)vid; (void)pid;
+        return false;   // Linux: usbRadioHints reads the permissions from sysfs; macOS needs no driver
+#endif
+    };
+    usbForEachDevice([&out](uint16_t vid, uint16_t pid, int openError) {
+        const char* r = radioOf(vid, pid);
+        if (!r) return;
+        UsbRadio u;
+        u.radio = r; u.vid = vid; u.pid = pid;
+        // NOT_SUPPORTED / NOT_FOUND: Windows has no driver libusb can use (ACCESS is left out: OnAir itself may have the radio open)
+        if (native::kOnWindows && (openError == -12 || openError == -5)) u.problem = native::windowsUsbDriverHint();
+        out.push_back(u);
+    }, tryOpen);
+    return out;
 }
 
 std::vector<std::string> sdrplayApiHints() {
