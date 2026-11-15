@@ -109,11 +109,11 @@ struct Session::Impl {
         r.threadName = "vg-src-" + std::to_string(k + 1);
         return r;
     }
-    void muxRun(std::vector<double> bpsHint);
+    void muxRun(const std::vector<double>& bpsHint);
     void previewRun();
 };
 
-void Session::Impl::muxRun(std::vector<double> bpsHint) {
+void Session::Impl::muxRun(const std::vector<double>& bpsHint) {
     const MuxConfig m = mcfg;
     const bool file = m.output == Output::File;
     const double rate = std::max(10000.0, muxRateFor(m, bpsHint));

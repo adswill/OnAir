@@ -136,8 +136,7 @@ private:
 
 class UdpClient final : public ClientTransport {
 public:
-    UdpClient(std::string host, int port) : host_(std::move(host)), port_(port) {
-        s_ = udpSocket(INADDR_ANY, 0, 0);
+    UdpClient(std::string host, int port) : host_(std::move(host)), port_(port), s_(udpSocket(INADDR_ANY, 0, 0)) {
         int sndBuf = 1 << 20;
         if (s_ != kBadSock) setsockopt(s_, SOL_SOCKET, SO_SNDBUF, reinterpret_cast<const char*>(&sndBuf), sizeof sndBuf);
     }
@@ -224,7 +223,7 @@ struct PipeIo {
         h = INVALID_HANDLE_VALUE;
     }
     // -1: nothing within ms, -2: the other end is gone, else a whole message's length (in rbuf)
-    long long read(int ms) {
+    long long readMessage(int ms) {
         DWORD n = 0;
         if (!reading) {
             ResetEvent(rd.hEvent);
@@ -274,8 +273,8 @@ HANDLE newInstance(const std::string& name, bool first) {
 
 class PipeServer final : public ServerTransport {
 public:
-    PipeServer(std::string name, HANDLE first, OnDatagram cb) : name_(std::move(name)), cb_(std::move(cb)) {
-        stopEv_ = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+    PipeServer(std::string name, HANDLE first, OnDatagram cb)
+        : name_(std::move(name)), cb_(std::move(cb)), stopEv_(CreateEventW(nullptr, TRUE, FALSE, nullptr)) {
         th_ = namedThread("vg-link-pipe", [this, first] { listen(first); });
     }
     ~PipeServer() override { stop(); CloseHandle(stopEv_); }
@@ -343,7 +342,7 @@ private:
     }
     void serve(Conn& c) {
         while (WaitForSingleObject(stopEv_, 0) != WAIT_OBJECT_0) {
-            const long long n = c.io.read(100);
+            const long long n = c.io.readMessage(100);
             if (n == -2) break;   // the generator closed it
             if (n > 0) cb_(c.io.rbuf.data(), (size_t)n, c.key, "");
         }
@@ -382,7 +381,7 @@ public:
     bool sendRtcp(const uint8_t* d, size_t n) override { return open_ && io_.write(d, n, 50); }
     long long recv(std::vector<uint8_t>& buf, int ms) override {
         if (!open_) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); return -1; }
-        const long long n = io_.read(ms);
+        const long long n = io_.readMessage(ms);
         if (n == -2) { open_ = false; return -1; }   // OnAir went away: open() again later
         if (n <= 0 || (size_t)n > buf.size()) return -1;
         std::copy_n(io_.rbuf.begin(), (size_t)n, buf.begin());
@@ -473,8 +472,7 @@ private:
 
 class UnixClient final : public ClientTransport {
 public:
-    explicit UnixClient(std::string path) : path_(std::move(path)) {
-        s_ = unSocket();
+    explicit UnixClient(std::string path) : path_(std::move(path)), s_(unSocket()) {
         if (s_ == kBadSock) return;
 #ifdef __linux__
         sockaddr_un a{};   // autobind: a unique abstract address, nothing to clean up
