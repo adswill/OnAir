@@ -644,6 +644,8 @@ void mbSettings() {
     ImGui::TextDisabled("Raster 256 px PNG/JPEG tiles only (vector MBTiles cannot be drawn).");
 }
 
+} // namespace
+
 // Map colours: presets, custom colours (sea, grid, outline, text, tile tint), and the reset to today's look.
 void colourSettings() {
     using namespace mapcol;
@@ -675,6 +677,7 @@ void colourSettings() {
 bool coloursChanged() { return gSchemeSel != mapcol::kDefault; }
 void coloursReset() { scheme(); gSchemeSel = mapcol::kDefault; gScheme = mapcol::kPresets[mapcol::kDefault].s; schemeSave(); }
 
+namespace {
 void tilesMenu(ImVec4 buttonColour) {
     static Usage uk, ut;   // kept, this session's
     static double countedAt = -1e9;   // counted again every 2 s while the menu is open: tiles keep arriving
