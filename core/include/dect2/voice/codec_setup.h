@@ -39,11 +39,16 @@ struct SetupProbe {                              // what the caller can see; eac
     std::function<bool(const std::string&)> fileExists;
     std::function<std::string(const std::string&)> archOfFile;   // the processor(s) a file is built for ("" when not known or not applicable)
     std::function<bool(const std::string&, std::string*)> loaded;   // is plug-in `id` loaded; its path
+    std::function<std::vector<std::string>(const std::string&)> listDir;   // file names in a folder (optional): a near-miss name is reported
     std::string processArch;                     // "arm64"
 };
 
 // The patented voice plug-ins (ambe2, ambe, imbe, tetra, tetrapol, ysf, ...) from the codec registry, one item each.
 std::vector<SetupItem> codecSetupStatus(const std::vector<codec::CodecDir>& dirs, const SetupProbe& probe);
+
+// Whether the build helper (tools/codec-builder) can make this plug-in id, and what the user has to do for it
+bool setupHelperBuilds(const std::string& id);
+std::string setupHowToGet(const std::string& id);
 
 // "3 of 5 installed" style summary
 std::string setupSummary(const std::vector<SetupItem>& items);

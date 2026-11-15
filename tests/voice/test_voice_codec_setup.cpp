@@ -68,5 +68,23 @@ int main() {
     CHECK(lin[0].find("apt install") != std::string::npos && lin[2].find("build-codecs.sh") != std::string::npos, "linux steps");
     CHECK(setupBuildCommand(SetupOs::MacOS) == "bash tools/codec-builder/build-codecs.sh", "command");
     CHECK(std::string(setupOsName(currentSetupOs())).size() > 2, "os name");
+    {   // the three plug-ins of #533: missing text names the exact file, the folders, how to get it; a near-miss file name is reported
+        std::set<std::string> none;
+        SetupProbe q;
+        q.fileExists = [&](const std::string& f) { return none.count(f) > 0; };
+        q.listDir = [](const std::string& d) { return d == "/home/u/codecs" ? std::vector<std::string>{"onair-codec-iridium (1).dll", "readme.txt", "libmbe.dll"} : std::vector<std::string>{}; };
+        q.processArch = "arm64";
+        const auto it2 = codecSetupStatus(dirs, q);
+        for (const char* id : {"aeroambe", "iridium", "tetrapol"}) {
+            const SetupItem* x = find(it2, id);
+            CHECK(x && x->state == SetupState::Missing, "present in the setup list: %s", id);
+            if (!x) continue;
+            CHECK(x->detail.find(x->fileName) != std::string::npos && x->detail.find("/home/u/codecs") != std::string::npos && x->detail.find("/opt/onair/codecs") != std::string::npos, "names file and folders: %s", x->detail.c_str());
+            CHECK(x->detail.find("build helper") != std::string::npos, "says how to get it: %s", id);
+        }
+        CHECK(find(it2, "iridium")->detail.find("different name") != std::string::npos && find(it2, "iridium")->detail.find("(1)") != std::string::npos, "near-miss reported");
+        CHECK(find(it2, "tetrapol")->detail.find("different name") == std::string::npos, "no false near-miss");
+        CHECK(!setupHelperBuilds("iridium") && !setupHelperBuilds("tetrapol") && !setupHelperBuilds("aeroambe") && setupHelperBuilds("ambe2"), "helper ids");
+    }
     return testSummary("voice_codec_setup");
 }

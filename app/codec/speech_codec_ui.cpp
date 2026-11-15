@@ -52,6 +52,12 @@ void syncExtra() {
     dect2::codec::setExtraCodecDir(plat::basePrefs().getS(kExtraKey, ""));
 }
 bool fileExists(const std::string& p) { std::error_code ec; return std::filesystem::is_regular_file(std::filesystem::path(p), ec); }
+std::vector<std::string> listFolderFiles(const std::string& dir) {
+    std::vector<std::string> v;
+    std::error_code ec;
+    for (std::filesystem::directory_iterator it(std::filesystem::path(dir), ec), end; !ec && it != end && v.size() < 500; it.increment(ec)) v.push_back(it->path().filename().string());
+    return v;
+}
 void openFolder(const std::string& folder) {
     std::error_code ec;
     std::filesystem::create_directories(std::filesystem::path(folder), ec);
@@ -309,6 +315,7 @@ static void codecSetupAssistant() {
     namespace vv = dect2::voice;
     vv::SetupProbe pr;
     pr.fileExists = fileExists;
+    pr.listDir = listFolderFiles;
     pr.archOfFile = [](const std::string& f) {
 #if defined(__APPLE__)
         return cd::machoArchOfFile(f);
@@ -377,6 +384,7 @@ void wizardCodecPanel() {
     namespace vv = dect2::voice;
     vv::SetupProbe pr;
     pr.fileExists = fileExists;
+    pr.listDir = listFolderFiles;
     pr.archOfFile = [](const std::string& f) {
 #if defined(__APPLE__)
         return cd::machoArchOfFile(f);

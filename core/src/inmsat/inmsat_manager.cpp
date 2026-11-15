@@ -39,6 +39,15 @@ constexpr double kAeroCost = 1.0, kInmcCost = 0.6, kCCost = 0.5;
 constexpr double kCGiveUp = 45;         // seconds an Aero C receiver may run without a frame before it is dropped (the carrier may be a 10500 bit/s P channel)
 constexpr double kCIdleDrop = 20;       // seconds without a frame after it had locked and the carrier is gone
 constexpr double kWindowHold = 20;      // seconds a window stays without any carrier
+constexpr double kInmcMinNarrowWidth = 900;   // a "narrow" carrier at least this wide may still be an Inmarsat-C channel (see mayBeInmarsatC)
+}
+
+// Which carriers get an Inmarsat-C receiver. An Inmarsat-C channel is 1200 symbol/s: measured at 10 dB under its peak it is 1.2 to 1.8 kHz wide,
+// so it lands on both sides of the 1.5 kHz narrow/medium edge. A weak or well-filtered one was "narrow", never got a receiver, and was listed
+// as a bare carrier while the Inmarsat-C mode decoded the same signal (#508). Aero 600 bit/s carriers are about 0.7 kHz wide.
+static bool mayBeInmarsatC(const DetectedCarrier& c) {
+    if (!c.confirmed) return false;
+    return c.cls == CarrierClass::Medium || (c.cls == CarrierClass::Narrow && c.widthHz >= kInmcMinNarrowWidth);
 }
 
 struct Manager::Impl {
@@ -73,6 +82,10 @@ struct Manager::Impl {
         uint64_t lastA = 0, lastI = 0;
         double lastCarrier = 0;       // stream time a carrier was last inside
         double inmcOffset = 0;        // where the Inmarsat-C carrier sits in the window
+        // what the receivers were last configured for: configure() restarts a receiver (locks, the Inmarsat-C 8.64 s frame search, half-received
+        // multi-block ACARS messages), so a window whose output did not change must not be touched when another window opens or closes (#508)
+        double cfgRate = -1;
+        bool inmcCfg = false;
     };
     std::vector<std::unique_ptr<Window>> wins;
     std::unique_ptr<lora::FdChannelizer> chz;
@@ -157,13 +170,13 @@ struct Manager::Impl {
         std::vector<char> used(un.size(), 0);
         for (size_t i = 0; i < un.size(); i++) {
             if (used[i]) continue;
-            bool medium = un[i]->cls == CarrierClass::Medium;
+            bool medium = mayBeInmarsatC(*un[i]);
             double lo = un[i]->offsetHz, hi = lo;
             used[i] = 1;
             for (size_t j = i + 1; j < un.size(); j++) {
                 if (used[j]) continue;
                 const double nlo = std::min(lo, un[j]->offsetHz), nhi = std::max(hi, un[j]->offsetHz);
-                if (nhi - nlo <= cfg.windowBwHz - 2 * kMargin) { lo = nlo; hi = nhi; used[j] = 1; medium |= un[j]->cls == CarrierClass::Medium; }
+                if (nhi - nlo <= cfg.windowBwHz - 2 * kMargin) { lo = nlo; hi = nhi; used[j] = 1; medium |= mayBeInmarsatC(*un[j]); }
             }
             double centre = 0.5 * (lo + hi);
             centre = std::max(-limit + cfg.windowBwHz / 2, std::min(limit - cfg.windowBwHz / 2, centre));
@@ -181,10 +194,11 @@ struct Manager::Impl {
             for (auto& w : wins) {
                 if (w->inmc) continue;
                 for (const auto& c : cars) {
-                    if (!c.confirmed || c.cls != CarrierClass::Medium || !covers(*w, c.offsetHz)) continue;
+                    if (!mayBeInmarsatC(c) || !covers(*w, c.offsetHz)) continue;
                     if (totalCost() + kInmcCost > cfg.budget + 1e-9) break;
                     w->inmcOffset = c.offsetHz - w->centerHz;
                     w->inmc = std::make_unique<InmcReceiver>();
+                    say("Inmarsat: Inmarsat-C receiver in the window at " + std::to_string((long)(w->centerHz / 1000)) + " kHz, carrier " + std::to_string((long)((w->centerHz + w->inmcOffset + cfg.centerHz) / 1000)) + " kHz");
                     changed = true;
                     break;
                 }
@@ -193,17 +207,22 @@ struct Manager::Impl {
         if (changed) {
             rebuildChannelizer();
             for (auto& w : wins) {
+                const bool rateChanged = w->cfgRate != w->outRate;
                 if (!w->aero) w->aero = std::make_unique<AeroReceiver>();
-                w->aero->configure(w->outRate);
-                w->aero->setSignalOffset(0);
-                w->aero->setSearchLimit(cfg.windowBwHz / 2 + 25000);   // the window's pass-band (the channelizer's margin); the empty rest of a fast window must not set the noise floor
-                if (w->inmc) {
+                if (rateChanged) {
+                    w->aero->configure(w->outRate);
+                    w->aero->setSignalOffset(0);
+                    w->aero->setSearchLimit(cfg.windowBwHz / 2 + 25000);   // the window's pass-band (the channelizer's margin); the empty rest of a fast window must not set the noise floor
+                }
+                if (w->inmc && (rateChanged || !w->inmcCfg)) {
                     w->inmc->configure(w->outRate);
                     w->inmc->setSignalOffset(w->inmcOffset);
                     w->inmc->setChannelSearch(true);
                     w->inmc->setSearchSpan(cfg.windowBwHz / 2);
+                    w->inmcCfg = true;
                 }
-                for (auto& c : w->cch) c->rx->configure(w->outRate, c->offsetHz, 2800);
+                if (rateChanged) for (auto& c : w->cch) c->rx->configure(w->outRate, c->offsetHz, 2800);
+                w->cfgRate = w->outRate;
             }
         }
     }
