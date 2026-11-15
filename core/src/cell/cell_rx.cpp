@@ -135,6 +135,7 @@ const char* lteOperatorName(int mcc, int mnc) {
         {248, 1, "Telia"}, {248, 2, "Elisa"}, {248, 3, "Tele2"},
         {260, 1, "Plus"}, {260, 2, "T-Mobile"}, {260, 3, "Orange"}, {260, 6, "Play"},
         {244, 5, "Elisa"}, {244, 12, "DNA"}, {244, 91, "Telia"},
+        {244, 45, "Erillisverkot"}, {244, 46, "Erillisverkot"},
         {240, 1, "Telia"}, {240, 2, "Tre"}, {240, 7, "Tele2"},
         {242, 1, "Telenor"}, {242, 2, "Telia"},
         {238, 1, "TDC"}, {238, 2, "Telenor"},
