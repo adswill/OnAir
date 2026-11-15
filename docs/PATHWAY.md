@@ -2419,3 +2419,8 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 ## 2026-11-15: Data services view for carousel files (issue 176)
 
 - A DSM-CC data and object carousel receiver with module reassembly, zlib modules, BIOP files, file list, save to disk and previews (text, PNG/JPEG, MHEG-5 object tree and scene drawing) already existed. The TV data sub-tab is now named "Data services" and says plainly that files are shown and interactive pages are not run (apart from the limited Red Button subset). docs/MHEG-REDBUTTON.md lists what is not implemented. Hong Kong DTMB weather and stock pages are not verified: no real stream here. Existing tests (dvbs_dsmcc, mheg) already round-trip compressed synthetic carousels.
+
+## 2026-11-15: PACTOR-II / -III identifier in the PACTOR-I screen (issue #216)
+
+- Research pass on what is public for PACTOR-I to -IV (docs/PACTOR-RESEARCH.md): the signals are documented, the channel coding of PACTOR-II, -III and -IV (code polynomials, puncturing, interleaver, CRC, frame layout) is not, so text cannot be decoded from them and OnAir does not guess.
+- The PACTOR-I screen now also runs the signal-level analysis and names a PACTOR-II or PACTOR-III signal on the channel (carriers, speed level), "data not decodable (proprietary)". Tested on generator signals only (test pactor_hfid).

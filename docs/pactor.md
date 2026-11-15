@@ -61,3 +61,10 @@ noise, FEC repeats, memory ARQ, noise only; engine run) and `tests/app/test_pact
 
 ARRL, "PACTOR" (arrl.org/pactor); Wavecom "PACTOR" decoder notes and the SCS protocol pages for the cycle, packet sizes, control signals and CRC; the
 sigidwiki page for PACTOR I. Facts only, no code taken. See THIRD_PARTY.md.
+
+## PACTOR-II / -III on the channel
+
+While this mode runs, the same signal-level analysis as the PACTOR-II mode runs on the channel. If it sees the carriers of a PACTOR-II or PACTOR-III
+signal, the state line says "PACTOR-II signal detected (...)" or "PACTOR-III signal detected, speed level N (...)", always with "data not decodable
+(proprietary)". Nothing is decoded: the coding of PACTOR-II, -III and -IV is not public (docs/PACTOR-RESEARCH.md). The PACTOR-II / -III / -IV modes show the symbols.
+Tested on generator signals only (`tests/pactor/test_pactor_hfid.cpp`).

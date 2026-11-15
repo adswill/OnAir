@@ -57,6 +57,9 @@ struct PactorTelemetry {
     uint64_t csCount = 0, memArqSaves = 0, repeats = 0, fastPackets = 0, slowPackets = 0, changeovers = 0, connects = 0;
     bool fecMode = false;        // packets without control signals
     bool hasFullHuffman = false;
+    // signal-level identifier (physical layer only): PACTOR-II / -III carriers seen on the channel, 0 = none
+    int hfVariant = 0, hfLevel = 0, hfCarriers = 0;
+    double hfBaud = 0, hfFrameSec = 0;
     std::vector<PactorFrameLog> frames;   // newest first
     std::vector<PactorStation> stations;
     std::string text;
@@ -67,6 +70,11 @@ inline std::string pactorSummary(const PactorTelemetry& t) {
     char b[160];
     if (t.blocksOk) {
         snprintf(b, sizeof b, "PACTOR-I: %llu packets, %s", (unsigned long long)t.blocksOk, t.fecMode ? "unproto / FEC" : "ARQ");
+        return b;
+    }
+    if (t.hfVariant == 2 || t.hfVariant == 3) {
+        if (t.hfVariant == 3 && t.hfLevel > 0) snprintf(b, sizeof b, "PACTOR-III signal detected, speed level %d (%d carriers), data not decodable (proprietary)", t.hfLevel, t.hfCarriers);
+        else snprintf(b, sizeof b, "PACTOR-II signal detected (%d carriers, %.0f baud), data not decodable (proprietary)", t.hfCarriers, t.hfBaud);
         return b;
     }
     if (t.pairLowHz > 0) return "PACTOR-I: tone pair found, no packet yet";

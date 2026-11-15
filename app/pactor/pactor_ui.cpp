@@ -202,6 +202,12 @@ void receiver(App& a) {
     const dect2::PactorTelemetry& t = a.rx.pactor;
     auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     kv(tr("state"), "%s", dect2::pactorSummary(t).c_str());
+    if (t.hfVariant == 2 || t.hfVariant == 3) {
+        ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", tr(t.hfVariant == 3 ? "PACTOR-III signal on the channel" : "PACTOR-II signal on the channel"));
+        if (t.hfVariant == 3 && t.hfLevel > 0) kv(tr("speed level"), "%d (%d carriers)", t.hfLevel, t.hfCarriers);
+        else kv(tr("carriers"), "%d at %.0f baud", t.hfCarriers, t.hfBaud);
+        ImGui::TextDisabled("%s", tr("Detected from the signal only. The data cannot be decoded: PACTOR-II, -III and -IV are proprietary (SCS) and their coding is not public. The PACTOR-II / -III / -IV modes show the symbols."));
+    }
     if (t.pairLowHz > 0) kv(tr("tone pair"), "%.0f / %.0f Hz", t.pairLowHz, t.pairLowHz + 200);
     kv(tr("packets"), "%llu OK (%llu at 200 baud), %llu %s", (unsigned long long)t.blocksOk, (unsigned long long)t.fastPackets, (unsigned long long)t.blocksBad, tr("failed"));
     kv(tr("control signals"), "%llu", (unsigned long long)t.csCount);
@@ -219,7 +225,7 @@ void status(App& a) {
     const AdcStatus adc = classifyAdc(st.rmsDbfs, st.peak, st.clipFraction);
     StatusPanel panel;
     lamp("IQ", run ? (adc == AdcStatus::Overload ? 3 : (adc == AdcStatus::Good ? 1 : 2)) : 0, (int)Ic::Wave); flowNext(12 * gUi);
-    lamp(tr("Signal"), !on ? 0 : a.rx.pactor.state >= 1 ? 1 : 0); flowNext(10 * gUi);
+    lamp(tr("Signal"), !on ? 0 : (a.rx.pactor.state >= 1 || a.rx.pactor.hfVariant) ? 1 : 0); flowNext(10 * gUi);
     lamp(tr("Packets"), !on ? 0 : a.rx.pactor.dataValid ? 1 : 0); flowNext(10 * gUi);
     ImGui::TextDisabled("|"); flowNext(10 * gUi);
     ImGui::AlignTextToFramePadding();

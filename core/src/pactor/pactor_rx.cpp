@@ -2,6 +2,8 @@
 #include "dect2/pactor/pactor_rx.h"
 #include "dect2/pactor/pactor_proto.h"
 #include "dect2/pactor/pactor_tel.h"
+#include "dect2/pactorhf/pactorhf_rx.h"
+#include "dect2/pactorhf/pactorhf_tel.h"
 #include "dect2/marine/marine_dsp.h"
 #include "../audio/ham_listen.h"
 #include <algorithm>
@@ -78,6 +80,8 @@ struct PactorReceiver::Impl {
     hfdig::UsbAudio usb;
     std::atomic<int> demodSet{HfDemodUsb};
     hfdig::Listen listen;
+    PactorHfReceiver hf{2};   // signal-level identifier for PACTOR-II / -III (the same analysis as the PACTOR-II mode)
+    uint64_t hfSeq = 0;
     std::vector<cf32> base;
     std::vector<float> aud;
     std::vector<float> ring;
@@ -147,6 +151,7 @@ struct PactorReceiver::Impl {
         running = curRate >= pactorTuning().minSampleRate - 1;
         if (running) { front.configure(curRate); front.setOffsetHz(off); }
         usb.reset(); listen.reset();
+        hf.configure(curRate); hf.setSignalOffset(off); hf.reset();
         std::fill(ring.begin(), ring.end(), 0.f);
         na = 0; secPow = 0; secN = 0;
         locked = false; candCnt = 0; on = false; offCnt = 0; histN = 0;
@@ -557,6 +562,17 @@ struct PactorReceiver::Impl {
         pub.csCount = csCount; pub.memArqSaves = memSaves; pub.repeats = repeats; pub.fastPackets = fastPk; pub.slowPackets = slowPk;
         pub.changeovers = changeovers; pub.connects = connects; pub.fecMode = fecMode;
         pub.hasFullHuffman = pactor::huffComplete();
+        {   // what the physical-layer analysis sees (PACTOR-II / -III carriers); only reported while no PACTOR-I packet is decoded
+            PactorHfTelemetry h;
+            if (hf.telemetry(h, hfSeq)) {
+                hfSeq = h.seq;
+                pub.hfVariant = (h.variant == 2 || h.variant == 3) && h.nCarriers > 0 ? h.variant : 0;
+                pub.hfLevel = pub.hfVariant == 3 ? h.level : 0;
+                pub.hfCarriers = pub.hfVariant ? h.nCarriers : 0;
+                pub.hfBaud = pub.hfVariant ? h.baud : 0;
+                pub.hfFrameSec = pub.hfVariant ? h.framePeriodSec : 0;
+            }
+        }
         if (changed) { pub.frames = frames; pub.stations = stations; pub.text = text; pub.levelHist = levelHist; changed = false; }
     }
 };
@@ -572,7 +588,7 @@ void PactorReceiver::reset() { p_->resetReq = true; }
 void PactorReceiver::feed(const cf32* x, size_t n) {
     Impl& m = *p_;
     if (m.resetReq.exchange(false)) { m.offsetReq = false; m.resetState(); }
-    if (m.offsetReq.exchange(false) && m.running) { std::lock_guard<std::mutex> lk(m.mu); m.front.setOffsetHz(m.offsetHz); }
+    if (m.offsetReq.exchange(false) && m.running) { std::lock_guard<std::mutex> lk(m.mu); m.front.setOffsetHz(m.offsetHz); m.hf.setSignalOffset(m.offsetHz); }
     if (m.clearReq.exchange(false)) { m.frames.clear(); m.stations.clear(); m.text.clear(); m.levelHist.clear(); m.badSoft.clear(); m.lastTextSender = 0; m.changed = true; }
     if (m.curRate <= 0) return;
     m.nIn += (int64_t)n;
@@ -586,6 +602,7 @@ void PactorReceiver::feed(const cf32* x, size_t n) {
         m.usb.process(m.base.data(), m.base.size(), m.aud, pw);
         m.listen.play(m.aud.data(), m.aud.size());
         m.process(m.aud.data(), m.aud.size());
+        m.hf.feed(x, n);
     }
     while ((double)m.nIn >= m.nextReport) {
         m.nextReport += 0.25 * m.curRate;
@@ -609,6 +626,7 @@ void PactorReceiver::clearResults() {
 void PactorReceiver::flush() {
     Impl& m = *p_;
     if (!m.running) return;
+    m.hf.flush();
     if (m.on) { m.on = false; m.endBurst(m.burstStart, m.lastOn); }
     m.changed = true;
     m.report();
