@@ -2342,3 +2342,8 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - Analog TV and FPV got Brightness and Contrast sliders with a Reset button, saved per mode and applied only to the picture on the screen (snow and full screen included); decoding and saved frames are unchanged.
 - Branch feat42-ui3. The table maths is tested by `display_adjust` (not yet run on CI); the screens were only syntax-checked.
+
+## 2026-11-15: touch interface on narrow screens (issue #139)
+
+- Under 800 px wide the touch interface folds Gain and Volume into More, widens Start/Stop, Tuner and More, drops the Running/Stopped word from the top bar and, in portrait, puts the status line behind a switch in More. Wider screens and the desktop layout are unchanged.
+- Branch feat42-ui3. The layout rules are tested by `touch_logic` (not yet run on CI); the screens were only syntax-checked, not looked at.

@@ -227,10 +227,15 @@ struct ShellLayout {
     bool stepInMore = false;  // the short one-row dock: the Step button is in the More sheet
     bool shortScreen = false;
     bool statusOnTop = false; // portrait: the status line above the tabs
+    bool narrow = false;      // under 800 px of display-scale width (#139): the secondary controls fold into More, the main ones get wider
+    bool secondaryInMore = false;   // narrow: Gain and Volume are in the More sheet, not in the dock
+    bool statusFolded = false;      // narrow portrait: the status line above the tabs is behind a toggle (More), off until chosen
+    bool topStateText = true;       // the Running / Stopped word in the top bar (narrow: the Start / Stop button says it, the mode chip gets the room)
 };
 inline float touchTarget(float dpi, float factor) { return std::max(32.f * dpi, 48.f * dpi * factor); }
 // the dock's weights: - 0.8, frequency 3, + 0.8 and Step 1.6 on the tuning row; Start 1.4 and four of 1 on the action row
 constexpr float kDockOneRowWeightNoStep = 0.8f + 3.f + 0.8f + 1.4f + 4.f;
+constexpr float kNarrowWidth = 800.f;
 inline ShellLayout shellLayout(float dispW, float dispH, float dpi, float factor, float sideGaps = 0) {
     ShellLayout L;
     if (!(dpi > 0)) dpi = 1;
@@ -241,10 +246,15 @@ inline ShellLayout shellLayout(float dispW, float dispH, float dpi, float factor
     const bool wide = dispW >= 1000.f * dpi;
     // the smallest buttons (- and +, weight 0.8) of a one-row dock without Step must keep 0.8 of a target across
     const bool eightFit = (dispW - sideGaps) * 0.8f / kDockOneRowWeightNoStep >= 0.8f * L.target;
+    L.narrow = dispW < kNarrowWidth * dpi;
+    L.secondaryInMore = L.narrow;
+    L.topStateText = !L.narrow;
+    // the choice of rows is the same as before (docs/TOUCH-SIZE-4.1.md); a narrow dock has two fewer buttons, so the rest are wider
     if (wide) L.dockRows = 1;
     else if (L.shortScreen && eightFit) { L.dockRows = 1; L.stepInMore = true; }
     else L.dockRows = 2;
     L.statusOnTop = dispH >= dispW && !L.shortScreen;
+    L.statusFolded = L.narrow && L.statusOnTop;
     return L;
 }
 // The height the shell leaves to the panels (the body), given the bars, item spacing and window padding: never negative.

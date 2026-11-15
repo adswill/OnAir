@@ -8,6 +8,7 @@
 #include "../app.h"
 #include "theme.h"
 #include "scale.h"
+#include "../platform/platform.h"
 #include "toolbar_internal.h"
 
 namespace touch {
@@ -51,11 +52,13 @@ void topBar(App& a, ImVec2 disp) {
     const ModeDef* cur = &kModes[0];
     for (const auto& m : allModes()) if (modeSelected(a, m)) cur = &m;
     char chip[96]; snprintf(chip, sizeof chip, "%s  v##modechip", cur->name);
-    const float chipW = std::min(disp.x * 0.5f, 260.f * dpi() * std::max(0.85f, sizeFactor()));
+    const float chipW = gL.topStateText ? std::min(disp.x * 0.5f, 260.f * dpi() * std::max(0.85f, sizeFactor()))
+                                        : ImGui::GetContentRegionAvail().x;   // narrow: the chip takes the rest of the bar
     ImGui::PushStyleColor(ImGuiCol_Button, ImGui::ColorConvertU32ToFloat4((cur->col & 0x00FFFFFF) | 0xFF000000));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::ColorConvertU32ToFloat4((cur->col & 0x00FFFFFF) | 0xFF000000));
     if (ImGui::Button(chip, ImVec2(chipW, h))) openModePicker();
     ImGui::PopStyleColor(2);
+    if (!gL.topStateText) return;   // narrow: the Start / Stop button of the dock says it
     ImGui::SameLine();
     const bool run = a.engine.running();
     ImGui::AlignTextToFramePadding();
@@ -75,24 +78,31 @@ void dock(App& a, ImVec2 disp, float dockH) {
     char stepBtn[48]; snprintf(stepBtn, sizeof stepBtn, "%s: %s", tr("Step"), step);
     const char* startLbl = running ? tr("Stop") : tr("Start");
     int hit = -1;
-    Item tune[4] = {{"-", 0.8f}, {fq.c_str(), 3.f}, {"+", 0.8f}, {stepBtn, 1.6f}};
-    Item act[5] = {{startLbl, 1.4f}, {tr("Gain"), 1.f}, {tr("Volume"), 1.f}, {tr("Tuner"), 1.f}, {tr("More"), 1.f}};
     // dock ids: 0 -, 1 frequency, 2 +, 3 step, 10 start / stop, 11 gain, 12 volume, 13 tuner, 14 more
-    if (wide && gL.stepInMore) {   // a short screen: start, - frequency +, gain, volume, tuner, more
-        const Item all[8] = {act[0], tune[0], tune[1], tune[2], act[1], act[2], act[3], act[4]};
-        static const int map[8] = {10, 0, 1, 2, 11, 12, 13, 14};
-        const int r = dockRow(all, 8, h, (1u << 1) | (1u << 3), 0, running);
-        if (r >= 0) hit = map[r];
-    } else if (wide) {   // one row: start, - frequency + step, gain, volume, tuner, more
-        const Item all[9] = {act[0], tune[0], tune[1], tune[2], tune[3], act[1], act[2], act[3], act[4]};
-        static const int map[9] = {10, 0, 1, 2, 3, 11, 12, 13, 14};
-        const int r = dockRow(all, 9, h, (1u << 1) | (1u << 3), 0, running);
-        if (r >= 0) hit = map[r];
+    // Narrow screens (#139): Gain and Volume are in More, so Start / Stop, Tuner and More are wider
+    const Item minus = {"-", 0.8f}, freq = {fq.c_str(), 3.f}, plus = {"+", 0.8f}, stepI = {stepBtn, 1.6f};
+    const Item start = {startLbl, 1.4f}, gain = {tr("Gain"), 1.f}, vol = {tr("Volume"), 1.f}, tuner = {tr("Tuner"), 1.f}, more = {tr("More"), 1.f};
+    const bool sec = !gL.secondaryInMore;
+    Item it[9]; int ids[9]; int n = 0;
+    unsigned rep = 0;
+    auto add = [&](const Item& x, int id, bool repeat = false) { if (repeat) rep |= 1u << n; it[n] = x; ids[n] = id; n++; };
+    if (wide) {   // one row: start, - frequency + (step), (gain, volume,) tuner, more
+        add(start, 10); add(minus, 0, true); add(freq, 1); add(plus, 2, true);
+        if (!gL.stepInMore) add(stepI, 3);
+        if (sec) { add(gain, 11); add(vol, 12); }
+        add(tuner, 13); add(more, 14);
+        const int r = dockRow(it, n, h, rep, 0, running);
+        if (r >= 0) hit = ids[r];
     } else {
-        const int r1 = dockRow(tune, 4, h, (1u << 0) | (1u << 2), -1, running);
-        if (r1 >= 0) hit = r1;
-        const int r2 = dockRow(act, 5, h, 0, 0, running);
-        if (r2 >= 0) hit = 10 + r2;
+        add(minus, 0, true); add(freq, 1); add(plus, 2, true); add(stepI, 3);
+        const int r1 = dockRow(it, n, h, rep, -1, running);
+        if (r1 >= 0) hit = ids[r1];
+        n = 0; rep = 0;
+        add(start, 10);
+        if (sec) { add(gain, 11); add(vol, 12); }
+        add(tuner, 13); add(more, 14);
+        const int r2 = dockRow(it, n, h, 0, 0, running);
+        if (r2 >= 0) hit = ids[r2];
     }
     const double stepMhz = stepHz() / 1e6;
     switch (hit) {
@@ -146,6 +156,14 @@ void moreSheet(App& a) {
         const float w = ImGui::GetContentRegionAvail().x;
         const char* names[3] = {tr("Status"), tr("List"), tr("Analysis")};
         for (int i = 0; i < 3; i++) if (bigButton(names[i], ImVec2(w, target() * 1.3f))) gMorePage = i + 1;
+        if (gL.secondaryInMore) {   // narrow (#139): the secondary controls of the dock
+            if (bigButton(tr("Gain"), ImVec2(w, target() * 1.3f))) { closeSheet(); gOpenGain = true; }
+            if (bigButton(tr("Volume"), ImVec2(w, target() * 1.3f))) { closeSheet(); gOpenVol = true; }
+        }
+        if (gL.statusFolded) {   // narrow portrait: the status line above the tabs is behind this switch
+            bool on = plat::prefs().getB("touchStatusLine", false);
+            if (ImGui::Checkbox(tr("Show the status line above the tabs"), &on)) plat::prefs().setB("touchStatusLine", on);
+        }
         if (gL.stepInMore) {   // the short one-row dock has no Step button
             char step[32]; stepLabel(stepHz(), step, sizeof step);
             char stepBtn[64]; snprintf(stepBtn, sizeof stepBtn, "%s: %s##tmorestep", tr("Step"), step);
@@ -185,7 +203,7 @@ void shell(App& a, ImVec2 disp) {
     if (hamViewFlag()) hamPanel(a);
     else if (txViewFlag()) txPanel(a);
     else {
-        if (gL.statusOnTop) { statusBar(a); ImGui::Separator(); }   // portrait: the mode's status line on top; landscape keeps the height for the picture (More > Status)
+        if (gL.statusOnTop && (!gL.statusFolded || plat::prefs().getB("touchStatusLine", false))) { statusBar(a); ImGui::Separator(); }   // portrait: the mode's status line on top; landscape keeps the height for the picture (More > Status)
         mainTabs(a);
     }
     ImGui::EndChild();
