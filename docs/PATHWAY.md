@@ -2378,3 +2378,7 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 ## 2026-11-15: DRM channel filter box follows the setting
 
 - Bug report: with the DRM channel filter set to 10 kHz the spectrum still drew a 20 kHz box. The box came from the fixed mode table width (20 kHz) and ignored the Channel filter choice. It now shows 10 or 20 kHz as chosen, or on "off" the occupancy the receiver found in the signal. The receiver still detects the occupancy by itself. Logic test drm_filter; only checked by syntax and the width function, not run on a live DRM signal.
+
+## 2026-11-15: DRM xHE-AAC sound on Android (#516)
+Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC decoder (drm_usac_ext.h: compressed frames out, PCM in, tried after libfdk-aac and before FFmpeg). Android registers its MediaCodec decoder there (audio/XheAacDecoder.kt, native/src/jni_xhe.cpp), using the ASC the DRM decoder already builds; a phone without a USAC decoder shows a plain status line on the DRM Audio card instead of silence.
+- Tested on the host with a fake decoder (test drm_xhe_ext: the hand-off, loss handling, the no-decoder line) and ASC bytes written out by hand from the specs. Kotlin and JNI were only syntax reviewed and compiled by the Android CI; nothing was tried on a phone, so real USAC decoding through MediaCodec (buffer timing, output format, which phones accept the config) is untested.

@@ -22,7 +22,8 @@ import io.github.adswill.onair.model.Tuning
 class OnAirCore internal constructor() {
     val libraryLoaded: Boolean get() = OnAirNative.loaded
 
-    fun init(resultsDir: String): Boolean = OnAirNative.nativeInit(resultsDir)
+    /** Also hands the core the phone's xHE-AAC decoder for DRM sound (audio/XheAacDecoder.kt); a phone without one gets a status line instead. */
+    fun init(resultsDir: String): Boolean = OnAirNative.nativeInit(resultsDir).also { if (it) io.github.adswill.onair.audio.XheAacDecoder.register() }
     fun modeTable(): ModeTable = ModeTable.parse(OnAirNative.nativeModeTable())
     fun setMode(family: Int, subId: String?): Tuning = Tuning.parse(OnAirNative.nativeSetMode(family, subId ?: ""))
     fun deviceInfo(kind: SourceKind, host: String, port: Int): DeviceCaps = DeviceCaps.parse(OnAirNative.nativeDeviceInfo(kind.code, host, port))

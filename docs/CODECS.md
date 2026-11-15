@@ -468,6 +468,13 @@ not loaded* with the reason: on Windows "a DLL it needs is missing" (an MSYS2/Mi
 Check the licence and your local patent situation before installing it. Status: the frames and the stream configuration follow ETSI ES 201 980;
 the decoding with a real libfdk-aac against a real DRM xHE-AAC recording has not been verified yet.
 
+### xHE-AAC for DRM on Android (the phone's own decoder)
+On Android OnAir ships no codec for xHE-AAC either. Android 9 (API 28) and later have an xHE-AAC (USAC) decoder in MediaCodec; OnAir hands
+the DRM access units to it (the AudioSpecificConfig, audio object type 42, is built from the SDC as on the desktop) and plays the PCM that
+comes back. A phone without that decoder shows "This phone has no xHE-AAC decoder; DRM audio of this service cannot play" as the DRM audio
+status (card **Audio**) instead of staying silent. The core side is a plain hand-off (`core/include/dect2/drm/drm_usac_ext.h`): compressed
+frames out, PCM in; a desktop plug-in can register the same way later. Order tried: libfdk-aac, this hand-off, FFmpeg.
+
 ## Your own FFmpeg (Settings > Advanced > FFmpeg libraries)
 
 Default **Bundled**: OnAir uses the FFmpeg inside it. Choose **External folder** and pick a folder with shared `libavcodec` / `libavutil` (for example

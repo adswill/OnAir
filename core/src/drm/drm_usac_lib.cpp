@@ -168,3 +168,15 @@ bool UsacSession::decode(const std::vector<uint8_t>& au, std::vector<int16_t>& p
 }
 
 }} // namespace dect2::drm
+
+#include "dect2/drm/drm_usac_ext.h"
+namespace dect2 { namespace drm { namespace usac_ext {
+namespace {
+std::mutex gExtMu;
+std::shared_ptr<UsacExternalDecoder> gExt;
+std::atomic<uint64_t> gExtGen{0};
+}
+void setShared(std::shared_ptr<UsacExternalDecoder> d) { std::lock_guard<std::mutex> lk(gExtMu); gExt = std::move(d); gExtGen++; }
+std::shared_ptr<UsacExternalDecoder> shared() { std::lock_guard<std::mutex> lk(gExtMu); return gExt; }
+uint64_t generation() { return gExtGen.load(); }
+}}}

@@ -6,6 +6,7 @@
 #include "dect2/drm/drm_aac.h"
 #include "dect2/drm/drm_fec.h"
 #include "dect2/drm/drm_usac_lib.h"
+#include "dect2/drm/drm_usac_ext.h"
 #include "dect2/common/diag.h"
 #include "dect2/dsp/exact_resampler.h"
 extern "C" {
@@ -247,6 +248,8 @@ struct AudioDecoder::Impl {
     AVFrame* frame = nullptr;
     AVPacket* pkt = nullptr;
     std::unique_ptr<UsacSession> fdk;      // the optional libfdk-aac decoder (loaded at run time), used before FFmpeg when it is there
+    std::shared_ptr<UsacExternalDecoder> ext;   // the platform / plug-in decoder (drm_usac_ext.h) when it is the one in use
+    uint64_t extGen = 0;
     bool started = false;                  // the decoder has seen an independent frame since it was (re)opened
     int decFails = 0;                      // frames in a row that the decoder refused
     std::string lastErr, baseInfo, fdkWhy;
@@ -274,6 +277,7 @@ struct AudioDecoder::Impl {
         if (frame) av_frame_free(&frame);
         if (pkt) av_packet_free(&pkt);
         fdk.reset();
+        if (ext) { ext->close(); ext.reset(); }
         open = false; started = false; rsReady = false;
     }
     static UsacLib usacLib() { return UsacLib::shared(); }   // loaded once; again after UsacLib::rescan() (the DRM panel)
@@ -301,6 +305,17 @@ struct AudioDecoder::Impl {
             const UsacLib::Report rep = UsacLib::lastReport();
             DIAG_DEBUG(580701, "The libfdk-aac library was not found or did not load, so xHE-AAC falls back to the FFmpeg AAC decoder, which cannot play most xHE-AAC streams.");
             fdkWhy = rep.failed.empty() ? "libfdk-aac not found in the codecs folders" : "libfdk-aac did not load: " + rep.failed.front();
+        }
+        extGen = usac_ext::generation();
+        if (std::shared_ptr<UsacExternalDecoder> e = usac_ext::shared()) {
+            std::string why = e->unavailableReason();
+            if (why.empty() && e->open(asc, cfg.rateHz(), cfg.mode == 2 ? 2 : 1, why)) {
+                ext = e; open = true; info = std::string(nb) + " (" + e->name() + ")"; baseInfo = info; return true;
+            }
+            if (why.empty()) why = "the decoder refused the stream configuration";
+            DIAG(730523, "The %s xHE-AAC decoder cannot play this DRM service (%s), so the service stays silent.", e->name(), why.c_str());
+            info = why;
+            return false;
         }
         const std::string hint = (fdkWhy.empty() ? std::string() : "; " + fdkWhy) + std::string("; to play it install ") + UsacLib::libraryHint() + " (see docs/CODECS.md, section AAC, xHE-AAC)";
         const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_AAC);
@@ -366,11 +381,29 @@ struct AudioDecoder::Impl {
     }
 
     bool decodeAu(const std::vector<uint8_t>& au, std::vector<float>& out) {
-        if (cfg.coding == 3 && !fdk && libGen != UsacLib::generation()) openXhe();   // "Look again" in the DRM panel: libfdk-aac added while running
+        if (cfg.coding == 3 && !fdk && !ext && (libGen != UsacLib::generation() || extGen != usac_ext::generation())) openXhe();   // "Look again" in the DRM panel: libfdk-aac added while running
         if (!open) return false;
         if (!started) {
             if (au.empty() || !(au[0] & 0x80)) { gap(out, auOut); return false; }   // usacIndependencyFlag: the first frame the decoder can start with
             started = true;
+        }
+        if (ext) {
+            std::vector<int16_t> pcm; int rate = 0, ch = 0;
+            const UsacExternalDecoder::Result r = ext->decode(au, pcm, rate, ch);
+            if (r == UsacExternalDecoder::Result::kNoOutput) return true;     // still priming: the playout evens the delay out
+            if (r == UsacExternalDecoder::Result::kError || ch <= 0 || pcm.empty()) {
+                decFails++; lastErr = std::string(ext->name()) + " returned no audio";
+                DIAG_DEBUG_EVERY(455379, 5, "The platform xHE-AAC decoder returned no audio for a frame, so the frame is replaced by a gap.");
+                gap(out, auOut); return false;
+            }
+            const size_t n = pcm.size() / (size_t)ch;
+            rin.resize(n);
+            for (size_t i = 0; i < n; i++) rin[i] = cf32(pcm[i * (size_t)ch] / 32768.f, pcm[i * (size_t)ch + (size_t)(ch > 1 ? 1 : 0)] / 32768.f);
+            const size_t before = out.size();
+            pushResampled(rate, out);
+            if (out.size() > before) auOut = (out.size() - before) / 2;
+            decFails = 0;
+            return true;
         }
         if (fdk) {
             std::vector<int16_t> pcm; int rate = 0, ch = 0;
@@ -401,6 +434,7 @@ struct AudioDecoder::Impl {
     void lostFrame() {
         if (!open || !started) return;
         if (ctx) avcodec_flush_buffers(ctx);
+        if (ext) ext->flush();
         started = false;
     }
 
@@ -420,7 +454,7 @@ struct AudioDecoder::Impl {
         }
         // the frames are good (CRC); whether sound comes out depends on the decoder
         if (samples > before) { state = 2; info = baseInfo; }
-        else if (decFails >= 3) { state = 1; info = baseInfo + ": the frames are fine but the xHE-AAC decoder refuses this stream (" + lastErr + ")" + (fdk ? "" : std::string("; FFmpeg has no MPS212 and no eSBR tools, install ") + UsacLib::libraryHint() + ", see docs/CODECS.md"); }
+        else if (decFails >= 3) { state = 1; info = baseInfo + ": the frames are fine but the xHE-AAC decoder refuses this stream (" + lastErr + ")" + (fdk || ext ? "" : std::string("; FFmpeg has no MPS212 and no eSBR tools, install ") + UsacLib::libraryHint() + ", see docs/CODECS.md"); }
         else if (state != 2) state = 1;
     }
 
@@ -503,7 +537,7 @@ bool AudioDecoder::decodable() const { return p_->open; }
 void AudioDecoder::reset() {
     Impl& d = *p_;
     d.xhe.reset();
-    if (d.open && d.started) { if (d.ctx) avcodec_flush_buffers(d.ctx); if (d.fdk) d.fdk->open(xheAscFromSdc(d.cfg)); }
+    if (d.open && d.started) { if (d.ctx) avcodec_flush_buffers(d.ctx); if (d.fdk) d.fdk->open(xheAscFromSdc(d.cfg)); if (d.ext) d.ext->flush(); }
     d.started = false;
     if (d.aacOk) d.aac.reset();
 }
