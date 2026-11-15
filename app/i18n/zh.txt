@@ -6091,7 +6091,6 @@ ETA (speed)	ETA（按航速）
 EVM %.0f %%	EVM %.0f %%
 EVM %.1f %%    Eb/N0 %.1f dB    carrier offset %+.0f Hz	EVM %.1f %%    Eb/N0 %.1f dB    载波偏移 %+.0f Hz
 EVM per order tried	各阶数尝试的 EVM
-EXPERIMENTAL: the file preview and the MHEG-5 scene drawing are untested on a real broadcast stream (no recording was available). Scripts and interactive links are not run or followed.	实验性：文件预览和 MHEG-5 场景绘制未在真实广播流上测试（没有录音可用）。脚本和交互链接不会运行或跟随。
 Each flight announces its frequency. The dial channel listens +-4 kHz around the dial;\nwith the span search on, every other balloon in the captured width gets a channel of its own.	每次飞行都会宣告其频率。拨号信道在拨号频率 +-4 kHz 内监听；\n开启跨段搜索后，采集宽度内其他气球各有自己的信道。
 Each mode keeps its own colours	每种模式保留自己的颜色
 Each new frame of a known satellite (NORAD number) is sent at once to db.satnogs.org under your callsign and the receiver position, as gr-satellites does. The satellite teams use these frames.	已知卫星（NORAD 编号）的每个新帧都会立即以你的呼号和接收机位置发送到 db.satnogs.org，与 gr-satellites 相同。卫星团队会使用这些帧。
@@ -6872,7 +6871,6 @@ Keep the pop-out video window above other windows	让弹出的视频窗口始终
 Keep the radio centre fixed and shift the decoder to the clicked frequency (avoid moving the LO / DC spike)	保持电台中心不动，把解码器移到点击的频率（避免移动本振 / 直流尖刺）
 Keep the spectrum and waterfall ranges on the noise floor of the view (click again to stop following; moving Min or Max stops it too)	让频谱和瀑布图范围跟随视图底噪（再次点击停止跟随；移动最小/最大值也会停止）
 Keep this CTCSS / DCS reading with the memory	将此 CTCSS / DCS 读数随存储一起保存
-Keeps only the DRM channel width and drops the AM stations beside it. 10 kHz: most DRM30 broadcasts. Changing it restarts the search.	只保留 DRM 信道宽度，丢弃旁边的 AM 电台。10 kHz：多数 DRM30 广播。修改后会重新开始搜索。
 Kenya	肯尼亚
 Kept	已保留
 Kept for this mode; Load layout lists them.	为此模式保留；「加载布局」列出它们。
@@ -7154,7 +7152,6 @@ Luxembourg	卢森堡
 M downlink	M 下行链路
 M uplink	M 上行链路
 MDC-1200 IDs	MDC-1200 识别码
-MDC-1200 is the 1200 bit/s data burst of Motorola radios that sends the unit ID when the key is pressed or released. Any FM carrier in the span is followed; the ID appears in the list below. FleetSync (Kenwood) is not decoded: its format is not publicly specified.	MDC-1200 是摩托罗拉电台的 1200 bit/s 数据突发，在按下或松开按键时发送本机 ID。会跟踪频段内任何 FM 载波；ID 显示在下方列表中。不解码 FleetSync（建伍）：其格式未公开。
 MER dB	MER dB
 MERGE	合并
 MHEG-5 file (ISO/IEC 13522-5). Interactive links not followed.	MHEG-5 文件（ISO/IEC 13522-5）。不跟踪交互链接。
