@@ -15,6 +15,8 @@
 #include "../badges/badges_ui.h"
 #include "input_map.h"
 #include "../adsb/adsb_map.h"
+#include "station/station_loc.h"
+#include "dect2/geo/station_location.h"
 #include "dect2/audio/audio_control.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/source/iq_record.h"
@@ -98,7 +100,17 @@ const std::map<std::string, Bind>& binds() {
         m["recFormat"] = Bind{[](App& a) -> double { return a.recFormat; }, [](App& a, double v) { a.recFormat = (int)v; plat::prefs().setI("recFormat", (long)v); }, nullptr, nullptr};
         NB("fmMono", a.fmMono); NB("fmStereo", a.fmStereo); NB("fmDeemph", a.fmDeemph); NB("fmRegion", a.fmRegion);
         NB("fmSquelch", a.fmSquelch); NB("ttxPage", a.ttxPage); SB("tvLang", a.tvLang);
-        PD("adsbLat"); PD("adsbLon");
+        // Settings > Location: the one station position. A change goes through setReceiverLocation (the ADS-B screen follows at once) and
+        // the screens that follow the global locator get the new one (station_loc.cpp)
+        m["adsbLat"] = Bind{[](App&) -> double { return plat::prefs().getD("adsbLat", 0); },
+                            [](App& a, double v) { setReceiverLocation(a, v, plat::prefs().getD("adsbLon", 0)); stationloc::propagate(a); }, nullptr, nullptr};
+        m["adsbLon"] = Bind{[](App&) -> double { return plat::prefs().getD("adsbLon", 0); },
+                            [](App& a, double v) { setReceiverLocation(a, plat::prefs().getD("adsbLat", 0), v); stationloc::propagate(a); }, nullptr, nullptr};
+        m["stationLocator"] = Bind{nullptr, nullptr, [](App&) -> std::string { return stationloc::locator(); },
+                                   [](App& a, const std::string& v) { stationloc::setFromText(a, v); }};
+        m["rxAltM"] = Bind{[](App&) -> double { return plat::prefs().getD("rxAltM", 0); },
+                           [](App&, double v) { plat::prefs().setD("rxAltM", dect2::station::clampHeightM(v)); }, nullptr, nullptr};
+        SW_PT("stationName");
         PD("rxThread");   // 4.0: Engine::setRxThreadMode at the next Start (toolbar_source.cpp)
         NB("updCheck", a.updCheck); NB("updBeta", a.updPre); NB("updAuto", a.updAuto); NB("updSrc", a.updSrc);
         NB("updMirrorOn", a.updMirrorOn); SB("updMirror", a.updMirror);

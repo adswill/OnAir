@@ -6,6 +6,7 @@
 // entered by hand: OnAir never looks gateways up on the internet. The Winlink password stays in memory for this run only.
 // The frames go out as one-shot bursts of the "winlinkpkt" / "winlinkardop" transmit modes and come back through the receivers'
 // frame taps; the receiver is paused while its radio transmits (half duplex), as on the MeshCore screen.
+#include "station/station_loc.h"
 #include "winlink_ui.h"
 #include "app.h"
 #include "gfx/gfx.h"
@@ -711,8 +712,10 @@ void settings() {
     W& d = w();
     ImGui::SetNextItemWidth(160 * gUi);
     if (ImGui::InputTextWithHint(tr("Your call sign"), "LY2ABC", d.call, sizeof d.call)) { for (char* p = d.call; *p; p++) *p = (char)toupper((unsigned char)*p); plat::prefs().setS("winlinkCall", d.call); }
-    ImGui::SetNextItemWidth(160 * gUi);
-    if (ImGui::InputTextWithHint(tr("Locator"), "KO24", d.grid, sizeof d.grid)) plat::prefs().setS("winlinkGrid", d.grid);
+    {   // follows the global location (Settings > Location) until the user chooses another locator
+        std::string g = d.grid;
+        if (stationloc::locatorRow(N_("Locator"), g, "winlinkGridOwn", 160)) { snprintf(d.grid, sizeof d.grid, "%s", g.c_str()); plat::prefs().setS("winlinkGrid", d.grid); }
+    }
     ImGui::SetNextItemWidth(220 * gUi);
     ImGui::InputText(tr("Winlink password"), d.password, sizeof d.password, ImGuiInputTextFlags_Password);
     ImGui::SameLine(); ImGui::TextDisabled("%s", tr("(kept in memory for this run only)"));

@@ -4,6 +4,7 @@
 // Start-up of the main program: the startup guard and first-run dialogs, and the developer / test command-line flags.
 // Split from main.cpp.
 // The flags are listed where they are parsed (parseDevFlags); none of them is saved.
+#include "station/station_loc.h"
 #include "dect2/audio/dolby_audio.h"
 #include <algorithm>
 #include "dect2/packs/datasets.h"
@@ -50,6 +51,7 @@ void startApp(App& app, int argc, char** argv) {
         guardNote = "OnAir did not finish starting " + std::to_string(failedStarts) + " times in a row, so it starts with the default settings this time. "
                   + (kept.empty() ? std::string("The old settings could not be kept.") : "The old settings are kept in " + kept + ".");
     }
+    stationloc::migrate();   // #453: the older per-screen positions fold into the one station location before any screen reads them
     loadPrefs(app);
     modeVisibilityLoad(app);   // Modes shown has a file of its own that settings.conf resets do not touch
     if (failedStarts == 1) {

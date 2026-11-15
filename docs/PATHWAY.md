@@ -2400,3 +2400,18 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 - #269: "Scan the span for pagers" in the pager screens (wide captures). A PagerFinder runs the whole-span pager bank beside the mode for up to 90 s and lists each carrier with the speed that decoded most pages (POCSAG 512 / 1200 / 2400, FLEX 1600 / 3200 / 6400) and its page count; click to tune. Test pager_find, simulated signals only.
 - #214 (a): new sonde type "GTH" for the Huayuntianyi HT03G / GTH3 and the Changwang GTH6 frame (2400 baud, 109 bytes, CRC-16): position, speed, time and, when the fields look plausible, temperature, humidity and pressure. Frame layout from the public rs1729 decoder (GPL-3, credited). The CF-06-AH frame (Reed-Solomon, GPS week) is not decoded. Test sonde_gth, simulated frames only: no recording of a GTH sonde was available; what the GTH6 PTU fields mean in the 2026 batch is not confirmed.
 - #214 (b): "Save every burst as a baseband file" in the SARSAT screen writes each beacon-like burst (decoded or not) as a 2 channel float WAV at 32 kHz with the carrier at zero, to the sarsat folder of the data directory. Test sarsat_export, simulated signal.
+
+## 2026-11-15: one station location (issue #453)
+
+- Settings > Location now holds one station position (latitude, longitude, height, locator, name). PSK Reporter, WSPRnet and Winlink follow it and show "using the global location" with a change link; a screen can still keep its own locator. Older saved positions are folded in once at start-up (first non-empty wins, differing locators stay as that screen's own).
+- Branch feat42-ui3. Helpers and migration rules tested by `station_location` (not yet run on CI); the screens were only syntax-checked.
+
+## 2026-11-15: brightness and contrast for analog TV and FPV (issue #239)
+
+- Analog TV and FPV got Brightness and Contrast sliders with a Reset button, saved per mode and applied only to the picture on the screen (snow and full screen included); decoding and saved frames are unchanged.
+- Branch feat42-ui3. The table maths is tested by `display_adjust` (not yet run on CI); the screens were only syntax-checked.
+
+## 2026-11-15: touch interface on narrow screens (issue #139)
+
+- Under 800 px wide the touch interface folds Gain and Volume into More, widens Start/Stop, Tuner and More, drops the Running/Stopped word from the top bar and, in portrait, puts the status line behind a switch in More. Wider screens and the desktop layout are unchanged.
+- Branch feat42-ui3. The layout rules are tested by `touch_logic` (not yet run on CI); the screens were only syntax-checked, not looked at.

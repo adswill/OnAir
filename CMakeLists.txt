@@ -743,10 +743,17 @@ if(DECT2_BUILD_APP)
   target_include_directories(test_mylocation PRIVATE core/include)
   target_compile_definitions(test_mylocation PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
   add_test(NAME mylocation COMMAND test_mylocation)
+  add_executable(test_station_location tests/geo/test_station_location.cpp core/src/geo/maidenhead.cpp)   # the one station location: text to position, first-non-empty migration, own-locator rule (#453)
+  target_include_directories(test_station_location PRIVATE core/include)
+  add_test(NAME station_location COMMAND test_station_location)
+  add_executable(test_display_adjust tests/video/test_display_adjust.cpp)   # brightness and contrast table for the analog TV and FPV pictures (#239)
+  target_include_directories(test_display_adjust PRIVATE core/include)
+  add_test(NAME display_adjust COMMAND test_display_adjust)
   file(GLOB DECT2_D40_UI CONFIGURE_DEPENDS app/d40/*.cpp)   # 4.0 features wired into the mode screens (docs/WIRING-4.0.md)
   list(APPEND APP_SOURCES ${DECT2_D40_UI})
   list(APPEND APP_SOURCES app/ui/ui_preview.cpp app/ui/ui_preview_draw.cpp)   # the hover preview of the appearance choices (docs/UI-PREVIEW-4.0.md)
   list(APPEND APP_SOURCES app/ui/topo_view.cpp)   # the mesh topology picture shared by the mesh, Zigbee / Thread and Z-Wave screens
+  list(APPEND APP_SOURCES app/station/station_loc.cpp)   # #453: the one station location (Settings > Location)
   list(APPEND APP_SOURCES app/map/my_location.cpp)   # 4.1: my location, range rings and distance/bearing on every map (docs/MY-LOCATION-MAPS-4.1.md)
   list(APPEND APP_SOURCES app/map/contact_lines.cpp)   # contact lines on the QSO-mode maps
   file(GLOB DECT2_IPTV_UI CONFIGURE_DEPENDS app/iptv/*.cpp)   # Internet TV (family 209): its core is in core/src/tv
