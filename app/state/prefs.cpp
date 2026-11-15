@@ -156,6 +156,7 @@ const std::vector<PrefKey>& keyTable() {
         // ---- shared by all receivers (written by receiver 1)
         shared(flagB("newUi", AT(a.newUi), true, true)),
         shared(flagB("dockOn", AT(a.dockOn), false, true)),
+        shared(flagB("allowDetach", AT(a.allowDetach), false)),   // View > Allow detaching panels (experimental)
         shared(flagB("videoGenOpen", AT(a.videoGenOpen), false)),   // Tools > Digital video generator
         shared(scaled("splitSide", AT(a.splitSide), 1, 0, 1, 0, false)), shared(scaled("splitRight", AT(a.splitRight), 1, 0, 1, 0, false)),
         shared(scaled("splitBottom", AT(a.splitBottom), 1, 0, 1, 0, false)), shared(scaled("splitDock", AT(a.splitDock), 1, 0, 1, 0, false)),

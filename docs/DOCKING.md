@@ -14,8 +14,11 @@ With docking on:
 - The layout is kept per mode. **Save layout as / Load layout / Delete layout** keep named layouts (also from other modes);
   **Reset docked layout** and **Undock all** start again. **View > Reset layout** clears the mode's layout too.
 
-Not possible yet: moving a window out onto another monitor as its own operating-system window. That needs Dear ImGui's multi-viewport
-(docking branch) build, which OnAir does not use; a floating window stays inside the OnAir window (make the OnAir window span both
-monitors to use the space). Tabs cannot be reordered by dragging, and the classic interface does not dock.
+Own operating-system windows (experimental): **View > Allow detaching panels (experimental)** (off by default, desktop only), then **View >
+Detach panel** > Spectrum, Waterfall or Messages. Each opens as a window of its own that can sit on another monitor; its place and size are
+kept. They are read-only copies of what the main window shows (the receiver cannot be tuned from them), drawn like the video pop-out, so the
+docked layout, the shortcuts and the touch interface are untouched. Close the window (or untick the entry) to bring it back. The map and the
+decoder tabs cannot be detached yet. Dear ImGui's own multi-viewport build is not used: the app's windows are placed in main-window
+coordinates. Tabs cannot be reordered by dragging, and the classic interface does not dock.
 
 Developer check: `--dockselftest` runs a hidden test of dragging, the shortcuts and turning docking off (11 checks).

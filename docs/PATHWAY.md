@@ -2424,3 +2424,8 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 - Research pass on what is public for PACTOR-I to -IV (docs/PACTOR-RESEARCH.md): the signals are documented, the channel coding of PACTOR-II, -III and -IV (code polynomials, puncturing, interleaver, CRC, frame layout) is not, so text cannot be decoded from them and OnAir does not guess.
 - The PACTOR-I screen now also runs the signal-level analysis and names a PACTOR-II or PACTOR-III signal on the channel (carriers, speed level), "data not decodable (proprietary)". Tested on generator signals only (test pactor_hfid).
+## 2026-11-15: detachable panels as OS windows (issue #242)
+
+- Branch feat42-windows. View > Allow detaching panels (experimental), off by default, then View > Detach panel opens the spectrum, the waterfall or the message log in a window of its own for a second monitor. Position and size are remembered.
+- Route chosen: not Dear ImGui's docking/multi-viewport branch (the vendored copy is master 1.92.2b with local patches, and about 60 window placements and 175 mouse reads assume main-window coordinates), but the video pop-out's technique: extra GLFW windows drawn by the same graphics back end from a separate draw list. Read-only mirrors; the map and decoder tabs are not detachable yet.
+- Compiles checked on CI (linux, macos, windows). Not run with a screen: the windows were not opened by hand.

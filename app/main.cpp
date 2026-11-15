@@ -27,6 +27,7 @@
 #include <dlfcn.h>
 #endif
 #include "main_internal.h"
+#include "ui/detach.h"
 #include "gfx/render_caps.h"
 #include "ui/typography.h"
 #include "state/workspace.h"
@@ -287,6 +288,7 @@ static void shutdownApp(App& app, gfx::Backend* gfxBackend, GLFWwindow* window) 
     dect2::sess::adaptersEndAll();   // open tracks end now, not at the next start
     dect2::sess::global().close();
     updateOnExit(app);   // a downloaded update replaces this program once it has ended
+    detach::shutdown();
     popOutShutdown();   // its window and surface go before the back end
     gfxBackend->shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -434,6 +436,7 @@ int main(int argc, char** argv) {
             receiversFrame(app, io.DisplaySize);
             perfOverlayDraw(app);
             popOutFrame(app);
+            detach::frame(app);
             keepWindowsReachable();
             ImGui::Render();
             if (app.highContrast) lightenDrawData(ImGui::GetDrawData(), false, true);   // High contrast wins over Light
@@ -448,6 +451,7 @@ int main(int argc, char** argv) {
             if (pi.occluded && !shotNow && !autoShot && gfxBackend->canSkipFrame()) gfxBackend->skipFrame();   // nobody can see it: no GPU work
             else gfxBackend->endFrame(ImGui::GetDrawData(), shotNow ? o.shotPath : autoShot ? autoPath.c_str() : nullptr);
             popOutPresent();
+            detach::present();
             if (shotNow) {
                 shotReport(app);
                 if (gOnAirIdCheck && gOnAirIdConflicts > 0) { fprintf(stderr, "IDCHECK: %d duplicate-ID items\n", gOnAirIdConflicts); gIdCheckFailed = true; }

@@ -8,6 +8,7 @@
 #include "input_map.h"
 #include "dect2/dsp/baseband_filter.h"
 #include "ui2_internal.h"
+#include "detach.h"
 #include "menu_groups.h"
 #include "ui_preview.h"
 #include "../general/general_panels.h"
@@ -742,6 +743,18 @@ static void viewMenu(App& a) {
             }
             rcaps::viewMenuItem();   // Low-power drawing (gfx/render_caps.h)
             ImGui::Separator();
+            if (!gNoOsWindows) {   // desktop: panels as OS windows of their own (ui/detach.cpp, #242)
+                if (ImGui::MenuItem(tr("Allow detaching panels (experimental)"), nullptr, &a.allowDetach)) savePrefs(a);
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Lets you open the spectrum, the waterfall and the messages in windows of their own, for example on a second monitor. They are read-only copies of what the main window shows."));
+                if (ImGui::BeginMenu(tr("Detach panel"), a.allowDetach)) {
+                    for (int k = 0; k < detach::kCount; k++) {
+                        static const char* nm[3] = {N_("Spectrum"), N_("Waterfall"), N_("Messages")};
+                        ImGui::MenuItem(tr(nm[k]), nullptr, &a.detached[k]);
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::Separator();
+            }
             {   // opt-in Discord Rich Presence
                 const bool have = *discord::appId() != 0;
                 ImGui::BeginDisabled(!have);

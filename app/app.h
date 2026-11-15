@@ -586,6 +586,8 @@ struct App {
     int stdMode = 0;     // 0 auto, 1 DVB-T2, 2 DVB-T
     bool popOut = false, videoOnly = false;
     bool popTop = true;      // the pop-out video window stays above other windows
+    bool allowDetach = false;        // View > Allow detaching panels (experimental): the spectrum, waterfall and messages can be OS windows of their own (ui/detach.cpp, #242)
+    bool detached[3] = {false, false, false};   // which of them are detached now (detach::Kind); not saved
     int histWindow = 60;
     int ttxPage = 100;
     int ttxSub = -1;                // teletext subpage shown in the tab: -1 = the newest
