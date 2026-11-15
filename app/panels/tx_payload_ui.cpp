@@ -15,6 +15,7 @@
 #include "dect2/cp16/cp16_proto.h"
 #include "../ui/cjk_fonts.h"
 #include "dect2/tv/videogen.h"
+#include "dect2/tv/ts_udp_in.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -278,6 +279,20 @@ void generatorPick(TxUi& s) {
     { ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Uses the stream of a generator of Tools > Digital video generator whose output is \"Transmitter\" (* = it is sending now). Start it there; click again to clear.")); }
 }
 
+// A live transport stream sent to this computer (OBS, ffmpeg, VLC): the same "video file" field takes udp://@:1234 (core: tv/ts_udp_in.h)
+void udpPick(TxUi& s, bool running) {
+    const bool on = dect2::isTsUdpSpec(s.file);
+    ImGui::TextDisabled("%s", tr("Live UDP stream:"));
+    ImGui::SameLine();
+    if (ImGui::SmallButton(on ? tr("Clear##tvudp") : tr("Listen on udp://@:1234##tvudp"))) snprintf(s.file, sizeof s.file, "%s", on ? "" : "udp://@:1234");
+    ImGui::SameLine(); ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Send an MPEG-TS stream here from OBS, ffmpeg or another program, for example ffmpeg ... -f mpegts udp://127.0.0.1:1234. Type the address in the video file field to change the port or to join a multicast group (udp://239.1.1.1:1234); RTP works too. When nothing arrives the transmitter sends null packets, when too much arrives the oldest packets are dropped."));
+    if (on && running) {
+        const dect2::TsUdpStats u = dect2::tsUdpLastStats();
+        if (u.running) ImGui::TextDisabled(tr("Listening on %s: %llu packets in, %llu queued, %llu null packets inserted, %llu dropped, %llu re-syncs"), u.address.c_str(), (unsigned long long)u.packets, (unsigned long long)u.queued, (unsigned long long)u.nullsInserted, (unsigned long long)u.dropped, (unsigned long long)u.resyncs);
+    }
+}
+
 void analogNfmBox(TxUi& s, bool running) {
     if (s.modeId == "general")   // the general receiver sends the audio with the modulation its test signal is set to (#373)
         ImGui::Checkbox(tr("Send the microphone or a file with the modulation above, instead of the test signal"), &s.analogVoice);
@@ -354,9 +369,10 @@ void muxIdentity(TxUi& s) {
 }
 
 // The DVB standard of the TV list entry, the digital video generator as the source, and what was done with the file last time
-void tvExtras(TxUi& s, const TxModeSpec& mode) {
+void tvExtras(TxUi& s, const TxModeSpec& mode, bool running) {
     const std::string id = mode.id ? mode.id : "";
     generatorPick(s);
+    udpPick(s, running);
     if (!s.fileNote.empty()) ImGui::TextWrapped("%s", s.fileNote.c_str());
     if (id == "dvbt2" || id == "dvbt") {
         const char* dvb[] = {"DVB-T2", "DVB-T"};
@@ -467,7 +483,7 @@ void customRow(TxUi& s, const TxModeSpec& mode, const PDef& d, bool running) {
         if (!note.empty()) banner(Note::Info, tr(note.c_str()));
         if (id == "dmr") banner(Note::Info, tr("Your DMR ID and callsign go on the air. Voice bits are a test pattern (OnAir cannot encode AMBE+2). Not tested on air against a real repeater."));
     } else if (k == "dmr.slotSync") dmrSlotSyncRow(s);
-    else if (k == "tv.mux") { tvExtras(s, mode); muxIdentity(s); }
+    else if (k == "tv.mux") { tvExtras(s, mode, running); muxIdentity(s); }
     else if (k == "atv.picture") atvPicture(s);
     else if (k == "atv.sound") atvSound(s, running);
     else if (k == "dab.services") dabServices(s);

@@ -2322,3 +2322,8 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - 11 m / CB band presets: SSTV 27.700 MHz (USB), JS8Call 27.245 MHz, ROS 27.635 MHz (USB) and a packet button for 27.235 MHz (FM) in APRS / Packet. CB rules differ by country, so the buttons are labelled and only warn.
 - LTE operator names: Erillisverkot (Finland) 24445 and 24446.
 - Wheel over the spectrum and waterfall: View > Controls already maps the wheel (zoom by default). Added "Tune by 10 steps" as a wheel choice (for Shift+wheel) and a custom tuning step field. Defaults are unchanged.
+
+## 2026-11-15: live UDP transport stream into the TV transmitters
+
+- Digital TV transmit modes can now read a live MPEG-TS stream from UDP (udp://@:1234, a multicast group, or RTP) in place of a file, for streaming from OBS, ffmpeg or VLC. A jitter buffer with null-packet stuffing and drop-oldest keeps the modulator fed; counters are shown in the transmit panel. Modes: DVB-T, T2, S, S2 (also QO-100), C, ATSC, ISDB-T, DTMB. docs/TS-UDP-IN.md, test ts_udp_in (alignment recovery, RTP, nulls, overflow, loopback socket).
+- Live RDS changes (PS, RadioText, PTY, TP/TA, music/speech) already existed since the earlier RDS-live work (panel, REST /api/v1/x/rds, MCP rds_set, text port); see docs/RDS-LIVE.md.

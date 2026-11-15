@@ -10,6 +10,7 @@
 #include "dect2/atsc/atsc_gen.h"
 #include "dect2/engine/device_claims.h"
 #include "dect2/tv/demo_ts.h"
+#include "dect2/tv/ts_udp_in.h"
 #include "dect2/tv/videogen.h"
 #include "dect2/dtmb/dtmb_gen.h"
 #include "dect2/dvbc/dvbc_rx.h"
@@ -595,6 +596,13 @@ bool txOpenMpegTs(const std::string& path, std::function<void(uint8_t*)>& outTs,
     if (int gid = 0; vgen::parseGeneratorSpec(path, gid)) {   // a running Digital video generator (Output: Transmitter): its stream, live
         if (!vgen::generatorTsSource(gid, outTs)) { note = "no such video generator"; return false; }
         note = "video generator " + std::to_string(gid) + " (live; null packets while it is not running)";
+        return true;
+    }
+    if (isTsUdpSpec(path)) {   // a live transport stream sent to this computer (OBS, ffmpeg, VLC ...): udp://@:1234, a multicast group, or RTP
+        std::string err;
+        if (!tsUdpOpen(path, outTs, err)) { note = err; return false; }
+        const TsUdpStats us = tsUdpLastStats();
+        note = "live UDP stream on " + us.address + " (null packets while nothing arrives)";
         return true;
     }
     int stride = 188, syncOff = 0;
