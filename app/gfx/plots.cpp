@@ -62,7 +62,7 @@ static void identifyPlotInput(App& a, int plotId) {
 
 // the "Identify" toggle in the corner of the spectrum, beside the other buttons
 static float identifyButton(App& a, ImVec2 plotMin, ImVec2 plotSize, float rightUsed) {
-    const char* lb = a.identifyTool ? "Identify: on###idbtn" : "Identify###idbtn";
+    const char* lb = a.identifyTool ? tr("Identify: on###idbtn") : tr("Identify###idbtn");
     const ImVec2 sz = ImGui::CalcTextSize(lb, nullptr, true);
     const float w = sz.x + 2 * ImGui::GetStyle().FramePadding.x, m = 4 * gUi;
     const float x = plotMin.x + plotSize.x - rightUsed - w - m;
@@ -483,7 +483,7 @@ void channelWidthButton(App& a, ImVec2 plotMin, ImVec2 plotSize, const char* yLa
 void wideSwitch(App& a, ImVec2 plotMin, ImVec2 plotSize) {
     gWideBtnW = 0;
     if (!modeSupportsWide(a.family)) return;
-    const char* lb = a.wideDecode ? "Whole span: on###widebtn" : "Whole span###widebtn";
+    const char* lb = a.wideDecode ? tr("Whole span: on###widebtn") : tr("Whole span###widebtn");
     const ImVec2 sz = ImGui::CalcTextSize(lb, nullptr, true);
     const float w = sz.x + 2 * ImGui::GetStyle().FramePadding.x, m = 4 * gUi;
     const float x = plotMin.x + plotSize.x - gBwBtnW - w - m;
@@ -550,7 +550,7 @@ void multiSwitch(App& a, ImVec2 plotMin, ImVec2 plotSize) {
     const WholeSpanTv ws = wholeSpanTvState(a);
     if (!ws.offered) return;
     const bool run = a.engine.multiChannelActive();
-    const char* lb = a.mtvOn && ws.usable ? "Whole span: on###mtvbtn" : "Whole span###mtvbtn";
+    const char* lb = a.mtvOn && ws.usable ? tr("Whole span: on###mtvbtn") : tr("Whole span###mtvbtn");
     const ImVec2 sz = ImGui::CalcTextSize(lb, nullptr, true);
     const float w = sz.x + 2 * ImGui::GetStyle().FramePadding.x, m = 4 * gUi;
     const float x = plotMin.x + plotSize.x - gBwBtnW - w - m;
@@ -1961,7 +1961,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
         const float sh = bandPlanStripHeight();
         drawBandPlanStrip(ImGui::GetWindowDrawList(), plotMin.x, plotMin.x + plotSize.x, plotMin.y - sh, sh, visLo, visHi);
         channelWidthButton(a, plotMin, plotSize, kYLabel); wideSwitch(a, plotMin, plotSize); multiSwitch(a, plotMin, plotSize);
-        gSpecBtnW = cornerPopup(a, "Spectrum###specbtn", "##specpop", plotMin, plotSize, gBwBtnW + gWideBtnW, ImGui::CalcTextSize(kYLabel).x + 24 * gUi, 0, false,
+        gSpecBtnW = cornerPopup(a, tr("Spectrum###specbtn"), "##specpop", plotMin, plotSize, gBwBtnW + gWideBtnW, ImGui::CalcTextSize(kYLabel).x + 24 * gUi, 0, false,
                                 tr("Spectrum: averaging, max hold, peak markers, fill, grid and the unit (dBFS or dBm)"), specDisplayPopup);
         const float idW = identifyButton(a, plotMin, plotSize, gBwBtnW + gWideBtnW + gSpecBtnW);
         const float alW = autoLabelsButton(a, plotMin, plotSize, gBwBtnW + gWideBtnW + gSpecBtnW + idW);
@@ -2173,7 +2173,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         plt::EndPlot();
     }
     if (drawn) wfScaleBarInput(a); else gScale.shown = false;
-    if (drawn) cornerPopup(a, a.wf.paused ? "Paused###wfbtn" : "Waterfall###wfbtn", "##wfpop", plotMin, plotSize, 0, 40 * gUi, ImGui::GetTextLineHeight() + 6 * gUi, a.wf.paused,
+    if (drawn) cornerPopup(a, a.wf.paused ? tr("Paused###wfbtn") : tr("Waterfall###wfbtn"), "##wfpop", plotMin, plotSize, 0, 40 * gUi, ImGui::GetTextLineHeight() + 6 * gUi, a.wf.paused,
                            tr("Waterfall: colour map, intensity range, speed and pause (then drag or use the wheel to look back)"), wfDisplayPopup);
 }
 

@@ -364,20 +364,20 @@ void aisChannelControls(App& a, bool& retune) {
     const DeviceInfo& dv = a.devices[a.devIdx];
     const double rate = a.tune.sampleRate;
     const int mask = dect2::ais::aisChannelsCovered(a.freqMhz * 1e6, rate);
-    ImGui::TextDisabled("Channels in the capture: %s%s%s%s", mask & 1 ? "AIS 1 " : "", mask & 2 ? "AIS 2 " : "", mask & 4 ? "75 " : "", mask & 8 ? "76" : "");
-    if (ImGui::SmallButton("AIS 1 + 2 (162.000)")) { a.freqMhz = 162.0; retune = true; }
+    ImGui::TextDisabled(tr("Channels in the capture: %s%s%s%s"), mask & 1 ? "AIS 1 " : "", mask & 2 ? "AIS 2 " : "", mask & 4 ? "75 " : "", mask & 8 ? "76" : "");
+    if (ImGui::SmallButton(tr("AIS 1 + 2 (162.000)"))) { a.freqMhz = 162.0; retune = true; }
     ImGui::SameLine();
-    if (ImGui::SmallButton("75 + 76 (156.800)")) { a.freqMhz = 156.8; retune = true; }
+    if (ImGui::SmallButton(tr("75 + 76 (156.800)"))) { a.freqMhz = 156.8; retune = true; }
     ImGui::SameLine();
-    if (ImGui::SmallButton("all four (159.400)")) { a.freqMhz = dect2::ais::kAisWideCentreHz / 1e6; retune = true; }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("One capture of %.1f Msps or more holds AIS 1, AIS 2 and the long-range channels 75 and 76 (message 27)", dect2::ais::aisWideRateHz() / 1e6);
+    if (ImGui::SmallButton(tr("all four (159.400)"))) { a.freqMhz = dect2::ais::kAisWideCentreHz / 1e6; retune = true; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("One capture of %.1f Msps or more holds AIS 1, AIS 2 and the long-range channels 75 and 76 (message 27)"), dect2::ais::aisWideRateHz() / 1e6);
     const bool narrow = dv.maxRateHz > 0 && dv.maxRateHz < dect2::ais::aisWideRateHz();
     if (narrow || S.hop) {
-        if (ImGui::Checkbox("Hop: AIS 1 + 2 for 1 min, 75 + 76 for 3 min 20 s", &S.hop)) { plat::prefs().setI("aisHop", S.hop); S.hopAt = 0; }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "For a radio that cannot hold all four channels: message 27 comes every 3 minutes, so a dwell a little longer than that hears every class A ship in range once");
+        if (ImGui::Checkbox(tr("Hop: AIS 1 + 2 for 1 min, 75 + 76 for 3 min 20 s"), &S.hop)) { plat::prefs().setI("aisHop", S.hop); S.hopAt = 0; }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("For a radio that cannot hold all four channels: message 27 comes every 3 minutes, so a dwell a little longer than that hears every class A ship in range once"));
     }
-    if (ImGui::Checkbox("Satellite mode (Doppler +-4.5 kHz, collisions)", &S.sat)) plat::prefs().setI("aisSatMode", S.sat);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "For IQ received by a satellite in low earth orbit: wider channel filters, Doppler tracking, and decoding of bursts that land on top of each other (more CPU)");
+    if (ImGui::Checkbox(tr("Satellite mode (Doppler +-4.5 kHz, collisions)"), &S.sat)) plat::prefs().setI("aisSatMode", S.sat);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("For IQ received by a satellite in low earth orbit: wider channel filters, Doppler tracking, and decoding of bursts that land on top of each other (more CPU)"));
 }
 
 void aisSatTick(App& a) {
