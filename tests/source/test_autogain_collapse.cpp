@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
 using namespace dect2;
 using namespace dect2::ag;
@@ -18,7 +19,49 @@ static int fails = 0;
 
 struct Scene { const char* name; int std_; double bw, rate, off, sig; std::vector<Tone> blockers; };
 
+
+// dynamic bands: mid-strength signals that key on and off, a loud one now and then, activation from the top or the bottom of the range
+static void dynamic() {
+    struct Dyn { const char* name; double startFrac; double burstDbm; double burstOn, burstEvery; double midDbm; double midOn, midEvery; };
+    const Dyn dyns[] = {
+        {"mid signals keying 20s/60s, start top", 1.0, -200, 0, 1e9, -52, 20, 60},
+        {"mid signals keying 20s/60s, start bottom", 0.0, -200, 0, 1e9, -52, 20, 60},
+        {"loud burst -35 dBm 3s/45s, start mid", 0.5, -35, 3, 45, -200, 0, 1e9},
+        {"loud burst -40 dBm 8s/120s + mid -55 keying, top", 1.0, -40, 8, 120, -55, 30, 90},
+        {"long strong call -45 dBm 90s/300s, start mid", 0.5, -45, 90, 300, -200, 0, 1e9},
+    };
+    for (const char* id : {"hackrf", "rtl-r820t", "airspy", "sdrplay", "pluto", "generic"}) {
+        const RadioProfile rp = *radioProfileById(id);
+        for (const Dyn& d : dyns) {
+            for (int v2 = 0; v2 < 2; v2++) {
+                const double lo = rp.minTotal(false), hi = rp.maxTotal(false);
+                SimRadio sim(rp, lo + d.startFrac * (hi - lo));
+                sim.rateHz = 2.4e6; sim.chanBw = 12.5e3; sim.chanOff = 100e3; sim.sigDbm = -108;
+                const ModeTarget tg = modeTargetFor(11, 12.5e3, 2.4e6);
+                AutoGainController c;
+                AgSettings s; s.mode = AgMode::Auto; s.v2 = v2 != 0;
+                c.configure(rp, tg, s);
+                double now = 0;
+                c.start(now, sim.live.totalDb, false, &sim.live);
+                double atMin = 0, total = 0, sumG = 0;
+                std::string trace;
+                run(c, sim, now, 1800, [&](double t) {
+                    sim.blockers.clear();
+                    if (d.burstEvery < 1e8 && std::fmod(t, d.burstEvery) < d.burstOn && t > 30) sim.blockers.push_back({600e3, d.burstDbm});
+                    if (d.midEvery < 1e8 && std::fmod(t + 17, d.midEvery) < d.midOn) sim.blockers.push_back({-450e3, d.midDbm});
+                    sim.blockers.push_back({250e3, -64});   // a steady mid-strength signal
+                    if (t > 600) { total += 0.05; sumG += c.current().totalDb; if (c.current().totalDb <= lo + 3) atMin += 0.05; }
+                    if (std::fmod(t, 300) < 0.05) { char b[32]; snprintf(b, sizeof b, " %.0f", c.current().totalDb); trace += b; }
+                });
+                printf("DYN %-10s v2=%d %-50s mean gain after 10 min %.1f (range %.0f..%.0f), %.0f %% of the time within 3 dB of the minimum; every 5 min:%s\n", id, v2, d.name, sumG / total, lo, hi, 100 * atMin / total, trace.c_str());
+                CHECK(atMin / total < 0.5, "%s v2=%d '%s': %.0f %% of the time at the minimum gain", id, v2, d.name, 100 * atMin / total);
+            }
+        }
+    }
+}
+
 int main() {
+    dynamic();
     const std::vector<Scene> scenes = {
         {"DMR weak, 3 mid signals", 11, 12.5e3, 2.4e6, 100e3, -112, {{-600e3, -62}, {350e3, -55}, {820e3, -68}}},
         {"DMR weak, one -45 dBm neighbour", 11, 12.5e3, 2.4e6, 100e3, -108, {{500e3, -45}}},
