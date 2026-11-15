@@ -17,6 +17,7 @@
 #include "voice/voice_monitor_ui.h"
 #include "voice/watch_ui.h"
 #include "voice/tgdir_ui.h"
+#include "tetra_names_ui.h"
 #include "dect2/voice/voice_monitor.h"
 #include "codec/speech_codec_ui.h"
 #include "dect2/audio/audioout.h"
@@ -286,10 +287,10 @@ void slotPanel(App& a) {
         const T::SlotInfo& k = best->slots[i];
         char heard[32] = "never";
         if (k.lastHeardSec >= 0) snprintf(heard, sizeof heard, "%.0f s ago", std::max(0.0, now - k.lastHeardSec));
-        char ids[64] = "";
+        char ids[160] = "";
         if (k.talkgroup) snprintf(ids, sizeof ids, " TG %u", k.talkgroup);
-        if (k.talkgroup) { const std::string nm = tgdirui::nameOf(dect2::TgKind::Tetra, k.talkgroup); if (!nm.empty()) snprintf(ids + strlen(ids), sizeof ids - strlen(ids), " %s", nm.c_str()); }
-        if (k.issi) snprintf(ids + strlen(ids), sizeof ids - strlen(ids), " ISSI %u", k.issi);
+        if (k.talkgroup) { std::string nm = tetranames::nameOf(dect2::TetraIdKind::Gssi, k.talkgroup, best->mcc, best->mnc); if (nm.empty()) nm = tgdirui::nameOf(dect2::TgKind::Tetra, k.talkgroup); if (!nm.empty()) snprintf(ids + strlen(ids), sizeof ids - strlen(ids), " %s", nm.c_str()); }
+        if (k.issi) { snprintf(ids + strlen(ids), sizeof ids - strlen(ids), " ISSI %u", k.issi); const std::string nm = tetranames::nameOf(dect2::TetraIdKind::Issi, k.issi, best->mcc, best->mnc); if (!nm.empty()) snprintf(ids + strlen(ids), sizeof ids - strlen(ids), " %s", nm.c_str()); }
         const bool enc = k.state == T::SlotState::Encrypted;
         if (enc) ImGui::PushStyleColor(ImGuiCol_Text, pal::warnAmber());
         ImGui::Text("slot %d: %s%s, last heard %s%s", i + 1, T::slotStateText(k.state), ids, heard,
@@ -530,8 +531,8 @@ void messageView(App& a) {
     if (ImGui::BeginTable("##tsds", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_Borders, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn(tr("Time"), ImGuiTableColumnFlags_WidthFixed, 66 * gUi);
-        ImGui::TableSetupColumn(tr("From"), ImGuiTableColumnFlags_WidthFixed, 80 * gUi);
-        ImGui::TableSetupColumn(tr("To"), ImGuiTableColumnFlags_WidthFixed, 80 * gUi);
+        ImGui::TableSetupColumn(tr("From"), ImGuiTableColumnFlags_WidthFixed, 150 * gUi);
+        ImGui::TableSetupColumn(tr("To"), ImGuiTableColumnFlags_WidthFixed, 150 * gUi);
         ImGui::TableSetupColumn(tr("Kind"), ImGuiTableColumnFlags_WidthFixed, 70 * gUi);
         ImGui::TableSetupColumn(tr("Content"), 0, 1.f);
         ImGui::TableHeadersRow();
@@ -545,8 +546,9 @@ void messageView(App& a) {
 #endif
             strftime(tb, sizeof tb, "%H:%M:%S", &tmv);
             ImGui::TableNextColumn(); ImGui::TextUnformatted(tb);
-            ImGui::TableNextColumn(); if (r.fromIssi >= 0) ImGui::Text("%d", r.fromIssi); else ImGui::TextDisabled("-");
-            ImGui::TableNextColumn(); if (r.toAddr >= 0) ImGui::Text("%d", r.toAddr); else ImGui::TextDisabled("-");
+            ImGui::TableNextColumn(); if (r.fromIssi >= 0) ImGui::TextUnformatted(tetranames::withName(dect2::TetraIdKind::Issi, (uint32_t)r.fromIssi).c_str()); else ImGui::TextDisabled("-");
+            ImGui::TableNextColumn();   // the address is a terminal (ISSI) or a group (GSSI): a name of either is shown
+            if (r.toAddr >= 0) { std::string nm = tetranames::nameOf(dect2::TetraIdKind::Issi, (uint32_t)r.toAddr); if (nm.empty()) nm = tetranames::nameOf(dect2::TetraIdKind::Gssi, (uint32_t)r.toAddr); ImGui::Text("%d%s%s", r.toAddr, nm.empty() ? "" : "  ", nm.c_str()); } else ImGui::TextDisabled("-");
             ImGui::TableNextColumn(); ImGui::TextUnformatted(r.kind.c_str());
             ImGui::TableNextColumn();
             if (r.hasPos) ImGui::Text("%s  (%.5f, %.5f)", r.text.c_str(), r.lat, r.lon); else ImGui::TextWrapped("%s", r.text.c_str());
@@ -621,6 +623,12 @@ std::string tgTime(int64_t t) {
     char b[32]; strftime(b, sizeof b, "%Y-%m-%d %H:%M:%S", &g); return b;
 }
 
+// the name of a talkgroup: the TETRA name book first (any network), else the shared talkgroup directory
+std::string gssiName(uint32_t gssi) {
+    std::string nm = tetranames::nameOf(dect2::TetraIdKind::Gssi, gssi);
+    return nm.empty() ? tgdirui::nameOf(dect2::TgKind::Tetra, gssi) : nm;
+}
+
 void talkgroupView(App& a) {
     if (typo::collapsingHeader(trw("Talkgroup activity"), 0)) d40TetraActivity();   // 4.0 (app/d40)
     ImGui::PushTextWrapPos(0);
@@ -629,7 +637,7 @@ void talkgroupView(App& a) {
     static std::string note;
     resexp::Table t; t.cols = {"gssi", "name", "first_heard_utc", "last_heard_utc", "calls_seen", "frequency_hz", "slot"};
     for (const auto& kv : gTg)
-        t.add({std::to_string(kv.first), tgdirui::nameOf(dect2::TgKind::Tetra, kv.first), tgTime(kv.second.first), tgTime(kv.second.last), std::to_string(kv.second.count),
+        t.add({std::to_string(kv.first), gssiName(kv.first), tgTime(kv.second.first), tgTime(kv.second.last), std::to_string(kv.second.count),
                std::to_string((long long)kv.second.hz), std::to_string(kv.second.slot)}, (double)kv.second.last);
     resexp::saveButton(t, "tetra_talkgroups", note, "svtetratg");
     ImGui::SameLine();
@@ -650,7 +658,7 @@ void talkgroupView(App& a) {
     for (const auto& kv : gTg) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::Text("%u", kv.first); ImGui::PopFont();
-        ImGui::TableNextColumn(); ImGui::TextUnformatted(tgdirui::nameOf(dect2::TgKind::Tetra, kv.first).c_str());
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(gssiName(kv.first).c_str());
         ImGui::TableNextColumn(); ImGui::TextUnformatted(tgTime(kv.second.first).c_str());
         ImGui::TableNextColumn(); ImGui::TextUnformatted(tgTime(kv.second.last).c_str());
         ImGui::TableNextColumn(); ImGui::Text("%u", kv.second.count);
@@ -666,6 +674,7 @@ void logView(App& a) {
 
 void tick(App& a) {
     watchui::tick(a);
+    tetranames::tick();
     tgCollect(a);
     // Load the voice codec while the mode runs, whichever tab is drawn (the strip only shows the state).
     if (live(a) && a.engine.running() && !gVoice.hasCodec()) {
@@ -696,13 +705,15 @@ void tab(App& a) {
     ImGui::TextDisabled("Receive only: the public information every TETRA base station broadcasts to all terminals (network code, location area, services, encryption advertised). Nothing is decrypted; no messages or identities are decoded. Clear (unencrypted) voice can be played only with a speech codec you install yourself; encrypted calls are never decoded.");
     ImGui::PopTextWrapPos();
     voiceStrip(a);
+    tetranames::speakingLine(a);
     if (kit::collapsingSection(tr("Listen"), false)) slotPanel(a);
     kit::modeHeader({46, "TETRA", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("tetrav", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Neighbours"), 1, true}, {tr("Carriers"), 2, true}, {tr("Log"), 3, true}, {tr("Messages"), 5, true}, {tr("Talkgroups"), 6, true}, {tr("Map"), 7, true}, {tr("Watch"), 90, true}});
+    kit::modeNav("tetrav", S.view, {{tr("Live"), 0}, {tr("Calls"), 4}, {tr("Neighbours"), 1, true}, {tr("Carriers"), 2, true}, {tr("Log"), 3, true}, {tr("Messages"), 5, true}, {tr("Talkgroups"), 6, true}, {tr("Names"), 8, true}, {tr("Map"), 7, true}, {tr("Watch"), 90, true}});
     if (S.view == 90) { watchui::watchView(a, "tetra"); return; }
     if (S.view == 4) { kit::sessionItems(46, 1, "tetra"); return; }
     if (S.view == 5) { messageView(a); return; }
     if (S.view == 6) { talkgroupView(a); return; }
+    if (S.view == 8) { tetranames::view(a); return; }
     if (S.view == 7) { tetraMap(a); return; }
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to find the TETRA base stations around you"); return; }
     if (S.view == 0) {

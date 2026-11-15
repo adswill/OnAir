@@ -2332,3 +2332,9 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
 - Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.
+
+## 2026-11-15: TETRA name book (ISSI / GSSI)
+
+- New Names tab on the TETRA screen: your own names for terminal (ISSI) and talkgroup (GSSI) numbers, with notes, optional network (MCC/MNC), colour code and site. Names appear in the slot lines, the Messages table, the Talkgroups table and the Map, and a "Speaking now" line shows who is on the air in calls that are not encrypted. Stored in the data folder, never shipped.
+- Import reads the own CSV (type,id,name,notes,mcc,mnc,colour_code,site) or plain lines (1001;Name, 1001,Name, ISSI=Name); export writes the CSV. The SDR# TETRA Trunk Tracker file layout could not be confirmed from public documentation, so only its plain "number, separator, name" lines read; see docs/TETRA-NAMES.md.
+- Tested by a unit test (parser, lookup, persistence round trip) with made-up data; the screen was only syntax-checked.
