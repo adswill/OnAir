@@ -22,13 +22,14 @@
 namespace dect2 {
 namespace chv {
 
-// The services (the families 340 .. 346 are kFamilyBase + Service)
-enum class Service { Cb = 0, Frs, Pmr, Ham, HfVoice, Mdc, Mic, kCount };
+// The services (the families 340 .. 347 are kFamilyBase + Service)
+enum class Service { Cb = 0, Frs, Pmr, Ham, HfVoice, Mdc, Mic, Fsync, kCount };   // (Fsync was added after Mic: the numbers of the older families stay)
+inline bool isIdService(Service s) { return s == Service::Mdc || s == Service::Fsync; }   // follows every FM carrier of the span and decodes a data burst on it
 constexpr int kFamilyBase = 340;
 constexpr int kServiceCount = (int)Service::kCount;
 inline int familyOf(Service s) { return kFamilyBase + (int)s; }
 inline bool serviceOfFamily(int family, Service& s) { if (family < kFamilyBase || family >= kFamilyBase + kServiceCount) return false; s = (Service)(family - kFamilyBase); return true; }
-const char* serviceId(Service s);      // "cb", "frs", "pmr446", "hamfm", "hfvoice", "mdc1200", "wmic"
+const char* serviceId(Service s);      // "cb", "frs", "pmr446", "hamfm", "hfvoice", "mdc1200", "wmic", "fleetsync"
 const char* serviceName(Service s);
 
 // How a channel is demodulated

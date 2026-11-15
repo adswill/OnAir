@@ -26,7 +26,7 @@ All of them have a busy-channel list (state, level, mode, tone, calls, total air
 
 ## What is not done
 
-* **FleetSync** (Kenwood) is not decoded. There is no public specification; the only open implementation found is GPL-2.0 reverse engineering, which is not used. The MDC-1200 mode says so on screen.
+* **FleetSync** (Kenwood) has its own mode, family 347 (docs/fleetsync.md).
 * MDC-1200: only the PTT ID (op 0x01) is named; other ops are shown as numbers. The decoder drops a burst with a CRC error (no single-bit correction by the parity bytes). A clock error of more than about 0.5 % loses the burst.
 * Wireless microphones: no expander for compressed (companded) audio, no pilot-tone display, no digital system decoding. FM / not FM is the envelope (constant, with a deviation above 3 kHz) of the carrier; an unmodulated mic shows as not FM until it is modulated.
 * CB: an unmodulated carrier looks the same in AM and FM and plays silence. SSB is demodulated against the nominal channel frequency (a transmitter more than about 1 kHz off gives a shifted pitch; the sideband comes from where the energy is).

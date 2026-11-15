@@ -204,6 +204,21 @@ int main() {
         }
         CHECK(r.tel.callsTotal == 2, "MDC: %llu calls", (unsigned long long)r.tel.callsTotal);
     }
+    // ---- FleetSync: two carriers, FleetSync and FleetSync II, one of them off frequency
+    {
+        GenScene sc; sc.rate = 1e6; sc.centreMhz = 155.0; sc.durSec = 4.0; sc.noiseSigma = 0.004;
+        GenTx a; a.mhz = 154.9625; a.mod = Demod::Nfm; a.amp = 0.1; a.devScale = 0.7; a.startSec = 0.3; a.durSec = 2.5; a.fsync = true; a.fsFleet = 107; a.fsUnit = 1772; a.fsFs2 = false;
+        GenTx b = a; b.mhz = 155.0375; b.cfoHz = 1100; b.fsFleet = 215; b.fsUnit = 3041; b.fsFs2 = true; b.startSec = 0.8;
+        sc.tx = {a, b};
+        const Run r = run(Service::Fsync, 0, sc);
+        CHECK(r.tel.fsync.size() == 2, "FleetSync: %zu bursts decoded, wanted 2", r.tel.fsync.size());
+        for (auto& e : r.tel.fsync) {
+            if (e.unit == 1772) CHECK(e.fleet == 107 && !e.fs2 && std::fabs(e.mhz - 154.9625) < 0.004, "FleetSync 107/1772: fleet %d fs2 %d at %.4f", e.fleet, e.fs2, e.mhz);
+            else if (e.unit == 3041) CHECK(e.fleet == 215 && e.fs2 && std::fabs(e.mhz - 155.0375) < 0.004, "FleetSync II 215/3041: fleet %d fs2 %d at %.4f", e.fleet, e.fs2, e.mhz);
+            else CHECK(false, "FleetSync: an unexpected unit %d", e.unit);
+        }
+        CHECK(r.tel.fsyncTotal == 2 && r.tel.mdc.empty(), "FleetSync: total %llu, MDC list %zu", (unsigned long long)r.tel.fsyncTotal, r.tel.mdc.size());
+    }
     // ---- HF voice: the HFGCS 11175 kHz carrier in USB, the single tuner scan asks for the other channels
     {
         GenScene sc; sc.rate = 250e3; sc.centreMhz = 11.175; sc.durSec = 3.5; sc.noiseSigma = 0.004;
@@ -287,7 +302,7 @@ int main() {
             if ((Service)sv == Service::Cb && rg == 2) continue;                 // the UK plan has FM only: the AM channel of the scene is FM there
             if ((Service)sv == Service::Mic && rg == 1) continue;                // same scene as Europe
             if ((Service)sv == Service::Ham && rg != 0 && rg != 1) continue;     // region 3 is the same code path as 2 (a longer repeater list)
-            const double rate = (Service)sv == Service::Mic ? 4e6 : (Service)sv == Service::HfVoice ? 250e3 : (Service)sv == Service::Ham || (Service)sv == Service::Frs || (Service)sv == Service::Mdc ? 2e6 : 1e6;
+            const double rate = (Service)sv == Service::Mic ? 4e6 : (Service)sv == Service::HfVoice ? 250e3 : (Service)sv == Service::Ham || (Service)sv == Service::Frs || (Service)sv == Service::Mdc || (Service)sv == Service::Fsync ? 2e6 : 1e6;
             GenScene sc = chanVoiceDemoScene((Service)sv, rg, rate, 30.0);
             const Run r = run((Service)sv, rg, sc);
             const char* nm = serviceName((Service)sv);
@@ -300,6 +315,7 @@ int main() {
                 int tones = 0; for (auto& rw : r.tel.rows) if (rw.calls && rw.lastTone.ctcssIdx >= 0) tones++; CHECK(tones == 2, "demo ham region %d: %d tones read, wanted 2", rg, tones); } break;
             case Service::HfVoice: { const ChvChannelRow* w = row(r.tel, "HFGCS 11175"); CHECK(w && w->calls == 1, "demo HF: calls %d", w ? w->calls : -1); } break;
             case Service::Mdc: CHECK(r.tel.mdc.size() == 2, "demo MDC: %zu bursts", r.tel.mdc.size()); break;
+            case Service::Fsync: CHECK(r.tel.fsync.size() == 2, "demo FleetSync: %zu bursts", r.tel.fsync.size()); break;
             default: { int fm = 0; for (auto& m : r.tel.mics) if (m.fmLike) fm++; CHECK(r.tel.mics.size() == 3 && fm == 3, "demo mic finder: %zu candidates, %d FM", r.tel.mics.size(), fm); } break;
             }
         }

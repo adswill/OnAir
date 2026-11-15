@@ -7,6 +7,7 @@
 // wide FM carriers. Audio comes from ToneScene (tones/tones_gen.h): 1.0 is 5 kHz of FM deviation.
 #pragma once
 #include "dect2/chanvoice/chv_mdc.h"
+#include "dect2/chanvoice/chv_fsync.h"
 #include "dect2/chanvoice/chv_plan.h"
 #include "dect2/common/ring.h"
 #include <memory>
@@ -28,6 +29,7 @@ struct GenTx {
     bool speech = true;           // speech-like audio; false: the tones below
     std::vector<double> tones = {1000.0};   // the test tones of a non-speech transmission (Hz), each 0.3 / n of full scale
     bool mdc = false; MdcPacket mdcPacket;   // an MDC-1200 burst at the start, voice after it
+    bool fsync = false; int fsFleet = 107, fsUnit = 1772; bool fsFs2 = false;   // a FleetSync burst at the start, voice after it
     unsigned seed = 1;
 };
 
@@ -53,6 +55,6 @@ class ModeSynth;
 struct SynthConfig;
 }
 namespace dect2 {
-// SynthConfig: snrDb = carrier to noise in 10 kHz; modeOpt[0] = the plan's region index. Engine standards 342 .. 348 (families 340 .. 346).
+// SynthConfig: snrDb = carrier to noise in 10 kHz; modeOpt[0] = the plan's region index. Engine standards 342 .. 349 (families 340 .. 347).
 std::unique_ptr<ModeSynth> makeChanVoiceSynth(const SynthConfig& cfg, double sampleRate, chv::Service s);
 }

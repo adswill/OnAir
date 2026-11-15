@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// Channelised analog voice screens (CB, FRS / GMRS, PMR446, ham FM repeaters, HFGCS / HF voice, MDC-1200, wireless mic finder): one UI for the seven
-// families 340 - 346 (engine standards 342 - 348, active standards 341 - 347). A channel plan that follows the location setting (or a manual choice),
+// Channelised analog voice screens (CB, FRS / GMRS, PMR446, ham FM repeaters, HFGCS / HF voice, MDC-1200, wireless mic finder, Kenwood FleetSync): one UI for the eight
+// families 340 - 347 (engine standards 342 - 349, active standards 341 - 348). A channel plan that follows the location setting (or a manual choice),
 // the busy-channel list with the CTCSS / DCS tone heard on each channel, a squelch, a multi-channel scan (a narrow radio, HF: the scan retunes the
 // radio), recording of every transmission, the call log, the MDC-1200 unit IDs and the wireless microphone candidates. Receive only (docs/CHANNELS-3.8.md).
 #include "app.h"
@@ -62,7 +62,7 @@ chv::Service curSvc(const App& a) {
 }
 SvcState& st(chv::Service s) { return S.s[(int)s]; }
 
-const char* kSvcKey[] = {"cb", "frs", "pmr", "ham", "hf", "mdc", "mic"};
+const char* kSvcKey[] = {"cb", "frs", "pmr", "ham", "hf", "mdc", "mic", "fsync"};
 std::string pk(chv::Service s, const char* k) { return std::string("chv.") + kSvcKey[(int)s] + "." + k; }
 
 void save(chv::Service sv) {
@@ -204,7 +204,7 @@ void controls(App& a, chv::Service sv) {
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Tunes the radio to the middle of the band (or the bottom 8 MHz of a wide one). The VHF bands use 25 kHz channels; the UHF bands use 100 kHz cells. Move the radio with the frequency box to look at another part of a wide band."));
     }
-    if (sv != chv::Service::Mic && sv != chv::Service::Mdc) {
+    if (sv != chv::Service::Mic && !chv::isIdService(sv)) {
         flowNext(10 * gUi);
         ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Channel")); ImGui::SameLine(0, 5 * gUi);
         const auto& chs = chv::channels(sv, rg);
@@ -293,7 +293,13 @@ void controls(App& a, chv::Service sv) {
 void detail(App& a, chv::Service sv) {
     if (sv == chv::Service::Mdc) {
         ImGui::PushTextWrapPos(0);
-        ImGui::TextDisabled("%s", tr("MDC-1200 is the 1200 bit/s data burst of Motorola radios that sends the unit ID when the key is pressed or released. Any FM carrier in the span is followed; the ID appears in the list below. FleetSync (Kenwood) is not decoded: its format is not publicly specified."));
+        ImGui::TextDisabled("%s", tr("MDC-1200 is the 1200 bit/s data burst of Motorola radios that sends the unit ID when the key is pressed or released. Any FM carrier in the span is followed; the ID appears in the list below. FleetSync (Kenwood) has its own mode."));
+        ImGui::PopTextWrapPos();
+        return;
+    }
+    if (sv == chv::Service::Fsync) {
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextDisabled("%s", tr("FleetSync is the 1200 bit/s data burst of Kenwood radios that sends the fleet and unit number at the start of a transmission (FleetSync and FleetSync II). Any FM carrier in the span is followed; each burst appears in the list below. Only the fleet and unit number are decoded: the message type, status text and position bits of the burst are shown as raw words because their layout is not published."));
         ImGui::PopTextWrapPos();
         return;
     }
@@ -384,7 +390,7 @@ void activity(App& a, chv::Service sv) {
         ImGui::PopID();
     };
     for (size_t i = 0; i < chs.size(); i++) draw(rowOf((int)i), &chs[i], (int)i);
-    if (t) for (const auto& r : t->rows) if (r.key >= (int)chs.size() || (sv == chv::Service::Mdc && r.key >= 0)) draw(&r, nullptr, 1000 + r.key);
+    if (t) for (const auto& r : t->rows) if (r.key >= (int)chs.size() || (chv::isIdService(sv) && r.key >= 0)) draw(&r, nullptr, 1000 + r.key);
     ImGui::EndTable();
 }
 
@@ -432,6 +438,26 @@ void mdcList(App& a) {
         ImGui::TableNextColumn(); ImGui::Text("%02X", e.arg);
         ImGui::TableNextColumn();
         if (e.dbl) ImGui::Text("%s  [%02X %02X %02X %02X]", e.text.c_str(), e.extra[0], e.extra[1], e.extra[2], e.extra[3]); else ImGui::TextUnformatted(e.text.c_str());
+    }
+    ImGui::EndTable();
+}
+
+void fsyncList(App& a) {
+    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("start the receiver")); return; }
+    const dect2::ChvTelemetry& t = a.rx.chanvoice;
+    if (t.fsync.empty()) { ImGui::TextDisabled("%s", tr("no FleetSync burst heard yet")); return; }
+    if (!ImGui::BeginTable("##chvfsync", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, std::max(160.f * gUi, ImGui::GetContentRegionAvail().y - 4 * gUi)))) return;
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn(tr("Time")); ImGui::TableSetupColumn("MHz"); ImGui::TableSetupColumn(tr("Fleet")); ImGui::TableSetupColumn(tr("Unit")); ImGui::TableSetupColumn(tr("Type")); ImGui::TableSetupColumn(tr("Raw words"), ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableHeadersRow();
+    for (const dect2::ChvFsyncEvent& e : t.fsync) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(timeText(e.wallTime).c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%.4f", e.mhz);
+        ImGui::TableNextColumn(); ImGui::Text("%d", e.fleet);
+        ImGui::TableNextColumn(); ImGui::Text("%d", e.unit);
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(e.fs2 ? "FleetSync II" : "FleetSync");
+        ImGui::TableNextColumn(); ImGui::PushFont(a.mono, 0); ImGui::Text("%08X %08X", e.word1, e.word2); ImGui::PopFont();
     }
     ImGui::EndTable();
 }
@@ -511,6 +537,11 @@ void tab(App& a) {
         if (S.view == 0) activity(a, sv); else if (S.view == 1) mdcList(a); else callLog(a, sv);
         return;
     }
+    if (sv == chv::Service::Fsync) {
+        subNav("chvv", S.view, {tr("Carriers"), tr("FleetSync IDs"), tr("Call log")});
+        if (S.view == 0) activity(a, sv); else if (S.view == 1) fsyncList(a); else callLog(a, sv);
+        return;
+    }
     subNav("chvv", S.view, {tr("Channels"), tr("Call log")});
     if (S.view == 0 || S.view > 1) activity(a, sv); else callLog(a, sv);
 }
@@ -550,6 +581,7 @@ void receiver(App& a) {
     kv(tr("plays"), "%s", t.playingLabel.empty() ? tr("nothing") : t.playingLabel.c_str());
     kv(tr("calls"), "%llu, %d %s", (unsigned long long)t.callsTotal, t.recordedFiles, tr("recorded"));
     if ((chv::Service)t.service == chv::Service::Mdc) kv("MDC-1200", "%llu", (unsigned long long)t.mdcTotal);
+    if ((chv::Service)t.service == chv::Service::Fsync) kv("FleetSync", "%llu", (unsigned long long)t.fsyncTotal);
     kv(tr("radio centre"), "%.4f MHz, %.3f Msps", t.centerHz / 1e6, t.inputRate / 1e6);
     kv(tr("signal time"), "%.1f s", t.timeSec);
 }

@@ -15,11 +15,11 @@ namespace dect2 {
 namespace chv {
 
 const char* serviceId(Service s) {
-    static const char* k[] = {"cb", "frs", "pmr446", "hamfm", "hfvoice", "mdc1200", "wmic"};
+    static const char* k[] = {"cb", "frs", "pmr446", "hamfm", "hfvoice", "mdc1200", "wmic", "fleetsync"};
     return (unsigned)s < (unsigned)kServiceCount ? k[(int)s] : "";
 }
 const char* serviceName(Service s) {
-    static const char* k[] = {"CB radio", "FRS / GMRS", "PMR446 analog", "Ham FM repeaters", "HFGCS / HF voice", "MDC-1200", "Wireless mic finder"};
+    static const char* k[] = {"CB radio", "FRS / GMRS", "PMR446 analog", "Ham FM repeaters", "HFGCS / HF voice", "MDC-1200", "Wireless mic finder", "Kenwood FleetSync"};
     return (unsigned)s < (unsigned)kServiceCount ? k[(int)s] : "";
 }
 const char* demodName(Demod d) {
@@ -36,7 +36,7 @@ const std::vector<RegionInfo>& regions(Service s) {
     static const std::vector<RegionInfo> mic = {{"eu", "Europe"}, {"us", "USA, Canada"}};
     switch (s) {
     case Service::Cb: return cb; case Service::Frs: return frs; case Service::Pmr: return pmr; case Service::Ham: return ham;
-    case Service::HfVoice: return hf; case Service::Mdc: return mdc; default: return mic;
+    case Service::HfVoice: return hf; case Service::Mdc: case Service::Fsync: return mdc; default: return mic;
     }
 }
 int regionIndex(Service s, const std::string& id) {
@@ -251,7 +251,7 @@ double rasterHz(Service s, int region) {
     case Service::Frs: return 12500.0;
     case Service::Pmr: return 6250.0;                                // 446.00625 + 12.5 kHz n: the channel centres are on a 6.25 kHz grid
     case Service::Ham: return region == 1 ? 5000.0 : 12500.0;
-    case Service::Mdc: return 12500.0;
+    case Service::Mdc: case Service::Fsync: return 12500.0;
     case Service::Mic: return 25000.0;
     default: return 1000.0;
     }
@@ -259,7 +259,7 @@ double rasterHz(Service s, int region) {
 
 Span planSpan(Service s, int region) {
     Span sp;
-    if (s == Service::Mdc) { sp.loMhz = 30; sp.hiMhz = 960; sp.centreMhz = 155.0; return sp; }
+    if (isIdService(s)) { sp.loMhz = 30; sp.hiMhz = 960; sp.centreMhz = 155.0; return sp; }
     if (s == Service::Mic) { const auto& b = micBands(region); sp.loMhz = b.front().loMhz; sp.hiMhz = b.back().hiMhz; sp.centreMhz = b.front().loMhz + 4.0; return sp; }
     const auto& v = channels(s, region);
     if (v.empty()) return sp;

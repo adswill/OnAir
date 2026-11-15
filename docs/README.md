@@ -84,6 +84,7 @@ The table below is the list of topic pages.
 | [INMARSAT.md](INMARSAT.md) | Inmarsat (all carriers) | Every Aero P and Inmarsat-C carrier of one wide capture at once; C voice not decoded (needs a user test). |
 | [ebicab.md](ebicab.md) | EBICab / Eurobalise | Balise up-link telegrams per SUBSET-036 (needs a user test); EBICab formats not public. |
 | [rpr.md](rpr.md) | Robust Packet (RPR) | HF OFDM packet: carriers, bursts and speed level (physical layer only; the coding is not public; needs a recording). |
+| [fleetsync.md](fleetsync.md) | Kenwood FleetSync | FleetSync and FleetSync II ID bursts on FM carriers: fleet and unit number (receive only). |
 
 ## Added in 3.0 (not in the table above yet)
 

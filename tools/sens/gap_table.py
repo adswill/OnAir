@@ -74,7 +74,7 @@ PHY = {
 
 # no simple model: the class of each, by mode id
 CLASS = {
-    "analog or squelch count (calls, tones, audio lines): no bit error theory": "am cb fm frs pmr446 hamfm hfvoice mdc1200 multitone tones selcal ils vor vorils ndb cw general airband cquam elt121 voiceinv wmic sstv wefax hell noaaapt codar sferics whistler ism esubghz sensors",
+    "analog or squelch count (calls, tones, audio lines): no bit error theory": "am cb fm frs pmr446 hamfm hfvoice mdc1200 fleetsync multitone tones selcal ils vor vorils ndb cw general airband cquam elt121 voiceinv wmic sstv wefax hell noaaapt codar sferics whistler ism esubghz sensors",
     "data on an FM or AM audio channel: limited by the FM threshold, not a bit-error formula": "packet klw tdcs lbj same atis u482c acars flex pager efr",
     "4FSK on a discriminator with voice FEC (no closed form here; DMR at 6 dB is the reference)": "dmr dpmr nxdn p25 m17",
     "OFDM / concatenated broadcast and satellite links: see SENSITIVITY-4.1-TV.md and the X-band rows of SENSITIVITY-4.1-ALL.md": "drm hdr cdr isdbtsb dab freedv hamdrm kaal kapp kaft kait kavb kaws",
