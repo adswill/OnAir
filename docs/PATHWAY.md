@@ -2305,3 +2305,8 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - The Smart checks cards (FM, AM, DAB, TV, satellite and others) now follow Insights > Advanced > Analyse decodes: with it off the cards and their checks stop, and Clear findings also resets the FM watchdog.
 - The HFDL, VDL2 and ACARS maps have a Clear button on the map toolbar that removes plotted aircraft, ground stations and lines.
 - Settings > Network and updates has a Map colours entry (background, grid, outline, text, tile tint, presets and reset); the default look is unchanged.
+
+## 2026-11-15: Auto gain no longer stays at the minimum after a strong burst
+
+- Report: Auto gain "always reduces the gain to 0". Reproduced in the simulator (Auto v2, default settings): a strong signal that keys up cuts the gain by up to 30 dB; the weak wanted signal then disappears under the ADC noise, the loop read that as "the signal went away" and waited 10 minutes at the minimum (RTL-SDR, Airspy and other index radios; the cut also repeated on every burst).
+- Fix: when a clip cut leaves the wanted channel invisible, the cut is treated as an out-of-band overload, so the fast climb back (limited by headroom and the soft ceiling) starts at once. New test `autogain_collapse` covers normal bands and keying signals on nine radio models.

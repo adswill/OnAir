@@ -214,7 +214,13 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
     // after a cut (a clip or the headroom floor): back up fast (up to 12 dB a step, 1.1 s apart) to the gain it was cut from once the room is there again. The interferer has
     // gone when the headroom says so, whatever cut the gain; a burst must not cost minutes. A soft ceiling only holds while the headroom does not clearly allow more
     {
-        if (cutActive_ && cutOobIn_ < -299 && !clTrial_ && now >= changedAt_ + settleTime() && now - cutAt_ >= settleTime() && fl_.valid) cutOobIn_ = fl_.oobDbfs - cur_.totalDb;
+        if (cutActive_ && cutOobIn_ < -299 && !clTrial_ && now >= changedAt_ + settleTime() && now - cutAt_ >= settleTime() && fl_.valid) {
+            cutOobIn_ = fl_.oobDbfs - cur_.totalDb;
+            // The cut took the gain far down and the wanted channel is gone with it (a weak signal under the ADC's noise at that gain): that is the cut's doing, not the signal
+            // going away, and the clip that caused it was not the wanted signal's (it is not there to clip). Without this the loop read "no signal", waited 10 minutes in the idle hold
+            // and sat at the minimum gain (user report 2026-11-15). The climb back is limited by the headroom and the soft ceiling as after any out-of-band cut
+            if (!cutWasOob_ && !hasSignal() && cutFrom_ > cur_.totalDb + 6.0) cutWasOob_ = true;
+        }
         const bool recovering = cutActive_ && cutWasOob_ && !idleHold && cur_.totalDb < cutFrom_ - 1 && now - cutAt_ > recWait_ / sp;
         if (!clTrial_ && recovering && now - lastUp_ >= 1.1 / sp && now - lastDown_ >= 1.5 / sp) {
             const double room = effHeadroom(in) - minHead_() - 1.0;
