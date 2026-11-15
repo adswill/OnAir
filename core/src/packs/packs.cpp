@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <thread>
 #include "dect2/common/u8file.h"
 #include "dect2/engine/updater.h"
 #include "dect2/geo/tilecache.h"
@@ -166,6 +167,17 @@ std::vector<Pack> parseCatalogTsv(const std::string& text, std::string* err) {
     return v;
 }
 
+static std::string fetchErrorText(int rc) {
+    switch (rc) {
+        case 22: return "the server has no such file (HTTP error, not published yet?)";
+        case 6: return "the server name could not be found, check the internet connection";
+        case 7: return "could not connect to the server";
+        case 28: return "the server did not answer in time";
+        case 35: case 51: case 58: case 60: return "the secure connection (TLS) failed, check the computer's date and certificates";
+        default: return "error " + std::to_string(rc);
+    }
+}
+
 Fetcher curlFetcher() {
     return [](const std::string& url, const std::string& out, uint64_t maxBytes, const std::atomic<bool>& cancel, const std::function<void()>& tick) {
         return curlDownloadFile(url, out, maxBytes, 3 * 3600, cancel, tick);
@@ -280,13 +292,22 @@ void PackManager::run(Pack p) {
         }
         fs::remove(u8file(part), ec);
         const uint64_t maxB = f.bytes ? f.bytes + (f.bytes >> 6) + 4096 : (p.tiles ? (4u << 20) : (1024ull << 20));
-        const int rc = fetch_(f.url, part, maxB, cancel_, [&] {
-            std::error_code e2;
-            const auto sz = fs::file_size(u8file(part), e2);
-            if (!e2) doneBytes_ = done + sz;
-        });
+        int rc = 0;
+        for (int attempt = 0; attempt < 3; attempt++) {   // a short network hiccup or a busy server should not fail the pack
+            if (attempt > 0) {
+                for (int w = 0; w < 20 && !cancel_; w++) std::this_thread::sleep_for(std::chrono::milliseconds(100 * attempt));
+                fs::remove(u8file(part), ec);
+            }
+            if (cancel_) break;
+            rc = fetch_(f.url, part, maxB, cancel_, [&] {
+                std::error_code e2;
+                const auto sz = fs::file_size(u8file(part), e2);
+                if (!e2) doneBytes_ = done + sz;
+            });
+            if (rc == 0 || rc == -1 || rc == 22) break;   // 22 = the server answered with an error (e.g. file not published): retrying will not help
+        }
         if (rc == -1 || cancel_) { fs::remove(u8file(part), ec); state_ = State::Cancelled; return; }
-        if (rc != 0) { fs::remove(u8file(part), ec); fail("download of " + f.rel + " failed (error " + std::to_string(rc) + ")"); return; }
+        if (rc != 0) { fs::remove(u8file(part), ec); fail("download of " + f.rel + " failed: " + fetchErrorText(rc) + " (" + f.url + ")"); return; }
         const auto sz = fs::file_size(u8file(part), ec);
         if (ec || sz == 0 || (f.bytes && sz != f.bytes)) { fs::remove(u8file(part), ec); fail(f.rel + ": the downloaded file has the wrong size, not used"); return; }
         if (!p.tiles) {
