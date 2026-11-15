@@ -12,6 +12,7 @@
 // stream clock. Full scale 1.0 is sent as 0 dBm before main/transgain.
 #include "native_common.h"
 #include "aartsa_min.h"
+#include "native_realddc.h"
 #include <cwchar>
 
 namespace dect2 {
@@ -233,6 +234,11 @@ constexpr double kIqRateOverSpan = 1.5;    // iqreceiver: the packets come at 1.
 // transmit: with a narrower main/spanfreq the device takes the packets and sends nothing. Measured on a V6 ECO 150XA-6 (RTSA-Suite PRO
 // 3.0.3, a 1 Msps tone at 433.92 MHz heard by a second receiver on the TX output): silent at 1 and 10 MHz, there at 20 and 50 MHz.
 constexpr double kTxMinSpanHz = 20e6;
+// receive below the lowest main/centerfreq of the iqreceiver mode (5 MHz on that V6 ECO: a lower value comes back "adjusted" to it and the
+// device stays at 5 MHz): the device stays at its lowest centre and runs `decim` times the rate, and the driver shifts the wanted
+// frequency to zero, filters and decimates. kEcoIqTopRateHz is where the ECO's iqreceiver rate stops growing (measured: 59.2137 Msps).
+constexpr int kLowMaxDecim = 4096;
+constexpr double kEcoIqTopRateHz = 59.2e6;
 constexpr double kRefTopDbm = 10;          // gain 0 dB = this reference level
 constexpr double kGainMaxDb = 60;
 constexpr double kZeroDbmAmp = 0.22360679774997896;   // sqrt(0.05): 0 dBm into 50 ohm, as the SDK's samples count
@@ -442,12 +448,38 @@ protected:
         if (!dev_.openAs(type_, mode_ == "raw" ? "raw" : "iqreceiver", serial_, err)) return false;
         fprintf(stderr, "SPECTRAN: opened %s %s (%s mode)\n", type_.c_str(), serial_.c_str(), mode_.c_str());
         fflush(stderr);
+        // the lowest centre the device takes in this mode: asked for 0 Hz, it answers with the value it adjusted that to
+        centreMin_ = 0;
+        decim_ = 1;
+        if (mode_ == "iq") {
+            double low = 0;
+            const aa::Result r = dev_.setNum(L"main/centerfreq", 0, &low);
+            if (!aa::failed(r) && low > 0 && low < 100e6) centreMin_ = low;
+        }
         return apply(s, err, false) && dev_.connectStart(err);
     }
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
+        if (live) {
+            {
+                std::lock_guard<std::mutex> lk(api_);
+                if (!dev_.open) return false;
+                if (plan(s).decim == decim_) return apply(s, err, true);
+            }
+            // across the device's lowest centre, or far enough below it for another span: the stream is stopped for it, as for a new rate
+            // (the stream thread itself calls this after it reopened a lost device: nothing to stop then)
+            const bool self = std::this_thread::get_id() == th_.get_id();
+            if (!self) stopStream();
+            bool ok;
+            {
+                std::lock_guard<std::mutex> lk(api_);
+                dev_.stopDisconnect();
+                ok = apply(s, err, false) && dev_.connectStart(err);
+            }
+            if (!self) startStream();
+            return ok;
+        }
         std::lock_guard<std::mutex> lk(api_);
         if (!dev_.open) return false;
-        if (live) return apply(s, err, true);
         // a new rate (the stream thread is stopped): the device is stopped, set up again and started
         dev_.stopDisconnect();
         return apply(s, err, false) && dev_.connectStart(err);
@@ -467,7 +499,7 @@ protected:
                 fprintf(stderr, "SPECTRAN: the device delivers %.6g Msps (%.6g were planned)\n", got / 1e6, rate_ / 1e6);
                 fflush(stderr);
             }
-            rate_ = got;
+            rate_ = got / decim_;
         } else if (run_) {
             addNote(err, "the SPECTRAN sent no samples within 3 s of its start");
         }
@@ -499,7 +531,8 @@ private:
     // (under api_) live: the stream runs, only the frequency, the reference level and the amplifier change
     bool apply(const TuneSettings& s, std::string& err, bool live) {
         dev_.warn.clear();
-        const double f = ppmCorrectedHz(std::max(s.centerHz, 0.0), radioPpm(s));
+        const Plan lowPlan = plan(s);
+        const double f = lowPlan.centre;
         if (!live) {
             if (radioOption(s, "rxchan", "Rx1") == "Rx2") dev_.setStr(L"device/receiverchannel", L"Rx2");
             else dev_.setStr(L"device/receiverchannel", L"Rx1");
@@ -523,12 +556,21 @@ private:
                     if (c < 0) {
                         const int n = (int)(sizeof kClocks / sizeof kClocks[0]);
                         c = n - 1;
-                        for (int i = 0; i < n; i++) if (kClocks[i].hz >= want * 0.999) { c = i; break; }
+                        for (int i = 0; i < n; i++) if (kClocks[i].hz >= lowPlan.hwRate * 0.999) { c = i; break; }
                     }
                     if (!setClock(c, err)) return false;
                 }
-                const aa::Result r = dev_.setNum(L"main/spanfreq", want / kIqRateOverSpan);
-                if (aa::failed(r)) { err = "SPECTRAN: a span of " + mhz(want / kIqRateOverSpan) + " was refused (" + hexResult(r) + ")"; return false; }
+                const aa::Result r = dev_.setNum(L"main/spanfreq", lowPlan.hwRate / kIqRateOverSpan);
+                if (aa::failed(r)) { err = "SPECTRAN: a span of " + mhz(lowPlan.hwRate / kIqRateOverSpan) + " was refused (" + hexResult(r) + ")"; return false; }
+                if (lowPlan.decim != decim_) {
+                    decim_ = lowPlan.decim;
+                    if (decim_ > 1) { ddcI_.design(decim_); ddcQ_.design(decim_); }
+                }
+                if (decim_ > 1) {
+                    fprintf(stderr, "SPECTRAN: %s is below the device's lowest centre (%s): the device stays there at %.6g Msps, shifted and decimated by %d\n",
+                            mhz(lowPlan.centre + lowPlan.shift).c_str(), mhz(centreMin_).c_str(), lowPlan.hwRate / 1e6, decim_);
+                    fflush(stderr);
+                }
             }
             rate_ = planned;
             requested_ = s.sampleRate;
@@ -537,6 +579,8 @@ private:
         }
         aa::Result r = dev_.setNum(L"main/centerfreq", f);
         if (aa::failed(r)) { err = "SPECTRAN: the device refused " + mhz(f) + " (" + hexResult(r) + ")"; return false; }
+        shift_ = lowPlan.shift;
+        ddcRate_ = 0;   // (the next packet tunes the shift)
         if (const Model* m = modelOf(type_)) addNote(err, freqSpecNote(eco_ ? "SPECTRAN V6 ECO" : "SPECTRAN V6", s.centerHz, m->minHz, m->maxHz));
         const std::string agc = radioOption(s, "agc", "keep");
         if (agc != "keep") dev_.setStr(L"device/gaincontrol", widen(agc));
@@ -553,6 +597,38 @@ private:
         if (!dev_.warn.empty() && !live) addNote(err, "SPECTRAN: " + dev_.warn);
         return true;
     }
+    // What the device is asked for. From its lowest centre up: the frequency itself and the rate. Below it (iqreceiver mode): the device
+    // stays at its lowest centre and runs `decim` times the rate, wide enough for the flat part of what it delivers (a third of its rate to
+    // each side) to reach the wanted frequency and half the output rate beyond it; convert() shifts and decimates.
+    struct Plan {
+        double centre = 0;   // of the device
+        double shift = 0;    // the wanted frequency against it (negative), 0 when the device is on it
+        int decim = 1;
+        double hwRate = 0;   // the rate asked of the device
+    };
+    Plan plan(const TuneSettings& s) const {
+        Plan p;
+        p.centre = ppmCorrectedHz(std::max(s.centerHz, 0.0), radioPpm(s));
+        const double want = s.sampleRate > 0 ? s.sampleRate : 2e6;
+        p.hwRate = want;
+        if (mode_ != "iq" || !(centreMin_ > 0) || p.centre >= centreMin_) return p;
+        p.shift = p.centre - centreMin_;
+        p.centre = centreMin_;
+        const Model* m = modelOf(type_);
+        const double top = eco_ ? kEcoIqTopRateHz : (m ? m->maxRateHz : 245.76e6);
+        const int most = std::clamp((int)std::floor(top / want), 2, kLowMaxDecim);
+        const int least = std::clamp((int)std::ceil(3 * -p.shift / want + 1.5), 2, most);
+        // from 2, 3, 4, 6, 8, 12 ... and the one in use kept while it is wide enough and not more than four times too wide: tuning around
+        // on short wave then seldom asks for another span
+        p.decim = decim_;
+        if (p.decim < least || p.decim > most || p.decim > 4 * least) {
+            p.decim = 2;
+            while (p.decim < least) p.decim = (p.decim & (p.decim - 1)) ? p.decim / 3 * 4 : p.decim / 2 * 3;
+            p.decim = std::min(p.decim, most);
+        }
+        p.hwRate = want * p.decim;
+        return p;
+    }
     bool setClock(int c, std::string& err) {
         if (c < 0 || !dev_.has(L"device/receiverclock")) return true;
         std::string e;
@@ -567,6 +643,25 @@ private:
         const int64_t stride = pk.stride >= 2 ? pk.stride : 2;
         float sc;
         { std::lock_guard<std::mutex> g(scaleMu_); sc = scale_; }
+        if (decim_ > 1) {
+            // below the device's lowest centre: shifted to zero and decimated. The filter takes real samples, so I and Q go through it one
+            // after the other, each at half the gain: out = F(I) + j F(Q)
+            if (pk.stepFrequency > 0 && pk.stepFrequency != ddcRate_) {
+                ddcRate_ = pk.stepFrequency;
+                ddcI_.tune(ddcRate_, shift_, 0.5);
+                ddcQ_.tune(ddcRate_, shift_, 0.5);
+            }
+            if (!(ddcRate_ > 0)) return;
+            ddcI_.process(pk.fp32, (size_t)pk.num, (size_t)stride, partI_);
+            ddcQ_.process(pk.fp32 + 1, (size_t)pk.num, (size_t)stride, partQ_);
+            const size_t n = std::min(partI_.size(), partQ_.size());
+            conv_.resize(n);
+            for (size_t i = 0; i < n; i++) conv_[i] = cf32((partI_[i].real() - partQ_[i].imag()) * sc, (partI_[i].imag() + partQ_[i].real()) * sc);
+            partI_.clear();
+            partQ_.clear();
+            if (n) push(conv_.data(), n);
+            return;
+        }
         conv_.resize((size_t)pk.num);
         for (int64_t k = 0; k < pk.num; k++) conv_[(size_t)k] = cf32(pk.fp32[k * stride] * sc, pk.fp32[k * stride + 1] * sc);
         push(conv_.data(), conv_.size());
@@ -579,6 +674,12 @@ private:
     std::atomic<double> firstRate_{0};
     std::mutex scaleMu_;
     float scale_ = 1;
+    // below the device's lowest centre (api_): that centre (0: not known, nothing is shifted), the wanted frequency against it, the
+    // decimation (1: the device is on the frequency) and the packet rate the shift was last tuned for
+    double centreMin_ = 0, shift_ = 0, ddcRate_ = 0;
+    int decim_ = 1;
+    RealDdc ddcI_, ddcQ_;
+    std::vector<cf32> partI_, partQ_;
 };
 
 // ------------------------------------------------------------------ transmit
