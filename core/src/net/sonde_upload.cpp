@@ -65,9 +65,11 @@ std::string loginLine(const std::string& call, const std::string& pass) {
 std::string latText(double lat) { return hundredths(lat, 2) + (lat < 0 ? "S" : "N"); }
 std::string lonText(double lon) { return hundredths(lon, 3) + (lon < 0 ? "W" : "E"); }
 
-std::string beaconLine(const std::string& call, double lat, double lon, const std::string& comment) {
+std::string beaconLine(const std::string& call, double lat, double lon, const std::string& comment, double altM) {
     if (!(std::fabs(lat) <= 90) || !(std::fabs(lon) <= 180)) return {};
-    return upperStr(call) + ">APRS,TCPIP*:!" + latText(lat) + "/" + lonText(lon) + "`" + comment + "\r\n";
+    std::string alt;
+    if (std::isfinite(altM) && altM > -3000 && altM < 99999) { char b[24]; snprintf(b, sizeof b, "/A=%06d ", (int)std::lround(altM / 0.3048)); alt = b; }   // APRS101: altitude in feet, 6 digits
+    return upperStr(call) + ">APRS,TCPIP*:!" + latText(lat) + "/" + lonText(lon) + "`" + alt + comment + "\r\n";
 }
 
 std::string objectName(const SondeInfo& s) {
@@ -155,8 +157,8 @@ struct SondeUpload::Impl {
     std::vector<SondeUploadStatus> pub, st;
     std::vector<Live> L;
     SondeUploadTiming tm, tl;                 // tm: set by callers under mu; tl: the thread's copy
-    double cLat = 0, cLon = 0; bool cSet = false;   // the thread's copy of the station
-    double stLat = 0, stLon = 0; bool stSet = false;
+    double cLat = 0, cLon = 0, cAlt = NAN; bool cSet = false;   // the thread's copy of the station
+    double stLat = 0, stLon = 0, stAlt = NAN; bool stSet = false;
     std::map<std::string, double> lastSent;   // object name -> steady time
     bool dirty = false, quit = false;
     std::thread th;
@@ -183,7 +185,7 @@ struct SondeUpload::Impl {
         const SondeUploadTarget& tg = live[i];
         Live& l = L[i];
         if (!cSet) return;
-        const std::string b = sondeup::beaconLine(tg.call, cLat, cLon);
+        const std::string b = sondeup::beaconLine(tg.call, cLat, cLon, "OnAir Radiosonde tracker", cAlt);
         if (!b.empty()) { l.out.push_back(b); l.nextBeacon = t + (tl.beaconEveryS > 0 ? tl.beaconEveryS : std::max(1, std::min(120, tg.beaconMin)) * 60.0); }
     }
     void service(size_t i, double t) {
@@ -289,7 +291,7 @@ struct SondeUpload::Impl {
                 cv.wait_for(lk, std::chrono::milliseconds(150), [&] { return quit || !q.empty() || dirty; });
                 if (quit) break;
                 batch.swap(q);
-                tl = tm; cLat = stLat; cLon = stLon; cSet = stSet;
+                tl = tm; cLat = stLat; cLon = stLon; cAlt = stAlt; cSet = stSet;
                 if (dirty) { applyConfig(); dirty = false; }
             }
             const double t = steadyNowSec();
@@ -329,9 +331,9 @@ SondeUploadStatus SondeUpload::status(size_t i) const {
     if (i >= impl_->cfg.size() || !impl_->cfg[i].enabled) { s.state = "off"; return s; }
     return i < impl_->pub.size() ? impl_->pub[i] : s;
 }
-void SondeUpload::setStation(double lat, double lon, bool set) {
+void SondeUpload::setStation(double lat, double lon, bool set, double altM) {
     std::lock_guard<std::mutex> lk(impl_->mu);
-    impl_->stLat = lat; impl_->stLon = lon; impl_->stSet = set;
+    impl_->stLat = lat; impl_->stLon = lon; impl_->stAlt = altM; impl_->stSet = set;
 }
 void SondeUpload::setTiming(const SondeUploadTiming& t) { std::lock_guard<std::mutex> lk(impl_->mu); impl_->tm = t; }
 

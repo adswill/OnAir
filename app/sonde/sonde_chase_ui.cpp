@@ -66,7 +66,6 @@ bool sondeStationMark(App& a, dect2::SondeMapStation& st) {
 }
 
 void sondeChaseControls(App& a) {
-    (void)a;
     load();
     Cs& c = C();
     if (ImGui::Checkbox(tr("Show my station on the map##sondeme"), &c.showMe)) save();
@@ -92,4 +91,11 @@ void sondeChaseControls(App& a) {
         else ImGui::TextDisabled("%s", c.gps.status().c_str());
         ImGui::TextDisabled("%s", tr("With a GPS fix the map shows a chase car, and SondeHub's Chase car option sends this position."));
     } else if (!receiverLocationSet()) ImGui::TextDisabled("%s", tr("No location set yet: View > Map, Use as my location."));
+    {   // the antenna height: the station height of the SondeHub and APRS uploads and of the sonde look angles (shared with the ADS-B position)
+        double h = receiverAltitudeM();
+        ImGui::SetNextItemWidth(110 * gUi);
+        if (ImGui::InputDouble(tr("Own height (m)##sondeown"), &h, 0, 0, "%.0f m", ImGuiInputTextFlags_EnterReturnsTrue)) setReceiverAltitudeM(a, h);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Set your antenna height above sea level, in metres. It goes into the station position of the uploads and is used for the line-of-sight angle to a sonde. Press Enter."));
+        if (h == 0 && receiverLocationSet()) ImGui::TextDisabled("%s", tr("Height is 0 m: set your antenna height above sea level."));
+    }
 }

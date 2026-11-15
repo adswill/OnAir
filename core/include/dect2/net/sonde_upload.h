@@ -10,6 +10,7 @@
 #pragma once
 #include "dect2/sonde/sonde_tel.h"
 #include <atomic>
+#include <cmath>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -53,7 +54,7 @@ std::string loginLine(const std::string& call, const std::string& pass);
 std::string latText(double lat);
 std::string lonText(double lon);
 // "DG9BFC-10>APRS,TCPIP*:!5240.87N/00848.27E`OnAir Radiosonde tracker\r\n"; "" for a position out of range
-std::string beaconLine(const std::string& call, double lat, double lon, const std::string& comment = "OnAir Radiosonde tracker");   // radiosondy.info lists a receiver only with the dish symbol (/`) and "tracker" in the comment
+std::string beaconLine(const std::string& call, double lat, double lon, const std::string& comment = "OnAir Radiosonde tracker", double altM = NAN);   // altM finite: "/A=nnnnnn" (feet) in front of the comment   // radiosondy.info lists a receiver only with the dish symbol (/`) and "tracker" in the comment
 // The 9 character APRS object name of a sonde, after the agreement of the sonde decoders (RS41 / RS92 serial, D + DFM number, LMS6xxxxx,
 // IMSxxxxxx, MRZxxxxxx, IMETxxxxx); "" when the type has none: M10 and M20 (the ID needs raw bytes OnAir does not keep) and iMet-1/4 (no serial).
 std::string objectName(const SondeInfo& s);
@@ -70,7 +71,7 @@ public:
     void configure(const std::vector<SondeUploadTarget>& t);   // starts the thread on the first enabled target; disabled ones close
     std::vector<SondeUploadTarget> targets() const;
     SondeUploadStatus status(size_t i) const;
-    void setStation(double lat, double lon, bool set);          // the receiver position for the beacon
+    void setStation(double lat, double lon, bool set, double altM = NAN);          // the receiver position for the beacon
     bool wanted() const { return want_.load(std::memory_order_relaxed); }   // cheap: any enabled target
     void frame(const SondeInfo& s, double wallUtc);             // one decoded frame (the receiver calls this; with a position only)
     void setTiming(const SondeUploadTiming& t);

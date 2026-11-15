@@ -26,6 +26,8 @@ void sondeSitesTick(App& a, bool live);   // sonde_sites_ui.cpp
 void sondeSitesView(App& a);
 void sondeSitesDraw(App& a, ImDrawList* dl, ImVec2 p0, ImVec2 size, int zoom);
 void sondeChaseControls(App& a);   // sonde_chase_ui.cpp
+void sondeNmeaControls();           // sonde_nmea_ui.cpp: the selected sonde as NMEA to a serial port, TCP or UDP
+void sondeNmeaTick(const dect2::SondeInfo* sel);
 // sonde_predict_ui.cpp: the landing prediction 4.0
 const dect2::SondePrediction* sondePredict40(const dect2::SondeInfo& s, bool selected, const dect2::tawhiri::Result* tw);
 bool sondePredict40On();
@@ -201,6 +203,7 @@ void tick(App& a) {
         if (s && s->hasPos && S.mapFollow) { S.map.lat = s->lat; S.map.lon = s->lon; }
     }
     if (!a.engine.running()) S.lastSeq = 0;
+    sondeNmeaTick(live(a) && a.engine.running() ? selected(a.rx.sonde) : nullptr);   // NMEA output of the selected sonde (off until ticked)
     if (S.autoStart) {   // the optional start at a launch window: a receiver already running uses up the window, so a stop by hand stays a stop
         const dect2::ease::SondeWindow w = dect2::ease::sondeWindow((int64_t)time(nullptr));
         const bool busy = a.engine.running() || txActive();
@@ -291,6 +294,8 @@ void mapView(App& a, ImVec2 size) {
     ImGui::PopStyleColor();
     if (ImGui::BeginPopup("##sondemepop")) {
         sondeChaseControls(a);
+        ImGui::Separator();
+        sondeNmeaControls();
         ImGui::Separator();
         if (ImGui::Checkbox(tr("Online flight prediction of the selected sonde (Tawhiri, SondeHub predictor)##sondepred"), &S.predOnline)) plat::prefs().setB("sondePredOnline", S.predOnline);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Sends the sonde's position, altitude, climb or fall rate and time to api.v2.sondehub.org/tawhiri, at most once a minute, and draws the predicted path dotted with the burst and landing. Off: nothing is asked."));

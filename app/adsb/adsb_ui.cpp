@@ -443,6 +443,13 @@ void receiverLocation(double& lat, double& lon) { loadState(); lat = S.refLat; l
 bool receiverLocationSet() { return plat::prefs().has("adsbLat") && plat::prefs().has("adsbLon") && !plat::prefs().getB("adsbLocCleared", false); }
 
 double receiverAltitudeM() { loadState(); return S.refAltM; }
+// The antenna height above sea level (the one value the ADS-B planner, the sonde screens and the uploads share), -500 .. 9000 m
+void setReceiverAltitudeM(App& a, double m) {
+    loadState();
+    if (!(m == m)) m = 0;
+    S.refAltM = std::max(-500.0, std::min(9000.0, m));
+    plat::prefs().setD("rxAltM", S.refAltM); savePrefs(a);
+}
 
 void setReceiverLocation(App& a, double lat, double lon) { loadState(); plat::prefs().setB("adsbLocCleared", false); setReference(a, lat, lon); }
 // Undo of an automatic position (E12): back to the old placeholder and to "not set"

@@ -5,7 +5,7 @@
 // radiosonde_auto_rx does it, after the SondeHub wiki (github.com/projecthorus/sondehub-infra/wiki: "SondeHub Telemetry Format" and
 // "API (Beta)"):
 //  - HTTPS PUT of a gzip-compressed JSON array of telemetry objects to <server>/sondes/telemetry, with the Date header (RFC 7231, used by
-//    SondeHub to correct a wrong receiver clock), User-Agent OnAir-<version>, Content-Encoding gzip, Content-Type application/json.
+//    SondeHub to correct a wrong receiver clock), User-Agent OnAir/<version>, Content-Encoding gzip, Content-Type application/json.
 //  - The frames are collected and sent every 15 s (the auto_rx default; 30 s at most, 1.5 times the interval, while a DFM or Meisei sonde is
 //    in the batch so that SondeHub's z-check gets enough points). 200 is success; 201 / 202 accepted with notes (shown); 5xx and no answer
 //    are retried, up to 5 tries; any other answer is not retried and its text is shown.
@@ -52,7 +52,7 @@ const char* softwareVersion();        // ONAIR_VERSION
 std::string userAgent();
 bool allowed();                       // ONAIR_SONDEHUB=1 (developers): without it nothing is ever uploaded, whatever the settings say
 extern const char* const kOffNote;    // the one-line text shown instead of the settings
-std::string logPath();                // ONAIR_SONDEHUB_LOG, only while allowed()              // "OnAir-<version>"
+std::string logPath();                // ONAIR_SONDEHUB_LOG, only while allowed()              // "OnAir/<version>"
 
 struct Ident {
     std::string manufacturer, type, subtype, serial;
@@ -107,6 +107,7 @@ struct SondeHubStatus : SondeUploadStatus {
     std::string skipWhy;              // the last such reason
     uint64_t uploads = 0;             // PUT requests that SondeHub accepted
     uint64_t rejected = 0;            // frames SondeHub answered with an error for (bad serial, ...), not counted as sent
+    std::string lastListenerLine;     // the station record upload: "PUT /listeners: HTTP 200: <answer>"
     std::string lastReply;            // the raw body of SondeHub's last answer (shortened), shown under "What is sent"
 };
 

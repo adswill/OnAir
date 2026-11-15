@@ -2336,3 +2336,9 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 ## 2026-11-15: SondeHub upload switched off (issue #526)
 
 - On branch feat42-sondehub: SondeHub upload is off in the app (note in the panel, saved settings ignored), kept for developers behind ONAIR_SONDEHUB=1. The RS41 datetime is now the sonde's GPS time as SondeHub's validation page asks, and ONAIR_SONDEHUB_LOG writes each submitted object as one JSON line. Test sonde_hub extended; tests run on GitHub.
+
+## 2026-11-15: Radiosonde own height and NMEA GPS output of the selected sonde
+
+- The radiosonde "me / prediction" panel now has "Own height (m)", the antenna height above sea level. It is the same value the ADS-B position uses (so it is not entered twice) and it goes into the station height of the SondeHub station record and telemetry (uploader_position, which was 0.0 when it had never been set) and into the APRS-IS station beacon (/A= in feet).
+- New optional output "Send the selected sonde as NMEA": $GPGGA and $GPRMC once a second for the sonde chosen in the list, to a serial port (COMx, /dev/cu.*, /dev/tty*, a pty or virtual port), or to TCP or UDP host:port; 4800 baud by default, off by default, nothing sent while the sonde has no position. Sentence builder and checksum are pure code with a test (sonde_nmea); the sender is checked against a file and UDP on localhost, not against a real COM port.
+- Developer-only SondeHub path (ONAIR_SONDEHUB=1): the telemetry body is a JSON array and the station record one object (now tested), the User-Agent is OnAir/<version>, and the HTTP status and answer of both uploads are shown in the panel and written to the developer log.

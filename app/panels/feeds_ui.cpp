@@ -138,9 +138,11 @@ void sondeHubEntry(dect2::FeedConfig& c, bool& changed) {
             const std::string lj = dect2::SondeHub::get().lastListenerJson(), tj = dect2::SondeHub::get().lastJson();
             ImGui::TextDisabled("%s", tr("Station record (PUT /listeners):"));
             ImGui::TextUnformatted(lj.empty() ? tr("(not sent yet)") : lj.c_str());
+            if (!s.lastListenerLine.empty()) ImGui::TextDisabled("%s", s.lastListenerLine.c_str());
             ImGui::TextDisabled("%s", tr("Last telemetry upload (PUT /sondes/telemetry, gzip-compressed):"));
             const std::string fo = firstObject(tj);
             ImGui::TextUnformatted(fo.empty() ? tr("(not sent yet)") : fo.c_str());
+            if (!s.lastLine.empty()) ImGui::TextDisabled("%s", s.lastLine.c_str());
             ImGui::TextDisabled("%s", tr("SondeHub's last answer:"));
             ImGui::TextUnformatted(s.lastReply.empty() ? tr("(none yet)") : s.lastReply.c_str());
             ImGui::PopTextWrapPos();
@@ -281,7 +283,7 @@ void loadFeedPrefs(App& a) {
 // Remote control from the clients of "Share my radio": their frequency and gain commands (only arrive when the box is ticked)
 void shareTick(App& a) {
     if (a.rxId == 1) {   // the station beacon position (APRS-IS) and the SondeHub station: the chase GPS while it has a fix, else the set location
-        double la = 0, lo = 0; receiverLocation(la, lo); dect2::SondeUpload::get().setStation(la, lo, receiverLocationSet());
+        double la = 0, lo = 0; receiverLocation(la, lo); dect2::SondeUpload::get().setStation(la, lo, receiverLocationSet(), receiverAltitudeM());
         dect2::SondeHubStation st;
         if (!sondeChasePosition(st.lat, st.lon, st.altM)) { st.lat = la; st.lon = lo; st.altM = receiverAltitudeM(); st.set = receiverLocationSet(); }
         else { st.set = true; st.live = true; }
