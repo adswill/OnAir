@@ -120,6 +120,7 @@ struct RtsaApi {
     aa::OpenFn Open = nullptr;
     aa::CloseFn Close = nullptr;
     aa::RescanDevicesFn RescanDevices = nullptr;
+    aa::OpenFn ResetDevices = nullptr;                      // optional (the same signature as Open): cures a start that delivers nothing
     aa::EnumDeviceFn EnumDevice = nullptr;
     aa::OpenDeviceFn OpenDevice = nullptr;
     aa::CloseDeviceFn CloseDevice = nullptr;
@@ -153,6 +154,7 @@ struct RtsaApi {
              lib.get(ConfigSetFloat, "AARTSAAPI_ConfigSetFloat") && lib.get(ConfigSetString, "AARTSAAPI_ConfigSetString");
         lib.opt(InitWithPath, "AARTSAAPI_Init_With_Path");
         lib.opt(Version, "AARTSAAPI_Version");
+        lib.opt(ResetDevices, "AARTSAAPI_ResetDevices");
         lib.opt(GetDeviceState, "AARTSAAPI_GetDeviceState");
         lib.opt(ConfigGetFloat, "AARTSAAPI_ConfigGetFloat");
         lib.opt(SendPacket, "AARTSAAPI_SendPacket");
@@ -449,6 +451,7 @@ protected:
         if (!rtsa().ok) { err = kRtsaMissingMsg; openFailure_ = OpenFailure::Final; return false; }
         if (!rtsa().ready) { err = "SPECTRAN: " + rtsa().why; openFailure_ = OpenFailure::Final; return false; }
         std::lock_guard<std::mutex> lk(api_);
+        lastSet_ = s;
         mode_ = radioOption(s, "mode", "iq") == "raw" ? "raw" : "iq";
         if (!dev_.openAs(type_, mode_ == "raw" ? "raw" : "iqreceiver", serial_, err)) return false;
         fprintf(stderr, "SPECTRAN: opened %s %s (%s mode)\n", type_.c_str(), serial_.c_str(), mode_.c_str());
@@ -464,6 +467,7 @@ protected:
         return apply(s, err, false) && dev_.connectStart(err);
     }
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
+        { std::lock_guard<std::mutex> lk(api_); lastSet_ = s; }
         if (live) {
             {
                 std::lock_guard<std::mutex> lk(api_);
@@ -500,9 +504,41 @@ protected:
     }
     bool waitForStreamStart(std::string& err) override {
         // the API says the real rate in every packet (stepFrequency): the first one is waited for, up to 6 s (a V6 ECO: 1.5 to 3.7 s after the start, measured)
-        const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(6);
-        while (std::chrono::steady_clock::now() < end && firstRate_.load() <= 0 && run_)
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        waitFirstPacket();
+        // A V6 ECO now and then starts, says it runs and delivers nothing (measured: about one start in ten, more after it was used in
+        // another mode); closing it, AARTSAAPI_ResetDevices and opening it again cures that, at times only the second time. Done twice at
+        // most, and only when this program has no other SPECTRAN open (the reset is for all of them).
+        for (int attempt = 0; attempt < 2 && firstRate_.load() <= 0 && run_ && rtsa().ResetDevices; attempt++) {
+            fprintf(stderr, "SPECTRAN: no samples within %d s of the start: the device is reset and opened again\n", kFirstPacketS);
+            fflush(stderr);
+            stopStream();
+            TuneSettings again;
+            bool alone;
+            {
+                std::lock_guard<std::mutex> lk(api_);
+                again = lastSet_;
+                dev_.close();
+                { std::lock_guard<std::mutex> g(gKnownMu); alone = gOpenCount == 0; }
+                if (alone) { std::lock_guard<std::mutex> g(rtsa().mu); rtsa().ResetDevices(&rtsa().h); }
+            }
+            bool ok = false;
+            std::string e;
+            if (alone) {
+                // the device is back on the bus about 3 s after the reset
+                std::this_thread::sleep_for(std::chrono::milliseconds(2500));
+                for (int i = 0; i < 12 && !ok; i++) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    e.clear();
+                    ok = openDevice(again, e);
+                    if (!ok) closeDevice();
+                }
+            } else {
+                ok = openDevice(again, e);
+            }
+            if (!ok) { err = e.empty() ? std::string("SPECTRAN: the device did not open again after its reset") : e; return false; }
+            startStream();
+            waitFirstPacket();
+        }
         const double got = firstRate_.load();
         if (got > 0) {
             if (std::fabs(got / decim_ - rate_) > 1.0) {
@@ -514,6 +550,13 @@ protected:
             addNote(err, "the SPECTRAN sent no samples within 6 s of its start");
         }
         return true;
+    }
+    // the API says the real rate in every packet (stepFrequency): the first one is waited for (a V6 ECO: 1.5 to 3.7 s after the start)
+    static constexpr int kFirstPacketS = 6;
+    void waitFirstPacket() {
+        const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(kFirstPacketS);
+        while (std::chrono::steady_clock::now() < end && firstRate_.load() <= 0 && run_)
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     void streamLoop() override {
         aa::Packet pk;
@@ -692,6 +735,7 @@ private:
     // below the device's lowest centre (api_): that centre (0: not known, nothing is shifted), the wanted frequency against it, the
     // decimation (1: the device is on the frequency) and the packet rate the shift was last tuned for
     double centreMin_ = 0, shift_ = 0, ddcRate_ = 0;
+    TuneSettings lastSet_;                                   // (api_) what was last asked for: for the open after a reset
     double expectRate_ = 0;                                  // the packet rate planned at the last set-up (0: any)
     std::chrono::steady_clock::time_point expectUntil_{};
     int decim_ = 1;
