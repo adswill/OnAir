@@ -6342,7 +6342,6 @@ Fold the controls panel to icons	把控制面板折叠为图标
 Fold the drawer: the spectrum and the waterfall take the room	收起抽屉：频谱和瀑布图占满空间
 Fold the spectrum and waterfall to a strip	把频谱和瀑布图折叠成一条
 Folded profile (one pulse period)	折叠剖面（一个脉冲周期）
-Folder paths are shortened. Log lines that may hold a key, a token or a password are left out.	文件夹路径已缩短。可能包含密钥、令牌或密码的日志行被省略。
 Folder with libavcodec and libavutil	包含 libavcodec 和 libavutil 的文件夹
 Folder...	文件夹…
 Folder...##vgapath	文件夹…##vgapath
@@ -6797,7 +6796,6 @@ In the mode list under CUSTOM MODES:	位于模式列表的「自定义模式」�
 Include medical pages	包含医疗页面
 Include secrets (voice keys, QRZ / Club Log / eQSL and other credentials)	包含机密（语音密钥、QRZ / Club Log / eQSL 及其他凭据）
 Include the tuned frequency in the Discord status.	在 Discord 状态中包含调谐频率。
-Included in the zip	已包含在 zip 中
 India	印度
 India and South Asia	印度和南亚
 Indicative: a rule of thumb per codec, not a measurement	指示性：按编解码器的经验值，并非实测
@@ -6956,7 +6954,6 @@ Leave the swarm	离开集群
 Leave this conversation and go to the next best one	离开此通话，转到下一个最佳通话
 Leave this step as it is and go on. Nothing is changed for it.	保持此步骤不变并继续。不会为它做任何更改。
 Left only	仅左声道
-Left out	已排除
 Left to right	从左到右
 Length (s)	长度（秒）
 Length field	长度字段
@@ -8062,7 +8059,6 @@ Press the refresh button.	按刷新按钮。
 Press to tune there and drag to keep tuning (Shift or Ctrl: fine steps). Drag the frequency scale, right- or middle-drag, or turn the wheel over the scale to pan.	按下调到那里，拖动持续调谐（Shift 或 Ctrl：细调）。拖动频率刻度、右键或中键拖动，或在刻度上滚动滚轮以平移。
 Pressure	气压
 Pressure hPa	气压 hPa
-Preview of diagnostics.txt	diagnostics.txt 预览
 Preview the new listing	预览新的列表
 Preview: nothing is encoded or sent	预览：不编码也不发送任何内容
 Previous channel of the plan	计划的上一信道
@@ -8158,7 +8154,6 @@ RC link, structure only	遥控链路，仅结构
 RDS clock %+.0f s against this computer, drift %+.1f s a day (%d clock times)	RDS 时钟与本机相差 %+.0f s，日漂移 %+.1f s（%d 个时钟时间）
 RDS details	RDS 详情
 RDS meanings	RDS 含义
-README.txt: what the zip is and how to attach it	README.txt：这个 zip 是什么以及如何附上
 REC	录制
 RECEIVING	接收中
 REFERENCE	参考
@@ -8285,7 +8280,6 @@ Recording:	录音：
 Recordings	录音
 Recordings folder	录音文件夹
 Recordings go to scan-recordings in the data folder; the oldest are deleted to stay inside this size.	录音保存在数据文件夹的 scan-recordings 中；超出此大小时删除最旧的。
-Recordings, settings files, keys, tokens, passwords, serial numbers, device addresses, file paths beyond the folder name, and the map server login.	录音、设置文件、密钥、令牌、密码、序列号、设备地址、超出文件夹名的文件路径，以及地图服务器登录信息。
 Recordings...	录音……
 Records board (personal best distances)	纪录榜（个人最远距离）
 Records board (personal best distances)##recb	纪录榜（个人最远距离）##recb
@@ -8539,7 +8533,6 @@ Save power when hidden	隐藏时省电
 Save power when hidden: always	隐藏时省电：始终
 Save power when hidden: off	隐藏时省电：关
 Save power when hidden: on battery	隐藏时省电：用电池时
-Save report zip...	保存报告 zip……
 Save rule	保存规则
 Save snapshot now	立即保存快照
 Save the analysis...	保存分析……
@@ -8563,7 +8556,6 @@ Saved to the memory table (group Fast scan).	已保存到存储表（Fast scan �
 Saved.	已保存。
 Saved. Attach both files to a GitHub issue or the signal sample library:	已保存。把两个文件都附到 GitHub 问题或信号样本库：
 Saved. It runs on every package from now on; see the Decoders view.	已保存。从现在起它对每个数据包都生效；见「译码器」视图。
-Saved. Nothing was uploaded: attach this file to your GitHub issue.	已保存。没有上传任何内容：请将此文件附到你的 GitHub 问题。
 Saved:	已保存：
 Saved: 	已保存：
 Saved: play it in Recordings.	已保存：在「录音」中播放。
@@ -9554,7 +9546,6 @@ This station	此台站
 This station has not sent that value.	此台站没有发送该值。
 This system has no keychain OnAir can use, so your keys are locked with a passphrase you type each time OnAir starts. If you forget it the keys cannot be recovered.	此系统没有 OnAir 可用的钥匙串，因此你的密钥用口令加密，每次 OnAir 启动时输入。遗忘口令将无法恢复密钥。
 This tool window is on the canvas already	此工具窗口已在画布上
-This writes one zip file on this computer that you can attach to a GitHub issue. Nothing is uploaded. Check the list below before you save.	这会在本机写一个 zip 文件，你可附到 GitHub 问题中。不上传任何内容。保存前请检查下方列表。
 Threads	线程
 Three made-up platforms in turn (24, 56 and 248 data bits) at their own frequencies. The 24 synchronisation bits are a stand-in: the real pattern is not public.	轮流三个虚构平台（24、56 和 248 数据位），各在其频率上。24 个同步位是占位：真实图案未公开。
 Three stations give a position with nothing left to check it; four or more can reject a wrong match.	三个台站给出一个无法验证的位置；四个或更多可以拒绝错误匹配。
@@ -9631,7 +9622,6 @@ Transponder MHz	转发器 MHz
 Transponders this network announces	该网络播报的转发器
 Transport stream	传输流
 Tries a mode this station can receive, ones you have not heard yet more often.	尝试此台站能收的模式，没听过的优先。
-Troubleshooter	故障排除器
 True azimuth now (°)	当前真方位角（°）
 True elevation now (°)	当前真仰角（°）
 Trunk load (Erlang B)	集群负载（Erlang B）
@@ -10362,7 +10352,6 @@ detections	检测
 detections sent	已发送检测
 device or file	设备或文件
 device or file##chpath	设备或文件##chpath
-diagnostics.txt: the version, this computer, the selected source and its device info, the active mode, the sample rate, the enabled features, your troubleshooter answers and the last 200 log lines	diagnostics.txt：版本、本机信息、所选信号源及其设备信息、活动模式、采样率、启用的功能、你的故障排除回答和最后 200 行日志
 dial	拨号
 digipeaters (optional)	数字中继（可选）
 digital	数字
