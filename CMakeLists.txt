@@ -74,14 +74,20 @@ pkg_check_modules(LIBUSB REQUIRED libusb-1.0)   # the own HackRF driver
 set(DECT2_FFMPEG_PREFIX "" CACHE PATH "Use the shared LGPL FFmpeg in this folder instead of the system's: tools/package/build_ffmpeg.sh (Linux packages, macOS app) or the FFmpeg of tools/package/cross_deps_windows.sh (Windows release; a Windows developer build with it behaves like the release)")
 # FFmpeg is always linked dynamically and shipped with the program: Windows next to OnAir.exe (like libSoapySDR.dll), Linux lib/ffmpeg of the
 # package (RUNPATH), macOS OnAir.app/Contents/Frameworks (tools/package/bundle_macos.py).
-if(DECT2_FFMPEG_PREFIX)
-  # pkg-config's search list: ";" between the folders on a Windows host (MSYS2 hands PKG_CONFIG_PATH to native programs that way), ":" elsewhere
-  if(CMAKE_HOST_WIN32)
-    set(ENV{PKG_CONFIG_PATH} "${DECT2_FFMPEG_PREFIX}/lib/pkgconfig;$ENV{PKG_CONFIG_PATH}")
-  else()
-    set(ENV{PKG_CONFIG_PATH} "${DECT2_FFMPEG_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+# Puts the prefix's pkg-config folder first in PKG_CONFIG_PATH. Called again before every later FFmpeg lookup (libavdevice): a toolchain file
+# that empties PKG_CONFIG_PATH (the OnAir Windows SDK's) is read again by each try_compile of a fresh configure, which drops the folder.
+macro(dect2_ffmpeg_pkg_config_path)
+  string(FIND "$ENV{PKG_CONFIG_PATH}" "${DECT2_FFMPEG_PREFIX}/lib/pkgconfig" _ff_pc_at)
+  if(DECT2_FFMPEG_PREFIX AND NOT _ff_pc_at EQUAL 0)
+    # pkg-config's search list: ";" between the folders on a Windows host (MSYS2 hands PKG_CONFIG_PATH to native programs that way), ":" elsewhere
+    if(CMAKE_HOST_WIN32)
+      set(ENV{PKG_CONFIG_PATH} "${DECT2_FFMPEG_PREFIX}/lib/pkgconfig;$ENV{PKG_CONFIG_PATH}")
+    else()
+      set(ENV{PKG_CONFIG_PATH} "${DECT2_FFMPEG_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+    endif()
   endif()
-endif()
+endmacro()
+dect2_ffmpeg_pkg_config_path()
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswscale libswresample)
 if(DECT2_FFMPEG_PREFIX)
   # the local FFmpeg, never the host's that is also installed (MSYS2, Homebrew): a mix links or runs another FFmpeg than the package has
@@ -669,6 +675,7 @@ else()
   # no GPU decoder yet (stub), audio through miniaudio
   if(WIN32)
     target_sources(dect2core PRIVATE core/src/dsp/gpu_ldpc_d3d11.cpp core/src/dsp/gpu_viterbi_d3d11.cpp core/src/tv/conceal_d3d11.cpp core/src/audio/audioout_native.cpp core/src/audio/bitstream_out.cpp core/src/audio/audioout_miniaudio.cpp core/src/audio/audioin_miniaudio.cpp)   # Direct3D 11 compute
+    dect2_ffmpeg_pkg_config_path()
     pkg_check_modules(AVDEVICE libavdevice)
     if(AVDEVICE_FOUND AND DECT2_FFMPEG_PREFIX)
       # only the libavdevice of that FFmpeg (MSYS2's libavdevice.dll.a must not be picked)
@@ -695,6 +702,7 @@ else()
       target_sources(dect2core PRIVATE core/src/dsp/gpu_ldpc_vulkan.cpp)
       target_link_libraries(dect2core PUBLIC ${CMAKE_DL_LIBS})
     endif()
+    dect2_ffmpeg_pkg_config_path()
     pkg_check_modules(AVDEVICE libavdevice)
     if(AVDEVICE_FOUND AND DECT2_FFMPEG_PREFIX)
       # only the libavdevice of that FFmpeg: the system's would load the system's FFmpeg next to the shipped one
