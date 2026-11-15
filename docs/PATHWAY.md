@@ -2332,3 +2332,7 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
 - Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.
+
+## 2026-11-15: DRM channel filter box follows the setting
+
+- Bug report: with the DRM channel filter set to 10 kHz the spectrum still drew a 20 kHz box. The box came from the fixed mode table width (20 kHz) and ignored the Channel filter choice. It now shows 10 or 20 kHz as chosen, or on "off" the occupancy the receiver found in the signal. The receiver still detects the occupancy by itself. Logic test drm_filter; only checked by syntax and the width function, not run on a live DRM signal.

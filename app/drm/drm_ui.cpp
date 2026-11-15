@@ -25,6 +25,7 @@
 #include <cmath>
 #include <ctime>
 #include <deque>
+#include "drm_filter_logic.h"
 
 bool freqStepArrow(const char* id, ImGuiDir dir);
 
@@ -129,7 +130,7 @@ void tick(App& a) {
     }
     if (S.chanFilter < 0) S.chanFilter = std::max(0, std::min(2, (int)plat::prefs().getI("drmChanFilter", 0)));
     if (run && (!S.wasRunning || S.chanFilter != S.chanPushed)) {
-        a.engine.drm().setChannelFilterHz(S.chanFilter == 1 ? 7000 : S.chanFilter == 2 ? 12000 : 0);
+        a.engine.drm().setChannelFilterHz(drmfilter::passHz(S.chanFilter));
         S.chanPushed = S.chanFilter;
     }
     if (run && (!S.wasRunning || S.sel != S.pushedSel)) { a.engine.drm().selectService(S.sel); S.pushedSel = S.sel; }
@@ -888,7 +889,7 @@ void receiver(App& a) {
             for (int i = 0; i < 3; i++) if (ImGui::Selectable(cf[i], v == i)) { S.chanFilter = i; plat::prefs().setI("drmChanFilter", i); }
             ImGui::EndCombo();
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Keeps only the DRM channel width and drops the AM stations beside it. 10 kHz: most DRM30 broadcasts. Changing it restarts the search."));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Keeps only the DRM channel width and drops the AM stations beside it. 10 kHz: most DRM30 broadcasts. The box in the spectrum follows this choice (off: the occupancy found in the signal). The receiver still detects the occupancy itself. Changing it restarts the search."));
     }
     kv("state", t.holding ? "holding through a fade (frequency, timing and clock frozen)" : stateText(t.state));
     kv("status", t.status.empty() ? "-" : t.status);
