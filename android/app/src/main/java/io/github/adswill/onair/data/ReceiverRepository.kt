@@ -191,6 +191,7 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
     )
 
     init {
+        io.github.adswill.onair.ui.UiHooks.usb = io.github.adswill.onair.usb.UsbRadiosBridge(radios, settings, scope) { chooseSource(SourceKind.USB) }
         scope.launch { for (u in persist) try { store.update { _settings.value } } catch (e: Exception) { AppLog.e("settings", "write failed", e) } }
         scope.launch { ops.withLock { initialise() } }
     }
