@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // onair-videogen (vg_state.h): the window. Easy mode: one tab (one source, sent to OnAir's transmitter at the rate it can carry).
 // Advanced: a tab per source ("+" adds one), "Muxing" (the programmes, the channel's capacity, the output) and "Preview" (the
 // picture of a source and its overlay editor). Start / Stop, the Advanced box and the link to OnAir stay above the tabs.

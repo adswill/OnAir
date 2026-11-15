@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What carries the video generator link's datagrams (vglink.h, docs/VIDEOGEN-LINK.md): internal to vglink.cpp.
 //
 //  - local (the default, #458): no ports at all. Windows: the named pipe \\.\pipe\onair-videogen-<user> in message mode (one pipe

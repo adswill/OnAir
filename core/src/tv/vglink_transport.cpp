@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The video generator link's transports (vglink_transport.h): UDP (RTP / RTCP ports), and the local named pipe / Unix socket.
 #include "vglink_transport.h"
 #include "../net/netcompat.h"

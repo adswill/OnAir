@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The windows of render_caps.h that belong to OnAir's interface: the software-OpenGL hint and View > Low-power drawing. The rest of
 // render_caps.cpp is in the shared interface library (onair_uikit), also used by onair-videogen.
 #include "render_caps.h"

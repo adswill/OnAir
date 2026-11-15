@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // onair-videogen, the Digital video generator as its own program (#458): the state of its window.
 //
 // One generator = one multiplex: several sources (tabs "Source 1", "Source 2" ..., each an input with its own encoding and overlay),

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // onair-videogen: what the program (vg_main.cpp) calls of its window (vg_window.cpp, vg_state.h)
 #pragma once
 #include <string>

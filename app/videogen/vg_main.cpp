@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // onair-videogen: the Digital video generator as its own program (#458, docs/VIDEO-GENERATOR.md, docs/VIDEOGEN-LINK.md).
 //
 //   onair-videogen [--onair local | host:port] [--token t] [--slot n] [--easy | --advanced] [--start]

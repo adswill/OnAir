@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Digital video generator program's engine: sources, mux and preview on their own threads (videogen_session.h, #458).
 #include "dect2/tv/videogen_session.h"
 #include "dect2/common/cpu_meter.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The link between the Digital video generator and OnAir (vglink.h, docs/VIDEOGEN-LINK.md): RTP and RTCP over the local pipe or UDP
 // (vglink_transport.cpp).
 #include "dect2/tv/vglink.h"

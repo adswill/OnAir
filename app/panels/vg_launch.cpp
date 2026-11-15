@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir's side of the Digital video generator, which is its own program since #458 (onair-videogen, app/videogen/):
 //  - the link server (vglink.h) runs from the start of OnAir: the generators send their multiplex to it over RTP and the transmitter
 //    reads it as "generator:N", as before. It always listens on the local pipe (no ports); with the Transmit panel's "Listen on the

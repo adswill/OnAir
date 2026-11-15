@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Part of test_videogen (ctest -R "^videogen$"): the muxing of the Digital video generator program (#458).
 //  1. TsRemux with set numbering (the Advanced Muxing tab): the programme number, PMT PID and stream PIDs given per source
 //  2. TsRemux with kept numbering (several generators' whole multiplexes in the transmitter): multi-programme inputs keep their

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Part of test_videogen (ctest -R "^videogen$"): the link between the Digital video generator program and OnAir (vglink.h, #458).
 //  1. packets: RTP (payload type 33, 7 TS packets) and compound RTCP (RR + SDES + APP, BYE) both ways, foreign and broken ones
 //     refused; key=value text both ways

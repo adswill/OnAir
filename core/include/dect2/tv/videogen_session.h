@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Digital video generator program's engine (#458): several sources, each on its own thread, put together by a mux thread, with a
 // preview thread for the window. The window thread only draws: it starts and stops things here and reads their status.
 //

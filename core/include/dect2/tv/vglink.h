@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The link between the Digital video generator (onair-videogen, its own program) and OnAir (issue #458), version 1 (docs/VIDEOGEN-LINK.md).
 //
 // Plain RTP (RFC 3550), no connection and no buffering in the link. Two transports (vglink_transport.h):

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A pipe / socket name of the test's own for the video generator link (vglink.h): never the one of a running OnAir.
 #pragma once
 #include <cstdlib>

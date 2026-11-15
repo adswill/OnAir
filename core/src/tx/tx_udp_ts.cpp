@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The transmitter's UDP input (tx.h txUdpTsSource, #458): a transport stream that arrives over UDP or RTP, as the Transmit panel's
 // "UDP stream" source. The receiving is the IPTV player's (iptv::Stream: udp:// and rtp://, multicast, RTP headers stripped, whole
 // 188-byte packets); this file puts the packets in a queue the transmitter takes one packet at a time from, at the channel's rate.
