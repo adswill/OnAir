@@ -75,6 +75,7 @@ add_library(onair SHARED
   src/jni_onair.cpp
   src/jni_radio.cpp
   src/jni_tv.cpp
+  src/jni_xhe.cpp
   src/results_json.cpp
   src/stubs_ext.c
 )

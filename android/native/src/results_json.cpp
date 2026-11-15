@@ -799,6 +799,8 @@ void genericResults(Out& o, const RxTelemetry& rx) {
 #include "results_generic_map.inc"
     default: break;
     }
+    // DRM: why there is no sound (e.g. a phone without an xHE-AAC decoder) is on the card list, past the generic cards' cap
+    if (rx.standard == 11 && !rx.drm.audioInfo.empty()) o.card("Audio", cell(rx.drm.audioInfo));
 }
 } // namespace
 

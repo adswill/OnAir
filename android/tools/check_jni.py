@@ -4,15 +4,16 @@
 
 """Compares the `external fun` declarations of the Kotlin JNI objects with their C++ functions (names, parameter and return types):
 OnAirNative.kt <-> native/src/jni_onair.cpp (macro FN), usb/RadioNative.kt <-> native/src/jni_radio.cpp (macro RFN),
-tv/TvNative.kt <-> native/src/jni_tv.cpp (macro TFN)."""
+tv/TvNative.kt <-> native/src/jni_tv.cpp (macro TFN), audio/XheNative.kt <-> native/src/jni_xhe.cpp (macro XFN)."""
 import re, sys, os
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 K = {'Int': 'jint', 'Long': 'jlong', 'Double': 'jdouble', 'Float': 'jfloat', 'Boolean': 'jboolean', 'String': 'jstring', 'FloatArray': 'jfloatArray',
-     'DoubleArray': 'jdoubleArray', 'ShortArray': 'jshortArray', 'ByteArray': 'jbyteArray', 'IntArray': 'jintArray', 'Unit': 'void'}
+     'DoubleArray': 'jdoubleArray', 'ShortArray': 'jshortArray', 'ByteArray': 'jbyteArray', 'IntArray': 'jintArray', 'Unit': 'void', 'Any': 'jobject'}
 PAIRS = [
     ('app/src/main/java/io/github/adswill/onair/OnAirNative.kt', 'native/src/jni_onair.cpp', 'FN'),
     ('app/src/main/java/io/github/adswill/onair/usb/RadioNative.kt', 'native/src/jni_radio.cpp', 'RFN'),
     ('app/src/main/java/io/github/adswill/onair/tv/TvNative.kt', 'native/src/jni_tv.cpp', 'TFN'),
+    ('app/src/main/java/io/github/adswill/onair/audio/XheNative.kt', 'native/src/jni_xhe.cpp', 'XFN'),
 ]
 bad = 0
 for ktf, ccf, macro in PAIRS:

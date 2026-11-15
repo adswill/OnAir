@@ -2332,3 +2332,7 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
 - Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.
+
+## 2026-11-15: DRM xHE-AAC sound on Android (#516)
+Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC decoder (drm_usac_ext.h: compressed frames out, PCM in, tried after libfdk-aac and before FFmpeg). Android registers its MediaCodec decoder there (audio/XheAacDecoder.kt, native/src/jni_xhe.cpp), using the ASC the DRM decoder already builds; a phone without a USAC decoder shows a plain status line on the DRM Audio card instead of silence.
+- Tested on the host with a fake decoder (test drm_xhe_ext: the hand-off, loss handling, the no-decoder line) and ASC bytes written out by hand from the specs. Kotlin and JNI were only syntax reviewed and compiled by the Android CI; nothing was tried on a phone, so real USAC decoding through MediaCodec (buffer timing, output format, which phones accept the config) is untested.
