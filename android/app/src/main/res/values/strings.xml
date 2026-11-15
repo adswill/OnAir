@@ -86,6 +86,7 @@
     <string name="update_check_now">Check now</string>
     <string name="update_checking">Checking for updates…</string>
     <string name="update_up_to_date">OnAir is up to date.</string>
+    <string name="update_banner">Update %1$s is available. Tap to download and install it.</string>
     <string name="update_available">Version %1$s is available.</string>
     <string name="update_download">Download (%1$s)</string>
     <string name="update_download_anyway">Download anyway (the mirror alone vouches for the checksum)</string>
