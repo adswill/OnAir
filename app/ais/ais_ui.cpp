@@ -176,7 +176,7 @@ void detail(App& a) {
     const dect2::AisTelemetry& t = a.rx.ais;
     const AisVessel* v = live(a) ? findVessel(t, S.sel) : nullptr;
     if (!v) {
-        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", !live(a) ? "start the receiver" : t.vessels.empty() ? "no stations heard yet" : "click a station"); ImGui::PopTextWrapPos(); }
+        { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", !live(a) ? tr("start the receiver") : t.vessels.empty() ? tr("no stations heard yet") : tr("click a station")); ImGui::PopTextWrapPos(); }
         return;
     }
     ImGui::TextColored(pal::heading(), "%s", nameOf(*v).c_str());
@@ -658,24 +658,24 @@ void tab(App& a) {
 
 void list(App& a) {
     loadState();
-    if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see vessels"); ImGui::PopTextWrapPos(); } return; }
+    if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("start the receiver to see vessels")); ImGui::PopTextWrapPos(); } return; }
     if (resultsClearButton("ais")) a.engine.ais().clearResults();
-    ImGui::TextDisabled("%u stations", a.rx.ais.vesselCount);
+    ImGui::TextDisabled(tr("%u stations"), a.rx.ais.vesselCount);
     vesselTable(a, true);
 }
 
 void receiver(App& a) {
     const dect2::AisTelemetry& t = a.rx.ais;
-    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
-    auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
-    kv("state", "%s", t.state == 0 ? "searching" : t.state == 1 ? "signal, no good message" : "decoding");
-    kv("messages", "%llu good, %llu failed the CRC", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
-    kv("bursts", "%llu detected", (unsigned long long)t.bursts);
-    kv("signal", "%.1f dB in 48 kHz, carrier error %+.0f Hz", t.snrDb, t.cfoHz);
-    if (t.satellite) kv("satellite mode", "Doppler %+.0f Hz (%+.1f Hz/s); %llu recovered, %llu after cancelling", t.dopplerHz[0], t.dopplerRateHzS[0],
+    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
+    auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", tr(k)); kvColumn(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
+    kv("state", "%s", t.state == 0 ? tr("searching") : t.state == 1 ? tr("signal, no good message") : tr("decoding"));
+    kv("messages", tr("%llu good, %llu failed the CRC"), (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
+    kv("bursts", tr("%llu detected"), (unsigned long long)t.bursts);
+    kv("signal", tr("%.1f dB in 48 kHz, carrier error %+.0f Hz"), t.snrDb, t.cfoHz);
+    if (t.satellite) kv("satellite mode", tr("Doppler %+.0f Hz (%+.1f Hz/s); %llu recovered, %llu after cancelling"), t.dopplerHz[0], t.dopplerRateHzS[0],
                         (unsigned long long)t.recovered, (unsigned long long)t.cancelled);
-    if (t.longRangeVessels) kv("long range", "%u ships sent message 27", t.longRangeVessels);
-    kv("stations", "%u in the table", t.vesselCount);
+    if (t.longRangeVessels) kv("long range", tr("%u ships sent message 27"), t.longRangeVessels);
+    kv("stations", tr("%u in the table"), t.vesselCount);
     kv("signal time", "%.1f s", t.timeSec);
     ImGui::Spacing();
     channelStats(a);
