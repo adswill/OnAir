@@ -35,6 +35,7 @@
     <string name="tv_no_services">The stream arrives, but no service list yet (PAT, PMT and SDT come within a few seconds).</string>
     <string name="tv_services">Services</string>
     <string name="tv_sound_tracks">Sound tracks</string>
+    <string name="tv_subtitles">Subtitles and data</string>
     <string name="tv_radio">radio</string>
     <string name="tv_scrambled">scrambled</string>
     <string name="tv_honesty">Picture and sound are decoded by this phone\'s own decoders (Android MediaCodec). OnAir ships no codec: a format the phone has no decoder for stays silent or dark, and the screen says which. Wideband TV demodulation is heavy for a phone: expect it to get warm, drain the battery quickly and, on slower phones, not keep up.</string>

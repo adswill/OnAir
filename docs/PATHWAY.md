@@ -2346,3 +2346,9 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - Positions: Aero P channels are the ground-to-aircraft direction, so an aircraft's own position reports are not heard from the ground; the mode text and docs now say so. Position decoding in a multi-carrier capture is covered by a new simulated-signal test (the test signal sends downlinks, a real P channel does not).
 - Codec setup: a missing plug-in row now names the exact file, every folder searched and how to get that plug-in (the build helper makes only tetra, ambe2, ambe, imbe, ysf, not aeroambe, iridium or tetrapol), and reports a near-miss file name. Tested with a fake folder listing.
 - Simulated signals only; no real capture was used.
+
+## 2026-11-15: Android DTMB provider names and track lists, Chinese text, ADS-B gain after close aircraft
+
+- Android TV: the service list header shows the SDT provider name when the multiplex has no network name (NIT), for any original network id; the provider also shows under the picture. The sound-track list always shows all audio streams and says "not supported on this phone" when no decoder can play one; DVB subtitle, teletext and MHEG-5 / data-carousel streams of the PMT are listed too (the phone does not draw them yet).
+- DVB text: unprefixed UTF-8 under a Chinese or Korean profile is read as UTF-8; the DTMB GB 2312 default switches to Big5 when the stream's time offset says Hong Kong, Macau or Taiwan.
+- ADS-B auto gain: after a cut for a very close aircraft the message counters read zero at the lower gain, which the loop took as the signal having gone and held the gain for up to 10 minutes. Pulsed modes no longer use that idle wait. New 1-hour test with a strong aircraft passing every 4 minutes on the RTL-SDR and HackRF models.

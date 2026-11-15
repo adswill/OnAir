@@ -37,7 +37,7 @@ data class TvUiState(
  * service and sound track ([pickService], [pickAudio]), and runs the [TvPlayer] on the panel's Surface. Leaving the panel stops the
  * picture and the sound (TV in the background is not offered: it would cost the battery a phone cannot spare).
  */
-class TvController(private val catalog: DecoderCatalog = AndroidDecoderCatalog()) {
+class TvController(val catalog: DecoderCatalog = AndroidDecoderCatalog()) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + kotlinx.coroutines.CoroutineName("onair-tv-ui"))
     private val _state = MutableStateFlow(TvUiState(libraryLoaded = TvNative.loaded))
     val state: StateFlow<TvUiState> = _state.asStateFlow()

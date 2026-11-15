@@ -36,11 +36,14 @@ TextContext TextContext::withLanguage(std::string_view language) const {
         else if (region == "phl") result.encoding = TextEncoding::Utf8;
         return result;
     }
+    // Traditional-Chinese regions (Taiwan, Hong Kong, Macau) broadcast Big5; the DTMB profile's GB 2312 default is for the mainland (issue #517: garbled Hong Kong EPG)
+    const bool bigRegion = region == "twn" || region == "hkg" || region == "mac";
+    if (encoding == TextEncoding::Gb2312 && bigRegion) { result.encoding = TextEncoding::Big5; return result; }
     if (encoding != TextEncoding::Dvb) return result;   // a receiver/profile override is already specific
-    if (lang == "chi" || lang == "zho") result.encoding = region == "twn" ? TextEncoding::Big5 : TextEncoding::Gb2312;
+    if (lang == "chi" || lang == "zho") result.encoding = bigRegion ? TextEncoding::Big5 : TextEncoding::Gb2312;
     else if (lang == "kor") result.encoding = TextEncoding::EucKr;
     else if (lang.empty()) { // country is only a fallback when the field has no language
-        if (region == "twn") result.encoding = TextEncoding::Big5;
+        if (bigRegion) result.encoding = TextEncoding::Big5;
         else if (region == "chn") result.encoding = TextEncoding::Gb2312;
         else if (region == "kor") result.encoding = TextEncoding::EucKr;
     }

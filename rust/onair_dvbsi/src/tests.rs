@@ -111,6 +111,27 @@ fn stream_encoding_fallbacks() {
 }
 
 #[test]
+fn unprefixed_utf8_under_a_legacy_hint() {
+    // Hong Kong / DTMB fields that are UTF-8 without the 0x15 selector (issue #517): taken as UTF-8, never converted as GB 2312 / Big5
+    use charset::Encoding::*;
+    let never = |_: &[u8], _: &[u8], _: &mut [u8]| panic!("UTF-8 text must not be converted");
+    let mut out = [0; 128];
+    for encoding in [Gb2312, Big5, EucKr] {
+        let n = charset::dvb_text("翡翠台".as_bytes(), encoding, Some(&never), &mut out);
+        assert_eq!(&out[..n], "翡翠台".as_bytes());
+        let n = charset::dvb_text("TVB 明珠台".as_bytes(), encoding, Some(&never), &mut out);
+        assert_eq!(&out[..n], "TVB 明珠台".as_bytes());
+    }
+    // real GB 2312 and Big5 pairs are still converted
+    let gb = |cs: &[u8], _: &[u8], o: &mut [u8]| { assert_eq!(cs, b"GB2312"); o[..2].copy_from_slice(b"gb"); Some(2) };
+    let n = charset::dvb_text(b"TV \xD6\xD0\xCE\xC4", Gb2312, Some(&gb), &mut out);
+    assert_eq!(&out[..n], b"gb");
+    let big = |cs: &[u8], _: &[u8], o: &mut [u8]| { assert_eq!(cs, b"BIG5"); o[..2].copy_from_slice(b"b5"); Some(2) };
+    let n = charset::dvb_text(b"TV \xA4\xA4\xA4\xE5", Big5, Some(&big), &mut out);
+    assert_eq!(&out[..n], b"b5");
+}
+
+#[test]
 fn dvb_nordic_and_celtic_selectors() {
     let unavailable = |_: &[u8], _: &[u8], _: &mut [u8]| panic!("native DVB table needs no OS converter");
     let mut out = [0; 128];

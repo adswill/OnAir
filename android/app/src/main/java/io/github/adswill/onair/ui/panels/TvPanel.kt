@@ -46,7 +46,14 @@ import io.github.adswill.onair.Mono
 import io.github.adswill.onair.R
 import io.github.adswill.onair.SectionLabel
 import io.github.adswill.onair.tv.AnalogSource
+import io.github.adswill.onair.tv.Playability
 import io.github.adswill.onair.tv.TvController
+import io.github.adswill.onair.tv.audioLabel
+import io.github.adswill.onair.tv.audioPlayability
+import io.github.adswill.onair.tv.interactiveLabel
+import io.github.adswill.onair.tv.muxLabel
+import io.github.adswill.onair.tv.providerNote
+import io.github.adswill.onair.tv.subtitleLabel
 import io.github.adswill.onair.tv.analogAspect
 import io.github.adswill.onair.tv.analogLine
 import io.github.adswill.onair.tv.analogSourceOf
@@ -158,6 +165,7 @@ object TvPanel : ModePanel {
             val sel = st.selected
             if (sel != null) {
                 Text(sel.title + (if (sel.now.isNotBlank()) "  -  ${sel.now}" else ""), color = p.text, fontSize = 15.sp)
+                providerNote(sel, muxLabel(st.mux)).takeIf { it.isNotEmpty() }?.let { Text(it, color = p.muted, fontSize = 12.sp) }
                 val line = listOfNotNull(
                     pb.state.takeIf { it.isNotBlank() },
                     pb.videoCodec.takeIf { it.isNotBlank() }?.let { v -> if (pb.width > 0) "$v ${pb.width}x${pb.height}" else v },
@@ -178,7 +186,8 @@ object TvPanel : ModePanel {
                 st.mux.packets == 0L -> Label(stringResource(R.string.tv_waiting))
                 st.services.isEmpty() -> Label(stringResource(R.string.tv_no_services))
                 else -> {
-                    SectionLabel(stringResource(R.string.tv_services) + (if (st.mux.network.isNotBlank()) " - ${st.mux.network}" else ""))
+                    val header = muxLabel(st.mux)
+                    SectionLabel(stringResource(R.string.tv_services) + (if (header.isNotBlank()) " - $header" else ""))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         for (s in st.services) {
                             val tags = listOfNotNull(
@@ -191,14 +200,24 @@ object TvPanel : ModePanel {
                         }
                     }
                     val audio = sel?.audio.orEmpty()
-                    if (audio.size > 1) {
+                    if (audio.size > 1 || audio.any { audioPlayability(it, tv.catalog) !is Playability.Plays }) {
                         Spacer(Modifier.height(8.dp))
                         SectionLabel(stringResource(R.string.tv_sound_tracks))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             for (a in audio) {
-                                val t = listOf(a.lang.ifBlank { "-" }, a.codec).joinToString(" ")
-                                Chip(t, color = p.accent, selected = a.pid == st.audioPid) { tv.selectAudio(a.pid) }
+                                val ok = audioPlayability(a, tv.catalog) is Playability.Plays
+                                Chip(audioLabel(a, tv.catalog), color = if (ok) p.accent else p.muted, selected = a.pid == st.audioPid) { tv.selectAudio(a.pid) }
                             }
+                        }
+                    }
+                    val subs = sel?.subtitles.orEmpty()
+                    val inter = sel?.interactive.orEmpty()
+                    if (subs.isNotEmpty() || inter.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        SectionLabel(stringResource(R.string.tv_subtitles))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            for (x in subs) Chip(subtitleLabel(x), color = p.muted)
+                            for (x in inter) Chip(interactiveLabel(x), color = p.muted)
                         }
                     }
                 }

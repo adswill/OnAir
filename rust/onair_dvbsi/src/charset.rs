@@ -284,6 +284,30 @@ fn looks_multibyte(p: &[u8], encoding: Encoding) -> bool {
     pairs > 0
 }
 
+/// Unprefixed text under a legacy multibyte hint that is really UTF-8: at least two valid three-byte sequences of CJK / full-width characters and nothing else
+/// non-ASCII. Some broadcasters (Hong Kong, mainland DTMB) send UTF-8 without the 0x15 selector; two legacy characters rarely look like this by accident.
+fn looks_utf8_cjk(p: &[u8]) -> bool {
+    let n = p.len();
+    let (mut i, mut chars) = (0, 0);
+    while i < n {
+        let b = p[i];
+        if b < 0x80 {
+            i += 1;
+            continue;
+        }
+        if b & 0xF0 != 0xE0 || i + 2 >= n || p[i + 1] & 0xC0 != 0x80 || p[i + 2] & 0xC0 != 0x80 {
+            return false;
+        }
+        let cp = ((b as u32 & 0x0F) << 12) | ((p[i + 1] as u32 & 0x3F) << 6) | (p[i + 2] as u32 & 0x3F);
+        if !((0x2E80..=0x9FFF).contains(&cp) || (0xFF00..=0xFFEF).contains(&cp) || (0x3000..=0x303F).contains(&cp)) {
+            return false;
+        }
+        chars += 1;
+        i += 3;
+    }
+    chars >= 2
+}
+
 /// DVB text local clean-up of the reference `dvbText`: drops UTF-8 C1 controls (C2 80..9F) and bytes below 0x20, line feed and carriage return become
 /// spaces. In place.
 fn local_clean(b: &mut [u8], n: usize) -> usize {
@@ -383,6 +407,7 @@ pub fn dvb_text(p: &[u8], encoding: Encoding, conv: Option<Convert>, out: &mut [
         match encoding {
             Encoding::Utf8 => o.bytes(p),
             Encoding::Latin15 => convert(conv, b"ISO-8859-15", p, &mut o),
+            Encoding::Gb2312 | Encoding::EucKr | Encoding::Big5 if looks_utf8_cjk(p) => o.bytes(p),
             Encoding::Gb2312 if looks_multibyte(p, encoding) => convert(conv, b"GB2312", p, &mut o),
             Encoding::EucKr if looks_multibyte(p, encoding) => convert(conv, b"EUC-KR", p, &mut o),
             Encoding::Big5 if looks_multibyte(p, encoding) => convert(conv, b"BIG5", p, &mut o),
