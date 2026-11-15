@@ -360,6 +360,7 @@ void presets(App& a) {
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("Bands"); flowNext(6 * gUi);
     static const struct { const char* name; double mhz; const char* tip; } kP[] = {
+        {"SW 49 m", 6.05, "DRM30, short wave 49 m band (5.9 - 6.2 MHz)"},
         {"SW 41 m", 7.325, "DRM30, short wave 41 m band (7.2 - 7.45 MHz)"},
         {"SW 31 m", 9.5, "DRM30, short wave 31 m band (9.4 - 9.9 MHz)"},
         {"SW 25 m", 11.65, "DRM30, short wave 25 m band (11.6 - 12.1 MHz)"},

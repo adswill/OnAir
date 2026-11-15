@@ -1208,10 +1208,12 @@ void generalChannelBand(const App& a, bool fill) {
 bool generalDragging(int plotId) { return (S.drag >= 0 && S.dragPlot == plotId) || S.vfoGrab == plotId; }
 
 // Drag to tune (Settings > Radio > Drag on spectrum, gfx/drag_tune.h): the press puts the channel there, the held drag keeps moving it
+static bool gPressOnPlot = false;   // the left press that is going on began on the spectrum (not on a popup over it)
 static struct { int plot = -1; bool moved = false; double last = NAN, press = NAN; ImVec2 p0; } gGDT;
 
 void generalPlotMouse(App& a, int plotId) {
     load();
+    if (ImGui::IsMouseClicked(0)) gPressOnPlot = false;   // set again below when the press is on the spectrum and reaches the click handling
     if (gGDT.plot == plotId) {
         ImGuiIO& io = ImGui::GetIO();
         if (!ImGui::IsMouseDown(0)) {   // let go: the target style centres the radio on a press that did not move (#301)
@@ -1302,7 +1304,7 @@ void generalPlotMouse(App& a, int plotId) {
         ImGui::SetTooltip("%s %.4g kHz: drag to tune, wheel: %s steps, right click: demodulator and filter", demodLabel(), S.width[S.demod] / 1e3, kStepNames[S.step[S.demod]]);
         return;
     }
-    if (ImGui::IsMouseClicked(0)) S.dragged = false;
+    if (ImGui::IsMouseClicked(0)) { S.dragged = false; gPressOnPlot = true; }
     const double to = snap(mhz * 1e6);
     if (specDragTunes(a) && !touch::on()) {   // drag to tune: the press tunes (the target style waits for the release), a drag goes on tuning
         if (ImGui::IsMouseClicked(0) && !plt::PressOnScale() && !ImGui::GetIO().KeyShift && !a.identifyTool) {
@@ -1313,7 +1315,7 @@ void generalPlotMouse(App& a, int plotId) {
         if (ImGui::IsMouseReleased(0)) return;   // a release here is the end of a pan of the scale, not a click
     }
     const ImVec2 dd = ImGui::GetMouseDragDelta(0, 0);
-    if (ImGui::IsMouseReleased(0) && !S.dragged && std::fabs(dd.x) < 4 && std::fabs(dd.y) < 4) { setListen(a, to, a.centreTuning); return; }
+    if (genlayout::plotClickTunes(gPressOnPlot, ImGui::IsMouseReleased(0), S.dragged, dd.x, dd.y)) { gPressOnPlot = false; setListen(a, to, a.centreTuning); return; }
     if (std::fabs(to - listenHz(a)) > 0.5) {
         const double lx[2] = {to / 1e6, to / 1e6}, ly[2] = {lim.Y.Min, lim.Y.Max};
         plt::Spec ls; ls.LineColor = ImVec4(0.95f, 0.25f, 0.25f, 0.5f); ls.LineWeight = 1.f;

@@ -192,4 +192,10 @@ inline AutoPick autoPick(const std::string& service, double hz, double bandWidth
     return {};
 }
 
+// A click on the spectrum tunes there only when the press began on the spectrum itself (#514): a slider in a popup over it (the filter bandwidth)
+// whose button is let go with the mouse above the plot must not tune to where the mouse is (the radio jumped to 190 kHz and the entry changed).
+inline bool plotClickTunes(bool pressedOnPlot, bool released, bool dragged, float dragDx, float dragDy) {
+    return pressedOnPlot && released && !dragged && dragDx > -4 && dragDx < 4 && dragDy > -4 && dragDy < 4;
+}
+
 }  // namespace genlayout
