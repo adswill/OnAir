@@ -545,6 +545,11 @@ void Engine::feedReceiver(int a, const cf32* x, size_t n) {
         if (!amCensusReady_ || c != amCensusC_ || r != amCensusR_) { amCensusC_ = c; amCensusR_ = r; amCensusReady_ = amCensus_.configure(r, c); }
         if (amCensusReady_) amCensus_.feed(x, n);
     }
+    if (pagerFindOn_.load(std::memory_order_relaxed) && a == 24) {   // the pager scan: every pager carrier of the capture, beside the mode's own receiver
+        const double c = captureCentreHz(), r = rate_.load();
+        if (!pagerFindReady_ || c != pagerFindC_ || r != pagerFindR_) { pagerFindC_ = c; pagerFindR_ = r; pagerFindReady_ = pagerFind_.configure(r, c); }
+        if (pagerFindReady_) pagerFind_.feed(x, n);
+    }
     if (smartCubeOn_.load(std::memory_order_relaxed) && a == 62) { smartCube_.feed(x, n); return; }   // Smart CubeSat takes the capture
     if (wideAllOn_.load(std::memory_order_relaxed)) { wideAll_.feed(x, n); return; }   // decode everything in view: the session takes the capture
     if (vfoN_.load(std::memory_order_relaxed)) vfoFeed(x, n);   // multi-VFO: the extra channels on the same capture (the mode's own receiver still gets the samples below)
