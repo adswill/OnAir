@@ -331,6 +331,11 @@ struct Dev {
         if (!api.ready) { err = api.why.empty() ? std::string(kRtsaMissingMsg) : "SPECTRAN: " + api.why; return false; }
         std::lock_guard<std::mutex> lk(api.mu);
         const std::wstring wtype = widen(type + "/" + mode), wserial = widen(serial);
+        // The library looks for the devices again before every open (measured on a V6 ECO: a second open without it either fails with
+        // "not found" or connects and never streams). Not while this program has another device open: its stream would be disturbed.
+        bool othersOpen;
+        { std::lock_guard<std::mutex> g(gKnownMu); othersOpen = gOpenCount > 0; }
+        if (!othersOpen) api.RescanDevices(&api.h, 500);
         aa::Result r = api.OpenDevice(&api.h, &d, wtype.c_str(), wserial.c_str());
         if (aa::failed(r)) { err = "SPECTRAN " + serial + ": cannot open it as " + type + "/" + mode + " (" + hexResult(r) + ")"; return false; }
         open = true;
@@ -472,15 +477,20 @@ protected:
             bool ok;
             {
                 std::lock_guard<std::mutex> lk(api_);
-                dev_.stopDisconnect();
-                ok = apply(s, err, false) && dev_.connectStart(err);
+                ok = setUpAgain(s, err);
             }
             if (!self) startStream();
             return ok;
         }
         std::lock_guard<std::mutex> lk(api_);
         if (!dev_.open) return false;
-        // a new rate (the stream thread is stopped): the device is stopped, set up again and started
+        return setUpAgain(s, err);   // a new rate (the stream thread is stopped)
+    }
+    // (under api_, the stream thread stopped) A new rate or span. The V6 ECO takes main/spanfreq and main/centerfreq while it streams (the
+    // new rate arrives within 0.1 s, behind a few packets still at the old one), and a disconnect and connect of the open device leaves
+    // it without samples (both measured on a V6 ECO 150XA-6): it is left running. The V6 is stopped, set up and started, as documented.
+    bool setUpAgain(const TuneSettings& s, std::string& err) {
+        if (eco_ && mode_ == "iq" && dev_.started) return apply(s, err, false);   // (the raw mode was not measured)
         dev_.stopDisconnect();
         return apply(s, err, false) && dev_.connectStart(err);
     }
@@ -489,19 +499,19 @@ protected:
         dev_.close();
     }
     bool waitForStreamStart(std::string& err) override {
-        // the API says the real rate in every packet (stepFrequency): the first one is waited for, up to 3 s
-        const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        // the API says the real rate in every packet (stepFrequency): the first one is waited for, up to 6 s (a V6 ECO: 1.5 to 3.7 s after the start, measured)
+        const auto end = std::chrono::steady_clock::now() + std::chrono::seconds(6);
         while (std::chrono::steady_clock::now() < end && firstRate_.load() <= 0 && run_)
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         const double got = firstRate_.load();
         if (got > 0) {
-            if (std::fabs(got - rate_) > 1.0) {
-                fprintf(stderr, "SPECTRAN: the device delivers %.6g Msps (%.6g were planned)\n", got / 1e6, rate_ / 1e6);
+            if (std::fabs(got / decim_ - rate_) > 1.0) {
+                fprintf(stderr, "SPECTRAN: the device delivers %.6g Msps (%.6g were planned)\n", got / decim_ / 1e6, rate_ / 1e6);
                 fflush(stderr);
             }
             rate_ = got / decim_;
         } else if (run_) {
-            addNote(err, "the SPECTRAN sent no samples within 3 s of its start");
+            addNote(err, "the SPECTRAN sent no samples within 6 s of its start");
         }
         return true;
     }
@@ -575,6 +585,9 @@ private:
             rate_ = planned;
             requested_ = s.sampleRate;
             firstRate_ = 0;
+            // (packets still at the rate of before a change are not taken for the new rate: for half a second only the planned one counts)
+            expectRate_ = mode_ == "raw" ? 0 : lowPlan.hwRate;
+            expectUntil_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(500);
             checkRate(s.sampleRate, err);
         }
         aa::Result r = dev_.setNum(L"main/centerfreq", f);
@@ -639,7 +652,9 @@ private:
     // (under api_) one packet into the ring: I/Q in volts, scaled so that the reference level is 1.0
     void convert(const aa::Packet& pk) {
         if (!pk.fp32 || pk.num <= 0) return;
-        if (pk.stepFrequency > 0 && firstRate_.load() <= 0) firstRate_ = pk.stepFrequency;
+        if (pk.stepFrequency > 0 && firstRate_.load() <= 0 &&
+            (!(expectRate_ > 0) || std::fabs(pk.stepFrequency - expectRate_) < 1.0 || std::chrono::steady_clock::now() > expectUntil_))
+            firstRate_ = pk.stepFrequency;
         const int64_t stride = pk.stride >= 2 ? pk.stride : 2;
         float sc;
         { std::lock_guard<std::mutex> g(scaleMu_); sc = scale_; }
@@ -677,6 +692,8 @@ private:
     // below the device's lowest centre (api_): that centre (0: not known, nothing is shifted), the wanted frequency against it, the
     // decimation (1: the device is on the frequency) and the packet rate the shift was last tuned for
     double centreMin_ = 0, shift_ = 0, ddcRate_ = 0;
+    double expectRate_ = 0;                                  // the packet rate planned at the last set-up (0: any)
+    std::chrono::steady_clock::time_point expectUntil_{};
     int decim_ = 1;
     RealDdc ddcI_, ddcQ_;
     std::vector<cf32> partI_, partQ_;
@@ -699,8 +716,15 @@ public:
         if (!dev_.openAs(type_, "iqtransmitter", serial_, err)) { dev_.close(); return false; }
         rate_ = t.sampleRate > 0 ? t.sampleRate : 1e6;
         const double f = ppmCorrectedHz(txRadioHz(t), ppmOf(t));
-        aa::Result r = dev_.setNum(L"main/centerfreq", f);
+        double tookHz = f;
+        aa::Result r = dev_.setNum(L"main/centerfreq", f, &tookHz);
         if (aa::failed(r)) { err = "SPECTRAN: the transmitter refused " + mhz(f) + " (" + hexResult(r) + ")"; dev_.close(); return false; }
+        // (a V6 ECO's transmitter starts at 22 MHz: a lower frequency comes back adjusted to that, and the signal would go out there)
+        if (std::fabs(tookHz - f) > 1.0) {
+            err = "SPECTRAN: the transmitter cannot send on " + mhz(f) + ": the nearest frequency it takes is " + mhz(tookHz);
+            dev_.close();
+            return false;
+        }
         // the span is the band the SDK's modulator covers: the signal's rate (or the radio setting), and never less than kTxMinSpanHz
         double span = std::max(rate_, kTxMinSpanHz);
         {
