@@ -21,7 +21,7 @@ typedef struct OnairHfdlS3072 { uint16_t len; uint8_t b[3072]; } OnairHfdlS3072;
 typedef struct OnairHfdlRate { int32_t m1, bps, bits_per_sym; uint8_t quarter, two_slots; int32_t blocks, col_shift; } OnairHfdlRate;
 
 // One ground station; name is static, NUL terminated.
-typedef struct OnairHfdlStation { int32_t id, nkhz; double lat, lon; int32_t khz[8]; const char* name; } OnairHfdlStation;
+typedef struct OnairHfdlStation { int32_t id, nkhz; double lat, lon; int32_t khz[20]; const char* name; } OnairHfdlStation;
 
 // One decoded SPDU or LPDU (see hfdl_proto.cpp). Defaults when a PDU sets nothing: ac_id -1, frame_index -1, utc_sec -1, acars_at -1, text empty. acars_at is the
 // offset in the PDU of the octets after the HFNPDU's FF FF (the ACARS block, maybe starting with SOH), acars_len the octets from there to the end of the LPDU

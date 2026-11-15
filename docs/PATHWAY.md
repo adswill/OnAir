@@ -2299,3 +2299,9 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - Published v4.1.0 from 4d351b912 with 12 assets (Windows installer and zip, macOS arm64 and x86_64, Linux AppImages, portable archives and .deb packages for x86_64 and aarch64, the signed Android APK, SHA256SUMS). Website updated.
 - Final checks: the full CI run had three failures. `sarsat_engine` and `sens40a3` passed when run alone (runner load). `sens41` timed out even alone on macOS (over 3000 s), so it now runs as three tests (`sens41`, `sens41_iridium`, `sens41_rest`) with every check unchanged; all three pass on macOS.
 - Merged contributor PRs #502, #509, #510, #511 and #515 are on main; issue replies posted for the 4.1 fixes and features.
+
+## 2026-11-15: HFDL ground-station table corrected
+
+- A user reported missing and wrong HFDL frequencies. The built-in table was compared with the UDXF "Digital aero" list (HFDL table version 51) and the dumphfdl system table (version 52). Missing frequencies were added (Molokai, Shannon, Johannesburg, Barrow, Muan, Agana), wrong ones corrected (Muan, Krasnoyarsk, Molokai, Barrow) and one removed (Canarias 5589, in neither source); the order follows the system table, as the squitter masks need.
+- The station record passed from Rust to C++ held only 8 frequencies per station; it now holds 20, so stations with more (Barrow has 19) are complete. Band table gained a 3.0 MHz entry and wider 3.455 and 4.67 MHz entries so the new frequencies are tuned.
+- The HFDL header, the aircraft list and the receiver panel now show how many aircraft have a position. New test: `hfdl_table`.

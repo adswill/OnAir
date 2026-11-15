@@ -629,7 +629,7 @@ void list(App& a) {
     if (resultsClearButton("hfdl")) a.engine.hfdl().clearResults();
     const dect2::HfdlTelemetry& t = a.rx.hfdl;
     int heard = 0; for (const auto& g : t.stations) heard += g.heardDirect;
-    ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%zu aircraft, %d ground stations heard", t.aircraft.size(), heard); ImGui::PopTextWrapPos();
+    ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%zu aircraft, %d with a position, %d ground stations heard", t.aircraft.size(), dect2::hfdlCountWithPos(t.aircraft), heard); ImGui::PopTextWrapPos();
     onlyPosBox();
     if (!ImGui::BeginTable("##hfl_s", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
@@ -689,7 +689,7 @@ void status(App& a) {
     ro("State", t.state == 2 ? "Decoding" : t.state == 1 ? "Preambles" : "Listening");
     snprintf(b, sizeof b, "%d", act); ro("Active", b);
     snprintf(b, sizeof b, "%llu / %llu", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad); ro("PDUs / bad", b);
-    snprintf(b, sizeof b, "%zu", t.aircraft.size()); ro("Aircraft", b);
+    snprintf(b, sizeof b, "%zu, %d with a position", t.aircraft.size(), dect2::hfdlCountWithPos(t.aircraft)); ro("Aircraft", b);
 }
 
 void summary(const App& a, std::string& l1, std::string& l2) {
