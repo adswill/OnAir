@@ -101,4 +101,32 @@ class TvServicesTest {
         assertTrue(playabilityNotes(s[1], s[1].audio[0], typical).single().contains("scrambled"))
         assertTrue(playabilityNotes(s[3], s[3].audio[0], typical).isEmpty())   // radio: no picture is not a problem
     }
+
+    // issue #517: DTMB multiplexes without a NIT (474, 506, 554 MHz) showed nothing as the header; the SDT's provider name stands in, for any original network id
+    private fun svc(id: Int, provider: String, vararg st: TvStream) = TvService(id, "S$id", provider, 1, 4096 + id, 256, false, false, 0, true, "", "", st.toList())
+    private fun stream(pid: Int, type: Int, codec: String, kind: String, lang: String = "") = TvStream(pid, type, codec, kind, lang, 0.0, false)
+
+    @Test fun providerNameStandsInForAMissingNetworkName() {
+        val noNit = TvMux(1, "", 4, listOf(svc(41, "SZTC"), svc(42, "SZMG"), svc(43, "SZMG"), svc(44, "")), onid = 1)
+        assertEquals("SZTC, SZMG", muxLabel(noNit))
+        val other = TvMux(1, "", 7, listOf(svc(1, "TVB")), onid = 0x2025)   // any original network id, not only 1
+        assertEquals("TVB", muxLabel(other))
+        assertEquals("SZTVM", muxLabel(TvMux(1, "  SZTVM ", 1, listOf(svc(1, "Other")), onid = 1)))
+        assertEquals("", muxLabel(TvMux(1, "", 1, listOf(svc(1, "")))))
+        assertEquals("SZMG", providerNote(svc(42, "SZMG"), ""))
+        assertEquals("", providerNote(svc(42, "SZMG"), "szmg"))
+        assertEquals("", providerNote(svc(42, ""), "x"))
+        assertEquals(0x2025, TvMux.parse("""{"packets":1,"network":"","tsid":1,"onid":8229,"services":[]}""").onid)
+    }
+
+    @Test fun subtitlesAndDataAreListedEvenWhenThePhoneCannotShowThem() {
+        val tvb = svc(1, "TVB", stream(256, 0x1B, "H.264", "video"), stream(257, 0x81, "AC-3", "audio", "chi"), stream(258, 0x81, "AC-3", "audio", "eng"),
+            stream(259, 0x06, "DVB subtitles", "subtitles", "chi"), stream(260, 0x0B, "DSM-CC", "data"), stream(261, 0x05, "private", "data"))
+        assertEquals(listOf(259), tvb.subtitles.map { it.pid })
+        assertEquals(listOf(260), tvb.interactive.map { it.pid })
+        assertEquals("chi subtitles (not supported on this phone)", subtitleLabel(tvb.subtitles[0]))
+        assertTrue(interactiveLabel(tvb.interactive[0]).contains("not supported on this phone"))
+        assertEquals("chi AC-3 (not supported on this phone)", audioLabel(tvb.audio[0], typical))
+        assertEquals("chi AC-3", audioLabel(tvb.audio[0], all.let { s -> DecoderCatalog { m -> if (m in s) "dec" else null } }))
+    }
 }

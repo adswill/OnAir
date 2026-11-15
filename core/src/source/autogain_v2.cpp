@@ -210,7 +210,8 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
     if (hasSignal()) lastSigAt_ = now;
     if (q_.locked && fl_.valid) chanRef_ = std::max(fl_.chanDbfs - cur_.totalDb, chanRef_ - 0.002);   // the channel's level while the decoder locks (a slow decay: a decoder reports late, the seconds after a call ends must not read as its level)
     // a signal was here not long ago and is gone now: the gain waits for it (a call that ended is no reason to raise the gain to the noise; the next burst would clip). The overload guards below still act
-    const bool idleHold = !hasSignal() && now - lastSigAt_ < 600.0 / sp && (!cutActive_ || (!cutWasOob_ && now - cutAt_ < 30.0 / sp));   // (a cut far below the signal's level loses the decoder too: that is not the signal going away)
+    const bool pulsedMsgs = tgt_.kind == ModeKind::Pulsed && q_.pulseValid;   // ADS-B: the message counters start again at every gain step, so "no messages yet" after a cut is the gain's doing, never the signal going away (the idle waits below would hold a gain that was cut for one close aircraft for up to 10 minutes: the receive level decayed in steps and stayed low, issue #522)
+    const bool idleHold = !pulsedMsgs && !hasSignal() && now - lastSigAt_ < 600.0 / sp && (!cutActive_ || (!cutWasOob_ && now - cutAt_ < 30.0 / sp));   // (a cut far below the signal's level loses the decoder too: that is not the signal going away)
     // after a cut (a clip or the headroom floor): back up fast (up to 12 dB a step, 1.1 s apart) to the gain it was cut from once the room is there again. The interferer has
     // gone when the headroom says so, whatever cut the gain; a burst must not cost minutes. A soft ceiling only holds while the headroom does not clearly allow more
     {
@@ -263,7 +264,7 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
     }
     // a trial that has already run out of headroom does not wait for its dwell
     if (clTrial_ && tri_.n >= 2 && now >= changedAt_ + settleTime() && eff < minHead - 0.5) return evaluateTrial(in, out);
-    const bool idleNoTrials = !hasSignal() && now - lastSigAt_ < 600.0 / sp && (!cutActive_ || now - cutAt_ > 90.0 / sp);   // (just after a cut the lost lock may be the cut's doing: the climb may look for a while)
+    const bool idleNoTrials = !pulsedMsgs && !hasSignal() && now - lastSigAt_ < 600.0 / sp && (!cutActive_ || now - cutAt_ > 90.0 / sp);   // (just after a cut the lost lock may be the cut's doing: the climb may look for a while)
     if (idleNoTrials && !clTrial_) { if (settled_) { blindRest_ = true; settledAt_ = now; } phase_ = Phase::Tracking; limit_.clear(); lastDecision_ = "the signal went away: the gain waits for the next one"; return false; }
     if (pulseWait || now - dwellFrom_ < dwell || (clTrial_ ? tri_.n : base_.n) < 3) return false;
     if (clTrial_) return evaluateTrial(in, out);
@@ -452,7 +453,7 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
         // decides then, as the old loop's sensitivity rule did
         const double mGain = mTri_.mean - mBase_.mean;
         const bool floorLow = mBase_.n >= 3 && mBase_.mean < tgt_.marginGoalDb - 2.0;
-        const bool signalJustLeft = !hasSignal() && now - lastSigAt_ < 600.0 / std::max(0.25, set_.loopSpeed);   // the floor is no reason to raise a gain that a burst set a moment ago
+        const bool signalJustLeft = !(tgt_.kind == ModeKind::Pulsed && q_.pulseValid) && !hasSignal() && now - lastSigAt_ < 600.0 / std::max(0.25, set_.loopSpeed);   // the floor is no reason to raise a gain that a burst set a moment ago
         if (!accept && !bad && !signalJustLeft && floorLow && mTri_.n >= 3 && mGain > 1.0 && dJ > -thr) { accept = true; sensWhy = true; }
         // the floor sits AT the ADC's own noise (within 1.5 dB): the antenna's noise is still under it and the wanted signal may be too, so neither the floor nor the SNR
         // moves with a step (a radio with a coarse gain table, or a network radio, gets there from the bottom: SpyServer, an RTL-SDR at index 0). More gain can only help

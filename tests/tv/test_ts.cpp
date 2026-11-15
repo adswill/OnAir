@@ -165,6 +165,19 @@ int main() {
         if (sv.streams.size() == 2) CHECK(sv.streams[0].codec == "H.264" && sv.streams[1].codec == "AAC" && sv.streams[1].lang == "eng", "stream parse: %s / %s %s", sv.streams[0].codec.c_str(), sv.streams[1].codec.c_str(), sv.streams[1].lang.c_str());
     }
     CHECK(sn.onid == 0x2310 && sn.tsid == 7, "ids onid %x tsid %x", sn.onid, sn.tsid);
+    // issue #517: the provider name of the SDT service descriptor comes through for any original_network_id (1, 0, 0x2025, 0xFFFF) and with no NIT at all
+    for (int onid : {0, 1, 0x2025, 0xFFFF}) {
+        TsDemux o;
+        int cs = 0;
+        std::vector<uint8_t> dsc = {0x48, (uint8_t)(3 + 4 + 7), 0x19, 4, 'S', 'Z', 'M', 'G', 7, 'S', 'Z', 'T', 'V', '-', '1', 'H'};
+        std::vector<uint8_t> sd = {0x42, 0xF0, 0, 0x00, 0x04, 0xC1, 0, 0, (uint8_t)(onid >> 8), (uint8_t)(onid & 0xFF), 0xFF, 0x00, 42, 0xFC, (uint8_t)(0x80 | (dsc.size() >> 8)), (uint8_t)(dsc.size() & 0xFF)};
+        sd.insert(sd.end(), dsc.begin(), dsc.end());
+        sd[2] = (uint8_t)(sd.size() - 3 + 4);
+        feedSection(o, 0x11, section(sd), cs);
+        const TsSnapshot os = o.snapshot();
+        CHECK(os.services.size() == 1 && os.services[0].provider == "SZMG" && os.services[0].name == "SZTV-1H" && os.networkName.empty() && os.onid == onid,
+              "provider for original_network_id %d: %zu services, provider '%s', name '%s'", onid, os.services.size(), os.services.empty() ? "" : os.services[0].provider.c_str(), os.services.empty() ? "" : os.services[0].name.c_str());
+    }
     // ISDB-T one-seg without a PAT (#313): the partial-reception PMT on 0x1FC8 alone builds the service
     {
         TsDemux o;

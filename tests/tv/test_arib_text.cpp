@@ -64,6 +64,18 @@ int main() {
     const uint8_t celtic[] = {0x0A, 0xA1, 0xA2};
     CHECK(dvbText(nordic, 3) == "ĄŠ", "ISO 8859-10 Nordic selector");
     CHECK(dvbText(celtic, 3) == "Ḃḃ", "ISO 8859-14 Celtic selector");
+    // issue #517: Traditional-Chinese regions send Big5, mainland DTMB GB 2312; UTF-8 without the 0x15 selector is still UTF-8
+    const uint8_t big5[] = {0xA4, 0xA4, 0xA4, 0xE5};   // 中文
+    const uint8_t gbk[] = {0xD6, 0xD0, 0xCE, 0xC4};    // 中文
+    CHECK(dvbText(big5, 4, {TextEncoding::Gb2312, "HKG"}) == "中文", "DTMB profile in Hong Kong reads Big5");
+    CHECK(dvbText(big5, 4, {TextEncoding::Gb2312, "MAC"}) == "中文", "DTMB profile in Macau reads Big5");
+    CHECK(dvbText(big5, 4, {TextEncoding::Dvb, "TWN"}) == "中文" && dvbText(big5, 4, {TextEncoding::Dvb, "HKG"}) == "中文", "Big5 by country");
+    CHECK(dvbText(gbk, 4, {TextEncoding::Gb2312, "CHN"}) == "中文" && dvbText(gbk, 4, {TextEncoding::Gb2312}) == "中文", "GB 2312 on the mainland");
+    const std::string tvb = "\xE7\xBF\xA1\xE7\xBF\xA0\xE5\x8F\xB0";   // 翡翠台, UTF-8 with no selector
+    for (TextEncoding e : {TextEncoding::Gb2312, TextEncoding::Big5})
+        CHECK(dvbText((const uint8_t*)tvb.data(), (int)tvb.size(), {e, "HKG"}) == "翡翠台", "unprefixed UTF-8 under a Chinese profile");
+    const uint8_t sel14[] = {0x14, 0xA4, 0xA4, 0xA4, 0xE5}, sel13[] = {0x13, 0xD6, 0xD0, 0xCE, 0xC4}, sel15[] = {0x15, 0xE4, 0xB8, 0xAD};
+    CHECK(dvbText(sel14, 5) == "中文" && dvbText(sel13, 5) == "中文" && dvbText(sel15, 4) == "中", "explicit selectors 0x14 0x13 0x15");
     printf(fails ? "arib FAILED\n" : "arib passed\n");
     return fails ? 1 : 0;
 }

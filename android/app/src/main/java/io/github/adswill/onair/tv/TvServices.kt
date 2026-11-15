@@ -23,13 +23,20 @@ class TvService(
 ) {
     val video: TvStream? get() = streams.firstOrNull { it.isVideo }
     val audio: List<TvStream> get() = streams.filter { it.isAudio }
+    /** DVB subtitle and teletext streams of the PMT (listed even though the phone cannot show them yet). */
+    val subtitles: List<TvStream> get() = streams.filter { it.kind == "subtitles" || it.kind == "teletext" }
+    /** Interactive data the PMT carries (DSM-CC object carousel / AIT: MHEG-5, HbbTV). */
+    val interactive: List<TvStream> get() = streams.filter { it.kind == "data" && it.streamType in INTERACTIVE_TYPES }
     /** Shown in lists: the name, else "Service <id>". */
     val title: String get() = name.ifBlank { "Service $id" }
     /** DVB service types 0x02 (digital radio), 0x0A (advanced codec radio), or no video stream at all. */
     val radio: Boolean get() = type == 0x02 || type == 0x0A || (havePmt && video == null && audio.isNotEmpty())
 }
 
-class TvMux(val packets: Long, val network: String, val tsid: Int, val services: List<TvService>) {
+/** stream_type of DSM-CC carousels (0x0B, 0x0D) and of the AIT (0x05 private sections is too common to claim; the carousels carry the MHEG-5 applications). */
+private val INTERACTIVE_TYPES = setOf(0x0B, 0x0D)
+
+class TvMux(val packets: Long, val network: String, val tsid: Int, val services: List<TvService>, val onid: Int = 0) {
     companion object {
         val empty = TvMux(0, "", 0, emptyList())
 
@@ -48,7 +55,7 @@ class TvMux(val packets: Long, val network: String, val tsid: Int, val services:
                 TvService(m.i("id"), m.s("name"), m.s("provider"), m.i("type"), m.i("pmt"), m.i("pcr"), m.b("ca"), m.b("scrambled"),
                     m.i("lcn"), m.b("havePmt"), m.s("now"), m.s("next"), streams)
             } ?: emptyList()
-            return TvMux(((root["packets"] as? Double) ?: 0.0).toLong(), root.s("network"), root.i("tsid"), list)
+            return TvMux(((root["packets"] as? Double) ?: 0.0).toLong(), root.s("network"), root.i("tsid"), list, root.i("onid"))
         }
     }
 }
@@ -216,3 +223,39 @@ fun pickAudio(service: TvService, cat: DecoderCatalog, languages: List<String> =
 /** The PIDs the native ring must keep for a service: its picture, the chosen sound track and the clock (PCR) PID. */
 fun pidsFor(service: TvService, audio: TvStream?): List<Int> =
     listOfNotNull(service.video?.pid, audio?.pid, service.pcrPid.takeIf { it in 1..8190 }).distinct()
+
+/**
+ * The name of the multiplex for the service list header: the network name of the NIT when there is one; many multiplexes (DTMB in China
+ * for one) carry no NIT or an empty one, then the service provider name of the SDT service descriptor stands in, whatever the original
+ * network id is. Several providers are joined; empty when neither is there.
+ */
+fun muxLabel(mux: TvMux): String {
+    if (mux.network.isNotBlank()) return mux.network.trim()
+    return mux.services.map { it.provider.trim() }.filter { it.isNotEmpty() }.distinct().take(3).joinToString(", ")
+}
+
+/** The provider of one service for the line under the picture; empty when the SDT gave none or it is the same as the multiplex header. */
+fun providerNote(service: TvService, header: String): String {
+    val p = service.provider.trim()
+    return if (p.isEmpty() || p.equals(header, ignoreCase = true)) "" else p
+}
+
+/** The chip text of a sound track: language and codec, and "not supported on this phone" when no decoder can play it (the entry is listed regardless). */
+fun audioLabel(s: TvStream, cat: DecoderCatalog): String {
+    val base = listOf(s.lang.ifBlank { "-" }, s.codec.ifBlank { "type 0x%02X".format(s.streamType) }).joinToString(" ")
+    return when (audioPlayability(s, cat)) {
+        is Playability.Plays -> base
+        Playability.Scrambled -> "$base (scrambled)"
+        else -> "$base (not supported on this phone)"
+    }
+}
+
+/** What a subtitle or teletext stream is, in a few words. The phone does not draw them yet, so each says so. */
+fun subtitleLabel(s: TvStream): String {
+    val what = if (s.kind == "teletext") "teletext" else "subtitles"
+    val lang = s.lang.ifBlank { "-" }
+    return "$lang $what (not supported on this phone)"
+}
+
+/** The line for interactive data (MHEG-5 / DSM-CC carousel) the service carries. */
+fun interactiveLabel(s: TvStream): String = "MHEG-5 / data carousel, PID ${s.pid} (not supported on this phone)"

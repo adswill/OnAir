@@ -2332,3 +2332,9 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
 - Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.
+
+## 2026-11-15: Android DTMB provider names and track lists, Chinese text, ADS-B gain after close aircraft
+
+- Android TV: the service list header shows the SDT provider name when the multiplex has no network name (NIT), for any original network id; the provider also shows under the picture. The sound-track list always shows all audio streams and says "not supported on this phone" when no decoder can play one; DVB subtitle, teletext and MHEG-5 / data-carousel streams of the PMT are listed too (the phone does not draw them yet).
+- DVB text: unprefixed UTF-8 under a Chinese or Korean profile is read as UTF-8; the DTMB GB 2312 default switches to Big5 when the stream's time offset says Hong Kong, Macau or Taiwan.
+- ADS-B auto gain: after a cut for a very close aircraft the message counters read zero at the lower gain, which the loop took as the signal having gone and held the gain for up to 10 minutes. Pulsed modes no longer use that idle wait. New 1-hour test with a strong aircraft passing every 4 minutes on the RTL-SDR and HackRF models.

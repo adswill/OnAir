@@ -10,6 +10,7 @@
 #include "../source/autogain_sim.h"
 #include <cstdio>
 #include <cstdlib>
+#include <functional>
 #include <random>
 
 using namespace dect2;
@@ -78,7 +79,7 @@ struct Radio {
 
 struct Result { double gain = 0, rate = 0, loudShare = 0, bestRate = 0, bestGain = 0, loudAtBest = 0; int changes = 0; std::string status; };
 
-static Result runSky(const char* radioId, Sky sky, double startDb, bool v2, double sec, const std::vector<Tone>& blockers = {}, double noiseRise = 0, bool noHold = false) {
+static Result runSky(const char* radioId, Sky sky, double startDb, bool v2, double sec, const std::vector<Tone>& blockers = {}, double noiseRise = 0, bool noHold = false, const std::function<void(Radio&, double)>& hook = nullptr) {
     const RadioProfile* rp = radioProfileById(radioId);
     if (!rp) { printf("no profile %s\n", radioId); exit(1); }
     Radio r(*rp, startDb);
@@ -98,6 +99,7 @@ static Result runSky(const char* radioId, Sky sky, double startDb, bool v2, doub
     const double dt = 0.05;
     for (; now < sec; now += dt) {
         r.sim.advance(now);
+        if (hook) hook(r, now);
         double okR, loudR; r.expect(okR, loudR);
         const uint64_t dm = std::poisson_distribution<int>(std::max(1e-9, okR * dt))(rng);
         uint64_t dl = 0; if (dm > 0 && okR > 0) { std::binomial_distribution<int> b((int)dm, std::min(1.0, loudR / okR)); dl = (uint64_t)b(rng); }
@@ -201,6 +203,18 @@ int main(int argc, char** argv) {
     }
     // the old headroom servo on the same skies, for the record (the new loop must not be worse where the servo was right, and must beat it where the pulses fool it)
     if (verbose) for (const Case& c : cases) show((std::string("old servo: ") + c.name).c_str(), runSky(c.radio, c.sky, c.start, false, 240, c.blockers, c.noiseRise, c.noHold));
+    // issue #522 (a dongle that "drops to weak after some minutes"): a very strong aircraft passes close every 4 minutes for 20 s, a stretch of an hour. Each pass cuts the gain;
+    // the weak aircraft then vanish under the noise and the message counters read zero. That must not hold the gain down (an idle wait of 10 minutes at each cut): the rate in the last
+    // 10 minutes must be near the best fixed gain's, on the RTL-SDR's own gain table too
+    for (const char* radio : {"rtl-r820t", "hackrf"}) {
+        Sky base; base.n = 40; base.loDbm = -105; base.hiDbm = -60;
+        Sky pass = base; pass.n = 50; pass.hiDbm = -30;
+        const auto hook = [&](Radio& r, double t) { r.sky = (std::fmod(t, 240.0) < 20.0 && t > 100.0) ? pass : base; };
+        const Result o = runSky(radio, base, 30, true, 3600, {}, 0, false, hook);
+        char nm[96]; snprintf(nm, sizeof nm, "%s, a strong aircraft passes every 4 min, 1 h", radio);
+        show(nm, o);
+        CHECK(o.rate >= 0.6 * o.bestRate, "%s: rate %.1f is only %.0f %% of the best fixed gain's %.1f after an hour of passes", radio, o.rate, 100 * o.rate / std::max(1e-9, o.bestRate), o.bestRate);
+    }
     printf(fails ? "%d FAILED\n" : "all passed\n", fails);
     return fails ? 1 : 0;
 }
