@@ -672,6 +672,9 @@ void colourSettings() {
     if (ch) schemeSave();
 }
 
+bool coloursChanged() { return gSchemeSel != mapcol::kDefault; }
+void coloursReset() { scheme(); gSchemeSel = mapcol::kDefault; gScheme = mapcol::kPresets[mapcol::kDefault].s; schemeSave(); }
+
 void tilesMenu(ImVec4 buttonColour) {
     static Usage uk, ut;   // kept, this session's
     static double countedAt = -1e9;   // counted again every 2 s while the menu is open: tiles keep arriving

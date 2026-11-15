@@ -39,6 +39,10 @@ void legend(float mapWidth, const char* fmt, ...);   // TextDisabled() along the
 // map. `privacy` (or null) ends "only tile numbers are sent" in the switch's tooltip, e.g. "never the position itself". After draw(), with
 // SameLine() before it; when they do not fit before the map's right edge they go on a line of their own.
 void tileControls(const char* privacy, bool fullButton = true);
+// Map colours (background/sea, grid, outline, labels, tile tint, presets, reset): the block of the tiles menu, also on Settings. One setting for every map.
+void colourSettings();
+bool coloursChanged();   // differs from the default look
+void coloursReset();
 // Full screen, one for every map: the button ("full screen" / "exit full screen", Esc leaves) is part of tileControls(), so every map has it on
 // its control line. It makes the screen the map is on fill the whole window. mainTabs() wraps each tab body in a FullScope (the body is what
 // is drawn again over the whole window); screens with their own full-screen view pass fullButton=false and use fullButton() themselves.

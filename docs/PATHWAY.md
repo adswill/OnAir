@@ -2299,3 +2299,9 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - Published v4.1.0 from 4d351b912 with 12 assets (Windows installer and zip, macOS arm64 and x86_64, Linux AppImages, portable archives and .deb packages for x86_64 and aarch64, the signed Android APK, SHA256SUMS). Website updated.
 - Final checks: the full CI run had three failures. `sarsat_engine` and `sens40a3` passed when run alone (runner load). `sens41` timed out even alone on macOS (over 3000 s), so it now runs as three tests (`sens41`, `sens41_iridium`, `sens41_rest`) with every check unchanged; all three pass on macOS.
 - Merged contributor PRs #502, #509, #510, #511 and #515 are on main; issue replies posted for the 4.1 fixes and features.
+
+## 2026-11-15: Smart checks, map Clear button, map colours in Settings
+
+- The Smart checks cards (FM, AM, DAB, TV, satellite and others) now follow Insights > Advanced > Analyse decodes: with it off the cards and their checks stop, and Clear findings also resets the FM watchdog.
+- The HFDL, VDL2 and ACARS maps have a Clear button on the map toolbar that removes plotted aircraft, ground stations and lines.
+- Settings > Network and updates has a Map colours entry (background, grid, outline, text, tile tint, presets and reset); the default look is unchanged.

@@ -14,6 +14,7 @@
 #include "settings_profile.h"
 #include "../badges/badges_ui.h"
 #include "input_map.h"
+#include "../adsb/adsb_map.h"
 #include "dect2/audio/audio_control.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/source/iq_record.h"
@@ -169,6 +170,7 @@ bool customChanged(const App& a, const Info& i) {
     if (!strcmp(i.key, "startMode")) return plat::prefs().getI("startFamily", -1) >= 0;
     if (!strcmp(i.key, "audioDevDefault")) return !plat::prefs().getS("audioDevDefault", "").empty();
     if (!strcmp(i.key, "keysEditor")) return !inputmap::settings().isDefault();
+    if (!strcmp(i.key, "mapColours")) return adsbmap::coloursChanged();
     return false;
 }
 void customReset(App& a, const Info& i) {
@@ -178,10 +180,11 @@ void customReset(App& a, const Info& i) {
     else if (!strcmp(i.key, "startMode")) { plat::prefs().setI("startFamily", -1); plat::prefs().setS("startSub", ""); }
     else if (!strcmp(i.key, "audioDevDefault")) { plat::prefs().setS("audioDevDefault", ""); audioDefaultDeviceChanged(); }
     else if (!strcmp(i.key, "keysEditor")) { inputmap::settings().reset(); inputmap::save(); }
+    else if (!strcmp(i.key, "mapColours")) adsbmap::coloursReset();
 }
 bool resettable(const Info& i) {
     if (!isCustom(i)) return true;
-    for (const char* k : {"themeMode", "uiLang", "uiTypography", "startMode", "audioDevDefault", "keysEditor"}) if (!strcmp(i.key, k)) return true;
+    for (const char* k : {"themeMode", "uiLang", "uiTypography", "startMode", "audioDevDefault", "keysEditor", "mapColours"}) if (!strcmp(i.key, k)) return true;
     return false;
 }
 
@@ -420,6 +423,7 @@ void customRow(App& a, const Info& i) {
     else if (k == "keysEditor") {   // the editor is drawn over the page's whole width (settingsWindow); in a search this row leads there
         if (ImGui::Button(tr("Open the key editor"))) { U.cat = catIndex(kKeys); U.query[0] = 0; }
     }
+    else if (k == "mapColours") { ImGui::PushID("mapcols"); adsbmap::colourSettings(); ImGui::PopID(); }
     else if (k == "profiles") profilesRow(a);
     else if (k == "recordingsFolder") {
         static char buf[1024]; static bool init = false;
