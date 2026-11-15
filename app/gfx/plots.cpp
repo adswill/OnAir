@@ -1675,9 +1675,9 @@ static void wheelPolicy(App& a, inputmap::Area area, ImVec2 size) {
         || ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId) || ImGui::IsAnyItemActive() || mouseOnScaleBar()) return;
     using inputmap::Wheel;
     switch (w) {
-        case Wheel::Tune: {
+        case Wheel::Tune: case Wheel::Tune10: {
             static float acc = 0;
-            tuneBySteps(a, inputmap::wheelSteps(acc, wheel, st.wheelNotch));
+            tuneBySteps(a, inputmap::wheelSteps(acc, wheel, st.wheelNotch) * inputmap::tuneMult(w));
             break;
         }
         case Wheel::PanFreq:
