@@ -61,8 +61,8 @@ class DeviceFilterTest {
         assertEquals("RTL-SDR Blog V4", UsbCatalog.identify(0x0bda, 0x2838, "RTLSDRBlog", "Blog V4")?.name)
         assertEquals("RTL-SDR Blog V4L", UsbCatalog.identify(0x0bda, 0x2838, "RTLSDRBlog", "Blog V4L")?.name)
         assertEquals("RTL-SDR Blog V3", UsbCatalog.identify(0x0bda, 0x2838, "RTLSDRBlog", "Blog V3")?.name)
-        assertEquals("RTL-SDR (R820T)", UsbCatalog.identify(0x0bda, 0x2838, "Realtek", "RTL2838UHIDIR")?.name)
-        assertEquals("RTL-SDR (R820T)", UsbCatalog.identify(0x0bda, 0x2838, null, null)?.name)   // before the permission
+        assertEquals("RTL-SDR (RTL2832U)", UsbCatalog.identify(0x0bda, 0x2838, "Realtek", "RTL2838UHIDIR")?.name)
+        assertEquals("RTL-SDR (RTL2832U)", UsbCatalog.identify(0x0bda, 0x2838, null, null)?.name)   // before the permission
         assertEquals("HackRF One", UsbCatalog.identify(0x1d50, 0x6089, "Great Scott Gadgets", "HackRF One")?.name)
         assertEquals("HackRF Pro", UsbCatalog.identify(0x1d50, 0x6089, "Great Scott Gadgets", "HackRF Pro")?.name)
         assertEquals(UsbCatalog.Family.AIRSPY, UsbCatalog.identify(0x1d50, 0x60a1, "Airspy", "AIRSPY")?.family)

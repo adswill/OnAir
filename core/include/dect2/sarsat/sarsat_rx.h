@@ -68,6 +68,9 @@ public:
     void setFalseBurstBudget(double seconds);
     uint64_t falseBurstsSkipped() const;
     void setWideSearch(bool on);
+    // CPU cap of the whole-capture search (#223): at most this many 90 kHz burst finders (0 = as many as the sample rate holds). Every finder mixes
+    // and averages the whole input, so the cost grows with the number of them; an old PC can search fewer channels (the span is centred on the dial).
+    void setWideMaxChannels(int n);
     // Repeat combining (on by default): soft bits of bursts that did not decode are kept up to 4 minutes and summed with the next bursts on the same
     // carrier (+-150 Hz) at the beacon's repeat interval (47.5 to 52.5 s, or a multiple of it when bursts were missed). period* = the interval accepted.
     void setRepeatCombining(bool on, double periodMinSec = 47.5, double periodMaxSec = 52.5);

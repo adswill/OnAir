@@ -421,6 +421,7 @@ struct SarsatReceiver::Impl {
     bool rateSet = false;
     // whole-capture search: child receivers 90 kHz apart
     bool wide = false, kidsDirty = true;
+    int wideMaxCh = 0;
     std::vector<std::unique_ptr<SarsatReceiver>> kids;
     std::vector<double> kidShift;              // each child's centre from the dial
     std::vector<uint64_t> kidSeq;
@@ -876,6 +877,7 @@ void SarsatReceiver::setRepairCostLimit(double perBit) {
     for (auto& k : p_->kids) k->setRepairCostLimit(perBit);
 }
 void SarsatReceiver::setWideSearch(bool on) { std::lock_guard<std::mutex> lk(p_->mu); if (on != p_->wide) { p_->wide = on; p_->kidsDirty = true; } }
+void SarsatReceiver::setWideMaxChannels(int n) { std::lock_guard<std::mutex> lk(p_->mu); n = std::max(0, n); if (n != p_->wideMaxCh) { p_->wideMaxCh = n; p_->kidsDirty = true; } }
 bool SarsatReceiver::wideSearch() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->wide; }
 double SarsatReceiver::wideSpanHz() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->wide ? p_->wideSpan : 0; }
 
@@ -889,7 +891,8 @@ void SarsatReceiver::feed(const cf32* x, size_t n) {
             m.kidsDirty = false;
             m.kids.clear(); m.kidShift.clear(); m.kidSeq.clear(); m.pending.clear();
             const double span = std::min(0.85 * m.fs, 1.1e6);
-            const int k = std::max(1, (int)std::ceil(span / 90e3));
+            int k = std::max(1, (int)std::ceil(span / 90e3));
+            if (m.wideMaxCh > 0) k = std::min(k, m.wideMaxCh);
             m.wideSpan = k * 90e3;
             for (int i = 0; i < k; i++) {
                 const double d = (i - (k - 1) / 2.0) * 90e3;

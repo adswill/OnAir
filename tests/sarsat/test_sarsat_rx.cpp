@@ -128,6 +128,26 @@ int main() {
         const SarsatTelemetry n = run(cfg, 1e6, 10, true, true);
         CHECK(n.log.empty(), "whole capture: noise gave %zu messages", n.log.size());
     }
+    {   // the CPU cap of the whole-capture search (#223): 3 finders cover 270 kHz, a beacon inside them is still found
+        SynthConfig cfg; cfg.snrDb = 25; cfg.cfoHz = 2000;
+        SarsatReceiver rx;
+        rx.configure(1e6);
+        rx.setWideMaxChannels(3);
+        rx.setWideSearch(true);
+        rx.setSignalOffset(-sarsatTuning().tuneOffsetHz);
+        auto syn = makeSarsatSynth(cfg, 1e6);
+        std::vector<cf32> buf(32768);
+        SarsatTelemetry t;
+        uint64_t seq = 0;
+        for (double done = 0; done < seconds * 1e6; done += (double)buf.size()) {
+            syn->generate(buf.data(), buf.size());
+            rx.feed(buf.data(), buf.size());
+            SarsatTelemetry n;
+            if (rx.telemetry(n, seq)) { seq = n.seq; t = n; }
+        }
+        CHECK(t.wideChannels == 3 && t.wideSpanHz < 280e3, "capped search: %d channels, %.0f Hz", t.wideChannels, t.wideSpanHz);
+        countFound(t, "capped whole capture");
+    }
     {   // a real recording (issue #223): I/Q wav at 37.5 kHz, carrier near +1.44 kHz, moved to the tuning offset at 256 kHz
         std::string path = __FILE__;
         for (char& ch : path) if (ch == '\\') ch = '/';   // MinGW gives backslashes

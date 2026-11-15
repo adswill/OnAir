@@ -387,11 +387,12 @@ void synth(App&, bool&) {
 
 // the whole-capture search: on by itself on the L-band downlink (each satellite somewhere in 1544 - 1545 MHz), or by hand
 bool gWideSet = false, gWideLoaded = false;
+int gWideCh = 0;   // 0 = every 90 kHz finder the sample rate holds; fewer = less CPU on an old computer (#223)
 bool wideWanted(const App& a) { return gWideSet || (a.freqMhz > 1543.5 && a.freqMhz < 1546.0); }
 
 void tick(App& a) {
-    if (!gWideLoaded) { gWideLoaded = true; gWideSet = plat::prefs().getB("sarsatWide", false); }
-    if (a.engine.running()) a.engine.sarsat().setWideSearch(wideWanted(a));
+    if (!gWideLoaded) { gWideLoaded = true; gWideSet = plat::prefs().getB("sarsatWide", false); gWideCh = plat::prefs().getI("sarsatWideCh", 0); }
+    if (a.engine.running()) { a.engine.sarsat().setWideMaxChannels(gWideCh); a.engine.sarsat().setWideSearch(wideWanted(a)); }
 }
 
 // issue #214: the satellites repeat the 406.0 - 406.1 MHz band on their L-band downlink (each one at its own place in 1544 - 1545 MHz)
@@ -416,6 +417,19 @@ void tuner(App& a, bool& retune) {
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", tr("Look for beacon bursts across the whole sample rate (up to 1.1 MHz) instead of 100 kHz around the dial. On by itself on the 1544 - 1545 MHz downlink. Set the radio to 2 Msps to cover the whole downlink band."));
     if (automatic) { flowNext(4 * gUi); ImGui::TextDisabled("%s", tr("(on by itself for the downlink)")); }
+    if (w) {
+        flowNext(6 * gUi);
+        static const int kCh[] = {0, 1, 2, 4, 8};
+        static const char* const kLb[] = {"all channels", "1 channel (90 kHz)", "2 channels (180 kHz)", "4 channels (360 kHz)", "8 channels (720 kHz)"};
+        int sel = 0;
+        for (int i = 0; i < 5; i++) if (kCh[i] == gWideCh) sel = i;
+        ImGui::SetNextItemWidth(std::min(190 * gUi, ImGui::GetContentRegionAvail().x));
+        if (ImGui::BeginCombo("##sarwch", tr(kLb[sel]))) {
+            for (int i = 0; i < 5; i++) if (ImGui::Selectable(tr(kLb[i]), i == sel)) { gWideCh = kCh[i]; plat::prefs().setI("sarsatWideCh", gWideCh); }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("How wide the search is. Each 90 kHz channel costs CPU time: on a slow computer that lags, choose fewer channels (centred on the dial)."));
+    }
     if (live(a) && a.rx.sarsat.wideSpanHz > 0) { flowNext(6 * gUi); ImGui::TextDisabled(tr("%.0f kHz searched"), a.rx.sarsat.wideSpanHz / 1e3); }
     flowEnd();
 }

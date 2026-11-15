@@ -82,7 +82,7 @@ object UsbCatalog {
 
     fun family(vid: Int, pid: Int): Family? = all[UsbId(vid, pid)]
 
-    private val rtlGeneric = Model("RTL-SDR (R820T)", Family.RTLSDR, 24e6, 1766e6, 2.4e6, false, 270)
+    private val rtlGeneric = Model("RTL-SDR (RTL2832U)", Family.RTLSDR, 24e6, 1766e6, 2.4e6, false, 270, "The tuner chip is only known once the radio is opened")
 
     /**
      * The model of a radio from its USB id and the strings the phone read ([manufacturer], [product] may be null when Android could
