@@ -213,12 +213,18 @@ inline AntennaNeed antennaNeed(const char* modeName, double mhz) {
     else {
         const double quarterCm = 7500.0 / mhz;
         // translate first, then substitute the formatted number for the placeholder: a translated string must never be used as a printf format
-        const char* key = quarterCm >= 100 ? N_("a vertical or dipole, quarter wave %.2f m") : N_("a vertical or dipole, quarter wave %.0f cm");
-        const char* token = quarterCm >= 100 ? "%.2f" : "%.0f";
-        std::snprintf(b, sizeof b, quarterCm >= 100 ? "%.2f" : "%.0f", quarterCm >= 100 ? quarterCm / 100 : quarterCm);
-        std::string s = tr(key);
-        const size_t pos = s.find(token);
-        if (pos != std::string::npos) s.replace(pos, std::strlen(token), b);
+        std::string s;
+        if (quarterCm >= 100) {
+            std::snprintf(b, sizeof b, "%.2f", quarterCm / 100);
+            s = tr(N_("a vertical or dipole, quarter wave %.2f m"));
+            const size_t pos = s.find("%.2f");
+            if (pos != std::string::npos) s.replace(pos, 4, b);
+        } else {
+            std::snprintf(b, sizeof b, "%.0f", quarterCm);
+            s = tr(N_("a vertical or dipole, quarter wave %.0f cm"));
+            const size_t pos = s.find("%.0f");
+            if (pos != std::string::npos) s.replace(pos, 4, b);
+        }
         n.text = s;
     }
     return n;
