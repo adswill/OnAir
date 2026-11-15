@@ -19,6 +19,7 @@
 #include "ui/touch.h"
 #include "dect2/source/iq_file.h"
 #include "panels/gallery.h"
+#include "panels/debug_report.h"
 #include "dect2/engine/crash_report.h"
 #include "platform/discord_rpc.h"
 #include <chrono>
@@ -269,6 +270,7 @@ static void shotReport(App& app) {
 
 // orderly shutdown: transmitter quiet, receivers stopped, results saved, windows and back end closed
 static void shutdownApp(App& app, gfx::Backend* gfxBackend, GLFWwindow* window) {
+    debugReportShutdown();   // the hang watchdog first: shutting down may take longer than a frame
     webshare::stopAll();   // the OnAir Web easy setup's server and tunnel end with the app
     savePrefsFlush();
     plat::prefs().flush();   // anything set since the last write (a retry of a refused write, a key set without a save)
@@ -305,9 +307,9 @@ int main(int argc, char** argv) {
 #ifdef __linux__
     if (geteuid() == 0) fprintf(stderr, "OnAir: running as root is not needed; see docs for udev rules\n");
 #endif
-#ifdef _WIN32
-    dect2::crash::startLog();   // the program has no console window: keep its messages in a log file next to the settings (the old one is kept as onair-prev.log)
-#endif
+    // a log file next to the settings (the old one is kept as onair-prev.log). Windows: standard error goes there (no console); everywhere the
+    // program log is copied there (debug_report.cpp), so the log of a run that crashed is still there at the next start
+    dect2::crash::startLog();
     {
         std::string report;
         if (dect2::crash::lastRunCrashed(report)) {
@@ -390,6 +392,7 @@ int main(int argc, char** argv) {
     startApp(app, argc, argv);
     DevOpts o;
     parseDevFlags(app, argc, argv, o);
+    debugReportInit(app, argc > 1);   // the crash or hang of the last run; the hang watchdog (not for --shot and test runs)
     loadFonts(app, io);   // preferences, the OS language and --lang have now selected the effective UI language
     std::string fontLanguage = i18n::current();
     if (!o.shotPath && argc <= 1 && touch::autoTouch(gWorkAreaW, gWorkAreaH, touch::touchChosen(app.touchUi, plat::prefs().has("touchAutoSeen")))) {   // #139: a small screen starts in the touch interface (View > Touch interface turns it off)
@@ -412,6 +415,7 @@ int main(int argc, char** argv) {
         {
             const PaceInfo pi = paceFrame(window, app, o, frameNext, lastInputT);
             glfwPollEvents();
+            debugReportBeat();   // the hang watchdog: the main loop runs (also while minimised)
             wbDropTick(app);
             updateTick(app);
             rcaps::frameGate(anyRunning());   // Linux / software OpenGL: input never draws faster than 60 fps; low-power drawing caps lower
@@ -432,6 +436,7 @@ int main(int argc, char** argv) {
             last = now;
             const double tUi0 = glfwGetTime();
             receiversFrame(app, io.DisplaySize);
+            debugReportFrame(app);   // Ctrl+D, the watchdog's heartbeat, the debug report window
             perfOverlayDraw(app);
             popOutFrame(app);
             keepWindowsReachable();

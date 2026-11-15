@@ -183,7 +183,6 @@ struct App {
     bool voiceCodecsOpen = false;   // the Voice codecs overview window (Help menu)
     bool creditsOpen = false;   // the Credits window (Help menu, the "by: ..." button)
     bool backupOpen = false;    // Tools > Backup and restore (app/panels/backup_ui.cpp)
-    bool reportOpen = false;    // Help > Report a problem (app/panels/report_problem.cpp)
     bool galleryOpen = false;           // the picture gallery (View > Images)
     bool dfOpen = false;                // the direction finder window (View > Direction finder; app/df)
     bool rfiOpen = false;               // the interference hunter window (View > Interference hunter; app/rfi)
