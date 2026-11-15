@@ -228,7 +228,7 @@ void carouselView(App& a) {
     const TsSnapshot& ts = a.ts;
     if (!ts.carousels || ts.carousels->empty()) { ImGui::TextDisabled("%s", tr("no DSM-CC carousel found")); return; }
     ImGui::PushTextWrapPos(0);
-    ImGui::TextColored(pal::accent(), "%s", tr("EXPERIMENTAL: the file preview and the MHEG-5 scene drawing are untested on a real broadcast stream (no recording was available). Scripts and interactive links are not run or followed."));
+    ImGui::TextColored(pal::accent(), "%s", tr("Data services: the files of the data carousels are shown (name, size, save to disk, text, pictures, MHEG-5 object tree and scene drawing); interactive pages are not run, except by the limited Red Button subset below. EXPERIMENTAL: untested on a real broadcast stream, and the Hong Kong DTMB MHEG-5 profile (weather and stock pages) is not verified."));
     ImGui::PopTextWrapPos();
     redButton(a);
     if (ImGui::Button(tr("Save all files"))) {

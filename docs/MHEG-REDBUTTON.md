@@ -89,8 +89,14 @@ TS packets (live demux, already in TV engine)
 The user's recordings of UK DVB-T/T2 or Freesat transport streams, when available, are the missing evidence; the debug path (carousel panel "save", `dsmcc_dump`) already lets a recording be examined.
 
 ## Status 2026-10-30
-- Acquisition: the existing DSM-CC demux feeds the carousel file list; "Start Red Button" in TV data > Carousels snapshots it and runs `MhegEngine` from `a` / `startup`.
+- Acquisition: the existing DSM-CC demux feeds the carousel file list; "Start Red Button" in TV data > Data services (the Carousels view) snapshots it and runs `MhegEngine` from `a` / `startup`.
 - Engine: Application, Scene, Rectangle, Text, Bitmap, variables, Links, timers, SendEvent, TransitionTo and the actions listed in `mheg_engine.h`; bounded, fuzz-tested against damaged BER. Anything else is counted as unsupported.
 - UI: Red/Green/Yellow/Blue, arrows, OK, Back buttons plus the 720x576 scene drawing. Not yet: keyboard shortcuts, overlay on the live video, Hotspot/PushButton/ListGroup, Stream objects, persistent storage.
 - Tested only with synthetic carousels (`tests/tv/test_mheg_engine.cpp`). No real UK stream and no BBC application was available; real BBC apps will very likely use classes outside this subset.
 - The app was compiled (carousel_view object) but not linked or screenshotted in this session.
+
+## Data services view and what is not implemented (issue 176, Hong Kong DTMB weather and stock pages)
+
+The TV data tab "Data services" (formerly "Carousels") lists every DSM-CC carousel (data stream types 0x0B/0x0D), its files (path, size, complete), saves them to disk and previews: text, PNG/JPEG, and MHEG-5 BER files as an object tree and a static scene drawing. Zlib-compressed modules are inflated; the test builds a carousel (DSI, DII, DDB, BIOP) with and without compression and round-trips the files (tests dvbs_dsmcc and mheg).
+
+Not implemented: full MHEG-5 interactivity. Files are shown; interactive pages are not run, apart from the limited Red Button subset (UK profile). The Hong Kong DTMB profile used by TVB for weather and stock pages has not been checked against a real stream; the reporter's TS was not available here, so those pages may show only as far as the shared object types go. Receive-only, clear data only.

@@ -968,7 +968,7 @@ static void tsTablesView(App& a, int view) {
 
 static int g_tsView = 0;
 void tsTab(App& a) {
-    subNav("tsv", g_tsView, {"PIDs", "Networks", "Other services", "Bouquets", "Time", "Conditional access", "Carousels", "Data", "Interactive"});
+    subNav("tsv", g_tsView, {"PIDs", "Networks", "Other services", "Bouquets", "Time", "Conditional access", "Data services", "Data", "Interactive"});
     if (g_tsView == 0) tsPidsView(a);
     else tsTablesView(a, g_tsView);
 }

@@ -2332,3 +2332,7 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
 - Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.
+
+## 2026-11-15: Data services view for carousel files (issue 176)
+
+- A DSM-CC data and object carousel receiver with module reassembly, zlib modules, BIOP files, file list, save to disk and previews (text, PNG/JPEG, MHEG-5 object tree and scene drawing) already existed. The TV data sub-tab is now named "Data services" and says plainly that files are shown and interactive pages are not run (apart from the limited Red Button subset). docs/MHEG-REDBUTTON.md lists what is not implemented. Hong Kong DTMB weather and stock pages are not verified: no real stream here. Existing tests (dvbs_dsmcc, mheg) already round-trip compressed synthetic carousels.
