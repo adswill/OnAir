@@ -230,6 +230,9 @@ void updateButton(App& a) {
         if (a.updSrc == 2 || (a.updSrc == 0 && a.updMirrorOn)) ImGui::TextWrapped("%s", tr("A mirror is a third-party web address you chose. It sees that you check for updates and which version you run. It is used only after GitHub fails (not at all with GitHub only), the package is checked against the checksum from GitHub when GitHub can be reached, and nothing is installed from a mirror without your confirmation."));
         else ImGui::TextWrapped("%s", tr("Only github.com is contacted. Downloads are checked against the SHA-256 GitHub lists for the file."));
         ImGui::PopStyleColor();
+        // github.com is unreliable from some networks in China: nudge zh users towards the mirror fallback the app already has
+        if (std::string(i18n::current()) == "zh" && a.updSrc != 2 && !(a.updSrc == 0 && a.updMirrorOn))
+            ImGui::TextWrapped("%s", tr("GitHub is hard to reach from some networks in China: keep the update source on Automatic and turn on 'Use the mirror when GitHub cannot be reached', so update checks and downloads keep working."));
         ImGui::EndPopup();
     }
 }

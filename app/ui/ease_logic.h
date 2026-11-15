@@ -6,6 +6,7 @@
 // The hints only inform: nothing here blocks a mode, changes a setting or starts a radio.
 #pragma once
 #include "dect2/specan/geo_look.h"
+#include "../i18n/i18n.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -208,12 +209,17 @@ inline AntennaNeed antennaNeed(const char* modeName, double mhz) {
     for (const Row& r : rows) if (m == r.mode) { n.text = r.text; return n; }
     if (mhz <= 0) return n;
     char b[100];
-    if (mhz < 30) n.text = N_("a long wire or a loop");
+    if (mhz < 30) n.text = tr(N_("a long wire or a loop"));
     else {
         const double quarterCm = 7500.0 / mhz;
-        if (quarterCm >= 100) std::snprintf(b, sizeof b, N_("a vertical or dipole, quarter wave %.2f m"), quarterCm / 100);
-        else std::snprintf(b, sizeof b, N_("a vertical or dipole, quarter wave %.0f cm"), quarterCm);
-        n.text = b;
+        // translate first, then substitute the formatted number for the placeholder: a translated string must never be used as a printf format
+        const char* key = quarterCm >= 100 ? N_("a vertical or dipole, quarter wave %.2f m") : N_("a vertical or dipole, quarter wave %.0f cm");
+        const char* token = quarterCm >= 100 ? "%.2f" : "%.0f";
+        std::snprintf(b, sizeof b, quarterCm >= 100 ? "%.2f" : "%.0f", quarterCm >= 100 ? quarterCm / 100 : quarterCm);
+        std::string s = tr(key);
+        const size_t pos = s.find(token);
+        if (pos != std::string::npos) s.replace(pos, std::strlen(token), b);
+        n.text = s;
     }
     return n;
 }

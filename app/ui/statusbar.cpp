@@ -215,8 +215,8 @@ void statusBar(App& a) {
             std::string l1, l2;
             if (mu->summary) mu->summary(a, l1, l2);
             ImGui::AlignTextToFramePadding();
-            ImGui::TextDisabled("State"); ImGui::SameLine();
-            ImGui::TextUnformatted(!a.engine.running() ? "stopped" : l2.empty() ? "running" : l2.c_str());
+            ImGui::TextDisabled("%s", tr("State")); ImGui::SameLine();
+            ImGui::TextUnformatted(!a.engine.running() ? tr("stopped") : l2.empty() ? tr("running") : l2.c_str());
             flowEnd(); return;
         }
     }
