@@ -704,7 +704,7 @@ ModeTuning js8Tuning() {
 }
 
 const Js8Preset* js8Presets(int& count) {
-    static const Js8Preset kP[] = {{"80 m", 3.578}, {"40 m", 7.078}, {"30 m", 10.130}, {"20 m", 14.078}, {"17 m", 18.104}, {"15 m", 21.078}, {"10 m", 28.078}};
+    static const Js8Preset kP[] = {{"80 m", 3.578}, {"40 m", 7.078}, {"30 m", 10.130}, {"20 m", 14.078}, {"17 m", 18.104}, {"15 m", 21.078}, {"10 m", 28.078}, {"11 m / CB band", 27.245}};
     count = (int)(sizeof kP / sizeof *kP);
     return kP;
 }

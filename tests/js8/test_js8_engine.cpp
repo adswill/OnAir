@@ -14,6 +14,11 @@ using namespace dect2;
 int main() {
     const ModeTuning mt = js8Tuning();
     CHECK(mt.stdMode == 39 && modeTuningById("js8") && modeTuningById("js8")->stdMode == 39, "tuning table");
+    {
+        int n = 0; const Js8Preset* p = js8Presets(n); bool cb = false;
+        for (int i = 0; i < n; i++) if (p[i].mhz == 27.245) cb = true;
+        CHECK(cb, "11 m / CB band preset 27.245");
+    }
     Engine e;
     DeviceInfo dev;
     TuneSettings t;

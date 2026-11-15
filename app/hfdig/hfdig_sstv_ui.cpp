@@ -267,7 +267,7 @@ void hfdigSetDemod(const App& a, int d);   // hfdig_ui.cpp
 struct SstvBand { const char* name; double mhz; int demod; const char* note; };
 const SstvBand kSstvBands[] = {{"80m", 3.730, dect2::HfDemodLsb, "Europe (3.845 in America)"}, {"40m", 7.171, dect2::HfDemodLsb, ""},
                                {"20m", 14.230, dect2::HfDemodUsb, "the busiest"}, {"15m", 21.340, dect2::HfDemodUsb, ""},
-                               {"10m", 28.680, dect2::HfDemodUsb, ""}, {"2m", 145.500, dect2::HfDemodNfm, "FM calling frequency (Europe)"},
+                               {"10m", 28.680, dect2::HfDemodUsb, ""}, {"11m / CB band", 27.700, dect2::HfDemodUsb, "CB band: check your licence"}, {"2m", 145.500, dect2::HfDemodNfm, "FM calling frequency (Europe)"},
                                {"ISS", 145.800, dect2::HfDemodNfm, "the ISS's SSTV events, FM"}};
 
 void sstvBandButtons(App& a) {
