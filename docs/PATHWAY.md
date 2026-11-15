@@ -2415,3 +2415,7 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 - Under 800 px wide the touch interface folds Gain and Volume into More, widens Start/Stop, Tuner and More, drops the Running/Stopped word from the top bar and, in portrait, puts the status line behind a switch in More. Wider screens and the desktop layout are unchanged.
 - Branch feat42-ui3. The layout rules are tested by `touch_logic` (not yet run on CI); the screens were only syntax-checked, not looked at.
+
+## 2026-11-15: Data services view for carousel files (issue 176)
+
+- A DSM-CC data and object carousel receiver with module reassembly, zlib modules, BIOP files, file list, save to disk and previews (text, PNG/JPEG, MHEG-5 object tree and scene drawing) already existed. The TV data sub-tab is now named "Data services" and says plainly that files are shown and interactive pages are not run (apart from the limited Red Button subset). docs/MHEG-REDBUTTON.md lists what is not implemented. Hong Kong DTMB weather and stock pages are not verified: no real stream here. Existing tests (dvbs_dsmcc, mheg) already round-trip compressed synthetic carousels.
