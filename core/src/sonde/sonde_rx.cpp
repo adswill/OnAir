@@ -667,7 +667,7 @@ struct SondeReceiver::Impl {
         if (f.hasPos && SondeHub::get().wanted()) {   // SondeHub (sondehub.h): off unless enabled; only this frame's own time, fix and counters
             SondeInfo hub = s;
             hub.freqHz = centerHz > 0 ? centerHz + s.offsetHz : r->announcedHz;
-            hub.hasTime = f.hasTime; hub.unixTime = f.hasTime ? f.unixTime : 0;
+            hub.hasTime = f.hasTime; hub.unixTime = f.hasTime ? f.unixTime : 0; hub.sondeAheadS = f.hasTime ? f.sondeAheadS : 0;
             hub.frame = f.frame; hub.hasVel = f.hasVel; hub.sats = f.sats; hub.batteryV = f.batteryV; hub.burstKillS = f.burstKillS;
             SondeHub::get().frame(hub, (double)time(nullptr));
         }

@@ -303,7 +303,7 @@ bool Rs41Decoder::decodeFrame(uint8_t* f, int len, SondeFix& fix) {
     if (g1) {
         const int week = u2(g1);
         const uint32_t tow = u4(g1 + 2);
-        if (week > 0 && tow < 604800000u) { fix.hasTime = true; fix.unixTime = sondegeo::gpsToUnix(week, tow / 1000.0); }
+        if (week > 0 && tow < 604800000u) { fix.hasTime = true; fix.unixTime = sondegeo::gpsToUnix(week, tow / 1000.0); fix.sondeAheadS = sondegeo::kGpsMinusUtcS; }
     }
     if (g3) {
         const double X = (int32_t)u4(g3) / 100.0, Y = (int32_t)u4(g3 + 4) / 100.0, Z = (int32_t)u4(g3 + 8) / 100.0;

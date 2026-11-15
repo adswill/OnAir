@@ -47,3 +47,9 @@ The new code has its own sockets and shares nothing with the APRS iGate (`Feeds`
 hey, found it: the igate only ever got the 2 m afsk packets, the sonde decoder was never connected to it. 3.9 has a new "radiosonde upload" in data feeds, you can add wettersonde.net and radiosondy.info (or more) at the same time, with your own call-ssid and passcode.
 it sends a station beacon with your map location first, then one line per sonde (rs41, rs92, dfm, lms6, mrz, imet-54, ims-100). m10/m20 are not sent yet.
 tried it only against a fake local server so far, so tell me if the sites show you after you ticked it.
+
+## 4.2: SondeHub upload switched off (issue #526)
+
+SondeHub asked us to stop uploading until OnAir's decoders are validated. In 4.2 the SondeHub upload is off in the app: the Radiosonde upload panel shows one line ("SondeHub upload is switched off until SondeHub has validated OnAir's decoders (see issue #526)"), and a saved "on" from an earlier version does not upload (`SondeHub::configure` forces it off). aprs.fi / radiosondy.info / wettersonde.net (APRS-IS) uploads and all local features are unchanged. The code stays.
+
+Developers only: `ONAIR_SONDEHUB=1` re-enables it, and `ONAIR_SONDEHUB_LOG=<file>` then appends every telemetry object exactly as submitted, one JSON per line, for SondeHub's validation (wiki "Sonde Telemetry Validation": at least 30 minutes of a flight per sonde type). Time: the SondeHub convention is the sonde's own time as sent. An RS41 sends GPS time, so `datetime` is now GPS time (UTC + 18 s), not converted to UTC; `time_received` stays the computer's UTC. Sondes that send UTC or their own leap seconds (M10, M20, DFM, ...) are unchanged.

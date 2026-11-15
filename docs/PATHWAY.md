@@ -2358,3 +2358,7 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - Pack downloads (such as the DAB transmitter lists) retry twice and say why they failed (missing file, DNS, TLS, timeout) with the address, instead of "error 22".
 - The COSPAS-SARSAT whole-capture search has a channel cap (1, 2, 4, 8 or all 90 kHz finders) for slow computers.
 - Android: the radio screen now lists every plugged-in USB radio and can select it; generic RTL-SDR sticks are named by their chip family, not always R820T.
+
+## 2026-11-15: SondeHub upload switched off (issue #526)
+
+- On branch feat42-sondehub: SondeHub upload is off in the app (note in the panel, saved settings ignored), kept for developers behind ONAIR_SONDEHUB=1. The RS41 datetime is now the sonde's GPS time as SondeHub's validation page asks, and ONAIR_SONDEHUB_LOG writes each submitted object as one JSON line. Test sonde_hub extended; tests run on GitHub.

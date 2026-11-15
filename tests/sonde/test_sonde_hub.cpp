@@ -469,7 +469,57 @@ static void testUploader() {
     m.stop();
 }
 
+static void setEnv(const char* k, const char* v) {
+#ifdef _WIN32
+    _putenv_s(k, v);
+#else
+    setenv(k, v, 1);
+#endif
+}
+
+// 4.2: switched off in the app (issue #526); the time of an RS41 is the sonde's own GPS time; the developer log
+static void testOffAndLog() {
+    setEnv("ONAIR_SONDEHUB", "0");
+    CHECK(!sondehub::allowed() && sondehub::logPath().empty(), "not allowed without ONAIR_SONDEHUB=1");
+    SondeHub& h = SondeHub::get();
+    SondeHubConfig c; c.call = "DL1ABC"; c.enabled = true; c.server = "http://127.0.0.1:9";   // never a real server
+    h.configure(c);
+    CHECK(!h.wanted() && !h.config().enabled && h.status().state == "off", "a saved 'on' does not upload");
+    h.frame(rs41((double)unixNow()), (double)unixNow());
+    CHECK(h.status().sent == 0 && h.status().skipped == 0, "no frame is even queued");
+    setEnv("ONAIR_SONDEHUB", "1");
+    CHECK(sondehub::allowed(), "allowed with ONAIR_SONDEHUB=1");
+
+    const double now = 1700000000.0;
+    SondeHubStation st;
+    SondeInfo s = rs41(now - 1.5); s.sondeAheadS = 18;   // what the RS41 decoder sets: its unixTime is UTC, the frame carried GPS time
+    const std::string js = sondehub::telemetryJson(c, st, s, now);
+    CHECK(field(js, "datetime") == "2023-11-14T22:13:36.500000Z", "RS41 datetime is the sonde's GPS time (UTC + 18 s), got %s", field(js, "datetime").c_str());
+    CHECK(field(js, "time_received") == "2023-11-14T22:13:20.000000Z", "time_received stays the computer's UTC");
+    SondeInfo m = rs41(now - 1.5); m.kind = SondeM10; m.type = "M10"; m.subtype.clear(); m.serial = "802-2-11234";
+    CHECK(field(sondehub::telemetryJson(c, st, m, now), "datetime") == "2023-11-14T22:13:18.500000Z", "a sonde that sends UTC is left as it is");
+
+    const std::string path = std::string("sondehub_dev_log_") + std::to_string((long long)unixNow()) + ".jsonl";
+    remove(path.c_str());
+    setEnv("ONAIR_SONDEHUB_LOG", path.c_str());
+    CHECK(sondehub::logPath() == path, "log path from ONAIR_SONDEHUB_LOG");
+    { SondeHubTiming tm; tm.retryWaitS = 0.05; h.setTiming(tm); }
+    h.configure(c);   // enabled now; its listener/telemetry PUTs go to a closed local port and fail quietly
+    const double t0 = (double)unixNow();
+    for (int i = 0; i < 3; i++) { SondeInfo f = rs41(t0 - 3 + i); f.frame = 700 + i; f.sondeAheadS = 18; h.frame(f, t0); }
+    h.stop();
+    setEnv("ONAIR_SONDEHUB_LOG", "");
+    std::string all; if (FILE* f = fopen(path.c_str(), "rb")) { char b[4096]; size_t n; while ((n = fread(b, 1, sizeof b, f)) > 0) all.append(b, n); fclose(f); }
+    remove(path.c_str());
+    int lines = 0; for (char ch : all) lines += ch == '\n';
+    CHECK(lines == 3 && all.find("\"frame\":700") != std::string::npos && all.find("\"datetime\"") != std::string::npos, "the log has the 3 submitted objects, one per line (%d lines)", lines);
+    std::string first = all.substr(0, all.find('\n'));
+    CHECK(validJson(first), "a log line is valid JSON");
+}
+
 int main() {
+    testOffAndLog();
+    setEnv("ONAIR_SONDEHUB", "1");   // the existing tests exercise the code with a mock server on localhost
     testIdentify();
     testTimes();
     testTelemetry();
