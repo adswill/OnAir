@@ -191,7 +191,19 @@ static void testZoom() {
     CHECK(std::fabs((v.lo + v.hi) / 2 - 5800.123456) < 1e-9 && std::fabs(v.hi - v.lo - 0.001) < 1e-9, "6 GHz, 1 kHz span");
 }
 
+// #514: a slider in a popup over the spectrum, let go above the plot, must not tune there
+static void testPlotClick() {
+    using namespace genlayout;
+    CHECK(plotClickTunes(true, true, false, 0, 0), "a plain click on the plot tunes");
+    CHECK(!plotClickTunes(false, true, false, 0, 0), "a press that began on a popup over the plot does not tune");
+    CHECK(!plotClickTunes(true, false, false, 0, 0), "no release, no tune");
+    CHECK(!plotClickTunes(true, true, true, 0, 0), "after a drag it does not tune");
+    CHECK(!plotClickTunes(true, true, false, 12, 0), "a moved press does not tune");
+    CHECK(!plotClickTunes(true, true, false, 0, -9), "a moved press does not tune (vertical)");
+}
+
 int main() {
+    testPlotClick();
     testPrefs();
     testSide();
     testHit();
