@@ -115,6 +115,10 @@ std::vector<uint8_t> gthFrameBytes(const SondeTruth& t, int frame, uint32_t sn) 
     for (int i = 0; i < 5; i++) f[i] = 0xAA;
     f[5] = 0x2D; f[6] = 0xD4; f[7] = 0x63;
     uint8_t* p = f + kOfs;
+    // the fields this decoder does not read get a pseudo-random fill: a run of hundreds of equal bits would drain the receiver's DC tracking, which a
+    // real frame (all fields filled) does not do
+    uint32_t x = 0x9E3779B9u ^ ((uint32_t)frame * 2654435761u) ^ sn;
+    for (int i = 3; i < 100; i++) { x ^= x << 13; x ^= x >> 17; x ^= x << 5; p[i] = (uint8_t)(x >> 8); }
     p[3] = 0x7F; p[4] = 0xFF; p[5] = 0xFF; p[6] = 0xEE;
     for (int i = 0; i < 4; i++) p[7 + i] = (uint8_t)(sn >> (24 - 8 * i));
     const int64_t s = (int64_t)std::floor(t.unixTime);
