@@ -2,7 +2,7 @@
 
 <h1 align="center">OnAir</h1>
 
-<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->391<!-- /modecount --> modes with one software-defined radio.</b><br>
+<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->392<!-- /modecount --> modes with one software-defined radio.</b><br>
 Free and open source, for macOS, Windows, Linux and Android.</p>
 
 <p align="center">
@@ -34,7 +34,7 @@ Free and open source, for macOS, Windows, Linux and Android.</p>
 
 OnAir turns a low-cost software-defined radio (a HackRF, an RTL-SDR, an Airspy and many others) into a receiver for most of what is on the air. Plug in an antenna, pick a mode, and watch the spectrum, the sync, the error correction and the decoded data.
 
-- <!-- modecount -->391<!-- /modecount --> modes in 14 families, from TV and DAB to aircraft, ships, satellites, two-way radio, pagers and sensors.
+- <!-- modecount -->392<!-- /modecount --> modes in 14 families, from TV and DAB to aircraft, ships, satellites, two-way radio, pagers and sensors.
 - Works with HackRF, RTL-SDR, Airspy, SDRplay, BladeRF, LimeSDR, USRP, Pluto and more, plus network radios, sound cards and Hamlib rigs.
 - Runs on macOS, Windows, Linux and Android. Free and open source (GPL-3.0-or-later).
 - A receiver first. It can also send test signals through a transmit-capable radio into a dummy load (off by default, behind a licence notice; see [Transmit](docs/TRANSMIT.md)).
