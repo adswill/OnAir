@@ -90,15 +90,20 @@ Counts are generated from the mode list in the app (`tools/release/gen_changelog
 
 Every receiver is built from published specifications and tested on generated signals and, where recordings exist, on real captures. The full numbered list is [MODES.md](MODES.md); notes per family are in [docs/MODES-DETAIL.md](docs/MODES-DETAIL.md). The KA family are modes designed for OnAir, measured in simulation only.
 
-## What is new in 4.1
+## What is new in 4.2
 
-The full list, with what was measured and the known limits, is in [docs/CHANGELOG-4.1.md](docs/CHANGELOG-4.1.md) and in the 4.1 release notes on the [releases page](https://github.com/adswill/OnAir/releases/latest). Read the **Known limits** section: nearly everything new was tested on generated signals, not on the air.
+The full list, with the known limits, is in [docs/CHANGELOG-4.2.md](docs/CHANGELOG-4.2.md) and in the 4.2 release notes on the [releases page](https://github.com/adswill/OnAir/releases/latest). Read the **Known limits** section: nearly everything new was tested on generated signals, not on the air, and the Android additions were not tried on a phone.
 
-- **New modes** (391 in the app's list, 5 more than 4.0; [MODES.md](MODES.md) has 393 rows): Golay paging (GSC), STL link, ESP-NOW, SCADA radio telemetry and Robust Packet (RPR).
-- **Devices**: Aaronia SPECTRAN V6, a native SDRplay RSP1 / MSi2500 driver, RX888 MkII up to 130 Msps (none of them tested on hardware).
-- **Sensitivity**: a measured table of every mode, and lower thresholds for CubeSat links, e-Czas, VDL4, KLW, TDCS, ATSC 3.0 and DRM (simulated signals).
-- **Maps**: your own position, range rings, distance and bearing to the pointer.
-- **Less CPU** in about 20 modes, diagnostic codes in log messages to make bug reports easier to trace, and the fixes for #496, #495, #491, #488 and #470.
+- **New mode** (392 in the app's list; [MODES.md](MODES.md) lists every mode): Kenwood FleetSync, receive only (fleet and unit number; message types and position are not decoded).
+- **Gain**: Auto gain no longer stays at the minimum after a strong burst, per-stage gain sliders, and SPECTRAN V6 gain read back from the device (V6 ECO fixes from datosg's pull request).
+- **Radiosondes**: GTH sondes (HT03G, GTH3, GTH6), own receiver height and NMEA output of the selected sonde; SondeHub upload is off in the app (#526).
+- **Tools**: a TETRA name book, "Find pagers" in the pager screens, SARSAT burst baseband export, live UDP / RTP transport-stream input for the TV transmitters, one station location, Help > Hardware and a one-window Report a problem.
+- **Android**: SDR++ server as a network radio, every USB radio selectable, an update banner, xHE-AAC DRM sound through the phone's decoder (needs one; untested on a phone).
+- Fixes for #534, #522, #521, #517, #514, #508, #507, #506 and more.
+
+## What was new in 4.1
+
+See [docs/CHANGELOG-4.1.md](docs/CHANGELOG-4.1.md): 5 new receivers, SPECTRAN V6 and a native RSP1 / MSi2500 driver, a measured sensitivity table of every mode, your own position on every map, and less CPU in about 20 modes.
 
 ## Radios
 
@@ -126,7 +131,7 @@ The full list: [docs/FEATURES.md](docs/FEATURES.md) and [docs/TOOLS-AND-NOTES.md
 - [Codecs](docs/CODECS.md) (voice and audio codecs you install yourself) and [optional libraries](docs/OPTIONAL-LIBRARIES.md)
 - [Plugins](docs/plugins.md) and the [plugin SDK](docs/PLUGIN-SDK.md)
 - [Updates and Discord status](docs/UPDATES.md)
-- Release history: [docs/CHANGELOG-4.0.md](docs/CHANGELOG-4.1.md), [4.0](docs/CHANGELOG-4.0.md) and the [releases page](https://github.com/adswill/OnAir/releases); older notes in [docs/CHANGELOG-0.2.md](docs/CHANGELOG-0.2.md)
+- Release history: [4.2](docs/CHANGELOG-4.2.md), [4.1](docs/CHANGELOG-4.1.md), [4.0](docs/CHANGELOG-4.0.md) and the [releases page](https://github.com/adswill/OnAir/releases); older notes in [docs/CHANGELOG-0.2.md](docs/CHANGELOG-0.2.md)
 - The wiki, a page per mode: [on-air.dev/docs](https://on-air.dev/docs/)
 
 > [!NOTE]
