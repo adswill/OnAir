@@ -21,6 +21,7 @@ int main() {
     {
         CHECK(parseBandList("14 28, 64") == std::vector<int>({14, 28, 64}) && parseBandList("").empty() && parseBandList("x") .empty(), "band list text");
         CHECK(std::string(lteOperatorName(313, 100)) == "FirstNet" && std::string(lteOperatorName(310, 410)) == "AT&T", "FirstNet and AT&T names");
+        CHECK(std::string(lteOperatorName(244, 45)) == "Erillisverkot" && std::string(lteOperatorName(244, 46)) == "Erillisverkot", "Finnish Erillisverkot 24445 and 24446");
     }
     std::vector<CellTower> v = {
         cell(66, true, -60, {"310-410", "313-100"}, 0x1234501, 10),   // shared network, strong

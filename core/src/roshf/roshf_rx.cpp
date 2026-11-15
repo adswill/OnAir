@@ -250,7 +250,7 @@ bool RoshfReceiver::telemetry(RoshfTelemetry& out, uint64_t lastSeq) {
 }
 
 const RoshfPreset* roshfPresets(int& count) {
-    static const RoshfPreset kP[] = {{"80 m", 3.590}, {"40 m", 7.045}, {"30 m", 10.140}, {"20 m", 14.080}, {"17 m", 18.100}, {"15 m", 21.090}, {"10 m", 28.120}};
+    static const RoshfPreset kP[] = {{"80 m", 3.590}, {"40 m", 7.045}, {"30 m", 10.140}, {"20 m", 14.080}, {"17 m", 18.100}, {"15 m", 21.090}, {"10 m", 28.120}, {"11 m / CB band", 27.635}};
     count = (int)(sizeof kP / sizeof *kP);
     return kP;
 }

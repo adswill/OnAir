@@ -84,6 +84,11 @@ int main() {
     acc = 0;
     check(wheelSteps(acc, -2.f, 1) == -2, "a fast spin gives several steps");
 
+    check(tuneMult(Wheel::Tune10) == 10 && tuneMult(Wheel::Tune) == 1, "Tune by 10 steps is ten");
+    check(clampStepHz(-5) == 0 && clampStepHz(7500) == 7500 && clampStepHz(999999999L) == 100000000, "a custom step is clamped");
+    check(snapToStep(100012345.0, 12500) == 100012500.0 && snapToStep(5.0, 0) == 5.0, "snap to the step grid");
+    check(wheelDefault(Area::Spectrum, C_None) != Wheel::Tune && wheelDefault(Area::Spectrum, C_Shift) == Wheel::Nothing, "defaults are unchanged: the wheel zooms");
+
     // the tuning step
     check(stepHzFor(s, 12500) == 12500, "setting 0: the mode's own step");
     Settings u; u.stepHz = 5000;

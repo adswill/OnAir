@@ -335,6 +335,11 @@ void editor() {
             ImGui::EndCombo();
         }
         ImGui::SameLine();
+        ImGui::SetNextItemWidth(110 * gUi);
+        int custom = s.stepHz;
+        if (ImGui::InputInt("##customstep", &custom, 0, 0)) { s.stepHz = clampStepHz(custom); changed = true; }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Custom step in Hz (0: the mode's own step)"));
+        ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(tr("Wheel notches per step"));
         ImGui::SameLine();

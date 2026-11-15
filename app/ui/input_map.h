@@ -7,6 +7,7 @@
 // somebody opens the window.
 #pragma once
 #include "imgui.h"
+#include <cmath>
 #include <cctype>
 #include <cstdint>
 #include <cstdio>
@@ -178,6 +179,7 @@ enum class Wheel : uint8_t {
     PanFreq,     // slide the view along the frequency axis
     ScrollTime,  // waterfall: look back through the rows (pauses the waterfall, the picture then scrolls)
     Nothing,
+    Tune10,      // tune up or down by ten steps (after Nothing, so the saved numbers of older versions stay)
     Count
 };
 // The modifier combinations the wheel table has a row for
@@ -202,6 +204,7 @@ inline const char* wheelName(Wheel w) {
         case Wheel::PanFreq: return "Pan along the frequency";
         case Wheel::ScrollTime: return "Scroll the waterfall back in time";
         case Wheel::Nothing: return "Nothing";
+        case Wheel::Tune10: return "Tune by 10 steps";
         default: return "";
     }
 }
@@ -215,6 +218,12 @@ inline Wheel wheelDefault(Area, int combo) {
     }
 }
 // Which axes a zoom action moves (the plot code asks): bit 0 frequency, bit 1 level / time
+// Steps per wheel step for a tuning action (Tune10: ten)
+inline int tuneMult(Wheel w) { return w == Wheel::Tune10 ? 10 : 1; }
+// A custom step typed by the user: 1 Hz .. 100 MHz, 0 (the mode's own step) stays 0
+inline int clampStepHz(long v) { return v <= 0 ? 0 : (int)(v > 100000000L ? 100000000L : v); }
+// A frequency snapped to the step grid (Hz)
+inline double snapToStep(double hz, double step) { return step >= 1 ? std::round(hz / step) * step : hz; }
 inline int zoomAxes(Wheel w) { return w == Wheel::ZoomBoth ? 3 : w == Wheel::ZoomFreq ? 1 : w == Wheel::ZoomLevel ? 2 : 0; }
 
 // The tuning steps the Step action and the wheel use (Hz). 0 in the settings: the mode's own step (the click snap)

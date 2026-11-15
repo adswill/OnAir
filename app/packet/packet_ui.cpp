@@ -424,6 +424,15 @@ void controls(App& a) {
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Receive filter width. 12.5 kHz cuts a neighbouring channel better (often best for APRS) but needs the signal on the channel centre; 25 kHz is the wider, more forgiving filter."));
     flowNext(10 * gUi);
+    {   // 11 m / CB band packet calling frequency (FM); the 2 m APRS channel is the mode's default
+        const bool here = std::fabs(a.freqMhz - 27.235) < 0.002;
+        if (here) ImGui::PushStyleColor(ImGuiCol_Button, pal::accent(0.45f));
+        char pb[64]; snprintf(pb, sizeof pb, "%s 27.235##pkt11", tr("11 m / CB band"));
+        if (ImGui::SmallButton(pb)) tuneFreq(a, 27.235);
+        if (here) ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Packet on the 11 m / CB band: 27.235 MHz, FM. CB rules differ by country; check yours."));
+    }
+    flowNext(10 * gUi);
     {
         static const char* kSz[] = {"standard", "5 times", "20 times"};
         const int cur = S.tableScale == 20 ? 2 : S.tableScale == 5 ? 1 : 0;

@@ -2316,3 +2316,9 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - A user reported missing and wrong HFDL frequencies. The built-in table was compared with the UDXF "Digital aero" list (HFDL table version 51) and the dumphfdl system table (version 52). Missing frequencies were added (Molokai, Shannon, Johannesburg, Barrow, Muan, Agana), wrong ones corrected (Muan, Krasnoyarsk, Molokai, Barrow) and one removed (Canarias 5589, in neither source); the order follows the system table, as the squitter masks need.
 - The station record passed from Rust to C++ held only 8 frequencies per station; it now holds 20, so stations with more (Barrow has 19) are complete. Band table gained a 3.0 MHz entry and wider 3.455 and 4.67 MHz entries so the new frequencies are tuned.
 - The HFDL header, the aircraft list and the receiver panel now show how many aircraft have a position. New test: `hfdl_table`.
+
+## 2026-11-15: 11 m presets, Finnish operator codes, wheel tuning choices
+
+- 11 m / CB band presets: SSTV 27.700 MHz (USB), JS8Call 27.245 MHz, ROS 27.635 MHz (USB) and a packet button for 27.235 MHz (FM) in APRS / Packet. CB rules differ by country, so the buttons are labelled and only warn.
+- LTE operator names: Erillisverkot (Finland) 24445 and 24446.
+- Wheel over the spectrum and waterfall: View > Controls already maps the wheel (zoom by default). Added "Tune by 10 steps" as a wheel choice (for Shift+wheel) and a custom tuning step field. Defaults are unchanged.
