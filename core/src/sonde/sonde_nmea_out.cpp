@@ -56,7 +56,8 @@ struct Link {
         if (c.path.empty()) { err = "choose a serial port"; return false; }
 #ifdef _WIN32
         std::string p = c.path;
-        if (p.rfind("\\\\.\\", 0) != 0) p = "\\\\.\\" + p;
+        const bool comName = p.size() >= 4 && (p[0] == 'C' || p[0] == 'c') && (p[1] == 'O' || p[1] == 'o') && (p[2] == 'M' || p[2] == 'm') && p.find_first_of("\\/.") == std::string::npos;   // COM10 and up need the device prefix; a file path (the test stands one in) is opened as it is
+        if (comName && p.rfind("\\\\.\\", 0) != 0) p = "\\\\.\\" + p;
         h = CreateFileA(p.c_str(), GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
         if (h == INVALID_HANDLE_VALUE) { err = "cannot open " + c.path; return false; }
         DCB dcb{}; dcb.DCBlength = sizeof dcb;
