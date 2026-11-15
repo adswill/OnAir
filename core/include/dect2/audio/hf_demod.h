@@ -20,4 +20,14 @@ inline int hfDemodResolve(int d, double dialMhz) {
     return dialMhz >= 30.0 ? HfDemodNfm : HfDemodUsb;
 }
 
+// The HF digital entries whose signals are sideband-only at every frequency (bitmask of the entry's decoders: 4 FreeDV, 8 FT8 / FT4 / FT2 / WSPR /
+// JT65 ..., 16 HamDRM, 32 keyboard modes): Auto never picks narrow FM for them, also at and above 30 MHz (FT8 / FT4 on 6, 4 and 2 m are upper sideband).
+// RTTY (1) and SSTV (2) keep the plain Auto: VHF SSTV is FM.
+inline bool hfdigSidebandOnly(int decoderMask) { return decoderMask == 4 || decoderMask == 8 || decoderMask == 16 || decoderMask == 32; }
+
+inline int hfDemodResolveFor(int d, double dialMhz, bool sidebandOnly) {
+    if (sidebandOnly && d == HfDemodAuto) return HfDemodUsb;
+    return hfDemodResolve(d, dialMhz);
+}
+
 } // namespace dect2

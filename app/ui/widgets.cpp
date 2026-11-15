@@ -564,12 +564,12 @@ int hfDemodLoad(const char* prefKey) {
     return v >= 0 && v < dect2::HfDemodCount ? (int)v : dect2::HfDemodAuto;
 }
 
-bool hfDemodControl(App& a, int& choice, const char* prefKey, const char* id) {
+bool hfDemodControl(App& a, int& choice, const char* prefKey, const char* id, bool sidebandOnly) {
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("%s", tr("Demod"));
     sameLineIf(100 * gUi, 5 * gUi);
     char cur[32];
-    if (choice == dect2::HfDemodAuto) snprintf(cur, sizeof cur, tr("Auto (%s)"), dect2::hfDemodName(dect2::hfDemodResolve(choice, a.freqMhz)));
+    if (choice == dect2::HfDemodAuto) snprintf(cur, sizeof cur, tr("Auto (%s)"), dect2::hfDemodName(dect2::hfDemodResolveFor(choice, a.freqMhz, sidebandOnly)));
     else snprintf(cur, sizeof cur, "%s", dect2::hfDemodName(choice));
     ImGui::PushID(id);
     ImGui::SetNextItemWidth(std::min(110 * gUi, ImGui::GetContentRegionAvail().x));

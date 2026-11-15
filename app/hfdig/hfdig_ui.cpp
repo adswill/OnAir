@@ -163,7 +163,7 @@ namespace {
 
 void tuner(App& a, bool&) {
     loadDemod(a);
-    hfDemodControl(a, S.demod, S.demodKey.c_str(), "hfdig");
+    hfDemodControl(a, S.demod, S.demodKey.c_str(), "hfdig", dect2::hfdigSidebandOnly(decMask(a)));
 }
 
 void tick(App& a) {
@@ -176,7 +176,7 @@ void tick(App& a) {
     if (!S.listenLoaded) { S.listenLoaded = true; S.listen = plat::prefs().getB("hfdigListen", false); }
     if (run && (!S.wasRunning || (int)S.listen != S.pushedListen)) { a.engine.hfdig().setListen(S.listen); S.pushedListen = S.listen; }
     loadDemod(a);
-    if (run) a.engine.hfdig().setDemod(dect2::hfDemodResolve(S.demod, a.freqMhz));   // Auto follows the dial
+    if (run) a.engine.hfdig().setDemod(dect2::hfDemodResolveFor(S.demod, a.freqMhz, dect2::hfdigSidebandOnly(decMask(a))));   // Auto follows the dial
     if (run && a.rx.standard == 26) {
         hfprop_ui::feedFtx(a, a.rx.hfdig.ftx);
         hamFeedFtx(a, a.rx.hfdig.ftx);   // ham.decode (ham/ham_events_ui.h)

@@ -931,7 +931,7 @@ const char* codecNeedMbe();
 // mute and volume, in a flow row (widgets.cpp). True when the switch changed.
 bool listenControls(App& a, bool& on, const char* prefKey, const char* id, const char* tip);
 int hfDemodLoad(const char* prefKey);                                         // the remembered HfDemod choice (default Auto)
-bool hfDemodControl(App& a, int& choice, const char* prefKey, const char* id);   // the ham front end's demodulator combo; saves on change
+bool hfDemodControl(App& a, int& choice, const char* prefKey, const char* id, bool sidebandOnly = false);   // the ham front end's demodulator combo; saves on change
 // rows that wrap in a narrow window: flowNext() between the groups of a row (a label and its control, a lamp, a read-out) instead of
 // ImGui::SameLine(); the next group stays on the line if it fits (as wide as in the last frame). flowBreak() ends the line, like NewLine().
 bool flowNext(float spacing = -1);   // true: on the same line
