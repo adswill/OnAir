@@ -207,6 +207,7 @@ private:
                 taken.push_back(c.second);
                 if (taken.size() >= 3) break;
                 const double fa = centroid(c.second, fl), fb = centroid(c.second + ds, fl);
+                if (std::fabs((fb - fa) - kShiftHz[si]) > 9.0) continue;   // the tones are not this shift apart (425 and 450 Hz lie 25 Hz from each other)
                 now.push_back({0.5 * (fa + (fb - kShiftHz[si])), si, 1});
             }
         }
