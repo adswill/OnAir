@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "station/station_loc.h"
 #include "ease/ease_ui.h"
 // View > Data feeds: send what the decoders find to other programs (tar1090 / readsb / VRS, OpenCPN, APRS-IS, acarshub).
 // Every feed is off until the user turns it on; the network work is in core (feeds.cpp).
@@ -449,7 +450,7 @@ void feedsWindow(App& a) {
     pc |= ImGui::Checkbox(tr("Send spots to PSK Reporter (pskreporter.info)"), &r.on);
     ImGui::Indent();
     pc |= textField(N_("Your callsign"), r.call, ImGuiInputTextFlags_CharsUppercase, 120);
-    pc |= textField(N_("Your locator"), r.locator, ImGuiInputTextFlags_CharsUppercase, 90);
+    pc |= stationloc::locatorRow(N_("Your locator"), r.locator, "pskrLocatorOwn", 90);
     pc |= textField(N_("Antenna"), r.antenna, 0, 200);
     ImGui::Unindent();
     {
@@ -485,7 +486,7 @@ void feedsWindow(App& a) {
     wc |= ImGui::Checkbox(tr("Send WSPR spots to WSPRnet (wsprnet.org)"), &wn.on);
     ImGui::Indent();
     wc |= textField(N_("Your callsign"), wn.call, ImGuiInputTextFlags_CharsUppercase, 120);
-    wc |= textField(N_("Your locator"), wn.locator, ImGuiInputTextFlags_CharsUppercase, 90);
+    wc |= stationloc::locatorRow(N_("Your locator"), wn.locator, "wsprNetLocatorOwn", 90);
     ImGui::Unindent();
     {
         const dect2::WsprNetStatus ws = dect2::WsprNet::get().status();

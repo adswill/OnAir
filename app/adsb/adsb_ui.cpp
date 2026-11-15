@@ -98,6 +98,7 @@ void positionFields(App& a) {
     ch |= ImGui::InputDouble("##alon", &lo, 0, 0, "%.4f E");
     if (ch) setReference(a, la, lo);
     ImGui::SetNextItemWidth(std::min(110 * gUi, ImGui::GetContentRegionAvail().x));
+    S.refAltM = plat::prefs().getD("rxAltM", S.refAltM);   // Settings > Location can change it too
     double al = S.refAltM;
     if (ImGui::InputDouble("##aalt", &al, 0, 0, "%.0f m")) {
         S.refAltM = std::max(-500.0, std::min(9000.0, al));
@@ -442,7 +443,7 @@ void receiverLocation(double& lat, double& lon) { loadState(); lat = S.refLat; l
 
 bool receiverLocationSet() { return plat::prefs().has("adsbLat") && plat::prefs().has("adsbLon") && !plat::prefs().getB("adsbLocCleared", false); }
 
-double receiverAltitudeM() { loadState(); return S.refAltM; }
+double receiverAltitudeM() { loadState(); S.refAltM = plat::prefs().getD("rxAltM", S.refAltM); return S.refAltM; }
 
 void setReceiverLocation(App& a, double lat, double lon) { loadState(); plat::prefs().setB("adsbLocCleared", false); setReference(a, lat, lon); }
 // Undo of an automatic position (E12): back to the old placeholder and to "not set"
