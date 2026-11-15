@@ -2332,3 +2332,8 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 - New mode on branch feat42-fleetsync, modelled on MDC-1200: every FM carrier of the span is followed and the 1200 bit/s FFSK burst is decoded, FleetSync and FleetSync II (error correction), with fleet and unit number, carrier, a log and the raw words.
 - Only the ID fields are defined by the public description used (credited: GopherTrunk, Apache-2.0); message type, status text and position are not decoded and there is no map. Tested on simulated signals only.
+
+## 2026-11-15: PACTOR-II / -III identifier in the PACTOR-I screen (issue #216)
+
+- Research pass on what is public for PACTOR-I to -IV (docs/PACTOR-RESEARCH.md): the signals are documented, the channel coding of PACTOR-II, -III and -IV (code polynomials, puncturing, interleaver, CRC, frame layout) is not, so text cannot be decoded from them and OnAir does not guess.
+- The PACTOR-I screen now also runs the signal-level analysis and names a PACTOR-II or PACTOR-III signal on the channel (carriers, speed level), "data not decodable (proprietary)". Tested on generator signals only (test pactor_hfid).
