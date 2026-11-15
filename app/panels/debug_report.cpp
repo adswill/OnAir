@@ -337,6 +337,34 @@ std::string sizeText(uintmax_t bytes) {
     return b;
 }
 
+// Save with the debug dump or the screenshot ticked: a notice that they hold personal information and facts about this computer.
+// True when the user pressed "I agree, continue"; "Abort" (or Escape) saves nothing. Unticking both skips the notice.
+bool privacyNotice(const State& s) {
+    bool agreed = false;
+    const ImGuiViewport* vp = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x * 0.5f, vp->WorkPos.y + vp->WorkSize.y * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(std::min(520 * gUi, vp->WorkSize.x * 0.9f), 0.f), ImGuiCond_Always);
+    if (!ImGui::BeginPopupModal(trw("Personal information"), nullptr, ImGuiWindowFlags_NoSavedSettings)) return false;
+    const bool dump = s.haveDump && s.incDump, shot = s.haveShot && s.incShot;
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.25f, 1), "%s", dump && shot ? tr("The debug dump and the screenshot contain personal information.")
+                                               : dump ? tr("The debug dump contains personal information.")
+                                                      : tr("The screenshot contains personal information."));
+    ImGui::Spacing();
+    ImGui::TextUnformatted(tr("They can hold what you entered in OnAir (keys, passwords, callsigns, positions, messages) and information about this computer. Anyone you send the zip to, or who can see the GitHub issue, can read it."));
+    ImGui::Spacing();
+    ImGui::TextUnformatted(tr("You can leave them out: press Abort and untick them. The report is then much less useful to find the problem."));
+    ImGui::Spacing();
+    ImGui::TextUnformatted(tr("By pressing \"I agree, continue\" you confirm that you were told this personal information is saved in the zip and is sent along when you share it."));
+    ImGui::PopTextWrapPos();
+    ImGui::Spacing();
+    if (ImGui::Button(tr("I agree, continue"))) { agreed = true; ImGui::CloseCurrentPopup(); }
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Abort")) || ImGui::IsKeyPressed(ImGuiKey_Escape)) ImGui::CloseCurrentPopup();
+    ImGui::EndPopup();
+    return agreed;
+}
+
 void reportWindow(App& a) {
     State& s = st();
     if (!s.open || ImGui::GetFrameCount() < s.openAtFrame) return;
@@ -400,7 +428,14 @@ void reportWindow(App& a) {
     }
 
     ImGui::Spacing();
+    bool save = false;
+    const bool personal = (s.haveDump && s.incDump) || (s.haveShot && s.incShot);
     if (ImGui::Button(tr("Save..."))) {
+        if (personal) ImGui::OpenPopup(trw("Personal information"));   // the dump or the screenshot: say what is in them first
+        else save = true;
+    }
+    if (privacyNotice(s)) save = true;
+    if (save) {
         const std::string path = plat::saveFileDialog(("debug_dump_v" + std::string(ONAIR_VERSION) + "_" + fileStamp() + ".zip").c_str());
         if (!path.empty()) {
             s.status = saveZip(s, path) ? std::string(tr("Saved. Attach this file to a new GitHub issue.")) + " " + path
