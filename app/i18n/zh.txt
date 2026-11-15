@@ -1,4 +1,4 @@
- OnAir interface in Simplified Chinese. One text per line: the English text as in the source, a tab, the translation.
+# OnAir interface in Simplified Chinese. One text per line: the English text as in the source, a tab, the translation.
 # \n is a line break. Keep the printf conversions (%s, %d, %.1f ...) in the same order. tests/app/test_i18n.cpp checks this file.
 %.1f dB	%.1f dB
 %s  #%d  %.3f MHz%s	%s  #%d  %.3f MHz%s
@@ -11222,7 +11222,6 @@ Whole span: on	整个频段：开
 Paused	已暂停
 start the receiver to see vessels	启动接收机以查看船舶
 %u stations	%u 个台站
-start the receiver	启动接收机
 no stations heard yet	尚未听到任何台站
 click a station	点击一个台站
 signal, no good message	有信号，但无有效报文
@@ -11232,6 +11231,4 @@ signal, no good message	有信号，但无有效报文
 Doppler %+.0f Hz (%+.1f Hz/s); %llu recovered, %llu after cancelling	多普勒 %+.0f Hz（%+.1f Hz/s）；恢复 %llu，对消后 %llu
 %u ships sent message 27	%u 艘船发送了 27 号报文
 %u in the table	表中有 %u 个
-satellite mode	卫星模式
-long range	远程
 GitHub is hard to reach from some networks in China: keep the update source on Automatic and turn on 'Use the mirror when GitHub cannot be reached', so update checks and downloads keep working.	国内部分网络访问 GitHub 不稳定：建议将更新来源保持为「自动：GitHub」并勾选「GitHub 无法连接时使用镜像」，以保证更新检查和下载正常进行。
