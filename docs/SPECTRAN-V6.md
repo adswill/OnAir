@@ -1,7 +1,7 @@
 # Aaronia SPECTRAN V6 and V6 ECO
 
-**Experimental: written from Aaronia's public documentation and tested only against a fake RTSA API. It has not run on a real SPECTRAN.
-Reports are welcome (issue #482).**
+**Experimental: written from Aaronia's public documentation. The V6 ECO part has since run on a real device (a V6 ECO 150XA-6, see
+"Measured on a V6 ECO" below); the full-size V6 has only run against a fake RTSA API. Reports are welcome (issue #482).**
 
 OnAir drives the SPECTRAN V6 and the V6 ECO through Aaronia's **RTSA API**, the C library that comes with the **RTSA-Suite PRO**.
 OnAir does not ship it; it is loaded at run time when it is installed. Receive and transmit both go through it.
@@ -38,6 +38,17 @@ When an Aaronia USB device (vendor id 2f72) is plugged in but the library is mis
   rate works: OnAir sets `main/spanfreq` to the rate / 1.5 (Aaronia's README: the packets come at 1.5 x the span) and uses the rate that the
   packets report. On the V6 the receiver clock is the slowest one that carries the rate (46.08 to 245.76 MHz), or the one chosen in the
   radio settings. OnAir sets no limit of its own; what the device cannot do it adjusts, and the start message says so.
+- **Below 5 MHz on the V6 ECO.** Its `iqreceiver` takes no `main/centerfreq` below 5 MHz (a lower value comes back adjusted to 5 MHz).
+  Below that the device stays at 5 MHz and runs a multiple of the rate, wide enough to hold the wanted frequency, and OnAir shifts it to
+  the centre, filters and decimates. The log says so (`... is below the device's lowest centre`). The lowest centre is read from the
+  device at every start, so a model with another one is handled the same way. Raw mode is not shifted.
+- **Tuning down across 8 MHz on the V6 ECO takes about 12 s.** A V6 ECO that was started above 8 MHz and is tuned below it while it
+  streams often stays set up for where it started: what is below about 4 MHz is then weak or missing. So OnAir closes the device, resets
+  it and starts it on the new frequency. Tuning around below 8 MHz, and from there upwards, is immediate.
+- **Starts.** The first samples come 1.5 to 3.7 s after a start. Before every open OnAir has the RTSA API look for the devices again and
+  waits until the device is listed as ready. A start that delivers nothing within 6 s is closed, reset (`AARTSAAPI_ResetDevices`) and
+  opened again, at most twice; the device is also reset between receiving and transmitting, which makes that change take 6 to 7 s.
+  The reset is for every SPECTRAN the API knows, so it is left out while OnAir has a second one open.
 - **Raw mode** (radio settings: Mode = Raw): `spectranv6/raw`, the receiver clock divided by 1 to 512 (`main/decimation`). OnAir takes the
   smallest of those rates at or above what the mode asks for. The V6 ECO runs at 61.44 MHz in this mode.
 - **Gain** sets the reference level (`main/reflevel`, the level that fills the converter): 0 dB = +10 dBm, each dB more is 1 dB lower
@@ -50,16 +61,49 @@ When an Aaronia USB device (vendor id 2f72) is plugged in but the library is mis
   PPS, 10 MHz reference), TX lead time; on the V6 also the receiver clock, the RX 1 / RX 2 input and the gain control (manual, peak, power).
   "Keep" leaves the device's own setting alone.
 - **Transmit** (the devices with the TX option): the device is opened as `spectranv6/iqtransmitter`. `main/centerfreq`, `main/spanfreq`
-  (the sample rate) and `main/transgain` (the TX gain in dB) are set, and the samples go out as timed packets, kept a lead time ahead of the
-  device's stream clock (50 ms on the V6, 500 ms on the V6 ECO, as Aaronia's samples; radio setting "TX lead time"). Full scale (1.0) is
-  sent as 0 dBm before `main/transgain`. OnAir warns but never blocks a transmission; frequency, rate and level are passed as given.
+  (the sample rate, and never less than 20 MHz: with a narrower span a V6 ECO takes the packets and sends nothing) and `main/transgain`
+  (the TX gain in dB) are set, and the samples go out as timed packets, kept a lead time ahead of the device's stream clock (50 ms on the
+  V6, 500 ms on the V6 ECO, as Aaronia's samples; radio setting "TX lead time"). Full scale (1.0) is sent as 0 dBm before
+  `main/transgain`. OnAir warns but never blocks a transmission; rate and level are passed as given. A frequency the transmitter adjusts
+  (a V6 ECO's starts at 22 MHz) is refused with the nearest one it takes, since the signal would otherwise go out there.
 - The receiver and the transmitter cannot have the device at the same time (it is opened in one mode at a time). Full duplex through
   `iqtransceiver` is not used yet.
 - An unplugged device is opened again every second until it is back, as for OnAir's other radios.
 
+## Measured on a V6 ECO
+
+On a V6 ECO 150XA-6 (options: TX, preamplifier, 9 kHz) with the RTSA-Suite PRO 3.0.3 (RTSA API 1.4) on Windows 11 and a USB 3 port.
+A second receiver (an RTL-SDR on the TX output behind an attenuator and a limiter, an IC-705 on the same antenna for short wave) said
+what was really there.
+
+- The library paths, `AARTSAAPI_Init_With_Path`, the packet and device-info layouts and the result codes are right.
+- `iqreceiver`: the rate is 1.5 x `main/spanfreq`, exactly, and stops growing at 59.2137 Msps (not 61.44). The packets' band is
+  `spanFrequency` wide: the centre is `startFrequency + spanFrequency / 2`.
+- Samples are volts, 0 dBm = sqrt(0.05). `main/reflevel` goes from -55 to +23 dBm in 0.5 dB steps; it and the RF amplifier
+  (`calibration/preamp`: auto, off, amp1, amp2) act while it streams. OnAir's gain slider still starts at +10 dBm.
+- `main/centerfreq` has a minimum of 5 MHz in `iqreceiver` and of 22 MHz in `iqtransmitter`; a lower value returns
+  `AARTSAAPI_WARNING_VALUE_ADJUSTED` and reads back as the minimum.
+- `main/spanfreq` and `main/centerfreq` can change while the receiver streams; the new rate arrives within 0.1 s, behind a few packets
+  still at the old one. A disconnect and connect of the open device leaves it without samples.
+- An open has to wait for a finished `AARTSAAPI_RescanDevices` (not `AARTSAAPI_RETRY`) and a device that `AARTSAAPI_EnumDevice` reports
+  as ready; otherwise it fails with "not found" or connects and delivers nothing. With that wait a start right after a stop takes 1.5 s.
+- About one start in ten reaches the running state and delivers nothing; a reset cures it, at times only the second one. The device is
+  ready again 2.7 s after a reset.
+- After the transmitter, the receiver delivers nothing without a reset; after the receiver, the transmitter did not reach its running
+  state at two of four starts without one.
+- Transmit: `iqtransmitter` has `main/centerfreq` (22 MHz to 8 GHz), `main/spanfreq` and `main/transgain` (-100 to +10 dB), and
+  `device/transmittermode` is "Stream" by default. A 1 Msps tone on 433.92 MHz: nothing at a span of 1 and 10 MHz, there at 20 and
+  50 MHz, on the right frequency and side, gone after the stop. A lead of 0.15 s was enough.
+- Started at 10.1 or 9 MHz and tuned to 5.5 or 5 MHz while streaming, a broadcast carrier on 3.955 MHz was missing in 11 of 21 tries;
+  started at 8 MHz or lower, or on the frequency itself, in none of 19. Small retunes afterwards did not bring it back. A change of the
+  rate alone never did that.
+
+Not tried on the ECO: raw mode, USB 2, Linux, the absolute transmit level, other transmit rates than 1 Msps from OnAir's TX window.
+
 ## Not verified on a device
 
-Everything below comes from Aaronia's public samples and README and from how SDR++ and SatDump use the API, not from a measurement:
+Everything below comes from Aaronia's public samples and README and from how SDR++ and SatDump use the API, not from a measurement
+(for the V6 ECO, see above for what has been measured since):
 
 - the library paths and `AARTSAAPI_Init_With_Path` with the install folder (older libraries without it get `AARTSAAPI_Init`)
 - the layouts of `AARTSAAPI_Packet` and `AARTSAAPI_DeviceInfo` and the result codes (declared in `core/src/source/aartsa_min.h`)
@@ -74,7 +118,10 @@ The tests (`tests/source/test_spectran.cpp`, `tests/source/test_spectran_missing
 `tests/source/spectran_fake.cpp`, a stand-in library with the same function names: listing, both receive modes, the rate plan, the
 level and scale, the order of I and Q (a tone at +rate/8 must come out at +rate/8), live retunes, rate changes (nothing that sets the rate
 is sent while the device streams), an unplug, a busy device, transmit pacing, gaps and flags, a missing library and a library that does
-not start. They show the driver follows the documentation; they cannot show the documentation matches the device.
+not start. They show the driver follows the documentation; they cannot show the documentation matches the device. With `eco_real` set,
+the fake behaves as the measured V6 ECO (the lowest centres, a span that changes while it streams, a start that delivers nothing): the
+tests then check the shift below 5 MHz, a retune and a rate change without a stop, the new start below 8 MHz, the reset after an empty
+start and before the transmitter, and the refusal of a transmit frequency below 22 MHz.
 
 ## Test checklist (for someone with the device)
 

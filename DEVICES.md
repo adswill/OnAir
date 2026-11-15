@@ -134,8 +134,9 @@ of the one that was opened.
 
 # Aaronia SPECTRAN V6 and V6 ECO
 
-Experimental, not tested on a device yet: written from Aaronia's public RTSA API samples and checked against a stand-in library
-(`tests/source/spectran_fake.cpp`). Receive (any rate through the RTSA API's IQ receiver, or the raw clock / decimation rates) and
+Experimental: written from Aaronia's public RTSA API samples and checked against a stand-in library
+(`tests/source/spectran_fake.cpp`). The V6 ECO has since run on a real device (receive, also below 5 MHz, and transmit); the full-size
+V6 has not. Receive (any rate through the RTSA API's IQ receiver, or the raw clock / decimation rates) and
 transmit (the TX option). It needs Aaronia's **RTSA-Suite PRO** (Windows or Linux, [aaronia.com/downloads](https://aaronia.com/downloads)),
 which OnAir does not ship; close the RTSA-Suite PRO before starting the device in OnAir. Install steps, what is unverified and a test
 checklist: [docs/SPECTRAN-V6.md](docs/SPECTRAN-V6.md).

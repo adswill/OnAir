@@ -4,7 +4,8 @@
 // The Aaronia SPECTRAN V6 / V6 ECO driver (source_spectran.cpp) against the fake RTSA API (spectran_fake.cpp): listing, the IQ receiver and
 // raw modes, the sample-rate plan, the reference level and the sample scale, live retunes, rate changes (the device stopped first), an
 // unplug and reopen, a busy device, the transmitter's timed packets and its end. Never touches a real device.
-// Only simulated: the fake follows Aaronia's public documentation, not a measured device (docs/SPECTRAN-V6.md).
+// Only simulated: the fake follows Aaronia's public documentation and, with "eco_real" set, what was measured on a V6 ECO
+// (docs/SPECTRAN-V6.md): the last block checks what the driver does for that device.
 #include "../../core/src/source/native_common.h"
 #include <filesystem>
 #include "dect2/source/autogain.h"
@@ -239,7 +240,7 @@ int main(int argc, char** argv) {
         CHECK(tx->open(tt, err));
         if (!err.empty()) std::cerr << "tx open: " << err << '\n';
         CHECK(std::string(str("opentype")) == "spectranv6eco/iqtransmitter");
-        CHECK(num("cfg:main/centerfreq") == 145.501e6 && num("cfg:main/transgain") == -10 && num("cfg:main/spanfreq") == 1e6);
+        CHECK(num("cfg:main/centerfreq") == 145.501e6 && num("cfg:main/transgain") == -10 && num("cfg:main/spanfreq") == 20e6);   // 1 Msps: the span is not left below 20 MHz
         CHECK(tx->sampleRate() == 1e6);
         std::vector<cf32> x(10000, cf32(1.f, 0.f));
         x[5] = cf32(3.f, 0.f);   // beyond full scale: clipped
@@ -264,6 +265,80 @@ int main(int argc, char** argv) {
         CHECK(!tx2->open(tt, err));
         CHECK(err.find("iqtransmitter") != std::string::npos);
         setv("no_tx", 0);
+    }
+    {
+        // ---- the V6 ECO as it was measured ("eco_real" in the fake, docs/SPECTRAN-V6.md): below its lowest centre (5 MHz) the device
+        // stays there at a multiple of the rate and the driver shifts and decimates. A carrier on 3.7 MHz, received at 3.6 MHz and 1 Msps,
+        // must come out 100 kHz above the centre and at its level.
+        setv("eco_real", 1);
+        setv("tone_hz", 3.7e6);
+        auto rx = native::makeSpectran(eco);
+        t = TuneSettings();
+        t.centerHz = 3.6e6; t.sampleRate = 1e6; t.gainDb = 30;
+        err.clear();
+        CHECK(rx->start(t, ring, err));
+        if (!err.empty()) std::cerr << "eco below 5 MHz: " << err << '\n';
+        CHECK(std::string(str("opentype")) == "spectranv6eco/iqreceiver");
+        CHECK(num("cfg:main/centerfreq") == 5e6);                          // the device stays at its lowest centre ...
+        CHECK(approx(num("cfg:main/spanfreq"), 6e6 / 1.5, 1e-3));          // ... at 6 times the rate (3.6 MHz is 1.4 MHz below it)
+        CHECK(rx->sampleRate() == 1e6);
+        CHECK(tone(ring, mag, step));
+        CHECK(approx(mag, 0.5, 0.02) && approx(step, 2 * kPi * 0.1, 2e-3));
+        // a retune that stays below 5 MHz and needs no other span: only the shift changes
+        const double starts = num("start"), spans = num("set:main/spanfreq");
+        t.centerHz = 3.65e6;
+        CHECK(rx->retune(t, err));
+        CHECK(num("cfg:main/centerfreq") == 5e6 && num("set:main/spanfreq") == spans);
+        CHECK(tone(ring, mag, step) && approx(mag, 0.5, 0.02) && approx(step, 2 * kPi * 0.05, 2e-3));
+        // up across 5 MHz while it streams: the device is tuned there, at the rate itself, without a stop
+        setv("tone_hz", 7.125e6);
+        t.centerHz = 7e6;
+        CHECK(rx->retune(t, err));
+        CHECK(num("cfg:main/centerfreq") == 7e6 && approx(num("cfg:main/spanfreq"), 1e6 / 1.5, 1e-3));
+        CHECK(num("start") == starts && num("rate_change_while_streaming") == 0);
+        CHECK(rx->sampleRate() == 1e6);
+        CHECK(tone(ring, mag, step) && approx(mag, 0.5, 0.02) && approx(step, kPi / 4, 2e-3));
+        // another rate while it streams: no stop either
+        t.sampleRate = 2e6;
+        setv("tone_hz", 7.25e6);
+        CHECK(rx->retune(t, err));
+        CHECK(num("start") == starts && approx(num("cfg:main/spanfreq"), 2e6 / 1.5, 1e-3) && rx->sampleRate() == 2e6);
+        CHECK(tone(ring, mag, step) && approx(step, kPi / 4, 2e-3));
+        rx->stop();
+        // started above 8 MHz and tuned below it: the device is closed, reset and started on the new frequency
+        t.centerHz = 10.1e6; t.sampleRate = 1e6;
+        setv("tone_hz", 6.125e6);
+        CHECK(rx->start(t, ring, err));
+        const double resets = num("resets"), opens = num("opendevice");
+        t.centerHz = 6e6;
+        CHECK(rx->retune(t, err));
+        CHECK(num("resets") == resets + 1 && num("opendevice") == opens + 1 && num("cfg:main/centerfreq") == 6e6);
+        CHECK(tone(ring, mag, step) && approx(step, kPi / 4, 2e-3));
+        rx->stop();
+        // a start that reaches the running state and delivers nothing: closed, reset and opened again, once
+        setv("stuck_starts", 1);
+        const double resets2 = num("resets");
+        err.clear();
+        CHECK(rx->start(t, ring, err));
+        CHECK(num("resets") == resets2 + 1 && num("stuck_starts") == 0);
+        CHECK(tone(ring, mag, step) && approx(step, kPi / 4, 2e-3));
+        rx->stop();
+        setv("tone_hz", 0);
+        // the transmitter after the receiver: a reset before it is opened. Below its lowest frequency (22 MHz) it refuses, with that frequency
+        const double resets3 = num("resets");
+        auto tx = native::makeSpectranTx(eco);
+        TxTune tt;
+        tt.centerHz = 7.1e6; tt.sampleRate = 1e6; tt.gainDb = -30;
+        err.clear();
+        CHECK(!tx->open(tt, err));
+        CHECK(err.find("22 MHz") != std::string::npos);
+        CHECK(num("resets") == resets3 + 1);
+        tt.centerHz = 433.92e6;
+        err.clear();
+        CHECK(tx->open(tt, err));
+        CHECK(num("cfg:main/centerfreq") == 433.92e6 && num("cfg:main/spanfreq") == 20e6);
+        tx->close();
+        setv("eco_real", 0);
     }
     std::error_code ec;
     fs::remove_all(dir, ec);
