@@ -181,6 +181,7 @@ struct App {
     int creditsTab = 0;         // 0 Contributors, 1 Projects and licences (the tab the Credits window opens on)
     bool voiceKeysOpen = false;     // the Voice keys window (Tools menu, the "encrypted: add your key" buttons; app/keys)
     bool voiceCodecsOpen = false;   // the Voice codecs overview window (Help menu)
+    bool hardwareOpen = false;      // Help > Hardware: this computer, the requirements and the media support (panels/hardware_ui.cpp)
     bool creditsOpen = false;   // the Credits window (Help menu, the "by: ..." button)
     bool backupOpen = false;    // Tools > Backup and restore (app/panels/backup_ui.cpp)
     bool galleryOpen = false;           // the picture gallery (View > Images)
@@ -1444,6 +1445,7 @@ struct DiagInput {
 std::string buildDiagnostics(const DiagInput& in);   // plain text, no ImGui
 std::string diagnosticsText(App& a);
 void systemInfoText(std::string& os, std::string& cpu, std::string& gpu);   // diag_ui.cpp: this computer's OS, CPU and graphics names
+void hardwareWindow(App& a);   // panels/hardware_ui.cpp: Help > Hardware
 bool writeZipFile(const std::string& path, const std::vector<std::pair<std::string, std::string>>& files);   // diag_ui.cpp: a zip, entries stored
 void radioMessagesUi(App& a, bool vertical);
 void recordGroupUi(App& a);   // diag_ui.cpp: the Record group of the Source panel (IQ and audio recording); the Workspace Recorder block too

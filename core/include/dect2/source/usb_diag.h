@@ -3,6 +3,7 @@
 
 // Why a USB radio that is plugged in does not show up: permissions, a kernel driver that holds it (Linux).
 #pragma once
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -12,6 +13,14 @@ namespace dect2 {
 // or the platform has no such check. Cheap enough to call when the radio list is refreshed.
 // Linux only; with DECT2_SYSFS_ROOT set, the /sys and /dev paths are read under that folder instead (tests, on every platform).
 std::vector<std::string> usbRadioHints();
+// The radios OnAir drives that are on the USB bus now (any OS; Help > Hardware). On Windows each WinUSB radio is opened for a moment, so
+// one without a usable driver gets `problem` (install WinUSB with Zadig). The other problems come from the hint functions here.
+struct UsbRadio {
+    std::string radio;      // "RTL-SDR", "HackRF", "SDRplay RSP", ...
+    uint16_t vid = 0, pid = 0;
+    std::string problem;    // empty when nothing is known to be wrong
+};
+std::vector<UsbRadio> usbRadiosPresent();
 // An SDRplay RSP is plugged in but the SDRplay API (its driver, which OnAir cannot ship) is not installed: the one hint, or none (any OS)
 std::vector<std::string> sdrplayApiHints();
 // An Aaronia SPECTRAN (USB vendor 2f72) is plugged in but the RTSA-Suite PRO (its RTSA API library) is not installed: the one hint, or none
