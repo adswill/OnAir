@@ -15,6 +15,7 @@
 #include "spec_paint.h"
 #include "../ui/input_map.h"
 #include "tuner_style.h"
+#include "../drm/drm_filter_logic.h"
 #include "../state/tune_worker.h"
 #include "../state/listen_freq.h"
 #include "view_span.h"
@@ -322,6 +323,11 @@ ChanWidth channelWidth(const App& a) {
     else if (a.family == 40 && a.engine.running() && a.rx.standard == 41 && a.rx.dvbc.symbolRate > 0) w.mhz = a.rx.dvbc.symbolRate * (1 + a.rx.dvbc.rollOff) / 1e6;
     else if (a.family == 6 && a.engine.running() && a.rx.standard == 7 && a.rx.dvbs.symbolRate > 0) w.mhz = a.rx.dvbs.symbolRate * (1 + a.rx.dvbs.rollOff) / 1e6;
     else if (isGeneralFamily(a.family)) w.mhz = generalChannelWidthMhz(a);
+    else if (a.family == 10 && (!a.engine.running() || a.rx.standard == 11)) {   // DRM: the channel filter choice (Receiver panel), else the occupancy found
+        const double det = a.engine.running() && a.rx.drm.occupancy >= 0 ? a.rx.drm.bandwidthKhz : 0;
+        const int ch = std::max(0, std::min(2, (int)plat::prefs().getI("drmChanFilter", 0)));
+        w.mhz = drmfilter::boxWidthMhz(ch, det);
+    }
     else if (const ModeTuning* mt = modeTuning(a.family + 2)) w.mhz = mt->bandwidthMhz;
     return w;
 }

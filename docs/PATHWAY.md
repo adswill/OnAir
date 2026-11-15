@@ -2374,3 +2374,7 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - New Names tab on the TETRA screen: your own names for terminal (ISSI) and talkgroup (GSSI) numbers, with notes, optional network (MCC/MNC), colour code and site. Names appear in the slot lines, the Messages table, the Talkgroups table and the Map, and a "Speaking now" line shows who is on the air in calls that are not encrypted. Stored in the data folder, never shipped.
 - Import reads the own CSV (type,id,name,notes,mcc,mnc,colour_code,site) or plain lines (1001;Name, 1001,Name, ISSI=Name); export writes the CSV. The SDR# TETRA Trunk Tracker file layout could not be confirmed from public documentation, so only its plain "number, separator, name" lines read; see docs/TETRA-NAMES.md.
 - Tested by a unit test (parser, lookup, persistence round trip) with made-up data; the screen was only syntax-checked.
+
+## 2026-11-15: DRM channel filter box follows the setting
+
+- Bug report: with the DRM channel filter set to 10 kHz the spectrum still drew a 20 kHz box. The box came from the fixed mode table width (20 kHz) and ignored the Channel filter choice. It now shows 10 or 20 kHz as chosen, or on "off" the occupancy the receiver found in the signal. The receiver still detects the occupancy by itself. Logic test drm_filter; only checked by syntax and the width function, not run on a live DRM signal.
