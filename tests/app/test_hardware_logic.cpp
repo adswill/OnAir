@@ -186,6 +186,6 @@ int main() {
         CHECK(u.rfind("USB radio drivers ([x] works, [ ] missing)\n", 0) == 0 && t.find(u) != std::string::npos, "the USB copy is the USB part of the report");
         CHECK(u.find("Media support") == std::string::npos && u.find("Requirements") == std::string::npos, "the USB copy has only the USB part");
     }
-    std::printf(failures ? "FAILED\n" : "hardware_logic ok\n");
+    std::printf("%s\n", failures ? "FAILED" : "hardware_logic ok");
     return failures ? 1 : 0;
 }
