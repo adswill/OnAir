@@ -1,8 +1,8 @@
-// Debug report: Ctrl+D (Cmd+D), Help > Debug report, a crash (at the next start) or a hang (the watchdog) makes a debug dump: the stacks
+// Report a problem: Ctrl+D (Cmd+D), Help > Report a problem, a crash (at the next start) or a hang (the watchdog) makes a debug dump: the stacks
 // of all threads (core debug_dump.h; no heap, no symbols), this computer (sysinfo.h), at most 1 MB of the newest log and a screenshot
 // of the OnAir window. A window then asks what the user was doing, how to reproduce it and what the problem is; Save writes one zip
 // (report.txt, dump.json, dump.dmp, system.txt, log.txt, crash.txt, screenshot.png) to attach to a GitHub issue. Nothing is uploaded.
-// The developer opens the dump with the symbols of the same build (cmake target debug_symbols_zip; the analysis script in the notes).
+// The developer opens the dump with the symbols of the same build (cmake target debug_symbols_zip; tools/debug_dump/analyse_debug_dump.py).
 #pragma once
 #include <string>
 
@@ -15,7 +15,7 @@ void debugReportInit(App& a, bool devRun);
 void debugReportFrame(App& a);
 // Every pass of the main loop, also while the window is minimised (no frame is drawn then): the main thread is alive.
 void debugReportBeat();
-// Help > Debug report, the command palette: the same as Ctrl+D (the dump and the screenshot are taken in this frame).
+// Help > Report a problem, the command palette: the same as Ctrl+D (the dump and the screenshot are taken in this frame).
 void debugReportRequest();
 // At exit: stops the watchdog.
 void debugReportShutdown();

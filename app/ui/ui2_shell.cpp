@@ -33,7 +33,6 @@
 #endif
 #include "dect2/engine/overload_hint.h"
 #include "../platform/discord_rpc.h"
-#include "../panels/report_problem.h"
 #include "../panels/debug_report.h"
 #include "../panels/backup_ui.h"
 #include "../badges/badges_ui.h"
@@ -971,8 +970,7 @@ float menuBar(App& a) {
             if (ImGui::MenuItem(tr("Join the OnAir Discord"))) dect2::openUrl(appcodec::discordInviteUrl());
             if (ImGui::MenuItem(tr("Credits and licences"))) { a.creditsOpen = true; a.creditsTab = 1; }
             ImGui::Separator();
-            if (ImGui::MenuItem(tr("Report a problem"))) a.reportOpen = true;
-            if (ImGui::MenuItem(tr("Debug report"), "Ctrl+D")) debugReportRequest();
+            if (ImGui::MenuItem(tr("Report a problem"), "Ctrl+D")) debugReportRequest();
             ImGui::EndMenu();
         }
         tourMark("help", ImVec2(hx0, my0), ImVec2(ImGui::GetCursorScreenPos().x, my1));
@@ -987,7 +985,6 @@ float menuBar(App& a) {
     voiceKeysWindow(a);
     inputmap::window();
     tx::windowPanel(a);
-    reportProblemWindow(a);
     modeVisibilityWindow(a);
     settingsWindow(a);
     badgesui::window(a);   // Server > Badges... and the "Badge earned" toast (app/badges)

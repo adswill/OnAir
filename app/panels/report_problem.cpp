@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// Help > Report a problem (report_problem.h). The zip is written only when the user presses Save, to a file the user picks.
+// Help > Report a problem (report_problem.h): the troubleshooter and the radio/mode text of the report window (debug_report.cpp).
 // Everything here runs on this computer: no network, no recordings, no settings file. Log lines are shortened (personal folder
 // paths become "~" or the folder name) and a line that may hold a key, token, password or serial is left out.
 #include "report_problem.h"
@@ -20,7 +20,6 @@
 namespace {
 
 constexpr int kNumQ = 5;
-constexpr size_t kLogLines = 200;
 
 struct Question { const char* ask; const char* fix; };
 const Question kQuestions[kNumQ] = {
@@ -38,10 +37,6 @@ const Question kQuestions[kNumQ] = {
 
 struct ReportState {
     int answers[kNumQ] = {0, 0, 0, 0, 0};   // 0 not answered, 1 yes, 2 no
-    int builtAnswers[kNumQ] = {-1, -1, -1, -1, -1};
-    bool built = false;
-    std::string diag;    // the diagnostics.txt text, as it will be saved
-    std::string status;  // the result of the last Save
 };
 
 ReportState& state() { static ReportState s; return s; }
@@ -120,22 +115,7 @@ std::string rangeLine(double lo, double hi, double scale, const char* unit) {
     return b;
 }
 
-std::string readmeText() {
-    return "OnAir problem report\n"
-           "\n"
-           "This zip was made on your computer by Help > Report a problem. Nothing was uploaded.\n"
-           "\n"
-           "Files:\n"
-           "  diagnostics.txt  the OnAir version, this computer, the selected source, the active mode,\n"
-           "                   the sample rate, the enabled features, your troubleshooter answers and the\n"
-           "                   last 200 log lines (folder paths shortened, lines that may hold a secret left out)\n"
-           "  README.txt       this file\n"
-           "\n"
-           "To report the problem, attach this zip to a new issue on GitHub and say what you were doing.\n"
-           "Recordings, settings, keys and passwords are not in this zip.\n";
-}
-
-std::string buildDiagnostics(App& a, const int* answers, bool withLog = true) {   // answers nullptr: no troubleshooter part
+std::string buildDiagnostics(App& a) {
     std::string os, cpu, gpu;
     systemInfoText(os, cpu, gpu);
     std::string s = "OnAir problem report\n";
@@ -184,21 +164,6 @@ std::string buildDiagnostics(App& a, const int* answers, bool withLog = true) { 
     if (a.rx.gpuAvailable) s += "  GPU LDPC decoder\n";
     if (a.netOn) s += "  remote control API\n";
 
-    if (answers) s += "\nTroubleshooter answers:\n";
-    for (int i = 0; answers && i < kNumQ; i++) {
-        const char* ans = answers[i] == 1 ? "yes" : answers[i] == 2 ? "no" : "not answered";
-        s += std::string("  ") + kQuestions[i].ask + " " + ans + "\n";
-    }
-
-    if (!withLog) return s;
-    size_t total = 0;
-    std::vector<std::string> lines = a.engine.logSnapshot(total);
-    const size_t from = lines.size() > kLogLines ? lines.size() - kLogLines : 0;
-    s += "\nLog (last " + std::to_string(lines.size() - from) + " lines):\n";
-    for (size_t i = from; i < lines.size(); i++) {
-        if (mayHoldSecret(lines[i])) { s += "[line left out: it may hold a key, a token or a password]\n"; continue; }
-        s += clean(lines[i]) + "\n";
-    }
     return s;
 }
 
@@ -206,43 +171,14 @@ std::string buildDiagnostics(App& a, const int* answers, bool withLog = true) { 
 
 std::string reportCleanText(const std::string& text) { return clean(text); }
 bool reportMayHoldSecret(const std::string& line) { return mayHoldSecret(line); }
-std::string reportRadioAndMode(App& a) { return buildDiagnostics(a, nullptr, false); }
+std::string reportRadioAndMode(App& a) { return buildDiagnostics(a); }
 
-void reportProblemWindow(App& a) {
+void reportTroubleshooterReset() {
+    for (int& v : state().answers) v = 0;
+}
+
+void reportTroubleshooter() {
     ReportState& st = state();
-    if (!a.reportOpen) { st.built = false; return; }
-
-    // the text is rebuilt when the window opens, when an answer changes, and on Refresh
-    bool answersChanged = false;
-    for (int i = 0; i < kNumQ; i++) if (st.answers[i] != st.builtAnswers[i]) answersChanged = true;
-    if (!st.built || answersChanged) {
-        st.diag = buildDiagnostics(a, st.answers);
-        for (int i = 0; i < kNumQ; i++) st.builtAnswers[i] = st.answers[i];
-        st.built = true;
-    }
-
-    const ImGuiViewport* vp = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x * 0.5f, vp->WorkPos.y + vp->WorkSize.y * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(std::min(760 * gUi, vp->WorkSize.x * 0.95f), std::min(720 * gUi, vp->WorkSize.y * 0.9f)), ImGuiCond_Appearing);
-    if (!ImGui::Begin(trw("Report a problem"), &a.reportOpen)) { ImGui::End(); return; }
-
-    ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextUnformatted(tr("This writes one zip file on this computer that you can attach to a GitHub issue. Nothing is uploaded. Check the list below before you save."));
-    ImGui::PopTextWrapPos();
-
-    ImGui::Spacing();
-    ImGui::SeparatorText(tr("Included in the zip"));
-    ImGui::BulletText("%s", tr("diagnostics.txt: the version, this computer, the selected source and its device info, the active mode, the sample rate, the enabled features, your troubleshooter answers and the last 200 log lines"));
-    ImGui::BulletText("%s", tr("README.txt: what the zip is and how to attach it"));
-    ImGui::BulletText("%s", tr("Folder paths are shortened. Log lines that may hold a key, a token or a password are left out."));
-    ImGui::Spacing();
-    ImGui::SeparatorText(tr("Left out"));
-    ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextUnformatted(tr("Recordings, settings files, keys, tokens, passwords, serial numbers, device addresses, file paths beyond the folder name, and the map server login."));
-    ImGui::PopTextWrapPos();
-
-    ImGui::Spacing();
-    ImGui::SeparatorText(tr("Troubleshooter"));
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextUnformatted(tr("Answer what you can. Each No shows one thing to try."));
     ImGui::PopTextWrapPos();
@@ -264,31 +200,13 @@ void reportProblemWindow(App& a) {
         ImGui::PopID();
         ImGui::Spacing();
     }
+}
 
-    ImGui::SeparatorText(tr("Preview of diagnostics.txt"));
-    {
-        const size_t lines = (size_t)std::count(st.diag.begin(), st.diag.end(), '\n');
-        const std::string info = std::to_string(lines) + " " + tr("lines") + ", " + std::to_string(st.diag.size()) + " " + tr("bytes");
-        ImGui::TextDisabled("%s", info.c_str());
+std::string reportTroubleshooterAnswers() {
+    std::string s;
+    for (int i = 0; i < kNumQ; i++) {
+        const int v = state().answers[i];
+        if (v != 0) s += std::string("  ") + kQuestions[i].ask + " " + (v == 1 ? "yes" : "no") + "\n";
     }
-    ImGui::BeginChild("##reportpreview", ImVec2(0, 200 * gUi), true);
-    ImGui::PushTextWrapPos(0.0f);
-    ImGui::TextUnformatted(st.diag.c_str());
-    ImGui::PopTextWrapPos();
-    ImGui::EndChild();
-
-    if (ImGui::Button(tr("Refresh preview"))) st.built = false;
-    ImGui::SameLine();
-    if (ImGui::Button(tr("Save report zip..."))) {
-        const std::string path = plat::saveFileDialog("onair-report.zip");
-        if (!path.empty()) {
-            std::vector<std::pair<std::string, std::string>> files = {{"diagnostics.txt", st.diag}, {"README.txt", readmeText()}};
-            st.status = writeZipFile(path, files)
-                ? tr("Saved. Nothing was uploaded: attach this file to your GitHub issue.")
-                : tr("Could not write the zip file.");
-        }
-    }
-    if (!st.status.empty()) { ImGui::SameLine(); ImGui::TextUnformatted(st.status.c_str()); }
-
-    ImGui::End();
+    return s;
 }

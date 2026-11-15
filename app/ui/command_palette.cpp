@@ -60,7 +60,7 @@ std::vector<Cmd> collect(App& a) {
     c.push_back({"Credits and licences", "Action", [](App& x) { x.creditsOpen = true; x.creditsTab = 1; }});
     c.push_back({"Documentation", "Action", [](App&) { dect2::openUrl("https://on-air.dev/docs/"); }});
     c.push_back({"Troubleshooting", "Action", [](App&) { dect2::openUrl("https://on-air.dev/docs/troubleshooting/"); }});
-    c.push_back({"Debug report (Ctrl+D)", "Action", [](App&) { debugReportRequest(); }});
+    c.push_back({"Report a problem (Ctrl+D)", "Action", [](App&) { debugReportRequest(); }});
     return c;
 }
 

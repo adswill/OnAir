@@ -275,6 +275,7 @@ void capture(App& a, Trigger t, const std::string& existingDump, const std::stri
     s.log = gatherLog(a, t == Trigger::Crash || t == Trigger::HangLastRun);
     s.crashTxt = crashText;
     s.q1.clear(); s.q2.clear(); s.q3.clear();
+    reportTroubleshooterReset();
     s.incDump = s.haveDump; s.incShot = true; s.incSys = true; s.incLog = true;
     s.status.clear();
     s.open = true;
@@ -291,6 +292,8 @@ std::string reportText(const State& s) {
     r += "What were you doing?\n" + (s.q1.empty() ? std::string("(no answer)") : s.q1) + "\n\n";
     r += "How can you reproduce it?\n" + (s.q2.empty() ? std::string("(no answer)") : s.q2) + "\n\n";
     r += "What is the core problem, or what do you want changed?\n" + (s.q3.empty() ? std::string("(no answer)") : s.q3) + "\n\n";
+    const std::string answers = reportTroubleshooterAnswers();
+    r += "Troubleshooter answers:\n" + (answers.empty() ? std::string("  (none)\n") : answers) + "\n";
     r += "Radio and mode at the time of the report:\n" + s.radio + "\n";
     r += "Files: report.txt (this), dump.json, " + std::string(s.incDump && s.haveDump ? "dump.dmp (stacks of all threads, no heap), " : "") +
          (s.incSys ? "system.txt, " : "") + (s.incLog ? "log.txt (at most 1 MB, newest last), " : "") +
@@ -342,7 +345,7 @@ void reportWindow(App& a) {
     ImGui::SetNextWindowSize(ImVec2(std::min(720 * gUi, vp->WorkSize.x * 0.95f), 0.f), ImGuiCond_Always);   // the height follows the content
     ImGui::SetNextWindowSizeConstraints(ImVec2(0.f, 0.f), ImVec2(FLT_MAX, vp->WorkSize.y * 0.9f));
     bool open = true;
-    if (!ImGui::Begin(trw("Debug report"), &open)) { ImGui::End(); if (!open) s.open = false; return; }
+    if (!ImGui::Begin(trw("Report a problem"), &open)) { ImGui::End(); if (!open) s.open = false; return; }
     {   // the height follows the content: keep the bottom on the screen when it grows
         const float bottom = vp->WorkPos.y + vp->WorkSize.y;
         const ImVec2 p = ImGui::GetWindowPos(), sz = ImGui::GetWindowSize();
@@ -351,7 +354,7 @@ void reportWindow(App& a) {
 
     ImGui::PushTextWrapPos(0.0f);
     switch (s.trigger) {
-        case Trigger::CtrlD: ImGui::TextUnformatted(tr("OnAir saved its current state (Ctrl+D).")); break;
+        case Trigger::CtrlD: ImGui::TextUnformatted(tr("OnAir saved its current state.")); break;
         case Trigger::Crash: ImGui::TextUnformatted(tr("OnAir crashed the last time it ran. Its state at the crash was saved.")); break;
         case Trigger::Hang: ImGui::TextUnformatted(tr("OnAir did not respond for a while. Its state at that moment was saved.")); break;
         case Trigger::HangLastRun: ImGui::TextUnformatted(tr("OnAir did not respond the last time it ran, and was closed. Its state at that moment was saved.")); break;
@@ -367,6 +370,10 @@ void reportWindow(App& a) {
     textBox("##q2", s.q2, 70 * gUi);
     ImGui::TextUnformatted(tr("What is the core problem, or what do you want changed?"));
     textBox("##q3", s.q3, 70 * gUi);
+    if (ImGui::TreeNode(trw("Troubleshooter (optional)"))) {
+        reportTroubleshooter();
+        ImGui::TreePop();
+    }
 
     ImGui::Spacing();
     ImGui::SeparatorText(tr("In the zip"));
