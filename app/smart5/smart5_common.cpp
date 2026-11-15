@@ -29,17 +29,20 @@ std::string utc(double t, bool date) {
     return b;
 }
 
+namespace { std::map<std::string, double>& lastPosts() { static std::map<std::string, double> m; return m; } }
+
 void post(const char* area, const char* kind, int severity, const std::string& key, const std::string& text) {
     // the same finding about the same thing at most once in 10 minutes (a flapping input would flood the list)
-    static std::map<std::string, double> last;
     const double now = wall();
-    double& l = last[std::string(kind) + "|" + key];
+    double& l = lastPosts()[std::string(kind) + "|" + key];
     if (l > 0 && now - l < 600) return;
     l = now;
     dect2::insight::Insight i;
     i.time = now; i.area = area; i.kind = kind; i.severity = severity; i.key = key; i.text = text;
     dect2::insight::live().post(i);
 }
+
+void clearPosts() { lastPosts().clear(); }
 
 void edge(bool& state, bool on, const char* area, const char* kind, int severity, const std::string& key, const std::string& text) {
     if (on && !state) post(area, kind, severity, key, text);
@@ -54,6 +57,7 @@ void line(int severity, const std::string& text) {
 
 bool card(const char* id) {
     ImGui::PushID(id);
+    if (!insightAnalysisOn()) return false;   // analysis off: no Smart checks block at all
     const bool open = typo::collapsingHeader(trw("Smart checks"), ImGuiTreeNodeFlags_DefaultOpen);
     ImGui::PopID();
     if (open && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Automatic: these run on what the receiver already measures. Findings also go to View > Insights."));
@@ -82,7 +86,13 @@ void writeData(const char* file, const std::string& text) {
 
 }  // namespace s5ui
 
+void smart5ClearFindings() {
+    s5ui::clearPosts();
+    smart5BroadcastClear();
+}
+
 void smart5Tick(App& a) {
+    if (!insightAnalysisOn()) return;
     smart5BroadcastTick(a);
     smart5TvTick(a);
     smart5SatTick(a);

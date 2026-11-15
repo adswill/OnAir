@@ -318,6 +318,8 @@ void smart5BroadcastTick(App& a) {
     hdTick(a);
 }
 
+void smart5BroadcastClear() { F.dog.reset(); F.evSeen = 0; F.seq = 0; }
+
 // ---------------------------------------------------------------------------------------------------------------- cards
 void smart5FmCard(App& a) {
     if (!s5ui::card("s5fm")) return;

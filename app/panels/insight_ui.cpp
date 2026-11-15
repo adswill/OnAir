@@ -477,6 +477,8 @@ void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float
 }
 
 // the pager view's "Hide automatic pages": the capcode sends automatic or test pages (the hub's key is "<protocol> <address>"); cached a few seconds
+bool insightAnalysisOn() { return S.on; }
+
 bool insightPagerAutomatic(const char* protocol, uint32_t address) {
     static std::map<std::string, bool> cache;
     static double at = 0;
@@ -535,7 +537,7 @@ void insightWindow(App& a) {
         if (ImGui::Checkbox(tr("Analyse decodes"), &S.on)) { plat::prefs().setB("insight.on", S.on); in::live().enable(S.on); }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Who hears me, antenna pattern, APRS health, talkgroup activity, trunk load, automatic pages, overdue broadcasts, aircraft manoeuvres, thermals, HFDL propagation, AIS ducting, NAVTEX warnings, mesh census, LoRaWAN health, my water meter. All of it stays on this computer."));
         ImGui::SameLine();
-        if (ImGui::Button(tr("Clear findings"))) S.rows.clear();
+        if (ImGui::Button(tr("Clear findings"))) { S.rows.clear(); smart5ClearFindings(); }
     }
     ImGui::End();
 }

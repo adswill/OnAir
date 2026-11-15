@@ -858,6 +858,7 @@ void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float
 bool wmbusIsMine(const std::string& meterKey);       // insight_ui.cpp: the wM-Bus meters the user marked as their own (leak check)
 void wmbusSetMine(const std::string& meterKey, bool mine);
 std::string insightBustedHint(const std::string& call, std::string* why);
+bool insightAnalysisOn();   // insight_ui.cpp: "Analyse decodes" is on (the Smart checks cards show only then)
 bool insightPagerAutomatic(const char* protocol, uint32_t address);   // insight_ui.cpp: the capcode sends automatic or test pages (the pager view's hide switch)   // insight_ui.cpp: the call a decoded one is probably a busted copy of, "" if none   // insight_ui.cpp: an FT8 / FT4 / JS8 decode for who hears me and the antenna pattern
 // app/smart5: the round-5 smart cards in the mode screens (docs/SMART5-UI-3.9.md); fed every frame by smart5Tick (from insightWindow)
 void smart5FmCard(App& a); void smart5AmCard(App& a); void smart5DabCard(App& a); void smart5DrmCard(App& a); void smart5HdCard(App& a);

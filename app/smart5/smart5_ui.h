@@ -21,6 +21,7 @@ void edge(bool& state, bool on, const char* area, const char* kind, int severity
 // one status line: amber or red when severity > 0
 void line(int severity, const std::string& text);
 // the card's header ("Smart checks"); false when folded. The details go under detailsHeader().
+void clearPosts();                                   // forget the 10-minute repeat throttle of post()
 bool card(const char* id);
 bool details(const char* id);
 std::string readData(const char* file);              // plat::dataDir()/file, "" when absent
@@ -30,7 +31,9 @@ void writeData(const char* file, const std::string& text);
 
 // app/smart5/*.cpp: feeding (called every frame) and the per-area summaries for View > Insights
 void smart5Tick(App& a);
+void smart5ClearFindings();            // "Clear findings": forget the cards' remembered findings (FM watchdog events, post() throttle)
 void smart5BroadcastTick(App& a);
+void smart5BroadcastClear();           // FM watchdog back to a clean state
 void smart5TvTick(App& a);
 void smart5SatTick(App& a);
 void smart5SciTick(App& a);
