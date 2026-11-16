@@ -363,7 +363,7 @@ void mapCanvas(App& a, ImVec2 size) {
             const ImVec2 m = ImGui::GetIO().MousePos;
             if (std::fabs(m.x - q.x) > 7 * gUi || std::fabs(m.y - q.y) > 7 * gUi) return;
             ImGui::SetTooltip("%s\naddress %s, %u frames%s%s%s", nameOf(g).c_str(), hex6(g.addr).c_str(), g.messages, kind[0] ? "\n" : "", kind,
-                              g.posOutliers ? ("\n" + std::to_string(g.posOutliers) + " odd position report(s) ignored").c_str() : "");
+                              (std::string(g.posFromList ? "\nposition from the station list (the decoded one was far off)" : "") + (g.posOutliers ? "\n" + std::to_string(g.posOutliers) + " odd position report(s) ignored" : "")).c_str());
         };
         for (const auto& g : t.stations) {   // estimated / unconfirmed stations: an open square; every station with a coverage: its reach
             if (!g.hasPos && !g.hasEstimate && !g.hasPending) continue;

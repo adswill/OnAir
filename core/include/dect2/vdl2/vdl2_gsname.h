@@ -38,4 +38,24 @@ inline std::string vdl2StationName(const Vdl2GroundStation& g, const AirportDb& 
     return "";
 }
 
+// The station list: a ground station reports the airports it covers; their positions (OnAir's OurAirports table, public domain) tell where it is.
+// A decoded position more than 600 km from the first known airport it covers is a damaged coordinate (a station in Paris drawn in the
+// mid-Atlantic): the airport's position is used instead and posFromList is set. A station without a known airport is left alone. True when changed.
+inline bool vdl2StationCheckList(Vdl2GroundStation& g, const AirportDb& db) {
+    constexpr double kSaneNm = 600.0 / 1.852;
+    if (!g.hasPos || g.airports.empty()) return false;
+    std::string tok;
+    for (size_t i = 0; i <= g.airports.size(); i++) {
+        const char c = i < g.airports.size() ? g.airports[i] : ' ';
+        if (std::isalnum((unsigned char)c)) { tok += (char)std::toupper((unsigned char)c); continue; }
+        const Airport* a = (tok.size() >= 3 && tok.size() <= 4) ? db.find(tok) : nullptr;
+        tok.clear();
+        if (!a) continue;
+        if (vdl2DistNm(g.lat, g.lon, a->latDeg, a->lonDeg) <= kSaneNm) return false;
+        g.lat = a->latDeg; g.lon = a->lonDeg; g.posFromList = true;
+        return true;
+    }
+    return false;
+}
+
 }  // namespace dect2
