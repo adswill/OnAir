@@ -14,7 +14,11 @@
 -keep class * implements io.github.adswill.onair.ui.panels.ModePanelProvider { public <init>(); }
 -keepnames interface io.github.adswill.onair.ui.panels.ModePanelProvider
 
-# The C++ side never calls back into Kotlin today. A future callback (FindClass / GetMethodID) needs its class and members kept here.
+# The one callback into Kotlin: native/src/jni_xhe.cpp looks the xHE-AAC decoder's methods up by name (GetMethodID: unavailableReason, open,
+# decode, outRate, outChannels, flush, close). Without these keeps R8 renames them and the app aborts at start (NoSuchMethodError in nativeXheRegister).
+-keep class io.github.adswill.onair.audio.XheAacDecoder { *; }
+-keep class io.github.adswill.onair.audio.XheNative { *; }
+# Any other FindClass / GetMethodID callback added later needs its class and members kept here too.
 
 # Readable crash reports: keep file names and line numbers, hide the original source file name.
 -keepattributes SourceFile,LineNumberTable
