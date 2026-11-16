@@ -5471,7 +5471,7 @@ CRC bad	CRC 错误
 CRC failed	CRC 失败
 CRC failed (kept for memory ARQ)	CRC 失败（为记忆 ARQ 保留）
 CRC good	CRC 正确
-CRF	CRF
+CRF	恒定质量因子（CRF）
 CRF needs x264 or x265	CRF 需要 x264 或 x265
 CUSTOM MODES	自定义模式
 CW / fast	CW / 快速
@@ -7882,8 +7882,8 @@ PTT by	PTT 方式
 PTT by %s (the rig's profile in the Ham view).	PTT 由 %s（Ham 视图中的电台配置文件）。
 PTT rig	PTT 电台
 PTT: a Hamlib rig keys the transmitter over CAT; none means VOX (the rig keys on the audio). Audio out is the sound card that feeds the rig. Receive audio comes from the radio source chosen in the toolbar (an SDR, or the rig's sound card as an audio source).	PTT：Hamlib 电台通过 CAT 控制发射机；无则使用 VOX（电台靠音频触发）。音频输出是馈给电台的声卡。接收音频来自工具栏选择的信号源（SDR，或作为音频来源的电台声卡）。
-Packet 1200	Packet 1200
-Packet 9600	Packet 9600
+Packet 1200	AX.25 分组无线电 1200 波特
+Packet 9600	AX.25 分组无线电 9600 波特
 Packet radio, sync only	分组无线电，仅同步
 Packets / syncs	数据包 / 同步
 Packets in %llu, out %llu, lost %llu	数据包入 %llu、出 %llu、丢失 %llu
