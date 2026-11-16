@@ -18,7 +18,8 @@
 
 namespace dect2 {
 
-SondeNmeaOut& SondeNmeaOut::get() { static SondeNmeaOut* s = new SondeNmeaOut(); return *s; }   // never destroyed: the thread may still run at exit
+SondeNmeaOut& SondeNmeaOut::get() { static SondeNmeaOut* s = new SondeNmeaOut(); return *s; }
+SondeNmeaOut& SondeNmeaOut::course() { static SondeNmeaOut* s = new SondeNmeaOut(); return *s; }   // never destroyed: the thread may still run at exit
 
 namespace {
 #ifndef _WIN32

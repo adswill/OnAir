@@ -23,14 +23,15 @@ struct SondeNmeaConfig {
 
 class SondeNmeaOut {
 public:
-    static SondeNmeaOut& get();
+    static SondeNmeaOut& get();                    // the selected sonde's own position
+    static SondeNmeaOut& course();                 // the second, independent output: the predicted course (sonde_course.h)
+    SondeNmeaOut() = default;
     void configure(const SondeNmeaConfig& c);      // opens (or closes) the output
     void send(const std::string& text);            // the latest sentences; "" sends nothing. Never blocks.
     std::string status() const;                    // "off", "sending to ...", or why it cannot
     unsigned long long sentCount() const;
     void stop();
 private:
-    SondeNmeaOut() = default;
     void run(SondeNmeaConfig c, unsigned long long myGen);
     mutable std::mutex mu_;
     std::condition_variable cv_;
