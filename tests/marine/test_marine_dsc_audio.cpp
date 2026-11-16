@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 using namespace dect2;
+using namespace dect2::marine;
 #include "../common/test_util.h"
 
 struct Wav { std::vector<float> x; double rate = 0; };
