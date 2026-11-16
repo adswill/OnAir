@@ -2432,3 +2432,6 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 - Flaky tests seen and passing on re-run: audio_engine (Windows timeout), sarsat_engine (Linux CPU budget), dtmb_threads (macOS under load).
 - PRs 523, 525, 528, 531, 532, 535, 538 are in; 528 went in on rebased commits, so it was closed with a note. 512 and 527 stay drafts. Thank-you comments and issue replies posted. Detachable windows (#242) left for 4.3 on feat42-windows.
 - Open: RX888 MkII rates above 64 Msps reported as not reachable by some users (no log yet, likely USB 3 or CPU limits).
+
+## 2026-11-16 ISM waterfall stalls (#542)
+- ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().

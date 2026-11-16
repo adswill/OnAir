@@ -45,6 +45,7 @@ static Result run(const std::vector<cf32>& x) {
     for (size_t i = 0; i < x.size(); i += chunk) rx.feed(x.data() + i, std::min(chunk, x.size() - i));
     std::vector<cf32> z(65536, cf32(0, 0));   // let the last burst end
     rx.feed(z.data(), z.size());
+    rx.flush();
     rx.telemetry(r.tel, 0);
     if (getenv("ISM_RAW"))
         for (const auto& w : r.tel.raws) {

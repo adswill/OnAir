@@ -165,6 +165,7 @@ int main() {
         for (size_t i = 0; i < x.size(); i += 65536) rx.feed(x.data() + i, std::min<size_t>(65536, x.size() - i));
         std::vector<cf32> z(65536, cf32(0, 0));
         rx.feed(z.data(), z.size());
+        rx.flush();
         std::string miss;
         if (devices)
             for (IsmTx p : kNew) if (!got.count((int)p)) { if (!miss.empty()) miss += ", "; miss += ismTxName(p); }

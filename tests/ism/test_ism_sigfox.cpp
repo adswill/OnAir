@@ -44,6 +44,7 @@ static IsmTelemetry run(const std::vector<cf32>& x, double rate, double dialOff)
     const size_t chunk = 65536;
     for (size_t i = 0; i < x.size(); i += chunk) rx.feed(x.data() + i, std::min(chunk, x.size() - i));
     IsmTelemetry t;
+    rx.flush();
     rx.telemetry(t, 0);
     return t;
 }
