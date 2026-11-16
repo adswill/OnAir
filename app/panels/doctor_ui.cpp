@@ -25,6 +25,8 @@ struct State {
     dr::AutoOpen autoOpen;
     bool autoCheck = false;      // the window opened by itself: run the check without being asked
     bool autoLoaded = false, autoOn = true;
+    std::string gainSig, radioSig; bool agcSeen = false, sigSeen = false;   // the gain-related settings last seen, to notice a change by hand
+    double lastManualGain = -1;  // ImGui time of the last one
     bool clipOpen = false, clipConsent = false;
     std::string clipNote;
     size_t want = 0;
@@ -217,8 +219,22 @@ void clipPanel(App& a) {
 }
 
 void autoTick(App& a) {
-    if (!S.autoLoaded) { S.autoLoaded = true; S.autoOn = plat::prefs().getB("doctorAutoOpen", true); }
-    if (!S.autoOn || a.doctorOpen) return;
+    S.autoOn = plat::prefs().getB("doctorAutoOpen", true);   // Settings > Decoding can change it any time
+    // the user's gain changes by hand (slider, stages, Auto on/off, decimation): the automatic opening waits 60 s (dr::autoOpenAllowed)
+    {
+        const std::string gain = std::to_string(a.tune.gainDb) + "|" + std::to_string(a.tune.lnaDb) + "|" + std::to_string(a.tune.vgaDb) + "|" + std::to_string(a.tune.ampOn);
+        std::string radio;
+        for (const auto& kv : a.tune.radio) radio += kv.first + "=" + kv.second + "|";
+        if (!S.sigSeen) { S.sigSeen = true; S.gainSig = gain; S.radioSig = radio; S.agcSeen = a.agcOn; }
+        else {
+            // with Auto on the gain moves by itself: only a switch of Auto or a change of a radio setting counts then
+            const bool byHand = a.agcOn != S.agcSeen || radio != S.radioSig || (gain != S.gainSig && !a.agcOn);
+            if (byHand) S.lastManualGain = ImGui::GetTime();
+            S.gainSig = gain; S.radioSig = radio; S.agcSeen = a.agcOn;
+        }
+    }
+    if (a.doctorOpen) return;
+    if (!dr::autoOpenAllowed(ImGui::GetTime(), S.lastManualGain, S.autoOn)) return;
     const bool radio = a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && a.devices[(size_t)a.devIdx].isRadio();
     const dr::StageInput in = stageInput(a);
     const bool decoding = in.syncState >= 2 || in.blocksOk > 0;
@@ -302,7 +318,7 @@ void receptionDoctorWindow(App& a) {
         clipPanel(a);
     }
     if (ImGui::CollapsingHeader(trw("Advanced"))) {
-        if (ImGui::Checkbox(tr("Open by itself when nothing decodes"), &S.autoOn)) plat::prefs().setB("doctorAutoOpen", S.autoOn);
+        if (ImGui::Checkbox(tr("Open by itself when nothing decodes"), &S.autoOn)) plat::prefs().setB("doctorAutoOpen", S.autoOn);   // also in Settings > Decoding (doctorAutoOpen)
     }
     ImGui::End();
 }
