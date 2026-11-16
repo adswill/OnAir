@@ -13,6 +13,7 @@
 #include <ctime>
 
 void sondeNmeaControls();   // sonde_nmea_ui.cpp
+void sondeLiveKmlControls(const dect2::SondeInfo* s);   // sonde_live_ui.cpp
 
 namespace {
 const char* kKeys[dect2::kNumFeeds] = {"feedSbs", "feedBeast", "feedAis", "feedAprsIs", "feedKiss", "feedAcars", "feedVdl2", "feedGnss", "feedBle", "feedLora"};
@@ -478,6 +479,9 @@ void tabStation(App& a, dect2::FeedConfig& c, bool& changed) {
 void tabNmea() {
     ImGui::TextDisabled("%s", tr("For a map or navigation program that takes a GPS: the sonde chosen in the radiosonde list is sent as GPS sentences."));
     sondeNmeaControls();
+    ImGui::Separator();
+    ImGui::TextDisabled("%s", tr("Selected sonde in Google Earth"));
+    sondeLiveKmlControls(nullptr);
 }
 
 const char* tabName(int i) {

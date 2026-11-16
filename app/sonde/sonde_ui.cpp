@@ -14,6 +14,7 @@
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "dect2/sonde/sonde_land.h"
+#include "dect2/sonde/sonde_course.h"
 #include "dect2/sonde/sonde_map_overlay.h"
 #include "dect2/sonde/sonde_predict.h"
 #include "dect2/geo/maidenhead.h"
@@ -29,6 +30,9 @@ void sondeSitesDraw(App& a, ImDrawList* dl, ImVec2 p0, ImVec2 size, int zoom);
 void sondeChaseControls(App& a);   // sonde_chase_ui.cpp
 void sondeNmeaControls();           // sonde_nmea_ui.cpp: the selected sonde as NMEA to a serial port, TCP or UDP
 void sondeNmeaTick(const dect2::SondeInfo* sel);
+void sondeLiveKmlControls(const dect2::SondeInfo* s);   // sonde_live_ui.cpp: the live Google Earth KML of the selected sonde
+void sondeLiveKmlTick(const dect2::SondeInfo* sel);
+bool sondePredictedCourse(const dect2::SondeInfo& s, std::vector<dect2::sondecourse::Point>& out);   // the predicted rest of the flight, for the live KML and the NMEA course
 // sonde_predict_ui.cpp: the landing prediction 4.0
 const dect2::SondePrediction* sondePredict40(const dect2::SondeInfo& s, bool selected, const dect2::tawhiri::Result* tw);
 bool sondePredict40On();
@@ -205,6 +209,7 @@ void tick(App& a) {
     }
     if (!a.engine.running()) S.lastSeq = 0;
     sondeNmeaTick(live(a) && a.engine.running() ? selected(a.rx.sonde) : nullptr);   // NMEA output of the selected sonde (off until ticked)
+    sondeLiveKmlTick(live(a) && a.engine.running() ? selected(a.rx.sonde) : nullptr);   // live Google Earth KML (off until "Live Google Earth..." is pressed)
     if (S.autoStart) {   // the optional start at a launch window: a receiver already running uses up the window, so a stop by hand stays a stop
         const dect2::ease::SondeWindow w = dect2::ease::sondeWindow((int64_t)time(nullptr));
         const bool busy = a.engine.running() || txActive();
@@ -457,6 +462,7 @@ void detailCard(const App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("The flight for Google Earth or OsmAnd: the ascent and the descent as lines with altitude, the launch, the burst and the landing (or the predicted landing).");
         ImGui::SameLine();
         if (ImGui::SmallButton("GPX...")) put(".gpx", dect2::xport::toGpx(fl.points, fl.tracks, s.serial));
+        sondeLiveKmlControls(&s);
         if (!tnote.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", tnote.c_str()); }
     }
     if (sp && s.hasTime) { time_t tt = (time_t)s.unixTime; struct tm g;
@@ -733,6 +739,23 @@ void meters(const App& a, std::vector<ModeMeter>& out) {
 }
 
 } // namespace
+
+// The predicted course of a sonde (4.0 prediction when on, else the simple landing): its position now, the ground track and the landing.
+bool sondePredictedCourse(const dect2::SondeInfo& s, std::vector<dect2::sondecourse::Point>& out) {
+    out.clear();
+    if (!s.hasPos) return false;
+    dect2::SondeLanding ld; std::vector<std::pair<double, double>> path; double groundM = 0;
+    if (sondePredict40On()) {
+        dect2::tawhiri::Result tw; double made = 0;
+        const bool haveTw = S.predOnline && predictor().result(s.serial, tw, made) && tw.ok;
+        const dect2::SondePrediction* p = sondePredict40(s, s.serial == S.selShown, haveTw ? &tw : nullptr);
+        if (!p) return false;
+        ld = p->legacy(); path = p->path; groundM = p->groundM;
+    } else ld = landing(s);
+    if (!ld.valid) return false;
+    out = dect2::sondecourse::build(s.lat, s.lon, s.altM, groundM, ld.lat, ld.lon, ld.secondsLeft, path);
+    return out.size() >= 2;
+}
 
 // Simple view: the map, the sonde table and the readout of the picked sonde side by side
 static void command(App& a) {
