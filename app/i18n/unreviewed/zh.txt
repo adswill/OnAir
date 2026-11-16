@@ -21,3 +21,6 @@ GOP
 PMT PID
 Apply address / port / TTL
 TTL
+CRF
+Packet 1200
+Packet 9600
