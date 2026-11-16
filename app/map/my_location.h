@@ -7,6 +7,8 @@
 
 namespace mylocmap {
 
+// the radiosonde screens measure in km: set true around their map draw so the pointer readout and rings use km, not the ADS-B unit
+void forceMetric(bool on);
 bool markerOn();
 bool ringsOn();
 void overlay(ImDrawList* dl, ImVec2 origin, ImVec2 size, bool hovered);

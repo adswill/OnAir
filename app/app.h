@@ -1063,6 +1063,9 @@ std::string autogainStatusJson(App& a);        // read-only state for the Web se
 void remoteApiLoadPrefs(App& a);    // remote_api_app.cpp: the remote-control API (HTTP + WebSocket), off by default: its settings, started when on
 void remoteApiSavePrefs(const App& a);
 void remoteApiTick(App& a);          // every frame: runs the commands the API queued for the main thread, publishes the telemetry
+// the places of the Data feeds window (feeds_ui.cpp); feedsOpenTab opens it on one of them (the old spots of the settings link here)
+enum { kFeedsTabUpload = 0, kFeedsTabPrograms, kFeedsTabShare, kFeedsTabStation, kFeedsTabNmea, kFeedsTabCount };
+void feedsOpenTab(App& a, int tab);
 void remoteApiSection(App& a);       // the settings panel (in the Data feeds window)
 void mcpDevOpen(App& a);             // dev flag --mcp: Data feeds open on the AI assistant section, switched on (not saved)
 void mcpSection(App& a);             // remote_api_app.cpp: the AI assistant (MCP) panel: switch, token, connection snippets, activity log (docs/MCP.md)

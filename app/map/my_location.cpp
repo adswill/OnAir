@@ -18,7 +18,8 @@ namespace mylocmap {
 
 namespace {
 
-bool metricUnits() { return std::strcmp(adsbDistUnit(), "km") == 0; }
+bool gForceMetric = false;
+bool metricUnits() { return gForceMetric || std::strcmp(adsbDistUnit(), "km") == 0; }
 
 std::vector<double> ringKm() {
     const std::vector<double> v = dect2::myloc::parseRingList(plat::prefs().getS("mapMyLocRingList", "50,100,200"));
@@ -50,6 +51,7 @@ void drawRing(ImDrawList* dl, double lat, double lon, double km, ImVec2 origin, 
 
 }
 
+void forceMetric(bool on) { gForceMetric = on; }
 bool markerOn() { return plat::prefs().getB("mapMyLoc", true); }
 bool ringsOn() { return plat::prefs().getB("mapMyLocRings", false); }
 
