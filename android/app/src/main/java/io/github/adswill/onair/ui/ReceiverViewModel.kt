@@ -154,6 +154,8 @@ class ReceiverViewModel(app: Application) : AndroidViewModel(app) {
     fun startRecording() = repo.startRecording()
     fun stopRecording() = repo.stopRecording()
     fun recordingCapMb(): Int = repo.recordingCapMb()
+    fun recordingAutoSave(): Boolean = repo.recordingAutoSave()
+    fun setRecordingAutoSave(on: Boolean) = repo.setRecordingAutoSave(on)
     fun setRecordingCapMb(mb: Int) = repo.setRecordingCapMb(mb)
     fun lastRecording(): java.io.File? = repo.lastRecording()
     fun clearRecordingNote() = repo.clearRecordingNote()

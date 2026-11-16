@@ -159,6 +159,7 @@ fun RecordIqBar(vm: ReceiverViewModel) {
     val rec by vm.rec.collectAsStateWithLifecycle()
     var open by remember { mutableStateOf(false) }
     var capMb by remember { mutableStateOf(vm.recordingCapMb()) }
+    var autoSave by remember { mutableStateOf(vm.recordingAutoSave()) }
     var toast by remember { mutableStateOf("") }
     val last = if (open) vm.lastRecording() else null
     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -195,6 +196,10 @@ fun RecordIqBar(vm: ReceiverViewModel) {
                         open = false
                         toast = ctx.getString(if (last != null && io.github.adswill.onair.data.IqFiles.saveToDownloads(ctx, last)) R.string.iq_saved else R.string.iq_save_failed)
                     },
+                )
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(stringResource(if (autoSave) R.string.iq_autosave_on else R.string.iq_autosave_off)) },
+                    onClick = { autoSave = !autoSave; vm.setRecordingAutoSave(autoSave) },
                 )
                 val next = io.github.adswill.onair.data.IqRecording.capChoicesMb.let { c -> c[(c.indexOf(capMb) + 1) % c.size] }
                 androidx.compose.material3.DropdownMenuItem(

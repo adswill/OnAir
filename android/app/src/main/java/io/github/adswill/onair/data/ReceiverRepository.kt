@@ -5,6 +5,7 @@ package io.github.adswill.onair.data
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import io.github.adswill.onair.ModeDef
@@ -130,6 +131,9 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
     private val recPrefs = ctx.getSharedPreferences("iq_recording", Context.MODE_PRIVATE)
     private var recJob: kotlinx.coroutines.Job? = null
 
+    /** Copy a finished recording to Downloads/OnAir by itself (#546). On by default; the app-private file stays the source. */
+    fun recordingAutoSave(): Boolean = recPrefs.getBoolean("autoSave", true)
+    fun setRecordingAutoSave(on: Boolean) { recPrefs.edit().putBoolean("autoSave", on).apply() }
     fun recordingCapMb(): Int = recPrefs.getInt("capMb", IqRecording.DEFAULT_CAP_MB)
     fun setRecordingCapMb(mb: Int) { recPrefs.edit().putInt("capMb", mb).apply(); _rec.update { it.copy(capBytes = mb * 1048576L) } }
 
@@ -171,6 +175,12 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
         val done = if (f != null && f.exists()) f else null
         AppLog.i("iq", "recording finished: ${done?.name} ${cur.bytes} bytes")
         _rec.value = IqRecording.idle.copy(capBytes = cur.capBytes, last = done, error = note)
+        if (done != null && recordingAutoSave() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { IqFiles.saveToDownloads(ctx, done) }
+            AppLog.i("iq", "auto-save of ${done.name}: ${if (ok) "done" else "failed"}")
+            val msg = ctx.getString(if (ok) R.string.iq_saved else R.string.iq_save_failed)
+            _rec.update { it.copy(error = if (it.error.isEmpty()) msg else it.error + "\n" + msg) }
+        }
     }
 
     fun stopRecording() { if (_rec.value.active) scope.launch { finishRecording("") } }
