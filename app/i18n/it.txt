@@ -3630,3 +3630,11 @@ Default	Predefinito
 Custom	Personalizzato
 Join the Discord to get access to built codecs	Entra nel Discord per accedere ai codec già compilati
 Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	Apre il Discord di OnAir nel browser. OnAir non scarica né include mai un codec.
+Unknown language	Unknown language
+Teletext subtitles	Teletext subtitles
+DVB subtitles	DVB subtitles
+hearing impaired	hearing impaired
+Teletext subtitles (page 888)	Teletext subtitles (page 888)
+subtitles##subson	subtitles##subson
+Subtitles over the picture (S in the pop-out window)	Subtitles over the picture (S in the pop-out window)
+Subtitle language, or Off (L in the pop-out window)	Subtitle language, or Off (L in the pop-out window)

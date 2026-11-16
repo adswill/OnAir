@@ -429,5 +429,49 @@ int main() {
         CHECK(std::string(kDraAudioNote) == "DRA audio: install the DRA add-on to hear this service", "DRA note '%s'", kDraAudioNote);
         printf("AVS / DRA player notes\n");
     }
+    {
+        // subtitle tracks (issue #517): language names and the PMT subtitling (0x59) and teletext (0x56) descriptors
+        CHECK(isoLanguageName("CHS") == "Chinese (simplified)" && isoLanguageName("cht") == "Chinese (traditional)", "Chinese variants");
+        CHECK(isoLanguageName("chi") == "Chinese" && isoLanguageName("ZHO") == "Chinese", "chi/zho");
+        CHECK(isoLanguageName("eng") == "English" && isoLanguageName("jpn") == "Japanese" && isoLanguageName("kor") == "Korean" && isoLanguageName("fra") == "French" &&
+              isoLanguageName("fre") == "French" && isoLanguageName("deu") == "German" && isoLanguageName("rus") == "Russian" && isoLanguageName("spa") == "Spanish" &&
+              isoLanguageName("por") == "Portuguese" && isoLanguageName("ita") == "Italian", "common names");
+        CHECK(isoLanguageName("").empty() && isoLanguageName("xyz") == "XYZ", "empty and unknown codes");
+        TsSubEntry d; d.lang = "chs"; d.type = 0x10;
+        CHECK(subtitleTrackLabel(d) == "Chinese (simplified) - DVB subtitles", "DVB label '%s'", subtitleTrackLabel(d).c_str());
+        d.type = 0x21;
+        CHECK(subtitleTrackLabel(d) == "Chinese (simplified) - DVB subtitles, 4:3 (hearing impaired)", "DVB HI label '%s'", subtitleTrackLabel(d).c_str());
+        TsSubEntry t; t.teletext = true; t.lang = "eng"; t.type = 5; t.page = 888;
+        CHECK(subtitleTrackLabel(t) == "English - Teletext subtitles 888 (hearing impaired)", "teletext label '%s'", subtitleTrackLabel(t).c_str());
+        t.type = 1;
+        CHECK(!subtitleEntryIsSubtitle(t) && subtitleEntryIsSubtitle(d), "teletext initial page is not a subtitle");
+
+        TsDemux b;
+        int c = 0;
+        std::vector<uint8_t> pat = {0x00, 0xB0, 13, 0x00, 0x04, 0xC1, 0, 0, 0x02, 0x03, 0xE2, 0x03};   // program 515 -> PMT 0x203
+        feedSection(b, 0, section(pat), c);
+        std::vector<uint8_t> pmt = {0x02, 0xB0, 0, 0x02, 0x03, 0xC1, 0, 0, 0xE2, 0x01, 0xF0, 0x00,
+                                    0x1B, 0xE2, 0x01, 0xF0, 0x00,                                                                  // video
+                                    0x81, 0xE2, 0x02, 0xF0, 0x00,                                                                  // AC-3
+                                    0x06, 0xE2, 0x10, 0xF0, 18, 0x59, 16, 'c', 'h', 's', 0x10, 0x00, 0x01, 0x00, 0x02, 'c', 'h', 't', 0x21, 0x00, 0x03, 0x00, 0x04,   // two subtitling entries
+                                    0x06, 0xE2, 0x11, 0xF0, 12, 0x56, 10, 'e', 'n', 'g', 0x10, 0x88, 'e', 'n', 'g', 0x08, 0x00};   // teletext: subtitle page 888, then an initial page (type 1)
+        pmt[2] = (uint8_t)(pmt.size() - 3 + 4);
+        feedSection(b, 0x203, section(pmt), c);
+        TsService sv;
+        bool found = false;
+        for (auto& x : b.snapshot().services) if (x.id == 515) { sv = x; found = true; }
+        CHECK(found, "service 515 missing");
+        const TsStream* sub = nullptr; const TsStream* ttx = nullptr;
+        for (auto& st : sv.streams) { if (st.pid == 0x210) sub = &st; if (st.pid == 0x211) ttx = &st; }
+        CHECK(sub && sub->subs.size() == 2, "DVB subtitle entries: %zu", sub ? sub->subs.size() : (size_t)0);
+        if (sub && sub->subs.size() == 2) {
+            CHECK(sub->subs[0].lang == "chs" && !sub->subs[0].teletext && sub->subs[0].type == 0x10 && sub->subs[0].page == 1 && sub->subs[0].ancPage == 2, "entry 0: %s %x %d %d", sub->subs[0].lang.c_str(), sub->subs[0].type, sub->subs[0].page, sub->subs[0].ancPage);
+            CHECK(sub->subs[1].lang == "cht" && sub->subs[1].type == 0x21 && sub->subs[1].page == 3 && sub->subs[1].ancPage == 4, "entry 1: %s %x", sub->subs[1].lang.c_str(), sub->subs[1].type);
+            bool hi = false; subtitleTypeName(sub->subs[1], &hi);
+            CHECK(hi, "type 0x21 is hearing impaired");
+        }
+        CHECK(ttx && ttx->subs.size() == 2 && ttx->subs[0].teletext && ttx->subs[0].type == 2 && ttx->subs[0].page == 888 && ttx->subs[1].type == 1, "teletext entries: %zu", ttx ? ttx->subs.size() : (size_t)0);
+        printf("subtitle languages and PMT descriptors\n");
+    }
     return fails ? 1 : 0;
 }

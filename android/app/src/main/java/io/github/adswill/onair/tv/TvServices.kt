@@ -11,7 +11,11 @@ import io.github.adswill.onair.update.UpdateLogic
  * list comes in through [DecoderCatalog], which Android fills from MediaCodecList (AndroidDecoderCatalog).
  */
 
-class TvStream(val pid: Int, val streamType: Int, val codec: String, val kind: String, val lang: String, val kbps: Double, val scrambled: Boolean) {
+/** One language entry of a subtitling (0x59) or teletext (0x56) descriptor; [langName] and [typeName] come from the core (isoLanguageName, subtitleTypeName). */
+class TvSubEntry(val lang: String, val langName: String, val typeName: String, val hearing: Boolean, val teletext: Boolean, val page: Int)
+
+class TvStream(val pid: Int, val streamType: Int, val codec: String, val kind: String, val lang: String, val kbps: Double, val scrambled: Boolean,
+               val subs: List<TvSubEntry> = emptyList()) {
     val isVideo: Boolean get() = kind == "video"
     val isAudio: Boolean get() = kind == "audio"
 }
@@ -25,6 +29,8 @@ class TvService(
     val audio: List<TvStream> get() = streams.filter { it.isAudio }
     /** DVB subtitle and teletext streams of the PMT (listed even though the phone cannot show them yet). */
     val subtitles: List<TvStream> get() = streams.filter { it.kind == "subtitles" || it.kind == "teletext" }
+    /** Every subtitle language the PMT offers, one track each (see [subtitleTracks]). */
+    val subtitleTracks: List<SubtitleTrack> get() = subtitleTracksOf(this)
     /** Interactive data the PMT carries (DSM-CC object carousel / AIT: MHEG-5, HbbTV). */
     val interactive: List<TvStream> get() = streams.filter { it.kind == "data" && it.streamType in INTERACTIVE_TYPES }
     /** Shown in lists: the name, else "Service <id>". */
@@ -50,7 +56,11 @@ class TvMux(val packets: Long, val network: String, val tsid: Int, val services:
                 val m = sv as? Map<*, *> ?: return@mapNotNull null
                 val streams = (m["streams"] as? List<*>)?.mapNotNull { st ->
                     val x = st as? Map<*, *> ?: return@mapNotNull null
-                    TvStream(x.i("pid"), x.i("type"), x.s("codec"), x.s("kind"), x.s("lang"), (x["kbps"] as? Double) ?: 0.0, x.b("scrambled"))
+                    val subs = (x["subs"] as? List<*>)?.mapNotNull { e ->
+                        val y = e as? Map<*, *> ?: return@mapNotNull null
+                        TvSubEntry(y.s("lang"), y.s("name"), y.s("kind"), y.b("hi"), y.b("ttx"), y.i("page"))
+                    } ?: emptyList()
+                    TvStream(x.i("pid"), x.i("type"), x.s("codec"), x.s("kind"), x.s("lang"), (x["kbps"] as? Double) ?: 0.0, x.b("scrambled"), subs)
                 } ?: emptyList()
                 TvService(m.i("id"), m.s("name"), m.s("provider"), m.i("type"), m.i("pmt"), m.i("pcr"), m.b("ca"), m.b("scrambled"),
                     m.i("lcn"), m.b("havePmt"), m.s("now"), m.s("next"), streams)
@@ -252,11 +262,44 @@ fun audioLabel(s: TvStream, cat: DecoderCatalog): String {
     }
 }
 
-/** What a subtitle or teletext stream is, in a few words. The phone does not draw them yet, so each says so. */
-fun subtitleLabel(s: TvStream): String {
-    val what = if (s.kind == "teletext") "teletext" else "subtitles"
-    val lang = s.lang.ifBlank { "-" }
-    return "$lang $what (not supported on this phone)"
+/** One selectable subtitle track: a language entry of a stream. The phone has no subtitle renderer yet, so [supported] is false for all. */
+class SubtitleTrack(val pid: Int, val entry: TvSubEntry) {
+    /** Stable across polls: the PID, language, page and kind. */
+    val key: String get() = "$pid:${entry.lang.lowercase()}:${entry.page}:${if (entry.teletext) "t" else "d"}:${if (entry.hearing) "h" else "n"}"
+    val supported: Boolean get() = false
+}
+
+/** The tracks of [s]: each language entry of a subtitle (DVB) or teletext stream; teletext pages that are not subtitles are left out. A stream without entries is one track. */
+fun subtitleTracksOf(s: TvService): List<SubtitleTrack> = s.subtitles.flatMap { st ->
+    if (st.subs.isEmpty()) listOf(SubtitleTrack(st.pid, TvSubEntry(st.lang, "", if (st.kind == "teletext") "Teletext" else "DVB subtitles", false, st.kind == "teletext", 0)))
+    else st.subs.filter { !it.teletext || it.typeName.contains("subtitles") }.map { SubtitleTrack(st.pid, it) }
+}
+
+/** ISO 639-2 codes that name one language (ger = deu, chs/cht/chi = zho) to one key, for matching a preferred language. */
+fun subtitleLangKey(code: String): String = when (val c = code.trim().lowercase()) {
+    "chs", "cht", "chi", "zho" -> "zho"
+    "ger" -> "deu"; "fre" -> "fra"; "dut" -> "nld"; "cze" -> "ces"; "gre" -> "ell"; "rum" -> "ron"; "slo" -> "slk"; "per" -> "fas"; "may" -> "msa"
+    else -> c
+}
+
+/** The track name for a menu: "Chinese (traditional) - DVB subtitles (hearing impaired) - not supported yet". [unknown], [hearing], [notYet] are the translated words. */
+fun subtitleTrackText(t: SubtitleTrack, unknown: String, hearing: String, notYet: String): String {
+    val e = t.entry
+    val name = e.langName.ifBlank { e.lang.uppercase() }.ifBlank { unknown }
+    return name + " - " + e.typeName + (if (e.teletext && e.page > 0) " ${e.page}" else "") + (if (e.hearing) " ($hearing)" else "") + (if (t.supported) "" else " - $notYet")
+}
+
+/**
+ * The track to select: the one the user chose ([chosenKey]; "" = Off, so null), else the first in the [preferred] languages (best order first, not
+ * hearing impaired before hearing impaired), else none: subtitles stay off until the user picks one.
+ */
+fun pickSubtitle(tracks: List<SubtitleTrack>, preferred: List<String>, chosenKey: String?): SubtitleTrack? {
+    if (chosenKey != null) return if (chosenKey.isEmpty()) null else tracks.firstOrNull { it.key == chosenKey }
+    for (l in preferred.map { subtitleLangKey(it) }.filter { it.isNotEmpty() }) {
+        val m = tracks.filter { subtitleLangKey(it.entry.lang) == l }
+        (m.firstOrNull { !it.entry.hearing } ?: m.firstOrNull())?.let { return it }
+    }
+    return null
 }
 
 /** The line for interactive data (MHEG-5 / DSM-CC carousel) the service carries. */

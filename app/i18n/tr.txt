@@ -3677,3 +3677,11 @@ working out the passes ...	geçişler hesaplanıyor ...
 wrong processor	yanlış işlemci
 Join the Discord to get access to built codecs	Hazır derlenmiş codec'lere erişmek için Discord'a katılın
 Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	OnAir Discord'unu tarayıcınızda açar. OnAir'in kendisi hiçbir codec indirmez veya içermez.
+Unknown language	Unknown language
+Teletext subtitles	Teletext subtitles
+DVB subtitles	DVB subtitles
+hearing impaired	hearing impaired
+Teletext subtitles (page 888)	Teletext subtitles (page 888)
+subtitles##subson	subtitles##subson
+Subtitles over the picture (S in the pop-out window)	Subtitles over the picture (S in the pop-out window)
+Subtitle language, or Off (L in the pop-out window)	Subtitle language, or Off (L in the pop-out window)

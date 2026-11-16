@@ -18,7 +18,7 @@ object AppGraph {
     val updates: io.github.adswill.onair.update.UpdateManager by lazy { io.github.adswill.onair.update.UpdateManager(app, settings) }
     val repository: ReceiverRepository by lazy { ReceiverRepository(app, settings) }
     /** TV picture and sound with the phone's decoders (tv/, the Watch panel of the TV modes). */
-    val tv: io.github.adswill.onair.tv.TvController by lazy { io.github.adswill.onair.tv.TvController() }
+    val tv: io.github.adswill.onair.tv.TvController by lazy { io.github.adswill.onair.tv.TvController(subPrefs = io.github.adswill.onair.tv.SharedSubtitlePrefs(app.getSharedPreferences("onair_tv", android.content.Context.MODE_PRIVATE))) }
     /** The pictures of the analogue TV modes (Analog TV, MAC, FPV video) on the same Watch panel. */
     val analogTv: io.github.adswill.onair.tv.AnalogTvController by lazy { io.github.adswill.onair.tv.AnalogTvController() }
 

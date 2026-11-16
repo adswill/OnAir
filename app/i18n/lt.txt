@@ -3670,3 +3670,11 @@ Large	Dideli
 Extra large	Labai dideli
 Small|Compact|Default|Large|Extra large	Maži|Kompaktiški|Numatytasis|Dideli|Labai dideli
 Height and padding of the touch interface's buttons, top bar and dock. Smaller leaves more room for the panels on small screens.	Jutiklinės sąsajos mygtukų, viršutinės juostos ir apatinio skydelio aukštis ir tarpai. Mažesni palieka daugiau vietos skydeliams mažuose ekranuose.
+Unknown language	Unknown language
+Teletext subtitles	Teletext subtitles
+DVB subtitles	DVB subtitles
+hearing impaired	hearing impaired
+Teletext subtitles (page 888)	Teletext subtitles (page 888)
+subtitles##subson	subtitles##subson
+Subtitles over the picture (S in the pop-out window)	Subtitles over the picture (S in the pop-out window)
+Subtitle language, or Off (L in the pop-out window)	Subtitle language, or Off (L in the pop-out window)

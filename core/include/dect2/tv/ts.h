@@ -27,6 +27,17 @@ struct TsSubEntry {
     int ancPage = 0;         // DVB: ancillary_page_id
 };
 
+// ISO 639-2 code (either the bibliographic or the terminology one, any case) to an English language name; "" for no code, the upper-case code
+// itself when it is not in the table. Chinese is split the way DTMB broadcasters use it: CHS simplified, CHT traditional, CHI/ZHO plain.
+std::string isoLanguageName(const std::string& code);
+// What a subtitle entry is, in a few words ("DVB subtitles", "DVB subtitles, 16:9", "Teletext subtitles"); hearingImpaired is set for the
+// hard-of-hearing types (DVB subtitling_type 0x20..0x24, teletext_type 5).
+std::string subtitleTypeName(const TsSubEntry& e, bool* hearingImpaired = nullptr);
+// The one-line label of a subtitle track for a menu: "Chinese (traditional) - DVB subtitles (hearing impaired)". English: the UI shows it as data.
+std::string subtitleTrackLabel(const TsSubEntry& e);
+// Entries that are real subtitles (teletext initial / information / schedule pages are not).
+bool subtitleEntryIsSubtitle(const TsSubEntry& e);
+
 struct TsStream {
     int pid = 0, streamType = 0;
     int declaredPid = -1;  // the PID the PMT gave, when the packets come on another one (DPRK DVB-T2, issue 498: every PID inverted, XOR 0x1FFF); -1: as declared
