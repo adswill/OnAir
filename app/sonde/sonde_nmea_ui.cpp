@@ -43,24 +43,24 @@ void load(Ns& n) {
     if (n.loaded) return;
     n.loaded = true;
     plat::Prefs& p = plat::prefs();
-    n.c.enabled = p.getB(key(n, "On"), false);
-    n.c.kind = std::max(0, std::min(2, (int)p.getI(key(n, "Kind"), 0)));
-    n.c.baud = (int)p.getI(key(n, "Baud"), 4800);
-    n.c.port = std::max(1, std::min(65535, (int)p.getI(key(n, "Port"), n.out == &dect2::SondeNmeaOut::get() ? 10110 : 10111)));
-    std::snprintf(n.path, sizeof n.path, "%s", p.getS(key(n, "Path"), "").c_str());
-    std::snprintf(n.host, sizeof n.host, "%s", p.getS(key(n, "Host"), "127.0.0.1").c_str());
+    n.c.enabled = p.getB(key(n, "On").c_str(), false);
+    n.c.kind = std::max(0, std::min(2, (int)p.getI(key(n, "Kind").c_str(), 0)));
+    n.c.baud = (int)p.getI(key(n, "Baud").c_str(), 4800);
+    n.c.port = std::max(1, std::min(65535, (int)p.getI(key(n, "Port").c_str(), n.out == &dect2::SondeNmeaOut::get() ? 10110 : 10111)));
+    std::snprintf(n.path, sizeof n.path, "%s", p.getS(key(n, "Path").c_str(), "").c_str());
+    std::snprintf(n.host, sizeof n.host, "%s", p.getS(key(n, "Host").c_str(), "127.0.0.1").c_str());
     n.c.path = n.path; n.c.host = n.host;
-    n.stepS = std::max(1, std::min(3600, (int)p.getI(key(n, "StepS"), 60)));
-    n.everyS = std::max(1, std::min(3600, (int)p.getI(key(n, "EveryS"), 10)));
-    n.aimOnly = p.getB(key(n, "Aim"), false);
+    n.stepS = std::max(1, std::min(3600, (int)p.getI(key(n, "StepS").c_str(), 60)));
+    n.everyS = std::max(1, std::min(3600, (int)p.getI(key(n, "EveryS").c_str(), 10)));
+    n.aimOnly = p.getB(key(n, "Aim").c_str(), false);
     if (n.c.enabled) n.out->configure(n.c);
 }
 void apply(Ns& n) {
     n.c.path = n.path; n.c.host = n.host;
     plat::Prefs& p = plat::prefs();
-    p.setB(key(n, "On"), n.c.enabled); p.setI(key(n, "Kind"), n.c.kind); p.setI(key(n, "Baud"), n.c.baud); p.setI(key(n, "Port"), n.c.port);
-    p.setS(key(n, "Path"), n.path); p.setS(key(n, "Host"), n.host);
-    p.setI(key(n, "StepS"), n.stepS); p.setI(key(n, "EveryS"), n.everyS); p.setB(key(n, "Aim"), n.aimOnly);
+    p.setB(key(n, "On").c_str(), n.c.enabled); p.setI(key(n, "Kind").c_str(), n.c.kind); p.setI(key(n, "Baud").c_str(), n.c.baud); p.setI(key(n, "Port").c_str(), n.c.port);
+    p.setS(key(n, "Path").c_str(), n.path); p.setS(key(n, "Host").c_str(), n.host);
+    p.setI(key(n, "StepS").c_str(), n.stepS); p.setI(key(n, "EveryS").c_str(), n.everyS); p.setB(key(n, "Aim").c_str(), n.aimOnly);
     n.out->configure(n.c);
 }
 
