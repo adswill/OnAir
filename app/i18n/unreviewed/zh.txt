@@ -15,3 +15,8 @@ peak K, centre km/s (LSR), FWHM km/s, area K km/s; one sigma
 estimated timing error of the prediction: %.1f s before, %.1f s after (1 sigma)
 Schumann transients, Jove and CALLISTO bursts: dB over the background. Whistlers: path score. Moon echo and beacon openings: sigma over the noise. Lower finds weaker events and more false ones.
 RBW
+CBR
+VBR / CRF
+GOP
+PMT PID
+Apply address / port / TTL
