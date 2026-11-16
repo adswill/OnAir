@@ -15,14 +15,14 @@ void AtvVideo::Impl::extractPicture(double tL, int row, int field) {
     if (g <= 0) return;
     // the span of samples this line's active part needs, with margins for the filters
     const double a0 = tL + (F.blankEndUs - 1.0) * spu, a1 = tL + (F.blankEndUs + F.activeUs + 1.0) * spu;
-    const long sa = (long)std::floor(a0) - 24, sb = (long)std::ceil(a1) + 24;
+    const int64_t sa = (int64_t)std::floor(a0) - 24, sb = (int64_t)std::ceil(a1) + 24;
     const size_t len = (size_t)(sb - sa + 1);
     const bool useColour = (colourKind == kAtvPal || colourKind == kAtvNtsc) && !bpf.empty();
     const bool colourNow = useColour && colourLocked && !killer && colourCapable && prm.colourOn;
     const bool secamNow = colourKind == kAtvSecam && secamLineOk && !bpf.empty() && !killer && colourCapable && prm.colourOn;
     std::vector<float>& rawv = yv;
     rawv.resize(len);
-    for (size_t k = 0; k < len; k++) rawv[k] = rv[(uint64_t)(sa + (long)k) & kMask];
+    for (size_t k = 0; k < len; k++) rawv[k] = rv[(uint64_t)(sa + (int64_t)k) & kMask];
     const double clampB = Bline;
     // luminance: the video without the colour subcarrier band (or all of it for a picture without colour)
     std::vector<float>& lum = lumBuf;
@@ -99,6 +99,9 @@ void AtvVideo::Impl::extractPicture(double tL, int row, int field) {
     const bool avgPrev = pal && prevValid && prevLineNo + 1 == curNo;
     // luminance at the pixels: 8-tap windowed sinc, positions stepped along the line
     const float stepY = (float)(pxUs * spu), pos0 = (float)(tL + (F.blankEndUs + 0.5 * pxUs) * spu - (double)sa);
+    // a line whose pixels would reach outside the samples copied for it is not a line (a time that does not fit its position, #520: the sample
+    // counter passes 2^31 after 215 s at 10 Msps, which a 32-bit long of Windows could not hold): the picture keeps what it had
+    if (!(pos0 >= 3.f) || !(pos0 + (float)(W - 1) * stepY + 5.f < (float)len)) return;
     yRowP.resize((size_t)W);
     {
         const float* kt = kern.data();
@@ -253,7 +256,7 @@ void AtvVideo::Impl::captureLine(double tL) {
     const double a = tL - 2.0 * spu, span = P;
     for (int k = 0; k < n; k++) {
         const double t = a + span * k / n;
-        const long i0 = (long)std::floor(t);
+        const int64_t i0 = (int64_t)std::floor(t);
         const double fr = t - (double)i0;
         const double r = rvAt((uint64_t)i0) * (1 - fr) + rvAt((uint64_t)i0 + 1) * fr;
         lineWave[(size_t)k] = (float)((Bline - r) / g);
@@ -271,7 +274,7 @@ void AtvVideo::Impl::vitsLine(double tL, int lineNo) {
     std::vector<double> raw((size_t)n);
     for (int k = 0; k < n; k++) {
         const double t = tL + k;
-        const long i0 = (long)std::floor(t);
+        const int64_t i0 = (int64_t)std::floor(t);
         const double fr = t - (double)i0;
         raw[(size_t)k] = rvAt((uint64_t)i0) * (1 - fr) + rvAt((uint64_t)i0 + 1) * fr;
     }
@@ -302,7 +305,7 @@ void AtvVideo::Impl::ghostLine(double tL) {
     const double a = tL - 2.0 * spu;
     for (int k = 0; k < n; k++) {
         const double t = a + P * k / n;
-        const long i0 = (long)std::floor(t);
+        const int64_t i0 = (int64_t)std::floor(t);
         const double fr = t - (double)i0;
         ghostAcc[(size_t)k] += (float)((Bline - (rvAt((uint64_t)i0) * (1 - fr) + rvAt((uint64_t)i0 + 1) * fr)) / g);
     }

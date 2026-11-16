@@ -35,6 +35,7 @@ public:
     ~AtvVideo();
     void configure(double videoRate, bool colourCapable);
     void reset();                                    // forget the signal; counters keep running
+    void setSampleCount(uint64_t n);                 // tests: carry on as if n samples had gone through already (the position counter passes 2^31 after 215 s at 10 Msps)
     void setParams(const AtvVideoParams& p);
     void setSoundSpacing(double mhz);                // from the carrier search: tells B/G from I, D/K and N (and C from L)
     void setMirrored(bool on);                       // the channel was found turned round (sound below the vision carrier): L' rather than L
