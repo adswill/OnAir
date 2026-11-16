@@ -32,6 +32,7 @@ static Result run(const std::vector<cf32>& x) {
     for (size_t i = 0; i < x.size(); i += 65536) rx.feed(x.data() + i, std::min<size_t>(65536, x.size() - i));
     std::vector<cf32> z(65536, cf32(0, 0));
     rx.feed(z.data(), z.size());
+    rx.flush();
     return r;
 }
 static std::vector<cf32> make(const IsmGenConfig& c, double sec) {

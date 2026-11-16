@@ -14,6 +14,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <mutex>
+#include <condition_variable>
+#include <deque>
+#include <thread>
+#include <chrono>
 
 namespace dect2 {
 
@@ -65,6 +69,76 @@ struct IsmReceiver::Impl {
     bool loadReq = false;
     IsmTelemetry loaded;
 
+    // Burst analysis runs on its own thread: demodulating and slicing a long burst takes tens to hundreds of ms, and feed() is on the same
+    // thread as the waterfall (#542). wmu guards tel, taps and the rate set (the worker holds it for one burst); the feed thread only
+    // try-locks it, so it never waits: a publish is skipped until the next call, a reset / clear / load waits by dropping input.
+    struct Job { bool sfxChunk = false; std::vector<cf32> x; std::vector<float> excess; uint64_t s0 = 0, gen = 0; };   // a burst to analyse, or a chunk of input for the Sigfox receiver (also slow, and it must stay in order)
+    size_t burstJobs = 0, sfxJobs = 0;
+    bool sfxOn = false;
+    std::mutex wmu, qmu;
+    std::condition_variable qcv, idleCv;
+    std::deque<Job> jobs;
+    bool busy = false, stop = false;
+    std::atomic<uint64_t> gen{0};
+    std::atomic<bool> realtime{false};
+    std::atomic<bool> want{false};   // the feed thread found wmu taken: the worker leaves a gap before its next job (a mutex is not fair, and a queue of jobs would starve it)
+    std::thread worker;
+
+    ~Impl() {
+        { std::lock_guard<std::mutex> lk(qmu); stop = true; }
+        qcv.notify_all();
+        if (worker.joinable()) worker.join();
+    }
+    void workerMain() {
+        for (;;) {
+            Job j;
+            {
+                std::unique_lock<std::mutex> lk(qmu);
+                qcv.wait(lk, [&] { return stop || !jobs.empty(); });
+                if (stop) return;
+                j = std::move(jobs.front()); jobs.pop_front();
+                (j.sfxChunk ? sfxJobs : burstJobs)--;
+                busy = true;
+            }
+            {
+                std::lock_guard<std::mutex> wl(wmu);
+                if (j.gen == gen.load()) { if (j.sfxChunk) sfx.feed(j.x.data(), j.x.size()); else analyse(j); }   // a retune since it was cut: its samples are of the old set-up
+            }
+            { std::lock_guard<std::mutex> lk(qmu); busy = false; }
+            idleCv.notify_all();
+            for (int i = 0; i < 20 && want.load(); i++) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    }
+    // the feed thread's way to wmu: a radio's try-locks (false: not now, and the worker is asked for a gap), a file's waits
+    bool takeLock(std::unique_lock<std::mutex>& wl) {
+        want = true;
+        if (realtime.load()) { if (!wl.try_lock()) return false; }
+        else wl.lock();
+        want = false;
+        return true;
+    }
+    void enqueue(Job&& j) {
+        {
+            std::unique_lock<std::mutex> lk(qmu);
+            if (!worker.joinable()) worker = std::thread([this] { workerMain(); });
+            if (!realtime.load()) {   // a file: wait for the worker instead of dropping
+                idleCv.wait(lk, [&] { return stop || (j.sfxChunk ? sfxJobs < 64 : burstJobs < 8); });
+                if (stop) return;
+            }
+            if (j.sfxChunk) {
+                if (sfxJobs >= 64) return;   // 0.5 s behind: this chunk is dropped, the waterfall goes on
+                sfxJobs++;
+            } else {
+                if (burstJobs >= 8)   // far behind (a band full of bursts): the oldest burst is dropped
+                    for (auto it = jobs.begin(); it != jobs.end(); ++it) if (!it->sfxChunk) { jobs.erase(it); burstJobs--; break; }
+                burstJobs++;
+            }
+            jobs.push_back(std::move(j));
+        }
+        qcv.notify_one();
+    }
+    void waitIdle() { std::unique_lock<std::mutex> lk(qmu); idleCv.wait(lk, [&] { return jobs.empty() && !busy; }); }
+
     static void moveLists(IsmTelemetry& to, IsmTelemetry& from) {
         to.devices = std::move(from.devices); to.events = std::move(from.events); to.raws = std::move(from.raws);
         from.devices.clear(); from.events.clear(); from.raws.clear();
@@ -82,6 +156,8 @@ struct IsmReceiver::Impl {
     }
 
     void init() {
+        gen++;
+        { std::lock_guard<std::mutex> lk(qmu); jobs.clear(); burstJobs = sfxJobs = 0; }
         thrLin = (float)std::pow(10.0, thrDb / 10.0);
         N = 64;
         while (N < 4096 && N < rate * kFrameSec) N *= 2;
@@ -120,6 +196,7 @@ struct IsmReceiver::Impl {
         tel.inputRate = rate; tel.centerHz = center; tel.dialOffsetHz = offset;
         tel.state = 0;
         sfx.configure(rate, offset, center > 0 ? center + offset : 0);
+        sfxOn = SigfoxRx::onSigfoxBand(center > 0 ? center + offset : 0);
         changed = true;
     }
 
@@ -161,16 +238,25 @@ struct IsmReceiver::Impl {
 
     // ---------------------------------------------------------------- one burst
 
-    void burst() {
+    void burst() {   // the feed thread: cuts the burst's samples out of the ring and hands them on
         const uint64_t pre = (uint64_t)(kPreSec * rate), post = (uint64_t)(kPostSec * rate);
         uint64_t s0 = bStart > pre ? bStart - pre : 0, s1 = std::min(total, bLast + post);
         if (total > ring.size() && s0 < total - ring.size()) s0 = total - ring.size();
         if (s1 <= s0 + 64) return;
+        Job j;
+        j.x.resize(s1 - s0);
+        for (uint64_t i = s0; i < s1; i++) j.x[i - s0] = ring[i & ringMask];
+        j.excess = excess;
+        j.s0 = s0; j.gen = gen.load();
+        enqueue(std::move(j));
+    }
+
+    void analyse(const Job& job) {   // the worker thread, wmu held
+        const std::vector<cf32>& x = job.x;
+        const uint64_t s0 = job.s0;
         tel.bursts++;
-        std::vector<cf32> x(s1 - s0);
-        for (uint64_t i = s0; i < s1; i++) x[i - s0] = ring[i & ringMask];
         // the signals in it
-        std::vector<float> e = excess;
+        std::vector<float> e = job.excess;
         std::vector<double> found;
         const int grp = std::max(1, (int)std::ceil(kGroupHz / (rate / N)));
         float first = 0;
@@ -665,16 +751,26 @@ bool IsmReceiver::telemetry(IsmTelemetry& out, uint64_t lastSeq) {
 
 void IsmReceiver::feed(const cf32* x, size_t n) {
     Impl& m = *p_;
-    bool rs;
-    { std::lock_guard<std::mutex> lk(m.mu); rs = m.resetReq; }
-    if (rs) { m.setup(); if (m.rate > 0) m.init(); }
-    if (m.rate < ismTuning().minSampleRate - 1 || !m.fft) return;
-    if (m.clearReq.exchange(false)) { m.tel.devices.clear(); m.tel.events.clear(); m.tel.raws.clear(); m.tel.blocksOk = m.tel.blocksBad = 0; m.sfx.clear(); m.changed = true; }
-    {
-        std::lock_guard<std::mutex> lk(m.mu);
-        if (m.loadReq) { m.loadReq = false; Impl::moveLists(m.tel, m.loaded); m.changed = true; }
+    bool rs, ld;
+    { std::lock_guard<std::mutex> lk(m.mu); rs = m.resetReq; ld = m.loadReq; }
+    const bool cl = m.clearReq.load();
+    std::unique_lock<std::mutex> wl(m.wmu, std::defer_lock);
+    if (rs || ld || cl) {
+        if (!m.takeLock(wl)) return;   // the worker is in a burst that uses the old set-up and lists: this input is dropped rather than waited for (#542)
+        if (rs) { m.setup(); if (m.rate > 0) m.init(); }
+        if (m.rate >= ismTuning().minSampleRate - 1 && m.fft) {
+            if (m.clearReq.exchange(false)) { m.tel.devices.clear(); m.tel.events.clear(); m.tel.raws.clear(); m.tel.blocksOk = m.tel.blocksBad = 0; m.sfx.clear(); m.changed = true; }
+            std::lock_guard<std::mutex> lk(m.mu);
+            if (m.loadReq) { m.loadReq = false; Impl::moveLists(m.tel, m.loaded); m.changed = true; }
+        }
+        wl.unlock();
     }
-    m.sfx.feed(x, n);
+    if (m.rate < ismTuning().minSampleRate - 1 || !m.fft) return;
+    if (m.sfxOn) {
+        Impl::Job j;
+        j.sfxChunk = true; j.x.assign(x, x + n); j.gen = m.gen.load();
+        m.enqueue(std::move(j));
+    }
     for (size_t i = 0; i < n; i++) {
         cf32 v = x[i];
         if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) v = cf32(0, 0);
@@ -685,10 +781,20 @@ void IsmReceiver::feed(const cf32* x, size_t n) {
         if (m.fpos == m.N) { m.fpos = 0; m.frame(m.total); }
     }
     const double now = (double)m.total / m.rate;
-    if (m.changed || now - m.lastPubSec >= 0.25) {
+    if ((m.changed || now - m.lastPubSec >= 0.25) && m.takeLock(wl)) {   // a radio: never waits for a burst, the next call tries again
         m.publish();
+        wl.unlock();
         m.levelAcc = 0; m.levelN = 0;
     }
+}
+
+void IsmReceiver::setRealtime(bool on) { p_->realtime = on; }
+
+void IsmReceiver::flush() {
+    Impl& m = *p_;
+    m.waitIdle();
+    std::lock_guard<std::mutex> wl(m.wmu);
+    if (m.rate >= ismTuning().minSampleRate - 1 && m.fft) m.publish();
 }
 
 ModeTuning ismTuning() {

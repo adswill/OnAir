@@ -39,6 +39,8 @@ public:
     void reset();                                        // after a retune: forget the signal (the devices and the logs stay: clearResults)
     void clearDevices();               // the user's Clear button
     void feed(const cf32* x, size_t n);
+    void setRealtime(bool on);         // true (a radio): feed() never waits, a backlog drops input; false (default, files and tests): feed() waits, nothing is lost
+    void flush();                      // waits for the bursts handed to the analysis thread and publishes them (tests, end of a file); feed() never waits
     bool telemetry(IsmTelemetry& out, uint64_t lastSeq);
     // The device table, the log and the unknown bursts stay through reset(), configure() and retunes: only clearResults() empties them
     void clearResults();
