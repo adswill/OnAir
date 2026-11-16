@@ -1,1 +1,6 @@
 # Machine-translated, not yet reviewed by a native speaker. One English key per line; delete a line once the translation was checked.
+Weave
+Bob
+ping
+Ping
+Pings
