@@ -34,7 +34,7 @@ OnAir 4.3 adds no new receiver. It fixes the Android start crash of the first 4.
 - **Sonde, second NMEA output**: sends the predicted rest of the flight (or the aim point) as GGA and RMC, one point per N seconds of flight every M seconds. The sonde map pointer now reads in km.
 - **Data feeds window**: five places instead of one long list: Upload to websites, Send to programs, Share my radio, My station (callsign, location, own height) and Serial / NMEA output, each with status chips and a settings expander. The sonde "me / prediction" popup links to them.
 - **Tuning marker**: a new marker for the tuned signal in the spectrum, drawn in the theme's accent colour: a slim centre line, a label tab that opens on hover or drag (mode and width, and the offset from the dial while dragging), a soft passband with edge lines, and grab handles on the movable edges. Hit testing, dragging and filter limits are unchanged. It is used by the general receiver and by the Simple tuner style of the other modes.
-- **USB / LSB / CW filter width**: up to 20 kHz (it stopped at 6 kHz for USB and LSB and at 3 kHz for CW). Defaults are unchanged.
+- **Wide filters in the General receiver**: the USB / LSB / CW / AM filter width is no longer capped at 6 kHz (USB, LSB) or 3 kHz (CW). The channel rate now follows the width: it stays exactly 48 kHz while the filter edge is at most 22 kHz, then steps to 96, 192, 384 and 768 kHz, never above the radio's own sample rate, so USB and LSB reach about 350 kHz and CW, AM, DSB and RAW about 700 kHz. Defaults are unchanged. The speaker, recordings and AM diversity stay at 48 kHz (the wide audio is low-passed and decimated for listening); decoders and the audio taps get the passband at the real channel rate.
 - **ISS SSTV (UHF)**: a preset on 437.550 MHz with Doppler follow (#540).
 - **Weather RTTY**: the 85 Hz shift is added to the RTTY shift list (saved choices keep working) and there are DWD weather RTTY presets (#539). Auto RTTY does not search 85 Hz (see Known limits).
 - **VHF DSC from a sound card or a WAV file**: the Marine receiver now takes the audio as already demodulated and slices the 1300 / 2100 Hz tones at any sound-card rate and level. Test recordings from the blackwellj/vhf-dsc project (MIT) are credited.
@@ -79,10 +79,12 @@ Thanks to everyone who reported the issues named above, to the Discord users who
 
 ## Known limits
 
+- Above 48 kHz channel rate (filters wider than about 22 kHz) AM Auto and synchronous detection are off (the envelope detector is used) although the panel may still show them as on.
+
 Please read these before relying on a new feature.
 
 - **Almost everything new was tested on simulated signals only**: the notch filters, the sonde KML and NMEA outputs, the VHF DSC audio path (a synthetic call and the credited test recordings), the voice "No audio" reasons, the ISM and ATV tests and the VDL2 correction.
-- **Not tested on hardware**: the FC0013 driver, the RSP1 reopen fix, the Android IQ file and auto-save, the Android EPG character sets and Airspy packing, xHE-AAC robustness, the Android subtitle list, VHF DSC from a real sound card, the 20 kHz USB filter in the GUI, the notch filter and the live sonde KML / NMEA in the GUI and in Google Earth, the DMR / P25 / NXDN audio reasons, the tuning marker animation, 85 Hz RTTY on a real signal and the ISS UHF preset.
+- **Not tested on hardware**: the wide General receiver channel rates above 48 kHz on real signals and in the GUI (slider and edge drag), the FC0013 driver, the RSP1 reopen fix, the Android IQ file and auto-save, the Android EPG character sets and Airspy packing, xHE-AAC robustness, the Android subtitle list, VHF DSC from a real sound card, the 20 kHz USB filter in the GUI, the notch filter and the live sonde KML / NMEA in the GUI and in Google Earth, the DMR / P25 / NXDN audio reasons, the tuning marker animation, 85 Hz RTTY on a real signal and the ISS UHF preset.
 - **Android has no subtitle renderer**: the subtitle tracks are listed and chosen, but nothing is drawn ("not supported yet").
 - **AC-3 on Android** needs the phone's own decoder; without one the label says so.
 - **Auto RTTY does not search 85 Hz**: the shift list has it, but Auto still searches the first five shifts only. Choose 85 Hz by hand.

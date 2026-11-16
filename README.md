@@ -96,7 +96,7 @@ The full list, with the known limits, is in [docs/CHANGELOG-4.3.md](docs/CHANGEL
 
 - **No new mode** (394 in the app's list; [MODES.md](MODES.md) lists every mode).
 - **Fixes**: the Android start crash of the first 4.2.0 APK (replaced on the release page), the Windows analog TV crash after 215 s (#520), the ISM waterfall stall (#542), arrow keys changing two digits (#547), the video generator sending a tone instead of the video's sound (#545), Android IQ files, RSP1 and FC0013 on Android, Chinese guide text, xHE-AAC sound on Android.
-- **Tools**: manual notch filters from the spectrum, a live Google Earth track and a second NMEA output for the sonde, a reorganised Data feeds window, a new tuning marker, USB / LSB / CW filters up to 20 kHz, a Signal doctor that no longer nags with a strong signal.
+- **Tools**: manual notch filters from the spectrum, a live Google Earth track and a second NMEA output for the sonde, a reorganised Data feeds window, a new tuning marker, wide USB / LSB / CW / AM filters (the channel rate follows the width), a Signal doctor that no longer nags with a strong signal.
 - **Modes**: ISS SSTV on 437.550 MHz, DWD weather RTTY presets with the 85 Hz shift, VHF DSC from a sound card or WAV file, a "No audio: why" line for DMR, P25 and NXDN, a DVB subtitle track list (Android lists only).
 
 ## What was new in 4.2
