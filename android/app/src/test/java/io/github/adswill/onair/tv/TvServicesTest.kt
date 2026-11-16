@@ -126,7 +126,7 @@ class TvServicesTest {
         assertEquals(listOf(260), tvb.interactive.map { it.pid })
         assertEquals("chi subtitles (not supported on this phone)", subtitleLabel(tvb.subtitles[0]))
         assertTrue(interactiveLabel(tvb.interactive[0]).contains("not supported on this phone"))
-        assertEquals("chi AC-3 (not supported on this phone)", audioLabel(tvb.audio[0], typical))
+        assertEquals("chi AC-3 (needs a decoder: this phone has none)", audioLabel(tvb.audio[0], typical))
         assertEquals("chi AC-3", audioLabel(tvb.audio[0], all.let { s -> DecoderCatalog { m -> if (m in s) "dec" else null } }))
     }
 }

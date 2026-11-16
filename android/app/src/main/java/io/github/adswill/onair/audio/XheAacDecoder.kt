@@ -27,6 +27,9 @@ object XheSupport {
     /** Whether a codec's profile list (profile numbers) contains xHE-AAC. */
     fun listsXhe(profiles: IntArray): Boolean = profiles.any { it == AAC_OBJECT_XHE }
 
+    /** How long to wait for the first output of a frame: short while the decoder primes, longer once it answers one output per input. */
+    fun outputWaitUs(primed: Boolean, inFlight: Long): Long = if (primed && inFlight > 0) 20_000L else 3_000L
+
     /** 16-bit samples from a PCM buffer: 16-bit as it is, float converted. [floatPcm]: the output format said ENCODING_PCM_FLOAT. */
     fun toShorts(buf: ByteBuffer, floatPcm: Boolean): ShortArray {
         buf.order(ByteOrder.nativeOrder())
@@ -35,6 +38,15 @@ object XheSupport {
         val fb = buf.asFloatBuffer()
         return ShortArray(n) { (fb.get().coerceIn(-1f, 1f) * 32767f).toInt().toShort() }
     }
+}
+
+/** Counters for the log: frames in, decoded buffers out, calls that returned nothing, busy input buffers, drops, errors, flushes. */
+class XheStats {
+    var framesIn = 0L; var framesOut = 0L; var empty = 0L; var inputBusy = 0L; var inputDropped = 0L; var errors = 0L; var flushes = 0L
+    var framesInAtFlush = 0L; var framesOutAtFlush = 0L
+    /** Frames given to the codec whose output has not come back since the last flush (never below 0). */
+    fun inFlight(): Long = maxOf(0L, (framesIn - framesInAtFlush) - (framesOut - framesOutAtFlush) - inputDropped.coerceAtMost(framesIn))
+    fun line(): String = "xHE-AAC frames in $framesIn, out $framesOut, empty calls $empty, input busy $inputBusy, dropped $inputDropped, errors $errors, flushes $flushes"
 }
 
 /**
@@ -50,6 +62,11 @@ class XheAacDecoder {
     private var floatPcm = false
     private var ptsUs = 0L
     private val info = MediaCodec.BufferInfo()
+    private var asc: ByteArray? = null
+    private var cfgRate = 0
+    private var cfgChannels = 0
+    private var pending = ShortArray(0)
+    private val stats = XheStats()
 
     private fun codecName(): String? = try {
         MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.firstOrNull { ci ->
@@ -79,6 +96,7 @@ class XheAacDecoder {
                 c.start()
             } catch (t: Throwable) { try { c.release() } catch (_: Throwable) {}; throw t }
             codec = c; rate = rateHz; channels = channelCount; floatPcm = false; ptsUs = 0
+            this.asc = asc.copyOf(); cfgRate = rateHz; cfgChannels = channelCount; pending = ShortArray(0)
             AppLog.i("xhe", "xHE-AAC decoder $name started: $rateHz Hz, $channelCount channel(s)")
             ""
         } catch (t: Throwable) {
@@ -87,32 +105,48 @@ class XheAacDecoder {
         }
     }
 
-    /** One access unit in; the PCM that came out (16-bit interleaved, maybe empty while the decoder primes), or null when the decoder failed. */
+    /**
+     * One access unit in; the PCM that came out (16-bit interleaved, maybe empty while the decoder primes), or null only when no decoder is open.
+     * Output is never discarded: whatever the codec produced during a failed or late call is returned with the next one.
+     */
     @Synchronized fun decode(au: ByteArray): ShortArray? {
         val c = codec ?: return null
-        return try {
+        stats.framesIn++
+        try {
             var queued = false
-            var out = ShortArray(0)
-            // an input buffer may be busy until some output has been taken: drain once and retry
-            for (attempt in 0 until 2) {
+            for (attempt in 0 until 4) {
                 val idx = c.dequeueInputBuffer(if (attempt == 0) 10_000L else 30_000L)
                 if (idx >= 0) {
                     val b = c.getInputBuffer(idx)!!
                     b.clear(); b.put(au)
                     c.queueInputBuffer(idx, 0, au.size, ptsUs, 0)
-                    ptsUs += 1000L
+                    ptsUs += 21_333L   // 1024 samples at 48 kHz; only has to grow
                     queued = true
                     break
                 }
-                out += drain(c, 0L)
+                stats.inputBusy++
+                pending += drain(c, 0L)   // an input buffer may be busy until some output has been taken
             }
-            if (!queued) return null
-            out += drain(c, 5_000L)   // a software decoder answers within a few ms; a longer wait would stall the receiver
-            out
+            if (!queued) stats.inputDropped++
+            pending += drain(c, XheSupport.outputWaitUs(stats.framesOut > 0, stats.inFlight()))
         } catch (t: Throwable) {
             AppLog.e("xhe", "xHE-AAC decode failed", t)
-            null
+            stats.errors++
+            restart()
         }
+        val out = pending
+        pending = ShortArray(0)
+        if (out.isEmpty()) stats.empty++
+        if (stats.framesIn % 500L == 0L) AppLog.i("xhe", stats.line())
+        return out
+    }
+
+    /** A codec error (IllegalStateException, CodecException): start a fresh codec with the same configuration; the next frame is independent. */
+    private fun restart() {
+        val a = asc ?: return
+        val r = rate; val ch = channels
+        val why = open(a, if (r > 0) r else cfgRate, if (ch > 0) ch else cfgChannels)
+        if (why.isNotEmpty()) AppLog.e("xhe", "xHE-AAC decoder restart failed: $why", null)
     }
 
     private fun drain(c: MediaCodec, firstWaitUs: Long): ShortArray {
@@ -127,6 +161,7 @@ class XheAacDecoder {
                     if (b != null && info.size > 0) {
                         b.position(info.offset); b.limit(info.offset + info.size)
                         all += XheSupport.toShorts(b, floatPcm)
+                        stats.framesOut++
                     }
                     c.releaseOutputBuffer(i, false)
                 }
@@ -147,12 +182,15 @@ class XheAacDecoder {
 
     /** Frames were lost: drop what is inside; the next access unit is independent. */
     @Synchronized fun flush() {
+        pending = ShortArray(0)
+        stats.flushes++; stats.framesInAtFlush = stats.framesIn; stats.framesOutAtFlush = stats.framesOut
         try { codec?.flush() } catch (t: Throwable) { AppLog.e("xhe", "xHE-AAC flush failed", t) }
     }
 
     @Synchronized fun close() {
         val c = codec ?: return
         codec = null
+        AppLog.i("xhe", stats.line() + " (closed)")
         try { c.stop() } catch (_: Throwable) {}
         try { c.release() } catch (_: Throwable) {}
     }
