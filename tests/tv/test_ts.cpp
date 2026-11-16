@@ -113,7 +113,23 @@ static void feedSection(TsDemux& d, int pid, const std::vector<uint8_t>& sec, in
     d.feed(p);
 }
 
+// A platform converter (Android's java.nio.charset) takes precedence over iconv and falls back to it when it declines.
+static bool fakeConvert(const char* cs, const uint8_t*, int, std::string& out) {
+    if (strcmp(cs, "BIG5") != 0) return false;
+    out = "\xE9\x81\x93";   // U+9053
+    return true;
+}
+static void testExternalConvert() {
+    const uint8_t big5[] = {0x14, 0xA4, 0xA4};   // 0x14 = Big5 selector
+    dect2::dvbsi::setExternalConvert(fakeConvert);
+    CHECK(dect2::dvbsi::dvbText(big5, 3) == "\xE9\x81\x93", "external converter not used for the Big5 selector");
+    const uint8_t gb[] = {'A', 'B'};
+    CHECK(dect2::dvbsi::dvbText(gb, 2) == "AB", "plain text changed by the external converter");
+    dect2::dvbsi::setExternalConvert(nullptr);
+}
+
 int main() {
+    testExternalConvert();
     std::mt19937 rng(4);
     roundTrip(true, rng);
     roundTrip(false, rng);

@@ -19,6 +19,7 @@
 #include <vector>
 
 #include "dect2/engine/engine.h"
+#include "dect2/tv/dvb_text.h"
 #include "jni_radio.h"
 
 using namespace dect2;
@@ -101,6 +102,71 @@ void installTap(bool on) {
 }
 
 } // namespace
+
+
+// Character sets for the programme guide and service names. Bionic's iconv has no Big5, GBK or GB 18030, so Chinese DTMB text (Hong Kong Big5, mainland GB 2312)
+// came out as raw bytes (issue #517). java.nio.charset on the phone has them: String(bytes, name).getBytes("UTF-8"), from any thread (attached on first use).
+namespace {
+JavaVM* gTvVm = nullptr;
+jclass gStringCls = nullptr;
+jmethodID gStrNew = nullptr, gStrBytes = nullptr;
+
+bool javaConvert(const char* charset, const uint8_t* p, int n, std::string& out) {
+    if (!gTvVm || !gStringCls || n <= 0) return false;
+    JNIEnv* e = nullptr;
+    bool attached = false;
+    if (gTvVm->GetEnv(reinterpret_cast<void**>(&e), JNI_VERSION_1_6) != JNI_OK) {
+        if (gTvVm->AttachCurrentThread(&e, nullptr) != JNI_OK) return false;
+        attached = true;
+    }
+    std::string name = charset;
+    if (name == "GB2312") name = "GB18030";
+    else if (name == "BIG5") name = "Big5-HKSCS";   // superset of Big5 with the Hong Kong characters
+    else if (name == "UCS-2BE") name = "UTF-16BE";
+    bool ok = false;
+    jbyteArray in = e->NewByteArray(n);
+    jstring cs = e->NewStringUTF(name.c_str());
+    jstring utf8 = e->NewStringUTF("UTF-8");
+    if (in && cs && utf8) {
+        e->SetByteArrayRegion(in, 0, n, reinterpret_cast<const jbyte*>(p));
+        jobject str = e->NewObject(gStringCls, gStrNew, in, cs);
+        if (!e->ExceptionCheck() && str) {
+            jbyteArray res = (jbyteArray)e->CallObjectMethod(str, gStrBytes, utf8);
+            if (!e->ExceptionCheck() && res) {
+                const jsize m = e->GetArrayLength(res);
+                out.resize((size_t)m);
+                if (m) e->GetByteArrayRegion(res, 0, m, reinterpret_cast<jbyte*>(&out[0]));
+                ok = true;
+            }
+            if (res) e->DeleteLocalRef(res);
+        }
+        if (str) e->DeleteLocalRef(str);
+    }
+    if (e->ExceptionCheck()) e->ExceptionClear();   // unknown charset name: iconv gets its turn
+    if (in) e->DeleteLocalRef(in);
+    if (cs) e->DeleteLocalRef(cs);
+    if (utf8) e->DeleteLocalRef(utf8);
+    if (attached) gTvVm->DetachCurrentThread();
+    return ok;
+}
+} // namespace
+
+extern "C" JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void*) {
+    gTvVm = vm;
+    JNIEnv* e = nullptr;
+    if (vm->GetEnv(reinterpret_cast<void**>(&e), JNI_VERSION_1_6) == JNI_OK && e) {
+        jclass c = e->FindClass("java/lang/String");
+        if (c) {
+            gStringCls = (jclass)e->NewGlobalRef(c);
+            gStrNew = e->GetMethodID(c, "<init>", "([BLjava/lang/String;)V");
+            gStrBytes = e->GetMethodID(c, "getBytes", "(Ljava/lang/String;)[B");
+            e->DeleteLocalRef(c);
+        }
+        if (e->ExceptionCheck()) { e->ExceptionClear(); gStringCls = nullptr; }
+        if (gStringCls && gStrNew && gStrBytes) dect2::dvbsi::setExternalConvert(javaConvert);
+    }
+    return JNI_VERSION_1_6;
+}
 
 #define TFN(ret, name) extern "C" JNIEXPORT ret JNICALL Java_io_github_adswill_onair_tv_TvNative_##name
 

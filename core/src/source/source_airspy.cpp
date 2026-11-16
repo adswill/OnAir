@@ -6,6 +6,7 @@
 #include "dect2/common/diag.h"
 #include "dect2/source/usb_fd.h"   // Android: radios handed over as descriptors
 #include <algorithm>
+#include <atomic>
 #include <map>
 
 namespace dect2 {
@@ -45,6 +46,7 @@ struct AirspyApi {
     const char* (DECT2_CALL* error_name)(int) = nullptr;   // optional: libairspy's name of an error code
     int (DECT2_CALL* version_string_read)(airspy_device*, char*, uint8_t) = nullptr;   // optional: tells a Mini ("AirSpy MINI ...") from an R2
     int (DECT2_CALL* open_fd)(airspy_device**, int) = nullptr;   // optional (libairspy 1.0.10+ built for Android): a descriptor the system opened
+    int (DECT2_CALL* set_packing)(airspy_device*, uint8_t) = nullptr;   // optional: 12-bit packed transfers, a quarter less USB traffic
     bool ok = false;
     DynLib lib;
     AirspyApi() {
@@ -61,6 +63,7 @@ struct AirspyApi {
         lib.opt(set_sensitivity_gain, "airspy_set_sensitivity_gain");
         lib.opt(is_streaming, "airspy_is_streaming");
         lib.opt(version_string_read, "airspy_version_string_read");
+        lib.opt(set_packing, "airspy_set_packing");
         lib.opt(error_name, "airspy_error_name");
         lib.opt(open_fd, "airspy_open_fd");
         if (ok && usbFdPlatform() && !open_fd) {   // Android without the descriptor entry point: it could only scan the bus, which it may not
@@ -162,6 +165,7 @@ protected:
             return false;
         }
         if (!configure(s, err, false)) return false;
+        libDropped_.store(0); libDropEvents_.store(0);
         // Streaming starts here, not on the stream thread: the first retune after start() must not meet a radio that is still being started,
         // and a radio that does not start is reported to the caller instead of sending nothing.
         if (!startRx()) { DIAG_ERROR(350986, "The Airspy library could not start streaming, so the radio is not used."); err = "Airspy: the radio did not start streaming"; return false; }
@@ -196,6 +200,13 @@ protected:
             }
             rate_ = pick;
             requested_ = s.sampleRate;
+            // An R2 at 10 Msps sends about 40 MB/s over USB: the very limit of a USB 2 link, which a phone's port is. Packed 12-bit transfers need 30 MB/s.
+            // On by default on a phone (descriptor from the system), off on a computer, "packing" in the radio settings overrides; a library without the call goes without.
+            if (airspy().set_packing) {
+                const bool pack = radioOption(s, "packing", usbFdPlatform() ? "1" : "0") == "1";
+                const int rc = airspy().set_packing(dev_, pack ? 1 : 0);
+                if (rc != 0 && pack) { DIAG(580374, "The Airspy refused packed transfers with code %d, so the radio runs unpacked.", rc); fprintf(stderr, "Airspy: packed transfers refused (%d): running unpacked\n", rc); fflush(stderr); }
+            }
             checkRate(s.sampleRate, err);
             if (!refused.empty()) err = refused + "; running at " + mspsText(rate_) + " Msps instead. Turn off \"10 Msps (unofficial)\" in the radio settings";
             // this Mini can run at 10 Msps, but only with the unofficial rate switched on in the radio settings
@@ -250,10 +261,25 @@ protected:
         stopRx();
     }
 
+public:
+    // the status line: what the library lost before the samples reached the ring (USB link or this thread too slow)
+    std::string statusNote() const override {
+        const unsigned long long n = libDropped_.load(), e = libDropEvents_.load();
+        if (!n) return {};
+        return "Airspy: " + std::to_string(n) + " samples dropped in the USB library (" + std::to_string(e) + " times; a slow USB 2 link or a busy phone)";
+    }
+
 private:
     static int DECT2_CALL callback(AirspyApi::transfer_t* t) {
         auto* self = static_cast<AirspySource*>(t->ctx);
         if (!self->run_ || !t->samples || t->sample_count <= 0) return 0;
+        // libairspy reports the samples it had to drop since the last transfer (its own buffers ran full: this callback, or the ring write, was slow)
+        if (t->dropped_samples) {
+            const uint64_t d = t->dropped_samples;
+            self->libDropped_.fetch_add(d);
+            if (self->libDropEvents_.fetch_add(1) < 5) { fprintf(stderr, "Airspy: libairspy reports %llu samples dropped (transfer of %d)\n", (unsigned long long)d, t->sample_count); fflush(stderr); }
+            if (self->ring_) self->ring_->noteLost(d);   // counts as lost at the radio side in the status panel's sample loss
+        }
         self->push(static_cast<const cf32*>(t->samples), (size_t)t->sample_count);   // float32 I/Q pairs = std::complex<float>
         return 0;
     }
@@ -317,6 +343,7 @@ private:
     bool rx_ = false;     // start_rx() done, stop_rx() not yet (under api_)
     bool streamed_ = false, reused_ = false, bad_ = false;   // start_rx() was tried on this handle (ever); it was kept from an earlier session; its start failed
     uint32_t freq_ = 0;
+    std::atomic<uint64_t> libDropped_{0}, libDropEvents_{0};   // from the library's transfers (written by its thread)
 };
 
 void listAirspy(std::vector<DeviceInfo>& out) {
