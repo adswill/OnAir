@@ -27,7 +27,7 @@ struct Run {
 
 // demodulator d on a synthetic station modulated with modulation m (the receiver's channel at chanOff from the dial)
 static Run run(int d, int m, double secs, double snr, bool quiet, double sigFromDial = 0, double chanOff = 0, double deemph = 0,
-               bool sqAuto = true, bool sqOn = true, float sqDb = -60, double tone = 1000) {
+               bool sqAuto = true, bool sqOn = true, float sqDb = -60, double tone = 1000, double width = 0) {
     SynthConfig sc;
     sc.mode = 57; sc.snrDb = snr; sc.modeOpt[0] = m; sc.modeOpt[1] = quiet ? 1 : 0; sc.modeVal[0] = sigFromDial; sc.modeVal[1] = tone;
     auto syn = makeGeneralSynth(sc, kRate);
@@ -36,7 +36,7 @@ static Run run(int d, int m, double secs, double snr, bool quiet, double sigFrom
     r.setSignalOffset(-generalTuning().tuneOffsetHz);
     r.setSilent(true);
     r.setDemod(d);
-    r.setWidthHz(generalDefaultWidth(d));
+    r.setWidthHz(width > 0 ? width : generalDefaultWidth(d));
     r.setChannelOffsetHz(chanOff);
     r.setDeemphUs(deemph);
     r.setSquelch(sqOn, sqAuto, sqDb);
@@ -73,7 +73,8 @@ int main() {
     generalFilterEdges(GenUsb, 2700, lo, hi); CHECK(lo == 300 && hi == 3000, "usb edges %g %g", lo, hi);
     generalFilterEdges(GenLsb, 2700, lo, hi); CHECK(lo == -3000 && hi == -300, "lsb edges %g %g", lo, hi);
     generalFilterEdges(GenNfm, 12500, lo, hi); CHECK(lo == -6250 && hi == 6250, "nfm edges");
-    CHECK(generalClampWidth(GenCw, 1e6) == 3000, "clamp");
+    CHECK(generalClampWidth(GenCw, 1e6) == 20000 && generalClampWidth(GenUsb, 1e6) == 20000 && generalClampWidth(GenUsb, 10000) == 10000, "clamp");
+    CHECK(generalDefaultWidth(GenUsb) == 2700 && generalDefaultWidth(GenCw) == 500, "defaults unchanged");
     CHECK(generalTuning().stdMode == 57 && std::fabs(generalTuning().defMhz - 145.5) < 1e-9, "tuning");
 
     struct Case { int d; double tone, amp; const char* name; };
@@ -90,6 +91,15 @@ int main() {
         CHECK(aOff < 0.1 * a, "%s off-tone %.4f", c.name, aOff);
         CHECK(tot < 1.3 * a, "%s distortion: rms peak %.3f vs tone %.3f", c.name, tot, a);
         CHECK(r.tel.squelchOpen && r.tel.dataValid && r.tel.snrDb > 15, "%s squelch %d snr %.1f", c.name, r.tel.squelchOpen, r.tel.snrDb);
+    }
+
+    // 4.4: a 10 kHz USB / LSB filter passes a 9 kHz tone, the default 2.7 kHz one does not
+    for (int d : {GenUsb, GenLsb}) {
+        const Run wide = run(d, d, 1.5, 30, false, 0, 0, 0, true, true, -60, 9000, 10000);
+        const Run nar = run(d, d, 1.5, 30, false, 0, 0, 0, true, true, -60, 9000, 0);
+        const double aW = toneAmp(wide.aud, 9000), aN = toneAmp(nar.aud, 9000);
+        printf("  %s 9 kHz tone: 10 kHz filter %.3f, default filter %.4f\n", d == GenUsb ? "USB" : "LSB", aW, aN);
+        CHECK(aW > 0.3 && aN < 0.1 * aW, "%s wide filter %.3f narrow %.4f", d == GenUsb ? "USB" : "LSB", aW, aN);
     }
 
     // 4.0: NFM audio low-pass at 3 kHz (was 4 kHz): speech up to 2.5 kHz keeps its level, 3.8 kHz (passed by the 3.9 filter) is cut
@@ -127,7 +137,7 @@ int main() {
     // names and ranges of the new ones; the first six keep their numbers
     CHECK(GenCw == 5 && GenDsb == 6 && GenRaw == 7 && GenCwl == 8 && GenDemodCount == 9, "demodulator numbers");
     CHECK(!strcmp(generalDemodName(GenDsb), "DSB") && !strcmp(generalDemodName(GenRaw), "RAW") && !strcmp(generalDemodName(GenCwl), "CW-L") && !strcmp(generalDemodName(99), "?"), "names");
-    CHECK(generalClampWidth(GenRaw, 1e6) == 44000 && generalClampWidth(GenDsb, 10) == 1000 && generalClampWidth(GenCwl, 1e6) == 3000, "new ranges");
+    CHECK(generalClampWidth(GenRaw, 1e6) == 44000 && generalClampWidth(GenDsb, 10) == 1000 && generalClampWidth(GenCwl, 1e6) == 20000, "new ranges");
 
     // a station 25 kHz above the dial, the channel put on it
     {
