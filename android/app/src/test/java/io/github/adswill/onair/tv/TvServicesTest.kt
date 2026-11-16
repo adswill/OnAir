@@ -124,9 +124,34 @@ class TvServicesTest {
             stream(259, 0x06, "DVB subtitles", "subtitles", "chi"), stream(260, 0x0B, "DSM-CC", "data"), stream(261, 0x05, "private", "data"))
         assertEquals(listOf(259), tvb.subtitles.map { it.pid })
         assertEquals(listOf(260), tvb.interactive.map { it.pid })
-        assertEquals("chi subtitles (not supported on this phone)", subtitleLabel(tvb.subtitles[0]))
+        assertEquals("CHI - DVB subtitles - not supported yet", subtitleTrackText(tvb.subtitleTracks[0], "Unknown language", "hearing impaired", "not supported yet"))
         assertTrue(interactiveLabel(tvb.interactive[0]).contains("not supported on this phone"))
         assertEquals("chi AC-3 (not supported on this phone)", audioLabel(tvb.audio[0], typical))
         assertEquals("chi AC-3", audioLabel(tvb.audio[0], all.let { s -> DecoderCatalog { m -> if (m in s) "dec" else null } }))
+    }
+
+    private fun sub(pid: Int, lang: String, hi: Boolean = false, ttx: Boolean = false, type: String = "DVB subtitles", page: Int = 0) =
+        TvStream(pid, 0x06, type, "subtitles", lang, 0.0, false, listOf(TvSubEntry(lang, "", type, hi, ttx, page)))
+
+    @Test fun subtitleTracksComeFromTheDescriptorsAndTheLanguageIsPicked() {
+        val json = """{"packets":1,"services":[{"id":1,"name":"TVB","streams":[
+            {"pid":300,"type":6,"codec":"DVB subtitles","kind":"subtitles","lang":"chs","subs":[
+              {"lang":"chs","name":"Chinese (simplified)","kind":"DVB subtitles","hi":false,"ttx":false,"page":1},
+              {"lang":"cht","name":"Chinese (traditional)","kind":"DVB subtitles","hi":true,"ttx":false,"page":2}]},
+            {"pid":301,"type":6,"codec":"Teletext","kind":"teletext","lang":"eng","subs":[
+              {"lang":"eng","name":"English","kind":"Teletext subtitles","hi":false,"ttx":true,"page":888},
+              {"lang":"eng","name":"English","kind":"Teletext initial page","hi":false,"ttx":true,"page":100}]}]}]}"""
+        val tracks = TvMux.parse(json).services[0].subtitleTracks
+        assertEquals(3, tracks.size)   // the teletext initial page is not a subtitle
+        assertEquals("Chinese (traditional) - DVB subtitles (hearing impaired) - not supported yet", subtitleTrackText(tracks[1], "?", "hearing impaired", "not supported yet"))
+        assertEquals("English - Teletext subtitles 888 - not supported yet", subtitleTrackText(tracks[2], "?", "hearing impaired", "not supported yet"))
+        assertNull(pickSubtitle(tracks, emptyList(), null))                       // nothing preferred: off
+        assertEquals(tracks[0].key, pickSubtitle(tracks, listOf("zho"), null)?.key)   // CHS satisfies a preferred Chinese, normal before hearing impaired
+        assertEquals(tracks[2].key, pickSubtitle(tracks, listOf("fra", "eng"), null)?.key)
+        assertNull(pickSubtitle(tracks, listOf("eng"), ""))                       // the user chose Off
+        assertEquals(tracks[1].key, pickSubtitle(tracks, listOf("eng"), tracks[1].key)?.key)
+        assertEquals("zho", subtitleLangKey("CHT")); assertEquals("deu", subtitleLangKey("ger"))
+        val plain = svc(2, "X", sub(5, "ger", hi = true))
+        assertEquals(1, plain.subtitleTracks.size)
     }
 }

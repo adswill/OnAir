@@ -53,7 +53,7 @@ import io.github.adswill.onair.tv.audioPlayability
 import io.github.adswill.onair.tv.interactiveLabel
 import io.github.adswill.onair.tv.muxLabel
 import io.github.adswill.onair.tv.providerNote
-import io.github.adswill.onair.tv.subtitleLabel
+import io.github.adswill.onair.tv.subtitleTrackText
 import io.github.adswill.onair.tv.analogAspect
 import io.github.adswill.onair.tv.analogLine
 import io.github.adswill.onair.tv.analogSourceOf
@@ -210,13 +210,18 @@ object TvPanel : ModePanel {
                             }
                         }
                     }
-                    val subs = sel?.subtitles.orEmpty()
+                    val subs = sel?.subtitleTracks.orEmpty()
                     val inter = sel?.interactive.orEmpty()
                     if (subs.isNotEmpty() || inter.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         SectionLabel(stringResource(R.string.tv_subtitles))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            for (x in subs) Chip(subtitleLabel(x), color = p.muted)
+                            val tracks = sel?.subtitleTracks.orEmpty()
+                            if (tracks.isNotEmpty()) Chip(stringResource(R.string.tv_subtitles_off), color = p.accent, selected = st.subtitleKey == null) { tv.selectSubtitle("", "") }
+                            val unknown = stringResource(R.string.tv_subtitle_unknown_language)
+                            val hearing = stringResource(R.string.tv_subtitle_hearing_impaired)
+                            val notYet = stringResource(R.string.tv_subtitle_not_yet)
+                            for (t in tracks) Chip(subtitleTrackText(t, unknown, hearing, notYet), color = p.accent, selected = st.subtitleKey == t.key) { tv.selectSubtitle(t.key, t.entry.lang) }
                             for (x in inter) Chip(interactiveLabel(x), color = p.muted)
                         }
                     }

@@ -36,6 +36,10 @@
     <string name="tv_services">Services</string>
     <string name="tv_sound_tracks">Sound tracks</string>
     <string name="tv_subtitles">Subtitles and data</string>
+    <string name="tv_subtitles_off">Subtitles off</string>
+    <string name="tv_subtitle_unknown_language">Unknown language</string>
+    <string name="tv_subtitle_hearing_impaired">hearing impaired</string>
+    <string name="tv_subtitle_not_yet">not supported yet</string>
     <string name="tv_radio">radio</string>
     <string name="tv_scrambled">scrambled</string>
     <string name="tv_honesty">Picture and sound are decoded by this phone\'s own decoders (Android MediaCodec). OnAir ships no codec: a format the phone has no decoder for stays silent or dark, and the screen says which. Wideband TV demodulation is heavy for a phone: expect it to get warm, drain the battery quickly and, on slower phones, not keep up.</string>

@@ -3627,3 +3627,11 @@ Default	Alapértelmezett
 Custom	Egyéni
 Join the Discord to get access to built codecs	Csatlakozz a Discordhoz, hogy hozzáférj az elkészített kodekekhez
 Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	Megnyitja az OnAir Discordot a böngészőben. Maga az OnAir soha nem tölt le és nem tartalmaz kodeket.
+Unknown language	Unknown language
+Teletext subtitles	Teletext subtitles
+DVB subtitles	DVB subtitles
+hearing impaired	hearing impaired
+Teletext subtitles (page 888)	Teletext subtitles (page 888)
+subtitles##subson	subtitles##subson
+Subtitles over the picture (S in the pop-out window)	Subtitles over the picture (S in the pop-out window)
+Subtitle language, or Off (L in the pop-out window)	Subtitle language, or Off (L in the pop-out window)

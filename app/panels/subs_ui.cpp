@@ -27,6 +27,20 @@ int ttxSubtitlePage(App& a, const SubOpt& o) {
     return 888;
 }
 
+// The menu text of a subtitle track: "Chinese (traditional) - DVB subtitles (hearing impaired)". The language name comes from the ISO 639 code
+// (core: isoLanguageName); the words around it are translated here.
+std::string subtitleMenuLabel(const TsSubEntry& e) {
+    bool hi = false;
+    subtitleTypeName(e, &hi);
+    const std::string lang = isoLanguageName(e.lang);
+    std::string s = lang.empty() ? std::string(tr("Unknown language")) : lang;
+    s += " - ";
+    s += e.teletext ? tr("Teletext subtitles") : tr("DVB subtitles");
+    if (e.teletext && e.page > 0) s += " " + std::to_string(e.page);
+    if (hi) s += std::string(" (") + tr("hearing impaired") + ")";
+    return s;
+}
+
 void overlayThunk(void* ctx, ImDrawList* dl, ImVec2 p0, ImVec2 size) {
     App& a = *(App*)ctx;
     // generated captions (auto subtitles, core/src/transcribe/captions.h): never in place of the station's own ones unless the user chose so
@@ -99,10 +113,10 @@ void subsUpdate(App& a) {
                 if (e.teletext) {
                     if (e.type != 2 && e.type != 5) continue;   // initial / information / schedule pages are not subtitles
                     o.comp = e.page;
-                    o.label = "Teletext " + std::to_string(e.page) + (e.lang.empty() ? "" : "  " + e.lang) + (e.type == 5 ? "  (hearing impaired)" : "");
+                    o.label = subtitleMenuLabel(e);
                 } else {
                     o.comp = e.page; o.anc = e.ancPage;
-                    o.label = "DVB" + (e.lang.empty() ? std::string() : "  " + e.lang) + (e.type >= 0x20 && e.type <= 0x24 ? "  (hearing impaired)" : "");
+                    o.label = subtitleMenuLabel(e);
                 }
                 o.key = std::string(e.teletext ? "ttx:" : "dvb:") + e.lang + ":" + std::to_string(e.page) + ":" + std::to_string(e.type);
                 a.subOpts.push_back(o);
@@ -110,7 +124,7 @@ void subsUpdate(App& a) {
         }
         if (a.subOpts.empty() && firstTtxPid >= 0) {   // teletext without a subtitle entry: the usual subtitle page 888 (777 on some channels)
             SubOpt o; o.ttx = true; o.pid = firstTtxPid; o.fallback = true; o.comp = 888;
-            o.label = "Teletext subtitles (page 888)"; o.key = "ttx::888:0";
+            o.label = tr("Teletext subtitles (page 888)"); o.key = "ttx::888:0";
             a.subOpts.push_back(o);
         }
         for (const auto& st : sv.streams) if (st.kind == "teletext" && st.subs.empty() && firstTtxPid < 0) firstTtxPid = st.pid;
@@ -172,17 +186,17 @@ void subsKey(App& a, int what) {
 
 void subsControls(App& a) {
     if (a.subOpts.empty()) return;
-    if (ImGui::Checkbox("subtitles", &a.subsOn)) savePrefs(a);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Subtitles over the picture (S in the pop-out window)");
-    if (a.subOpts.size() > 1 || (a.subIdx >= 0 && !a.subOpts[a.subIdx].lang.empty())) {
-        flowNext();
-        ImGui::SetNextItemWidth(220 * gUi);
-        const char* cur = a.subIdx >= 0 ? a.subOpts[a.subIdx].label.c_str() : "";
-        if (ImGui::BeginCombo("##sublang", cur)) {
-            for (int i = 0; i < (int)a.subOpts.size(); i++)
-                if (ImGui::Selectable(a.subOpts[i].label.c_str(), i == a.subIdx)) { a.subIdx = i; a.subsPick = a.subOpts[i].key; a.subsOn = true; savePrefs(a); }
-            ImGui::EndCombo();
-        }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Subtitle language (L in the pop-out window)");
+    if (ImGui::Checkbox(tr("subtitles##subson"), &a.subsOn)) savePrefs(a);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Subtitles over the picture (S in the pop-out window)"));
+    flowNext();
+    ImGui::SetNextItemWidth(260 * gUi);
+    const std::string off = tr("Off");
+    const char* cur = !a.subsOn || a.subIdx < 0 ? off.c_str() : a.subOpts[a.subIdx].label.c_str();
+    if (ImGui::BeginCombo("##sublang", cur)) {
+        if (ImGui::Selectable(off.c_str(), !a.subsOn)) { a.subsOn = false; savePrefs(a); }   // the remembered language stays for the next time
+        for (int i = 0; i < (int)a.subOpts.size(); i++)
+            if (ImGui::Selectable(a.subOpts[i].label.c_str(), a.subsOn && i == a.subIdx)) { a.subIdx = i; a.subsPick = a.subOpts[i].key; a.subsOn = true; savePrefs(a); }
+        ImGui::EndCombo();
     }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Subtitle language, or Off (L in the pop-out window)"));
 }

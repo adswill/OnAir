@@ -477,4 +477,52 @@ TsSnapshot TsDemux::snapshot() const {
     return sn;
 }
 
+std::string isoLanguageName(const std::string& code) {
+    std::string c;
+    for (char ch : code) { if (ch == '\0' || ch == ' ') break; c += (char)((ch >= 'A' && ch <= 'Z') ? ch + 32 : ch); }
+    if (c.empty()) return "";
+    static const struct { const char* code; const char* name; } kNames[] = {
+        {"chs", "Chinese (simplified)"}, {"cht", "Chinese (traditional)"}, {"chi", "Chinese"}, {"zho", "Chinese"}, {"cmn", "Chinese (Mandarin)"}, {"yue", "Chinese (Cantonese)"},
+        {"eng", "English"}, {"jpn", "Japanese"}, {"kor", "Korean"}, {"fra", "French"}, {"fre", "French"}, {"deu", "German"}, {"ger", "German"},
+        {"rus", "Russian"}, {"spa", "Spanish"}, {"por", "Portuguese"}, {"ita", "Italian"}, {"nld", "Dutch"}, {"dut", "Dutch"}, {"pol", "Polish"},
+        {"tur", "Turkish"}, {"ara", "Arabic"}, {"heb", "Hebrew"}, {"hin", "Hindi"}, {"tha", "Thai"}, {"vie", "Vietnamese"}, {"ind", "Indonesian"},
+        {"msa", "Malay"}, {"may", "Malay"}, {"swe", "Swedish"}, {"nor", "Norwegian"}, {"nob", "Norwegian"}, {"dan", "Danish"}, {"fin", "Finnish"},
+        {"ces", "Czech"}, {"cze", "Czech"}, {"slk", "Slovak"}, {"slo", "Slovak"}, {"hun", "Hungarian"}, {"ron", "Romanian"}, {"rum", "Romanian"},
+        {"ell", "Greek"}, {"gre", "Greek"}, {"bul", "Bulgarian"}, {"ukr", "Ukrainian"}, {"hrv", "Croatian"}, {"srp", "Serbian"}, {"slv", "Slovenian"},
+        {"lit", "Lithuanian"}, {"lav", "Latvian"}, {"est", "Estonian"}, {"cat", "Catalan"}, {"fas", "Persian"}, {"per", "Persian"}, {"urd", "Urdu"},
+        {"ben", "Bengali"}, {"tam", "Tamil"}, {"tel", "Telugu"}, {"fil", "Filipino"}, {"tgl", "Tagalog"}, {"und", "Undetermined"}, {"qaa", "Original audio"},
+    };
+    for (const auto& k : kNames) if (c == k.code) return k.name;
+    std::string up = c;
+    for (char& ch : up) if (ch >= 'a' && ch <= 'z') ch -= 32;
+    return up;
+}
+
+bool subtitleEntryIsSubtitle(const TsSubEntry& e) { return !e.teletext || e.type == 2 || e.type == 5; }
+
+std::string subtitleTypeName(const TsSubEntry& e, bool* hearingImpaired) {
+    bool hi = false;
+    std::string s;
+    if (e.teletext) {
+        hi = e.type == 5;
+        s = e.type == 2 || e.type == 5 ? "Teletext subtitles" : e.type == 1 ? "Teletext initial page" : e.type == 3 ? "Teletext information" : e.type == 4 ? "Teletext schedule" : "Teletext";
+    } else {
+        // EN 300 468 table 26: 0x10..0x13 normal (ratio), 0x14 for a display of 4:3 .. 0x20..0x24 hard of hearing
+        hi = e.type >= 0x20 && e.type <= 0x24;
+        s = "DVB subtitles";
+        static const char* const kRatio[] = {"", ", 4:3", ", 16:9", ", 2.21:1", ", HD"};
+        const int r = e.type >= 0x20 ? e.type - 0x20 : e.type >= 0x10 ? e.type - 0x10 : 0;
+        if (r >= 1 && r <= 4 && e.type != 0x10 && e.type != 0x20) s += kRatio[r];
+    }
+    if (hearingImpaired) *hearingImpaired = hi;
+    return s;
+}
+
+std::string subtitleTrackLabel(const TsSubEntry& e) {
+    bool hi = false;
+    const std::string t = subtitleTypeName(e, &hi);
+    const std::string l = isoLanguageName(e.lang);
+    return (l.empty() ? std::string("Unknown language") : l) + " - " + t + (e.teletext && e.page > 0 ? " " + std::to_string(e.page) : std::string()) + (hi ? " (hearing impaired)" : "");
+}
+
 } // namespace dect2

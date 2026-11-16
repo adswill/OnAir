@@ -11218,3 +11218,11 @@ Doppler %+.0f Hz (%+.1f Hz/s); %llu recovered, %llu after cancelling	多普勒 %
 %u ships sent message 27	%u 艘船发送了 27 号报文
 %u in the table	表中有 %u 个
 GitHub is hard to reach from some networks in China: keep the update source on Automatic and turn on 'Use the mirror when GitHub cannot be reached', so update checks and downloads keep working.	国内部分网络访问 GitHub 不稳定：建议将更新来源保持为「自动：GitHub」并勾选「GitHub 无法连接时使用镜像」，以保证更新检查和下载正常进行。
+Unknown language	Unknown language
+Teletext subtitles	Teletext subtitles
+DVB subtitles	DVB subtitles
+hearing impaired	hearing impaired
+Teletext subtitles (page 888)	Teletext subtitles (page 888)
+subtitles##subson	subtitles##subson
+Subtitles over the picture (S in the pop-out window)	Subtitles over the picture (S in the pop-out window)
+Subtitle language, or Off (L in the pop-out window)	Subtitle language, or Off (L in the pop-out window)

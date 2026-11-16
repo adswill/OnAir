@@ -26,6 +26,8 @@ data class TvUiState(
     val services: List<TvService> = emptyList(),
     val selectedId: Int? = null,
     val audioPid: Int? = null,
+    /** The subtitle track chosen (by the user, else the preferred language); null = Off. The phone cannot draw it yet. */
+    val subtitleKey: String? = null,
     val notes: List<String> = emptyList(),
     val playback: TvPlaybackStats = TvPlaybackStats(),
 ) {
@@ -37,7 +39,7 @@ data class TvUiState(
  * service and sound track ([pickService], [pickAudio]), and runs the [TvPlayer] on the panel's Surface. Leaving the panel stops the
  * picture and the sound (TV in the background is not offered: it would cost the battery a phone cannot spare).
  */
-class TvController(val catalog: DecoderCatalog = AndroidDecoderCatalog()) {
+class TvController(val catalog: DecoderCatalog = AndroidDecoderCatalog(), private val subPrefs: SubtitlePrefs = SubtitlePrefs.Memory()) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + kotlinx.coroutines.CoroutineName("onair-tv-ui"))
     private val _state = MutableStateFlow(TvUiState(libraryLoaded = TvNative.loaded))
     val state: StateFlow<TvUiState> = _state.asStateFlow()
@@ -47,6 +49,8 @@ class TvController(val catalog: DecoderCatalog = AndroidDecoderCatalog()) {
     private var surface: Surface? = null
     private var userPickedId: Int? = null
     private var userAudioPid: Int? = null
+    /** null: the user has not chosen on this service; "": Off; else a [SubtitleTrack.key]. */
+    private var userSubKey: String? = null
     private var playing: TvPlayer.Selection? = null
     private var missingSince = 0L
 
@@ -72,12 +76,19 @@ class TvController(val catalog: DecoderCatalog = AndroidDecoderCatalog()) {
     }
 
     fun selectService(id: Int) {
-        userPickedId = id; userAudioPid = null
+        userPickedId = id; userAudioPid = null; userSubKey = null
         scope.launch { refresh() }
     }
 
     fun selectAudio(pid: Int) {
         userAudioPid = pid
+        scope.launch { refresh() }
+    }
+
+    /** A subtitle track by [SubtitleTrack.key], or "" for Off. The language is remembered and chosen again on the next channel that has it. */
+    fun selectSubtitle(key: String, lang: String) {
+        userSubKey = key
+        subPrefs.preferred = if (key.isEmpty()) "-" else lang   // "-": Off is remembered too
         scope.launch { refresh() }
     }
 
@@ -108,7 +119,9 @@ class TvController(val catalog: DecoderCatalog = AndroidDecoderCatalog()) {
         val chosen = pickService(list, userPickedId ?: playing?.service?.id, catalog)
         val audio = chosen?.let { pickAudio(it, catalog, languages, userAudioPid) }
         val notes = chosen?.let { playabilityNotes(it, audio, catalog) } ?: emptyList()
-        _state.update { it.copy(mux = mux, services = list, selectedId = chosen?.id, audioPid = audio?.pid, notes = notes) }
+        val subPref = subPrefs.preferred
+        val sub = chosen?.let { pickSubtitle(it.subtitleTracks, if (subPref == "-" || subPref.isBlank()) emptyList() else listOf(subPref), userSubKey) }
+        _state.update { it.copy(mux = mux, services = list, selectedId = chosen?.id, audioPid = audio?.pid, subtitleKey = sub?.key, notes = notes) }
         if (!_state.value.visible) return
         if (chosen == null) {
             // the service went away (another channel tuned, the receiver stopped): stop after a few seconds, not at the first gap
@@ -130,4 +143,17 @@ class TvController(val catalog: DecoderCatalog = AndroidDecoderCatalog()) {
     /** The PMT changed the PIDs or codecs of the picture: start again with the new ones. */
     private fun streamsChanged(a: TvService, b: TvService): Boolean =
         a.video?.pid != b.video?.pid || a.video?.streamType != b.video?.streamType || a.pcrPid != b.pcrPid
+}
+
+/** Where the preferred subtitle language (ISO 639-2, "-" for Off, "" for no choice yet) is kept. */
+interface SubtitlePrefs {
+    var preferred: String
+    class Memory : SubtitlePrefs { override var preferred: String = "" }
+}
+
+/** [SubtitlePrefs] in the app's SharedPreferences. */
+class SharedSubtitlePrefs(private val sp: android.content.SharedPreferences) : SubtitlePrefs {
+    override var preferred: String
+        get() = try { sp.getString("subtitle_lang", "") ?: "" } catch (_: Exception) { "" }
+        set(v) { try { sp.edit().putString("subtitle_lang", v).apply() } catch (_: Exception) { } }
 }

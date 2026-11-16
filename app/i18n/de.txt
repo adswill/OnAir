@@ -4578,3 +4578,11 @@ Receive only. Listening to non-broadcast utility traffic may be restricted in so
 filter	Filter
 Hide not recognised	Nicht erkannte ausblenden
 Utility telemetry	Versorger-Fernwirktechnik
+Unknown language	Unknown language
+Teletext subtitles	Teletext subtitles
+DVB subtitles	DVB subtitles
+hearing impaired	hearing impaired
+Teletext subtitles (page 888)	Teletext subtitles (page 888)
+subtitles##subson	subtitles##subson
+Subtitles over the picture (S in the pop-out window)	Subtitles over the picture (S in the pop-out window)
+Subtitle language, or Off (L in the pop-out window)	Subtitle language, or Off (L in the pop-out window)

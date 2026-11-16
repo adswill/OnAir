@@ -3642,3 +3642,11 @@ Default	既定
 Custom	カスタム
 Join the Discord to get access to built codecs	Discord に参加してビルド済みコーデックを入手する
 Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	ブラウザで OnAir の Discord を開きます。OnAir 自身がコーデックをダウンロードしたり同梱したりすることはありません。
+Unknown language	Unknown language
+Teletext subtitles	Teletext subtitles
+DVB subtitles	DVB subtitles
+hearing impaired	hearing impaired
+Teletext subtitles (page 888)	Teletext subtitles (page 888)
+subtitles##subson	subtitles##subson
+Subtitles over the picture (S in the pop-out window)	Subtitles over the picture (S in the pop-out window)
+Subtitle language, or Off (L in the pop-out window)	Subtitle language, or Off (L in the pop-out window)

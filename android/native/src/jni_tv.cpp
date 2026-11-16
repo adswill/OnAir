@@ -122,7 +122,15 @@ TFN(jstring, nativeTvServices)(JNIEnv* e, jobject) {
         for (size_t i = 0; i < sv.streams.size(); i++) {
             const TsStream& st = sv.streams[i];
             o += std::string(i ? "," : "") + "{\"pid\":" + std::to_string(st.pid) + ",\"type\":" + std::to_string(st.streamType) + ",\"codec\":" + q(st.codec) +
-                 ",\"kind\":" + q(st.kind) + ",\"lang\":" + q(st.lang) + ",\"kbps\":" + num(st.kbps) + ",\"scrambled\":" + (st.scrambled ? "true" : "false") + "}";
+                 ",\"kind\":" + q(st.kind) + ",\"lang\":" + q(st.lang) + ",\"kbps\":" + num(st.kbps) + ",\"scrambled\":" + (st.scrambled ? "true" : "false") + ",\"subs\":[";
+            for (size_t k = 0; k < st.subs.size(); k++) {
+                const TsSubEntry& se = st.subs[k];
+                bool hi = false;
+                const std::string kind = subtitleTypeName(se, &hi);
+                o += std::string(k ? "," : "") + "{\"lang\":" + q(se.lang) + ",\"name\":" + q(isoLanguageName(se.lang)) + ",\"kind\":" + q(kind) +
+                     ",\"hi\":" + (hi ? "true" : "false") + ",\"ttx\":" + (se.teletext ? "true" : "false") + ",\"page\":" + std::to_string(se.page) + "}";
+            }
+            o += "]}";
         }
         o += "]}";
     }
