@@ -7,7 +7,7 @@ The same code runs over libusb on a desktop and over an Android `UsbDeviceConnec
 Covered: RTL2832U register / demodulator programming (init, FIR, IF frequency, sample rate with the resampler's rounding, ppm correction, AGC, test mode,
 direct sampling I/Q incl. the automatic switch below 24 MHz, offset tuning), I2C repeater, GPIO and bias-T (RTL-SDR Blog V3/V4 upconverter switch, EEPROM
 "force bias-T"), EEPROM read/write, tuner probing, and the tuners **R820T / R820T2**, **R828D** (incl. the RTL-SDR Blog V4 band switching and notch filters) and
-**E4000**. Fitipower FC0012 / FC0013 and FCI FC2580 dongles are probed (same transfers as the original) but not driven: `open` returns -95 for them.
+**E4000** and Fitipower **FC0013** (`fc0013.rs`). Fitipower FC0012 and FCI FC2580 dongles are probed (same transfers as the original) but not driven: `open` returns -95 for them.
 
 ## Source and licence
 
@@ -84,7 +84,7 @@ struct FdUsb : dect2::rs::RtlTransport {                       // fd from UsbDev
 };
 extern "C" JNIEXPORT jlong JNICALL Java_..._nativeOpen(JNIEnv*, jobject, jint fd) {
     auto* u = new FdUsb; u->fd = fd; int err = 0;
-    auto rtl = dect2::rs::RtlSdrRs::open(*u, &err);      // -95: FC0012/FC0013/FC2580 tuner
+    auto rtl = dect2::rs::RtlSdrRs::open(*u, &err);      // -95: FC0012/FC2580 tuner
     ...                                                  // keep {u, rtl}; the sample thread loops rtl->readSync(buf, 262144) (a multiple of 512)
 }
 ```

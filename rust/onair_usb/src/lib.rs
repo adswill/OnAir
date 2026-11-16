@@ -8,6 +8,7 @@
 #![deny(unsafe_code)]
 
 mod e4k;
+mod fc0013;
 pub mod fake;
 pub mod fuzz;
 mod r82xx;

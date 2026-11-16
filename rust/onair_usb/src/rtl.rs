@@ -25,7 +25,7 @@ pub enum Tuner {
     E4000 = 1,
     /// Fitipower FC0012 (detected only)
     Fc0012 = 2,
-    /// Fitipower FC0013 (detected only)
+    /// Fitipower FC0013
     Fc0013 = 3,
     /// FCI FC2580 (detected only)
     Fc2580 = 4,
@@ -411,14 +411,15 @@ impl<T: UsbTransfer> RtlSdr<T> {
 
     // ---- tuner dispatch (`tuners[]`) --------------------------------------------------------------------------------------------------------------
 
-    /// True when the dongle has a tuner driver (every type but Unknown; the unsupported FC types never get this far, see [`RtlSdr::open`]).
+    /// True when the dongle has a tuner driver (E4000, FC0013, R820T, R828D; the unsupported FC0012 / FC2580 never get this far, see [`RtlSdr::open`]).
     pub(crate) fn t_has_tuner(&self) -> bool {
-        matches!(self.tuner_type, Tuner::E4000 | Tuner::R820T | Tuner::R828D)
+        matches!(self.tuner_type, Tuner::E4000 | Tuner::Fc0013 | Tuner::R820T | Tuner::R828D)
     }
 
     fn t_init(&mut self) -> i32 {
         match self.tuner_type {
             Tuner::E4000 => self.e4000_init(),
+            Tuner::Fc0013 => self.fc0013_init(),
             _ => self.r820t_init(),
         }
     }
@@ -426,6 +427,7 @@ impl<T: UsbTransfer> RtlSdr<T> {
     fn t_exit(&mut self) -> i32 {
         match self.tuner_type {
             Tuner::E4000 => self.e4000_exit(),
+            Tuner::Fc0013 => self.fc0013_exit(),
             _ => self.r820t_exit(),
         }
     }
@@ -433,6 +435,7 @@ impl<T: UsbTransfer> RtlSdr<T> {
     fn t_set_freq(&mut self, freq: u32) -> i32 {
         match self.tuner_type {
             Tuner::E4000 => self.e4000_set_freq(freq),
+            Tuner::Fc0013 => self.fc0013_set_freq(freq),
             _ => self.r820t_set_freq(freq),
         }
     }
@@ -440,6 +443,7 @@ impl<T: UsbTransfer> RtlSdr<T> {
     fn t_set_bw(&mut self, bw: i32) -> i32 {
         match self.tuner_type {
             Tuner::E4000 => self.e4000_set_bw(bw),
+            Tuner::Fc0013 => self.fc0013_set_bw(bw),
             _ => self.r820t_set_bw(bw),
         }
     }
@@ -447,6 +451,7 @@ impl<T: UsbTransfer> RtlSdr<T> {
     fn t_set_gain(&mut self, gain: i32) -> i32 {
         match self.tuner_type {
             Tuner::E4000 => self.e4000_set_gain(gain),
+            Tuner::Fc0013 => self.fc0013_set_gain(gain),
             _ => self.r820t_set_gain(gain),
         }
     }
@@ -454,6 +459,7 @@ impl<T: UsbTransfer> RtlSdr<T> {
     fn t_set_gain_mode(&mut self, manual: i32) -> i32 {
         match self.tuner_type {
             Tuner::E4000 => self.e4000_set_gain_mode(manual),
+            Tuner::Fc0013 => self.fc0013_set_gain_mode(manual),
             _ => self.r820t_set_gain_mode(manual),
         }
     }
@@ -741,7 +747,7 @@ impl<T: UsbTransfer> RtlSdr<T> {
     /// Opens an RTL2832U whose USB interface 0 the platform layer has already claimed (`rtlsdr_open` from the dummy register write on): resets the
     /// baseband, probes the tuner (E4000, FC0013, R820T, R828D, then FC2580 and FC0012 after a GPIO reset) and initialises it.
     ///
-    /// On success returns the device. A dongle whose tuner is an FC0012, FC0013 or FC2580 is recognised but not driven (rare; the C++ build never
+    /// On success returns the device. A dongle whose tuner is an FC0012 or FC2580 is recognised but not driven (rare; the C++ build never
     /// supported them either): the transport comes back with the error -95.
     pub fn open(usb: T) -> Result<Self, (i32, T)> {
         let mut dev = RtlSdr {
@@ -803,7 +809,7 @@ impl<T: UsbTransfer> RtlSdr<T> {
             }
         }
         dev.tuner_type = found;
-        if matches!(found, Tuner::Fc0012 | Tuner::Fc0013 | Tuner::Fc2580) {
+        if matches!(found, Tuner::Fc0012 | Tuner::Fc2580) {
             dev.set_i2c_repeater(false);
             return Err((-95, dev.usb));
         }

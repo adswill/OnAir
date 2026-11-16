@@ -17,7 +17,7 @@ pub enum FakeChip {
     R828D,
     /// E4000 at 0xc8
     E4000,
-    /// FC0013 at 0xc6 (recognised, not driven)
+    /// FC0013 at 0xc6
     Fc0013,
     /// No tuner answers
     None,
@@ -103,6 +103,12 @@ impl FakeRtl {
             FakeChip::None => {}
         }
         f
+    }
+
+    /// Makes the chip at 0xc6 an FC0012 (chip id 0xa1: found only after the GPIO reset probe; the driver does not drive it).
+    pub fn add_fc0012(&mut self) {
+        self.present[3] = true;
+        self.regs[3][0] = 0xa1;
     }
 
     /// Sets the seed of the corruption generator.

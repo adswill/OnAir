@@ -142,7 +142,7 @@ unsafe fn dev<'a>(h: *mut u8) -> Option<&'a mut Dev> {
 }
 
 /// Opens the RTL2832U behind `ops` (interface already claimed) into `mem`. 0 on success (call `onair_usb_rtl_close` later), otherwise a negative error and
-/// `mem` stays unused: -1 bad arguments, -95 an FC0012 / FC0013 / FC2580 tuner (recognised, not driven).
+/// `mem` stays unused: -1 bad arguments, -95 an FC0012 / FC2580 tuner (recognised, not driven).
 #[no_mangle]
 pub unsafe extern "C" fn onair_usb_rtl_open(mem: *mut u8, mem_len: usize, ops: *const Ops) -> i32 {
     if mem.is_null() || ops.is_null() || mem_len < size_of::<Dev>() || (mem as usize) % align_of::<Dev>() != 0 {
