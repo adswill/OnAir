@@ -22,6 +22,9 @@ public:
     ~MarineReceiver();
 
     void configure(double inputRateHz);
+    // A sound card or a WAV file: the samples are real audio that is already FM demodulated (VHF DSC: 1300 / 2100 Hz tones, 1200 baud), at any rate
+    // from 8 kHz (the engine hands over the card's rate, interpolated up to the mode's minimum). Only VHF DSC runs then. Call before or after configure().
+    void setAudioInput(bool on);
     void setSignalOffset(double hz);                     // where the wanted channel sits relative to 0 Hz in the input
     bool ready() const;                                  // false when the input rate is too low for this mode
     void reset();                                        // after a retune: forget the signal (the NAVTEX and DSC lists stay: clearResults)
