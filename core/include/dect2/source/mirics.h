@@ -24,6 +24,16 @@ constexpr uint8_t kEndpoint = 0x81;         // the samples, isochronous (alterna
 constexpr int kAltIso = 1, kAltBulk = 3;
 constexpr size_t kBlockBytes = 1024;        // the samples come in 1024-byte blocks: 16-byte header (a 32-bit sample counter first), then data
 
+// The interface steps before every stream (#503: the radio worked once after plugging in, never again after a stop or a relaunch). The
+// interface and the endpoint keep what the last stream left (the streaming alternate setting, a halted endpoint after the cancelled
+// transfers), and setting the same alternate setting again changes nothing, so the stream is first parked on setting 0, then set up, and
+// the endpoint's halt cleared.
+enum class IfaceStep { AltIdle, AltStream, ClearHalt };
+struct IfaceStepPlan { IfaceStep step; int alt; };
+inline std::vector<IfaceStepPlan> streamPrepSteps(bool bulk) {
+    return {{IfaceStep::AltIdle, 0}, {IfaceStep::AltStream, bulk ? kAltBulk : kAltIso}, {IfaceStep::ClearHalt, 0}};
+}
+
 // One register write as it goes over USB
 struct Write { uint8_t reg; uint32_t value; };
 inline void writeSetup(const Write& w, uint16_t& wValue, uint16_t& wIndex) {

@@ -61,6 +61,17 @@ static std::vector<uint8_t> encode(Format f, uint32_t ctr, const std::vector<int
 
 static int bitsOf(Format f) { return f == Format::S14 ? 14 : f == Format::S12 ? 12 : f == Format::S10 ? 10 : 8; }
 
+// #503: every stream starts from alternate setting 0, then the stream setting, then the halt is cleared (a second stream after a stop did nothing)
+static void testStreamPrep() {
+    for (bool bulk : {false, true}) {
+        const auto v = streamPrepSteps(bulk);
+        CHECK(v.size() == 3);
+        CHECK(v[0].step == IfaceStep::AltIdle && v[0].alt == 0);
+        CHECK(v[1].step == IfaceStep::AltStream && v[1].alt == (bulk ? kAltBulk : kAltIso) && v[1].alt != 0);
+        CHECK(v[2].step == IfaceStep::ClearHalt);
+    }
+}
+
 static void testUsbSetup() {
     uint16_t v, i;
     writeSetup({9, 0x123456}, v, i);
@@ -263,6 +274,7 @@ static void testUnpack() {
 
 int main() {
     testUsbSetup();
+    testStreamPrep();
     testFormats();
     testRates();
     testFilters();

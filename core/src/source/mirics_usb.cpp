@@ -115,6 +115,7 @@ public:
         ring_ = &ring;
         // the radio may still be streaming from a program that ended without stopping it
         request(mirics::kReqStopStream);
+        libusb_set_interface_alt_setting(h_, 0, 0);
         write(mirics::adcStopReg());
         for (const auto& w : mirics::initRegs()) write(w);
         if (!program(s, true, err) || !startStream(s, err)) { finish(); return false; }
@@ -249,7 +250,13 @@ private:
     bool startStream(const TuneSettings& s, std::string& err) {
         bulk_ = useBulk(s);
         unpack_.reset(fmt_);
-        const int alt = libusb_set_interface_alt_setting(h_, 0, bulk_ ? mirics::kAltBulk : mirics::kAltIso);
+        int alt = 0;
+        for (const auto& st : mirics::streamPrepSteps(bulk_)) {
+            if (st.step == mirics::IfaceStep::ClearHalt) { libusb_clear_halt(h_, mirics::kEndpoint); continue; }   // best effort: nothing halted answers an error
+            const int r = libusb_set_interface_alt_setting(h_, 0, st.alt);
+            if (st.step == mirics::IfaceStep::AltStream) alt = r;
+            else if (r != 0 && r != LIBUSB_ERROR_NOT_SUPPORTED) continue;   // parking on setting 0 is best effort too
+        }
         if (alt != 0) {
             err = DIAG_TEXT(204693, "The Mirics radio has no %s stream setting (%s): change \"USB transfer\" in its radio settings.", bulk_ ? "bulk" : "isochronous", libusb_error_name(alt));
             return false;
@@ -312,7 +319,10 @@ private:
         for (int i = 0; i < 100 && inflight_ > 0 && ctx_; i++) libusb_handle_events_timeout_completed(ctx_, &tv, nullptr);
         for (auto*& t : xfers_) if (t) { libusb_free_transfer(t); t = nullptr; }
         xfers_.clear(); bufs_.clear();
-        if (h_) request(mirics::kReqStopStream);
+        if (h_) {
+            request(mirics::kReqStopStream);
+            libusb_set_interface_alt_setting(h_, 0, 0);   // park the interface: the next stream starts from setting 0 (#503)
+        }
     }
 
     void finish() {
