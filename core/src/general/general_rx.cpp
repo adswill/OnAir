@@ -199,8 +199,8 @@ void generalWidthRange(int d, double& lo, double& hi) {
     switch (d) {
     case GenWfm: lo = 50000; hi = 220000; break;
     case GenAm: lo = 1000; hi = 20000; break;
-    case GenUsb: case GenLsb: lo = 500; hi = 6000; break;
-    case GenCw: case GenCwl: lo = 50; hi = 3000; break;
+    case GenUsb: case GenLsb: lo = 500; hi = 20000; break;   // the channel runs at 48 kHz: the upper edge (300 Hz + width) stays below 24 kHz
+    case GenCw: case GenCwl: lo = 50; hi = 20000; break;
     case GenDsb: lo = 1000; hi = 20000; break;
     case GenRaw: lo = 2000; hi = 44000; break;   // the channel runs at 48 kHz
     default: lo = 2000; hi = 30000; break;
