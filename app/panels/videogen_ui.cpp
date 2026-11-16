@@ -95,7 +95,7 @@ const RowHelp kRowHelp[] = {
     {N_("Audio bitrate"), N_("Per track. 64 to 96 kbit/s is fine for speech in mono, 128 to 192 kbit/s for music in stereo (MPEG-1 Layer II needs the higher end).")},
     {N_("Sample rate"), N_("48 kHz is the broadcast standard; use 32 or 44.1 kHz only if your receiver needs it.")},
     {N_("Channels"), N_("Mono saves some bitrate; stereo needs more.")},
-    {N_("TS mux rate"), N_("The total rate of the transport stream: video, audio, tables and null packets that pad it to a constant rate. Keep it at or below the net bitrate of the DVB link, e.g. DVB-T 8 MHz, 64-QAM, code rate 2/3, guard interval 1/4 carries about 19.9 Mbit/s; QPSK 1/2 about 5 Mbit/s. Auto uses the estimate on the right plus a small margin.")},
+    {N_("TS mux rate"), N_("The total rate of the transport stream: video, audio, tables and null packets that pad it to a constant rate. Keep it at or below the net bitrate of the DVB link, e.g. DVB-T 8 MHz, 64-QAM, code rate 2/3, guard interval 1/4 carries about 19.9 Mbit/s; QPSK 1/2 about 5 Mbit/s. For DVB-T2-Lite keep it at or below 4 Mbit/s, the most a T2-Lite programme may carry (the transmitter then says the exact rate). Auto uses the estimate on the right plus a small margin.")},
     {N_("Service ID"), N_("The programme number in the PAT and PMT, and the service ID in the SDT. Receivers use it to find the programme; 1 is fine unless you test something specific.")},
     {N_("Service name"), N_("The channel name a receiver shows in its list (from the SDT).")},
     {N_("Provider"), N_("The provider name in the SDT; some receivers show it with the channel.")},

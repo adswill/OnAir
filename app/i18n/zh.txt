@@ -7943,7 +7943,6 @@ Per band	按频段
 Per continent	按大洲
 Per hour of the day	按一天中的小时
 Per mode	按模式
-Per system, set the parameters you want or leave them on Any. The list beside them shows the modes that carry the bitrate within the bandwidth at the C/N, the best first: the smallest bandwidth, then the most C/N margin. Satellite modes have a free symbol rate: their bandwidth is what the bitrate needs, their capacity what the whole bandwidth would carry. The thresholds are the ideal AWGN values of the standards (no implementation margin, phase noise or multipath): keep a few dB in hand. The DVB-T2 bitrate is the ideal cell capacity (P1/P2 symbols and signalling not deducted), so the real one is a few percent lower.	按系统设置你要的参数，或保持「任意」。旁边的列表显示在此 C/N 下能在该带宽内承载此码率的模式，最优在前：先带宽最小，再 C/N 余量最大。卫星模式的符号率自由：其带宽是码率所需，容量是整个带宽能承载的量。阈值为各标准的理想 AWGN 值（无实现余量、相位噪声或多径）：请预留几 dB。DVB-T2 码率为理想单元容量（未扣除 P1/P2 符号和信令），实际值低几个百分点。
 Per track. 64 to 96 kbit/s is fine for speech in mono, 128 to 192 kbit/s for music in stereo (MPEG-1 Layer II needs the higher end).	按音轨。单声道语音 64 至 96 kbit/s 即可，立体声音乐 128 至 192 kbit/s（MPEG-1 Layer II 需要接近上限）。
 Performance overlay	性能叠加显示
 Periods are from memory and drift with the Earth's motion; the search covers 0.02 % around the period. Check the ATNF pulsar catalogue before a long run.	周期凭记忆获得并随地球运动漂移；搜索范围为周期附近 0.02 % around the period。长时间运行前请核对 ATNF 脉冲星目录。
@@ -9459,7 +9458,6 @@ The times could be off by about %.0f s. Update the orbits.	时间可能偏差约
 The top graph is the spectrum: left is lower frequency, right is higher, up is a stronger signal. Below it the waterfall shows the same over time, newest at the top.\nA signal is a bright bump or stripe that stands out from the grainy noise floor. A steady stripe is a broadcast; short dashes are bursts of data or speech.	上方图是频谱：左低右高，向上信号更强。下方瀑布图显示同样内容随时间的变化，最新在顶部。\n信号是从颗粒状噪声底上突出的亮块或亮条纹。稳定条纹是广播；短划是数据或语音突发。
 The top shows the spectrum, and the waterfall scrolls its history below. Click a signal to tune to it.	上方显示频谱，瀑布图在下方滚动历史。点击信号即可调谐过去。
 The total TS rate with signalling and null packets. Set it to what the DVB link carries, or let it follow the estimate.	含信令和空包的 TS 总码率。设为 DVB 链路承载量，或跟随估算值。
-The total rate of the transport stream: video, audio, tables and null packets that pad it to a constant rate. Keep it at or below the net bitrate of the DVB link, e.g. DVB-T 8 MHz, 64-QAM, code rate 2/3, guard interval 1/4 carries about 19.9 Mbit/s; QPSK 1/2 about 5 Mbit/s. Auto uses the estimate on the right plus a small margin.	传输流总码率：视频、音频、表和填充为恒定速率的空包。保持不超过 DVB 链路净码率，例如 DVB-T 8 MHz、64-QAM、码率 2/3、保护间隔 1/4 约承载 19.9 Mbit/s；QPSK 1/2 约 5 Mbit/s。自动取右侧估算值加少量余量。
 The transmitter reads this generator's stream by this name. Several generators can run at once (the tabs at the top); each has its own name: generator:1, generator:2 ...	发射机按此名字读取本发生器的流。可同时运行多个发生器（顶部标签页）；每个有自己的名字：generator:1、generator:2……
 The transmitter takes it as its "MPEG-TS / video file".	发射机把它当作「MPEG-TS / 视频文件」。
 The transmitter's clock error in parts per million, positive when it runs fast (the signal then goes out above the frequency asked for). Measure it with a known receiver or a frequency counter.	发射机时钟误差，百万分率，偏快时为正（信号实际发出频率高于请求值）。用已知接收机或频率计测量。
