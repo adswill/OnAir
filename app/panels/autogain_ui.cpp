@@ -304,6 +304,8 @@ void advancedPopup(App& a) {
         const int lines = a.engine.spurNotchLines();
         if (a.engine.spurNotch() && lines > 0) { char b[96]; snprintf(b, sizeof b, tr("%d spur(s) cut"), lines); ImGui::SameLine(); ImGui::TextDisabled("%s", b); }
     }
+    ImGui::Spacing();
+    notchPanel(a);
     ImGui::Separator();
     // stages
     ImGui::TextDisabled("%s", tr("Stages it may adjust"));
