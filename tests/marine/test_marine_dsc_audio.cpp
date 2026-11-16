@@ -6,6 +6,7 @@
 // interpolated up to the mode's minimum rate (audioOutFactor) -> MarineReceiver with setAudioInput(true). Recordings: tests/data/dsc_audio (MIT,
 // from github.com/blackwellj/vhf-dsc, see its README.md), at their own rate and resampled to other card rates, at several levels.
 #include "dect2/dsp/exact_resampler.h"
+#include "dect2/dsp/resampler.h"
 #include "dect2/marine/marine_dsc.h"
 #include "dect2/marine/marine_rx.h"
 #include "dect2/marine/marine_tel.h"
@@ -68,7 +69,8 @@ static std::vector<DscCall> run(const std::vector<float>& audio, double rate, fl
     rx.setFrequencyHz(156.525e6);
     rx.setService(2);
     AudioIfState st;
-    ExactResampler up; if (f > 1) up.configure(rate, rate * f);
+    RationalResampler up;   // as the source does it (source_audio.cpp)
+    if (f > 1) up.configure(rate, rate * f);
     std::vector<float> a(audio.size());
     for (size_t i = 0; i < a.size(); i++) a[i] = audio[i] * level;
     a.resize(a.size() + (size_t)(2.0 * rate), 0.f);   // silence after the call: the last reports
