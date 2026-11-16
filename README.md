@@ -90,16 +90,18 @@ Counts are generated from the mode list in the app (`tools/release/gen_changelog
 
 Every receiver is built from published specifications and tested on generated signals and, where recordings exist, on real captures. The full numbered list is [MODES.md](MODES.md); notes per family are in [docs/MODES-DETAIL.md](docs/MODES-DETAIL.md). The KA family are modes designed for OnAir, measured in simulation only.
 
-## What is new in 4.2
+## What is new in 4.3
 
-The full list, with the known limits, is in [docs/CHANGELOG-4.2.md](docs/CHANGELOG-4.2.md) and in the 4.2 release notes on the [releases page](https://github.com/adswill/OnAir/releases/latest). Read the **Known limits** section: nearly everything new was tested on generated signals, not on the air, and the Android additions were not tried on a phone.
+The full list, with the known limits, is in [docs/CHANGELOG-4.3.md](docs/CHANGELOG-4.3.md) and in the 4.3 release notes on the [releases page](https://github.com/adswill/OnAir/releases/latest). Read the **Known limits** section: nearly everything new was tested on generated signals, not on the air, and the Android additions were not tried on a phone.
 
-- **New mode** (392 in the app's list; [MODES.md](MODES.md) lists every mode): Kenwood FleetSync, receive only (fleet and unit number; message types and position are not decoded).
-- **Gain**: Auto gain no longer stays at the minimum after a strong burst, per-stage gain sliders, and SPECTRAN V6 gain read back from the device (V6 ECO fixes from datosg's pull request).
-- **Radiosondes**: GTH sondes (HT03G, GTH3, GTH6), own receiver height and NMEA output of the selected sonde; SondeHub upload is off in the app (#526).
-- **Tools**: a TETRA name book, "Find pagers" in the pager screens, SARSAT burst baseband export, live UDP / RTP transport-stream input for the TV transmitters, one station location, Help > Hardware and a one-window Report a problem.
-- **Android**: SDR++ server as a network radio, every USB radio selectable, an update banner, xHE-AAC DRM sound through the phone's decoder (needs one; untested on a phone).
-- Fixes for #534, #522, #521, #517, #514, #508, #507, #506 and more.
+- **No new mode** (394 in the app's list; [MODES.md](MODES.md) lists every mode).
+- **Fixes**: the Android start crash of the first 4.2.0 APK (replaced on the release page), the Windows analog TV crash after 215 s (#520), the ISM waterfall stall (#542), arrow keys changing two digits (#547), the video generator sending a tone instead of the video's sound (#545), Android IQ files, RSP1 and FC0013 on Android, Chinese guide text, xHE-AAC sound on Android.
+- **Tools**: manual notch filters from the spectrum, a live Google Earth track and a second NMEA output for the sonde, a reorganised Data feeds window, a new tuning marker, USB / LSB / CW filters up to 20 kHz, a Signal doctor that no longer nags with a strong signal.
+- **Modes**: ISS SSTV on 437.550 MHz, DWD weather RTTY presets with the 85 Hz shift, VHF DSC from a sound card or WAV file, a "No audio: why" line for DMR, P25 and NXDN, a DVB subtitle track list (Android lists only).
+
+## What was new in 4.2
+
+See [docs/CHANGELOG-4.2.md](docs/CHANGELOG-4.2.md): Kenwood FleetSync, per-stage gain sliders, SPECTRAN V6 gain checks, GTH sondes, a TETRA name book, a pager scan, live UDP / RTP input for the TV transmitters and one station location.
 
 ## What was new in 4.1
 
@@ -131,7 +133,7 @@ The full list: [docs/FEATURES.md](docs/FEATURES.md) and [docs/TOOLS-AND-NOTES.md
 - [Codecs](docs/CODECS.md) (voice and audio codecs you install yourself) and [optional libraries](docs/OPTIONAL-LIBRARIES.md)
 - [Plugins](docs/plugins.md) and the [plugin SDK](docs/PLUGIN-SDK.md)
 - [Updates and Discord status](docs/UPDATES.md)
-- Release history: [4.2](docs/CHANGELOG-4.2.md), [4.1](docs/CHANGELOG-4.1.md), [4.0](docs/CHANGELOG-4.0.md) and the [releases page](https://github.com/adswill/OnAir/releases); older notes in [docs/CHANGELOG-0.2.md](docs/CHANGELOG-0.2.md)
+- Release history: [4.3](docs/CHANGELOG-4.3.md), [4.2](docs/CHANGELOG-4.2.md), [4.1](docs/CHANGELOG-4.1.md), [4.0](docs/CHANGELOG-4.0.md) and the [releases page](https://github.com/adswill/OnAir/releases); older notes in [docs/CHANGELOG-0.2.md](docs/CHANGELOG-0.2.md)
 - The wiki, a page per mode: [on-air.dev/docs](https://on-air.dev/docs/)
 
 > [!NOTE]
