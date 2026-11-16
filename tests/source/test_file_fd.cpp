@@ -23,6 +23,10 @@ int main() {
     CHECK(parseFdPath("/tmp/a.cs8") == -1, "plain path");
     CHECK(parseFdPath("") == -1, "empty");
 
+#ifdef _WIN32
+    printf("file fd: ok (descriptor part is POSIX only)\n");
+    return fails ? 1 : 0;
+#else
     const char* tmp = "/tmp/test_file_fd.cs8";
     FILE* w = fopen(tmp, "wb");
     for (int i = 0; i < 40000; i++) fputc(i & 0x7f, w);
@@ -41,4 +45,5 @@ int main() {
     close(fd);
     printf(fails ? "file fd: FAILED\n" : "file fd: ok\n");
     return fails ? 1 : 0;
+#endif
 }
