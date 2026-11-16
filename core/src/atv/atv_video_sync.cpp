@@ -720,7 +720,7 @@ void AtvVideo::Impl::processLine(const LineRec& r) {
         if (g > 0) {
             const auto level = [&](double us) -> float {
                 const double t = tL + us * spu;
-                const long i0 = (long)std::floor(t);
+                const int64_t i0 = (int64_t)std::floor(t);
                 const double fr = t - (double)i0;
                 return (float)((Bline - (rvAt((uint64_t)i0) * (1 - fr) + rvAt((uint64_t)i0 + 1) * fr)) / g);
             };

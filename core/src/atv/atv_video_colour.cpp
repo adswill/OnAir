@@ -204,7 +204,7 @@ void AtvVideo::Impl::decideColour() {
 
 // One of the identification lines of the field blanking: the subcarrier ends the line at +350 kHz from f0R (a D'R line) or -350 kHz from f0B
 void AtvVideo::Impl::secamBottle(double tL, double g, long L) {
-    const long sa = secamSpan(tL + 22 * spu, tL + 64 * spu);
+    const int64_t sa = secamSpan(tL + 22 * spu, tL + 64 * spu);
     const size_t M = secam.baseband(zsi.data(), zsq.data(), zsi.size(), secBB);
     const double a = secamOut(tL + 30 * spu, sa), b = secamOut(tL + 58 * spu, sa);
     if (M < 10 || a < 0 || b >= (double)M) return;
@@ -232,7 +232,7 @@ void AtvVideo::Impl::secamLine(double tL, bool havePicture) {
     if (F.lines == 625 && ((vsyncField == 0 && L >= 7 && L <= 15) || (vsyncField == 1 && L >= 320 && L <= 328))) { secamBottle(tL, g, L); return; }
     if (!havePicture) return;
     if (colourKind < 0) {                                       // colour search: does the lead-in alternate between the two rest frequencies?
-        const long sa = secamSpan(tL + 1 * spu, tL + 14 * spu);
+        const int64_t sa = secamSpan(tL + 1 * spu, tL + 14 * spu);
         secam.baseband(zsi.data(), zsq.data(), zsi.size(), secBB);
         double amp;
         const int kind = secamLead(tL, g, secBB, sa, amp);
@@ -243,7 +243,7 @@ void AtvVideo::Impl::secamLine(double tL, bool havePicture) {
         } else lastLeadKind = -1;
         return;
     }
-    const long sa = secamSpan(tL + 1 * spu, tL + 69 * spu);
+    const int64_t sa = secamSpan(tL + 1 * spu, tL + 69 * spu);
     const size_t M = secam.baseband(zsi.data(), zsq.data(), zsi.size(), secBB);
     if (M < 20) return;
     double leadAmp = 0, fLead = 0;
@@ -273,12 +273,12 @@ void AtvVideo::Impl::secamLine(double tL, bool havePicture) {
     // colour difference at the pixels (cubic through the values of D')
     secRY.resize((size_t)W); secBY.resize((size_t)W); secU.resize((size_t)W); secV.resize((size_t)W);
     std::vector<float>& dst = isR ? secRY : secBY;
-    const long nD = (long)secD.size();
+    const int64_t nD = (int64_t)secD.size();
     for (int x = 0; x < W; x++) {
         const double u = secamOut(tL + (F.blankEndUs + (x + 0.5) * pxUs) * spu, sa) + 0.5;      // D'[m] lies half an output before output m
-        const long i0 = (long)std::floor(u);
+        const int64_t i0 = (int64_t)std::floor(u);
         const float fr = (float)(u - (double)i0);
-        auto at = [&](long i) { return secD[(size_t)std::min(nD - 1, std::max(0L, i))]; };
+        auto at = [&](int64_t i) { return secD[(size_t)std::min(nD - 1, std::max((int64_t)0, i))]; };
         const float t2 = fr * fr, t3 = t2 * fr;
         const float d = (-0.5f * t3 + t2 - 0.5f * fr) * at(i0 - 1) + (1.5f * t3 - 2.5f * t2 + 1.f) * at(i0) + (-1.5f * t3 + 2.f * t2 + 0.5f * fr) * at(i0 + 1) + (0.5f * t3 - 0.5f * t2) * at(i0 + 2);
         dst[(size_t)x] = isR ? -d / 1.902f : d / 1.505f;     // D'R = -1.902 (R - Y), D'B = 1.505 (B - Y)

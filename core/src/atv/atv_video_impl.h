@@ -511,19 +511,19 @@ struct AtvVideo::Impl {
 
     // ------------------------------------------------------------------------------ SECAM
     // the complex baseband of samples [a, b] (absolute) copied into zsi, zsq; returns the first sample
-    long secamSpan(double a, double b) {
-        const long sa = (long)std::floor(a), sb = std::min((long)std::ceil(b), (long)nAbs - 1);
+    int64_t secamSpan(double a, double b) {
+        const int64_t sa = (int64_t)std::floor(a), sb = std::min((int64_t)std::ceil(b), (int64_t)nAbs - 1);
         const size_t n = sb >= sa ? (size_t)(sb - sa + 1) : 0;
         zsi.resize(n); zsq.resize(n);
-        for (size_t k = 0; k < n; k++) { const uint64_t idx = (uint64_t)(sa + (long)k) & kMask; zsi[k] = ri[idx]; zsq[k] = rq[idx]; }
+        for (size_t k = 0; k < n; k++) { const uint64_t idx = (uint64_t)(sa + (int64_t)k) & kMask; zsi[k] = ri[idx]; zsq[k] = rq[idx]; }
         return sa;
     }
     // position of an absolute sample in the outputs of the baseband that starts at sa
-    double secamOut(double tAbs, long sa) const { return (tAbs - (double)sa - secam.half()) / secam.decim(); }
+    double secamOut(double tAbs, int64_t sa) const { return (tAbs - (double)sa - secam.half()) / secam.decim(); }
 
     // The lead-in: the subcarrier at the rest frequency of the line from 5.6 us after 0H. 1 = D'R, 0 = D'B, -1 = nothing usable.
     // fHz and amp are what was measured (amp 0: nothing). The hard decision needs the frequency within 45 kHz of a rest frequency.
-    int secamLead(double tL, double g, const std::vector<AtvSecam::cx>& bb, long sa, double& amp, double* fHz = nullptr) {
+    int secamLead(double tL, double g, const std::vector<AtvSecam::cx>& bb, int64_t sa, double& amp, double* fHz = nullptr) {
         const double a = secamOut(tL + 6.6 * spu, sa), b = secamOut(tL + std::min(9.9, fmt.blankEndUs - 0.4) * spu, sa);
         amp = 0;
         if (a < 0 || b >= (double)bb.size()) return -1;
@@ -548,7 +548,7 @@ struct AtvVideo::Impl {
 
     // ------------------------------------------------------------------------------ the picture
     inline float interp(const float* x, double pos) const {          // x[0] is sample 0; pos in samples
-        const long i0 = (long)std::floor(pos);
+        const int64_t i0 = (int64_t)std::floor(pos);
         const double fr = pos - (double)i0;
         const int ph = (int)std::lround(fr * kInterpPhases);
         const float* k = &kern[(size_t)ph * kInterpTaps];
