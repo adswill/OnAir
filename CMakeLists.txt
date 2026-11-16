@@ -2831,6 +2831,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_tsout_udp tests/tv/test_tsout_udp.cpp)
   target_link_libraries(test_tsout_udp PRIVATE dect2core)
   add_test(NAME tsout_udp COMMAND test_tsout_udp)
+  add_executable(test_tsout_file tests/tv/test_tsout_file.cpp)   # TS recording closed while the paced queue is behind: every packet once, in order
+  target_link_libraries(test_tsout_file PRIVATE dect2core)
+  add_test(NAME tsout_file COMMAND test_tsout_file)
   add_executable(test_videogen tests/tv/test_videogen.cpp)   # Digital video generator: bitrate estimate, encoder settings, overlay, .ts file, UDP / RTP
   target_link_libraries(test_videogen PRIVATE dect2core)
   add_test(NAME videogen COMMAND test_videogen WORKING_DIRECTORY ${ONAIR_ROOT})
