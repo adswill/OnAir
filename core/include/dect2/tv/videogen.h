@@ -77,6 +77,9 @@ void drawTestCard(uint8_t* y, int ys, uint8_t* u, int us, uint8_t* v, int vs, in
 // What a file is, by its extension (the drop zone uses it to put a dropped file in the right slot)
 enum class MediaKind { Unknown, Picture, Video, Audio };
 MediaKind mediaKind(const std::string& path);
+// The sound a source should have when the user picks it: a video file or the RTMP server brings its own sound (a test tone or silence left over from
+// another source would be sent instead, #545); a source without sound of its own cannot keep "sound of the file / stream". Everything else stays.
+AudioSource audioForSource(Source source, AudioSource current);
 // The files of a folder of that kind, sorted by name (not case sensitive); a file gives just itself (any kind); empty when nothing fits
 std::vector<std::string> listMedia(const std::string& path, MediaKind kind);
 

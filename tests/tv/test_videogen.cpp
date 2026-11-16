@@ -571,6 +571,39 @@ static void testMpeg2LowRate(const fs::path& dir) {
 }
 
 // A video file as the source: its length, looping when the output is longer, its sound kept in step, and a file without sound
+// #545: a video file as the input must carry the file's own sound (440 Hz here), not the 1 kHz test tone the configuration started with
+static void writeWav(const fs::path& p, double hz, double seconds);
+static double audioRms(const fs::path& p, double t0, double t1, double* hz);
+static void testVideoFileSound(const fs::path& dir, const fs::path& pic) {
+    CHECK(audioForSource(Source::VideoFile, AudioSource::Tone) == AudioSource::FromFile, "a video file replaces the test tone with its own sound");
+    CHECK(audioForSource(Source::Rtmp, AudioSource::Tone) == AudioSource::FromFile && audioForSource(Source::Rtmp, AudioSource::Silence) == AudioSource::FromFile, "OBS replaces the tone and silence");
+    CHECK(audioForSource(Source::VideoFile, AudioSource::Microphone) == AudioSource::Microphone && audioForSource(Source::VideoFile, AudioSource::AudioFile) == AudioSource::AudioFile, "a chosen microphone or sound file stays");
+    CHECK(audioForSource(Source::Picture, AudioSource::FromFile) == AudioSource::Tone && audioForSource(Source::Picture, AudioSource::Silence) == AudioSource::Silence, "a picture cannot use the file's sound");
+    const fs::path wav = dir / "v440.wav";
+    writeWav(wav, 440, 1.5);
+    GenConfig mk = pictureConfig(pic);
+    mk.output = Output::File;
+    mk.audio = AudioSource::AudioFile;
+    mk.audioPath = wav.string();
+    mk.tsPath = (dir / "clip440.ts").string();
+    mk.seconds = 1.5;
+    mk.enc.videoEncoder = "mpeg2video";
+    std::string err;
+    CHECK(encodeFile(mk, err), "make the 440 Hz clip: %s", err.c_str());
+    GenConfig c = pictureConfig(pic);
+    c.source = Source::VideoFile;
+    c.path = mk.tsPath;
+    c.audio = audioForSource(c.source, AudioSource::Tone);   // what the window does when the input is chosen
+    c.output = Output::File;
+    c.tsPath = (dir / "from440.ts").string();
+    c.seconds = 1.2;
+    c.enc.videoEncoder = "mpeg2video";
+    CHECK(encodeFile(c, err), "encode the video file: %s", err.c_str());
+    double hz = 0;
+    const double rms = audioRms(c.tsPath, 0.2, 1.0, &hz);
+    CHECK(rms > 0.05 && std::fabs(hz - 440) < 25, "the generator's sound is the file's 440 Hz, not 1 kHz (rms %.3f, %.0f Hz)", rms, hz);
+}
+
 static void testVideoFile(const fs::path& dir, const fs::path& pic) {
     // a 1 s clip with a tone, made by the generator itself (MPEG-2 + MP2: in every FFmpeg build)
     GenConfig mk = pictureConfig(pic);
@@ -670,7 +703,7 @@ static std::vector<double> lumaSeries(const fs::path& p) {
     return r;
 }
 // RMS of the first audio track between two times (seconds)
-static double audioRms(const fs::path& p, double t0, double t1) {
+static double audioRms(const fs::path& p, double t0, double t1, double* hz) {
     AVFormatContext* fc = nullptr;
     if (avformat_open_input(&fc, p.string().c_str(), nullptr, nullptr) < 0) return -1;
     const AVCodec* c = nullptr;
@@ -678,7 +711,7 @@ static double audioRms(const fs::path& p, double t0, double t1) {
     AVCodecContext* dec = si >= 0 && c ? avcodec_alloc_context3(c) : nullptr;
     AVPacket* pk = av_packet_alloc();
     AVFrame* fr = av_frame_alloc();
-    double sum = 0, first = -1; long cnt = 0;
+    double sum = 0, first = -1, prev = 0, tFirst = -1, tLast = 0; long cnt = 0, cross = 0, crossN = 0;
     auto grab = [&] {
         while (avcodec_receive_frame(dec, fr) >= 0) {
             const double t = fr->pts == AV_NOPTS_VALUE ? 0 : (double)fr->pts * av_q2d(fc->streams[si]->time_base);
@@ -694,6 +727,8 @@ static double audioRms(const fs::path& p, double t0, double t1) {
                 default: break;
                 }
                 sum += v * v; cnt++;
+                if (cnt > 1 && ((prev < 0) != (v < 0))) { if (crossN++ == 0) tFirst = (double)cnt; tLast = (double)cnt; cross++; }
+                prev = v;
             }
         }
     };
@@ -706,6 +741,7 @@ static double audioRms(const fs::path& p, double t0, double t1) {
         grab();
     }
     av_frame_free(&fr); av_packet_free(&pk); avcodec_free_context(&dec); avformat_close_input(&fc);
+    if (hz) *hz = (cross > 4 && tLast > tFirst) ? (double)(crossN - 1) / 2.0 * 48000.0 / (tLast - tFirst) : 0;   // from the zero crossings (48 kHz samples)
     return cnt ? std::sqrt(sum / (double)cnt) : 0;
 }
 static double meanOf(const std::vector<double>& v, size_t a, size_t b) {
@@ -767,12 +803,12 @@ static void testOwnContent(const fs::path& dir, const fs::path& pic) {
     a.seconds = 2;
     a.enc.videoEncoder = "mpeg2video";
     CHECK(encodeFile(a, err), "own sound looped: %s", err.c_str());
-    const double l0 = audioRms(a.tsPath, 0.1, 0.4), l1 = audioRms(a.tsPath, 1.2, 1.9);
+    const double l0 = audioRms(a.tsPath, 0.1, 0.4, nullptr), l1 = audioRms(a.tsPath, 1.2, 1.9, nullptr);
     CHECK(l0 > 0.05 && l1 > 0.05, "own sound: heard at the start and after the loop (rms %.3f, %.3f)", l0, l1);
     a.loop = false;
     a.tsPath = (dir / "own_audio_once.ts").string();
     CHECK(encodeFile(a, err), "own sound once: %s", err.c_str());
-    const double o0 = audioRms(a.tsPath, 0.1, 0.4), o1 = audioRms(a.tsPath, 1.2, 1.9);
+    const double o0 = audioRms(a.tsPath, 0.1, 0.4, nullptr), o1 = audioRms(a.tsPath, 1.2, 1.9, nullptr);
     CHECK(o0 > 0.05 && o1 < 0.01, "own sound once: then silence (rms %.3f, %.3f)", o0, o1);
     // a folder of sounds is played in order
     const fs::path snd = dir / "sounds";
@@ -783,7 +819,7 @@ static void testOwnContent(const fs::path& dir, const fs::path& pic) {
     a.loop = true;
     a.tsPath = (dir / "own_folder.ts").string();
     CHECK(encodeFile(a, err), "sound folder: %s", err.c_str());
-    CHECK(audioRms(a.tsPath, 0.1, 0.4) > 0.05 && audioRms(a.tsPath, 0.6, 0.9) > 0.05 && audioRms(a.tsPath, 1.6, 1.9) > 0.05, "sound folder: the files follow each other and start over");
+    CHECK(audioRms(a.tsPath, 0.1, 0.4, nullptr) > 0.05 && audioRms(a.tsPath, 0.6, 0.9, nullptr) > 0.05 && audioRms(a.tsPath, 1.6, 1.9, nullptr) > 0.05, "sound folder: the files follow each other and start over");
 
     // a folder of videos plays one after the other and ends with the last
     const fs::path vids = dir / "vids";
@@ -1194,7 +1230,7 @@ static void testRtmpInput(const fs::path& dir) {
     size_t firstGrey = 0;
     while (firstGrey < luma.size() && luma[firstGrey] < 150) firstGrey++;
     std::printf("rtmp input: picture order %s, first picture after %.1f s (sender from 0.3 s)\n", seq.c_str(), firstGrey / 10.0);
-    const double toneRms = audioRms(c.tsPath, 1.2, 2.0), quietRms = audioRms(c.tsPath, 2.9, 3.2);
+    const double toneRms = audioRms(c.tsPath, 1.2, 2.0, nullptr), quietRms = audioRms(c.tsPath, 2.9, 3.2, nullptr);
     CHECK(toneRms > 0.1, "rtmp: the sender's tone in the stream (rms %.3f)", toneRms);
     CHECK(quietRms >= 0 && quietRms < 0.02, "rtmp: silence while nobody sends (rms %.3f)", quietRms);
     // stop() while waiting for a sender returns at once
@@ -1540,6 +1576,7 @@ int main() {
     testMpeg2LowRate(dir);
     testGenerator(dir, pic);
     testVideoFile(dir, pic);
+    testVideoFileSound(dir, pic);
     testOwnContent(dir, pic);
     testFailures(dir, pic);
     testStopAndOverlayChanges(dir, pic);
