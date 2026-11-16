@@ -8,6 +8,7 @@
 #include <filesystem>
 #include "dect2/sonde/sonde_flight.h"
 #include "app.h"
+#include "map/my_location.h"
 #include "ui/kit/export.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
@@ -228,7 +229,9 @@ void mapView(App& a, ImVec2 size) {
     const bool on = live(a);
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
     const double lat0 = S.map.lat, lon0 = S.map.lon; const int zoom0 = S.map.zoom;
+    mylocmap::forceMetric(true);   // the sonde screens use km everywhere, also in the pointer readout
     adsbmap::draw(S.map, size);
+    mylocmap::forceMetric(false);
     if (S.map.lat != lat0 || S.map.lon != lon0 || S.map.zoom != zoom0) S.mapFollow = false;   // panned or zoomed (the wheel at the centre moves nothing)
     ImVec2 click;
     const bool clicked = adsbmap::clickedAt(click);
@@ -294,8 +297,6 @@ void mapView(App& a, ImVec2 size) {
     ImGui::PopStyleColor();
     if (ImGui::BeginPopup("##sondemepop")) {
         sondeChaseControls(a);
-        ImGui::Separator();
-        sondeNmeaControls();
         ImGui::Separator();
         if (ImGui::Checkbox(tr("Online flight prediction of the selected sonde (Tawhiri, SondeHub predictor)##sondepred"), &S.predOnline)) plat::prefs().setB("sondePredOnline", S.predOnline);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Sends the sonde's position, altitude, climb or fall rate and time to api.v2.sondehub.org/tawhiri, at most once a minute, and draws the predicted path dotted with the burst and landing. Off: nothing is asked."));
