@@ -295,7 +295,7 @@ std::string systemInfoReport(App& a) {
     s += "generic";
 #endif
     s += "\n";
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(DECT2_X86_DISPATCH)   // set by dect2/dsp/simd.h where cpuHasAvx2() exists (GCC/clang, x86-64, no DECT2_NO_SIMD)
     s += std::string("  AVX2 paths in use: ") + (dect2::cpuHasAvx2() ? "yes" : "no") + "\n";
 #endif
     s += "\n";
