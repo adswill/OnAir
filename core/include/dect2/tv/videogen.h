@@ -112,6 +112,12 @@ using FrameSink = std::function<void(int w, int h, const uint8_t* rgb24)>;
 void setGeneratorFrameSink(int id, FrameSink s);                     // the picture of every frame, RGB 8 bit packed; an empty function removes it
 bool generatorHasFrameSink(int id);
 void generatorPublishFrame(int id, int w, int h, const uint8_t* rgb24);
+// The sound the generator encodes, interleaved stereo float at its sample rate, for the analog transmitter's sound carrier (AudioIn::File
+// with generatorSpec(id), #545). Published only while a sink is set; an empty function removes it (and waits for a call in progress).
+using AudioSink = std::function<void(const float* stereo, int frames, int rate)>;
+void setGeneratorAudioSink(int id, AudioSink s);
+bool generatorHasAudioSink(int id);
+void generatorPublishAudio(int id, const float* stereo, int frames, int rate);
 
 // ---- free-text FFmpeg arguments ----
 // Split into an argument list (quotes group, nothing is expanded or run: there is no shell anywhere).

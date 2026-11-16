@@ -1114,6 +1114,8 @@ bool TxSession::start(std::unique_ptr<TxSink> sink, const TxRequest& r, const Tx
             if (k == AudioIn::File) note("audio file not used: " + aerr + "; a 1 kHz tone is sent instead");
             audio_->start(AudioIn::Tone, 48000, {}, req_.toneHz > 0 ? req_.toneHz : 1000, aerr);
         }
+        if (int gid = 0; audio_->kind() == AudioIn::File && vgen::parseGeneratorSpec(arg, gid))
+            note("sound: video generator " + std::to_string(gid) + " (live; silence while it is not sending to the transmitter)");
         audio_->setMuted(req_.audioMute);
         audio_->setGain(req_.micGain > 0 ? req_.micGain : 1.f);
         if (audio_->kind() == AudioIn::File && sink_->name() == "IQ file" && audio_->fileSeconds() > 0) {   // into a file: the audio file is sent once, then the file is closed

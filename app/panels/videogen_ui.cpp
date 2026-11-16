@@ -448,6 +448,7 @@ void sourceSection(State& s, float col, float w) {
         c.source = (Source)src;
         if ((c.source == Source::Picture || c.source == Source::Generator) && !s.lengthEdited) c.seconds = 60;   // one minute unless changed
         if (c.source == Source::Rtmp) c.audio = AudioSource::FromFile;   // OBS sends its sound with the picture
+        else if (c.source == Source::VideoFile && (c.audio == AudioSource::Tone || c.audio == AudioSource::Silence)) c.audio = AudioSource::FromFile;   // its own sound (#545)
         else if (c.source != Source::VideoFile && c.audio == AudioSource::FromFile) c.audio = AudioSource::Tone;
     }
     if (c.source == Source::Camera) {
