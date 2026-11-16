@@ -65,7 +65,7 @@ struct MarineReceiver::Impl {
     mutable std::mutex telMu;      // the report
     double rate = 0, offsetHz = 0;
     bool audioIn = false;          // setAudioInput(): real, already demodulated audio (sound card / WAV), VHF DSC only
-    bool okRate = false;           // the input rate suits the chain in use
+    bool okRate = false, audioOk = false, iqOk = false;   // the input rate suits a chain (audioOk: the audio-as-FM chain, iqOk: the IQ chain)
     ExactResampler ars;            // audio -> kBaseRate
     std::vector<cf32> arsIn;
     std::atomic<int> service{0};
@@ -192,12 +192,11 @@ struct MarineReceiver::Impl {
     }
 
     void configureChain() {
-        if (audioIn) {
-            okRate = rate >= 7999 && ars.configure(rate, kBaseRate, 8);
-        } else {
-            okRate = rate >= marineTuning().minSampleRate - 1;
-            if (okRate) { front.configure(rate); front.setOffsetHz(offsetHz); }
-        }
+        // the audio-as-FM chain (VHF DSC only, picked per feed) and the IQ chain every other decoder uses (an IF from a sound card too) are both kept ready
+        audioOk = audioIn && rate >= 7999 && ars.configure(rate, kBaseRate, 8);
+        iqOk = rate >= marineTuning().minSampleRate - 1;
+        if (iqOk) { front.configure(rate); front.setOffsetHz(offsetHz); }
+        okRate = iqOk || audioOk;
         fax.configure(12000.0);
         parDirty = true;
         resetAll();
@@ -351,7 +350,9 @@ void MarineReceiver::feed(const cf32* x, size_t n) {
     Impl& s = *p_;
     std::lock_guard<std::mutex> lk(s.mu);
     if (!s.okRate) return;
-    if (s.audioIn) {   // real audio, already demodulated: only the VHF DSC slicer, no discriminator
+    const Enabled en0 = chooseServices(s.service.load(), s.freqHz.load());
+    // a sound card whose audio is already FM-demodulated: only when VHF DSC is the one decoder; NAVTEX, fax and the rest keep treating the samples as IQ (an IF)
+    if (s.audioOk && en0.dscVhf && !en0.navtex && !en0.dscHf && !en0.fax) {
         s.arsIn.resize(n);
         for (size_t i = 0; i < n; i++) s.arsIn[i] = cf32(x[i].real(), 0.f);
         s.base.clear();
@@ -366,6 +367,7 @@ void MarineReceiver::feed(const cf32* x, size_t n) {
         while (s.sinceReport >= per) { s.sinceReport -= per; s.publish(); }
         return;
     }
+    if (!s.iqOk) return;
     s.applyFaxSettings();
     if (s.parDirty) s.rebuildPar();
     const Enabled en = chooseServices(s.service.load(), s.freqHz.load());
