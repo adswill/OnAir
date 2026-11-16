@@ -6,10 +6,12 @@
 // interpolated up to the mode's minimum rate (audioOutFactor) -> MarineReceiver with setAudioInput(true). Recordings: tests/data/dsc_audio (MIT,
 // from github.com/blackwellj/vhf-dsc, see its README.md), at their own rate and resampled to other card rates, at several levels.
 #include "dect2/dsp/exact_resampler.h"
+#include "dect2/marine/marine_dsc.h"
 #include "dect2/marine/marine_rx.h"
 #include "dect2/marine/marine_tel.h"
 #include "dect2/source/audio_if.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
@@ -80,11 +82,35 @@ static std::vector<DscCall> run(const std::vector<float>& audio, double rate, fl
         at += (size_t)n;
     }
     MarineTelemetry t;
-    rx.telemetry(t, 0);
+    const bool got = rx.telemetry(t, 0);
+    if (t.dsc.empty()) printf("  (no call: telemetry %d seq %llu state %d dscLocked %d snr %.1f dscCount %llu level peak %.2f)\n", got, (unsigned long long)t.seq, t.state, t.dscLocked, (double)t.snrDb, (unsigned long long)t.dscCount, (double)st.peak);
     return t.dsc;
 }
 
+// A clean call made here: phase-continuous AFSK, Y = 1300 Hz, B = 2100 Hz, 1200 baud, at `rate`
+static std::vector<float> synthCall(double rate, int dots) {
+    const std::vector<int> body = dscBuildDistress("232123456", 103, 50.85, -1.3, 12, 34, 0);
+    const std::vector<uint8_t> bits = dscFrameBits(body, 127, dots);
+    std::vector<float> a((size_t)(0.3 * rate), 0.f);
+    double ph = 0, pos = 0;
+    const double spb = rate / 1200.0;
+    for (size_t k = 0; k < bits.size(); k++) {
+        const double f = bits[k] ? 1300.0 : 2100.0;
+        const size_t end = (size_t)std::lround((double)(k + 1) * spb);
+        for (; pos < (double)end; pos += 1) { ph += 2 * 3.14159265358979 * f / rate; a.push_back(0.5f * (float)std::sin(ph)); }
+    }
+    return a;
+}
+
 int main() {
+    for (int dots : {20, 200}) {
+        for (double r : {48000.0, 11025.0}) {
+            const std::vector<DscCall> calls = run(synthCall(r, dots), r, 1.0f, false);
+            int good = 0;
+            for (const auto& d : calls) { printf("  synthetic %d dots %.0f Hz: %s ecc %d: %s\n", dots, r, d.fromMmsi.c_str(), d.eccOk, d.text.c_str()); if (d.vhf && d.eccOk && d.fromMmsi == "232123456" && d.distress && d.hasPos) good++; }
+            CHECK(good >= 1, "synthetic call, %d dots, %.0f Hz: %d good calls of %zu", dots, r, good, calls.size());
+        }
+    }
     struct Case { const char* file; const char* self; int format; bool distress; };
     const Case cases[] = {
         {"individual_call.wav", "002275200", 120, false},
