@@ -13,7 +13,7 @@ namespace plotsplit {
 constexpr float kFracMin = 0.2f, kFracMax = 0.8f, kFracDefault = 0.5f;
 constexpr float kMinSpec = 60.f, kMinWf = 60.f;   // the least each plot is given when the panel has room (the spectrum's counts its band strip)
 
-inline float safeFrac(float f) { return std::isfinite(f) ? std::min(kFracMax, std::max(kFracMin, f)) : kFracDefault; }
+inline float safeFrac(float f) { return std::isnan(f) ? kFracDefault : std::min(kFracMax, std::max(kFracMin, f)); }
 
 // The height of the spectrum part (strip included); the waterfall has h - result. Both stay inside h.
 inline float spectrumHeight(float h, float frac, float strip) {
