@@ -5159,7 +5159,7 @@ Appends every message to hrdcp.csv in the data folder, also when nobody watches 
 Applied. Press Check again to see if it helped.	已应用。再按一次「检查」看是否有帮助。
 Applies to every voice mode. Starred clips are exempt from all three limits.	适用于所有语音模式。加星的片段不受这三项限制约束。
 Apply %+.2f ppm to this radio	对此电台应用 %+.2f ppm
-Apply address / port / TTL	应用地址 / 端口 / TTL
+Apply address / port / TTL	应用地址 / 端口 / 生存时间（TTL）
 Apply changes by themselves and restart the web server if it stops	自动应用更改，并在 Web 服务器停止时重启它
 Apply to all new images	应用到所有新图像
 Apply##rxbwchipapply	应用##rxbwchipapply
@@ -5449,7 +5449,7 @@ C/N0	C/N0
 CARRIER	载波
 CAT 021, 048, 062 over UDP or from a file	CAT 021、048、062，经 UDP 或文件
 CAT command	CAT 命令
-CBR	CBR
+CBR	恒定码率（CBR）
 CBR gives a predictable rate; VBR varies with the scene and needs headroom for the peaks	CBR 速率可预测；VBR 随场景变化，需为峰值预留余量
 CBR: a constant rate, predictable, what a broadcast link needs. Constrained VBR: the rate varies with the scene up to 1.5 times the bitrate, so the mux rate needs headroom for the peaks. VBR / CRF: a constant quality instead of a rate (x264 and x265 only), capped at twice the bitrate.	CBR：恒定速率、可预测，是广播链路的需要。受限 VBR：速率随场景变化，最高为码率的 1.5 倍，因此复用速率需为峰值预留余量。VBR / CRF：恒定质量而非恒定速率（仅 x264 和 x265），上限为码率的两倍。
 CCCH load: %llu blocks, %.0f%% paging, %.0f%% assignments, %.0f%% rejects, %.0f%% idle (message kinds only, no contents read)	CCCH 负载：%llu 个块，%.0f%% 寻呼，%.0f%% 指派，%.0f%% 拒绝，%.0f%% 空闲（仅消息类型，不读取内容）
@@ -6468,7 +6468,7 @@ GOES-N / O / P LRIT (BPSK 293.883 ksym/s): the older series, now retired or stor
 GOES-N/O/P LRIT, 293.883 ksym/s	GOES-N/O/P LRIT，293.883 ksym/s
 GOES-R GRB on 1686.6 MHz: DVB-S2, 8.67 Msym/s. Needs a dish at L-band, an LNA and 12 Msps or more.	GOES-R GRB，1686.6 MHz：DVB-S2，8.67 Msym/s。需要 L 波段天线、LNA 和 12 Msps 以上。
 GOES-R HRIT, 927 ksym/s	GOES-R HRIT，927 ksym/s
-GOP	GOP
+GOP	图像组（GOP）
 GPRS / EDGE: the cell sends SI13	GPRS / EDGE：小区发送 SI13
 GPS	GPS
 GPS (NMEA)	GPS（NMEA）
@@ -7872,7 +7872,7 @@ PAT, PMT, SDT	PAT、PMT、SDT
 PES and TS headers, PCR	PES 和 TS 头部、PCR
 PID (0: the link's)	PID（0：本链路的）
 PIDs	PID
-PMT PID	PMT PID
+PMT PID	节目映射表 PID
 POCSAG + FLEX (both)	POCSAG + FLEX（两者）
 POCSAG is the ITU-R M.584 / CCIR Radiopaging Code No. 1 (RPC1): the same signal, so CCIR paging on the pager bands is decoded here at 512, 1200 and 2400 baud. The CCIR 5-tone selective calls are in the Tones mode.	POCSAG 即 ITU-R M.584 / CCIR 无线寻呼码 No.1（RPC1）：同一信号，因此寻呼频段上的 CCIR 寻呼在此以 512、1200 和 2400 波特解码。CCIR 五音选呼在「音调」模式中。
 PSC only	仅 PSC
@@ -9788,7 +9788,7 @@ Usual	常用
 Utility telemetry	勤务遥测
 VARA FM	VARA FM
 VARA HF	VARA HF
-VBR / CRF	VBR / CRF
+VBR / CRF	可变码率 / 恒定质量（VBR / CRF）
 VC	VC
 VDL Mode 2	VDL 模式 2
 VHF (137-146 MHz)	VHF（137-146 MHz）
