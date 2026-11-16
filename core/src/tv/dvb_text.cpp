@@ -18,9 +18,13 @@
 #else
 #include <iconv.h>
 #endif
+#include <atomic>
 
 namespace dect2::dvbsi {
 namespace textns = dect2::text;
+
+namespace { std::atomic<ExternalConvert> gExternal{nullptr}; }
+void setExternalConvert(ExternalConvert f) { gExternal.store(f); }
 
 #ifdef _WIN32
 // Windows has the ISO 8859 tables built in (code pages 28591..28599, 28603, 28605): no iconv needed.
@@ -51,6 +55,10 @@ std::string convertCharset(const char* charset, const uint8_t* p, int n) {
 }
 #else
 std::string convertCharset(const char* charset, const uint8_t* p, int n) {
+    if (ExternalConvert ext = gExternal.load()) {
+        std::string r;
+        if (ext(charset, p, n, r)) return r;
+    }
     iconv_t cd = iconv_open("UTF-8", !strcmp(charset, "GB2312") ? "GB18030" : charset);   // GB 18030 holds GBK and GB 2312: names with extension characters convert whole
     if (cd == (iconv_t)-1) return std::string((const char*)p, n);
     std::string out(n * 4 + 8, '\0');

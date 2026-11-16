@@ -15,6 +15,10 @@ namespace dect2::dvbsi {
 // Source bytes in the named character set ("ISO-8859-5", "UCS-2BE", "BIG5", "GB2312", "EUC-KR"...) to UTF-8 with iconv (code pages on Windows); the raw bytes
 // when the character set is unknown to the system. Never empty-handed: partial output is returned for input that stops converting.
 std::string convertCharset(const char* charset, const uint8_t* p, int n);
+// A platform converter tried before iconv (Android: bionic's iconv has no Big5, GBK or GB 18030; the app registers java.nio.charset through JNI). It fills
+// `out` with UTF-8 and returns true, or returns false when it does not know the character set (iconv then runs). Not thread-safe to change while decoding: set once at start.
+using ExternalConvert = bool (*)(const char* charset, const uint8_t* p, int n, std::string& out);
+void setExternalConvert(ExternalConvert f);
 // DVB selectors take precedence over an unprefixed-text fallback. ARIB is a separate wire format; Isdb selects its profile from stream context.
 enum class TextEncoding : uint32_t { Dvb = 0, Gb2312 = 1, EucKr = 2, Big5 = 3, Utf8 = 4, Latin15 = 5, Arib = 6, Isdb = 7 };
 struct TextContext {
