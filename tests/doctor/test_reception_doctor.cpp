@@ -65,6 +65,11 @@ int main() {
         f = get(r, Code::WeakSignal);
         CHECK(f && f->fix == Fix::None, "weak at max gain should offer no fix");
     }
+    {   // gain cut on purpose: low overall level but a strong carrier above the noise: no 'raise the gain'
+        auto x = make(0.0005, {{0, 0.02, 100e3}});
+        Report r = diagnose(x.data(), x.size(), live());
+        CHECK(!has(r, Code::WeakSignal), "doctor nags about low gain although a strong signal is present");
+    }
     {   // noise only at a sane level: no signal
         auto x = make(0.05, {});
         Report r = diagnose(x.data(), x.size(), live());

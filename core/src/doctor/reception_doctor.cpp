@@ -127,7 +127,9 @@ Report diagnose(const cf32* x, size_t n, const Context& c) {
 
     // ---- 2. too little signal: the level is near the converter's own noise, or the spectrum has nothing standing out
     if (!clipping && !c.locked) {
-        const bool lowLevel = m.rmsDbfs < -48 && !(c.live && adcLevelCompensated());   // (AirspyHF+: the level is the firmware's, not the gain's)
+        // a strong signal in the passband means the low overall level is the user's deliberate gain cut (or a clean quiet band), not a starved converter
+        const bool strongSig = haveSignal && m.strongestOverFloorDb > 20;
+        const bool lowLevel = m.rmsDbfs < -48 && !strongSig && !(c.live && adcLevelCompensated());   // (AirspyHF+: the level is the firmware's, not the gain's)
         if (lowLevel && c.live) {
             Finding f; f.code = Code::WeakSignal; f.severity = SevWarn; f.a = m.rmsDbfs;
             f.text = c.gainMaxDb > 0 && c.gainDb >= c.gainMaxDb - 1
