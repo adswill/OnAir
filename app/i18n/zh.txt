@@ -1829,7 +1829,7 @@ Then do	则执行
 This rule will start the program below, on this computer, every time it fires, with text from the decoded signals in its arguments. Anyone who can send such a signal can influence it. Only allow it if you wrote it or trust the one who did.	每次触发时，此规则都会在这台电脑上启动下面的程序，并把解码信号中的文本放入参数。任何能发出此类信号的人都可能影响它。仅在你自己编写或信任作者时才允许。
 Topic	主题
 WAV file (empty: beeps)	WAV 文件（留空：蜂鸣）
-Webhook	Webhook
+Webhook	网络回调
 Webhook address	Webhook 地址
 What can a script do?	脚本能做什么？
 When this happens	当发生以下情况
@@ -3478,7 +3478,7 @@ custom	自定义
 default	默认
 How much spectrum the radio captures. Default is the mode's own width; click to set any width you like.	无线电捕获的频谱宽度。默认是该模式自身的宽度；点击可设置任意宽度。
 Back to this mode's own bandwidth and sample rate. Your custom values stay saved for the next time you tick Custom.	恢复该模式自身的带宽和采样率。您的自定义值会保留，下次勾选“自定义”时可再次使用。
-16-bit	16-bit
+16-bit	16 位
 Share##rec	分享##rec
 Opens the folder with this recording and copies its path. Send the file (for SigMF the .sigmf-meta and the .sigmf-data together): it replays with its own frequency, rate and mode.	打开此录音所在文件夹并复制其路径。发送该文件（SigMF 需同时发送 .sigmf-meta 和 .sigmf-data）：它会以自身的频率、采样率和模式回放。
 Identify	识别
@@ -7284,7 +7284,7 @@ Modulation of unknown carriers##csm_mod	未知载波的调制##csm_mod
 Modulation peaks +%.0f / -%.0f %%, clipped %.2f %%, carrier shift %.1f %%	调制峰值 +%.0f / -%.0f %%，削波 %.2f %%，载波偏移 %.1f %%
 Modulation##csm_nm	调制##csm_nm
 Modulation: healthy	调制：正常
-Mono Pro	Mono Pro
+Mono Pro	专业单色
 Mono Pro (OLED, amber)	Mono Pro（OLED，琥珀色）
 Mono saves some bitrate; stereo needs more.	单声道别省码率；立体声需要更多。
 More bitrate generally gives a better picture but uses more of the channel. Auto follows a rule of thumb for this codec, resolution, frame rate and frame types; the estimate on the right shows what the whole stream then needs. Untick Auto to set your own. MPEG-2 has a lowest bitrate for each picture size (about 160 bit/s per 16x16 block, e.g. 150 kbit/s at 640x360): a picture must reach the receiver within about 0.7 s.	更高码率通常画质更好，但占用更多信道。自动按此编码、分辨率、帧率和帧类型的经验规则取值；右侧估算值显示整条码流的需求。取消勾选「自动」可自行设置。MPEG-2 对每种图像大小有最低码率（约每 16x16 块 160 bit/s，640x360 时约 150 kbit/s）：图像必须在约 0.7 s 内到达接收机。
@@ -9043,7 +9043,7 @@ Strikes	闪电
 Strikes per minute, last 60 minutes (right = now)	每分钟闪电次数，最近 60 分钟（右 = 现在）
 Stronger and slower than the default bilateral filter (not used while a picture is still arriving)	比默认双边滤波更强更慢（图像尚未传完时不使用）
 Strongest path comes from bearing	最强路径来自方位角
-Studio	Studio
+Studio	工作室
 Studio (slate, rounded)	Studio（石板色，圆角）
 Sub-GHz sensors (readings)	Sub-GHz 传感器（读数）
 Sub-mode	子模式
