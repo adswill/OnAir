@@ -9133,7 +9133,7 @@ TRANSMIT	发射
 TRANSMIT ON SCHEDULE	按计划发射
 TS content	TS 内容
 TS mux rate	TS 复用码率
-TTL	TTL
+TTL	生存时间（TTL）
 TV (auto)	电视（自动）
 TV channel. A channel number belongs to a standard and a country: channel 2 is 57 MHz in the US, 47-54 MHz is E2 in Europe. Pick the region in the list (it starts from your location), then a channel; OnAir tunes its centre and sets its width. The frequency box, the width and the sample rate can still be set to anything. Details: docs/TV-CHANNELS.md.	电视频道。频道号属于某个制式和国家：2 频道在美国是 57 MHz，47-54 MHz 在欧洲是 E2。在列表中选择地区（从你所在位置开始），再选频道；OnAir 会调谐其中心并设置带宽。频率框、带宽和采样率仍可任意设置。详情：docs/TV-CHANNELS.md。
 TV: %s, %d MHz channels.  Band plan: %s.  Time zone: %s.	电视：%s，%d MHz 频道。频段规划：%s。时区：%s。
