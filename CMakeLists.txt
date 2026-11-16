@@ -167,7 +167,7 @@ add_library(dect2core STATIC core/src/source/source.cpp core/src/source/source_t
 target_sources(dect2core PRIVATE core/src/dsp/synth_wide.cpp)
 target_sources(dect2core PRIVATE core/src/source/synth_group.cpp)
 target_sources(dect2core PRIVATE core/src/source/synth_media.cpp)   # the picture and sound files of the synthetic source (synth_media.h)
-target_sources(dect2core PRIVATE core/src/t2/t2ldpc.cpp core/src/t2/t2mi_out.cpp core/src/t2/t2mi_in.cpp)
+target_sources(dect2core PRIVATE core/src/t2/t2ldpc.cpp core/src/t2/t2mi_out.cpp core/src/t2/t2mi_in.cpp core/src/t2/t2profile.cpp)   # t2profile: the configurations EN 302 755 allows (Base, Lite)
 target_sources(dect2core PRIVATE core/src/dsp/synth_wide.cpp)
 target_sources(dect2core PRIVATE core/src/source/synth_group.cpp core/src/source/diversity_source.cpp core/src/dsp/diversity.cpp)   # radio groups: stitched wide (synth_group.h) and diversity pairs (diversity_source.h, dsp/diversity.h)
 target_sources(dect2core PRIVATE core/src/dsp/zoom_spectrum.cpp)   # 4.0: the zoom spectrum and the display windows (docs/WATERFALL-4.0.md)
