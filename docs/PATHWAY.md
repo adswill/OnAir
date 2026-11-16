@@ -2432,3 +2432,8 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 - Flaky tests seen and passing on re-run: audio_engine (Windows timeout), sarsat_engine (Linux CPU budget), dtmb_threads (macOS under load).
 - PRs 523, 525, 528, 531, 532, 535, 538 are in; 528 went in on rebased commits, so it was closed with a note. 512 and 527 stay drafts. Thank-you comments and issue replies posted. Detachable windows (#242) left for 4.3 on feat42-windows.
 - Open: RX888 MkII rates above 64 Msps reported as not reachable by some users (no log yet, likely USB 3 or CPU limits).
+
+## 2026-11-16: 4.2.0 Android APK replaced (start crash, #544)
+
+- The 4.2.0 release APK aborted at launch on every phone: R8 renamed the xHE-AAC decoder methods that android/native/src/jni_xhe.cpp looks up by name (NoSuchMethodError in nativeXheRegister). Added keep rules for XheAacDecoder and XheNative in android/app/proguard-rules.pro (82392fe9b), rebuilt, checked that the names survive in the dex, signed with the same certificate and replaced the asset and SHA256SUMS on the v4.2.0 release (same version number; users install over it).
+- 4.3 branches pushed: fix43-atvcrash (Windows ATV crash after 2^31 samples, `long` is 32-bit there, #520) and fix43-ism (ISM burst decoding off the feed thread, waterfall stall, #542). Approved for 4.3: MIDI LNA/VGA/Bias-T (#543), ISS SSTV 437.550 (#540), DWD RTTY 147.3 kHz 85 Hz (#539), DVB subtitle track list (#517). PR #541 (FFmpeg as shared libraries) to be reviewed and tested for 4.3.
