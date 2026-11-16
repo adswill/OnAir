@@ -137,7 +137,7 @@ class XheAacDecoder {
         val out = pending
         pending = ShortArray(0)
         if (out.isEmpty()) stats.empty++
-        if (stats.framesIn % 500 == 0) AppLog.i("xhe", stats.line())
+        if (stats.framesIn % 500L == 0L) AppLog.i("xhe", stats.line())
         return out
     }
 
