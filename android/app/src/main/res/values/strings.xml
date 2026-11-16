@@ -320,6 +320,8 @@
     <string name="iq_share">Share recording</string>
     <string name="iq_save_downloads">Save to Downloads</string>
     <string name="iq_saved">Saved to Downloads/OnAir</string>
+    <string name="iq_autosave_on">Save to Downloads when finished: on</string>
+    <string name="iq_autosave_off">Save to Downloads when finished: off</string>
     <string name="iq_save_failed">Could not save to Downloads</string>
     <string name="iq_cap_title">Size limit</string>
     <string name="iq_cap_option">Limit %1$s</string>

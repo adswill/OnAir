@@ -10,6 +10,10 @@
 #include "dect2/source/hamlib_rig.h"
 #include "dect2/source/source.h"
 #include "native_common.h"
+#include "fd_path.h"
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 #include "dect2/net/netradio.h"
 #include "dect2/source/synth_group.h"
 #include "dect2/source/synth_media.h"
@@ -360,7 +364,12 @@ protected:
             f_ = n > 0 ? _wfopen(w.c_str(), L"rb") : nullptr;
         }
 #else
-        f_ = fopen(path_.c_str(), "rb");
+        const int fdNum = parseFdPath(path_);
+        if (fdNum >= 0) {   // a descriptor the host already opened: use a copy of it, never reopen the path (permission denied on Android, #546)
+            const int d = dup(fdNum);
+            if (d >= 0) { f_ = fdopen(d, "rb"); if (!f_) close(d); else fseek(f_, 0, SEEK_SET); }
+        }
+        if (!f_) f_ = fopen(path_.c_str(), "rb");
 #endif
         if (!f_) { DIAG_ERROR(759483, "The IQ file %s could not be opened (%s), so the file source stays closed.", path_.c_str(), strerror(errno)); err = "cannot open " + path_ + ": " + strerror(errno); return false; }
         if (off_ && fseek(f_, (long)off_, SEEK_SET) != 0) { DIAG_ERROR(859954, "The IQ file %s could not be positioned at its start offset, so the file source stays closed.", path_.c_str()); err = "cannot seek in " + path_; return false; }
