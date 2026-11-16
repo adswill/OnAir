@@ -34,4 +34,21 @@ class XheAacTest {
         f.asFloatBuffer().put(floatArrayOf(0f, 1.5f, -1f)); f.limit(12)
         assertArrayEquals(shortArrayOf(0, 32767, -32767), XheSupport.toShorts(f, true))
     }
+
+    @Test fun outputWaitIsShortWhilePrimingAndLongerOnceTheDecoderAnswers() {
+        assertEquals(3_000L, XheSupport.outputWaitUs(false, 3))
+        assertEquals(3_000L, XheSupport.outputWaitUs(true, 0))
+        assertEquals(20_000L, XheSupport.outputWaitUs(true, 1))
+    }
+
+    @Test fun statsCountFramesInFlightAndNeverGoNegative() {
+        val s = XheStats()
+        s.framesIn = 10; s.framesOut = 8
+        assertEquals(2L, s.inFlight())
+        s.flushes++; s.framesInAtFlush = 10; s.framesOutAtFlush = 8
+        assertEquals(0L, s.inFlight())
+        s.framesOut = 12   // late output after a flush cannot make it negative
+        assertEquals(0L, s.inFlight())
+        assertTrue(s.line().contains("in 10") && s.line().contains("flushes 1"))
+    }
 }

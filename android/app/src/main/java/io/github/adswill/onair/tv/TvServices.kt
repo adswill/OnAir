@@ -246,6 +246,8 @@ fun audioLabel(s: TvStream, cat: DecoderCatalog): String {
     return when (audioPlayability(s, cat)) {
         is Playability.Plays -> base
         Playability.Scrambled -> "$base (scrambled)"
+        is Playability.NoDecoder -> if (s.streamType == 0x81 || s.streamType == 0x87 || s.codec == "AC-3" || s.codec == "E-AC-3")
+            "$base (needs a decoder: this phone has none)" else "$base (not supported on this phone)"
         else -> "$base (not supported on this phone)"
     }
 }
