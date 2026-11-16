@@ -2547,8 +2547,8 @@ automatic	自动
 Sound	声音
 The sound subcarrier of the video transmitter, an FM carrier above the picture. Automatic takes the stronger of 6.0 and 6.5 MHz.	视频发射机的伴音副载波，位于图像之上的调频载波。自动时取 6.0 与 6.5 MHz 中较强者。
 Saturation	饱和度
-Weave	Weave
-Bob	Bob
+Weave	场合并
+Bob	场倍增
 offset	偏移
 picture	图像
 lines	行
@@ -2893,9 +2893,9 @@ not active	不活跃
 start the receiver to see the echoes	启动接收机以查看回波
 echoes: +-500 Hz around the beacon line, the last 30 seconds (brighter = stronger over the background)	回波：信标谱线两侧 ±500 Hz，最近 30 秒（越亮 = 比背景越强)
 beacon	信标
-ping	ping
+ping	流星回波
 long-term spectrum around the beacon (dB over the noise)	信标周围的长期频谱（高于噪声的 dB)
-Pings	Ping
+Pings	流星回波
 Rates	速率
 Echoes	回波
 pings	ping
@@ -2904,7 +2904,7 @@ noise	噪声
 detector	检测器
 log	日志
 The beacon is a fixed transmitter far beyond the horizon: it is heard only when a meteor trail reflects it, as a short echo a few Hz to a few hundred Hz away from the line. Echoes closer than 18 Hz to the line are masked.	信标是远在地平线之外的固定发射机：只有流星余迹反射它时才能听到，表现为离谱线几 Hz 到几百 Hz 的短回波。距谱线不到 18 Hz 的回波会被屏蔽。
-Ping	Ping
+Ping	流星回波
 with interference bursts	含干扰脉冲
 The test signal is a beacon 420 Hz off the centre with simulated meteor echoes: short underdense ones and a few long overdense ones.	测试信号是偏离中心 420 Hz 的信标，带有模拟流星回波：短的欠密回波和少量长的过密回波。
 Beacon echoes, 143.050 MHz	信标回波，143.050 MHz
