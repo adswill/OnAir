@@ -153,6 +153,30 @@ void open(const char* mode) { if (mode) S.mode = mode; S.open = true; }
 
 // ---------------------------------------------------------------- the strip in the mode's tab
 
+// "No audio: why" (dect2/voice/voice_silence.h): one amber line, only while calls are heard and nothing is played, with the button that fixes it
+void silenceLine(App& a, const char* mode, bool live, bool codecReady) {
+    load();
+    vm::Monitor& m = vm::monitor(mode);
+    const vm::Silence sl = vm::whySilent(m.silenceInput(live, codecReady, a.volume, a.muted));
+    if (sl.why == vm::SilenceWhy::None) return;
+    ImGui::PushID(mode);
+    ImGui::PushStyleColor(ImGuiCol_Text, pal::warnAmber());
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextUnformatted(sl.text.c_str());
+    ImGui::PopTextWrapPos();
+    ImGui::PopStyleColor();
+    if (sl.canReleaseHold) { ImGui::SameLine(); if (ImGui::SmallButton("Release hold##sil")) m.releaseHold(), save(); }
+    if (sl.canUseDefaultOutput) {
+        vm::Settings s = m.settings();
+        if (!s.device.empty()) { ImGui::SameLine(); if (ImGui::SmallButton("Use default output##sil")) { s.device.clear(); apply(m, s); } }
+    }
+    if (sl.why == vm::SilenceWhy::ModeVolume) {
+        vm::Settings s = m.settings();
+        ImGui::SameLine(); if (ImGui::SmallButton("Set volume to 100 %##sil")) { s.volume = 1.f; apply(m, s); }
+    }
+    ImGui::PopID();
+}
+
 void strip(App& a, const char* mode, const char* title, const Link& l) {
     load();
     S.titles[mode] = title;
@@ -206,6 +230,7 @@ void strip(App& a, const char* mode, const char* title, const Link& l) {
     if (ImGui::SmallButton("Voice monitor...")) open(mode);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Calls, history search, talkgroup filters, mute list, priority, squelch and the output device of %s", title);
     flowEnd();
+    silenceLine(a, mode, l.live, l.codecReady);
 
     // the "now talking" card
     const float cardH = ImGui::GetTextLineHeightWithSpacing() * 3.2f;

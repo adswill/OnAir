@@ -413,6 +413,7 @@ void watchPosition(App& a, const dect2::voice::WatchEntry& e) {
 void tab(App& a) {
     kit::modeHeader({9, "DMR", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
     kit::modeNav("dmrv", S.view, {{tr("Live"), 0}, {tr("Calls"), 3}, {tr("Map"), 1}, {tr("Table"), 2, true}, {tr("Watch"), 90, true}});
+    if (S.view != 0) voiceui::silenceLine(a, "dmr", live(a), dect2::codec::pluginLoaded("ambe2") || dect2::dmrAmbeAvailable(nullptr));   // the Live view's strip has it already
     if (S.view == 90) { watchui::watchView(a, "dmr", [&a](const dect2::voice::WatchEntry& e) { watchPosition(a, e); }); return; }
     if (S.view == 3) { kit::sessionItems(9, 1, "dmr"); return; }
     if (S.view == 1) { dmrMap(a); return; }

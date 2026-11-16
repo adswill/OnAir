@@ -804,9 +804,14 @@ struct P25Receiver::Impl {
         }
         if (!clear) return;   // encrypted with no usable key: reported, never decoded
         tel.now.clearFrames++;
-        if (!imbe || !imbe->ok()) return;
+        if (!imbe || !imbe->ok()) { if (mon) mon->noteSound(voice::Monitor::Sound::CodecUnavailable); return; }
         int16_t pcm[160];
         imbe->decode(fr, pcm);
+        if (mon) {   // "No audio: why" (voice_silence.h): a codec that only returns zeros
+            bool any = false;
+            for (int16_t v : pcm) if (v) { any = true; break; }
+            mon->noteSound(any ? voice::Monitor::Sound::Decoded : voice::Monitor::Sound::DecodedSilent);
+        }
         for (int16_t s : pcm) aud8.push_back(s / 32768.f);
         tel.voiceDecoded++;
         tel.now.voice = true;

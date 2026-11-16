@@ -576,9 +576,14 @@ struct NxdnReceiver::Impl {
             if (mon->offer(ci) != voice::Verdict::Play) return;
             playing = ci;
         }
-        if (!ambe || !ambe->ok() || !clear) return;
+        if (!ambe || !ambe->ok() || !clear) { if (mon && clear) mon->noteSound(voice::Monitor::Sound::CodecUnavailable); return; }
         int16_t pcm[160];
         ambe->decodeSoft(frame, rel, pcm);
+        if (mon) {   // "No audio: why" (voice_silence.h): a codec that only returns zeros
+            bool any = false;
+            for (int16_t v : pcm) if (v) { any = true; break; }
+            mon->noteSound(any ? voice::Monitor::Sound::Decoded : voice::Monitor::Sound::DecodedSilent);
+        }
         for (int16_t s : pcm) aud8.push_back(s / 32768.f);
         tel.voiceDecoded++;
         tel.now.voice = true;
