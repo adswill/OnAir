@@ -18,6 +18,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include "dect2/voice/voice_silence.h"
 #include <string>
 #include <vector>
 
@@ -144,6 +145,13 @@ public:
     void endCall(const CallInfo& c);     // the receiver saw the end of the call (terminator)
     float volume() const;                // the mode's volume
 
+    // ---- what the sound path reports, for "No audio: why" (voice_silence.h)
+    enum class Sound { Decoded, DecodedSilent, CodecUnavailable };
+    void noteSound(Sound n);                                  // a burst went through the codec (all zeros: DecodedSilent), or no decoder could start
+    void noteOutput(bool ok, const std::string& device) const;   // the mode's sound device opened (or not)
+    bool outputRetryDue() const;                              // a failed output is tried again every 3 s
+    SilenceIn silenceInput(bool live, bool codecReady, float appVolume, bool appMuted) const;   // what the monitor knows, for whySilent()
+
     // ---- the interface
     Settings settings() const;
     void setSettings(const Settings& s);
@@ -201,6 +209,12 @@ private:
     std::string srcLabelLocked(const CallInfo& c) const;
     void openRecLocked(Live& l, int channels, int rate);
     bool autoRecLocked(Live& l);                 // a record rule (session/record_rules.h) wants this call's audio
+    double lastVerdict_[9] = {-1e9, -1e9, -1e9, -1e9, -1e9, -1e9, -1e9, -1e9, -1e9};   // monitor clock of the last frame per Verdict
+    uint32_t silentRun_ = 0;
+    double lastCodecBad_ = -1e9;         // last CodecUnavailable note
+    mutable bool outFailed_ = false;
+    mutable std::string outDevice_;
+    mutable double outTry_ = -1e9;       // steady clock (s) of the last output open try
     uint16_t sessRx_ = 0;
     sess::SessionStore* sessStore_ = nullptr;
     bool sessNamed_ = false;

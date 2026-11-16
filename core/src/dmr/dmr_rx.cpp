@@ -219,11 +219,16 @@ struct DmrReceiver::Impl {
             if (audioSlot < 0) audioSlot = s;
             if (audioSlot != s) return;
         }
-        if (!ambeOk) { ambeOk = dmrAmbeAvailable(&ambePath); if (!ambeOk) return; }
+        if (!ambeOk) { ambeOk = dmrAmbeAvailable(&ambePath); if (!ambeOk) return; }   // (the monitor already said NoCodec)
         if (!ambe[s] || !ambe[s]->ok()) ambe[s] = std::make_unique<DmrAmbe>();   // again after a codec plug-in was installed while running
-        if (!ambe[s]->ok()) return;
+        if (!ambe[s]->ok()) { if (mon) mon->noteSound(voice::Monitor::Sound::CodecUnavailable); return; }
         int16_t pcm[480];
         ambe[s]->decodeBurstSoft(vs, link.voiceReliability(), pcm);
+        if (mon) {   // "No audio: why" (voice_silence.h): a codec that only returns zeros
+            bool any = false;
+            for (int16_t v : pcm) if (v) { any = true; break; }
+            mon->noteSound(any ? voice::Monitor::Sound::Decoded : voice::Monitor::Sound::DecodedSilent);
+        }
         for (int16_t v : pcm) aud8.push_back(v / 32768.f);
         voiceDecoded++;
     }

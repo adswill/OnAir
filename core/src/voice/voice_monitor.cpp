@@ -11,6 +11,7 @@
 #include "dect2/session/voice_bridge.h"
 #include <algorithm>
 #include <cctype>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -453,6 +454,7 @@ Verdict Monitor::offer(const CallInfo& c0) {
         else if (e.priority && !curPrio_) v = Verdict::Play;   // a priority call takes the sound
         else v = curPrio_ ? Verdict::LowerPriority : Verdict::Busy;
     }
+    lastVerdict_[(int)v] = t;
     if (v == Verdict::Play) { cur_ = key; curLast_ = t; curPrio_ = e.priority; e.played++; }
     e.verdict = v;
     sessionSyncLocked(it->second, t);
@@ -574,6 +576,44 @@ std::vector<CallEntry> Monitor::history(const std::string& query, size_t max) co
         out.push_back(e);
     }
     return out;
+}
+
+void Monitor::noteSound(Sound n) {
+    std::lock_guard<std::mutex> lk(mu_);
+    if (n == Sound::Decoded) silentRun_ = 0;
+    else if (n == Sound::DecodedSilent) silentRun_++;
+    else lastCodecBad_ = now();
+}
+
+void Monitor::noteOutput(bool ok, const std::string& device) const {
+    std::lock_guard<std::mutex> lk(mu_);
+    outFailed_ = !ok;
+    outDevice_ = device;
+}
+
+bool Monitor::outputRetryDue() const {
+    const double t = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    std::lock_guard<std::mutex> lk(mu_);
+    if (t - outTry_ < 3.0) return false;
+    outTry_ = t;
+    return true;
+}
+
+SilenceIn Monitor::silenceInput(bool live, bool codecReady, float appVolume, bool appMuted) const {
+    std::lock_guard<std::mutex> lk(mu_);
+    SilenceIn in;
+    const double t = now();
+    auto since = [&](Verdict v) { return t - lastVerdict_[(int)v]; };
+    in.live = live; in.codecReady = codecReady; in.monVolume = set_.volume; in.appVolume = appVolume; in.appMuted = appMuted;
+    in.outputFailed = outFailed_;
+    in.outputError = outFailed_ ? (outDevice_.empty() ? "the default output could not be opened" : "\"" + outDevice_ + "\" could not be opened") : std::string();
+    in.hold = set_.hold; in.squelchPct = set_.squelchPct;
+    in.codecUnavailable = t - lastCodecBad_ <= kSilenceRecentSec;
+    in.silentRun = silentRun_;
+    in.sincePlay = since(Verdict::Play); in.sinceNotHeld = since(Verdict::NotHeld); in.sinceMuted = since(Verdict::Muted);
+    in.sinceFiltered = since(Verdict::Filtered); in.sinceSquelched = since(Verdict::Squelched); in.sinceEncrypted = since(Verdict::Encrypted);
+    in.sinceNoCodec = since(Verdict::NoCodec);
+    return in;
 }
 
 void Monitor::holdTarget(const std::string& token) {
@@ -830,12 +870,17 @@ void loadAllSettings(const std::string& text) {
 
 void ensureOutput(std::unique_ptr<AudioOut>& out, const Monitor& m, int rate, int startThreshold) {
     const std::string dev = m.settings().device;
-    if (out && out->device() == dev) return;
-    out.reset();
-    out = std::make_unique<AudioOut>();
-    out->setDevice(dev);
-    out->start(rate);
+    if (out && out->device() == dev) {
+        if (out->running()) { m.noteOutput(true, dev); return; }
+        if (!m.outputRetryDue()) return;   // the device did not open: try again now and then, not on every frame
+    } else {
+        out.reset();
+        out = std::make_unique<AudioOut>();
+        out->setDevice(dev);
+    }
+    const bool ok = out->start(rate);
     out->setStartThreshold(startThreshold);
+    m.noteOutput(ok, dev);
 }
 
 bool readWav(const std::string& path, int& rate, int& channels, std::vector<int16_t>& samples) {
