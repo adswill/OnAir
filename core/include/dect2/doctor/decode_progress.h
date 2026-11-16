@@ -40,6 +40,12 @@ private:
     bool done_ = false;
 };
 
+// May the doctor open by itself now? Never when the user switched that off (userSetting), and never within kQuietAfterGainSec of a gain change
+// made by hand (slider, stage gain, Auto on/off, decimation): the user is tuning and knows what they are doing. lastManualGainSec < 0: none yet.
+// Asking for the doctor (menu, button) is not affected: this only decides the automatic opening.
+constexpr double kQuietAfterGainSec = 60;
+bool autoOpenAllowed(double nowSec, double lastManualGainSec, bool userSetting);
+
 // A clip of the failed signal, as 8-bit interleaved I/Q and a SigMF meta file. Written only after the user agreed to this one clip in the app.
 struct ClipInfo {
     double rateHz = 0, freqHz = 0;

@@ -222,6 +222,7 @@ a scope and up to two keys. The code asks `inputmap::pressed(Action)` instead of
 
 | Key | Setting | Kind | Default | 4.0 |
 |---|---|---|---|---|
+| `doctorAutoOpen` | Signal doctor opens by itself | Bool | on | new |
 | `fmMono` | FM: force mono | Bool | off |  |
 | `fmStereo` | FM stereo | Choice | Auto |  |
 | `fmDeemph` | FM de-emphasis | Choice | 50 us |  |

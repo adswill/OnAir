@@ -147,6 +147,7 @@ inline const std::vector<Info>& table() {
         {"audioRecSplit", kFiles, N_("One audio file per transmission"), N_("A new file each time the sound starts again."), "split vox", K::Bool, 0},
         {"audioRecKeep", kFiles, N_("Keep recording audio across retunes"), N_("Off: a retune ends the file."), "retune", K::Bool, 0, 0, 0, nullptr, nullptr, "", true},
         // ---- Decoding
+        {"doctorAutoOpen", kDecoding, N_("Signal doctor opens by itself"), N_("On: the Reception doctor opens on its own when a mode has not decoded for a while. Off: it opens only when you ask (View menu or its button). After you change a gain by hand it never opens by itself for 60 seconds."), "reception doctor popup gain overload advice", K::Bool, 1},
         {"fmMono", kDecoding, N_("FM: force mono"), N_("A weak station is quieter in mono."), "stereo", K::Bool, 0},
         {"fmStereo", kDecoding, N_("FM stereo"), N_("Auto, mono, or stereo whenever a pilot is there."), "", K::Choice, 0, 0, 0, "Auto|Mono|Stereo"},
         {"fmDeemph", kDecoding, N_("FM de-emphasis"), N_("50 us (Europe, most of the world) or 75 us (Americas); Off for a flat response."), "tone", K::Choice, 50, 0, 0, "Off|50 us|75 us", "0,50,75"},

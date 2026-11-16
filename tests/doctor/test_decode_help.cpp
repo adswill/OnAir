@@ -123,7 +123,18 @@ static void testCoach() {
     Context unk; unk.live = true; c = coach(q, unk, false, false); CHECK(has(c, Advice::GainUp));
 }
 
+static void testAutoOpenAllowed() {
+    CHECK(autoOpenAllowed(1000, -1, true));          // no gain change yet, setting on
+    CHECK(!autoOpenAllowed(1000, -1, false));        // setting off: never
+    CHECK(!autoOpenAllowed(1000, 990, true));        // 10 s after a gain change by hand
+    CHECK(!autoOpenAllowed(1000, 941, true));        // 59 s
+    CHECK(autoOpenAllowed(1000, 940, true));         // 60 s
+    CHECK(autoOpenAllowed(1000, 500, true));
+    CHECK(!autoOpenAllowed(1000, 500, false));       // setting off wins whatever the time
+}
+
 int main() {
+    testAutoOpenAllowed();
     testStages(); testAutoOpen(); testClip(); testCoach();
     if (fails) { printf("%d failures\n", fails); return 1; }
     printf("decode help ok\n");

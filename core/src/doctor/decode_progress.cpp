@@ -61,6 +61,11 @@ bool AutoOpen::update(double now, bool running, bool decoding, const std::string
     return true;
 }
 
+bool autoOpenAllowed(double nowSec, double lastManualGainSec, bool userSetting) {
+    if (!userSetting) return false;
+    return lastManualGainSec < 0 || nowSec - lastManualGainSec >= kQuietAfterGainSec;
+}
+
 size_t clipBytes(size_t samples) { return std::min(samples, kMaxClipSamples) * 2; }
 
 std::string clipMeta(const ClipInfo& info) {
