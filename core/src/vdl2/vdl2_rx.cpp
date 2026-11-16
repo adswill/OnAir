@@ -8,6 +8,7 @@
 #include "dect2/results/results_io.h"
 #include "dect2/net/feeds.h"
 #include "dect2/vdl2/vdl2_proto.h"
+#include "dect2/vdl2/vdl2_gsname.h"
 #include "dect2/acars/acars_reasm.h"
 #include "vdl2_internal.h"
 #include <algorithm>
@@ -585,9 +586,10 @@ struct Vdl2Receiver::Impl {
             g.addr = a; g.type = src ? m.srcType : m.dstType; g.lastSeenSec = m.timeSec;
             if (src) {
                 g.messages++; g.freqHz = m.freqHz; g.lastHeardSec = m.timeSec; g.levelDb = m.levelDb;
-                if (m.hasPos && m.posKind == "XID ground station location") vdl2StationReport(g, m.lat, m.lon);
+                if (m.hasPos && m.posKind == "XID ground station location") { g.posFromList = false; vdl2StationReport(g, m.lat, m.lon); }
                 const size_t at = m.detail.find("airport coverage ");
                 if (at != std::string::npos) g.airports = m.detail.substr(at + 17, m.detail.find('\n', at) - at - 17);
+                vdl2StationCheckList(g, AirportDb::builtin());
             }
             if (srcAir && !tel.aircraft.empty() && tel.aircraft.front().icao == m.src) {   // a downlink from a located aircraft: it is within reach of this station
                 const Vdl2Aircraft& c = tel.aircraft.front();

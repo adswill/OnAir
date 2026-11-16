@@ -43,5 +43,19 @@ int main() {
         Vdl2GroundStation m; m.hasPos = true; m.lat = -60; m.lon = -120;   // open ocean
         CHECK(vdl2StationName(m, db).empty(), "nothing near");
     }
+    {   // the station list: a damaged coordinate of a known station shows the airport position
+        const AirportDb& db = AirportDb::builtin();
+        const Airport* lfpg = db.find("LFPG");
+        CHECK(lfpg != nullptr, "LFPG in the table");
+        Vdl2GroundStation g; g.airports = "LFPG"; g.hasPos = true; g.lat = 48.9; g.lon = -30.0;   // mid-Atlantic
+        CHECK(vdl2StationCheckList(g, db) && g.posFromList, "corrected");
+        CHECK(vdl2DistNm(g.lat, g.lon, lfpg->latDeg, lfpg->lonDeg) < 0.1, "table position shown");
+        Vdl2GroundStation ok; ok.airports = "LFPG"; ok.hasPos = true; ok.lat = 49.0; ok.lon = 2.6;   // a few km off: kept
+        CHECK(!vdl2StationCheckList(ok, db) && !ok.posFromList && ok.lon == 2.6, "near position untouched");
+        Vdl2GroundStation u; u.hasPos = true; u.lat = 48.9; u.lon = -30.0;   // unknown station
+        CHECK(!vdl2StationCheckList(u, db) && u.lon == -30.0 && !u.posFromList, "unknown unchanged");
+        Vdl2GroundStation z; z.airports = "ZZZZ"; z.hasPos = true; z.lat = 48.9; z.lon = -30.0;   // airport not in the table
+        CHECK(!vdl2StationCheckList(z, db) && z.lon == -30.0, "unknown airport unchanged");
+    }
     return testSummary("vdl2_gsstable");
 }

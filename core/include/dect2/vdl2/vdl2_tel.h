@@ -170,6 +170,7 @@ struct Vdl2GroundStation {
     double pendLat = 0, pendLon = 0;
     uint32_t posOutliers = 0;    // reports that disagreed with the consensus (a corrupted coordinate) and were ignored
     uint32_t posRejected = 0;    // reports with impossible coordinates
+    bool posFromList = false;    // hasPos / lat / lon are the airport's position from the station list: the decoded one was far from it (vdl2StationCheckList)
 };
 
 // One aircraft position heard talking to this station: the estimate on the sphere and the coverage radius
