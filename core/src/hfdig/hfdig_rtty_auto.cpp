@@ -28,7 +28,7 @@ std::vector<RttyAutoHyp> rttyAutoAnalyse(const float* audio, size_t n, int maxHy
     std::vector<RttyAutoHyp> res;
     if (n < (size_t)(3 * kFs)) return res;
     // the pairs of tones (autoparam.h); with them the keying gives the speed, so only the likely ones go through the decoder
-    const auto pairs = autoparam::findFskPairs(audio, n, kFs, kRttyShiftTable, kRttyShifts, 4, 10.0);
+    const auto pairs = autoparam::findFskPairs(audio, n, kFs, kRttyShiftTable, kRttyShiftsAuto, 4, 10.0);
     if (pairs.empty()) return res;
     struct Pick { autoparam::FskPair p; int bauds[2]; int nb; };
     std::vector<Pick> pick;

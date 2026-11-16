@@ -219,6 +219,20 @@ int main() {
         CHECK(has(s.text, "CQ CQ DE ONAIR"), "50 baud / 450 Hz %s, %.0f Hz off the marker: '%s' (%s)", manual ? "fixed" : "Auto", away, s.text.c_str(), s.status.c_str());
     }
 
+    // ---- 50 baud / 85 Hz RTTY (DWD on 147.3 kHz, #539): chosen by hand, the marker on the signal and 300 Hz off it
+    for (int away : {0, 300}) {
+        Rig r(cfg(2, 30));
+        SynthConfig rc = cfg(0, 30);
+        rc.cfoHz = (kSwSynthRttyCentreHz - 1360.0) + away;
+        r.syn = makeHfdigSynthFromAudio(makeRttyTxAudio("", 1, 5, false, 1360.0 - 42.5), rc, kRate);
+        Opts o; o.rttyBaud = 1; o.rttyShift = 5; r.rx.setDecoderOpts(Dec::Rtty, o);
+        r.rx.startDecoder(Dec::Rtty);
+        r.run(22);
+        const SwDecoderStatus s = r.dec(Dec::Rtty);
+        printf("  RTTY 50/85 fixed, signal %d Hz from the marker: %s | %.50s\n", away, s.status.c_str(), s.text.c_str());
+        CHECK(has(s.text, "CQ CQ DE ONAIR"), "50 baud / 85 Hz fixed, %d Hz off the marker: '%s' (%s)", away, s.text.c_str(), s.status.c_str());
+    }
+
     // ---- Auto finds the text decoder that works
     {
         Rig r(cfg(2, 30));

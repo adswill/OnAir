@@ -807,6 +807,7 @@ std::string mapSendStatusLine();                    // short "connected / N sent
 std::string mapSendDiagnosticsBlock(const App& a);  // map.on-air.dev ingest state + recent log for Copy diagnostics
 std::string passesArmFamily(App& a, int family);   // passes_ui.cpp: one click: track the next pass of this mode's satellite
 constexpr int kPassFamilyIssSstv = 100025;           // passes_ui.cpp: a pass link's "family" for the ISS's SSTV events (the SSTV entry of family 25, on FM)
+constexpr int kPassFamilyIssSstvUhf = 100026;        // passes_ui.cpp: the same on 437.550 MHz (UHF, NFM)
 std::string passesFamilyLine(App& a, int family, bool* armed);   // passes_ui.cpp: "Next pass: ..." of this mode's satellites, for the mode's hint line
 void passesDevTle(const std::string& path);       // dev (--tle): TLEs from a file, as if pasted
 std::vector<std::pair<std::string, double>> passesArgosDoppler(double unixSec, double freqHz);       // passes_ui.cpp: MetOp (Argos downlink) satellites above the horizon and their Doppler

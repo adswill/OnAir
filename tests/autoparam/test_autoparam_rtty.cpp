@@ -41,7 +41,7 @@ int main() {
     // 1. all 40 combinations with +-60 Hz offset and drift of 6 Hz/min at 12 dB in 3 kHz
     int ok = 0, n = 0;
     for (int b = 0; b < kRttyBauds; b++)
-        for (int s = 0; s < kRttyShifts; s++)
+        for (int s = 0; s < kRttyShiftsAuto; s++)
             for (int rv = 0; rv < 2; rv++) {
                 auto a = rtty(b, s, rv != 0, 900 + 37.0 * (b * 5 + s + rv * 2), 12);
                 shift(a, 8000, (n % 2 ? 60 : -60), 6);

@@ -22,7 +22,7 @@ namespace {
 int passFamilyOf(const App& a) {
     switch (a.family) {
         case 59: case 44: case 152: case 201: return a.family;   // Meteor LRPT, Orbcomm, Argos downlink, LoRa satellites
-        case 25: if (a.sub == subIndexOf("sstv") && std::fabs(a.freqMhz - 145.8) < 0.1) return kPassFamilyIssSstv; return -1;   // SSTV on the ISS's frequency
+        case 25: if (a.sub == subIndexOf("sstv") && std::fabs(a.freqMhz - 145.8) < 0.1) return kPassFamilyIssSstv; if (a.sub == subIndexOf("sstv") && std::fabs(a.freqMhz - 437.55) < 0.1) return kPassFamilyIssSstvUhf; return -1;   // SSTV on the ISS's frequency
         default: return -1;
     }
 }
@@ -41,7 +41,7 @@ void passHint(App& a) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Starts the receiver by itself at the rise, follows the Doppler and puts the receiver back at the set. Cancel it in View > Passes."));
     ImGui::PopID();
     if (auto it = msg.find(fam); it != msg.end() && !armed && !it->second.empty()) ImGui::TextDisabled("%s", it->second.c_str());
-    if (fam == kPassFamilyIssSstv) ImGui::TextDisabled("%s", tr("The ISS sends SSTV only during announced events; check the ARISS news before you wait for a pass."));
+    if (fam == kPassFamilyIssSstv || fam == kPassFamilyIssSstvUhf) ImGui::TextDisabled("%s", tr("The ISS sends SSTV only during announced events; check the ARISS news before you wait for a pass."));
 }
 
 // E14: near-me navaids (OurAirports navaids.csv, public domain; fetched once with a notice, cached). Community data, not for navigation.

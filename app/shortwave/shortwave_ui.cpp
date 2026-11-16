@@ -271,7 +271,7 @@ void advanced(App& a) {
             if (ImGui::Combo("##baud", &baud, "Baud: auto\00045.45\00050\00075\000100\000")) { o.rttyBaud = baud - 1; ch = true; }
             ImGui::SameLine(0, 6 * gUi);
             ImGui::SetNextItemWidth(120 * gUi);
-            if (ImGui::Combo("##shift", &shift, "Shift: auto\000170 Hz\000200 Hz\000425 Hz\000450 Hz\000850 Hz\000")) { o.rttyShift = shift - 1; ch = true; }
+            if (ImGui::Combo("##shift", &shift, "Shift: auto\000170 Hz\000200 Hz\000425 Hz\000450 Hz\000850 Hz\00085 Hz\000")) { o.rttyShift = shift - 1; ch = true; }
             ImGui::SameLine(0, 6 * gUi);
             if (ImGui::Checkbox("Reverse", &o.rttyReverse)) ch = true;
             tip("Mark is the upper tone. Only used when baud and shift are fixed (automatic tries both polarities).");
