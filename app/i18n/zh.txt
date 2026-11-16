@@ -4102,7 +4102,7 @@ typically	通常
 watch	监测
 LNB drift watch	LNB 漂移监测
 Tune onto a steady beacon or carrier and leave the receiver locked: the offset of the carrier from the tuned frequency is the LNB's error. It shows the error in kHz and ppm of the LO, the drift per minute, and says when it has settled (an LNB drifts while it warms up: wait before fine pointing).	调谐到一个稳定的信标或载波并保持锁定：载波与调谐频率的偏差就是 LNB 的误差。它以 kHz 和 LO 的 ppm 显示误差、每分钟漂移量，并告知何时已稳定（LNB 在预热期间会漂移：精细指向前请等待）。
-LNB LO (MHz)	LNB LO (MHz)
+LNB LO (MHz)	LNB 本振频率（MHz）
 Collecting: needs about a minute of a locked carrier.	采集中：需要约一分钟的锁定载波。
 Error	误差
 settled	已稳定
