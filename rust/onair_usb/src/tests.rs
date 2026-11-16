@@ -363,10 +363,64 @@ fn bias_tee_gpio_and_forced_bias_tee() {
 
 #[test]
 fn unsupported_fitipower_tuner_is_recognised_not_driven() {
-    match RtlSdr::open(FakeRtl::new(FakeChip::Fc0013)) {
+    // FC0012 / FC2580 are probed but not driven; the FC0013 is driven (see fc0013_opens_and_tunes)
+    let mut f = FakeRtl::new(FakeChip::None);
+    f.add_fc0012();
+    match RtlSdr::open(f) {
         Err((e, _)) => assert_eq!(e, -95),
-        Ok(_) => panic!("FC0013 must not open"),
+        Ok(_) => panic!("FC0012 must not open"),
     }
+}
+
+#[test]
+fn fc0013_opens_and_tunes() {
+    let mut d = RtlSdr::open(FakeRtl::new(FakeChip::Fc0013)).ok().unwrap();
+    assert_eq!(d.get_tuner_type(), Tuner::Fc0013);
+    assert_eq!(d.get_tuner_type().code(), 3);
+    assert_eq!(d.get_tuner_gains(None), 23);
+    // init wrote the register file (reg 0x07 gets the clock bit, reg 0x0c the dual master bit)
+    assert_eq!(d.transport().chip_reg(0xc6, 0x07), 0x2a);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x0c), 0xfe);
+    assert_eq!(d.set_sample_rate(2_048_000), 0);
+    assert_eq!(d.set_tuner_gain_mode(1), 0);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x13), 0x0a);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x0d) & 0x08, 0x08);
+    // 100 MHz: VHF filter on, UHF off, divider 32 (VCO 3.2 GHz, above 3.06 GHz: bit 3 of reg 6)
+    assert_eq!(d.set_center_freq(100_000_000), 0);
+    assert_eq!(d.get_center_freq(), 100_000_000);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x07) & 0x10, 0x10);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x14) & 0xe0, 0x00);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x1d) & 0x1c, 0x1c);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x05), 0x82 | 0x07);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x06) & 0xc0, 0x80);
+    // 522 MHz: UHF on, VHF filter off, divider 6
+    assert_eq!(d.set_center_freq(522_000_000), 0);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x07) & 0x10, 0);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x14) & 0xe0, 0x40);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x05), 0x0a | 0x07);
+    // gain: 197 dB/10 is the last entry (0x10), -99 the first (0x02)
+    assert_eq!(d.set_tuner_gain(197), 0);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x14) & 0x1f, 0x10);
+    assert_eq!(d.set_tuner_gain(-99), 0);
+    assert_eq!(d.transport().chip_reg(0xc6, 0x14) & 0x1f, 0x02);
+    assert_eq!(d.set_tuner_bandwidth(0), 0);
+}
+
+#[test]
+fn fc0013_pure_tables() {
+    use crate::fc0013::{divider, lna_code, vhf_track_bits};
+    assert_eq!(divider(36_000_000), (96, 0x82, 0x00));
+    assert_eq!(divider(50_000_000), (64, 0x02, 0x02));
+    assert_eq!(divider(100_000_000), (32, 0x82, 0x02));
+    assert_eq!(divider(300_000_000), (8, 0x22, 0x02));
+    assert_eq!(divider(949_999_999), (4, 0x12, 0x02));
+    assert_eq!(divider(1_090_000_000), (2, 0x0a, 0x02));
+    assert_eq!(vhf_track_bits(177_500_000), 0x1c);
+    assert_eq!(vhf_track_bits(250_000_000), 0x04);
+    assert_eq!(vhf_track_bits(300_000_000), 0x1c);
+    assert_eq!(lna_code(-100), 0x02);
+    assert_eq!(lna_code(60), 0x0e);
+    assert_eq!(lna_code(500), 0x10);
 }
 
 #[test]
