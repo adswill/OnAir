@@ -4,3 +4,4 @@ Bob
 ping
 Ping
 Pings
+LNB LO (MHz)
