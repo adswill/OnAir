@@ -86,7 +86,7 @@ TxModeSpec mk(const char* id, const char* name, int std, const char* gen, const 
 std::vector<TxModeSpec> makeTxTable() {
     // First eight: the original verified TV / ADS-B list. After that: every other generator-capable mode that is not on the deny-list.
     return {
-        mk("dvbt2", "DVB-T2", 0, "T2Generator, real PLP with the test transport stream", "FFT size, guard interval, pilot pattern, channel width", kTrip, 1, 64e6 / 7, true, 0),
+        mk("dvbt2", "DVB-T2", 0, "T2Generator, real PLP with the test transport stream", "T2-Base or T2-Lite, SISO / MISO, FFT size, guard interval, pilot pattern, constellation, code rate, channel width (1.7 to 8 MHz)", kTrip, 1, 64e6 / 7, true, 0),
         mk("dvbt", "DVB-T", 0, "dvbt::Generator, demo programme", "mode 2K/8K, guard, modulation, code rate, channel width", kTrip, 2, 64e6 / 7, true, 0),
         mk("atsc", "ATSC 1.0 (8-VSB)", 3, "atsc::Generator, demo programme", "none", kTrip, 0, 8e6, false, 6.5e6),
         mk("dab", "DAB / DAB+", 4, "makeDabSynth, transmission mode I with real audio", "none", kTrip, 0, 2.048e6, false, 2e6),
@@ -748,12 +748,19 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
             auto gen = std::make_shared<dvbt::Generator>(tp, namedTs(fileTs, dvbt::netBitrate(tp, native)));
             g = std::make_unique<FrameGen>(native, [gen](std::vector<cf32>& f) { gen->nextSymbol(f); }, 0.25f);
         } else {
-            TxParams tp = s.tx;
-            tp.payload = true;
+            // the frame within 250 ms, and T2-Lite within its 4 Mbit/s and time-interleaver memory (t2TxPlan)
+            const T2TxPlan plan = t2TxPlan(s.tx, bw);
+            TxParams tp = plan.params;
             auto ts = std::make_shared<std::function<void(uint8_t*)>>();   // the padding needs the bit rate, which the generator knows once built
             tp.tsSource = [ts](uint8_t* pk) { (*ts)(pk); };
             auto gen = std::make_shared<T2Generator>(tp);
             *ts = namedTs(fileTs, gen->tsBitrate(native));
+            if (plan.capped) {
+                std::array<char, 256> b{};
+                snprintf(b.data(), b.size(), "T2-Lite: the PLP is held to %.2f Mbit/s (%d of %d FEC blocks a frame: 4 Mbit/s and 2^18 time-interleaver cells, EN 302 755 I.10 and I.8), a transport stream of %.2f Mbit/s",
+                         plan.plpBps / 1e6, plan.blocks, plan.blocksFit, plan.tsBps / 1e6);
+                const_cast<TxRequest&>(r).fileNote += std::string(r.fileNote.empty() ? "" : "; ") + b.data();
+            }
             g = std::make_unique<FrameGen>(native, [gen](std::vector<cf32>& f) { gen->nextFrame(f); }, 0.25f);
         }
     } else if (m.stdMode == 3) {
