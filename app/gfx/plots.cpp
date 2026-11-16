@@ -14,7 +14,7 @@
 #include "spec_axis.h"
 #include "spec_paint.h"
 #include "../ui/input_map.h"
-#include "tuner_style.h"
+#include "vfo_marker.h"
 #include "../drm/drm_filter_logic.h"
 #include "../state/tune_worker.h"
 #include "../state/listen_freq.h"
@@ -422,21 +422,32 @@ void specLookBand(const App& a, double x0, double x1, double centre, bool spectr
 void specLookSet(App& a, int look, bool save);
 
 // The channel band behind the trace (spectrum: a light fill and its edges) or on top of the picture (waterfall: the edges only)
-// The "Simple" tuner look (tuner_style.h): the same band, drawn by the ImGui draw list inside the plot
+// The "Simple" tuner look: the VFO marker (vfo_marker.h), drawn by the ImGui draw list inside the plot
 static void tunerDraw(const App& a, bool spectrum) {
     const ChanWidth cw = channelWidth(a);
     if (cw.mhz <= 0) return;
+    static vmark::Anim anim[2];
+    static char label[2][40];
     const plt::Rect lim = plt::GetPlotLimits();
-    tstyle::In I;
-    I.pmin = plt::GetPlotPos(); I.psize = plt::GetPlotSize(); I.sc = gUi;
-    I.xLo = specaxis::mhzToPx(a.freqMhz - cw.mhz / 2, I.pmin.x, I.psize.x, lim.X.Min, lim.X.Max);
-    I.xHi = specaxis::mhzToPx(a.freqMhz + cw.mhz / 2, I.pmin.x, I.psize.x, lim.X.Min, lim.X.Max);
-    I.xC = specaxis::mhzToPx(a.freqMhz, I.pmin.x, I.psize.x, lim.X.Min, lim.X.Max);
     const int plotId = spectrum ? 0 : 1;
-    I.dragging = bandEdgeDragging(plotId);
-    I.hover = I.dragging ? gEdgeDrag : -1;
-    if (!I.dragging && cw.settable && a.fmMode && plt::IsPlotHovered()) I.hover = specaxis::edgeUnder(ImGui::GetIO().MousePos.x, I.xLo, I.xHi, 6 * gUi);
-    tstyle::draw(ImGui::GetWindowDrawList(), I);
+    vmark::In I;
+    I.pmin = plt::GetPlotPos(); I.psize = plt::GetPlotSize(); I.sc = gUi; I.dt = ImGui::GetIO().DeltaTime; I.spectrum = spectrum;
+    const double xLo = specaxis::mhzToPx(a.freqMhz - cw.mhz / 2, I.pmin.x, I.psize.x, lim.X.Min, lim.X.Max);
+    const double xHi = specaxis::mhzToPx(a.freqMhz + cw.mhz / 2, I.pmin.x, I.psize.x, lim.X.Min, lim.X.Max);
+    I.xC = specaxis::mhzToPx(a.freqMhz, I.pmin.x, I.psize.x, lim.X.Min, lim.X.Max);
+    I.pxPerUnit = I.psize.x / std::max(1e-9, (lim.X.Max - lim.X.Min) * 1e6);
+    I.lo = -cw.mhz / 2 * 1e6; I.hi = cw.mhz / 2 * 1e6;
+    const bool movable = cw.settable && a.fmMode;   // the edges bandEdgeMouse lets the mouse drag
+    I.canLo = I.canHi = movable;
+    I.accent = pal::accent(); I.tabBg = ImGui::GetStyleColorVec4(ImGuiCol_PopupBg); I.tabText = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+    if (bandEdgeDragging(plotId)) I.drag = gEdgeDrag == 0 ? vmark::EdgeLo : vmark::EdgeHi;
+    else if (movable && gEdgeDrag < 0 && plt::IsPlotHovered() && xHi - xLo >= 12 * gUi) {
+        const int e = specaxis::edgeUnder(ImGui::GetIO().MousePos.x, xLo, xHi, 6 * gUi);
+        I.hover = e == 0 ? vmark::EdgeLo : e == 1 ? vmark::EdgeHi : vmark::None;
+    }
+    snprintf(label[plotId], sizeof label[0], "BW %s", widthText(cw.mhz).c_str());
+    I.label = label[plotId];
+    vmark::draw(ImGui::GetWindowDrawList(), I, anim[plotId]);
 }
 
 static void channelBandMain(const App& a, bool fill) {

@@ -491,7 +491,7 @@ struct App {
     bool specFill = true, specGrid = true, specPeaks = false, specReadout = true, specDbm = false;   // fill under the line, grid, peak markers, level at the cursor, dBm instead of dBFS
     // The spectrum look (gfx/spec_look.h: 0 OnAir, 1 SDR++ look, 2 SDRoxide look) and the choices around it
     int specLook = 1;
-    int tunerStyle = 1;        // the tuned band over the spectrum and waterfall: 0 Classic, 1 Simple (red centre line, grey edge lines; gfx/tuner_style.h)
+    int tunerStyle = 1;        // the tuned band over the spectrum and waterfall: 0 Classic, 1 Simple (the VFO marker, gfx/vfo_marker.h)
     int specAxisLabels = -1;   // the frequency labels: -1 as the look has them, 0 frequencies, 1 offsets from the tuned frequency
     float specLabelSize = 1.f; // the axis label size, times the look's
     int specSmoothTrace = -1;  // mild smoothing passes over the trace: -1 as the look has it, else 0..4

@@ -16,6 +16,7 @@
 #include "dect2/geo/maidenhead.h"
 #include "state/freq_model.h"
 #include "gfx/drag_tune.h"
+#include "gfx/vfo_marker.h"
 #include "general/general_layout.h"
 #include "general/general_panels.h"
 #include "ui/touch.h"
@@ -1169,21 +1170,44 @@ void generalDemodPicker() {
     demodGrid(5);
 }
 
+// Drag to tune (Settings > Radio > Drag on spectrum, gfx/drag_tune.h): the press puts the channel there, the held drag keeps moving it
+static bool gPressOnPlot = false;   // the left press that is going on began on the spectrum (not on a popup over it)
+static struct { int plot = -1; bool moved = false; double last = NAN, press = NAN; ImVec2 p0; } gGDT;
+
+// The VFO marker (gfx/vfo_marker.h) on the spectrum (fill) or the waterfall: what is hovered and held comes from the same hit test and drag
+// state as generalPlotMouse, only to draw it
+static void drawVfoMarker(const App& a, bool spectrum, double lo, double hi) {
+    static vmark::Anim anim[2];
+    static char label[2][48];
+    const int plotId = spectrum ? 0 : 1;
+    plt::PlotVBandGradient(NAN, NAN, ImVec4(), ImVec4());   // draws nothing, but finishes the plot's setup: its background goes under the marker
+    const plt::Rect lim = plt::GetPlotLimits();
+    const ImVec2 pp = plt::GetPlotPos(), ps = plt::GetPlotSize();
+    const double span = std::max(1e-9, lim.X.Max - lim.X.Min), f = listenHz(a) / 1e6;
+    auto px = [&](double mhz) { return pp.x + (mhz - lim.X.Min) / span * ps.x; };
+    vmark::In I;
+    I.pmin = pp; I.psize = ps; I.spectrum = spectrum; I.sc = gUi; I.dt = ImGui::GetIO().DeltaTime;
+    I.xC = px(f); I.lo = lo; I.hi = hi; I.pxPerUnit = ps.x / (span * 1e6);
+    I.canLo = S.demod != dect2::GenUsb; I.canHi = S.demod != dect2::GenLsb;
+    I.accent = pal::accent(); I.tabBg = ImGui::GetStyleColorVec4(ImGuiCol_PopupBg); I.tabText = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+    if (S.drag >= 0 && S.dragPlot == plotId) I.drag = S.drag == 0 ? vmark::EdgeLo : vmark::EdgeHi;
+    else if (S.vfoGrab == plotId || (gGDT.plot == plotId && gGDT.moved)) I.drag = vmark::Body;
+    else if (S.drag < 0 && S.vfoGrab < 0 && S.exDrag < 0 && plt::IsPlotHovered()) {
+        const genlayout::Hit h = genlayout::hitTest(ImGui::GetIO().MousePos.x, (float)px(f + lo / 1e6), (float)px(f + hi / 1e6), (float)I.xC, 5 * gUi, I.canLo, I.canHi);
+        I.hover = h == genlayout::Hit::EdgeLo ? vmark::EdgeLo : h == genlayout::Hit::EdgeHi ? vmark::EdgeHi : h == genlayout::Hit::Body ? vmark::Body : vmark::None;
+    }
+    char* b = label[plotId];
+    if (I.drag == vmark::Body) snprintf(b, sizeof label[0], "%+.3f kHz", (listenHz(a) - a.freqMhz * 1e6) / 1e3);   // the offset from the dial
+    else snprintf(b, sizeof label[0], "%s  %.4g kHz", demodLabel(), S.width[S.demod] / 1e3);
+    I.label = b;
+    vmark::draw(ImGui::GetWindowDrawList(), I, anim[plotId]);
+}
+
 void generalChannelBand(const App& a, bool fill) {
     load();
     double lo, hi;
     edges(lo, hi);
-    const double f = listenHz(a) / 1e6, x0 = f + lo / 1e6, x1 = f + hi / 1e6;
-    if (specLookActive(a)) specLookBand(a, x0, x1, f, fill, S.drag >= 0);   // the spectrum look's passband (the counter below still drawn)
-    else {
-        if (fill) { plt::Spec band; band.FillColor = pal::accent(pal::dev() ? 0.14f : 0.16f); plt::PlotVBand("band", x0, x1, band); }
-        const double e[2] = {x0, x1};
-        plt::Spec es; es.LineColor = pal::accent(fill ? 0.55f : 0.70f); es.LineWeight = S.drag >= 0 ? 2.f : 1.f;
-        plt::PlotInfLines("bandedges", e, 2, es);
-        const double c[1] = {f};
-        plt::Spec cs; cs.LineColor = ImVec4(0.95f, 0.35f, 0.30f, 0.85f); cs.LineWeight = 1.2f;
-        plt::PlotInfLines("channel", c, 1, cs);
-    }
+    drawVfoMarker(a, fill, lo, hi);   // the counter and the other channels below
     if (fill && S.nExtra > 0) {   // the counter at the top right of the spectrum
         char b[40]; snprintf(b, sizeof b, "%d decoders", S.nExtra + 1);
         const ImVec2 pp = plt::GetPlotPos(), ps = plt::GetPlotSize(), ts = ImGui::CalcTextSize(b);
@@ -1207,9 +1231,6 @@ void generalChannelBand(const App& a, bool fill) {
 
 bool generalDragging(int plotId) { return (S.drag >= 0 && S.dragPlot == plotId) || S.vfoGrab == plotId; }
 
-// Drag to tune (Settings > Radio > Drag on spectrum, gfx/drag_tune.h): the press puts the channel there, the held drag keeps moving it
-static bool gPressOnPlot = false;   // the left press that is going on began on the spectrum (not on a popup over it)
-static struct { int plot = -1; bool moved = false; double last = NAN, press = NAN; ImVec2 p0; } gGDT;
 
 void generalPlotMouse(App& a, int plotId) {
     load();
