@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include <random>
+#include <string>
 
 using namespace dect2;
 using namespace dect2::atsc3;
@@ -153,6 +154,34 @@ int main() {
         double limit = cs.snr >= 25 ? 0.0 : cs.snr >= 15 ? 0.02 : 0.06;
         snprintf(m, sizeof m, "round trip bit errors (ps %d, symbol %d)", cs.ps, cs.sym);
         CHECK(ber <= limit, m);
+    }
+    // the channel estimate from the pilot comb (cirDenoiseChannel) keeps the channel's level: a flat channel with a little pilot noise comes back
+    // within 1 % at every FFT size and pilot spacing (1/M, M the pilots in the band, made it about N/noc = 1.18 times too large)
+    {
+        struct Cir { int N, noc, D; };
+        const Cir cirs[] = {{8192, 6913, 3}, {8192, 6913, 8}, {16384, 13825, 4}, {16384, 13825, 12}, {32768, 27649, 6}, {32768, 27649, 32}};
+        std::mt19937 rngc(5);
+        std::normal_distribution<float> gc(0.f, 1.f);
+        for (const Cir& c : cirs) {
+            const cf32 H = std::polar(0.7f, 0.6f);
+            std::vector<cf32> est((size_t)c.noc, cf32(0, 0));
+            std::vector<uint8_t> ok((size_t)c.noc, 0);
+            for (int k = 0; k < c.noc; k += c.D) { est[(size_t)k] = H + cf32(gc(rngc), gc(rngc)) * 0.01f; ok[(size_t)k] = 1; }   // 34 dB
+            std::vector<cf32> h;
+            const bool okc = cirDenoiseChannel(c.N, c.noc, c.D, 0, est, ok, h);
+            const std::string tag = " (FFT " + std::to_string(c.N) + ", Dx " + std::to_string(c.D) + ")";
+            CHECK(okc && (int)h.size() == c.noc, ("comb channel estimate made" + tag).c_str());
+            if (!okc || (int)h.size() != c.noc) continue;
+            double worst = 0, sum = 0;
+            for (int k = c.noc / 8; k < c.noc - c.noc / 8; k++) {   // away from the band edges
+                const double r = std::abs(h[(size_t)k] / H);
+                worst = std::max(worst, std::fabs(r - 1.0));
+                sum += r;
+            }
+            const double mean = sum / (c.noc - 2 * (c.noc / 8));
+            printf("  comb estimate FFT %5d Dx %2d: |H^/H| mean %.4f, worst %.4f off\n", c.N, c.D, mean, worst);
+            CHECK(std::fabs(mean - 1.0) < 0.01, ("comb channel estimate level within 1 %" + tag).c_str());
+        }
     }
     printf(fails ? "atsc3 ofdm: FAILED\n" : "atsc3 ofdm: ok\n");
     return fails ? 1 : 0;
