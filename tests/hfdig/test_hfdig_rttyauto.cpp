@@ -43,7 +43,7 @@ int main(int argc, char** argv) {
     // 1. every speed x shift x polarity at 15 dB, the lower tone at various places
     int ok = 0, okNear = 0, n = 0, lowOk = 0;
     for (int b = 0; b < kRttyBauds; b++)
-        for (int s = 0; s < kRttyShifts; s++)
+        for (int s = 0; s < kRttyShiftsAuto; s++)
             for (int rv = 0; rv < 2; rv++) {
                 const double low = 400 + 45.0 * (double)((b * 5 + s) * 2 + rv);
                 const auto a = rtty(b, s, rv != 0, low, 15, 14, (uint64_t)(100 + n));

@@ -104,6 +104,9 @@
 14.08|RTTY 14.08 MHz|0.5|Narrow-band digital segment; contests use the CW/RTTY segments
 21.08|RTTY 21.08 MHz|0.5|Narrow-band digital segment; contests use the CW/RTTY segments
 28.08|RTTY 28.08 MHz|0.5|Narrow-band digital segment; contests use the CW/RTTY segments
+0.1473|DWD weather RTTY 147.3 kHz|0.5|German weather service; 50 baud, 85 Hz shift, USB; choose 85 Hz in the shift list (Auto does not search it)|rtty|DE|
+11.039|DWD weather RTTY 11039 kHz|0.5|German weather service; 50 baud, 85 Hz shift, USB; choose 85 Hz in the shift list (Auto does not search it)|rtty|DE|
+14.4673|DWD weather RTTY 14467.3 kHz|0.5|German weather service; 50 baud, 85 Hz shift, USB; choose 85 Hz in the shift list (Auto does not search it)|rtty|DE|
 @mode cw
 1.83|CW QRP calling 1.83 MHz|0.5|QRP centre of activity
 3.56|CW QRP calling 3.56 MHz|0.5|QRP centre of activity
@@ -121,6 +124,7 @@
 21.34|SSTV 21.34 MHz|3|Activity frequency; 145.800 is the ISS SSTV downlink during events (FM)
 28.68|SSTV 28.68 MHz|3|Activity frequency; 145.800 is the ISS SSTV downlink during events (FM)
 145.8|SSTV 145.8 MHz|3|Activity frequency; 145.800 is the ISS SSTV downlink during events (FM)
+437.55|ISS SSTV 437.550 MHz (UHF)|12.5|ISS UHF downlink (FM); Doppler shift about +-10 kHz, use Follow the next pass
 @mode freedv
 3.625|FreeDV 3.625 MHz|3|Activity frequency
 7.177|FreeDV 7.177 MHz|3|Activity frequency

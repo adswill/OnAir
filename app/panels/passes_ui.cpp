@@ -50,7 +50,7 @@ namespace fs = std::filesystem;
 fs::path fsPath(const std::string& p) { return fs::path(reinterpret_cast<const char8_t*>(p.c_str())); }
 
 constexpr int kNoaaApt = 260, kNoaaHrpt = 261, kNoaaDsb = 263, kMeteorHrpt = 264, kArktikaGgak = 267, kAws = 268;   // families of the wxsat links
-constexpr int kIssSstv = kPassFamilyIssSstv, kHfdig = 25;   // the ISS's SSTV events: the SSTV entry of the HF digital family on FM (AppHost)
+constexpr int kIssSstv = kPassFamilyIssSstv, kIssSstvU = kPassFamilyIssSstvUhf, kHfdig = 25;   // the ISS's SSTV events: the SSTV entry of the HF digital family on FM (AppHost)
 constexpr int kGeoscanCs = 297, kSpino = 299;   // cubesat families of the SatDump tier 3 links
 constexpr int kSpecx = 41, kAprs = 24, kOrbcomm = 44, kMeteor = 59, kCubesat = 61, kGlobalstar = 62, kArgos = 152, kLoraSat = 201;   // mode families: Spectrum explorer (no decoder), APRS (AFSK), Orbcomm, Meteor-M LRPT, CubeSat telemetry, Argos, LoRa satellites
 constexpr int kIridium = 19;   // the Iridium burst decoder (4.0: the Iridium group of the tracker)
@@ -112,6 +112,7 @@ const Known kKnown[] = {
     {"HORIZON", 61755, 435.430, "9k6 FSK", kGeoscanCs, Amateur, 0, false},
     {"Spino", 56211, 435.200, "2k4 FSK", kSpino, Amateur, 0, false},
     {"ISS APRS", 25544, 145.825, "APRS", kAprs, Iss, 0, false},
+    {"ISS SSTV (UHF)", 25544, 437.550, "SSTV events", kIssSstvU, Iss, 0, false},   // the UHF downlink: the radio follows the Doppler shift of about +-10 kHz like on 145.800
     {"ISS voice", 25544, 145.800, "FM voice", kSpecx, Iss, 0, false},
     {"ISS SSTV", 25544, 145.800, "SSTV events", kIssSstv, Iss, 0, false},   // only during announced events: never the default link (SatLink::eventOnly)
     {"ISS repeater", 25544, 437.800, "FM voice", kSpecx, Iss, 0, false},
@@ -134,7 +135,7 @@ const char* yieldsOf(const dect2::SatLink& l) {
         case kArktikaGgak: return N_("Space-weather telemetry");
         case kAws: return N_("Microwave scans");
         case kArgos: return N_("Platform messages");
-        case kIssSstv: return N_("Pictures, during announced events");
+        case kIssSstv: case kIssSstvU: return N_("Pictures, during announced events");
         case kAprs: return N_("APRS packets");
         case kOrbcomm: return N_("Decoded messages");
         case kGlobalstar: return N_("Activity monitor");
@@ -291,7 +292,7 @@ void buildSats() {
     auto link = [](double hz, int fam, const std::string& mode, double need = 0, bool dec = true) {
         dect2::SatLink l; l.hz = hz; l.family = fam; l.mode = mode; l.needRateHz = need; l.decoder = dec;
         l.radioFollowsDoppler = fam != kLoraSat && fam != kIridium;   // a retune in the middle of a frame would break it, and the decoder follows the shift (Iridium: many satellites at once)
-        l.eventOnly = fam == kIssSstv;
+        l.eventOnly = fam == kIssSstv || fam == kIssSstvU;
         return l;
     };
     std::map<int, bool> amateur;
@@ -627,7 +628,7 @@ std::string armNextOfFamily(int family) {
     const int keepLink = s.link; const bool keepChosen = s.linkChosen;
     for (int i = 0; i < (int)s.links.size(); i++) if (s.links[i].family == family) { s.link = i; s.linkChosen = true; }
     armRow(*best);
-    if (family == kIssSstv) { s.link = keepLink; s.linkChosen = keepChosen; }   // an event, not the ISS's usual downlink: the queue keeps the link for this pass
+    if (family == kIssSstv || family == kIssSstvU) { s.link = keepLink; s.linkChosen = keepChosen; }   // an event, not the ISS's usual downlink: the queue keeps the link for this pass
     return "armed " + s.name + " at " + timeText(best->p.aos) + ": the receiver starts, follows the Doppler shift and records by itself";
 }
 
@@ -698,12 +699,13 @@ public:
     bool running() const override { return a_.engine.running(); }
     bool transmitting() const override { return txActive(); }
     int family() const override {
-        if (a_.family == kHfdig && a_.sub == subIndexOf("sstv") && std::fabs(a_.freqMhz - 145.8) < 0.1) return kIssSstv;   // already there: not switched, not restored
+        if (a_.family == kHfdig && a_.sub == subIndexOf("sstv") && std::fabs(a_.freqMhz - 145.8) < 0.1) return kIssSstv;
+        if (a_.family == kHfdig && a_.sub == subIndexOf("sstv") && std::fabs(a_.freqMhz - 437.55) < 0.1) return kIssSstvU;   // already there: not switched, not restored
         return a_.family;
     }
     double tunedHz() const override { return a_.freqMhz * 1e6; }
     void setMode(int f) override {
-        if (f == kIssSstv) {   // the SSTV entry on FM, and what to put back afterwards (the HF digital family is one family of many entries)
+        if (f == kIssSstv || f == kIssSstvU) {   // the SSTV entry on FM, and what to put back afterwards (the HF digital family is one family of many entries)
             if (!gIssSstv.taken) { gIssSstv.taken = true; gIssSstv.family = a_.family; gIssSstv.sub = a_.sub; }
             selectMode(a_, kHfdig, "sstv");
             gIssSstv.demod = hfdigDemod(a_);
