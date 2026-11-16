@@ -467,6 +467,7 @@ static void verboseFrameLog(App& a) {
 
 static void syncSpectrumEngine(App& a) {
     verboseFrameLog(a);
+    notchSync(a);
     if (a.engine.spectrumFft() != a.specFft) a.engine.setSpectrumFft(a.specFft);
     if (a.engine.spectrumWindow() != a.specWindow) a.engine.setSpectrumWindow(a.specWindow);   // 4.0: the display window and overlap
     {

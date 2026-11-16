@@ -241,6 +241,7 @@
 #include "dect2/power/power.h"
 #include "dect2/dsp/dc_notch.h"
 #include "dect2/dsp/spur_notch.h"
+#include "dect2/dsp/notch_bank.h"
 #include <map>
 #include <utility>
 
@@ -505,6 +506,9 @@ public:
     void setSpurNotch(bool on) { spurNotch_ = on; }
     bool spurNotch() const { return spurNotch_.load(); }
     int spurNotchLines() const { return spurLines_.load(); }
+    // Manual notches set from the spectrum (dsp/notch_bank.h): narrow band-stops in front of the spectrum, the waterfall and the decoders
+    void setNotches(const std::vector<Notch>& v) { notches_.set(v); }
+    std::vector<Notch> notches() const { return notches_.get(); }
     // DAB / DAB+: the ensemble found on the channel, and the station to play (a sub-channel id, -1 = none)
     DabEnsemble dabEnsemble() const { return rxD_.ensemble(); }
     DabFicAnalysis dabFic() const { return rxD_.ficAnalysis(); }
@@ -876,6 +880,7 @@ private:
     std::atomic<bool> spurNotch_{false};
     std::atomic<int> spurLines_{0};
     SpurNotch spurn_;
+    NotchBank notches_;
     double spurRate_ = 0;
     void fileFollowVfo(const TuneSettings& t);
     OffsetMixer decodeMix_;

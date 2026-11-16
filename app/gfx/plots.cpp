@@ -680,6 +680,36 @@ static void markerLayer(const App& a, bool labels) {
     }
 }
 
+// The manual notches (app/panels/notch_ui.cpp): a thin dashed line at each one, with a small label on the spectrum; red when on, grey when off.
+// The spectrum is measured after the notches, so a notched carrier reads low there (the tooltip says so).
+static void notchLayer(const App& a, bool labels) {
+    const std::vector<Notch> nl = notchList(a);
+    if (nl.empty()) return;
+    const plt::Rect lim = plt::GetPlotLimits();
+    const ImVec2 pp = plt::GetPlotPos(), ps = plt::GetPlotSize();
+    const double span = lim.X.Max - lim.X.Min;
+    if (!(span > 0)) return;
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    for (size_t i = 0; i < nl.size(); i++) {
+        const double f = notchAxisMhz(a, nl[i]);
+        if (f < lim.X.Min || f > lim.X.Max) continue;
+        const float x = pp.x + (float)((f - lim.X.Min) / span) * ps.x;
+        const ImVec4 c = nl[i].enabled ? pal::badRed() : pal::grey(0.7f);
+        const ImU32 col = ImGui::GetColorU32(ImVec4(c.x, c.y, c.z, labels ? 0.85f : 0.55f));
+        for (float y = pp.y; y < pp.y + ps.y; y += 8 * gUi) dl->AddLine(ImVec2(x, y), ImVec2(x, std::min(pp.y + ps.y, y + 4 * gUi)), col, 1.f);
+        if (!labels) continue;
+        char lb[48]; snprintf(lb, sizeof lb, "N%zu %.0f Hz", i + 1, nl[i].widthHz);
+        const ImVec2 ts = ImGui::CalcTextSize(lb);
+        const float lx = std::min(x + 3 * gUi, pp.x + ps.x - ts.x - 2 * gUi), ly = pp.y + ps.y - ts.y - 3 * gUi - ImGui::GetFontSize() * 2.2f - (float)(i % 2) * ts.y;
+        dl->AddRectFilled(ImVec2(lx - 2 * gUi, ly - 1), ImVec2(lx + ts.x + 2 * gUi, ly + ts.y + 1), IM_COL32(0, 0, 0, 120), 2 * gUi);
+        dl->AddText(ImVec2(lx, ly), ImGui::GetColorU32(c), lb);
+        const ImVec2 mp = ImGui::GetMousePos();
+        if (plt::IsPlotHovered() && std::fabs(mp.x - x) < 4 * gUi && mp.y >= pp.y && mp.y <= pp.y + ps.y)
+            ImGui::SetTooltip("%s", nl[i].follow ? tr("Notch (follows the tuning). The spectrum shows the signal after the notch, so a carrier under it reads low here.")
+                                                 : tr("Notch (stays at this RF frequency). The spectrum shows the signal after the notch, so a carrier under it reads low here."));
+    }
+}
+
 constexpr double kFreqSpanMinMhz = 0.001;   // 1 kHz at full zoom-in
 
 // The spectrum and the waterfall share one frequency axis: panning or zooming either moves both, and a retune brings both back to the band.
@@ -1979,6 +2009,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
         fileSpikeAndEdges(a, 0, plotMin, plotSize);
         multiMarkers(a);
         markerLayer(a, true);
+        notchLayer(a, true);
         autoLabelsDraw(a, 0, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
         generalAutoPlot(a, 0, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
         clickToTune(a, 0);
@@ -2019,6 +2050,13 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
             if (ImGui::MenuItem(tr("Add a marker here"), nullptr, false, (int)m.size() < specaxis::kMaxMarkers)) { m.push_back(ctxMhz); a.specMarkers = specaxis::markersText(m); savePrefs(a); }
             if (nearIdx >= 0 && ImGui::MenuItem(tr("Remove this marker"))) { m.erase(m.begin() + nearIdx); a.specMarkers = specaxis::markersText(m); savePrefs(a); }
             if (!m.empty() && ImGui::MenuItem(tr("Clear all markers"))) { a.specMarkers.clear(); savePrefs(a); }
+        }
+        ImGui::Separator();
+        {   // a notch at the right-click place: cuts the carrier before the spectrum and the decoders (core dsp/notch_bank.h)
+            const bool room = (int)notchList(a).size() < NotchBank::kMax;
+            if (ImGui::MenuItem(tr("Add notch here"), nullptr, false, room)) notchAdd(a, ctxMhz * 1e6);
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", room ? tr("A narrow band-stop at this frequency, in front of the spectrum and the decoders: a birdie is removed. The spectrum shows the signal after the notch, so it reads low there. Edit or remove it in the Auto gain options (Notches).")
+                                                                                                          : tr("The notch list is full (8). Delete one in the Auto gain options (Notches)."));
         }
         ImGui::EndPopup();
     }
@@ -2185,6 +2223,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         if (a.wf.viewImg) spaint::wfImage(v, a.wf.viewImg->texture(), texW, H, x0, x1, W, a.wf.rows, frac);
         channelBand(a, false);
         markerLayer(a, false);
+        notchLayer(a, false);
         plotMin = plt::GetPlotPos(); plotSize = plt::GetPlotSize();
         if (look) {
             specLookCursor(a, 1, plotMin, plotSize);

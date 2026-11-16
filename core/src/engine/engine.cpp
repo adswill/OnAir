@@ -88,6 +88,10 @@ void Engine::ingest(cf32* x, size_t n) {
             nbSeen0_ = nb_.seen(); nbBlank0_ = nb_.blanked();
         }
     } else if (nbWas_) { nbWas_ = false; nbPct_ = 0.f; nb_.reset(); }   // switched off: the next start learns the level again
+    if (notches_.active()) {   // the manual notches (dsp/notch_bank.h): before the spectrum and the decoders, at the radio's rate, about the capture centre
+        const double r = srcRate_ > 0 ? srcRate_ : rate_.load();
+        notches_.process(x, n, r, captureCentreHz());
+    } else notches_.process(x, 0, 0, 0);   // takes a pending change of the list (nothing is filtered)
     lastSamples_ = a0;   // the radio is alive, whether or not the resampler gives a sample out of this block
     if (offResample_) { offBuf_.clear(); offRs_.process(x, n, offBuf_); x = offBuf_.data(); n = offBuf_.size(); }
     if (!n) { tRx_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - a0).count(); tRxCpu_ += (double)(cpu::threadNs() - c0) * 1e-9; return; }

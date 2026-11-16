@@ -486,6 +486,7 @@ struct App {
     bool wfPerMode = false;    // each mode remembers its own waterfall colour map (saved as wfMapMode<family>)
     int wfMapFamily = -1;      // the mode the map was last loaded for
     std::string wfCustom;      // the custom gradient's stops (cmap::Gradient text)
+    std::string notchText;     // the manual notches (dect2::NotchBank::toText; settings key notchList; app/panels/notch_ui.cpp)
     std::string specMarkers;   // the frequency markers on the spectrum and the waterfall (specaxis::parseMarkers text)
     float specLine = 1.2f;     // thickness of the spectrum trace
     bool specFill = true, specGrid = true, specPeaks = false, specReadout = true, specDbm = false;   // fill under the line, grid, peak markers, level at the cursor, dBm instead of dBFS
@@ -1129,6 +1130,12 @@ void iptvShutdown();               // iptv_ui.cpp: stops the stream (the program
 void txShutdown();                 // stops a running transmission (the radio goes quiet before it returns); the program's end
 bool txActive();
 void savePrefs(const App& a);
+// manual notches (app/panels/notch_ui.cpp)
+std::vector<dect2::Notch> notchList(const App& a);
+void notchSync(App& a);                        // every frame: the list to the engine when it changed
+bool notchAdd(App& a, double rfHz);            // false when the list is full
+double notchAxisMhz(const App& a, const dect2::Notch& n);   // where the notch sits on the spectrum's axis
+void notchPanel(App& a);                       // the "Notches" list (auto gain popup)
 void applyGpuPolicy(App& a);       // app/ui/gpu_ui.cpp: the global tick and the per-mode overrides to the engine
 void gpuModeTick(App& a, const char* mode);
 bool gulogic_allowed(const App& a, const char* mode);   // global tick + the mode's override

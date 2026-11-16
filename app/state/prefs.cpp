@@ -119,7 +119,7 @@ const std::vector<PrefKey>& keyTable() {
         flagB("wf3dSmooth", AT(a.wf.s3d.smooth), false), flagB("wf3dPeak", AT(a.wf.s3d.peak), true), flagB("wf3dMarker", AT(a.wf.s3d.marker), true),
         flagB("wf3dShade", AT(a.wf.s3d.shade), true), num("wf3dPreset", AT(a.wf.s3d.preset), 0, 0, w3d::NumPresets - 1),
         real("wf3dYaw", AT(a.wf.s3d.cam.yaw), -3.2, 3.2), real("wf3dPitch", AT(a.wf.s3d.cam.pitch), 0.03, 1.553), real("wf3dDist", AT(a.wf.s3d.cam.dist), 0.35, 8),
-        text("wfCustom", AT(a.wfCustom)), text("specMarkers", AT(a.specMarkers)),
+        text("wfCustom", AT(a.wfCustom)), text("specMarkers", AT(a.specMarkers)), shared(text("notchList", AT(a.notchText))),
         num("traceColor", AT(a.traceColor), 0, 0, cmap::kNumTracePresets - 1, true), num("holdColor", AT(a.holdColor), -1, -1, cmap::kNumTracePresets - 1, true),
         flagB("minHold", AT(a.minHold), false, false, true), flagB("showLive", AT(a.showLive), false, false, true),
         flagB("nbOn", AT(a.nbOn), false, false, true), real("nbThr", AT(a.nbThr), 2, 40), real("nbWidthUs", AT(a.nbWidthUs), 2, 2000),
