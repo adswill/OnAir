@@ -83,6 +83,7 @@ void GnssReceiver::setFrequencyHint(double hz, bool valid) { p_->cfoHintHz = hz;
 void GnssReceiver::setAcquisitionRate(int u) { p_->acqRate = std::max(1, u); }
 void GnssReceiver::setApproxPosition(double lat, double lon, bool valid) { p_->hintLat = lat; p_->hintLon = lon; p_->hintValid = valid; }
 void GnssReceiver::setElevationMask(double deg) { p_->elMask = deg; }
+void GnssReceiver::setCarrierSmoothing(int epochs) { p_->smoothEpochs = epochs < 0 ? 0 : epochs; }
 bool GnssReceiver::getEphemeris(int prn, GpsEphemeris& e, int* week) const {
     std::lock_guard<std::mutex> lk(p_->procMu);
     if (prn < 1 || prn > 32 || !p_->sat[prn].hasEph) return false;
