@@ -195,16 +195,30 @@ double generalDefaultWidth(int d) {
     }
 }
 
-void generalWidthRange(int d, double& lo, double& hi) {
+void generalWidthRange(int d, double& lo, double& hi, double srcRate) {
+    double maxRate = kGeneralMaxChannelRate;
+    if (srcRate > 0) { double r = kGeneralAudioRate; while (r * 2 <= srcRate && r * 2 <= maxRate) r *= 2; maxRate = r; }
+    const double edge = maxRate * 11.0 / 24.0;   // 22 kHz at the 48 kHz channel
     switch (d) {
     case GenWfm: lo = 50000; hi = 220000; break;
-    case GenAm: lo = 1000; hi = 20000; break;
-    case GenUsb: case GenLsb: lo = 500; hi = 20000; break;   // the channel runs at 48 kHz: the upper edge (300 Hz + width) stays below 24 kHz
-    case GenCw: case GenCwl: lo = 50; hi = 20000; break;
-    case GenDsb: lo = 1000; hi = 20000; break;
-    case GenRaw: lo = 2000; hi = 44000; break;   // the channel runs at 48 kHz
+    case GenAm: lo = 1000; hi = 2 * edge; break;
+    case GenUsb: case GenLsb: lo = 500; hi = edge - kGeneralSsbLowCutHz; break;   // the upper edge (300 Hz + width) stays inside the channel rate
+    case GenCw: case GenCwl: lo = 50; hi = 2 * edge; break;
+    case GenDsb: lo = 1000; hi = 2 * edge; break;
+    case GenRaw: lo = 2000; hi = 2 * edge; break;
     default: lo = 2000; hi = 30000; break;
     }
+}
+
+double generalChannelRate(int d, double w, double srcRate) {
+    if (d == GenWfm) return kGeneralWideRate;
+    double lo, hi;
+    generalFilterEdges(d, w, lo, hi);
+    const double edge = std::max(std::fabs(lo), std::fabs(hi));
+    double r = kGeneralAudioRate;
+    while (edge > r * 11.0 / 24.0 + 1e-6 && r * 2 <= kGeneralMaxChannelRate) r *= 2;
+    if (srcRate > 0) while (r > kGeneralAudioRate && r > srcRate) r /= 2;
+    return r;
 }
 
 double generalClampWidth(int d, double hz) {
@@ -242,6 +256,11 @@ struct GeneralReceiver::Impl {
     qo100::Decimator dec;
     ExactResampler rs;
     double decRate = 0, demodRate = kGeneralAudioRate;
+    int adec = 1;                          // channel rate / 48 kHz (1 in every default case)
+    RealFir wideLp, wideLpDry;             // adec > 1: the wide audio down to 48 kHz (speaker, tap, files), the gated and the dry copy
+    std::vector<float> wAud, wDry;         // adec > 1: the wide demodulated audio of this feed, gated and dry
+    std::function<void(const float*, size_t, double)> wtapSet, wtap;
+    std::atomic<bool> wtapReq{false};
     std::vector<cf32> clean, decd, base;
     // channel filter
     std::vector<cf32> taps, hist;
@@ -357,7 +376,7 @@ struct GeneralReceiver::Impl {
     // AM through the processor (Auto quality, or a synchronous detector chosen by hand)
     AmProcessor amp;
     std::vector<float> ampOut;
-    bool useAmp() const { return cfg.demod == GenAm && !wide && (cfg.amAuto || cfg.amDet > 0); }
+    bool useAmp() const { return cfg.demod == GenAm && !wide && adec == 1 && (cfg.amAuto || cfg.amDet > 0); }
     void ampConfig() {
         AmProcConfig c;
         c.autoQuality = cfg.amAuto;
@@ -428,8 +447,9 @@ struct GeneralReceiver::Impl {
         built = false;
         if (curRate <= 0) return;
         wide = cfg.demod == GenWfm;
-        demodRate = wide ? kGeneralWideRate : kGeneralAudioRate;
-        const double pass = wide ? 115000.0 : 26000.0;
+        demodRate = generalChannelRate(cfg.demod, cfg.width, curRate);
+        adec = wide ? 1 : (int)std::lround(demodRate / kGeneralAudioRate);
+        const double pass = wide ? 115000.0 : adec > 1 ? 0.5417 * demodRate : 26000.0;
         dec.configure(curRate, pass, demodRate * (wide ? 1.0 : 2.0));
         decRate = dec.outRate();
         if (!rs.configure(decRate, demodRate)) return;
@@ -443,6 +463,7 @@ struct GeneralReceiver::Impl {
         // NFM: 3 kHz audio low-pass (4.0, owner's choice; 3.9 had 4 kHz). FM noise rises with audio frequency, so 4 -> 3 kHz is about
         // 3.7 dB less noise ((4/3)^3) while speech (300 .. 3000 Hz) is kept; 127 taps keep the passband flat up to about 2.7 kHz.
         else audLp.design(127, 3000.0 / demodRate, 1);
+        if (adec > 1) wideLp.design(64 * adec + 1, 21000.0 / demodRate, adec), wideLpDry = wideLp;   // 48 kHz copy of the wide audio
         design();
         mixHz = 1e300;
         built = true;
@@ -472,7 +493,7 @@ struct GeneralReceiver::Impl {
         std::fill(hist.begin(), hist.end(), cf32(0, 0)); hpos = 0;
         acc.assign(kNoiseN, 0.0); accN = 0; fbuf.clear(); noisePsd = -1; noisePsdIn = -1;
         prev = cf32(0, 0); pllPh = 0; pllW = 0; pllWeak = false; car = 0; env = 0; carInit = false; bfoPh = 0; samReset(); nbMean = -1; nbHold = 0; nbG1 = nbG2 = nbFill = cf32(0, 0);
-        dcX = dcY = deY = 0; audLp.reset(); dry.reset();
+        dcX = dcY = deY = 0; audLp.reset(); dry.reset(); wideLp.reset(); wideLpDry.reset(); wAud.clear(); wDry.clear();
         blkPow = 0; blkN = 0; lvl = -1; open = false; hang = 0; ramp = 0;
         fmSum = 0; fmN = 0; cfo = 0;
         preAud.clear(); preIq.clear();
@@ -603,12 +624,24 @@ struct GeneralReceiver::Impl {
     void emit(float a) {
         const float dry = std::clamp(a, -1.f, 1.f);
         const float target = open ? 1.f : 0.f;
+        if (adec > 1) {   // a wide channel: the audio stays at the channel rate until the 48 kHz copy is cut from it
+            ramp += std::clamp(target - ramp, -1.f / (240 * adec), 1.f / (240 * adec));   // 5 ms
+            wAud.push_back(std::clamp(dry * ramp, -1.f, 1.f));
+            if (wantDry.load(std::memory_order_relaxed) || plainRec.load(std::memory_order_relaxed)) wDry.push_back(dry);
+            return;
+        }
         ramp += std::clamp(target - ramp, -1.f / 240, 1.f / 240);   // 5 ms
         aud.push_back(std::clamp(dry * ramp, -1.f, 1.f));
         if (wantDry.load(std::memory_order_relaxed) || plainRec.load(std::memory_order_relaxed)) dryAud.push_back(dry);
     }
 
     void play() {
+        if (adec > 1) {
+            for (float v : wAud) { float y; if (wideLp.push(v, y)) aud.push_back(y); }
+            for (float v : wDry) { float y; if (wideLpDry.push(v, y)) dryAud.push_back(y); }
+        }
+        if (wtapReq.exchange(false)) { std::lock_guard<std::mutex> lk(mu); wtap = wtapSet; }
+        if (wtap) { if (adec > 1) { if (!wAud.empty()) wtap(wAud.data(), wAud.size(), demodRate); } else if (!aud.empty()) wtap(aud.data(), aud.size(), kGeneralAudioRate); }
         const bool haveAud = !aud.empty();
         if (haveAud) {
             spk.apply(aud, afHp, afLp, afNotch);
@@ -835,7 +868,7 @@ void GeneralReceiver::feed(const cf32* x, size_t n) {
     if (m.cfgDirty.exchange(false)) {
         Cfg c; double r;
         { std::lock_guard<std::mutex> lk(m.mu); c = m.cfgSet; r = m.rate; }
-        const bool rebuild = !m.built || r != m.curRate || (c.demod == GenWfm) != (m.cfg.demod == GenWfm);
+        const bool rebuild = !m.built || r != m.curRate || (c.demod == GenWfm) != (m.cfg.demod == GenWfm) || generalChannelRate(c.demod, c.width, r) != m.demodRate;
         const bool demodCh = c.demod != m.cfg.demod;
         const bool refilter = demodCh || c.width != m.cfg.width;
         const bool retuned = c.chanOff != m.cfg.chanOff;
@@ -869,7 +902,7 @@ void GeneralReceiver::feed(const cf32* x, size_t n) {
     m.noiseFeed(m.decd.data(), m.decd.size());
     m.base.clear();
     m.rs.process(m.decd.data(), m.decd.size(), m.base);
-    m.aud.clear(); m.dryAud.clear(); m.iqBlk.clear();
+    m.aud.clear(); m.dryAud.clear(); m.iqBlk.clear(); m.wAud.clear(); m.wDry.clear();
     m.ampOut.clear();
     if (m.useAmp()) m.amp.process(m.base.data(), m.base.size(), m.ampOut);
     const int T = (int)m.taps.size();
@@ -947,6 +980,7 @@ void GeneralReceiver::setAudioFilters(double hpHz, double lpHz, double notchHz) 
 void GeneralReceiver::setMuted(bool m) { p_->muted = m; }
 void GeneralReceiver::setSilent(bool s) { p_->silent = s; }
 void GeneralReceiver::setAudioTap(std::function<void(const float*, size_t)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->tapSet = std::move(cb); p_->tapReq = true; }
+void GeneralReceiver::setWideTap(std::function<void(const float*, size_t, double)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->wtapSet = std::move(cb); p_->wtapReq = true; }
 
 bool GeneralReceiver::startRecording(const std::string& path) {
     std::string msg;

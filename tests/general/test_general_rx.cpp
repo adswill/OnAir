@@ -73,7 +73,7 @@ int main() {
     generalFilterEdges(GenUsb, 2700, lo, hi); CHECK(lo == 300 && hi == 3000, "usb edges %g %g", lo, hi);
     generalFilterEdges(GenLsb, 2700, lo, hi); CHECK(lo == -3000 && hi == -300, "lsb edges %g %g", lo, hi);
     generalFilterEdges(GenNfm, 12500, lo, hi); CHECK(lo == -6250 && hi == 6250, "nfm edges");
-    CHECK(generalClampWidth(GenCw, 1e6) == 20000 && generalClampWidth(GenUsb, 1e6) == 20000 && generalClampWidth(GenUsb, 10000) == 10000, "clamp");
+    CHECK(generalClampWidth(GenCw, 1e6) == 704000 && generalClampWidth(GenUsb, 1e6) == 351700 && generalClampWidth(GenUsb, 10000) == 10000, "clamp");
     CHECK(generalDefaultWidth(GenUsb) == 2700 && generalDefaultWidth(GenCw) == 500, "defaults unchanged");
     CHECK(generalTuning().stdMode == 57 && std::fabs(generalTuning().defMhz - 145.5) < 1e-9, "tuning");
 
@@ -100,6 +100,78 @@ int main() {
         const double aW = toneAmp(wide.aud, 9000), aN = toneAmp(nar.aud, 9000);
         printf("  %s 9 kHz tone: 10 kHz filter %.3f, default filter %.4f\n", d == GenUsb ? "USB" : "LSB", aW, aN);
         CHECK(aW > 0.3 && aN < 0.1 * aW, "%s wide filter %.3f narrow %.4f", d == GenUsb ? "USB" : "LSB", aW, aN);
+    }
+
+    // 4.4: the channel rate follows the width (48 kHz up to a 22 kHz filter edge, then doubling), never above the input rate
+    {
+        for (int d = 0; d < GenDemodCount; d++) {
+            double wlo, whi; generalWidthRange(d, wlo, whi);
+            CHECK(generalChannelRate(d, generalDefaultWidth(d)) == (d == GenWfm ? 240000.0 : 48000.0), "default channel rate %d", d);
+            for (double w : {wlo, generalDefaultWidth(d)}) CHECK(generalChannelRate(d, w, kRate) == (d == GenWfm ? 240000.0 : 48000.0), "narrow channel rate %d", d);
+        }
+        CHECK(generalChannelRate(GenUsb, 20000) == 48000 && generalChannelRate(GenUsb, 30000) == 96000 && generalChannelRate(GenUsb, 100000) == 384000, "usb ladder");
+        CHECK(generalChannelRate(GenRaw, 44000) == 48000 && generalChannelRate(GenRaw, 60000) == 96000 && generalChannelRate(GenAm, 90000) == 192000, "raw / am ladder");
+        CHECK(generalChannelRate(GenUsb, 300000, 200000) == 192000 && generalChannelRate(GenUsb, 300000, 30000) == 48000 && generalChannelRate(GenUsb, 1e9) == 768000, "caps");
+        double h1, h2, l; generalWidthRange(GenUsb, l, h1, 100000); generalWidthRange(GenUsb, l, h2);
+        CHECK(h1 == 43700, "range under a 100 kHz input %g", h1);
+        CHECK(h2 == 352000 - 300, "range cap %g", h2);
+    }
+    // 4.4: a 30 kHz USB filter at a 96 kHz channel passes a 25 kHz tone and blocks a 40 kHz one; the rate follows the width while running
+    {
+        auto wideRun = [&](double tone, double width, double& chanRate, size_t& nWide, size_t& n48) {
+            SynthConfig sc;
+            sc.mode = 57; sc.snrDb = 30; sc.modeOpt[0] = GenUsb; sc.modeOpt[1] = 0; sc.modeVal[0] = 0; sc.modeVal[1] = tone;
+            auto syn = makeGeneralSynth(sc, kRate);
+            GeneralReceiver r;
+            r.configure(kRate);
+            r.setSignalOffset(-generalTuning().tuneOffsetHz);
+            r.setSilent(true);
+            r.setDemod(GenUsb);
+            r.setWidthHz(width);
+            std::vector<float> a;
+            double rate = 0;
+            r.setWideTap([&](const float* x, size_t n, double hz) { a.insert(a.end(), x, x + n); rate = hz; });
+            r.setAudioTap([&](const float*, size_t n) { n48 += n; });
+            n48 = 0;
+            std::vector<cf32> buf(20000);
+            uint64_t seq = 0; GeneralTelemetry g;
+            for (double t = 0; t < 1.5; t += buf.size() / kRate) { syn->generate(buf.data(), buf.size()); r.feed(buf.data(), buf.size()); if (r.telemetry(g, seq)) seq = g.seq; }
+            chanRate = rate; nWide = a.size();
+            CHECK(g.demodRate == rate, "telemetry rate %g vs tap %g", g.demodRate, rate);
+            const size_t s = a.size() / 2;
+            double re = 0, im = 0;
+            for (size_t i = s; i < a.size(); i++) { const double ph = 2 * kPi * tone * (double)i / rate; re += a[i] * std::cos(ph); im += a[i] * std::sin(ph); }
+            return 2 * std::sqrt(re * re + im * im) / (double)(a.size() - s);
+        };
+        double r25, r40, r9; size_t nw25, nw40, nw9, n25, n40, n9;
+        const double a25 = wideRun(25000, 30000, r25, nw25, n25), a40 = wideRun(40000, 30000, r40, nw40, n40), a9 = wideRun(9000, 2700, r9, nw9, n9);
+        printf("  wide USB 30 kHz at %.0f Hz: 25 kHz tone %.3f, 40 kHz tone %.4f; default 9 kHz tone %.4f at %.0f Hz\n", r25, a25, a40, a9, r9);
+        CHECK(r25 == 96000 && r40 == 96000 && r9 == 48000, "channel rates %g %g %g", r25, r40, r9);
+        CHECK(a25 > 0.3 && a40 < 0.1 * a25, "wide filter 25 kHz %.3f 40 kHz %.4f", a25, a40);
+        CHECK(n25 > 60000 && std::abs((double)nw25 / 2 - (double)n25) < 64, "48 kHz copy %zu vs wide %zu", n25, nw25);   // the speaker copy is the wide audio / 2
+        CHECK(nw9 == n9, "default: the wide tap is the 48 kHz audio");
+        // rate changes while running: no crash, finite output, the rate follows
+        SynthConfig sc;
+        sc.mode = 57; sc.snrDb = 30; sc.modeOpt[0] = GenUsb; sc.modeOpt[1] = 0; sc.modeVal[0] = 0; sc.modeVal[1] = 1000;
+        auto syn = makeGeneralSynth(sc, kRate);
+        GeneralReceiver r;
+        r.configure(kRate);
+        r.setSignalOffset(-generalTuning().tuneOffsetHz);
+        r.setSilent(true);
+        r.setDemod(GenUsb);
+        bool fin = true; size_t got = 0;
+        r.setAudioTap([&](const float* x, size_t n) { got += n; for (size_t i = 0; i < n; i++) fin = fin && std::isfinite(x[i]); });
+        std::vector<cf32> buf(20000);
+        uint64_t seq = 0; GeneralTelemetry g;
+        const double widths[] = {2700, 30000, 100000, 2700, 351700, 30000, 2700};
+        const double want[] = {48000, 96000, 384000, 48000, 768000, 96000, 48000};
+        for (int k = 0; k < 7; k++) {
+            r.setWidthHz(widths[k]);
+            for (int j = 0; j < 12; j++) { syn->generate(buf.data(), buf.size()); r.feed(buf.data(), buf.size()); }
+            if (r.telemetry(g, seq)) seq = g.seq;
+            CHECK(g.demodRate == want[k], "step %d width %g: channel rate %g want %g", k, widths[k], g.demodRate, want[k]);
+        }
+        CHECK(fin && got > 20000, "rate changes keep the audio finite (%zu samples)", got);
     }
 
     // 4.0: NFM audio low-pass at 3 kHz (was 4 kHz): speech up to 2.5 kHz keeps its level, 3.8 kHz (passed by the 3.9 filter) is cut
@@ -137,7 +209,7 @@ int main() {
     // names and ranges of the new ones; the first six keep their numbers
     CHECK(GenCw == 5 && GenDsb == 6 && GenRaw == 7 && GenCwl == 8 && GenDemodCount == 9, "demodulator numbers");
     CHECK(!strcmp(generalDemodName(GenDsb), "DSB") && !strcmp(generalDemodName(GenRaw), "RAW") && !strcmp(generalDemodName(GenCwl), "CW-L") && !strcmp(generalDemodName(99), "?"), "names");
-    CHECK(generalClampWidth(GenRaw, 1e6) == 44000 && generalClampWidth(GenDsb, 10) == 1000 && generalClampWidth(GenCwl, 1e6) == 20000, "new ranges");
+    CHECK(generalClampWidth(GenRaw, 44000) == 44000 && generalClampWidth(GenDsb, 10) == 1000 && generalClampWidth(GenCwl, 1e9) == 704000, "new ranges");
 
     // a station 25 kHz above the dial, the channel put on it
     {
