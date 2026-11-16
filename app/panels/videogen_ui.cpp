@@ -391,7 +391,7 @@ void applyDrops(State& s) {
         if (k == MediaKind::Picture) { c.source = Source::Picture; c.path = p; fitLength(s); s.note = std::string(tr("Picture set: ")) + p; }
         else if (k == MediaKind::Video) {
             c.source = Source::VideoFile; c.path = p;
-            if (c.audio == AudioSource::Silence) c.audio = AudioSource::FromFile;
+            c.audio = audioForSource(Source::VideoFile, c.audio);
             fitLength(s);
             s.note = std::string(tr("Video set: ")) + p;
         }
@@ -447,8 +447,7 @@ void sourceSection(State& s, float col, float w) {
     if (combo("##vgsrc", src, kSourceNames, 5, w)) {
         c.source = (Source)src;
         if ((c.source == Source::Picture || c.source == Source::Generator) && !s.lengthEdited) c.seconds = 60;   // one minute unless changed
-        if (c.source == Source::Rtmp) c.audio = AudioSource::FromFile;   // OBS sends its sound with the picture
-        else if (c.source != Source::VideoFile && c.audio == AudioSource::FromFile) c.audio = AudioSource::Tone;
+        c.audio = audioForSource(c.source, c.audio);   // a video file and OBS bring their own sound; the test tone stayed on before (#545)
     }
     if (c.source == Source::Camera) {
         rowLabel(N_("Camera"), col);

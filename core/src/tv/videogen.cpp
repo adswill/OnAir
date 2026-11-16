@@ -347,6 +347,11 @@ static std::string lowerExt(const std::string& path) {
     for (char& ch : e) ch = (char)std::tolower((unsigned char)ch);
     return e;
 }
+AudioSource audioForSource(Source source, AudioSource current) {
+    if (source == Source::VideoFile || source == Source::Rtmp) return current == AudioSource::Tone || current == AudioSource::Silence ? AudioSource::FromFile : current;
+    return current == AudioSource::FromFile ? AudioSource::Tone : current;
+}
+
 MediaKind mediaKind(const std::string& path) {
     static const std::set<std::string> pic = {".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".ppm", ".pgm", ".pnm"};
     static const std::set<std::string> vid = {".mp4", ".m4v", ".mov", ".mkv", ".avi", ".webm", ".ts", ".m2ts", ".mts", ".mpg", ".mpeg", ".vob", ".wmv", ".flv", ".ogv", ".3gp"};

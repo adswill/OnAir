@@ -102,6 +102,9 @@ bool gFreqHovered = false;   // last frame: the mouse was over the digits (the 1
 
 float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::function<void(double)>& tune, float fontSize) {
     static int kbIdx = -1;               // the digit the keyboard works on after typing or left/right (-1: the one under the mouse)
+    static ImGuiID kbOwner = 0;          // which readout kbIdx belongs to: several readouts (main, TX panel) share these statics, and each one used to act on the same key press (#547: two digits per key)
+    static int keyFrame = -1;            // the frame whose arrow/number keys a readout already took
+    const ImGuiID myId = ImGui::GetID("##freqdigits");
     static ImVec2 kbMouse;               // where the mouse was then: moving it gives the digit back to the mouse
     static double preClickMhz = 0;       // the frequency before the first click of a double click, which the double click undoes
     static char typed[32] = "";
@@ -157,10 +160,15 @@ float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::fu
     ImGui::TextDisabled("%s", tr("Hz"));
     const float endX = ImGui::GetItemRectMax().x;
     ImGuiIO& io = ImGui::GetIO();
-    gFreqHovered = hovIdx >= 0 || (kbIdx >= 0 && io.MousePos.x == kbMouse.x && io.MousePos.y == kbMouse.y);
-    if (kbIdx >= 0 && (io.MousePos.x != kbMouse.x || io.MousePos.y != kbMouse.y)) kbIdx = -1;
-    const int cur = kbIdx >= 0 ? kbIdx : hovIdx;
-    if (cur >= 0 && !io.WantTextInput && !io.KeyCtrl && !io.KeyAlt && !io.KeySuper) {
+    if (kbOwner != myId && kbIdx >= 0 && hovIdx >= 0) kbIdx = -1;   // the mouse moved to another readout
+    const bool mineKb = kbIdx >= 0 && kbOwner == myId;
+    gFreqHovered = hovIdx >= 0 || (mineKb && io.MousePos.x == kbMouse.x && io.MousePos.y == kbMouse.y);
+    if (mineKb && (io.MousePos.x != kbMouse.x || io.MousePos.y != kbMouse.y)) kbIdx = -1;
+    const int cur = (kbIdx >= 0 && kbOwner == myId) ? kbIdx : hovIdx;
+    const int frame = ImGui::GetFrameCount();
+    if (cur >= 0 && keyFrame != frame && !io.WantTextInput && !io.KeyCtrl && !io.KeyAlt && !io.KeySuper) {
+        keyFrame = frame;
+        kbOwner = myId;
         const long long place = fdigits::placeOf(cur);
         for (int k = 0; k < 10; k++)
             if (ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_0 + k), false) || ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_Keypad0 + k), false)) {
@@ -171,7 +179,7 @@ float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::fu
         if (ImGui::IsKeyPressed(ImGuiKey_DownArrow)) delta = -place;
         if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) { kbIdx = std::max(0, cur - 1); kbMouse = io.MousePos; }
         if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) { kbIdx = std::min(kD - 1, cur + 1); kbMouse = io.MousePos; }
-        if (kbIdx >= 0 && kbIdx != hovIdx) {   // show where the keyboard is when it is not under the mouse
+        if (kbIdx >= 0 && kbOwner == myId && kbIdx != hovIdx) {   // show where the keyboard is when it is not under the mouse
             const float kx = digitX[kbIdx];
             dl->AddRect(ImVec2(kx, o.y), ImVec2(kx + cw, o.y + ch), u32(T.dim), 2.f);
         }
