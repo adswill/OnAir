@@ -34,6 +34,8 @@ void uniSave(App& a) {
 
 }  // namespace
 
+void uniLayoutReset(App& a) { uniMap(a).clear(); a.uniSplit.clear(); }   // (uniMap has loaded first, so the cleared map is not filled again from the old text)
+
 template <class F> static void unifiedCentre(App& a, F tabs) {
     UniSt& st = uniMap(a)[a.family];
     const ImVec2 avail = ImGui::GetContentRegionAvail();

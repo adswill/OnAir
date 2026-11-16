@@ -233,3 +233,6 @@ void generalScreen(App& a, float bodyH, ImVec2 disp) {
     ImGui::PopStyleVar();
     ImGui::EndChild();
 }
+
+// View > Reset view > Reset layout: the sidebar, the spectrum / waterfall bar and the drawer of the General screen back to their defaults
+void generalLayoutReset() { lay() = genlayout::Layout{}; saveLay(); }

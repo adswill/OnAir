@@ -12,6 +12,8 @@
 #include "general/general_layout.h"
 #include "ui/freq_digits.h"
 #include "gfx/view_span.h"
+#include "gfx/plot_split.h"
+#include <limits>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -202,7 +204,24 @@ static void testPlotClick() {
     CHECK(!plotClickTunes(true, true, false, 0, -9), "a moved press does not tune (vertical)");
 }
 
+// the spectrum / waterfall bar: a bad fraction is replaced, and the waterfall always keeps room inside the panel (it used to be pushed out of a short one)
+static void testPlotSplit() {
+    const float nan = std::numeric_limits<float>::quiet_NaN(), inf = std::numeric_limits<float>::infinity();
+    CHECK(plotsplit::safeFrac(nan) == 0.5f && plotsplit::safeFrac(0) == 0.2f && plotsplit::safeFrac(-3) == 0.2f && plotsplit::safeFrac(9) == 0.8f && plotsplit::safeFrac(inf) == 0.8f, "fraction clamp");
+    for (float h : {2.f, 30.f, 100.f, 119.f, 130.f, 200.f, 400.f, 1500.f})
+        for (float frac : {nan, 0.f, 0.2f, 0.5f, 0.8f, 1.f, inf, -inf})
+            for (float strip : {0.f, 22.f, 40.f}) {
+                const float hs = plotsplit::spectrumHeight(h, frac, strip);
+                CHECK(hs >= 1.f && hs <= std::max(1.f, h - 1.f), "h %g frac %g strip %g: spectrum %g inside the panel", h, frac, strip, hs);
+                if (h >= 120.f + strip) CHECK(h - hs >= plotsplit::kMinWf - 0.01f && hs >= plotsplit::kMinSpec + strip - 0.01f, "h %g frac %g strip %g: both plots keep their minimum (spectrum %g)", h, frac, strip, hs);
+                else if (h >= 30.f) CHECK(h - hs >= 10.f, "h %g strip %g: a short panel still shows %g px of waterfall", h, strip, h - hs);
+            }
+    CHECK(plotsplit::spectrumHeight(500, 0.5f, 20) == 250.f, "half of 500 is 250");
+    CHECK(plotsplit::spectrumHeight(500, nan, 20) == 250.f, "NaN gives the default half");
+}
+
 int main() {
+    testPlotSplit();
     testPlotClick();
     testPrefs();
     testSide();

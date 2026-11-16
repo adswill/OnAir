@@ -1403,6 +1403,8 @@ void vfoPanelWindow(App& a);
 void vfoPopupSection(App& a);
 void vfoAddAt(App& a, double mhz);
 void generalPlotMouse(App& a, int plotId);
+void generalLayoutReset();                      // general_screen.cpp: the General screen's sidebar, spectrum / waterfall bar and drawer back to the defaults
+void uniLayoutReset(App& a);                    // main_tabs.cpp: the unified layout's split shares and fold state (every mode) back to the defaults
 void generalWheelTune(App& a, int n, double stepHzOverride);   // wheel tuning in the general receiver (#409)
 void generalChannelBand(const App& a, bool fill);
 bool generalDragging(int plotId);
