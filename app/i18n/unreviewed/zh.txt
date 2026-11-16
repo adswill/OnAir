@@ -5,3 +5,7 @@ ping
 Ping
 Pings
 LNB LO (MHz)
+Webhook
+Studio
+Mono Pro
+16-bit
