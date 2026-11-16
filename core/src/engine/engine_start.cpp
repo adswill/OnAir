@@ -464,6 +464,7 @@ void Engine::configureDecoderReceivers(const DeviceInfo& dev, const TuneSettings
     rxSonde_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAis_.configure(rate_);
     rxAis_.setLogCallback([this](const std::string& s) { rxLog(s); });
+    rxMarine_.setAudioInput(dev.kind == DeviceInfo::Audio);   // a sound card or WAV gives the demodulated audio itself (VHF DSC tones), a radio gives an FM channel
     rxMarine_.configure(rate_);
     rxMarine_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAcars_.configure(rate_);

@@ -41,3 +41,8 @@ then sideband inversion (LSB or `audio_invert`). The dial is not touched: the us
 IC-7300 in USB with its 12 kHz IF on the USB audio, pick the sound card, mode Real (mono), IF centre 12000 Hz, dial 14.074 MHz, and FT8 decodes as
 from an SDR (the radio's own filters and AGC do the front end). A serial of `file:<wav>` plays a WAV as the sound card (tests). Level for a meter:
 `audioSourceLevel()`. Tests: `tests/audio/test_audio_if.cpp`, `tests/audio/test_audio_source.cpp`.
+
+VHF DSC (marine channel 70, 1200 baud, tones 1300 / 2100 Hz) from a sound card or a WAV: the Marine receiver's `setAudioInput(true)` (engine_start.cpp sets it for an
+Audio source, like Tones and SELCAL) takes the real audio as already FM-demodulated, resamples it to 24 kHz and slices the tones directly, with no second FM discriminator
+(the discriminator turned the audio tones into constant levels, which is why nothing decoded). Any card rate from 8 kHz, any level. Only VHF DSC runs from audio; NAVTEX,
+MF/HF DSC and fax still want the radio's IQ. Test: `tests/marine/test_marine_dsc_audio.cpp` (recordings in `tests/data/dsc_audio`, MIT, credited).

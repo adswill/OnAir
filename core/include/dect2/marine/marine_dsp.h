@@ -98,6 +98,10 @@ public:
     template <class F> void process(const cf32* x, size_t n, F&& onBit) {
         for (size_t i = 0; i < n; i++) { float a = disc(x[i]); float s; if (slicer_.push(cf32(a, 0.f), s)) onBit(s); }
     }
+    // Sound card or WAV file: the samples are already the demodulated FM audio (real, tones 1300 Hz = Y and 2100 Hz = B), at kBaseRate: no discriminator.
+    template <class F> void processAudio(const cf32* x, size_t n, F&& onBit) {
+        for (size_t i = 0; i < n; i++) { float s; if (slicer_.push(cf32(x[i].real(), 0.f), s)) onBit(s); }
+    }
     double baud() const { return slicer_.symbolRate(); }
     // 4.0: a 4.5 kHz channel filter (2 pole Butterworth, twice) before the discriminator: the 24 kHz stream is wider than the signal (+-3 kHz deviation plus the
     // 2.1 kHz tone), and a follow-up of the carrier offset (the mean of the discriminator) in front of it. Default on; off = the 3.9 receiver, for before / after measurements.

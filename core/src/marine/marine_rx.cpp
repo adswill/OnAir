@@ -6,6 +6,7 @@
 #include "dect2/marine/marine_rx.h"
 #include "dect2/marine/marine_dsc.h"
 #include "dect2/marine/marine_dsp.h"
+#include "dect2/dsp/exact_resampler.h"
 #include "dect2/marine/marine_bands.h"
 #include "dect2/marine/marine_navtex.h"
 #include "dect2/marine/marine_incident.h"
@@ -63,6 +64,10 @@ struct MarineReceiver::Impl {
     std::mutex mu;                 // the processing chain (feed, configure, reset)
     mutable std::mutex telMu;      // the report
     double rate = 0, offsetHz = 0;
+    bool audioIn = false;          // setAudioInput(): real, already demodulated audio (sound card / WAV), VHF DSC only
+    bool okRate = false;           // the input rate suits the chain in use
+    ExactResampler ars;            // audio -> kBaseRate
+    std::vector<cf32> arsIn;
     std::atomic<int> service{0};
     std::atomic<double> freqHz{0};
     std::atomic<int> faxLpm{0}, faxIoc{0};     // 0 = detect from the start tone and the phasing
@@ -186,9 +191,21 @@ struct MarineReceiver::Impl {
         for (auto& c : tel.dsc) c.rxSec += dt;
     }
 
+    void configureChain() {
+        if (audioIn) {
+            okRate = rate >= 7999 && ars.configure(rate, kBaseRate, 8);
+        } else {
+            okRate = rate >= marineTuning().minSampleRate - 1;
+            if (okRate) { front.configure(rate); front.setOffsetHz(offsetHz); }
+        }
+        fax.configure(12000.0);
+        parDirty = true;
+        resetAll();
+    }
+
     void resetAll() {
         { std::lock_guard<std::mutex> lk(telMu); shiftTimes(-lastNow); lastNow = 0; }
-        front.reset(); spec.reset(); fsk.reset(); vhf.reset(); faxAudio.reset(); fax.reset(); listen.reset();
+        ars.reset(); front.reset(); spec.reset(); fsk.reset(); vhf.reset(); faxAudio.reset(); fax.reset(); listen.reset();
         for (auto& n : nav) n.reset();
         for (auto& d : dsc) d.reset();
         for (auto& d : dscv) d.reset();
@@ -297,13 +314,14 @@ MarineReceiver::~MarineReceiver() = default;
 void MarineReceiver::configure(double inputRateHz) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->rate = inputRateHz;
-    if (inputRateHz >= marineTuning().minSampleRate - 1) {
-        p_->front.configure(inputRateHz);
-        p_->front.setOffsetHz(p_->offsetHz);
-    }
-    p_->fax.configure(12000.0);
-    p_->parDirty = true;
-    p_->resetAll();
+    p_->configureChain();
+}
+
+void MarineReceiver::setAudioInput(bool on) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    if (p_->audioIn == on) return;
+    p_->audioIn = on;
+    if (p_->rate > 0) p_->configureChain();
 }
 
 void MarineReceiver::setSignalOffset(double hz) {
@@ -315,7 +333,7 @@ void MarineReceiver::setSignalOffset(double hz) {
 
 bool MarineReceiver::ready() const {
     std::lock_guard<std::mutex> lk(p_->mu);
-    return p_->rate >= marineTuning().minSampleRate - 1;
+    return p_->okRate;
 }
 
 void MarineReceiver::reset() {
@@ -332,7 +350,22 @@ void MarineReceiver::reset() {
 void MarineReceiver::feed(const cf32* x, size_t n) {
     Impl& s = *p_;
     std::lock_guard<std::mutex> lk(s.mu);
-    if (s.rate < marineTuning().minSampleRate - 1) return;
+    if (!s.okRate) return;
+    if (s.audioIn) {   // real audio, already demodulated: only the VHF DSC slicer, no discriminator
+        s.arsIn.resize(n);
+        for (size_t i = 0; i < n; i++) s.arsIn[i] = cf32(x[i].real(), 0.f);
+        s.base.clear();
+        s.ars.process(s.arsIn.data(), n, s.base);
+        s.inSamples += n;
+        if (!s.base.empty()) {
+            s.spec.push(s.base.data(), s.base.size());
+            s.vhf.processAudio(s.base.data(), s.base.size(), [&](float v) { s.dscv[0].pushBit(v); s.dscv[1].pushBit(v); });   // 1300 Hz = Y = 1
+        }
+        s.sinceReport += (double)n;
+        const double per = 0.25 * s.rate;
+        while (s.sinceReport >= per) { s.sinceReport -= per; s.publish(); }
+        return;
+    }
     s.applyFaxSettings();
     if (s.parDirty) s.rebuildPar();
     const Enabled en = chooseServices(s.service.load(), s.freqHz.load());
