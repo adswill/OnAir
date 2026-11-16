@@ -6,6 +6,7 @@
 #include "../app.h"
 #include "imgui_internal.h"   // the drag selftest prints the hovered window and active id on a failure
 #include "plot_util.h"
+#include "plot_split.h"
 #include "tune_drag.h"
 #include "drag_tune.h"
 #include "../ui/touch.h"
@@ -2161,7 +2162,8 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         int c0 = 0, c1 = W;
         specaxis::visibleCols(vis.X.Min, vis.X.Max, x0, fs, W, c0, c1);
         const int k = plt::WfView::groupRows(vis.Y.Max - vis.Y.Min, psz.y * std::max(1.f, fbs.y), H);
-        if (!a.wf.viewImg && gGfx) a.wf.viewImg = gGfx->createImage(texW, H, 0xFF000000u);
+        if (a.wf.viewImg && !a.wf.viewImg->texture()) { delete a.wf.viewImg; a.wf.viewImg = nullptr; a.wf.view.exact = false; a.wf.view.newest = -1; }   // a texture that did not survive (a lost GL context): made again, the view rebuilt
+        if (!a.wf.viewImg && gGfx) { a.wf.viewImg = gGfx->createImage(texW, H, 0xFF000000u); a.wf.view.exact = false; a.wf.view.newest = -1; }
         bool full = false;
         static std::vector<int> dirty;
         plt::WfView& v = a.wf.view;
@@ -2221,7 +2223,7 @@ void spectrumWaterfall(App& a, float& frac, bool drag) {
     const float sliderCol = std::min(52.f * gUi, std::max(0.f, avail.x - 60.f));
     const float w = std::max(60.f, avail.x - sliderCol), h = avail.y;
     const float stripH = bandPlanStripHeight();
-    const float hs = std::floor(std::min(std::max(60.f + stripH, h * frac), std::max(60.f + stripH, h - 60.f)));
+    const float hs = plotsplit::spectrumHeight(h, frac, stripH);   // gfx/plot_split.h: the waterfall stays inside a short panel
     const float y = p.y + hs;
     bool hot = false;
     if (drag) {   // first, so the handle takes the mouse before the plots under it
@@ -2229,7 +2231,7 @@ void spectrumWaterfall(App& a, float& frac, bool drag) {
         ImGui::InvisibleButton("##split", ImVec2(w, 6 * gUi));
         hot = ImGui::IsItemHovered() || ImGui::IsItemActive();
         if (hot) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
-        if (ImGui::IsItemActive()) frac = std::min(0.8f, std::max(0.2f, frac + ImGui::GetIO().MouseDelta.y / std::max(1.f, h)));
+        if (ImGui::IsItemActive()) frac = plotsplit::safeFrac(plotsplit::safeFrac(frac) + ImGui::GetIO().MouseDelta.y / std::max(1.f, h));
         ImGui::SetCursorScreenPos(p);
     }
     freqPageKeys();
@@ -2253,11 +2255,11 @@ void spectrumWaterfall(App& a, float& frac, bool drag) {
     }
     auto specPart = [&] {
         ImGui::SetCursorScreenPos(ImVec2(p.x, p.y + stripH));
-        spectrumPlot(a, ImVec2(w, std::max(40.f, hs - stripH)), plt::Flags_Flush | plt::Flags_OpenBottom);
+        spectrumPlot(a, ImVec2(w, std::max(8.f, hs - stripH)), plt::Flags_Flush | plt::Flags_OpenBottom);
     };
     auto wfPart = [&] {
         ImGui::SetCursorScreenPos(ImVec2(p.x, y));
-        waterfallPlot(a, ImVec2(w, std::max(60.f, h - hs)), plt::Flags_Flush | plt::Flags_OpenTop);
+        waterfallPlot(a, ImVec2(w, std::max(8.f, h - hs)), plt::Flags_Flush | plt::Flags_OpenTop);
         dragRetune(a);   // a drag on the waterfall that runs past the band retunes too (its overflow is gone once the next plot begins)
     };
     if (wfFirst) { wfPart(); specPart(); } else { specPart(); wfPart(); }

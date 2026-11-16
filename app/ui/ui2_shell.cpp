@@ -761,7 +761,8 @@ static void viewMenu(App& a) {
             if (ImGui::MenuItem(tr("Restore the default view"), inputmap::shortcut(inputmap::Action::RestoreView).c_str())) restoreDefaultView(a);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Back to the default interface: the new interface with classic panels, the Sidebar arrangement, no docking, no touch mode"));
             if (ImGui::MenuItem(tr("Reset layout"))) { if (!a.touchUi) layoutReset();   // forgets the saved window positions of every mode
-                a.splitSide = a.splitRight = a.splitBottom = a.splitDock = a.splitBot2 = 0; a.panelSizes.clear(); savePrefs(a); }
+                a.splitSide = a.splitRight = a.splitBottom = a.splitDock = a.splitBot2 = 0; a.panelSizes.clear();
+                specWaterfallSplit() = 0.5f; generalLayoutReset(); uniLayoutReset(a); savePrefs(a); }   // also the spectrum / waterfall bar, so a waterfall squeezed away comes back
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Forgets the saved window positions of every mode and the sizes of the panels"));
             if (ImGui::MenuItem(tr("Reset spectrum"))) resetSpectrum(a);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Put the panels back to their automatic sizes (drag the bars between panels to resize them)"));
