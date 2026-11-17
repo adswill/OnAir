@@ -152,8 +152,8 @@ Show the frequency	显示频率
 Shows on your Discord profile that you are using OnAir, the mode and the frequency. Needs the Discord desktop app running.	在你的 Discord 资料中显示正在使用 OnAir，以及模式和频率。需要运行 Discord 桌面应用。
 Discord application ID not set in this build	此版本未设置 Discord 应用 ID
 Passes	过境
-Data feeds...	数据推送...
-Data feeds	数据推送
+Data feeds...	数据源...
+Data feeds	数据源
 Scanner (highly experimental)	扫描器（高度实验性）
 Scanner (highly experimental)...	扫描器（高度实验性）...
 HIGHLY EXPERIMENTAL	高度实验性
@@ -161,7 +161,7 @@ HIGHLY EXPERIMENTAL: step through a list of frequencies and modes, or a band, an
 Classic interface	经典界面
 New interface	新界面
 Try the new interface. You can switch back at any time.	试用新界面。随时可以切换回来。
-Guided tour	新手导览
+Guided tour	新手引导
 Tour	导览
 by: Kristijonas Adomaitis, made with help from the community	作者：Kristijonas Adomaitis，在社区的帮助下完成
 Thank you to everyone who reported bugs, sent recordings and opened pull requests.	感谢所有报告问题、提供录制文件和提交拉取请求的朋友。
@@ -336,7 +336,7 @@ ADC level high	ADC 电平偏高
 ADC level low - raise the gain	ADC 电平偏低 - 请提高增益
 ADC sees almost nothing - antenna / gain?	ADC 几乎没有信号 - 检查天线 / 增益？
 ADC level (rms). %s\npeak %.2f   clip %.3f%%   DC %+.3f / %+.3f	ADC 电平（rms）。%s\n峰值 %.2f   削波 %.3f%%   直流 %+.3f / %+.3f
-Bias-tee (antenna power)	馈电（天线供电）
+Bias-tee (antenna power)	偏置供电（天线供电）
 Sends DC power up the antenna cable for an active antenna or LNA (e.g. a GNSS patch antenna). Leave it off with a passive antenna, and never with a DC short in the antenna path (some antennas, splitters or filters): it can damage the radio.	通过天线电缆向有源天线或 LNA（例如 GNSS 贴片天线）供直流电。无源天线请保持关闭；天线链路中有直流短路（某些天线、功分器或滤波器）时切勿开启，否则可能损坏设备。
 Most GNSS antennas are active and need this on.	大多数 GNSS 天线是有源的，需要开启此项。
 IQ correction	IQ 校正
@@ -11067,7 +11067,7 @@ terrain##sp40t	地形##sp40t
 testing…	测试中……
 the Flippers' password	Flipper 的密码
 the L1 signalling part 2 has not been decoded yet	L1 信令第二部分尚未解码
-the active antenna needs power (this radio has no bias tee)	有源天线需要供电（此电台无偏置馈电）
+the active antenna needs power (this radio has no bias tee)	有源天线需要供电（此电台不支持偏置供电）
 the computer's	本机的
 the computer's time zone	本机时区
 the dial is on no Sigfox zone (listening anyway)	调谐频率不在任何 Sigfox 区域内（仍继续监听）
