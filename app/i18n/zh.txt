@@ -10840,7 +10840,7 @@ period, DM	周期，DM
 phase	相位
 pi/8-D8PSK carrier (TEDS), no TETRA synchronisation	pi/8-D8PSK 载波（TEDS），无 TETRA 同步
 pi/8-D8PSK slots (TEDS)	pi/8-D8PSK 时隙（TEDS）
-pick	拾取
+pick	选取
 pictures	图像
 plan	规划
 plane-alert-db.csv (github.com/sdr-enthusiasts/plane-alert-db): one list per category (military, government, police, historic ...), all off at first. Importing again replaces them and keeps the ones you switched on.	plane-alert-db.csv（github.com/sdr-enthusiasts/plane-alert-db）：每类一个列表（军用、政府、警察、历史 ……），初始全部关闭。重新导入会替换列表并保留你开启的项。
@@ -11002,7 +11002,7 @@ skip locked-out	跳过已锁定
 skipped: receiver in use	已跳过：接收机占用中
 skipped: transmitting	已跳过：正在发射
 snapshot saved	快照已保存
-soft values of the slicer	切片器软值
+soft values of the slicer	切片器软判决值
 solo	独奏
 south	南
 south-east	东南
@@ -11068,7 +11068,7 @@ the L1 signalling part 2 has not been decoded yet	L1 信令第二部分尚未解
 the active antenna needs power (this radio has no bias tee)	有源天线需要供电（此电台无偏置馈电）
 the computer's	本机的
 the computer's time zone	本机时区
-the dial is on no Sigfox zone (listening anyway)	拨号不在任何 Sigfox 区域（仍继续监听）
+the dial is on no Sigfox zone (listening anyway)	调谐频率不在任何 Sigfox 区域内（仍继续监听）
 the history starts after the first minute	历史在第一分钟后开始
 the mode's own step	该模式自身的步进
 the programme	节目
@@ -11198,7 +11198,7 @@ Channels in the capture: %s%s%s%s	捕获中的频道：%s%s%s%s
 AIS 1 + 2 (162.000)	AIS 1 + 2（162.000）
 75 + 76 (156.800)	75 + 76（156.800）
 all four (159.400)	全部四个（159.400）
-One capture of %.1f Msps or more holds AIS 1, AIS 2 and the long-range channels 75 and 76 (message 27)	一次 %.1f Msps 或更宽的捕获即可同时覆盖 AIS 1、AIS 2 和远程频道 75 与 76（27 号报文）
+One capture of %.1f Msps or more holds AIS 1, AIS 2 and the long-range channels 75 and 76 (message 27)	一次采样率达到 %.1f Msps 或更高的捕获，即可同时覆盖 AIS 1、AIS 2 和远程频道 75 与 76（27 号报文）
 Hop: AIS 1 + 2 for 1 min, 75 + 76 for 3 min 20 s	跳转：AIS 1 + 2 听 1 分钟，75 + 76 听 3 分 20 秒
 For a radio that cannot hold all four channels: message 27 comes every 3 minutes, so a dwell a little longer than that hears every class A ship in range once	对于无法同时容纳四个频道的电台：27 号报文每 3 分钟发出一次，因此停留时间略长于 3 分钟，就能听到范围内每艘 A 级船一次
 Satellite mode (Doppler +-4.5 kHz, collisions)	卫星模式（多普勒 ±4.5 kHz，存在碰撞）
