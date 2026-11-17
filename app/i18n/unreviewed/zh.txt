@@ -47,3 +47,6 @@ Hellschreiber is a picture
 Mono saves some bitrate; stereo needs more.
 No DAB ensembles found. Check the antenna and press Scan on the Scan tab.
 No ensemble in the capture yet (needs at least 3 MHz of Band III).
+Open http://this-computer:port/stream.ts in VLC, OBS (media source) or ffplay. Without a key, anyone who can reach the port can watch while it is on.
+Payload (hex)
+Periods are from memory and drift with the Earth's motion; the search covers 0.02 % around the period. Check the ATNF pulsar catalogue before a long run.
