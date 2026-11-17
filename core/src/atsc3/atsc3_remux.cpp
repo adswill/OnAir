@@ -7,6 +7,7 @@
 #include "dect2/audio/ac4_dec.h"
 #include "dect2/audio/dolby_audio.h"
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -29,16 +30,143 @@ extern "C" {
 
 namespace dect2 {
 
+namespace {
+
+uint32_t rd32(const uint8_t* p) { return (uint32_t)p[0] << 24 | (uint32_t)p[1] << 16 | (uint32_t)p[2] << 8 | p[3]; }
+
+struct Box { std::array<char, 4> type; size_t start, body, end; };   // body: where the content starts (after the size, type and a 64-bit size)
+
+// The boxes of [from, to) in d, end to end. False when they do not fill it exactly.
+bool boxesOf(const uint8_t* d, size_t from, size_t to, std::vector<Box>& out) {
+    out.clear();
+    size_t pos = from;
+    while (pos < to) {
+        if (to - pos < 8) return false;
+        uint64_t size = rd32(d + pos);
+        size_t hdr = 8;
+        if (size == 1) {
+            if (to - pos < 16) return false;
+            size = (uint64_t)rd32(d + pos + 8) << 32 | rd32(d + pos + 12);
+            hdr = 16;
+        } else if (size == 0) size = to - pos;   // to the end
+        if (size < hdr || size > to - pos) return false;
+        Box b;
+        std::copy_n(d + pos + 4, 4, b.type.begin());
+        b.start = pos; b.body = pos + hdr; b.end = pos + (size_t)size;
+        out.push_back(b);
+        pos = b.end;
+    }
+    return true;
+}
+
+bool is(const Box& b, const char* t) { return !memcmp(b.type.data(), t, 4); }
+
+}   // namespace
+
+// The default sample sizes of the tracks (moov/mvex/trex), for the check of the media segments.
+static std::map<uint32_t, uint32_t> trexSizes(const std::vector<uint8_t>& init) {
+    std::map<uint32_t, uint32_t> r;
+    std::vector<Box> top, moov, mvex;
+    if (!boxesOf(init.data(), 0, init.size(), top)) return r;
+    for (auto& a : top) {
+        if (!is(a, "moov") || !boxesOf(init.data(), a.body, a.end, moov)) continue;
+        for (auto& b : moov) {
+            if (!is(b, "mvex") || !boxesOf(init.data(), b.body, b.end, mvex)) continue;
+            for (auto& t : mvex) if (is(t, "trex") && t.end - t.body >= 24) r[rd32(&init[t.body + 4])] = rd32(&init[t.body + 16]);
+        }
+    }
+    return r;
+}
+
+// Whether a media segment can be given to the MP4 demuxer: whole boxes from end to end, every moof followed by an mdat, and the samples that
+// the track runs of a moof point to inside that mdat. A segment that a loss cut short or that starts in the middle (a moof without its mdat,
+// an mdat that claims more bytes than there are) would make the demuxer read the next segments as the rest of this one: it then never finds a
+// box again and the component gives nothing for good. `samples` gets the number of samples in the segment.
+static bool segmentUsable(const std::vector<uint8_t>& seg, const std::map<uint32_t, uint32_t>& trex, long* samples) {
+    *samples = 0;
+    const uint8_t* d = seg.data();
+    std::vector<Box> top, moof, traf;
+    if (seg.size() < 8 || !boxesOf(d, 0, seg.size(), top)) return false;
+    for (size_t i = 0; i < top.size(); i++) {
+        if (!is(top[i], "moof")) continue;
+        const Box* mdat = nullptr;
+        for (size_t j = i + 1; j < top.size() && !is(top[j], "moof") && !mdat; j++) if (is(top[j], "mdat")) mdat = &top[j];
+        if (!mdat || !boxesOf(d, top[i].body, top[i].end, moof)) return false;
+        bool firstTraf = true;
+        for (auto& tb : moof) {
+            if (!is(tb, "traf")) continue;
+            if (!boxesOf(d, tb.body, tb.end, traf)) return false;
+            uint32_t tfFlags = 0, defSize = 0;
+            bool haveDef = false, absolute = false;
+            for (auto& x : traf) {
+                if (!is(x, "tfhd")) continue;
+                if (x.end - x.body < 8) return false;
+                tfFlags = rd32(d + x.body) & 0xffffff;
+                const uint32_t track = rd32(d + x.body + 4);
+                size_t p = x.body + 8;
+                if (tfFlags & 0x1) { absolute = true; p += 8; }   // base-data-offset: positions in the file, not checked here
+                if (tfFlags & 0x2) p += 4;
+                if (tfFlags & 0x8) p += 4;
+                if (tfFlags & 0x10) { if (p + 4 > x.end) return false; defSize = rd32(d + p); haveDef = true; }
+                if (!haveDef) { auto it = trex.find(track); if (it != trex.end()) { defSize = it->second; haveDef = true; } }
+            }
+            // where the data of the first run starts without a data offset is not checked (it depends on the traf before); with one, it is
+            // counted from the moof (default-base-is-moof, or the first traf of the moof)
+            const bool fromMoof = !absolute && ((tfFlags & 0x20000) || firstTraf);
+            firstTraf = false;
+            bool havePos = false;
+            uint64_t pos = 0;
+            for (auto& x : traf) {
+                if (!is(x, "trun")) continue;
+                if (x.end - x.body < 8) return false;
+                const uint32_t fl = rd32(d + x.body) & 0xffffff, n = rd32(d + x.body + 4);
+                size_t p = x.body + 8;
+                int64_t off = 0;
+                const bool hasOff = fl & 0x1;
+                if (hasOff) { if (p + 4 > x.end) return false; off = (int32_t)rd32(d + p); p += 4; }
+                if (fl & 0x4) p += 4;
+                const size_t per = 4 * (!!(fl & 0x100) + !!(fl & 0x200) + !!(fl & 0x400) + !!(fl & 0x800));
+                if (p > x.end || (uint64_t)n * per > x.end - p) return false;
+                *samples += n;
+                bool sized = (fl & 0x200) || haveDef;
+                uint64_t total = 0;
+                if (fl & 0x200) {
+                    const size_t so = 4 * !!(fl & 0x100);
+                    for (uint32_t k = 0; k < n; k++) total += rd32(d + p + k * per + so);
+                } else total = (uint64_t)n * defSize;
+                if (hasOff && fromMoof) { pos = (uint64_t)((int64_t)top[i].start + off); havePos = true; }
+                else if (!hasOff && !havePos) sized = false;   // starts where the data of another track run ends: not known here
+                if (sized && havePos) {
+                    if (pos < mdat->body || pos > mdat->end || total > mdat->end - pos) return false;
+                    pos += total;
+                } else havePos = false;
+            }
+        }
+    }
+    return true;
+}
+
 struct Atsc3Remux::Impl {
+    struct Chunk {
+        std::vector<uint8_t> data;
+        bool samples = false;           // a media segment with samples in it (the demuxer gives packets from it)
+    };
     struct Comp {
         int id = 0;
         std::mutex mu;
         std::condition_variable cv;
-        std::deque<std::vector<uint8_t>> chunks;
+        std::deque<Chunk> chunks;
         size_t pos = 0;                 // read position in chunks.front()
         bool ended = false;
-        AVFormatContext* ic = nullptr;
+        // media segments with samples that the demuxer has read to the end since it gave its last packet: a demuxer that has lost the box
+        // boundaries reads on and gives nothing, and is started again on the next segment
+        std::atomic<int> segsNoPacket{0};
+        bool resync = false;            // the read was stopped for that (guarded by mu)
+        std::map<uint32_t, uint32_t> trex;   // the default sample sizes of the init segment's tracks (guarded by mu)
+        AVFormatContext* ic = nullptr;  // changed (under Impl::pmu) when the demuxer starts again; the old ones are kept until stop()
+        std::vector<AVFormatContext*> oldIc;
         AVIOContext* io = nullptr;
+        std::vector<AVIOContext*> oldIo;
         std::thread th;
         bool opened = false, failed = false;
         std::vector<int> outStream;     // input stream index -> output stream index or -1
@@ -75,16 +203,26 @@ struct Atsc3Remux::Impl {
     std::thread muxThread;
     bool muxStarted = false;
 
+    static constexpr int kLostSegments = 3;
+
     static int readCb(void* opaque, uint8_t* buf, int size) {
         Comp* c = (Comp*)opaque;
         std::unique_lock<std::mutex> lk(c->mu);
         for (;;) {
             if (!c->chunks.empty()) {
+                if (c->pos == 0 && c->segsNoPacket.load() >= kLostSegments) {   // at the start of a segment: the demuxer starts again here
+                    c->resync = true;
+                    return AVERROR_INVALIDDATA;
+                }
                 auto& f = c->chunks.front();
-                int n = (int)std::min<size_t>(size, f.size() - c->pos);
-                std::memcpy(buf, f.data() + c->pos, n);
+                int n = (int)std::min<size_t>(size, f.data.size() - c->pos);
+                std::copy_n(f.data.data() + c->pos, n, buf);
                 c->pos += n;
-                if (c->pos >= f.size()) { c->chunks.pop_front(); c->pos = 0; }
+                if (c->pos >= f.data.size()) {
+                    if (f.samples) c->segsNoPacket++;
+                    c->chunks.pop_front();
+                    c->pos = 0;
+                }
                 return n;
             }
             if (c->ended) return AVERROR_EOF;
@@ -110,14 +248,44 @@ struct Atsc3Remux::Impl {
         return size;
     }
 
-    void demuxLoop(Comp* c) {
+    // A demuxer on the component's input from where it is now. Null when FFmpeg cannot open it.
+    static AVFormatContext* openDemuxer(Comp* c, AVIOContext** io) {
         const int kBuf = 1 << 16;
         uint8_t* buf = (uint8_t*)av_malloc(kBuf);
-        c->io = avio_alloc_context(buf, kBuf, 0, c, &Impl::readCb, nullptr, nullptr);
-        c->ic = avformat_alloc_context();
-        c->ic->pb = c->io;
-        c->ic->flags |= AVFMT_FLAG_CUSTOM_IO;
-        if (avformat_open_input(&c->ic, "", av_find_input_format("mov"), nullptr) < 0) {
+        *io = avio_alloc_context(buf, kBuf, 0, c, &Impl::readCb, nullptr, nullptr);
+        AVFormatContext* ic = avformat_alloc_context();
+        ic->pb = *io;
+        ic->flags |= AVFMT_FLAG_CUSTOM_IO;
+        if (avformat_open_input(&ic, "", av_find_input_format("mov"), nullptr) < 0) return nullptr;   // frees ic
+        return ic;
+    }
+
+    // The demuxer failed or lost the box boundaries (a damaged segment that got past the check in push()): a new one starts on the next
+    // segment, with the init segment in front of it. The streams are those of the same init segment, so the output goes on as it was.
+    // The old demuxer is kept until stop(): the muxer may still be looking at its streams. Returns false when stopped or when it cannot open.
+    bool restartDemuxer(Comp* c) {
+        {
+            std::lock_guard<std::mutex> lk(c->mu);
+            if (c->ended || c->init.empty()) return false;
+            if (c->pos > 0) { c->chunks.pop_front(); c->pos = 0; }   // the rest of the segment it was in
+            c->chunks.push_front(Chunk{c->init, false});
+            c->resync = false;
+            c->segsNoPacket = 0;
+        }
+        AVIOContext* io = nullptr;
+        AVFormatContext* ic = openDemuxer(c, &io);
+        std::lock_guard<std::mutex> lk(pmu);
+        c->oldIo.push_back(c->io);
+        c->io = io;
+        if (!ic) return false;
+        c->oldIc.push_back(c->ic);
+        c->ic = ic;
+        return true;
+    }
+
+    void demuxLoop(Comp* c) {
+        c->ic = openDemuxer(c, &c->io);
+        if (!c->ic) {
             DIAG(413547, "An ATSC 3.0 media component has an initialization segment that FFmpeg cannot open as MP4, so this component is left out of the output.");
             std::lock_guard<std::mutex> lk(pmu);
             c->failed = true; c->done = true;
@@ -146,7 +314,16 @@ struct Atsc3Remux::Impl {
         AVPacket* pkt = av_packet_alloc();
         for (;;) {   // runs until the data is used up: stop() marks the input as ended, so what was delivered is still processed
             int r = av_read_frame(c->ic, pkt);
-            if (r < 0) break;
+            if (r < 0) {
+                bool ended, lost;
+                { std::lock_guard<std::mutex> lk(c->mu); ended = c->ended && c->chunks.empty(); lost = c->resync; }
+                if (ended) break;
+                // not the end of the input: a segment the demuxer could not read. Without a new demuxer this component would give nothing more.
+                DIAG_DEBUG_EVERY(552817, 10.0, "The MP4 demuxer of ATSC 3.0 component %d %s, so it starts again on the next media segment.", c->id, lost ? "read three segments without finding a sample (it lost the box boundaries)" : "stopped on a segment it could not read");
+                if (!restartDemuxer(c)) break;
+                continue;
+            }
+            c->segsNoPacket = 0;
             std::unique_lock<std::mutex> lk(pmu);
             int os = pkt->stream_index < (int)c->outStream.size() ? c->outStream[pkt->stream_index] : -1;
             // a component the output does not hold yet (no stream map: the muxer waits for it or starts again with it): its packets are kept
@@ -251,10 +428,13 @@ struct Atsc3Remux::Impl {
     // (Restart; the stream goes on with new tables), or when none of them has a track that can be played (Nothing).
     RunEnd runOutput(int run, Timeline& tl) {
         std::vector<Comp*> cs, fresh;   // fresh: not in the output before this one
+        std::map<Comp*, AVFormatContext*> ics;
         {
             std::lock_guard<std::mutex> lk(pmu);
             std::lock_guard<std::mutex> l2(mu);
             for (auto& c : comps) if (c.second->opened) { cs.push_back(c.second.get()); if (c.second->outStream.empty()) fresh.push_back(c.second.get()); }
+            // the demuxer of a component may be replaced while this runs (restartDemuxer): its streams are the same, and the old one is kept
+            for (Comp* c : cs) ics[c] = c->ic;
         }
         AVFormatContext* oc = nullptr;
         if (avformat_alloc_output_context2(&oc, nullptr, "mpegts", nullptr) < 0 || !oc) {
@@ -271,9 +451,10 @@ struct Atsc3Remux::Impl {
         std::vector<std::vector<int>> maps(cs.size());
         for (size_t ci = 0; ci < cs.size(); ci++) {
             Comp* c = cs[ci];
-            maps[ci].assign(c->ic->nb_streams, -1);
-            for (unsigned si = 0; si < c->ic->nb_streams; si++) {
-                AVStream* in = c->ic->streams[si];
+            AVFormatContext* ic = ics[c];
+            maps[ci].assign(ic->nb_streams, -1);
+            for (unsigned si = 0; si < ic->nb_streams; si++) {
+                AVStream* in = ic->streams[si];
                 const AVCodecParameters* cp = in->codecpar;
                 if (cp->codec_type != AVMEDIA_TYPE_VIDEO && cp->codec_type != AVMEDIA_TYPE_AUDIO) continue;
                 // AC-4 sound (ATSC A/342-2, sample entry 'ac-4'): the FFmpeg inside OnAir cannot decode it. With the optional AC-4 library it is
@@ -399,7 +580,7 @@ struct Atsc3Remux::Impl {
                     if (c->q.empty()) continue;
                     AVPacket* h = c->q.front();
                     // streams of this component were mapped when its first packet was queued
-                    AVStream* in = c->ic->streams[h->stream_index];
+                    AVStream* in = ics[c]->streams[h->stream_index];
                     const int64_t d0 = dts90(in, h);
                     int64_t d = d0 == INT64_MIN ? 0 : d0;
                     if (!epochBases.empty() && startTop != INT64_MIN && d0 != INT64_MIN && !clocks.count(c)) {
@@ -450,7 +631,7 @@ struct Atsc3Remux::Impl {
                 if (startTop != INT64_MIN && best < startTop && std::find(fresh.begin(), fresh.end(), pick) != fresh.end()) { av_packet_free(&pk); continue; }
                 lastOut[pick] = best;
             }
-            AVStream* in = pick->ic->streams[pk->stream_index];
+            AVStream* in = ics[pick]->streams[pk->stream_index];
             int os = pk->stream_index < (int)pick->outStream.size() ? pick->outStream[pk->stream_index] : -1;
             // a picture stream new to the output starts at a picture that decodes on its own (the first of a segment): the ones before it
             // would only show as broken pictures. A stream that never marks one is let through after a while.
@@ -562,9 +743,12 @@ void Atsc3Remux::push(int id, const std::vector<uint8_t>& data) {
     {
         std::lock_guard<std::mutex> lk(c->mu);
         // an init segment that comes round again (a repeating or looped broadcast) would confuse the running demuxer: it has it already
-        if (data.size() >= 8 && (!memcmp(&data[4], "ftyp", 4) || !memcmp(&data[4], "moov", 4))) {
+        const bool init = data.size() >= 8 && (!memcmp(&data[4], "ftyp", 4) || !memcmp(&data[4], "moov", 4));
+        long samples = 0;
+        if (init) {
             if (!c->init.empty() && c->init == data) return;
             c->init = data;
+            c->trex = trexSizes(data);
             Ac4Dsi dsi;
             int ch = 0;
             if (findAc4InInit(data.data(), data.size(), &dsi, &ch)) {
@@ -581,7 +765,11 @@ void Atsc3Remux::push(int id, const std::vector<uint8_t>& data) {
                 ac4NoteSeen(d);
             }
         }
-        c->chunks.push_back(data);
+        else if (!segmentUsable(data, c->trex, &samples)) {
+            DIAG_DEBUG_EVERY(552818, 10.0, "A media segment of ATSC 3.0 component %d is cut short or damaged (%zu bytes, its boxes do not add up), so it is left out instead of being given to the MP4 demuxer.", id, data.size());
+            return;
+        }
+        c->chunks.push_back(Impl::Chunk{data, samples > 0});
         if (!c->th.joinable()) c->th = dect2::namedThread("onair-a3dmx", [this, c] { p_->demuxLoop(c); });
     }
     c->cv.notify_all();
@@ -633,6 +821,10 @@ void Atsc3Remux::stop() {
         c.second->q.clear();
         if (c.second->ic) avformat_close_input(&c.second->ic);
         if (c.second->io) { av_freep(&c.second->io->buffer); avio_context_free(&c.second->io); }
+        for (auto* ic : c.second->oldIc) avformat_close_input(&ic);
+        for (auto* io : c.second->oldIo) if (io) { av_freep(&io->buffer); avio_context_free(&io); }
+        c.second->oldIc.clear();
+        c.second->oldIo.clear();
     }
 }
 

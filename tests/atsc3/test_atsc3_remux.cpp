@@ -7,12 +7,14 @@
 #include "dect2/atsc3/atsc3_remux.h"
 #include "dect2/audio/ac4_dec.h"
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <set>
 #include <thread>
 #include <vector>
@@ -327,6 +329,113 @@ int main(int argc, char** argv) {
         printf("  late AC-4 init without the library: %d streams, %zu PAT version(s), %ld continuity breaks, %ld of %ld video packets\n", r3.streamCount(), patVersions.size(), ccBreaks, nv, vin);
         CHECK(r3.streamCount() == 1 && patVersions.size() == 1 && ccBreaks == 0, "late AC-4 without the library: the output is not started again");
         CHECK(nv == vin, "late AC-4 without the library: every picture");
+    }
+    // A media segment damaged by a loss on air (cut short, or the start of it lost) among good ones: the picture goes on from the next good
+    // segment. Before, such a segment stopped the component for good: a moof without its mdat could end its demuxer (FFmpeg returned an error on one from the air;
+    // on the segments of this file it goes over it), and a segment
+    // whose mdat claims more bytes than there are made the demuxer read the following segments as the rest of that mdat, after which it never
+    // found a box again and waited for more data in the read callback. The output (and with it the whole transport stream, when the
+    // picture was its only stream) stopped while the segments went on arriving.
+    {
+        // 12 segments of one second: the three of the file, four times over, each round 3 s later, each with a segment type box in front (as
+        // ROUTE delivers them)
+        const uint32_t vts = timescaleOf(vinit);
+        const uint8_t styp[24] = {0, 0, 0, 24, 's', 't', 'y', 'p', 'm', 's', 'd', 'h', 0, 0, 0, 0, 'm', 's', 'd', 'h', 'm', 's', 'i', 'x'};
+        std::vector<std::vector<uint8_t>> segs;
+        for (int round = 0; round < 4; round++)
+            for (auto g : vseg) {
+                size_t pos = 0, keep = g.size();   // up to the end of the mdat (the last one carries the file's mfra)
+                while (pos + 8 <= g.size()) { const uint32_t sz = rd32(&g[pos]); if (sz < 8) break; if (!memcmp(&g[pos + 4], "mdat", 4)) { keep = pos + sz; break; } pos += sz; }
+                g.resize(keep);
+                if (round) shiftTfdt(g, vts, 3 * round);
+                g.insert(g.begin(), styp, styp + sizeof styp);
+                segs.push_back(g);
+            }
+        const long perSeg = vin / (long)vseg.size();
+        // moof only: the bytes up to the end of the moof box
+        auto moofOnly = [](std::vector<uint8_t> g) {
+            for (size_t pos = 0; pos + 8 <= g.size();) { const uint32_t sz = rd32(&g[pos]); if (sz < 8) break; if (!memcmp(&g[pos + 4], "moof", 4)) { g.resize(pos + sz); break; } pos += sz; }
+            return g;
+        };
+        // a base data offset far ahead in the track fragment header: the boxes add up, but the demuxer looks for the samples 64 MB on and
+        // reads every segment that follows on the way there (the check of the segments cannot tell; the demuxer must be started again)
+        auto farBase = [](std::vector<uint8_t> g) {
+            size_t moof = 0, traf = 0;
+            for (size_t i = 4; i + 12 < g.size(); i++) {
+                if (!memcmp(&g[i], "moof", 4)) moof = i - 4;
+                if (!memcmp(&g[i], "traf", 4)) traf = i - 4;
+                if (memcmp(&g[i], "tfhd", 4)) continue;
+                const size_t box = i - 4;
+                uint8_t* f = &g[i + 4];
+                const uint32_t fl = rd32(f) | 1;
+                f[0] = 0; f[1] = (uint8_t)(fl >> 16); f[2] = (uint8_t)(fl >> 8); f[3] = (uint8_t)fl;
+                const uint64_t base = 64ull << 20;
+                std::vector<uint8_t> b(8);
+                for (int k = 0; k < 8; k++) b[k] = (uint8_t)(base >> (56 - 8 * k));
+                g.insert(g.begin() + i + 12, b.begin(), b.end());   // after version/flags and track_ID
+                for (size_t at : {box, traf, moof}) { uint32_t s = rd32(&g[at]) + 8; g[at] = s >> 24; g[at + 1] = s >> 16; g[at + 2] = s >> 8; g[at + 3] = s; }
+                break;
+            }
+            return g;
+        };
+        struct Case { const char* name; std::vector<uint8_t> bad; long minVideo; };
+        std::vector<Case> cases = {
+            {"moof without its mdat", moofOnly(segs[4]), (long)(segs.size() - 1) * perSeg},
+            {"first half of a segment", std::vector<uint8_t>(segs[4].begin(), segs[4].begin() + segs[4].size() / 2), (long)(segs.size() - 1) * perSeg},
+            {"second half of a segment", std::vector<uint8_t>(segs[4].begin() + segs[4].size() / 2, segs[4].end()), (long)(segs.size() - 1) * perSeg},
+            {"samples 64 MB ahead", farBase(segs[4]), (long)(segs.size() - 5) * perSeg},
+        };
+        for (auto& cs : cases) {
+            Atsc3Remux r5;
+            r5.setStartupWaitMs(200);
+            std::vector<uint8_t> ts5;
+            std::mutex m5;
+            std::thread rd([&] {
+                uint8_t buf[8192];
+                for (;;) { int k = r5.read(buf, sizeof buf); if (k <= 0) break; std::lock_guard<std::mutex> l(m5); ts5.insert(ts5.end(), buf, buf + k); }
+            });
+            r5.push(1, vinit);
+            for (size_t i = 0; i < segs.size(); i++) {
+                r5.push(1, i == 4 ? cs.bad : segs[i]);
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            }
+            // what came out while the input is still open (stop() would end the input and let a stuck demuxer finish)
+            size_t before = 0;
+            for (int i = 0, same = 0; i < 200 && same < 10; i++) {   // until nothing more for half a second
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                size_t a; { std::lock_guard<std::mutex> l(m5); a = ts5.size(); }
+                same = a == before && a > 0 ? same + 1 : 0;
+                before = a;
+            }
+            std::vector<uint8_t> early;
+            { std::lock_guard<std::mutex> l(m5); early = ts5; }
+            r5.stop();
+            rd.join();
+            long nv = 0;
+            int64_t vl = -1;
+            MemIn m6{early.data(), early.size()};
+            unsigned char* b6 = (unsigned char*)av_malloc(1 << 16);
+            AVIOContext* io6 = avio_alloc_context(b6, 1 << 16, 0, &m6, memRead, nullptr, nullptr);
+            AVFormatContext* c6 = avformat_alloc_context();
+            c6->pb = io6;
+            if (!early.empty() && avformat_open_input(&c6, "", av_find_input_format("mpegts"), nullptr) >= 0) {
+                AVPacket* q = av_packet_alloc();
+                while (av_read_frame(c6, q) >= 0) {
+                    AVStream* st = c6->streams[q->stream_index];
+                    if (st->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) { nv++; if (q->pts != AV_NOPTS_VALUE) vl = av_rescale_q(q->pts, st->time_base, AVRational{1, 1000}); }
+                    av_packet_unref(q);
+                }
+                av_packet_free(&q);
+                avformat_close_input(&c6);
+            } else avformat_free_context(c6);
+            av_freep(&io6->buffer);
+            avio_context_free(&io6);
+            // the last picture of the 12 s is at 2 s (the output's start) + 12 s - one frame
+            printf("  damaged segment 5 of 12 (%s): %ld of %ld video packets before the input ended, the last at %lld ms\n", cs.name, nv, (long)segs.size() * perSeg, (long long)vl);
+            std::array<char, 160> msg;
+            snprintf(msg.data(), msg.size(), "damaged segment (%s): the picture goes on after it", cs.name);
+            CHECK(nv >= cs.minVideo && vl >= 13000, msg.data());
+        }
     }
     printf(fails ? "atsc3 remux: FAILED\n" : "atsc3 remux: ok\n");
     return fails ? 1 : 0;
