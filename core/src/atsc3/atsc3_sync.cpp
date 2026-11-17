@@ -490,12 +490,14 @@ struct Atsc3Sync::Pool {
     std::deque<Job> jobs;
     std::map<long, Done> done;
     long nextSeq = 0, nextCommit = 0;
+    long base = 0;                       // frames the receiver had committed when the pool started: job seq is frame number base + seq
     int inflight = 0, maxInflight = 2;
     bool committing = false, stop = false;
     double secDecode = 0;
     std::vector<std::thread> th;
 
-    Pool(Atsc3Receiver* r, int n) : rx(r), maxInflight(2 * n) {
+    // no more frames in flight than the receiver's decode plan looks back (Atsc3Receiver::decodePlan)
+    Pool(Atsc3Receiver* r, int n) : rx(r), base(r->framesCommitted()), maxInflight(std::min(2 * n, Atsc3Receiver::kPlanLag)) {
         for (int i = 0; i < n; i++) th.emplace_back(dect2::namedThread("onair-a3sync", [this] { run(); }));
     }
     ~Pool() {
@@ -528,7 +530,8 @@ struct Atsc3Sync::Pool {
             }
             const auto t0 = std::chrono::steady_clock::now();
             DECT2_STAGE_VAR(stFr, "a3.frame");
-            Done d{decodeFrame(j.y.data(), j.y.size(), j.bs), j.bs};
+            const DecodePlan plan = rx->decodePlan(base + j.seq);
+            Done d{decodeFrame(j.y.data(), j.y.size(), j.bs, &plan), j.bs};
             stFr.stop();
             std::unique_lock<std::mutex> lk(m);
             secDecode += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();

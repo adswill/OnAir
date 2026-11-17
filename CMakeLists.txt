@@ -2623,6 +2623,10 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_atsc3_frame PRIVATE dect2core)
   add_test(NAME atsc3_frame COMMAND test_atsc3_frame)
 
+  add_executable(test_atsc3_plp_backoff tests/atsc3/test_atsc3_plp_backoff.cpp)   # a PLP that decodes nothing costs only a few probe blocks per frame
+  target_link_libraries(test_atsc3_plp_backoff PRIVATE dect2core)
+  add_test(NAME atsc3_plp_backoff COMMAND test_atsc3_plp_backoff)
+
   add_executable(test_atsc3_receiver tests/atsc3/test_atsc3_receiver.cpp)
   target_link_libraries(test_atsc3_receiver PRIVATE dect2core)
   add_test(NAME atsc3_receiver COMMAND test_atsc3_receiver ${ONAIR_ROOT}/tests/data/route_video.mp4 ${ONAIR_ROOT}/tests/data/route_audio.mp4)
