@@ -17,6 +17,7 @@
 #include <deque>
 #include <map>
 #include <mutex>
+#include <set>
 #include <thread>
 
 extern "C" {
@@ -43,6 +44,8 @@ struct Atsc3Remux::Impl {
         std::vector<int> outStream;     // input stream index -> output stream index or -1
         std::deque<AVPacket*> q;        // packets waiting for the muxer (guarded by Impl::pmu)
         bool done = false;
+        bool av = false, video = false;   // the init segment has a picture or sound track / a picture track (set when opened)
+        bool playable = false;          // and one of them can go into the output (not only AC-4 sound without the AC-4 library)
         std::vector<uint8_t> init;      // the init segment already given to the demuxer
         bool ac4 = false;               // the init segment has an AC-4 sample entry ('ac-4')
         int ac4Channels = 0;            // its channel count (a hint)
@@ -57,6 +60,7 @@ struct Atsc3Remux::Impl {
     // packet exchange between the demuxer threads and the muxer thread
     std::mutex pmu;
     std::condition_variable pcv;
+    int opens = 0;                      // components opened so far (guarded by pmu): the muxer looks for new ones when it changes
 
     // output bytes
     std::mutex omu;
@@ -121,9 +125,22 @@ struct Atsc3Remux::Impl {
             return;
         }
         // the init segment carries the codec parameters; no probing of the media that follows
+        bool playable = false;
+        for (unsigned si = 0; si < c->ic->nb_streams && !playable; si++) {
+            const AVCodecParameters* cp = c->ic->streams[si]->codecpar;
+            if (cp->codec_type == AVMEDIA_TYPE_VIDEO) playable = true;
+            else if (cp->codec_type == AVMEDIA_TYPE_AUDIO) playable = !isAc4(c, cp) || ac4Convertible();
+        }
         {
             std::lock_guard<std::mutex> lk(pmu);
             c->opened = true;
+            c->playable = playable;
+            for (unsigned si = 0; si < c->ic->nb_streams; si++) {
+                const int t = c->ic->streams[si]->codecpar->codec_type;
+                if (t == AVMEDIA_TYPE_VIDEO) c->video = true;
+                if (t == AVMEDIA_TYPE_VIDEO || t == AVMEDIA_TYPE_AUDIO) c->av = true;
+            }
+            opens++;
             pcv.notify_all();
         }
         AVPacket* pkt = av_packet_alloc();
@@ -132,12 +149,8 @@ struct Atsc3Remux::Impl {
             if (r < 0) break;
             std::unique_lock<std::mutex> lk(pmu);
             int os = pkt->stream_index < (int)c->outStream.size() ? c->outStream[pkt->stream_index] : -1;
-            if (os < 0 && !hdr) {   // the header is not written yet: keep early packets, the stream map is applied by the muxer
-                AVPacket* cp = av_packet_alloc();
-                av_packet_ref(cp, pkt);
-                c->q.push_back(cp);
-                pcv.notify_all();
-            } else if (os >= 0) {
+            // a component the output does not hold yet (no stream map: the muxer waits for it or starts again with it): its packets are kept
+            if (os >= 0 || (c->outStream.empty() && c->playable)) {
                 AVPacket* cp = av_packet_alloc();
                 av_packet_ref(cp, pkt);
                 c->q.push_back(cp);
@@ -154,6 +167,17 @@ struct Atsc3Remux::Impl {
         pcv.notify_all();
     }
 
+    // AC-4 sound (ATSC A/342-2, sample entry 'ac-4')
+    static bool isAc4(const Comp* c, const AVCodecParameters* cp) {
+        return cp->codec_type == AVMEDIA_TYPE_AUDIO && (cp->codec_id == AV_CODEC_ID_AC4 || cp->codec_tag == MKTAG('a', 'c', '-', '4') || c->ac4);
+    }
+    // whether AC-4 sound can be converted for the output now (the optional AC-4 library and an AC-3 encoder are there)
+    static bool ac4Convertible() {
+        if (!ac4Available()) return false;
+        Ac4ToAc3 probe;
+        return probe.open(2);
+    }
+
     void fail(const std::string& m) { std::lock_guard<std::mutex> lk(mu); if (err.empty()) err = m; }
 
     static int64_t dts90(AVStream* s, const AVPacket* p) {
@@ -161,30 +185,82 @@ struct Atsc3Remux::Impl {
         return t == AV_NOPTS_VALUE ? INT64_MIN : av_rescale_q(t, s->time_base, AVRational{1, 90000});
     }
 
-    void muxLoop() {
-        // wait for the init segments
+    // Waits for the components of the first output: until every known one is open and a picture and a sound track are there, or startupWaitMs
+    // after the first data when at least one has a picture or sound track. A component whose init segment comes later (lost or late on air)
+    // is taken in by starting the output again (runOutput). Returns false when stopped.
+    bool waitFirst() {
         auto t0 = std::chrono::steady_clock::now();
-        std::vector<Comp*> cs;
-        {
-            std::unique_lock<std::mutex> lk(pmu);
-            for (;;) {
-                if (stopping) return;
-                int open = 0, total = 0, bad = 0;
-                { std::lock_guard<std::mutex> l2(mu); for (auto& c : comps) { total++; open += c.second->opened; bad += c.second->failed; } }
-                bool first = open > 0;
-                auto waited = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
-                if (open + bad >= total && total > 0 && open > 0) break;
-                if (first && waited > startupWaitMs) break;
-                pcv.wait_for(lk, std::chrono::milliseconds(50));
+        std::unique_lock<std::mutex> lk(pmu);
+        for (;;) {
+            if (stopping) return false;
+            int open = 0, total = 0, bad = 0;
+            bool av = false, video = false, audio = false;
+            {
+                std::lock_guard<std::mutex> l2(mu);
+                for (auto& c : comps) {
+                    total++; open += c.second->opened; bad += c.second->failed;
+                    if (c.second->opened && c.second->av) { av = true; video = video || c.second->video; audio = audio || !c.second->video; }
+                }
             }
+            auto waited = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count();
+            if (av && open + bad >= total && video && audio) return true;
+            if (av && waited > startupWaitMs) return true;
+            pcv.wait_for(lk, std::chrono::milliseconds(50));
         }
-        { std::lock_guard<std::mutex> l2(mu); for (auto& c : comps) if (c.second->opened) cs.push_back(c.second.get()); }
+    }
+
+    // an open component that the running output does not hold and that would add a stream to it (caller holds pmu). One that would add
+    // nothing (AC-4 sound without the AC-4 library) does not start the output again: that would only break the stream for no gain.
+    bool newComponent() {
+        std::lock_guard<std::mutex> l2(mu);
+        for (auto& c : comps) if (c.second->opened && c.second->playable && c.second->outStream.empty()) return true;
+        return false;
+    }
+
+    // The clock of the output, kept when the output starts again so that the components stay in step and the timestamps go on.
+    struct Timeline {
+        int64_t base = INT64_MIN;
+        struct CompClock { int64_t lastRaw = INT64_MIN; int epoch = 0; };
+        std::map<Comp*, CompClock> clocks;
+        std::vector<int64_t> epochBases;
+        std::map<Comp*, int64_t> lastOut;   // the output time of the last packet taken from each component
+        int64_t topOut = INT64_MIN;         // the latest time written on any stream
+        bool paced = false;
+        std::chrono::steady_clock::time_point wall0;
+        int64_t dts0 = 0;
+    };
+    enum class RunEnd { Ended, Restart, Nothing };
+
+    void muxLoop() {
+        if (!waitFirst()) return;
+        Timeline tl;
+        for (int run = 0;; run++) {
+            const RunEnd e = runOutput(run, tl);
+            if (e == RunEnd::Ended) break;
+            if (e == RunEnd::Nothing) {   // nothing to play yet: wait for another component (a picture whose init segment was lost)
+                std::unique_lock<std::mutex> lk(pmu);
+                while (!stopping && !newComponent()) pcv.wait_for(lk, std::chrono::milliseconds(100));
+                if (stopping) break;
+            }
+            DIAG_DEBUG_EVERY(415873, 10.0, "An ATSC 3.0 media component started after the transport stream output (its init segment was late or lost), so the output starts again with it (output %d).", run + 2);
+        }
+        finishOut();
+    }
+
+    // One transport stream output over the components open now. Ends when all of them have ended, or when another component opens
+    // (Restart; the stream goes on with new tables), or when none of them has a track that can be played (Nothing).
+    RunEnd runOutput(int run, Timeline& tl) {
+        std::vector<Comp*> cs, fresh;   // fresh: not in the output before this one
+        {
+            std::lock_guard<std::mutex> lk(pmu);
+            std::lock_guard<std::mutex> l2(mu);
+            for (auto& c : comps) if (c.second->opened) { cs.push_back(c.second.get()); if (c.second->outStream.empty()) fresh.push_back(c.second.get()); }
+        }
         AVFormatContext* oc = nullptr;
         if (avformat_alloc_output_context2(&oc, nullptr, "mpegts", nullptr) < 0 || !oc) {
             DIAG_ERROR(689053, "FFmpeg has no MPEG transport stream muxer, so the ATSC 3.0 service cannot be remuxed for playback.");
             fail("the transport stream muxer is not available");
-            finishOut();
-            return;
+            return RunEnd::Ended;
         }
         uint8_t* obuf = (uint8_t*)av_malloc(1 << 16);
         AVIOContext* oio = avio_alloc_context(obuf, 1 << 16, 1, this, nullptr, &Impl::writeCb, nullptr);
@@ -192,17 +268,17 @@ struct Atsc3Remux::Impl {
         oc->flags |= AVFMT_FLAG_CUSTOM_IO;
         std::vector<AVBSFContext*> bsfs;
         std::map<int, std::unique_ptr<Ac4ToAc3>> xcodes;   // output stream index -> AC-4 to AC-3 converter
-        std::vector<std::vector<AVStream*>> inStreams(cs.size());
+        std::vector<std::vector<int>> maps(cs.size());
         for (size_t ci = 0; ci < cs.size(); ci++) {
             Comp* c = cs[ci];
-            c->outStream.assign(c->ic->nb_streams, -1);
+            maps[ci].assign(c->ic->nb_streams, -1);
             for (unsigned si = 0; si < c->ic->nb_streams; si++) {
                 AVStream* in = c->ic->streams[si];
                 const AVCodecParameters* cp = in->codecpar;
                 if (cp->codec_type != AVMEDIA_TYPE_VIDEO && cp->codec_type != AVMEDIA_TYPE_AUDIO) continue;
                 // AC-4 sound (ATSC A/342-2, sample entry 'ac-4'): the FFmpeg inside OnAir cannot decode it. With the optional AC-4 library it is
                 // decoded here and goes on as AC-3; without it the component is left out (and said so), the picture and other sound still play.
-                if (cp->codec_type == AVMEDIA_TYPE_AUDIO && (cp->codec_id == AV_CODEC_ID_AC4 || cp->codec_tag == MKTAG('a', 'c', '-', '4') || c->ac4)) {
+                if (isAc4(c, cp)) {
                     ac4NoteSeen("");
                     auto xc = std::make_unique<Ac4ToAc3>();
                     AVStream* os = nullptr;
@@ -213,10 +289,9 @@ struct Atsc3Remux::Impl {
                         os->codecpar->bit_rate = xc->outBitRate();
                         av_channel_layout_default(&os->codecpar->ch_layout, xc->outChannels());
                         os->time_base = AVRational{1, 90000};
-                        c->outStream[si] = os->index;
+                        maps[ci][si] = os->index;
                         if ((int)bsfs.size() <= os->index) bsfs.resize(os->index + 1, nullptr);
                         xcodes[os->index] = std::move(xc);
-                        inStreams[ci].push_back(in);
                     } else {
                         ac4NoteDropped();
                         DIAG_DEBUG_EVERY(683372, 10.0, "The AC-4 sound of an ATSC 3.0 component could not be opened (no AC-4 decoder library or no output stream), so that sound is left out.");
@@ -232,7 +307,7 @@ struct Atsc3Remux::Impl {
                 }
                 os->codecpar->codec_tag = 0;
                 os->time_base = AVRational{1, 90000};
-                c->outStream[si] = os->index;
+                maps[ci][si] = os->index;
                 // Video: the parameter sets in front of every picture, so that a receiver that joins at any point can start decoding
                 // (MP4 keeps them in the header and a transport stream normally repeats them at every random access point only)
                 if ((int)bsfs.size() <= os->index) bsfs.resize(os->index + 1, nullptr);
@@ -249,44 +324,73 @@ struct Atsc3Remux::Impl {
                         }
                     }
                 }
-                inStreams[ci].push_back(in);
             }
+        }
+        auto freeOut = [&]() {
+            for (auto* b : bsfs) if (b) av_bsf_free(&b);
+            avio_flush(oio);
+            av_freep(&oio->buffer);
+            avio_context_free(&oio);
+            avformat_free_context(oc);
+        };
+        {   // the stream maps; also for a component without a playable track, so that it is not taken for a new one
+            std::lock_guard<std::mutex> lk(pmu);
+            for (size_t ci = 0; ci < cs.size(); ci++) cs[ci]->outStream = maps[ci];
+        }
+        // the picture streams of components new to the output start at a key frame; those that were in the output before go on as they were
+        std::vector<char> needKey(oc->nb_streams, 0);
+        std::vector<int> keyWait(oc->nb_streams, 0);
+        for (size_t ci = 0; ci < cs.size(); ci++) {
+            if (std::find(fresh.begin(), fresh.end(), cs[ci]) == fresh.end()) continue;
+            for (int o : maps[ci]) if (o >= 0 && oc->streams[o]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) needKey[o] = 1;
         }
         // a component that has nothing to put in the output (timed metadata, captions) never delivers a packet: it must not be waited for
         cs.erase(std::remove_if(cs.begin(), cs.end(), [](Comp* c) { for (int o : c->outStream) if (o >= 0) return false; return true; }), cs.end());
         if (oc->nb_streams == 0) {
-            DIAG_ERROR(410006, "None of the ATSC 3.0 media components holds a picture or sound track that can be remuxed (%zu components, %zu dropped), so nothing is played.", cs.size(), dropped.size());
+            DIAG_ERROR(410006, "None of the ATSC 3.0 media components holds a picture or sound track that can be remuxed (%zu components, %zu dropped), so nothing is played until one arrives.", cs.size(), dropped.size());
             fail(!dropped.empty() ? "only AC-4 sound in the stream, and no AC-4 decoder library is installed" : "no picture or sound in the stream");
-            finishOut();
-            avformat_free_context(oc);
-            return;
+            freeOut();
+            return RunEnd::Nothing;
         }
-        if (avformat_write_header(oc, nullptr) < 0) {
+        // the tables of a new output get a new version, so that a player that keeps the old ones takes the new streams
+        AVDictionary* opts = nullptr;
+        av_dict_set_int(&opts, "tables_version", run & 31, 0);
+        const int wh = avformat_write_header(oc, &opts);
+        av_dict_free(&opts);
+        if (wh < 0) {
             DIAG_ERROR(406134, "FFmpeg could not write the transport stream header for the ATSC 3.0 service, so nothing is played.");
             fail("cannot start the transport stream");
-            finishOut();
-            avformat_free_context(oc);
-            return;
+            freeOut();
+            return RunEnd::Ended;
         }
+        { std::lock_guard<std::mutex> lk(mu); err.clear(); }
         nStreams = (int)oc->nb_streams;
         hdr = true;
-        int64_t base = INT64_MIN;
-        struct CompClock { int64_t lastRaw = INT64_MIN; int epoch = 0; };
-        std::map<Comp*, CompClock> clocks;
-        std::vector<int64_t> epochBases;
-        std::map<Comp*, int64_t> lastOut;   // the output time of the last packet taken from each component
+        int64_t& base = tl.base;
+        auto& clocks = tl.clocks;
+        auto& epochBases = tl.epochBases;
+        auto& lastOut = tl.lastOut;
+        int64_t& topOut = tl.topOut;
+        bool& paced = tl.paced;
+        auto& wall0 = tl.wall0;
+        int64_t& dts0 = tl.dts0;
+        const int64_t startTop = topOut;   // packets of a new component from before this point are too late for the output
         std::vector<int64_t> lastDts(oc->nb_streams, INT64_MIN);
         std::map<int, int64_t> lastAc3;   // last written time of each converted (AC-4) stream;
         long idle = 0;
-        bool paced = false;
-        std::chrono::steady_clock::time_point wall0;
-        int64_t dts0 = 0;
+        std::set<Comp*> silent;   // components waited for in vain, until they send again
+        int seenOpens = -1;
+        RunEnd end = RunEnd::Ended;
         for (;;) {
             Comp* pick = nullptr;
             int64_t best = INT64_MAX;
             AVPacket* pk = nullptr;
             {
                 std::unique_lock<std::mutex> lk(pmu);
+                if (!stopping && opens != seenOpens) {
+                    seenOpens = opens;
+                    if (newComponent()) { end = RunEnd::Restart; break; }
+                }
                 bool any = false, allDone = true;
                 for (Comp* c : cs) { if (!c->q.empty()) any = true; if (!c->done || !c->q.empty()) allDone = false; }
                 if (allDone) break;
@@ -296,14 +400,27 @@ struct Atsc3Remux::Impl {
                     AVPacket* h = c->q.front();
                     // streams of this component were mapped when its first packet was queued
                     AVStream* in = c->ic->streams[h->stream_index];
-                    int64_t d = dts90(in, h);
-                    if (d == INT64_MIN) d = 0;
+                    const int64_t d0 = dts90(in, h);
+                    int64_t d = d0 == INT64_MIN ? 0 : d0;
+                    if (!epochBases.empty() && startTop != INT64_MIN && d0 != INT64_MIN && !clocks.count(c)) {
+                        // A component new to a running output: find the clock it runs on (the newest one its time fits, within 30 s of where the
+                        // output is). One that fits none (another clock, for example after a service change) goes on from where the output is,
+                        // instead of having its packets dropped as too old, or written far ahead, until its time catches up.
+                        const int64_t kNear = 90000LL * 30;
+                        int found = -1;
+                        for (int e = (int)epochBases.size() - 1; e >= 0 && found < 0; e--) {
+                            const int64_t t = d - epochBases[e];
+                            if (t > startTop - kNear && t < startTop + kNear) found = e;
+                        }
+                        if (found < 0) { epochBases.push_back(d - (startTop + 3600)); found = (int)epochBases.size() - 1; }
+                        clocks[c] = Timeline::CompClock{d, found};
+                    }
                     if (!epochBases.empty()) {   // compare on the output clock: after a clock jump the old and the new clock must not be mixed
-                        const CompClock& cc = clocks[c];
+                        const Timeline::CompClock& cc = clocks[c];
                         int ep = cc.epoch;
                         if (cc.lastRaw != INT64_MIN && d < cc.lastRaw - 90000 * 5) ep++;
                         if (ep < (int)epochBases.size()) d -= epochBases[ep];
-                        else { int64_t top = 0; for (int64_t v : lastDts) top = std::max(top, v); d = top + 3600; }
+                        else d = (topOut == INT64_MIN ? 0 : topOut) + 3600;
                     }
                     if (d < best) { best = d; pick = c; }
                 }
@@ -312,21 +429,35 @@ struct Atsc3Remux::Impl {
                 // while (segment delivery is bursty: a component may be a segment behind another). Once a component has been written past this time
                 // its next packet cannot be older, and nothing needs to wait for it: without that every packet waited for the audio, which arrives in
                 // bursts and is mostly consumed, and the stream ran far slower than real time.
-                bool needWait = false;
+                // A component that was waited for the full time and still sent nothing is not waited for again until it sends: otherwise every
+                // packet would wait the full time for a component that stopped.
+                std::vector<Comp*> waitFor;
                 for (Comp* c : cs) {
-                    if (!c->q.empty() || c->done) continue;
+                    if (!c->q.empty() || c->done || silent.count(c)) continue;
                     auto lo = lastOut.find(c);
-                    if (lo == lastOut.end() || lo->second < best) needWait = true;
+                    if (lo == lastOut.end() || lo->second < best) waitFor.push_back(c);
                 }
-                if (needWait && !stopping) { if (++idle < 9) { pcv.wait_for(lk, std::chrono::milliseconds(300)); continue; } }
-                lastOut[pick] = best;
+                if (!waitFor.empty() && !stopping) {
+                    if (++idle < 9) { pcv.wait_for(lk, std::chrono::milliseconds(300)); continue; }
+                    silent.insert(waitFor.begin(), waitFor.end());
+                }
                 idle = 0;
+                for (Comp* c : cs) if (!c->q.empty()) silent.erase(c);
                 pk = pick->q.front();
                 pick->q.pop_front();
                 pcv.notify_all();
+                // a component taken in by a new output brings the packets it kept while it waited: those older than what was written are dropped
+                if (startTop != INT64_MIN && best < startTop && std::find(fresh.begin(), fresh.end(), pick) != fresh.end()) { av_packet_free(&pk); continue; }
+                lastOut[pick] = best;
             }
             AVStream* in = pick->ic->streams[pk->stream_index];
             int os = pk->stream_index < (int)pick->outStream.size() ? pick->outStream[pk->stream_index] : -1;
+            // a picture stream new to the output starts at a picture that decodes on its own (the first of a segment): the ones before it
+            // would only show as broken pictures. A stream that never marks one is let through after a while.
+            if (os >= 0 && os < (int)needKey.size() && needKey[os]) {
+                if (!(pk->flags & AV_PKT_FLAG_KEY) && ++keyWait[os] < 600) { av_packet_free(&pk); continue; }
+                needKey[os] = 0;
+            }
             if (os >= 0) {
                 if (base == INT64_MIN) base = best - 90000 * 2;   // start two seconds in: priming frames and reordered pictures must not get negative timestamps
                 AVStream* ostr = oc->streams[os];
@@ -334,14 +465,12 @@ struct Atsc3Remux::Impl {
                 // the broadcast clock jumped back (a looped recording or a restarted encoder): carry on from where the output stopped.
                 // Each component notices the jump on its own, because one can still be sending old-clock packets when the other has restarted.
                 int64_t raw = pk->dts != AV_NOPTS_VALUE ? pk->dts : pk->pts;
-                CompClock& cc = clocks[pick];
+                Timeline::CompClock& cc = clocks[pick];
                 if (raw != AV_NOPTS_VALUE) {
                     if (cc.lastRaw != INT64_MIN && raw < cc.lastRaw - 90000 * 5) {
                         cc.epoch++;
                         if (cc.epoch >= (int)epochBases.size()) {
-                            int64_t top = INT64_MIN;
-                            for (int64_t v : lastDts) top = std::max(top, v);
-                            epochBases.push_back(raw - (top == INT64_MIN ? 0 : top + 3600));
+                            epochBases.push_back(raw - (topOut == INT64_MIN ? 0 : topOut + 3600));
                         }
                     }
                     cc.lastRaw = raw;
@@ -358,12 +487,14 @@ struct Atsc3Remux::Impl {
                 }
                 if (pk->pts != AV_NOPTS_VALUE && pk->dts != AV_NOPTS_VALUE && pk->pts < pk->dts) pk->pts = pk->dts;
                 lastDts[os] = pk->dts;
+                if (pk->dts != AV_NOPTS_VALUE) topOut = std::max(topOut, pk->dts);
                 if (realtime.load() && pk->dts != AV_NOPTS_VALUE) {   // release the packet when its time has come
                     using clk = std::chrono::steady_clock;
                     if (!paced) { paced = true; wall0 = clk::now() + std::chrono::milliseconds(latencyMs.load()); dts0 = pk->dts; }
                     auto target = wall0 + std::chrono::microseconds((pk->dts - dts0) * 1000000 / 90000);
                     auto now = clk::now();
                     if (now > target + std::chrono::milliseconds(500)) wall0 += now - target;   // behind (nothing arrived for a while): start again from here
+                    else if (target > now + std::chrono::seconds(5)) { wall0 -= target - now; target = now; }   // the timestamps jumped ahead: no waiting for them
                     while (!stopping.load() && clk::now() < target) std::this_thread::sleep_for(std::min<clk::duration>(target - clk::now(), std::chrono::milliseconds(20)));
                 }
                 pk->stream_index = os;
@@ -397,12 +528,8 @@ struct Atsc3Remux::Impl {
             av_packet_free(&pk);
         }
         av_write_trailer(oc);
-        for (auto* b : bsfs) if (b) av_bsf_free(&b);
-        avio_flush(oio);
-        av_freep(&oio->buffer);
-        avio_context_free(&oio);
-        avformat_free_context(oc);
-        finishOut();
+        freeOut();
+        return end;
     }
 
     void finishOut() {
