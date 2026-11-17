@@ -10398,9 +10398,9 @@ end not seen yet	尚未看到结束
 ends in 	结束于 
 energy on the channels, no decodable packet yet	信道上有能量，还没有可解码的数据包
 enhancing...	增强中……
-ensemble dots	集合点
+ensemble dots	节目群标记点
 ensemble dots##sp40d	集合点##sp40d
-ensemble members	集合成员
+ensemble members	节目群成员
 ensemble members##sp40m	集合成员##sp40m
 enter at least one recipient	至少输入一个收件人
 enter your call sign in Settings first	请先在设置中输入你的呼号
@@ -10458,7 +10458,7 @@ frequency	频率
 frequency %+.1f kHz	频率 %+.1f kHz
 frequency error	频率误差
 frequency kept (no clear peak)	频率保留（无明确峰值）
-from the dial	来自拨号
+from the dial	来自调谐刻度
 from the published description	来自公开的描述
 from you	来自你
 gain now %+.1f dB (no boost of the noise between transmissions)	当前增益 %+.1f dB（不提升传输间隔期间的噪声）
