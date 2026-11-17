@@ -74,3 +74,6 @@ Your radios and antennas, entered once: modes pick the right ones and the mode l
 does not look like a reference of this program
 dial
 echo found, equaliser on
+ensemble dots
+ensemble members
+from the dial
