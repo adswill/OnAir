@@ -8447,7 +8447,7 @@ Russia	俄罗斯
 S-band CCSDS satellites	S 频段 CCSDS 卫星
 S/N against dispersion measure	信噪比对色散量
 S/N against period	信噪比对周期
-S4 comes from the receiver's 1 Hz C/N0: only slow, strong scintillation shows. Multipath is judged at the end of each pass.	S4 来自接收机的 1 Hz C/N0：只有慢速强闪烁才显现。多径在每个过境结束时评估。
+S4 comes from the receiver's 1 Hz C/N0: only slow, strong scintillation shows. Multipath is judged at the end of each pass.	S4 根据接收机的 1 Hz C/N0 计算：只有缓慢且强烈的电离层闪烁才会显现。多径在每次过境结束时评估。
 SB	SB
 SC	SC
 SDR++ running as a server (sdrpp --server). It takes one client at a time: close SDR++'s own client first. Its source's settings (gain mode, bias tee, AGC, ...) show up under Radio settings once connected.	SDR++ 以服务器方式运行（sdrpp --server）。一次只接受一个客户端：请先关闭 SDR++ 自己的客户端。连接后，其信号源的设置（增益模式、偏置供电、AGC 等）会显示在「电台设置」下。
@@ -8552,7 +8552,7 @@ Saved analysis	已保存的分析
 Saved for %s. Applied to every transmission on this radio.	已为 %s 保存。应用于此电台的每次发射。
 Saved groups	已保存的组
 Saved messages	已保存的消息
-Saved to the memory table (group Fast scan).	已保存到存储表（Fast scan 组）。
+Saved to the memory table (group Fast scan).	已保存到存储表（快速扫描组）。
 Saved.	已保存。
 Saved. Attach both files to a GitHub issue or the signal sample library:	已保存。把两个文件都附到 GitHub 问题或信号样本库：
 Saved. It runs on every package from now on; see the Decoders view.	已保存。从现在起它对每个数据包都生效；见「译码器」视图。
@@ -8578,7 +8578,7 @@ Scan starred	扫描标星项
 Scan with the paired nodes	与配对节点一起扫描
 Scan##chvscan	扫描##chvscan
 Scanning	扫描中
-Scatter, 144.140 MHz	散射，144.140 MHz
+Scatter, 144.140 MHz	流星余迹散射，144.140 MHz
 Scene %dx%d: %zu drawn items, %d links and %d programs (not run)	场景 %dx%d：%zu 个绘制项、%d 个链接和 %d 个程序（未运行）
 Schedule	日程
 Schedule file	节目表文件
