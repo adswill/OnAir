@@ -50,3 +50,4 @@ No ensemble in the capture yet (needs at least 3 MHz of Band III).
 Open http://this-computer:port/stream.ts in VLC, OBS (media source) or ffplay. Without a key, anyone who can reach the port can watch while it is on.
 Payload (hex)
 Periods are from memory and drift with the Earth's motion; the search covers 0.02 % around the period. Check the ATNF pulsar catalogue before a long run.
+Plays the first of the chosen channels that opens, stays on it until it has been quiet for the hang time, then goes on.
