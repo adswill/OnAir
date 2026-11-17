@@ -9403,7 +9403,7 @@ The reference data OnAir uses. Your own file layered over a dataset wins over th
 The round button at the top left starts and stops the receiver. Nothing is received while it is stopped.	左上角的圆形按钮启动和停止接收机。停止时收不到任何内容。
 The same key on every station: packets are signed with it and anything else is dropped. Nothing is sent anywhere but to the server you name.	每个台站使用同一密钥：数据包用它签名，其他一律丢弃。除你指定的服务器外不发送任何内容。
 The same position as in every other mode (ADS-B antenna position, Passes, Map). It is marked on the map below.	与其他所有模式相同的位置（ADS-B 天线位置、过境、地图）。它已标在下方地图上。
-The sample rate actually handed over by the radio, over the last seconds. A warning appears below 97% of the set rate.	电台最近几秒实际交付的采样率。低于设定值 97% of 时显示警告。
+The sample rate actually handed over by the radio, over the last seconds. A warning appears below 97% of the set rate.	电台最近几秒实际交付的采样率。低于设定采样率的 97% 时会显示警告。
 The sample rate sets how wide the spectrum is. A wider view shows more signals at once.	采样率决定频谱有多宽。越宽一次显示的信号越多。
 The satellite or link. Picking one tunes to its frequency and sets its modulation and frame format.	卫星或链路。选择一个会调谐到其频率并设置调制和帧格式。
 The satellite retransmits the uplink carriers around 1679.85 MHz: one dish hears a hemisphere of platforms. Tested on simulated signals only.	卫星在 1679.85 MHz 附近转发上行载波：一口天线锅可听到半球内的所有平台。仅在模拟信号上测试。
@@ -9457,7 +9457,7 @@ The time between two keyframes (I-frames). A receiver can start or recover only 
 The time, as set in Settings > Time display	时间，按「设置 > 时间显示」中的设置
 The times could be off by about %.0f s. Update the orbits.	时间可能偏差约 %.0f 秒。请更新轨道。
 The top graph is the spectrum: left is lower frequency, right is higher, up is a stronger signal. Below it the waterfall shows the same over time, newest at the top.\nA signal is a bright bump or stripe that stands out from the grainy noise floor. A steady stripe is a broadcast; short dashes are bursts of data or speech.	上方图是频谱：左低右高，向上信号更强。下方瀑布图显示同样内容随时间的变化，最新在顶部。\n信号是从颗粒状噪声底上突出的亮块或亮条纹。稳定条纹是广播；短划是数据或语音突发。
-The top shows the spectrum, and the waterfall scrolls its history below. Click a signal to tune to it.	上方显示频谱，瀑布图在下方滚动历史。点击信号即可调谐过去。
+The top shows the spectrum, and the waterfall scrolls its history below. Click a signal to tune to it.	上方显示频谱，下方瀑布图滚动显示频谱历史。点击某个信号即可调谐到该信号。
 The total TS rate with signalling and null packets. Set it to what the DVB link carries, or let it follow the estimate.	含信令和空包的 TS 总码率。设为 DVB 链路承载量，或跟随估算值。
 The total rate of the transport stream: video, audio, tables and null packets that pad it to a constant rate. Keep it at or below the net bitrate of the DVB link, e.g. DVB-T 8 MHz, 64-QAM, code rate 2/3, guard interval 1/4 carries about 19.9 Mbit/s; QPSK 1/2 about 5 Mbit/s. Auto uses the estimate on the right plus a small margin.	传输流总码率：视频、音频、表和填充为恒定速率的空包。保持不超过 DVB 链路净码率，例如 DVB-T 8 MHz、64-QAM、码率 2/3、保护间隔 1/4 约承载 19.9 Mbit/s；QPSK 1/2 约 5 Mbit/s。自动取右侧估算值加少量余量。
 The transmitter reads this generator's stream by this name. Several generators can run at once (the tabs at the top); each has its own name: generator:1, generator:2 ...	发射机按此名字读取本发生器的流。可同时运行多个发生器（顶部标签页）；每个有自己的名字：generator:1、generator:2……
@@ -9495,7 +9495,7 @@ The words you meet on a radio, in plain language. Type to search.	你在电台�
 The world map with the chosen satellites' orbits, footprints and day and night	世界地图，显示所选卫星的轨道、覆盖区和昼夜
 The zoom transform asks for about four bins per pixel of the view at most this many. Lower saves CPU on very wide windows.	缩放变换要求视图每像素约 4 个 bin，上限为此值。调低可在很宽的窗口上节省 CPU。
 Their report	对方报告
-Their report of you minus your SNR of them: above 0 they hear you better than you hear them	对方报你的信噪比减去你听对方的信噪比：大于 0 表示他们听你比你在他们听得清
+Their report of you minus your SNR of them: above 0 they hear you better than you hear them	对方报告的你的信噪比，减去你接收对方信号的信噪比：结果大于 0 表示对方听你比你听对方更清楚。
 Then only stations signed in with your GitHub account can use the name, and your badge can show next to it.	此后只有用你的 GitHub 账号登录的台站才能使用该名称，你的徽章可以显示在它旁边。
 Then start OnAir again.	然后重新启动 OnAir。
 Theoretical range (terrain horizon)	理论范围（地形地平线）
