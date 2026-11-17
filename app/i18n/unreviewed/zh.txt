@@ -59,3 +59,5 @@ Saved to the memory table (group Fast scan).
 S4 comes from the receiver's 1 Hz C/N0: only slow, strong scintillation shows. Multipath is judged at the end of each pass.
 Send one weather station's values to Weather Underground and CWOP every few minutes. Off until you switch it on; your station id, key and callsign. Windy and AWEKAS are not supported.
 Short hands-on lessons on the real controls. Each one lights up the part to use and notices when you have done it. Skip any you know already.
+Start the receiver first: the doctor looks at the live signal.
+Starts the receiver by itself at the rise, follows the Doppler and puts the receiver back at the set. Cancel it in View > Passes.
