@@ -225,9 +225,9 @@ AMATEUR - DIGITAL	业余无线电 - 数字
 AMATEUR - VOICE & PACKET	业余无线电 - 语音与分组
 HF UTILITY	短波业务
 GENERAL & TOOLS	通用与工具
-T2 and T, automatic	T2 与 T，自动
+T2 and T, automatic	DVB-T2 / DVB-T 自动识别
 8-VSB, North America	8-VSB，北美
-NextGen TV	NextGen TV
+NextGen TV	下一代数字电视
 Japan, Brazil	日本、巴西
 China, Hong Kong, Cuba	中国、香港、古巴
 Cable	有线
@@ -238,19 +238,19 @@ Stereo and RDS	立体声与 RDS
 SW, MW, VHF	短波、中波、甚高频
 USA, FM and AM	美国，调频与调幅
 China digital radio	中国数字广播
-Aircraft, 1090 MHz	飞机，1090 MHz
-Interrogations, 1030 MHz	询问信号，1030 MHz
-Aircraft messages, VHF	飞机消息，甚高频
-Data link, 136.9 MHz	数据链，136.9 MHz
-Data link, 8.9 MHz	数据链，8.9 MHz
-AM voice, 118-137 MHz	调幅语音，118-137 MHz
+Aircraft, 1090 MHz	航空器监视信号，1090 MHz
+Interrogations, 1030 MHz	二次雷达询问信号，1030 MHz
+Aircraft messages, VHF	航空器数据链报文，甚高频
+Data link, 136.9 MHz	航空数据链，136.9 MHz
+Data link, 8.9 MHz	短波航空数据链，8.9 MHz
+AM voice, 118-137 MHz	航空调幅语音，118–137 MHz
 Radial, 108-118 MHz	径向方位，108-118 MHz
 Localizer and glide slope	航向信标与下滑道
-Drones, 2.4 GHz	无人机，2.4 GHz
+Drones, 2.4 GHz	无人机远程识别，2.4 GHz
 Ships, 162 MHz	船舶，162 MHz
-Ship warnings, 518 kHz	船舶警报，518 kHz
-Ship calls, 2187.5 kHz	船舶呼叫，2187.5 kHz
-Weather charts, HF	天气图，短波
+Ship warnings, 518 kHz	船舶航行安全警报，518 kHz
+Ship calls, 2187.5 kHz	海事数字选择性呼叫，2187.5 kHz
+Weather charts, HF	短波气象传真图
 GPS, GLONASS, BeiDou	GPS、GLONASS、北斗
 Satellites, 1622 MHz	卫星，1622 MHz
 Satellites, 137 MHz	卫星，137 MHz
@@ -272,26 +272,26 @@ Railway, 921 - 925 MHz	铁路，921 - 925 MHz
 Pagers, 512-2400 bd	寻呼机，512-2400 波特
 Pagers, 1600-6400	寻呼机，1600-6400
 Sensors, 433 / 868 MHz	传感器，433 / 868 MHz
-IoT, 868.1 MHz	物联网，868.1 MHz
-LoRa mesh, 869.525 MHz	LoRa 网状网络，869.525 MHz
-LoRa mesh, 869.618 MHz	LoRa 网状网络，869.618 MHz
-Advertising, 2.4 GHz	广播包，2.4 GHz
-Beacons, 2.4 / 5 / 6 GHz	信标，2.4 / 5 / 6 GHz
-Balloons, 403 MHz	探空气球，403 MHz
-LF and HF time codes	长波与短波时间码
+IoT, 868.1 MHz	物联网设备，868.1 MHz
+LoRa mesh, 869.525 MHz	LoRa 网状通信，869.525 MHz
+LoRa mesh, 869.618 MHz	LoRa 网状通信，869.618 MHz
+Advertising, 2.4 GHz	广播信号，2.4 GHz
+Beacons, 2.4 / 5 / 6 GHz	Wi-Fi 网络信标，2.4 / 5 / 6 GHz
+Balloons, 403 MHz	气象探空仪，403 MHz
+LF and HF time codes	长波与短波授时信号
 Chirp sweeps, 0 - 30 MHz	线性调频扫描，0 - 30 MHz
-Hydrogen line, 1420 MHz	氢线，1420 MHz
-Beacons, 14.0956 MHz	信标，14.0956 MHz
-Keyboard chat, 14.070 MHz	键盘聊天，14.070 MHz
+Hydrogen line, 1420 MHz	中性氢 21 厘米谱线，1420 MHz
+Beacons, 14.0956 MHz	WSPR 信标，14.0956 MHz
+Keyboard chat, 14.070 MHz	键盘文本通信，14.070 MHz
 Messaging, 14.078 MHz	消息，14.078 MHz
 Teletype, 14.080 MHz	电传，14.080 MHz
 Morse, 14.020 MHz	莫尔斯码，14.020 MHz
 Pictures, 14.230 MHz	图像，14.230 MHz
 Digital SSTV, 14.233 MHz	数字 SSTV，14.233 MHz
-Link establishment, 14.109 MHz	链路建立，14.109 MHz
-NFM / AM / SSB / CW	窄带调频 / 调幅 / 单边带 / 等幅报
-Spectrum, waterfall, sweep	频谱、瀑布图、扫频
-Sweep, 1 - 6000 MHz	扫频，1 - 6000 MHz
+Link establishment, 14.109 MHz	短波链路建立，14.109 MHz
+NFM / AM / SSB / CW	NFM / AM / SSB / CW 接收
+Spectrum, waterfall, sweep	频谱、瀑布图与扫频
+Sweep, 1 - 6000 MHz	全频段扫频，1–6000 MHz
 Aero, L-band	航空，L 波段
 EGC, L-band	EGC，L 波段
 SRC	信号源
@@ -618,7 +618,7 @@ Drones, 2.4 / 5.8 GHz	无人机，2.4 / 5.8 GHz
 Elsewhere	其他地区
 Europe	欧洲
 FM radio	FM 广播
-Files: audio and IQ	文件：音频和 IQ
+Files: audio and IQ	音频与 IQ 录制文件
 Fill under the line	填充曲线下方
 Find "SDRplay API Service" and press Start (or Restart).	找到“SDRplay API Service”，点击启动（或重新启动）。
 Fix the address of the network radio (host:port).	请修正网络电台的地址（主机：端口）。
@@ -643,8 +643,8 @@ Install the udev rules (install-udev-rules.sh), then unplug and replug the radio
 Install the udev rules: run install-udev-rules.sh from the OnAir folder (the .deb does it).	安装 udev 规则：运行 OnAir 文件夹中的 install-udev-rules.sh（.deb 包会自动完成）。
 Install the udev rules: run install-udev-rules.sh from the OnAir folder (the .deb package does it for you).	安装 udev 规则：运行 OnAir 文件夹中的 install-udev-rules.sh（.deb 包会为您完成）。
 Intensity (dB)	强度 (dB)
-IoT, 2.4 GHz	物联网，2.4 GHz
-IoT, sub-GHz	物联网，sub-GHz
+IoT, 2.4 GHz	物联网设备，2.4 GHz
+IoT, sub-GHz	1 GHz 以下物联网设备
 It is streaming to another program: stop it there first.	它正在向另一个程序传输数据：请先在那里停止。
 Japan	日本
 Journaline	Journaline
@@ -696,7 +696,7 @@ Or install OnAir's blacklist file (the .deb package does it).	或安装 OnAir �
 Or set the UHD_IMAGES_DIR variable to the folder with the images.	或将变量 UHD_IMAGES_DIR 设置为存放镜像的文件夹。
 Own accent colour	自定义强调色
 PSK Reporter	PSK Reporter
-Pagers, tones and FFSK	寻呼机、音调和 FFSK
+Pagers, tones and FFSK	多音寻呼信号与 FFSK
 Pause	暂停
 Peak markers	峰值标记
 Plug a radio into the computer that runs the SpyServer, and restart the SpyServer.	请把电台接到运行 SpyServer 的电脑上，然后重启 SpyServer。
@@ -707,7 +707,7 @@ Press the refresh button next to the radio list.	点击电台列表旁边的刷�
 Press the refresh button next to the source.	点击信号源旁边的刷新按钮。
 Put the library in the OnAir codecs folder (button below).	把库文件放入 OnAir 编解码器文件夹（下方按钮）。
 Put the panels back to their automatic sizes (drag the bars between panels to resize them)	将面板恢复为自动大小（拖动面板之间的分隔条可调整大小）
-Radar chirps, HF	雷达啁啾，短波
+Radar chirps, HF	短波海洋雷达线性调频信号
 Radio settings (%d changed)###radioset	电台设置（已更改 %d 项）###radioset
 Radio settings###radioset	电台设置###radioset
 Receivers at once	同时接收器数量
@@ -801,8 +801,8 @@ Up: radio = RF + LO	上变频：电台 = RF + LO
 Update the HackRF firmware (the page below has the steps; the file comes with the HackRF software).	更新 HackRF 固件（下方页面有步骤；固件文件随 HackRF 软件提供）。
 Wait a minute after plugging it in, then press the refresh button.	插入后等待一分钟，然后点击刷新按钮。
 Waterfall: colour map, intensity range, speed and pause (then drag or use the wheel to look back)	瀑布图：色图、强度范围、速度和暂停（之后可拖动或用滚轮回看）
-Wave buoys, HF	波浪浮标，短波
-Weather alerts, 162.55 MHz	天气警报，162.55 MHz
+Wave buoys, HF	海浪浮标遥测，短波
+Weather alerts, 162.55 MHz	气象预警广播，162.55 MHz
 Weather pictures, 1.7 GHz	气象图像，1.7 GHz
 What to add to a level in dBFS to get dBm for this radio (its calibration: a known signal into the antenna port shows it). Also in the radio's settings.	要加到 dBFS 电平上才能得到这台电台 dBm 的数值（即其校准值：向天线口输入已知信号即可得出）。也可在电台设置中修改。
 Your callsign	您的呼号
@@ -837,7 +837,7 @@ CFO	CFO
 Ctrl + / Ctrl - / Ctrl 0	Ctrl + / Ctrl - / Ctrl 0
 DVB-T	DVB-T
 EVM %.1f dB	EVM %.1f dB
-Es'hail-2, 10.49 GHz	Es'hail-2, 10.49 GHz
+Es'hail-2, 10.49 GHz	Es'hail-2 卫星，10.49 GHz
 FIC	FIC
 GI	GI
 LNB	LNB
@@ -1067,7 +1067,7 @@ STOP ALL	全部停止
 Sample rate	采样率
 Search signals...	搜索信号...
 Settings	设置
-Signal	信号
+Signal	信号特征
 Stops the transmission or test, the carrier and any pending start, and gives the radio back.	停止发射或测试、载波和任何待处理的启动，并释放电台。
 TEST - NO RF	测试 - 无射频
 Test (no RF)	测试（无射频)
@@ -1282,7 +1282,7 @@ Not used: the Reed-Solomon bytes of the frame (a frame with a wrong check byte i
 Carrier	载波
 Sync	同步
 The test signal carries the computer's time with a time packet every 12 s: the clock offset should stay near zero (the simulator's own buffering shows in it).	测试信号每 12 秒携带一次计算机时间的时间包：时钟偏差应保持接近零（模拟器自身的缓冲会体现在其中）。
-LW time service, Poland	长波授时服务（波兰）
+LW time service, Poland	波兰长波授时服务
 Predict positions	预测位置
 Fills the gaps between position reports: the aircraft moves smoothly and, when messages stop, is dead-reckoned along its track (and along the route when a message named the destination). Predicted positions are drawn as a ghost with a dashed ring.	填补位置报告之间的空白：飞机平滑移动，消息中断后沿航迹（若消息给出了目的地，则沿航路）推算位置。预测位置以带虚线圈的虚影绘制。
 uncertainty	不确定度
@@ -2026,7 +2026,7 @@ Last 24 hours (UTC), 15 minute cells, darker: fewer stations	最近 24 小时（
 %s asks for these permissions:	%s 请求以下权限：
 A crash or a hang of the plugin then only ends its helper process. Takes effect the next time the plugin starts.	插件崩溃或卡死时只会结束它的辅助进程。下次启动插件时生效。
 Add decoders and actions without rebuilding OnAir: install, enable and set up plugins	无需重新编译 OnAir 即可添加解码器和动作：安装、启用并设置插件
-Add-ons	扩展
+Add-ons	扩展插件
 Allow	允许
 Asks for	请求
 Asks for no permissions.	不请求任何权限。
@@ -2436,7 +2436,7 @@ Likely source	可能的来源
 To MHz	至 MHz
 Spacing kHz	间隔 kHz
 Alerts	报警
-Event	事件
+Event	事件监测
 dB above baseline	高于基线 dB
 new signal	新信号
 noise floor up	底噪上升
@@ -2565,7 +2565,7 @@ sync tip is the highest frequency	同步头是最高频率
 over the noise beside them	高于旁边的噪声
 5.8 GHz bands A, B, E, F, R (Raceband) and L, and the 1.2 GHz plan. Needs a wide radio: 20 Msps (a HackRF). The picture is the frequency of the carrier; PAL or NTSC is found by itself.	5.8 GHz 频段 A、B、E、F、R (Raceband）、L 以及 1.2 GHz 方案。需要宽带电台：20 Msps (HackRF）。图像就是载波的频率；PAL 或 NTSC 会自动识别。
 no transmitter heard: scan the channels, or tune to one	未听到发射机：请扫描信道或调谐到某一信道
-Transmitter	发射机
+Transmitter	发射机状态
 Video sync	视频同步
 FPV video	FPV 视频
 system	制式
@@ -2768,7 +2768,7 @@ Meters	表计
 meters	表计
 868 MHz: S1 868.3, T1 and C1 868.95, R2 868.03 - 868.15 MHz; 169 MHz: N1 169.40625 - 169.46875 MHz. Encrypted payloads are never decoded.	868 MHz：S1 868.3，T1 和 C1 868.95，R2 868.03 - 868.15 MHz；169 MHz：N1 169.40625 - 169.46875 MHz。加密的有效载荷绝不会被解码。
 The test signal sends six simulated meters (S1, T1, C1 in both formats, R2) on the 868 MHz channels, one with an encrypted payload.	测试信号在 868 MHz 信道上发送六个模拟表计 (S1、T1、两种格式的 C1、R2），其中一个带有加密有效载荷。
-Meters, 868 / 169 MHz	表计，868 / 169 MHz
+Meters, 868 / 169 MHz	无线表计数据，868 / 169 MHz
 5-tone	五音
 2-tone	双音
 sub-audible	亚音频
@@ -2845,14 +2845,14 @@ Last burst	最近的突发
 Input	输入
 start the receiver to see beacons	启动接收机以查看信标
 The test signal repeats five made-up beacons every 3 seconds (real ones send every 50 seconds): an EPIRB, a PLB, an ELT, a maritime user beacon and an EPIRB in the southern hemisphere.	测试信号每 3 秒重复五个虚构的信标（真实信标每 50 秒发送一次）：一个 EPIRB、一个 PLB、一个 ELT、一个海事用户信标和一个南半球的 EPIRB。
-Distress beacons, 406 MHz	遇险信标，406 MHz
+Distress beacons, 406 MHz	卫星遇险示位标，406 MHz
 %.0f Hz above the dial (%.3f kHz)	拨盘频率以上 %.0f Hz(%.3f kHz)
 Interleave	交织
 Line	行
 Long	长
 MT63 comes in three widths, 500, 1000 and 2000 Hz (5, 10 and 20 characters per second). Automatic looks for all three.	MT63 有三种带宽:500、1000 和 2000 Hz(每秒 5、10 和 20 个字符）。自动模式会同时搜索这三种。
 Play the sideband (dial + 200 Hz to 3.8 kHz) on the sound card; decoding is the same either way	通过声卡播放边带（拨盘频率 + 200 Hz 至 3.8 kHz）；两种情况下解码相同
-Robust chat, 14.1095 MHz	稳健聊天，14.1095 MHz
+Robust chat, 14.1095 MHz	抗干扰文本通信，14.1095 MHz
 Short	短
 The 64 carriers: the level of each, relative to the strongest	64 个载波：各自相对于最强者的电平
 The long interleave spreads every character over 64 symbols, the short one over 32: the long one survives longer fades and bursts, the short one has less delay. Automatic decodes both and shows the one with clean codewords.	长交织把每个字符分散到 64 个符号，短交织分散到 32 个：长交织能承受更长的衰落和突发干扰，短交织延迟更小。自动模式同时解码两者，并显示码字干净的那个。
@@ -2978,14 +2978,14 @@ tones heard	听到的音调
 tone quality	音调质量
 FSQ speeds: 1.5, 2, 3, 4.5 and 6 baud. Automatic looks for all five; the band is 290 Hz wide at every speed.	FSQ 速度:1.5、2、3、4.5 和 6 波特。自动会寻找全部五种；任何速度下频带宽度都是 290 Hz。
 IFKP speeds: 0.5, 1.0 and 2.0 (1.95, 3.9 and 7.8 baud). Automatic looks for all three; the band is 387 Hz wide at every speed.	IFKP 速度:0.5、1.0 和 2.0(1.95、3.9 和 7.8 波特）。自动会寻找全部三种；任何速度下频带宽度都是 387 Hz。
-Directed chat, 14.105 MHz	定向聊天，14.105 MHz
+Directed chat, 14.105 MHz	定向文本通信，14.105 MHz
 Keyboard chat, 14.083 MHz	键盘聊天，14.083 MHz
 25 Hz pilot	25 Hz 导频
 Audio width	音频带宽
 Auto switches to stereo when the 25 Hz pilot is there. Mono plays L + R on both sides. Stereo uses the quadrature part whatever the pilot says.	自动：有 25 Hz 导频时切换为立体声。单声道：两侧都播放 L + R。立体声：无论导频如何都使用正交部分。
 Left and right audio level (dBFS, the last 30 s on the right)	左右声道音频电平 (dBFS，右侧为最近 30 秒)
 MONO	单声道
-MW stereo, 531 - 1602 kHz	中波立体声，531 - 1602 kHz
+MW stereo, 531 - 1602 kHz	中波立体声，531–1602 kHz
 Mono	单声道
 Mute the noise when the carrier is weaker than 4 dB over it	载波比噪声高出不足 4 dB 时静音
 NO CARRIER	无载波
@@ -3124,10 +3124,10 @@ locked, waiting for the sync	已锁定，等待同步
 The GOES and Meteosat data collection system: river gauges, weather stations, tide gauges and buoys send a short report on a 1.5 kHz channel of 401.7 to 402.1 MHz, at 100, 300 or 1200 bps. The 8-digit hex address names the platform. The receiver tries every bit rate and coding on every carrier it finds.	GOES和Meteosat数据收集系统：水位计、气象站、潮位计和浮标在401.7至402.1 MHz的1.5 kHz信道上以100、300或1200 bps发送简短报告。8位十六进制地址标识平台。接收机会对找到的每个载波尝试所有比特率和编码。
 with a steady carrier on another channel	在另一信道上加入稳定载波
 The test signal is three platforms on channels 60, 100 and 140 that each send a short report every 14 to 18 seconds.	测试信号为信道60、100和140上的三个平台，各自每14至18秒发送一份简短报告。
-Platform reports, 401.85 MHz	平台报告，401.85 MHz
+Platform reports, 401.85 MHz	卫星数据采集平台报告，401.85 MHz
 Codes	代码
 start the receiver to see the codes	启动接收机以查看代码
-Squawk and altitude, 1090 MHz	应答机编码与高度，1090 MHz
+Squawk and altitude, 1090 MHz	应答机识别码与气压高度，1090 MHz
 Mode A is the squawk, Mode C the altitude in 100 ft steps. A reply does not say which of the two it is: a code shows as A/C until it can only be a squawk or is matched to a Mode S aircraft by its squawk or its altitude.	A 模式是应答机编码（squawk），C 模式是以 100 英尺为步进的高度。应答本身不会说明是哪一种：代码显示为 A/C，直到它只可能是应答机编码，或按编码或高度与某架 Mode S 飞机匹配。
 Receive only: item trackers are recognised from their public advertisements. OnAir never connects to one, sends to one or reads its owner's data. Identifiers stay in memory for 30 minutes after a tracker was last heard, are shown as the last two address bytes only and are never saved.	仅接收：物品追踪器通过其公开广播被识别。OnAir 从不连接追踪器、不向其发送任何内容，也不读取其所有者的数据。标识符在最后一次收到后仅在内存中保留 30 分钟，只显示地址的最后两个字节，且从不保存。
 your own	你自己的
@@ -3161,7 +3161,7 @@ Alert after	警报时间
 How long a tracker must stay with the receiver before the alert.	追踪器在发出警报前必须与接收机相伴多久。
 Near level	近距电平
 The averaged level from which a tracker counts as near. The radio's level, not a calibrated distance.	追踪器被视为靠近的平均电平。这是电台的电平，不是校准过的距离。
-Trackers, 2.4 GHz	追踪器，2.4 GHz
+Trackers, 2.4 GHz	蓝牙物品追踪器，2.4 GHz
 Telemetry	遥测
 start the receiver to see the beacon	启动接收机以查看信标
 No narrow carrier found. Tune so that the beacon lies inside the capture: a Ku-band beacon seen through an LNB is usually within a few hundred kHz of the centre.	未找到窄带载波。请调谐使信标落在采集范围内：通过 LNB 接收的 Ku 波段信标通常位于中心附近几百 kHz 以内。
@@ -3178,7 +3178,7 @@ bit rate	比特率
 other lines	其他谱线
 A satellite beacon is a carrier, sometimes phase modulated with telemetry, that ground stations use to measure the link. The carrier is followed in frequency and level; the telemetry is recovered as raw frames and the frame length is learned from their repetition. The layout of a given satellite's frames is not decoded.	卫星信标是一种载波，有时用遥测对其进行相位调制，地面站用它来测量链路。程序按频率和电平跟踪载波；遥测被恢复为原始帧，帧长度则根据帧的重复规律学习得到。特定卫星的帧结构不会被解码。
 The test signal is a carrier 236 kHz off the centre, drifting like an LNB, with a second carrier 545 kHz above it and 4800 bit/s bi-phase telemetry on a 48 kHz subcarrier, in frames of 256 bytes.	测试信号是偏离中心 236 kHz、像 LNB 一样漂移的载波，其上方 545 kHz 处有第二个载波，并在 48 kHz 副载波上以双相码携带 4800 bit/s 的遥测，帧长 256 字节。
-Carrier, drift, telemetry frames	载波、漂移、遥测帧
+Carrier, drift, telemetry frames	载波频率、频率漂移与遥测帧
 decoded	已解码
 estimated	估计
 unknown meaning	含义未知
@@ -3688,8 +3688,8 @@ stations	电台
 sweep range	扫描范围
 sweep rate	扫描速率
 sweeps counted	已计数的扫描
-AX.25, upper sideband, HF	AX.25，上边带，短波
-Analog scrambler, narrow FM	模拟扰频器，窄带调频
+AX.25, upper sideband, HF	AX.25，短波上边带
+Analog scrambler, narrow FM	窄带调频模拟语音扰频
 Emergency beacon, AM	紧急信标，调幅
 Receive only. Fleet Broadcast is a 16 channel, 75 Bd multiplex sent as 1200 Bd differential BPSK from UHF military SATCOM satellites. Channel 0 is for synchronisation; the other channels are usually random-looking, encrypted data. This screen finds the carrier, the clock and the frame and shows what each channel looks like. Nothing is decoded and nothing is decrypted.	仅接收。舰队广播（Fleet Broadcast）是以 1200 Bd 差分 BPSK 从 UHF 军用卫星发送的 16 信道、75 Bd 复用。信道 0 用于同步；其他信道通常是随机外观的加密数据。此界面查找载波、时钟和帧，并显示每个信道的内容。不解码任何内容，也不解密任何内容。
 sync pattern (repeats)	同步图案（重复）
@@ -3728,7 +3728,7 @@ The three Fleet Broadcast carriers listed on r00t.cz. The satellite's Doppler sh
 Invert bits	比特取反
 The bit polarity is not published. Switch it when the idle channels look swapped.	比特极性未公开。空闲信道看起来对调时请切换。
 Link	链路
-16 channel SATCOM multiplex	16 信道卫星通信复用
+16 channel SATCOM multiplex	16 路卫星通信信道复用
 Start the receiver.	请启动接收机。
 Listening for 16 equally spaced carriers. CP16 is read by eye on a waterfall: the picture appears here once the carriers and their rows are found (about 10 seconds of signal).	正在监听 16 个等间隔载波。CP16 在瀑布图上用肉眼判读：找到载波及其行后，画面会显示在这里（约需 10 秒信号）。
 Dot size	点大小
@@ -3752,7 +3752,7 @@ Font file	字体文件
 Use this font	使用此字体
 Font loaded.	字体已加载。
 Font:	字体：
-Waterfall text, HF	瀑布图文字，短波
+Waterfall text, HF	短波瀑布图文字信号
 bottom	底部
 top	顶部
 per column, newest on the right	按列排列，最新的在右侧
@@ -3769,12 +3769,12 @@ could not write to the data folder	无法写入数据文件夹
 Event list	事件列表
 Detection threshold (0 = automatic)	检测阈值（0 = 自动）
 Schumann transients, Jove and CALLISTO bursts: dB over the background. Whistlers: path score. Moon echo and beacon openings: sigma over the noise. Lower finds weaker events and more false ones.	舒曼瞬态、木星射电暴和 CALLISTO 射电暴：以高于背景噪声的分贝数表示。哨声信号：以传播路径评分表示。月面回波和信标开放：以高于噪声的标准差倍数表示。数值越低，越容易检测到较弱事件，但误报也会增多。
-ELF, 7.83 Hz	ELF，7.83 Hz
-VLF, 1 - 10 kHz	VLF，1 - 10 kHz
-EME echo, 144 MHz and up	EME 回波，144 MHz 及以上
-Jupiter and Sun, 20.1 MHz	木星和太阳，20.1 MHz
-Solar bursts, 45 - 870 MHz	太阳射电爆发，45 - 870 MHz
-Beacon openings, VHF	信标开通，VHF
+ELF, 7.83 Hz	极低频，7.83 Hz
+VLF, 1 - 10 kHz	甚低频，1–10 kHz
+EME echo, 144 MHz and up	月面反射通信回波，144 MHz 及以上
+Jupiter and Sun, 20.1 MHz	木星与太阳射电观测，20.1 MHz
+Solar bursts, 45 - 870 MHz	太阳射电暴，45–870 MHz
+Beacon openings, VHF	甚高频信标传播状况
 One radio: control channel and calls together	单台电台：控制信道与通话兼顾
 Start a P25, Motorola Type II, EDACS or MPT 1327 receiver on the control channel: the calls inside the capture are followed at the same time, with no second radio.	在控制信道上启动 P25、Motorola Type II、EDACS 或 MPT 1327 接收机：同时跟踪采集范围内的通话，无需第二台电台。
 Following %d of %d voice slots from one capture: %.4f MHz, %.2f Msps	正在从同一段采集中跟踪 %d / %d 个语音时隙：%.4f MHz，%.2f Msps
@@ -3920,9 +3920,9 @@ verified	已验证
 What leaves this computer	哪些数据会离开这台电脑
 The update check (when on) sends one HTTPS request to api.github.com, or to your mirror, with the header User-Agent: OnAir/<version>. GitHub therefore sees your IP address and the app version, nothing else. The plug-in Store (View > Plugins > Store) contacts its registry only when you press Refresh, open a plug-in's page or install one: HTTPS requests to the registry address with the header User-Agent: OnAir-Store/<version>; that server sees your IP address and the app version, nothing else. Sending your station to the map server and the Discord status are opt-in and off until you turn them on. The HFDL live ground-station list (below) is off until you turn it on.	更新检查（开启时）向 api.github.com 或您的镜像发送一次 HTTPS 请求，请求头为 User-Agent: OnAir/<version>。因此 GitHub 会看到您的 IP 地址和应用版本，仅此而已。插件商店（视图 > 插件 > 商店）仅在您按“刷新”、打开插件页面或安装插件时联系其注册表：向注册表地址发送 HTTPS 请求，请求头 User-Agent: OnAir-Store/<version>；该服务器会看到您的 IP 地址和应用版本，仅此而已。向地图服务器发送电台位置和 Discord 状态均为自主选择，开启前不会发送。HFDL 实时地面站列表（下方）同理。
 Add your own decoders as plug-ins (a native library plus a manifest). Plug-ins are listed in the mode list under PLUGINS. They run native code with this program's rights: install only ones you trust. The Store tab installs signed plug-ins from a registry when you ask (nothing is fetched by itself).	以插件形式添加您自己的解码器（原生库加清单）。插件列在模式列表的 PLUGINS 组中。它们以本程序的权限运行原生代码：只安装您信任的插件。“商店”标签页按您的要求从注册表安装签名插件（不会自动获取任何内容）。
-Aviation, ILS markers	航空，ILS 指点标
-Utility, FSK modems	业务通信，FSK 调制解调器
-Aviation, SSR interrogations	航空，SSR 询问
+Aviation, ILS markers	航空 ILS 指点信标
+Utility, FSK modems	专用通信 FSK 调制解调器
+Aviation, SSR interrogations	航空二次监视雷达询问信号
  (from the neighbouring hours)	（来自相邻时段）
 %.1f minutes ago	%.1f 分钟前
 A different frequency is best in	最佳频率在
@@ -3943,11 +3943,11 @@ Best now	当前最佳
 Blind scan and dish pointing	盲扫与天线指向
 Blind sectors (heard on both sides, nothing in between)	盲区（两侧都听到，中间没有）
 Built from the decodes of this session. Heard: callsigns in the messages, newest first. Band summary: spots in the last 30 minutes per band, with the farthest one and the directions it is open to (needs your position and the stations' locators). Clear frequency: the widest gap in 200 - 2900 Hz for the even and the odd slot, from the last decodes: call there to avoid sitting on somebody. Suggested band: the busiest of the last hour, every band still revisited every 30 minutes.	由本次会话的解码构建。已听到：消息中的呼号，最新的在前。波段摘要：最近 30 分钟各波段的 spot 数，及最远台和波段开通的方向（需要您的位置和电台的网格定位）。空闲频率：根据最近解码，偶数与奇数时隙在 200 - 2900 Hz 中最宽的间隙：在那里呼叫可避免压到别人。建议波段：最近一小时最繁忙的波段，每个波段仍每 30 分钟回访一次。
-Burst finder	突发查找器
+Burst finder	突发信号检测
 Bursts of the same beacon ID grouped. A real beacon repeats about every 50 seconds and, if it carries a position, sends it again; a 5 second echo or a single burst is not flagged. Self-test bursts are counted separately. Receive only: do not rely on this for safety.	按相同信标 ID 分组的突发。真实信标约每 50 秒重复一次，且若带有位置会再次发送；5 秒的回波或单个突发不会被标记。自检突发单独计数。仅接收：请勿据此判断安全。
 Busiest now	当前最繁忙
 Busy hours	繁忙时段
-Buzz train timing	蜂鸣列车时序
+Buzz train timing	蜂鸣脉冲序列与时序
 C/N	C/N
 CQ callers only##d40cwh	仅 CQ 呼叫##d40cwh
 CQ callers only##d40ftxh	仅 CQ 呼叫##d40ftxh
@@ -3961,7 +3961,7 @@ Channel use	信道使用
 Classifier	分类器
 Classifier: no regular line code found.	分类器：未找到规则的线路编码。
 Clear frequency	空闲频率
-Command	命令
+Command	读写指令
 Counts, per 25 kHz cell and hour of the day, how often a signal was there. Saved between runs and merged over days. A signal in a cell that was almost always quiet at this hour raises an alert.	按 25 kHz 网格和一天中的小时统计信号出现的频率。在运行之间保存并跨天合并。某个网格在此小时几乎总是安静、现在却出现信号时会发出警报。
 Coverage by bearing and ship types	按方位和船舶类型的覆盖
 Cumulative share	累计占比
@@ -3969,7 +3969,7 @@ DX opening alarm	DX 开通警报
 Dish pointing aid	天线指向辅助
 Distance km	距离 km
 EIRP %.1f dBm, path loss %.1f dB, received %.1f dBm, margin %+.1f dB, free-space range at zero margin %.1f km	EIRP %.1f dBm，路径损耗 %.1f dB，接收 %.1f dBm，余量 %+.1f dB，零余量自由空间距离 %.1f km
-Emitter	发射体
+Emitter	辐射源
 Ensemble changes	节目集变更
 Fade margin dB	衰落余量 dB
 Farthest nm	最远 海里
@@ -3981,7 +3981,7 @@ Good	良好
 Heard stations, band summary and clear frequency	已听到的电台、波段摘要与空闲频率
 ID	ID
 Incidents (one row per beacon)	事件（每个信标一行）
-Interference	干扰
+Interference	干扰信号
 Keep an activity map	保留活动地图
 Kept for this session; 24 hours of reports.	仅本次会话保留；24 小时的报告。
 Last 50 min	最近 50 分钟
@@ -3993,7 +3993,7 @@ Link budget, ramp and SWR	链路预算、功率斜坡与 SWR
 Look at this	查看此处
 Mean SNR	平均 SNR
 Median gap s	中位间隔 s
-Meteor echoes	流星回波
+Meteor echoes	流星雷达回波
 Names: put talkgroups.csv (decimal id, name; or a RadioReference export) in the data folder.	名称：把 talkgroups.csv（十进制 ID、名称；或 RadioReference 导出文件）放入数据文件夹。
 Narrowest carrier (MHz)	最窄载波 (MHz)
 Next launch (UTC)	下次施放 (UTC)
@@ -4017,12 +4017,12 @@ Nothing learned yet for this hour: leave the beacon monitor running.	该时段�
 Nothing yet: keep the receiver running.	尚无内容：请保持接收机运行。
 Overhead	开销
 Packet	数据包
-Path class	路径类别
-Pattern	图案
+Path class	电波传播路径分类
+Pattern	噪声特征
 Per min	每分钟
 Per minute	每分钟
 Position drift	位置漂移
-RC PPM frames	RC PPM 帧
+RC PPM frames	航模遥控 PPM 帧
 RX antenna dBi	RX 天线 dBi
 RX loss dB	RX 损耗 dB
 RX sensitivity dBm	RX 灵敏度 dBm
@@ -4057,7 +4057,7 @@ Stations heard and CQ callers	听到的电台与 CQ 呼叫者
 Steps to the target power	到目标功率的步数
 Suggested band	建议波段
 TX antenna dBi	TX 天线 dBi
-Tag	标签
+Tag	RFID 标签
 Talkgroup activity	通话组活动
 The link budget needs this radio's power table (Advanced > Calibration).	链路预算需要此电台的功率表（高级 > 校准）。
 The listened channel is outside the capture.	收听的信道在采集范围之外。
@@ -4444,12 +4444,12 @@ Slow	慢
 Previews of the looks	外观预览
 Hover a colour palette, layout, font look, text size or waterfall colour map (in Settings and the View menu) to see a small picture of the interface with it. Nothing changes until you pick one.	在“设置”和“视图”菜单中悬停配色、布局、字体外观、文字大小或瀑布图色图，即可看到应用该外观后的界面小图。在您选定之前不会做任何更改。
 Applies after a restart	重启后生效
-HF MFSK, 10 / 20 Bd	短波 MFSK，10 / 20 Bd
-HF MFSK, 7.8 Bd	短波 MFSK，7.8 Bd
-HF MFSK, 40 Bd	短波 MFSK，40 Bd
-HF FSK, 200 Bd 500 Hz	短波 FSK，200 Bd 500 Hz
-HF FSK, 200 Bd 1000 Hz	短波 FSK，200 Bd 1000 Hz
-HF FSK, 100 Bd 200 Hz	短波 FSK，100 Bd 200 Hz
+HF MFSK, 10 / 20 Bd	短波多频移键控，10 / 20 Bd
+HF MFSK, 7.8 Bd	短波多频移键控，7.8 Bd
+HF MFSK, 40 Bd	短波多频移键控，40 Bd
+HF FSK, 200 Bd 500 Hz	短波 FSK，200 Bd，500 Hz
+HF FSK, 200 Bd 1000 Hz	短波 FSK，200 Bd，1000 Hz
+HF FSK, 100 Bd 200 Hz	短波 FSK，100 Bd，200 Hz
 End of train, FFSK	列尾数据，FFSK
 Train dispatch, FFSK	列车调度数据，FFSK
 Tail ID	列尾编号
@@ -4787,7 +4787,7 @@ udp	udp
 512k and 1M update a few times a second. With the zoom FFT on (Resolution below) a zoomed-in view gets a bin per pixel anyway, at far less CPU.	512k 和 1M 每秒更新数次。开启缩放 FFT 后（见下方「分辨率」），放大视图无论如何都能每像素一个频点，且 CPU 占用低得多。
 6 Bit viewer	6 比特查看器
 6 hours	6 小时
-6 m scatter, 50.230 MHz	6 米散射，50.230 MHz
+6 m scatter, 50.230 MHz	6 米波段流星余迹散射，50.230 MHz
 60 Hz mains	60 Hz 市电
 600 bit/s coded, short	600 bit/s 编码，短
 7 days	7 天
@@ -5050,10 +5050,10 @@ Aircraft (ADS-B)	飞机（ADS-B）
 Aircraft and their tracks: low is warm, high is cool, on the ground is grey. Off: white, grey when the signal is old.	飞机及其轨迹：低高度偏暖色，高高度偏冷色，地面为灰色。关闭时为白色，信号陈旧时为灰色。
 Aircraft on the map	地图上的飞机
 Aircraft talk in AM between 118 and 137 MHz. The airport tower and the approach frequency are the busiest. Transmissions are short, so leave the squelch on and wait.	飞机在 118 至 137 MHz 之间用 AM 通话。机场塔台和进近频率最繁忙。通话很短，请开着静噪耐心等待。
-Aircraft tone call	飞机单音呼叫
+Aircraft tone call	飞机选择呼叫音频
 Aircraft, 978 MHz	飞机，978 MHz
 Airframes ever heard: %zu   today: %u, of them new: %u   positions today: %llu   farthest today: %.0f km	历史听到过的机身：%zu   今日：%u，其中新出现：%u   今日位置：%llu   今日最远：%.0f 公里
-Airport data link, 5 GHz	机场数据链路，5 GHz
+Airport data link, 5 GHz	机场宽带数据链，5 GHz
 Airport not found.	未找到机场。
 Airport weather (METAR, SPECI, TAF) found in the text of ACARS, VDL2 and HFDL messages: weather requests, D-ATIS and printer uplinks. Flight category from ceiling and visibility (FAA: LIFR, IFR, MVFR, VFR).	机场天气（METAR、SPECI、TAF）：在 ACARS、VDL2 和 HFDL 报文文本中找到：气象请求、数字 ATIS 和打印机上行链路。飞行类别由云高和能见度得出（FAA：LIFR、IFR、MVFR、VFR）。
 Airports##airportsec	机场##airportsec
@@ -5148,7 +5148,7 @@ Antenna rotator or telescope mount: GS-232 / Yaesu, Hamlib rotctld (works with a
 Antenna rotator...	天线转台…
 Antennas	天线
 Any	任意
-Any TV standard, automatic	任意电视标准，自动
+Any TV standard, automatic	电视制式自动识别
 Any antenna	任意天线
 Any radio	任意电台
 Any station	任意电台
@@ -5482,7 +5482,7 @@ CW tone %.0f Hz	CW 音调 %.0f Hz
 CW1234 or callsign	CW1234 或呼号
 CWOP needs the receiver position (Tuner, Locate).	CWOP 需要接收机位置（「调谐器」、「定位」）。
 Cable feed	有线馈送
-Cable, OFDM	有线，OFDM
+Cable, OFDM	有线电视，OFDM
 Cabrillo export	Cabrillo 导出
 Calibrate az + el from peaked satellite	用峰值卫星校准方位 + 俯仰
 Calibrate azimuth from peaked satellite	用峰值卫星校准方位角
@@ -5556,9 +5556,9 @@ Cc	抄送
 Cell	小区
 Cell identity	小区标识
 Cell parameter	小区参数
-Cells, 3G	蜂窝，3G
-Cells, CDMA2000	蜂窝，CDMA2000
-Cells, TD-SCDMA	蜂窝，TD-SCDMA
+Cells, 3G	3G 蜂窝网络
+Cells, CDMA2000	CDMA2000 蜂窝网络
+Cells, TD-SCDMA	TD-SCDMA 蜂窝网络
 Census: every station at once	普查：所有电台同时
 Centre MHz	中心 MHz
 Centre decode	中心解码
@@ -5596,7 +5596,7 @@ Characters in [ ] were guessed from earlier pages of this address; ? could not b
 Chart	图表
 Chart levels	图表电平
 Chat frequency	聊天频率
-Chat, 433.92 MHz	聊天，433.92 MHz
+Chat, 433.92 MHz	文本通信，433.92 MHz
 Check again	再检查一次
 Check carriers and modulation	检查载波与调制
 Check carriers and modulation from an AM station's screen.	从 AM 电台的屏幕上检查载波与调制。
@@ -5749,7 +5749,7 @@ Constrained VBR	受限 VBR
 Constraint length K	约束长度 K
 Contact (optional, shown publicly)	联系方式（可选，公开显示）
 Contact e-mail (optional, only the SondeHub admins see it)	联系邮箱（可选，仅 SondeHub 管理员可见）
-Contactless, 13.56 MHz	非接触式，13.56 MHz
+Contactless, 13.56 MHz	近场非接触通信，13.56 MHz
 Contacts	联系人
 Content	内容
 Contest	竞赛
@@ -5803,7 +5803,7 @@ Copy##voice	复制##voice
 Corrected = mechanical + offset. Map bearings use corrected azimuth.	修正值 = 机械值 + 偏移。地图方位角使用修正方位角。
 Corrections	修正
 Corrects the phase between I and Q. Adjust with the gain balance for the smallest mirror image.	校正 I 和 Q 之间的相位。与增益平衡配合调节，使镜像最小。
-Cosmic noise, 30 MHz	宇宙噪声，30 MHz
+Cosmic noise, 30 MHz	宇宙射电噪声，30 MHz
 Could not download the helper.	无法下载助手程序。
 Could not download the station list.	无法下载电台列表。
 Could not make the safety backup, so nothing was restored: 	无法制作安全备份，因此没有恢复任何内容：
@@ -5841,7 +5841,7 @@ Current	当前
 Current (default), Clean or Compact.	当前（默认）、简洁或紧凑。
 Custom (OBT, VHF / UHF)	自定义（OBT，VHF / UHF）
 Custom decoder (rtl_433 flex syntax)	自定义解码器（rtl_433 flex 语法）
-Custom decoders	自定义解码器
+Custom decoders	自定义解码模式
 Custom fields (v2 bytes 21 to 29)	自定义字段（v2 字节 21 至 29）
 Custom gradient	自定义渐变
 Custom mode: listening	自定义模式：监听中
@@ -5880,7 +5880,7 @@ Data (hex)	数据（十六进制）
 Data applications	数据应用
 Data folder	数据文件夹
 Data folder (applies after a restart; existing files are not moved)	数据文件夹（重启后生效；现有文件不会移动）
-Data link, L band	数据链路，L 波段
+Data link, L band	航空数据链，L 波段
 Data rate	数据速率
 Dataset	数据集
 Datasets	数据集
@@ -6067,7 +6067,7 @@ Driver status	驱动状态
 Driver written from the work of Topol (in collaboration with AI, MIT) and Pieter Ibelings (ic-r8600-usb-iq, MIT).	驱动基于 Topol 的工作（与 AI 合作，MIT）和 Pieter Ibelings（ic-r8600-usb-iq，MIT）编写。
 Drives the rotator or telescope mount set up in View > Antenna rotator: waits at the rise point, follows the satellite, parks at LOS	驱动「视图 > 天线转台」中设置的转台或望远镜赤道仪：在升起点等待、跟踪卫星、在 LOS 处归位
 Drone Remote ID	无人机远程识别
-Drone telemetry	无人机遥测
+Drone telemetry	无人机遥测数据
 Drones above 120 m, within 5 km of an airport, or near a manned aircraft heard on ADS-B at the same time (needs ADS-B running as the second mode). Each drone and reason once per 10 minutes.	高于 120 米、在机场 5 公里内、或靠近 ADS-B 上同时听到的有人驾驶飞机的无人机（需要 ADS-B 作为第二模式运行）。每架无人机和每个原因每 10 分钟提醒一次。
 Drop	丢弃
 Drop a listener who does nothing for this many minutes (0 = the default, 30)	丢弃无操作超过此分钟数的听众（0 = 默认 30）
@@ -6087,7 +6087,7 @@ EOS DB (Aqua, Aura)	EOS DB（Aqua、Aura）
 EOS DB (Terra)	EOS DB（Terra）
 ESP-NOW frames whose checksum failed are listed in Messages, marked; they never count as a device	校验失败的 ESP-NOW 帧会列入「消息」并加标记；它们永不算作一台设备
 ESP32 radio...	ESP32 电台…
-ESP32, 2.4 GHz	ESP32，2.4 GHz
+ESP32, 2.4 GHz	ESP32 设备，2.4 GHz
 ETA (declared)	ETA（申报）
 ETA (speed)	ETA（按航速）
 EVM %.0f %%	EVM %.0f %%
@@ -6257,7 +6257,7 @@ Favourites only	仅收藏
 Fax width	传真宽度
 Feed hunter: try every narrow carrier	Feed 猎手：尝试每个窄载波
 Fengyun-3 MERSI, X-band	风云-3 MERSI，X 波段
-Fengyun-3 pictures, 1.7 GHz	风云-3 图像，1.7 GHz
+Fengyun-3 pictures, 1.7 GHz	风云三号气象图像，1.7 GHz
 Fetching 	正在获取 
 Fewest hops	最少跳数
 Field Day: your class and ARRL / RAC section, e.g. 2B EMA	野外日：你的组别和 ARRL / RAC 分区，例如 2B EMA
@@ -6511,7 +6511,7 @@ GitHub shows your GitHub user name on the submission.	GitHub 会在提交中显�
 GitHub sign-in goes through the OnAir plugin marketplace, which is not set up in this build yet.	GitHub 登录经由 OnAir 插件市场，此构建尚未配置该功能。
 Give a number and a name.	请给出号码和名称。
 Give every stopped receiver its best free radio	为每个停止的接收机分配最佳的空闲电台
-Glider trackers, 868 MHz	滑翔机跟踪器，868 MHz
+Glider trackers, 868 MHz	滑翔机位置跟踪，868 MHz
 Gliders	滑翔机
 Go	执行
 Go on from the log	从日志继续
@@ -6557,7 +6557,7 @@ HD Radio	HD Radio
 HDLC bit stuffing	HDLC 比特填充
 HDLC flags	HDLC 标志
 HF 12-tone PSK	HF 12 音调 PSK
-HF ALE, 8-PSK	HF ALE，8-PSK
+HF ALE, 8-PSK	短波自动链路建立，8-PSK
 HF ARQ / FEC, D-PSK	HF ARQ / FEC，D-PSK
 HF ARQ, 14.080 MHz	HF ARQ，14.080 MHz
 HF ARQ, 1800 baud	HF ARQ，1800 波特
@@ -6567,16 +6567,16 @@ HF FEC, FSK	HF FEC，FSK
 HF FSK, 36 / 50 Bd	HF FSK，36 / 50 波特
 HF FSK, 96 Bd	HF FSK，96 波特
 HF MFSK	HF MFSK
-HF broadcast, FSK	HF 广播，FSK
+HF broadcast, FSK	短波广播，FSK
 HF data modem, 8-PSK	HF 数据调制解调器，8-PSK
 HF data modem, PSK	HF 数据调制解调器，PSK
 HF data modem, QAM	HF 数据调制解调器，QAM
-HF data, pilot only	HF 数据，仅导频
+HF data, pilot only	短波数传，仅检测导频
 HF digital and CW decodes	HF 数字和 CW 解码
 HF packet, OFDM	HF 分组，OFDM
-HF tactical data link, tones	HF 战术数据链路，音调
+HF tactical data link, tones	短波战术数据链，音调检测
 HF utility	HF 公用业务
-HF weak-signal chat, 4/8/16 baud	HF 弱信号聊天，4/8/16 波特
+HF weak-signal chat, 4/8/16 baud	短波弱信号文本通信，4 / 8 / 16 Bd
 HFDL	HFDL
 HFDL live list: minutes between requests	HFDL 实时列表：请求间隔分钟数
 HFDL propagation: share of squitters heard per UTC hour	HFDL 传播：每个 UTC 小时听到的广播占比
@@ -6746,8 +6746,8 @@ Icom IC-R8600: the I/Q OUT port of the receiver, 10 kHz to 3 GHz. Needs Icom's f
 Id	ID
 Id (file name)	ID（文件名）
 Ident	识别码
-Ident, 190-535 kHz	识别信标，190-535 kHz
-Identification only, HF	仅识别，HF
+Ident, 190-535 kHz	导航信标莫尔斯识别码，190–535 kHz
+Identification only, HF	短波信号识别
 Identify: settings	识别：设置
 If GitHub cannot be reached, try the mirror address below for the update check.	无法访问 GitHub 时，请用下方镜像地址检查更新。
 If a stream says 403 or refuses to play, Advanced has User-Agent, Referer and headers. Details: docs/IPTV.md.	如果流返回 403 或拒绝播放，「高级」中有 User-Agent、Referer 和 headers。详见 docs/IPTV.md。
@@ -6803,7 +6803,7 @@ India and South Asia	印度和南亚
 Indicative: a rule of thumb per codec, not a measurement	指示性：按编解码器的经验值，并非实测
 Indonesia	印度尼西亚
 Information bits:	信息比特：
-Inland waterways, 1200 Bd	内河航道，1200 波特
+Inland waterways, 1200 Bd	内河航行信息，1200 Bd
 Insights	洞察
 Install Icom's free "USB I/Q Package for HDSDR" on a Windows PC. It puts IC-R8600_usb_iq.spt in C:\\Windows\\System32\\IC-R8600\\ . Copy that file to this computer and choose Import Icom firmware.	在 Windows 电脑上安装 Icom 免费的「USB I/Q Package for HDSDR」。它会把 IC-R8600_usb_iq.spt 放到 C:\\Windows\\System32\\IC-R8600\\ 。把该文件复制到这台电脑并选择「导入 Icom 固件」。
 Install OnAir's udev rules (install-udev-rules.sh), then unplug and replug the radio.	安装 OnAir 的 udev 规则（install-udev-rules.sh），然后拔插电台。
@@ -6850,7 +6850,7 @@ JSON	JSON
 JSON...	JSON…
 JSON...##sens	JSON…##sens
 Japan only, 2484 MHz	仅限日本，2484 MHz
-Japan, satellite	日本，卫星
+Japan, satellite	日本卫星电视
 Join MeshCore	加入 MeshCore
 Join MeshCore again	重新加入 MeshCore
 Join MeshCore first: it makes your identity	先加入 MeshCore：它会生成你的身份
@@ -6882,7 +6882,7 @@ Key id	密钥 ID
 Key id##k	密钥 ID##k
 Key sequence	按键序列
 Key-up	松开按键
-Keyboard chat, 14.075 MHz	键盘聊天，14.075 MHz
+Keyboard chat, 14.075 MHz	键盘文本通信，14.075 MHz
 Keyboard shortcuts	键盘快捷键
 Keying	键控
 Keys are shown masked. Nothing is imported until you press Import.	密钥以掩码显示。按「导入」之前不会导入任何内容。
@@ -6898,9 +6898,9 @@ L-band dish (1.4-1.8 GHz)	L 波段天线（1.4-1.8 GHz）
 L5 navigation message	L5 导航电文
 LAN swarm	局域网集群
 LAN swarm...	局域网集群…
-LF telegrams, FSK	LF 电报，FSK
+LF telegrams, FSK	长波电报信号，FSK
 LOS in	LOS 还有
-LPWAN, header only	LPWAN，仅报头
+LPWAN, header only	低功耗广域网，仅解析报头
 LSB first	LSB 在前
 LTE-M: SIB1-BR sent (schedulingInfoSIB1-BR %d: %d repetitions, %d bit transport block)%s	LTE-M：已发送 SIB1-BR（schedulingInfoSIB1-BR %d：重复 %d 次，%d 比特传输块）%s
 Label	标签
@@ -6909,7 +6909,7 @@ Label size	标签大小
 Label text size (%)	标签文字大小（%）
 Lanczos, held to the range of the pixels around (no ringing); not used while a picture is still arriving	Lanczos 重采样，限制在周围像素范围内（无振铃）；图像尚未传完时不使用
 Landed: came down near the field and reported the ground, or was lost low on the approach. Took off: from the ground (or first heard low) climbing out. Within 8 km, below 2000 ft above the field.	落地：在机场附近接地并报告了地面，或在进近中于低空失去联系。起飞：从地面（或首次在低空被听到）爬升离场。8 公里内、低于场面 2000 英尺。
-Landing system data, VHF	着陆系统数据，VHF
+Landing system data, VHF	GBAS 地基增强着陆数据，甚高频
 Landings	着陆
 Landsat 8/9 S-band	Landsat 8/9 S 波段
 Landsat 8/9 X-band	Landsat 8/9 X 波段
@@ -6983,9 +6983,9 @@ Licence class	执照等级
 Licence problem	许可问题
 Light aircraft, 868 MHz	轻型飞机，868 MHz
 Light or high contrast	浅色或高对比
-Lightning map, several stations	闪电地图，多站
+Lightning map, several stations	多站协同雷电定位图
 Lightning shows as short radio crackles (sferics) on every band below about 30 MHz, strongest at VLF / LF and in the evening on HF. Tune a quiet frequency (3 to 8 MHz, or an unused AM broadcast channel) and watch the strikes. One receiver gives the time and strength of each strike, not its position. Receive only.	闪电在约 30 MHz 以下每个频段都表现为短暂的无线电杂音（sferics），在 VLF / LF 最强，HF 傍晚最强。调到安静的频率（3 至 8 MHz，或未使用的 AM 广播信道）观察闪电。单台接收机给出每次闪电的时间和强度，而不是位置。仅接收。
-Lightning, below 30 MHz	闪电，30 MHz 以下
+Lightning, below 30 MHz	雷电电磁脉冲，30 MHz 以下
 Like	点赞
 Like !1a2b3c4d (8 hex digits). Empty: a stable number is made from your callsign, or the long name.	例如 !1a2b3c4d（8 个十六进制位）。留空：根据你的呼号或长名生成一个稳定的号码。
 LimeSDR: a wideband transceiver, 10 MHz to 3.5 GHz.	LimeSDR：宽带收发信机，10 MHz 至 3.5 GHz。
@@ -7060,7 +7060,7 @@ LoRa	LoRa
 LoRa and mesh	LoRa 与 mesh
 LoRa demodulator	LoRa 解调器
 LoRa frames	LoRa 帧
-LoRa mesh, structure only	LoRa mesh，仅结构
+LoRa mesh, structure only	LoRa 网状通信，仅解析帧结构
 LoRa preambles	LoRa 前导
 LoRaWAN health	LoRaWAN 健康度
 LoRaWAN packet forwarder (receive only)	LoRaWAN 数据包转发器（仅接收）
@@ -7235,7 +7235,7 @@ Memory stores frequencies with their mode and settings. Frequencies lists what i
 Mercury	水星
 Merge: keep what is here, add what is missing	合并：保留现有内容，补上缺失部分
 Mesh census (Meshtastic, MeshCore, LoRa APRS, MeshCom)	Mesh 普查（Meshtastic、MeshCore、LoRa APRS、MeshCom）
-Mesh radio, header only	Mesh 电台，仅头部
+Mesh radio, header only	网状通信，仅解析报头
 Meshtastic channel link	Meshtastic 信道链接
 Message counter	消息计数器
 Messages (repeats counted on one row; screen only)	消息（重复合并在同一行；仅屏幕显示）
@@ -7243,7 +7243,7 @@ Messages to this callsign are marked "to you". Without an SSID every SSID of it 
 MetOp X-band dump	MetOp X 频段下传
 MetOp-SG DDB	MetOp-SG DDB
 Meteor HRPT pictures, 1.7 GHz	Meteor HRPT 图像，1.7 GHz
-Meteor scatter, 144.140 MHz	流星余迹散射，144.140 MHz
+Meteor scatter, 144.140 MHz	流星余迹散射通信，144.140 MHz
 Meteosat / Himawari 402.22 MHz	Meteosat / Himawari 402.22 MHz
 Meteosat HRDCP 402.3 MHz	Meteosat HRDCP 402.3 MHz
 Meteosat SEVIRI raw, 1.7 GHz	Meteosat SEVIRI 原始数据，1.7 GHz
@@ -7264,7 +7264,7 @@ Minimum SNR dB	最小 SNR dB
 Mirror address	镜像地址
 Mismatch dB	失配 dB
 Mismatch: what is left of the two radios' difference in their overlap after the correction (-30 dB good, above -10 dB poor). It needs a signal both radios hear in the overlap: with only noise there it stays poor, and that is fine.	失配：校正后两台电台重叠区差异的残余（-30 dB 良好，高于 -10 dB 差）。需要两台电台在重叠区都能收到的信号：只有噪声时会一直偏差，这没关系。
-Mobile TV, S band	移动电视，S 频段
+Mobile TV, S band	S 频段移动电视
 Mod	调制
 Mode Builder	模式构建器
 Mode Builder description...	模式构建器说明……
@@ -7351,10 +7351,10 @@ NAC (P25)##k	NAC（P25）##k
 NAVTEX warnings in force	生效中的 NAVTEX 警告
 NEXT	下一个
 NMEA	NMEA
-NOAA APT pictures (recordings)	NOAA APT 图像（录音）
-NOAA DSB / TIP (recordings)	NOAA DSB / TIP（录音）
-NOAA GAC dump (recordings)	NOAA GAC 下传（录音）
-NOAA HRPT pictures (recordings)	NOAA HRPT 图像（录音）
+NOAA APT pictures (recordings)	NOAA APT 图像解码（录制文件）
+NOAA DSB / TIP (recordings)	NOAA DSB / TIP 数据（录制文件）
+NOAA GAC dump (recordings)	NOAA GAC 数据下传（录制文件）
+NOAA HRPT pictures (recordings)	NOAA HRPT 图像解码（录制文件）
 NORAD number##csm_nd	NORAD 编号##csm_nd
 NOW	现在
 Name for the selected number	所选号码的名称
@@ -7886,14 +7886,14 @@ PTT rig	PTT 电台
 PTT: a Hamlib rig keys the transmitter over CAT; none means VOX (the rig keys on the audio). Audio out is the sound card that feeds the rig. Receive audio comes from the radio source chosen in the toolbar (an SDR, or the rig's sound card as an audio source).	PTT：Hamlib 电台通过 CAT 控制发射机；无则使用 VOX（电台靠音频触发）。音频输出是馈给电台的声卡。接收音频来自工具栏选择的信号源（SDR，或作为音频来源的电台声卡）。
 Packet 1200	AX.25 分组无线电 1200 波特
 Packet 9600	AX.25 分组无线电 9600 波特
-Packet radio, sync only	分组无线电，仅同步
+Packet radio, sync only	分组无线电，仅检测同步信号
 Packets / syncs	数据包 / 同步
 Packets in %llu, out %llu, lost %llu	数据包入 %llu、出 %llu、丢失 %llu
 Packets in / lost	数据包收 / 丢
 Packets of a mode in Wireshark: capture interface, pcapng files and GSMTAP	在 Wireshark 中查看某模式的数据包：捕获接口、pcapng 文件和 GSMTAP
 Pager	寻呼机
 Pagers	寻呼机
-Pagers, 169 MHz	寻呼机，169 MHz
+Pagers, 169 MHz	无线寻呼信号，169 MHz
 Pagers, 300 / 600 bit/s	寻呼机，300 / 600 bit/s
 Paging channel	寻呼信道
 Pair	配对
@@ -7902,7 +7902,7 @@ Paired	已配对
 Pakistan	巴基斯坦
 Palette	调色板
 Pan (old OnAir)	平移（旧版 OnAir）
-Paragliders, LoRa	滑翔伞，LoRa
+Paragliders, LoRa	滑翔伞通信网络，LoRa
 Parameter	参数
 Parameters	参数
 Park	归位
@@ -7994,9 +7994,9 @@ Plan	计划
 Planes (ADS-B) and ships (AIS) on a map, from the positions they send.	飞机（ADS-B）和船只（AIS）在地图上，来自它们发送的位置。
 Planes on a map, and pilots talking to the towers.	飞机在地图上，还有飞行员与塔台通话。
 Platform ID	平台 ID
-Platform data, 401 MHz	平台数据，401 MHz
+Platform data, 401 MHz	卫星平台位置与遥测数据，401 MHz
 Platform messages	平台消息
-Platform messages, 402.3 MHz	平台消息，402.3 MHz
+Platform messages, 402.3 MHz	卫星数据采集平台报文，402.3 MHz
 Play the channel as narrow FM; decoding is the same either way	以窄带 FM 播放该信道；两种方式解码相同
 Play the tuned channel through the speakers in any mode, to recognise a signal: the radio's samples are demodulated as USB, LSB, narrow FM or AM. Stays silent while the mode plays its own sound.	以任意模式通过扬声器播放已调信道以识别信号：电台的采样按 USB、LSB、窄带 FM 或 AM 解调。模式播放自己的声音时保持静音。
 Play this frequency together with the listened one: the same programme on two frequencies, the clearer one is heard.	与正在收听的频率一起播放此频率：同一节目在两个频率上，听到较清晰的一个。
@@ -8006,7 +8006,7 @@ Played (DL Plus songs)##dabpl	已播（DL Plus 歌曲）##dabpl
 Played (RadioText+ songs)	已播（RadioText+ 歌曲）
 Played (RadioText+ songs)##fmpl	已播（RadioText+ 歌曲）##fmpl
 Playing 	正在播放：
-Playlists, HLS, UDP, RTP	播放列表、HLS、UDP、RTP
+Playlists, HLS, UDP, RTP	播放列表与网络视频流（HLS、UDP、RTP）
 Plays the first of the chosen channels that opens, stays on it until it has been quiet for the hang time, then goes on.	播放所选信道中第一个成功打开的信道；持续收听，直到静默时间达到挂起时长，然后切换到下一个信道。
 Plug in a radio and press Refresh.	插入电台并按「刷新」。
 Plug the radio in on USB 3 for an RX888 MkII.	RX888 MkII 请用 USB 3 连接电台。
@@ -8111,7 +8111,7 @@ Publish	发布
 Publish new version	发布新版本
 Publish to an MQTT broker	发布到 MQTT 代理
 Published	已发布
-Pulsars, 408 MHz	脉冲星，408 MHz
+Pulsars, 408 MHz	脉冲星信号，408 MHz
 Pulse / gap widths (us)	脉冲 / 间隔宽度（us）
 Pulse S/N over the band	整个频段的脉冲信噪比
 Pulse shape	脉冲形状
@@ -8152,7 +8152,7 @@ RBN (CW, RTTY)	RBN（CW、RTTY）
 RBN digital (FT8, FT4)	RBN 数字（FT8、FT4）
 RBW	分辨率带宽（RBW）
 RC link	遥控链路
-RC link, structure only	遥控链路，仅结构
+RC link, structure only	遥控链路，仅解析帧结构
 RDS clock %+.0f s against this computer, drift %+.1f s a day (%d clock times)	RDS 时钟与本机相差 %+.0f s，日漂移 %+.1f s（%d 个时钟时间）
 RDS details	RDS 详情
 RDS meanings	RDS 含义
@@ -8177,7 +8177,7 @@ RTTY Roundup: 579 and your state / province, or a serial number from DX, e.g. 57
 RUN THE TEST (no RF)	运行测试（无射频）
 RX888 notes	RX888 说明
 RX888: a direct-sampling receiver, excellent for long, medium and short wave. Needs USB 3.	RX888：直接采样接收机，长中短波表现出色。需要 USB 3。
-Radar pulses	雷达脉冲
+Radar pulses	雷达脉冲检测
 Radio (rig)	电台（设备）
 Radio IQ	电台 IQ
 Radio IQ: an SDR (or a sound card carrying IQ). FM audio: a sound card on a radio's discriminator (9600 baud too) or speaker output (1200 baud), with the sound card chosen as the radio.	电台 IQ：SDR（或传输 IQ 的声卡）。FM 音频：接在电台鉴频器上（也支持 9600 波特）或扬声器输出（1200 波特）的声卡，并把该声卡选为电台。
@@ -8420,7 +8420,7 @@ Right-click: name this sensor, or an alert	右键：命名此传感器或某个�
 Ring alerts	振铃提醒
 Ring overflow: %.2f s discarded %llu times, last %s	环形缓冲溢出：丢弃 %.2f s 共 %llu 次，最近 %s
 Rises with the level, so you can aim without looking at the screen. Off until ticked.	随电平升高而变大，无需看屏幕即可对准。勾选前关闭。
-Road toll, 5.8 GHz	道路收费，5.8 GHz
+Road toll, 5.8 GHz	ETC 道路收费通信，5.8 GHz
 Robust Packet: the carriers, the 50 baud clock, the speed level (D-BPSK or D-QPSK) and the demodulated symbols are shown. The convolutional code polynomials, the interleaver, the scrambler, the callsign compression and the packet types are not public, so no AX.25 frames or text are produced until a recording lets them be worked out.	Robust Packet：显示载波、50 波特时钟、速率级别（D-BPSK 或 D-QPSK）和解调符号。卷积码多项式、交织器、扰码器、呼号压缩和分组类型未公开，在有录音可供推算之前不会产生 AX.25 帧或文本。
 Roles: %s	角色：%s
 Rolling text	滚动文字
@@ -8467,7 +8467,7 @@ SNR median / best	SNR 中值 / 最佳
 SNR of each balloon in 3 kHz. Horus Binary decodes down to about -6 dB, RTTY 100 Bd to about 0 dB.	每支气球在 3 kHz 中的 SNR。Horus Binary 可解到约 -6 dB，RTTY 100 Bd 约 0 dB。
 SPECTRAN notes	SPECTRAN 说明
 STANAG 5066 D_PDUs	STANAG 5066 D_PDU
-STDMA link, 136.9 MHz	STDMA 链路，136.9 MHz
+STDMA link, 136.9 MHz	STDMA 数据链，136.9 MHz
 STEREO high rate	STEREO 高速率
 Safe start ramps up from the lowest gain until the noise floor has risen this much (the mode's: %.0f dB): the antenna's noise is then above the radio's.	安全启动从最低增益逐步上升，直到噪声底升高此值（模式值：%.0f dB）：此时天线噪声高于电台自身噪声。
 Same frequency and mode	相同频率和模式
@@ -8482,7 +8482,7 @@ Saral L-band	Saral L 频段
 Saral X-band dump	Saral X 频段下传
 SatNOGS transmitters	SatNOGS 发射机
 Satellite by its own network table:	按卫星自身网络表的卫星：
-Satellite carriers	卫星载波
+Satellite carriers	卫星信号载波监测
 Satellite longitude (deg E)	卫星经度（东经度）
 Satellite orbits age: older ones predict the times less well. They update by themselves once a day while this window is open or a pass is armed; without a network the saved and built-in ones are used.	卫星轨道会老化：越旧预测越不准。本窗口打开或过境预备期间每天自动更新一次；无网络时使用已保存和内置的轨道。
 Satellite passes	卫星过境
@@ -8846,8 +8846,8 @@ Slot modes with a CAT rig: for each transmission the rig's dial moves in 500 Hz 
 Slots: blue heard, red sent, orange not sent; outlined: your next transmissions; E / O even / odd	时隙：蓝已听，红已发，橙未发；描边：你接下来的发射；E / O 偶 / 奇
 Slovakia	斯洛伐克
 Slovenia	斯洛文尼亚
-Slow CW, 10.140 MHz	慢速 CW，10.140 MHz
-Slow CW, 137.5 kHz	慢速 CW，137.5 kHz
+Slow CW, 10.140 MHz	慢速摩尔斯电码，10.140 MHz
+Slow CW, 137.5 kHz	慢速摩尔斯电码，137.5 kHz
 Slower presets compress better but need more time	较慢的预设压缩率更高但更耗时
 Slower redraws and background work to save battery.	降低重绘和后台工作频率以省电。
 Slower spectrum updates while the window is hidden or minimised.	窗口隐藏或最小化时降低频谱更新频率。
@@ -9117,7 +9117,7 @@ TD-SCDMA cells heard in this 1.6 MHz channel, by their downlink pilot (SYNC-DL c
 TDM	TDM
 TDM (SH-B)	TDM（SH-B）
 TDM scrambling code	TDM 扰码
-TDMA link, 25 kHz	TDMA 链路，25 kHz
+TDMA link, 25 kHz	TDMA 数据链，25 kHz
 TEDS cell and QAM carrier	TEDS 小区和 QAM 载波
 TEDS: pi/8-D8PSK %s, QAM %s	TEDS：pi/8-D8PSK %s，QAM %s
 TETRA Direct Mode: terminal to terminal, or through a DM repeater or gateway	TETRA 直通模式：终端对终端，或经 DM 中继 / 网关
@@ -9607,7 +9607,7 @@ Tracks the next pass of these satellites, starts the receiver by itself at the r
 Traffic announcement (TA)	交通公告（TA）
 Traffic map	交通地图
 Traffic programme (TP)	交通节目（TP）
-Train telemetry, 457.9 MHz	列车遥测，457.9 MHz
+Train telemetry, 457.9 MHz	列尾设备遥测，457.9 MHz
 Transcribe what I am listening to	转录我正在收听的内容
 Transcribing speech ...	正在转录语音……
 Transmission log	发射日志
@@ -9787,7 +9787,7 @@ Uses current offsets. After calibration this should match the satellite; before 
 Uses the same detector; it stays longer on a step where a conversation is active.	使用相同的检测器；在有通话的频道上会停留更久。
 Uses the stream of a generator of Tools > Digital video generator whose output is "Transmitter" (* = it is sending now). Start it there; click again to clear.	使用「工具 > 数字视频发生器」中输出为「发射机」（* 表示正在发送）的发生器的码流。先在那里启动；再次点击清除。
 Usual	常用
-Utility telemetry	公用事业遥测
+Utility telemetry	工业与公用事业遥测
 VARA FM	VARA FM
 VARA HF	VARA HF
 VBR / CRF	可变码率（VBR）/ 恒定质量因子（CRF）
@@ -9795,14 +9795,14 @@ VC	VC
 VDL Mode 2	VDL 模式 2
 VHF (137-146 MHz)	VHF（137-146 MHz）
 VHF + UHF	VHF + UHF
-VLF stations, 15 - 30 kHz	VLF 电台，15 - 30 kHz
+VLF stations, 15 - 30 kHz	甚低频台站，15–30 kHz
 VOX	VOX
 VOX hold (ms)	VOX 保持（ms）
 VOX threshold (dBFS)	VOX 阈值（dBFS）
 Values	数值
 Vehicle / position	车辆 / 位置
-Vehicle safety, 5.9 GHz	车辆安全，5.9 GHz
-Vehicle sidelink, 5.9 GHz	车辆直通链路，5.9 GHz
+Vehicle safety, 5.9 GHz	车联网安全通信，5.9 GHz
+Vehicle sidelink, 5.9 GHz	车车直连通信，5.9 GHz
 Verbose	详细
 Verdict	结论
 Verified	已验证
@@ -9822,7 +9822,7 @@ Video file or folder	视频文件或文件夹
 Video fills the screen (press F or Esc to leave)	视频全屏（按 F 或 Esc 退出）
 Video generator	视频发生器
 Video generator:	视频发生器：
-Video link, structure only	视频链路，仅结构
+Video link, structure only	视频链路，仅解析帧结构
 Video only	仅视频
 Video peak	视频峰值
 Video pop-out stays on top	视频弹出窗口保持置顶
@@ -9844,7 +9844,7 @@ Voice keys...	语音密钥……
 Voice monitor	语音监听
 Voice noise remover (neural)	语音降噪器（神经网络）
 Voice slots (calls at once)##t1_slots	语音时隙（同时通话数）##t1_slots
-Voice, channels 1-88	语音，频道 1-88
+Voice, channels 1-88	甚高频语音，频道 1–88
 Voices	语音
 Volume##tvvol	音量##tvvol
 Vote	投票
@@ -9897,7 +9897,7 @@ Weather images, 1695.4 MHz	气象图像，1695.4 MHz
 Weather images, 1697 MHz	气象图像，1697 MHz
 Weather picture	气象图
 Weather pictures	气象图
-Weather radar	天气雷达
+Weather radar	气象雷达信号检测
 Weather radio (NOAA, 162.550 MHz)	气象电台（NOAA，162.550 MHz）
 Weather satellite pictures and satellite passes over your place.	气象卫星图像和经过你所在位置的卫星过境。
 Weather satellites	气象卫星
@@ -10144,7 +10144,7 @@ ago	前
 aircraft	飞机
 alert	警报
 aligning	对齐中
-all carriers, L-band	所有载波，L 频段
+all carriers, L-band	L 波段全载波监测
 all modes	所有模式
 all-intra	全帧内
 already there	已存在
@@ -10194,8 +10194,8 @@ averaging off	平均关闭
 az %.0f  el %.0f  range %.0f km	方位角 %.0f  仰角 %.0f  距离 %.0f km
 backups (one a day, the last 30 kept) in	备份（每天一次，保留最近 30 份）位于
 bad	差
-balise up-link 4.234 MHz	应答器上行链路 4.234 MHz
-balloon / satellite pictures, 70 cm	气球 / 卫星图像，70 cm
+balise up-link 4.234 MHz	应答器上行链路，4.234 MHz
+balloon / satellite pictures, 70 cm	气球与卫星图像，70 厘米波段
 band over floor	频段高出噪底
 band width %.0f %%	带宽 %.0f %%
 bands MHz	频段 MHz
