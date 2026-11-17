@@ -141,6 +141,14 @@ transmit (the TX option). It needs Aaronia's **RTSA-Suite PRO** (Windows or Linu
 which OnAir does not ship; close the RTSA-Suite PRO before starting the device in OnAir. Install steps, what is unverified and a test
 checklist: [docs/SPECTRAN-V6.md](docs/SPECTRAN-V6.md).
 
+# Tektronix RSA306 (and RSA306B, RSA500A, RSA600A)
+
+Experimental, receive only, tried on an RSA306: Tektronix's USB real-time spectrum analysers through Tektronix's **RSA API** (Windows
+or Linux, a free download from [tek.com](https://www.tek.com/en/products/spectrum-analyzers/rsa306)), which OnAir does not ship. Rates
+of 56 Msps divided by 1 to 4096 (OnAir takes the slowest one that carries the mode), 9 kHz to 6.2 GHz on the RSA306. Close SignalVu-PC
+before starting the device in OnAir; it stays connected to OnAir until OnAir is closed. Install steps, what was measured and a test
+checklist for the other models: [docs/TEKTRONIX-RSA.md](docs/TEKTRONIX-RSA.md).
+
 # LimeSDR Mini (and Mini 2)
 
 **Experimental: written from LimeSuite's public C API (`LimeSuite.h`) and tested only against a fake library. It has not run on a real
