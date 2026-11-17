@@ -7806,7 +7806,7 @@ Open download page	打开下载页面
 Open file...	打开文件……
 Open folder##picsave	打开文件夹##picsave
 Open folder##picsaved	打开文件夹##picsaved
-Open http://this-computer:port/stream.ts in VLC, OBS (media source) or ffplay. Without a key, anyone who can reach the port can watch while it is on.	在 VLC、OBS（媒体源）或 ffplay 中打开 http://本机：端口/stream.ts。没有密钥时，任何能到达该端口的人都能在播出期间观看。
+Open http://this-computer:port/stream.ts in VLC, OBS (media source) or ffplay. Without a key, anyone who can reach the port can watch while it is on.	在 VLC、OBS（媒体源）或 ffplay 中打开 http://this-computer:port/stream.ts。没有密钥时，任何能够访问该端口的人都可以在串流开启期间观看。
 Open in Mode Builder	在模式构建器中打开
 Open in decoder	在译码器中打开
 Open mode screen	打开模式屏幕
@@ -7925,7 +7925,7 @@ Path hash	路径哈希
 Paused.	已暂停。
 Paused: the source's decoder stops (it runs the General receiver at the same frequency), the other blocks keep working	已暂停：该信号源的译码器停止（它在同一频率运行通用接收机），其他模块继续工作
 Payload	有效载荷
-Payload (hex)	有效载荷（hex）
+Payload (hex)	有效载荷（十六进制）
 Payload IDs	有效载荷 ID
 Payload IDs: one "id, callsign" per line (the format of horusdemodlib's payload_id_list.txt). Custom fields: the JSON of custom_field_list.json (struct characters < > B b H h f x; none, battery_5v_byte, divide_by_10, divide_by_100). Nothing is downloaded: paste the entries of the payloads you follow.	有效载荷 ID：每行一条「id, callsign」（horusdemodlib 的 payload_id_list.txt 格式）。自定义字段：custom_field_list.json 的 JSON（结构字符 < > B b H h f x；none、battery_5v_byte、divide_by_10、divide_by_100）。不会下载任何内容：粘贴你关注的有效载荷条目。
 Payload bytes	有效载荷字节
@@ -7946,7 +7946,7 @@ Per mode	按模式
 Per system, set the parameters you want or leave them on Any. The list beside them shows the modes that carry the bitrate within the bandwidth at the C/N, the best first: the smallest bandwidth, then the most C/N margin. Satellite modes have a free symbol rate: their bandwidth is what the bitrate needs, their capacity what the whole bandwidth would carry. The thresholds are the ideal AWGN values of the standards (no implementation margin, phase noise or multipath): keep a few dB in hand. The DVB-T2 bitrate is the ideal cell capacity (P1/P2 symbols and signalling not deducted), so the real one is a few percent lower.	按系统设置你要的参数，或保持「任意」。旁边的列表显示在此 C/N 下能在该带宽内承载此码率的模式，最优在前：先带宽最小，再 C/N 余量最大。卫星模式的符号率自由：其带宽是码率所需，容量是整个带宽能承载的量。阈值为各标准的理想 AWGN 值（无实现余量、相位噪声或多径）：请预留几 dB。DVB-T2 码率为理想单元容量（未扣除 P1/P2 符号和信令），实际值低几个百分点。
 Per track. 64 to 96 kbit/s is fine for speech in mono, 128 to 192 kbit/s for music in stereo (MPEG-1 Layer II needs the higher end).	按音轨。单声道语音 64 至 96 kbit/s 即可，立体声音乐 128 至 192 kbit/s（MPEG-1 Layer II 需要接近上限）。
 Performance overlay	性能叠加显示
-Periods are from memory and drift with the Earth's motion; the search covers 0.02 % around the period. Check the ATNF pulsar catalogue before a long run.	周期凭记忆获得并随地球运动漂移；搜索范围为周期附近 0.02 % around the period。长时间运行前请核对 ATNF 脉冲星目录。
+Periods are from memory and drift with the Earth's motion; the search covers 0.02 % around the period. Check the ATNF pulsar catalogue before a long run.	周期值来自已有记录，并会随地球运动而漂移；搜索范围覆盖该周期上下 0.02 %。长时间运行前请核对 ATNF 脉冲星目录。
 Permissions	权限
 Peru	秘鲁
 Phase track	相位跟踪
