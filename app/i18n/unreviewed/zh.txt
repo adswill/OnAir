@@ -32,3 +32,6 @@ no ping yet: on GRAVES a quiet hour brings a few, a shower peak hundreds
 pings per hour (UTC), the last 24 hours
 pings per day (UTC), the last 30 days; showers marked at their peak
 pings
+The microphone starts only when you press START TRANSMITTING.	只有按下“开始发射”后，麦克风才会启动。
+Type the PlutoSDR's IP (USB gadget 192.168.2.1, or its Ethernet address) and Connect. It is then in the Radio list.	输入 PlutoSDR 的 IP 地址（USB 网络接口为 192.168.2.1，也可填写其以太网地址），然后点击“连接”。连接后，它会出现在“电台列表”中。
+Your DMR ID and callsign go on the air. Voice bits are a test pattern (OnAir cannot encode AMBE+2). Not tested on air against a real repeater.	你的 DMR ID 和呼号会通过无线电发射出去。语音数据为测试图样（OnAir 无法编码 AMBE+2）。尚未使用真实中继进行空中测试。
