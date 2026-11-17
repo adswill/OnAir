@@ -24,3 +24,11 @@ TTL
 CRF
 Packet 1200
 Packet 9600
+Copies the pings as CSV: id, UTC time, duration, peak level, Doppler, drift, type, beacon frequency.
+Appends every ping to meteor_scatter.csv in the data folder, also when nobody watches the screen.
+How far above its long-term level a spectrum bin must rise to count as an echo. Lower finds weaker pings and more false ones.
+start the receiver to see the pings
+no ping yet: on GRAVES a quiet hour brings a few, a shower peak hundreds
+pings per hour (UTC), the last 24 hours
+pings per day (UTC), the last 30 days; showers marked at their peak
+pings
