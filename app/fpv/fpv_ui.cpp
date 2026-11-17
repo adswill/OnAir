@@ -527,8 +527,10 @@ void decoder(App& a, bool&) {
     if (S.adjust.controls("fpv", fit(90))) S.frameDirty = true;
     ImGui::TextDisabled("%s", tr("Fields")); ImGui::SameLine(0, 5 * gUi);
     if (pillButton(tr("Weave"), S.deint == 0)) { S.deint = 0; plat::prefs().setI("fpvDeint", 0); savePrefs(a); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Combines the two fields of an interlaced picture. Keeps more detail, but moving objects may show comb-like edges."));
     ImGui::SameLine(0, 4 * gUi);
     if (pillButton(tr("Bob"), S.deint == 1)) { S.deint = 1; plat::prefs().setI("fpvDeint", 1); savePrefs(a); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Displays each field in turn and fills its missing lines from neighbouring lines. Motion looks smoother, but vertical detail is reduced."));
     {
         static const char* const kAspects[3] = {"Auto", "4:3", "16:9"};
         ImGui::TextDisabled("%s", tr("Aspect")); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(90));
