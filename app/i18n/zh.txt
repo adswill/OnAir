@@ -2547,8 +2547,10 @@ automatic	自动
 Sound	声音
 The sound subcarrier of the video transmitter, an FM carrier above the picture. Automatic takes the stronger of 6.0 and 6.5 MHz.	视频发射机的伴音副载波，位于图像之上的调频载波。自动时取 6.0 与 6.5 MHz 中较强者。
 Saturation	饱和度
-Weave	场合并
-Bob	场倍增
+Weave	两场合并
+Bob	单场补全
+Combines the two fields of an interlaced picture. Keeps more detail, but moving objects may show comb-like edges.	将隔行视频的两场画面交错合并，保留更多细节；运动物体边缘可能出现梳齿状错位。
+Displays each field in turn and fills its missing lines from neighbouring lines. Motion looks smoother, but vertical detail is reduced.	逐场显示画面，并利用相邻扫描线补齐缺失的线条。运动画面更平滑，但垂直细节会有所减少。
 offset	偏移
 picture	图像
 lines	行
