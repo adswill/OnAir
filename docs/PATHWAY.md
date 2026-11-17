@@ -2440,3 +2440,11 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-17: 4.3.0 published
+
+- v4.3.0 published from 3d3f1ca99 (12 assets, signed APK), main fast-forwarded to it. Windows, macOS, Linux and Android builds green; wide CI had one real failure (the new Big5 external-converter check in `ts` cannot pass on Windows, test-only; fixed on fix44-tstest) and flakes that passed on re-run (diversity_source, inmsat_engine on Windows, audio_engine on macOS). Published with the CI check skipped for that reason.
+- release.sh downloads every artifact including the crash-symbol zips and kept timing out on this network; downloaded only the six artifacts that carry the release files with retries and made the draft by hand (checksums, `gh release create --draft`, upload per file, then publish). The disk filled once: removed merged w43-* worktrees.
+- The version tag push starts "Release all", which would re-upload rebuilt files over the published ones with --clobber: cancelled it right away. Docker image for 4.3 is therefore not built yet.
+- Crash dump from the owner (OnAir.exe+0x3f6eef7) = #520, the 32-bit `long` overflow in the ATV code, fixed in 4.3.
+- Replies posted on #520 #542 #544 #545 #546 #547 #503 #516 #517 #539 #540 and a thank-you on PR #548. None closed (reporters have not confirmed).
