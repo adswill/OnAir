@@ -58,7 +58,7 @@ Talkgroup	通话组
 TETRA ACELP is not encoded here. Colour code and IDs are shown; the downlink test pattern is sent. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	此处不编码 TETRA ACELP。显示色码和 ID；发送下行测试图案。也可改为以模拟 NFM 发送 1 kHz 音调、静音或 WAV/MP3。
 Text	文本
 The capture rate of the sound card. The engine runs at this rate; there is no radio to tune.	声卡的采集速率。引擎按该速率运行；没有可调谐的电台。
-The microphone starts only when you press START TRANSMITTING.	只有按下 START TRANSMITTING 后麦克风才会启动。
+The microphone starts only when you press START TRANSMITTING.	只有按下“开始发射”后，麦克风才会启动。
 this mode has no transmit generator	此模式没有发射发生器
 This vocoder cannot encode: OnAir loads mbelib for decode only (AMBE/IMBE). Destination ID / talkgroup / colour code still go on the air; voice bits are the test pattern. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	此声码器无法编码：OnAir 仅加载 mbelib 用于解码 (AMBE/IMBE）。目的地 ID / 通话组 / 色码仍会发送；语音比特为测试图案。也可改为以模拟 NFM 发送 1 kHz 音调、静音或 WAV/MP3。
 To	收件人
@@ -930,7 +930,7 @@ Transmit radio	发射用无线电
 Choose a radio to transmit with.	请选择用于发射的无线电。
 %s (in use by RX %d)	%s（被 RX %d 使用）
 %s is in use by RX %d, and this radio cannot receive and transmit at the same time. Choose another radio for transmitting, or stop that receiver first.	%s 正被 RX %d 使用，而这台无线电不能同时接收和发射。请选择另一台无线电来发射，或先停止该接收机。
-Type the PlutoSDR's IP (USB gadget 192.168.2.1, or its Ethernet address) and Connect. It is then in the Radio list.	输入 PlutoSDR 的 IP（USB gadget 192.168.2.1，或其以太网地址）并 Connect。之后它会出现在 Radio 列表中。
+Type the PlutoSDR's IP (USB gadget 192.168.2.1, or its Ethernet address) and Connect. It is then in the Radio list.	输入 PlutoSDR 的 IP 地址（USB 网络接口为 192.168.2.1，也可填写其以太网地址），然后点击“连接”。连接后，它会出现在“电台列表”中。
 GNSS, Bluetooth LE, LoRa (UDP JSON / NMEA)	GNSS、蓝牙 LE、LoRa（UDP JSON / NMEA）
 GNSS NMEA RMC/GGA (UDP)	GNSS NMEA RMC/GGA（UDP）
 Bluetooth LE advertisements, JSON (UDP)	蓝牙 LE 广播，JSON（UDP）
@@ -10053,7 +10053,7 @@ You can still pick it.	你仍然可以选择它。
 You can turn the question back on, or share later, in the Scan tab under Shared data.	你可以稍后重新打开该问题，或在「扫描」选项卡的「共享数据」下共享。
 You changed something that is part of the listing. Preview it again before it is sent.	你更改了属于列表信息的内容。发送前再次预览。
 You published this plugin before: this upload is its new version.	你之前发布过这个插件：本次上传是它的新版本。
-Your DMR ID and callsign go on the air. Voice bits are a test pattern (OnAir cannot encode AMBE+2). Not tested on air against a real repeater.	你的 DMR ID 和呼号会上空。语音比特是测试图样（OnAir 无法编码 AMBE+2）。尚未在真实中继上进行空中测试。
+Your DMR ID and callsign go on the air. Voice bits are a test pattern (OnAir cannot encode AMBE+2). Not tested on air against a real repeater.	你的 DMR ID 和呼号会通过无线电发射出去。语音数据为测试图样（OnAir 无法编码 AMBE+2）。尚未使用真实中继进行空中测试。
 Your GNSS fix is %.0f km from the station position.	你的 GNSS 定位距离台站位置 %.0f 公里。
 Your HF antenna is poor at this frequency.	你的 HF 天线在此频率表现不佳。
 Your SNR	你的 SNR
