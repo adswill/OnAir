@@ -30,6 +30,7 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <memory>
 #include <set>
 #include <sstream>
@@ -918,12 +919,17 @@ void settingsPanel(App& a) {
                 ImGui::Text("%s: %s", tr("Model status"), backendReady() ? tr("Ready") : ls == 1 ? tr("Loading") : ls == 3 ? tr("Failed") : tr("Not loaded"));
                 settingsSection(tr("Processing"));
                 const dect2::TranscriberStats ts = gTr.stats();
-                char processing[512];
-                snprintf(processing, sizeof processing,
-                         tr("Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time"),
-                         (unsigned long long)ts.segments, (unsigned long long)ts.kept,
-                         (unsigned long long)ts.filtered, (unsigned long long)ts.dropped, ts.avgRtf);
-                processingMessage(processing);
+                std::ostringstream processing;
+                processing << tr("Heard") << ' ' << ts.segments
+                           << ", " << tr("kept") << ' ' << ts.kept
+                           << ", " << tr("left out") << ' ' << ts.filtered
+                           << ' ' << tr("(silence, noise, repeats)")
+                           << ", " << tr("skipped") << ' ' << ts.dropped
+                           << ' ' << tr("(too slow)")
+                           << ", " << tr("speed") << ' ' << std::fixed << std::setprecision(2)
+                           << ts.avgRtf << ' ' << tr("x real time");
+                const std::string processingText = processing.str();
+                processingMessage(processingText.c_str());
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
@@ -1053,8 +1059,8 @@ void windowPanel(App& a) {
     if (ImGui::SmallButton(tr("Copy all shown"))) ImGui::SetClipboardText(dect2::transcriptsTxt(U.rows).c_str());
     for (const char* ext : {"txt", "srt", "json", "csv"}) {
         ImGui::SameLine();
-        char b[32]; snprintf(b, sizeof b, tr("Export %s##txe"), ext);
-        if (ImGui::SmallButton(b)) exportRows(ext);
+        const std::string label = std::string(tr("Export")) + " " + ext + "##txe";
+        if (ImGui::SmallButton(label.c_str())) exportRows(ext);
     }
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("Delete all ..."))) U.askDelete = true;
@@ -1349,12 +1355,14 @@ void captionsSettings(App& a) {
 
     settingsSection(tr("Processing"));
     const dect2::TranscriberStats ts = gCap.stats();
-    char processing[512];
-    snprintf(processing, sizeof processing,
-             tr("Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time"),
-             (unsigned long long)ts.segments, (unsigned long long)ts.musicSkipped,
-             (unsigned long long)ts.dropped, ts.avgRtf);
-    processingMessage(processing);
+    std::ostringstream processing;
+    processing << tr("Captions:") << ' ' << ts.segments << ' ' << tr("pieces")
+               << ", " << ts.musicSkipped << ' ' << tr("music skipped")
+               << ", " << ts.dropped << ' ' << tr("skipped (too slow)")
+               << ", " << tr("speed") << ' ' << std::fixed << std::setprecision(2)
+               << ts.avgRtf << ' ' << tr("x real time");
+    const std::string processingText = processing.str();
+    processingMessage(processingText.c_str());
     if (ts.avgRtf > 1.0) {
         const ImVec4 warning = pal::warnAmber();
         processingMessage(tr("The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest."), &warning);
