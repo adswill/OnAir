@@ -7286,7 +7286,7 @@ Modulation##csm_nm	调制##csm_nm
 Modulation: healthy	调制：正常
 Mono Pro	专业单色
 Mono Pro (OLED, amber)	Mono Pro（OLED，琥珀色）
-Mono saves some bitrate; stereo needs more.	单声道别省码率；立体声需要更多。
+Mono saves some bitrate; stereo needs more.	单声道可节省一些码率；立体声则需要更多码率。
 More bitrate generally gives a better picture but uses more of the channel. Auto follows a rule of thumb for this codec, resolution, frame rate and frame types; the estimate on the right shows what the whole stream then needs. Untick Auto to set your own. MPEG-2 has a lowest bitrate for each picture size (about 160 bit/s per 16x16 block, e.g. 150 kbit/s at 640x360): a picture must reach the receiver within about 0.7 s.	更高码率通常画质更好，但占用更多信道。自动按此编码、分辨率、帧率和帧类型的经验规则取值；右侧估算值显示整条码流的需求。取消勾选「自动」可自行设置。MPEG-2 对每种图像大小有最低码率（约每 16x16 块 160 bit/s，640x360 时约 150 kbit/s）：图像必须在约 0.7 s 内到达接收机。
 More lessons	更多课程
 More modes	更多模式
@@ -7430,7 +7430,7 @@ No %s encoder works here: the FFmpeg OnAir is built with has none for this compu
 No .tsv, .csv, .txt or .json file in that folder.	该文件夹中没有 .tsv、.csv、.txt 或 .json 文件。
 No APRS message heard yet. Messages between stations appear here as conversations, with their acknowledgements.	尚未听到 APRS 消息。台站之间的消息会作为对话连同确认出现在这里。
 No Alpaca server answered on this network.	此网络上没有 Alpaca 服务器应答。
-No DAB ensembles found. Check the antenna and press Scan on the Scan tab.	未找到 DAB 频段。请检查天线，并在「扫描」选项卡按「扫描」。
+No DAB ensembles found. Check the antenna and press Scan on the Scan tab.	未找到 DAB 节目群。请检查天线，并在「扫描」选项卡按「扫描」。
 No DRM-shaped channel found right now.	当前未找到 DRM 形状的信道。
 No FM stations found. Check the antenna and press Scan on the Scan tab.	未找到 FM 电台。请检查天线，并在「扫描」选项卡按「扫描」。
 No HFDL ground station heard yet. Learned over days; kept between runs.	尚未听到 HFDL 地面站。需要数天学习；在运行之间保留。
@@ -7477,7 +7477,7 @@ No days yet: the store fills while the receiver runs.	尚无数据：库随接�
 No digipeater heard yet. Frames show them in their path once they repeat a packet.	尚未听到数字中继。帧一旦被转发，就会在其路径中显示它们。
 No drawing while the window is minimised or hidden. Decoding goes on.	窗口最小化或隐藏时不绘制。解码继续。
 No ducting now.	当前无波导传播。
-No ensemble in the capture yet (needs at least 3 MHz of Band III).	捕获中尚无频段（需要至少 3 MHz 的 III 频段）。
+No ensemble in the capture yet (needs at least 3 MHz of Band III).	尚未捕获到 DAB 节目群（需要至少 3 MHz 的 Band III 带宽）。
 No entries.	没有条目。
 No extra channels. Add channel, then click on the waterfall: each channel decodes or plays on its own and the sound of the open ones is mixed.	没有额外信道。添加信道后点击瀑布图：每个信道独立解码或播放，打开的信道声音混合输出。
 No favourites yet. Click the star on a mode (or press F on the highlighted one).	尚无收藏。点击模式上的星标（或在高亮模式上按 F）。
