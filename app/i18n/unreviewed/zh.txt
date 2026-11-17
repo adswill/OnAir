@@ -61,3 +61,6 @@ Send one weather station's values to Weather Underground and CWOP every few minu
 Short hands-on lessons on the real controls. Each one lights up the part to use and notices when you have done it. Skip any you know already.
 Start the receiver first: the doctor looks at the live signal.
 Starts the receiver by itself at the rise, follows the Doppler and puts the receiver back at the set. Cancel it in View > Passes.
+The sample rate actually handed over by the radio, over the last seconds. A warning appears below 97% of the set rate.
+Their report of you minus your SNR of them: above 0 they hear you better than you hear them
+The top shows the spectrum, and the waterfall scrolls its history below. Click a signal to tune to it.
