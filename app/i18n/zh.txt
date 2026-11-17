@@ -8958,7 +8958,7 @@ Start the lessons	开始课程
 Start the radio (or a recording) first.	先启动电台（或录音）。
 Start the radio first.	先启动电台。
 Start the radio: the channels share its capture.	启动电台：各信道共享它的捕获。
-Start the receiver first: the doctor looks at the live signal.	先启动接收机：接收医生要查看实时信号。
+Start the receiver first: the doctor looks at the live signal.	先启动接收机：接收诊断工具会检查实时信号。
 Start the receiver first: the fingerprint is taken from the live signal.	先启动接收机：指纹取自实时信号。
 Start the receiver to see TETRA terminals on the map.	启动接收机以在地图上看到 TETRA 终端。
 Start the receiver with DVB-SH selected.	以选中 DVB-SH 启动接收机。
@@ -8972,7 +8972,7 @@ Starting...	正在启动……
 Starts	开始
 Starts a web page for your radio and gives it a public link. No router settings and no files to edit. Everything you can change is under Advanced.	为你的电台生成网页并给出公开链接。无需设置路由器，无需编辑文件。你能改的一切都在「高级」下。
 Starts at	开始于
-Starts the receiver by itself at the rise, follows the Doppler and puts the receiver back at the set. Cancel it in View > Passes.	升段时自动启动接收机，跟踪多普勒，结束后把接收机调回原设。在「视图 > 过境」中可取消。
+Starts the receiver by itself at the rise, follows the Doppler and puts the receiver back at the set. Cancel it in View > Passes.	卫星升起时自动启动接收机，跟踪多普勒，并在过境结束后将接收机调回预设状态。在「视图 > 过境」中可取消。
 Starts when the receiver runs.	接收机运行时启动。
 State topic base	状态主题基础
 Station class	台站类别
