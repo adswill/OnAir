@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// The ATSC 3.0 receiver chain after the physical layer: baseband packets -> ALP -> IP/UDP -> low level signaling (service list) and ROUTE for
-// the selected service -> MP4 fragments -> transport stream (readTs(), the input of the HLS pipeline).
+// The ATSC 3.0 receiver chain after the physical layer: baseband packets -> ALP -> IP/UDP -> low level signaling (service list) and ROUTE or
+// MMTP for the selected service -> MP4 fragments -> transport stream (readTs(), the input of the HLS pipeline).
 #pragma once
 #include "atsc3_alp.h"
 #include "atsc3_frame.h"
 #include "atsc3_ip.h"
+#include "atsc3_mmtp.h"
 #include "atsc3_remux.h"
 #include "atsc3_route.h"
 #include <condition_variable>
@@ -30,6 +31,7 @@ struct ReceiverStats {
     // PLPs backed off because they decoded nothing for several frames (decodePlan): times one was backed off, PLP frames in which only its probe
     // blocks were tried and none decoded, and the FEC blocks not tried in those frames
     long plpBackoffs = 0, plpProbeFrames = 0, blocksSkipped = 0;
+    long mpusDelivered = 0, mpusDropped = 0;   // MMTP services: whole MPUs passed on, and MPUs given up because a part of them was lost
 };
 
 struct FrameInfo {
@@ -71,10 +73,11 @@ public:
     bool selectService(int serviceId);                        // false until the service is known; may be called before, it is remembered
     bool selectServiceIfNone(int serviceId);                  // as selectService, but nothing happens when one is already selected (checked under the lock)
     int selectedService() const { std::lock_guard<std::mutex> lk(mu_); return selected_; }
-    // When no service has been chosen, take the first visible linear video service (ROUTE) as soon as the service list arrives.
+    // When no service has been chosen, take the first visible linear video service (ROUTE or MMTP) as soon as the service list arrives.
     void setAutoSelect(bool on) { autoSelect_ = on; }
-    bool serviceReady() const;                                // the service's signaling (S-TSID) has arrived
+    bool serviceReady() const;                                // the service's signaling (S-TSID, or for MMTP the MP table and a first MPU) has arrived
     std::string mpd() const;
+    // The components of the selected service. For an MMTP service, one per asset of the MP table: `tsi` is the asset's packet id.
     std::vector<RouteComponent> components() const;
 
     int readTs(uint8_t* buf, int size) { return remux_.read(buf, size); }   // blocks; the Reader of HlsPipeline
@@ -95,6 +98,8 @@ private:
     void onUdp(const UdpDatagram& d, int plpId);
     void startRoute();
     void onObject(uint64_t gen, const RouteComponent& c, const RouteObject& o);
+    void deliver(const std::string& key, bool init, bool repeatedInit, const std::vector<uint8_t>& data);   // to the remuxer, init segments once
+    int componentId(const std::string& key);       // the remuxer's id of a component, given on first sight
 
     mutable std::mutex mu_;
     std::map<int, AlpReassembler> reasm_;
@@ -107,6 +112,7 @@ private:
     bool routeStarted_ = false;
     uint64_t routeGen_ = 0;                        // counts the routes made: objects of a route that a service change replaced are dropped (#650)
     std::shared_ptr<RouteService> route_;   // shared: onUdp keeps its copy while a service change (another thread) replaces route_
+    std::shared_ptr<MmtpService> mmtp_;            // shared for the same reason; an MMTP service counts in routeGen_ as a route does
     std::map<std::string, int> remuxIds_;          // component key -> remux component id
     std::map<int, std::vector<uint8_t>> lastInit_;
     struct CtiPlp;

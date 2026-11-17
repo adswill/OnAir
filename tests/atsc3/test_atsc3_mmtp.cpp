@@ -5,16 +5,18 @@
 // becomes an MPU the way ATSC 3.0 senders make them (ftyp + mmpu + moov with an MMT hint track in front of the media track, a moof with a
 // hint traf, MFUs that carry a 34-byte hint sample in front of the media and a 14-byte header on every fragment), split into MMTP packets.
 // Checked: the rebuilt fragmented MP4 (media samples byte for byte, one init segment, a running timeline that FFmpeg reads), shuffled,
-// duplicated and lost packets, a corrupted MPU sequence number, the limits and the alignment of two assets.
-// Needs the test files: test_atsc3_mmtp <video.mp4> <audio.mp4>
+// duplicated and lost packets, a corrupted MPU sequence number, the limits, the alignment of two assets, and the whole receiver from an
+// MMTP service in the service list to a transport stream. Needs the test files: test_atsc3_mmtp <video.mp4> <audio.mp4>
 #include "atsc3_sim.h"
 #include "dect2/atsc3/atsc3_mmtp.h"
 #include "dect2/common/endian.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <map>
 #include <random>
+#include <thread>
 
 using namespace dect2;
 using namespace dect2::atsc3;
@@ -467,6 +469,41 @@ int main(int argc, char** argv) {
             printf("  %s: video starts at %.3f s, audio at %.3f s\n", bySeq ? "by sequence number" : "by MPU time", vs, as);
             CHECK(gv && ga && std::fabs(as - vs - (bySeq ? 0.0 : 0.25)) < 0.002, bySeq ? "assets lined up by sequence number" : "assets lined up by the MPU timestamps");
         }
+    }
+    // ---- the whole receiver: an MMTP service in the service list, MMTP datagrams, a transport stream with picture and sound
+    {
+        std::vector<Bytes> ip;
+        int id = 1;
+        auto send = [&](uint32_t dst, int port, const Bytes& pl) { for (auto& p : makeUdpPackets(sim::kSrc, dst, 4000, port, pl, id++ & 0xFFFF)) ip.push_back(p); };
+        const std::string slt = "<SLT bsid=\"4660\"><Service serviceId=\"1002\" majorChannelNo=\"7\" minorChannelNo=\"2\" serviceCategory=\"1\" shortServiceName=\"MMT\" sltSvcSeqNum=\"0\">"
+                                "<BroadcastSvcSignaling slsProtocol=\"2\" slsDestinationIpAddress=\"239.255.5.1\" slsDestinationUdpPort=\"3000\" slsSourceIpAddress=\"10.1.1.5\"/></Service></SLT>";
+        send(kLlsAddress, kLlsPort, makeLls(1, 0, 1, slt));
+        std::vector<UdpDatagram> in;
+        in.push_back(signalling(0x20, {{100, "hvc1", {}}, {200, "mp4a", {}}}, 0));
+        Sender v{100}, a{200};
+        for (int k = 0; k < 3; k++) v.mpu(vm[k], 1000 + k);
+        a.mpu(am, 1000);
+        in.insert(in.end(), a.out.begin(), a.out.end());
+        in.insert(in.end(), v.out.begin(), v.out.end());
+        for (auto& d : in) send(d.dstIp, d.dstPort, d.payload);
+        Atsc3Receiver rx;
+        rx.setAutoSelect(true);
+        std::vector<uint8_t> ts;
+        std::thread reader([&] { uint8_t buf[8192]; for (;;) { int k = rx.readTs(buf, sizeof buf); if (k <= 0) break; ts.insert(ts.end(), buf, buf + k); } });
+        for (auto& p : ip) rx.pushIp(p.data(), p.size());
+        for (int i = 0; i < 60; i++) { std::this_thread::sleep_for(std::chrono::milliseconds(50)); size_t s0 = ts.size(); std::this_thread::sleep_for(std::chrono::milliseconds(50)); if (s0 == ts.size() && s0 > 0) break; }
+        rx.stop();
+        reader.join();
+        const auto st = rx.stats();
+        CHECK(rx.selectedService() == 1002 && rx.serviceReady(), "the MMTP service is chosen and ready");
+        const auto comps = rx.components();
+        CHECK(comps.size() == 2 && comps[0].tsi == 100 && comps[0].contentType == "video" && comps[1].contentType == "audio", "components from the MP table");
+        CHECK(st.mpusDelivered == 4 && st.mpusDropped == 0, "all MPUs delivered");
+        long vc = 0, ac = 0;
+        bool hevc = false, aac = false;
+        CHECK(sim::countTs(ts, vc, ac, hevc, aac) && hevc && aac, "HEVC video and AAC audio in the transport stream");
+        printf("  receiver: %zu bytes of transport stream, %ld video and %ld audio frames\n", ts.size(), vc, ac);
+        CHECK(vc >= 70 && ac >= 130, "nearly all frames came through");
     }
     printf(fails ? "atsc3 mmtp: FAILED\n" : "atsc3 mmtp: ok\n");
     return fails ? 1 : 0;

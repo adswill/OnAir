@@ -30,7 +30,7 @@ The compact family table is in the [README](../README.md#modes); the full number
 
 - **DVB-SH** (S band 2170 - 2200 MHz, OFDM and TDM forms), **DVB-C2** (cable, needs the cable network as input) and **ISDB-TSB** (narrow-band ISDB, one or three segments). Tested on generated signals only; DVB-T also carries the DVB-H layer (4K, MPE, time slicing, MPE-FEC).
 - **DVB-T2 / DVB-T** (detected automatically; T2-Lite included): Europe, Middle East, Africa, Asia, Australia.
-- **ATSC 1.0** (North America, South Korea) and **ATSC 3.0** NextGen TV (ROUTE, HEVC video with AAC audio, optional AC-4 audio through libavcodec when installed; needs 6.5 Msps or more; MMTP services are not supported).
+- **ATSC 1.0** (North America, South Korea) and **ATSC 3.0** NextGen TV (ROUTE, HEVC video with AAC audio, optional AC-4 audio through libavcodec when installed; needs 6.5 Msps or more; MMTP services play their video and audio, their captions are not shown yet).
 - **ISDB-T** (Japan, Brazil and most of South America, Philippines; 13 segments, up to three layers, one-segment mobile TV).
 - **DVB-S / S2 / S2X** satellite TV through an LNB, all MODCODs, VL-SNR frames, polarisation warning.
 - **TV sat beacon decoder** (the narrow carrier of a geostationary beacon, found anywhere in the capture and tracked: level, C/N0, offset, drift; the reference carrier; phase-modulated telemetry recovered as bits and frames with the frame length learned from the repetition; CSV logging; a decoded view of every word of the frames with its confidence, the satellite estimated from the frequency, CSV and JSON export; [details](satbeacon.md)).

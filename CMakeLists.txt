@@ -2755,6 +2755,11 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_atsc3_mmtp PRIVATE dect2core)
   add_test(NAME atsc3_mmtp COMMAND test_atsc3_mmtp ${ONAIR_ROOT}/tests/data/route_video.mp4 ${ONAIR_ROOT}/tests/data/route_audio.mp4)
 
+  add_executable(test_atsc3_mmtp_rec tests/atsc3/test_atsc3_mmtp_rec.cpp)   # an MMTP recording named by ONAIR_ATSC3_MMTP_REC; skipped without it
+  target_link_libraries(test_atsc3_mmtp_rec PRIVATE dect2core)
+  add_test(NAME atsc3_mmtp_rec COMMAND test_atsc3_mmtp_rec)
+  set_tests_properties(atsc3_mmtp_rec PROPERTIES SKIP_RETURN_CODE 77)
+
   add_executable(test_atsc3_remux tests/atsc3/test_atsc3_remux.cpp)
   target_link_libraries(test_atsc3_remux PRIVATE dect2core)
   add_test(NAME atsc3_remux COMMAND test_atsc3_remux ${ONAIR_ROOT}/tests/data/route_video.mp4 ${ONAIR_ROOT}/tests/data/route_audio.mp4)

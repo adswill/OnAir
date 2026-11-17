@@ -364,7 +364,7 @@ void Atsc3Receiver::onUdp(const UdpDatagram& d, int plpId) {
                 start = start || (selected_ >= 0 && !routeStarted_);
                 if (selected_ < 0 && autoSelect_) {
                     for (auto& sv : services_)
-                        if (sv.category == 1 && !sv.hidden && sv.slsProtocol == 1) { selected_ = sv.serviceId; start = true; break; }
+                        if (sv.category == 1 && !sv.hidden && (sv.slsProtocol == 1 || sv.slsProtocol == 2)) { selected_ = sv.serviceId; start = true; break; }
                 }
             }
         }
@@ -372,11 +372,15 @@ void Atsc3Receiver::onUdp(const UdpDatagram& d, int plpId) {
         return;
     }
     std::shared_ptr<RouteService> r;
+    std::shared_ptr<MmtpService> m;
     {
         std::lock_guard<std::mutex> lk(mu_);
         r = route_;
+        m = mmtp_;
     }
-    if (r && r->push(d) && plpId >= 0) {   // the selected service's signaling or media: never backed off while it decodes at all
+    bool mine = r && r->push(d);
+    if (m && m->push(d)) mine = true;
+    if (mine && plpId >= 0) {   // the selected service's signaling or media: never backed off while it decodes at all
         std::lock_guard<std::mutex> lk(mu_);
         servicePlps_.insert(plpId);
     }
@@ -389,6 +393,7 @@ bool Atsc3Receiver::selectService(int id) {
         routeStarted_ = false;
         route_.reset();
         servicePlps_.clear();
+        mmtp_.reset();
         remuxIds_.clear();
         lastInit_.clear();
     }
@@ -405,6 +410,7 @@ bool Atsc3Receiver::selectServiceIfNone(int id) {
         routeStarted_ = false;
         route_.reset();
         servicePlps_.clear();
+        mmtp_.reset();
         remuxIds_.clear();
         lastInit_.clear();
     }
@@ -418,8 +424,22 @@ void Atsc3Receiver::startRoute() {
     if (routeStarted_) return;
     for (auto& s : services_) {
         if (s.serviceId != selected_) continue;
-        if (s.slsProtocol != 1) {   // ROUTE only; MMTP services are not supported
-            DIAG_EVERY(923174, 30.0, "ATSC 3.0 service %d uses MMTP signalling (protocol %d), which this receiver does not support, so it cannot be played.", s.serviceId, (int)s.slsProtocol);
+        if (s.slsProtocol == 2) {   // MMTP: the video and audio assets; captions and the other signalling are not read yet
+            auto m = std::make_shared<MmtpService>(s.slsSrcIp, s.slsDstIp, s.slsDstPort);
+            const uint32_t ip = s.slsDstIp;
+            const int port = s.slsDstPort;
+            auto key = [ip, port](uint16_t pid) { char k[64]; snprintf(k, sizeof k, "%08x:%d:p%u", ip, port, (unsigned)pid); return std::string(k); };
+            const uint64_t gen = ++routeGen_;
+            // as for a route: what the service that was just left still delivers is dropped
+            auto current = [this, gen]() { std::lock_guard<std::mutex> lk(mu_); return gen == routeGen_ && mmtp_; };
+            m->onObject = [this, key, current](uint16_t pid, const std::string&, bool init, const std::vector<uint8_t>& data) { if (current()) deliver(key(pid), init, false, data); };
+            m->onAsset = [this, key, current](uint16_t pid, const MmtpAsset&) { if (current()) remux_.addComponent(componentId(key(pid))); };
+            mmtp_ = m;
+            routeStarted_ = true;
+            return;
+        }
+        if (s.slsProtocol != 1) {
+            DIAG_EVERY(923174, 30.0, "ATSC 3.0 service %d uses a signalling protocol (%d) that is neither ROUTE nor MMTP, so it cannot be played.", s.serviceId, (int)s.slsProtocol);
             return;
         }
         route_ = std::make_shared<RouteService>(s.slsSrcIp, s.slsDstIp, s.slsDstPort);
@@ -431,25 +451,36 @@ void Atsc3Receiver::startRoute() {
 }
 
 void Atsc3Receiver::onObject(uint64_t gen, const RouteComponent& c, const RouteObject& o) {
-    int id;
     {
         std::lock_guard<std::mutex> lk(mu_);
         if (gen != routeGen_ || !route_) return;   // an object of the service that was just left: its component numbers would mix into the new service
         st_.routeObjects++;
-        char key[64];
-        snprintf(key, sizeof key, "%08x:%d:%u", c.dstIp, c.dstPort, c.tsi);
-        auto it = remuxIds_.find(key);
-        if (it == remuxIds_.end()) {
-            id = (int)remuxIds_.size() + 1;
-            remuxIds_[key] = id;
-        } else id = it->second;
-        // an initialization segment: by its code point, or (not every sender uses the code points of the S-TSID) by its first box
-        const bool boxInit = o.data.size() >= 8 && (memcmp(o.data.data() + 4, "ftyp", 4) == 0 || memcmp(o.data.data() + 4, "moov", 4) == 0);
-        const bool init = (o.codePoint >= 5 && o.codePoint <= 7) || boxInit;
+    }
+    char key[64];
+    snprintf(key, sizeof key, "%08x:%d:%u", c.dstIp, c.dstPort, c.tsi);
+    // an initialization segment: by its code point, or (not every sender uses the code points of the S-TSID) by its first box
+    const bool boxInit = o.data.size() >= 8 && (memcmp(o.data.data() + 4, "ftyp", 4) == 0 || memcmp(o.data.data() + 4, "moov", 4) == 0);
+    const bool init = (o.codePoint >= 5 && o.codePoint <= 7) || boxInit;
+    deliver(key, init, o.codePoint == 7, o.data);
+}
+
+int Atsc3Receiver::componentId(const std::string& key) {
+    std::lock_guard<std::mutex> lk(mu_);
+    auto it = remuxIds_.find(key);
+    if (it != remuxIds_.end()) return it->second;
+    const int id = (int)remuxIds_.size() + 1;
+    remuxIds_[key] = id;
+    return id;
+}
+
+void Atsc3Receiver::deliver(const std::string& key, bool init, bool repeatedInit, const std::vector<uint8_t>& data) {
+    const int id = componentId(key);
+    {
+        std::lock_guard<std::mutex> lk(mu_);
         if (init) {
-            if (o.codePoint == 7 && lastInit_.count(id)) return;   // a repeat of the init segment
-            if (lastInit_.count(id) && lastInit_[id] == o.data) return;
-            lastInit_[id] = o.data;
+            if (repeatedInit && lastInit_.count(id)) return;   // a repeat of the init segment
+            if (lastInit_.count(id) && lastInit_[id] == data) return;
+            lastInit_[id] = data;
         } else if (!lastInit_.count(id)) {
             DIAG_DEBUG_EVERY(772844, 10.0, "An ATSC 3.0 media segment arrived on component %d before its initialization segment, so it is dropped until the initialization segment is received.", id);
             return;   // media before the init segment cannot be played
@@ -457,18 +488,36 @@ void Atsc3Receiver::onObject(uint64_t gen, const RouteComponent& c, const RouteO
         st_.objectsDelivered++;
     }
     remux_.addComponent(id);
-    remux_.push(id, o.data);
+    remux_.push(id, data);
 }
 
 std::vector<SltService> Atsc3Receiver::services() const { std::lock_guard<std::mutex> lk(mu_); return services_; }
-bool Atsc3Receiver::serviceReady() const { std::lock_guard<std::mutex> lk(mu_); return route_ && route_->ready(); }
+bool Atsc3Receiver::serviceReady() const { std::lock_guard<std::mutex> lk(mu_); return (route_ && route_->ready()) || (mmtp_ && mmtp_->ready()); }
 std::string Atsc3Receiver::mpd() const { std::lock_guard<std::mutex> lk(mu_); return route_ ? route_->mpd() : std::string(); }
-std::vector<RouteComponent> Atsc3Receiver::components() const { std::lock_guard<std::mutex> lk(mu_); return route_ ? route_->components() : std::vector<RouteComponent>(); }
+std::vector<RouteComponent> Atsc3Receiver::components() const {
+    std::lock_guard<std::mutex> lk(mu_);
+    if (route_) return route_->components();
+    std::vector<RouteComponent> out;
+    if (!mmtp_) return out;
+    for (const MmtpAsset& a : mmtp_->assets()) {
+        for (uint16_t pid : a.packetIds) {
+            RouteComponent c;
+            for (auto& s : services_) if (s.serviceId == selected_) { c.dstIp = s.slsDstIp; c.dstPort = s.slsDstPort; }
+            c.tsi = pid;
+            c.repId = a.id;
+            c.contentType = assetKind(a.type);
+            c.realTime = true;
+            out.push_back(c);
+        }
+    }
+    return out;
+}
 FrameInfo Atsc3Receiver::frameInfo() const { std::lock_guard<std::mutex> lk(mu_); return info_; }
 ReceiverStats Atsc3Receiver::stats() const {
     std::lock_guard<std::mutex> lk(mu_);
     ReceiverStats s = st_;
     if (route_) { s.slsObjects = route_->slsObjects(); s.slsTables = route_->slsTables(); }
+    if (mmtp_) { const MmtpStats ms = mmtp_->stats(); s.mpusDelivered = ms.mpusDelivered; s.mpusDropped = ms.mpusDropped; }
     return s;
 }
 
