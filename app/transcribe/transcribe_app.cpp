@@ -20,6 +20,8 @@
 #include "ui/theme.h"
 #include "ui/ui_common.h"
 #include <algorithm>
+#include <array>
+#include <cctype>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -55,6 +57,7 @@ struct Cfg {
     bool translate = false;     // also keep an English translation of foreign speech (multilingual model)
     int threads = 2;            // CPU budget: threads of the speech engine
     int days = 7;               // retention
+    int columns = 0x75;        // UTC, channel, text, aircraft, confidence; local time/frequency optional
     // auto subtitles
     bool cap = true;            // master switch for captions (separate from the transcripts: nothing is kept in a file)
     std::set<int> capModes;     // the standards it runs for (all that can be captioned until the user changes it)
@@ -111,6 +114,7 @@ void load() {
     C.translate = d.getB("txTranslate", false);
     C.threads = (int)std::max(1L, std::min(8L, d.getI("txThreads", 2)));
     C.days = (int)std::max(1L, std::min(365L, d.getI("txDays", 7)));
+    C.columns = (int)d.getI("txColumns", 0x75) & 0x7f;
     C.cap = d.getB("capOn", true);
     {
         std::stringstream ss(d.getS("capModes", "*"));   // "*": every mode that can be captioned
@@ -135,7 +139,7 @@ void save() {
     Rx1 r;
     plat::Prefs& d = plat::prefs();
     d.setB("txEnabled", C.enabled); d.setB("txAirband", C.airband); d.setB("txMarine", C.marine); d.setB("txOther", C.other);
-    d.setS("txModel", C.model); d.setS("txLang", C.lang); d.setB("txTranslate", C.translate); d.setI("txThreads", C.threads); d.setI("txDays", C.days);
+    d.setS("txModel", C.model); d.setS("txLang", C.lang); d.setB("txTranslate", C.translate); d.setI("txThreads", C.threads); d.setI("txDays", C.days); d.setI("txColumns", C.columns);
     d.setB("capOn", C.cap); d.setI("capSource", C.capSource); d.setI("capSize", C.capSize); d.setI("capBg", C.capBg); d.setI("capLines", C.capLines);
     d.setI("txVer", 31);
     d.setB("capTop", C.capTop); d.setI("capShow", C.capShow); d.setB("capSave", C.capSave);
@@ -180,13 +184,22 @@ std::atomic<int64_t> gSegMs{0};               // the last time a speech piece wa
 uint64_t gSegSeen = 0;
 std::atomic<int64_t> gFirstSoundMs{0};        // when the sound began to arrive (0: none now)
 
+// Keep the user's translation preference when switching temporarily to English or
+// an English-only model, but never request translation in those configurations.
+bool translationSupported() {
+    if (C.lang == "en") return false;
+    if (const dect2::SpeechModel* m = dect2::findSpeechModel(C.model)) return m->multilingual;
+    // User-supplied models: use the filename until a backend is loaded.
+    return !dect2::speechModelEnglishOnly(modelFile(C.model));
+}
+
 void applyConfig() {
     dect2::TranscribeConfig c = gTr.config();
     c.enabled = C.enabled;
     c.workers = 1;
     c.threads = C.threads;
     c.language = C.lang;
-    c.translate = C.translate;
+    c.translate = C.translate && translationSupported();
     c.queueMax = 6;
     gTr.configure(c);
     gStore.setLimits(20000, C.days);
@@ -195,7 +208,7 @@ void applyConfig() {
     k.workers = 1;
     k.threads = C.threads;
     k.language = C.lang;
-    k.translate = C.translate;
+    k.translate = C.translate && translationSupported();
     k.queueMax = 3;
     k.segmenter.rejectMusic = true;
     k.segmenter.maxSec = 12;     // shorter pieces: the first words show up sooner
@@ -321,7 +334,7 @@ std::string statusLine(int* level) {
     *level = 0;
     if (!C.enabled && !C.cap) return tr("Transcription is off.");
     if (!dect2::whisperAvailable()) { *level = 2; return tr("This build has no speech engine."); }
-    if (!modelPresent(C.model) && !backendReady()) { *level = 2; return tr("Model missing: download a speech model (Transcripts > Settings and speech model)."); }
+    if (!modelPresent(C.model) && !backendReady()) { *level = 2; return tr("Model missing: download a speech model (Transcripts > Show settings > Speech model)."); }
     if (!backendReady()) {
         if (gLoadState.load() == 3) { *level = 2; std::lock_guard<std::mutex> lk(gMu); return gLoadErr.empty() ? std::string(tr("The speech model could not be loaded.")) : gLoadErr; }
         return tr("Model loading ...");
@@ -634,7 +647,8 @@ void captions(App& a) {
 namespace {
 
 struct Ui {
-    char query[96] = "", aircraft[32] = "", airport[16] = "";
+    char query[96] = "";
+    int searchIn = 0;                         // all, channel, text, aircraft
     int freqSel = 0;                           // 0 all, else index into freqs
     std::vector<double> freqs;
     std::vector<dect2::TranscriptEntry> rows;
@@ -647,19 +661,42 @@ struct Ui {
     const dect2::SpeechModel* askModel = nullptr;
     std::string note;
     bool settings = false;
+    float splitRatio = 0.5f;
+    bool splitLoaded = false;
+    bool wasOpen = false;
+    bool showNotice = false;
 };
 Ui U;
 
+// Search the selected field, case-insensitively, keeping the existing all-words behaviour.
+bool searchMatch(const dect2::TranscriptEntry& e, const char* query, int field) {
+    std::string hay;
+    if (field == 1) hay = e.channel;
+    else if (field == 2) hay = e.text + " " + e.translation;
+    else if (field == 3) hay = e.callsign + " " + e.reg + " " + e.aircraft;
+    else hay = e.text + " " + e.translation + " " + e.channel + " " + e.callsign + " " + e.reg + " " + e.aircraft;
+    std::transform(hay.begin(), hay.end(), hay.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    std::istringstream words(query);
+    std::string word;
+    while (words >> word) {
+        std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+        if (hay.find(word) == std::string::npos) return false;
+    }
+    return true;
+}
+
 void refreshRows() {
     dect2::TranscriptFilter f;
-    f.query = U.query; f.aircraft = U.aircraft; f.airport = U.airport;
     if (U.freqSel > 0 && (size_t)U.freqSel <= U.freqs.size()) f.freqHz = U.freqs[(size_t)U.freqSel - 1];
-    char k[400];
-    snprintf(k, sizeof k, "%s|%s|%s|%d", U.query, U.aircraft, U.airport, U.freqSel);
+    char k[256];
+    snprintf(k, sizeof k, "%s|%d|%d", U.query, U.searchIn, U.freqSel);
     const double now = ImGui::GetTime();
     if (gStore.version() == U.ver && U.key == k && now - U.at < 5) return;
     U.ver = gStore.version(); U.key = k; U.at = now;
     U.rows = gStore.find(f);
+    U.rows.erase(std::remove_if(U.rows.begin(), U.rows.end(), [](const auto& e) {
+        return !searchMatch(e, U.query, U.searchIn);
+    }), U.rows.end());
     U.total = gStore.size();
     std::map<long long, int> fr;
     for (const auto& e : gStore.find({})) if (e.freqHz > 0) fr[(long long)std::llround(e.freqHz / 1000.0)]++;
@@ -693,130 +730,207 @@ const char* kLangs[][2] = {{"en", "English"}, {"auto", "Auto-detect (needs a mul
                            {"it", "Italiano"}, {"nl", "Nederlands"}, {"pl", "Polski"}, {"pt", "Português"}, {"lt", "Lietuvių"}, {"ru", "Русский"}, {"hu", "Magyar"},
                            {"tr", "Türkçe"}, {"ar", "العربية"}, {"zh", "中文"}, {"ja", "日本語"}};
 
-void settingsPanel() {
-    ImGui::PushTextWrapPos(0);
-    ImGui::TextColored(pal::warnAmber(), "%s", tr("Privacy: what is said on public aviation radio is public, but the speech engine runs here on your computer and the text is kept in your data folder. Do not use it on private conversations. It is on for what you are listening to (FM, AM, marine, amateur, CB, digital voice ...) once a speech model is installed; untick the boxes below to stop it. A visible line shows what it is doing."));
-    ImGui::PopTextWrapPos();
+// A lightweight heading and rule keep the half-width settings pane scannable.
+void settingsSection(const char* heading) {
     ImGui::Spacing();
-    bool ch = false;
-    ch |= ImGui::Checkbox(tr("Transcribe speech"), &C.enabled);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Master switch. While a transmission is going on the audio is cut out, sent to the speech engine and turned into text. Nothing runs while the channels are quiet."));
-    ImGui::BeginDisabled(!C.enabled);
-    ch |= ImGui::Checkbox(tr("Airband channels"), &C.airband);
-    ImGui::SameLine();
-    ch |= ImGui::Checkbox(tr("Marine VHF"), &C.marine);
-    ImGui::SameLine();
-    ch |= ImGui::Checkbox(tr("Transcribe what I am listening to"), &C.other);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Takes the sound you hear in any mode (FM, AM, amateur, CB, digital voice ...) and turns the speech in it into text. Music is skipped."));
-    ImGui::EndDisabled();
-    if (ch) { save(); applyConfig(); }
+    ImGui::TextUnformatted(heading);
+    ImGui::Separator();
+    ImGui::Spacing();
+}
 
-    // the model
-    ImGui::Spacing();
-    ImGui::TextUnformatted(tr("Speech model"));
+void modelSelector() {
     const std::string dir = modelsDir();
     const double now = ImGui::GetTime();
     if (now - gUserFilesAt > 3) { gUserFiles = dect2::userSpeechModels(dir); gUserFilesAt = now; }
+    const float labelWidth = 70 * gUi;
+    ImGui::TextUnformatted(tr("Engine"));
+    ImGui::SameLine(labelWidth);
+    ImGui::SetNextItemWidth(-1);
+    if (ImGui::BeginCombo("##txengine", tr("Whisper"))) {
+        ImGui::Selectable(tr("Whisper"), true);
+        ImGui::EndCombo();
+    }
     std::string cur = tr("none");
     if (modelPresent(C.model)) cur = C.model.compare(0, 5, "file:") == 0 ? C.model.substr(5) : C.model;
-    ImGui::SetNextItemWidth(260 * gUi);
+    ImGui::TextUnformatted(tr("Model"));
+    ImGui::SameLine(labelWidth);
+    ImGui::SetNextItemWidth(-1);
     if (ImGui::BeginCombo("##txmodel", cur.c_str())) {
         for (const auto& m : dect2::speechModels()) {
             if (!dect2::speechModelInstalled(dir, m)) continue;
-            if (ImGui::Selectable(m.id, C.model == m.id)) { C.model = m.id; save(); }
+            if (ImGui::Selectable(m.id, C.model == m.id)) { C.model = m.id; save(); applyConfig(); }
         }
-        for (const auto& f : gUserFiles) if (ImGui::Selectable(f.c_str(), C.model == "file:" + f)) { C.model = "file:" + f; save(); }
+        for (const auto& f : gUserFiles)
+            if (ImGui::Selectable(f.c_str(), C.model == "file:" + f)) { C.model = "file:" + f; save(); applyConfig(); }
         ImGui::EndCombo();
     }
-    ImGui::SameLine();
-    if (ImGui::Button(tr("Open models folder"))) {
-        std::error_code ec;
-        std::filesystem::create_directories(dect2::u8file(dir), ec);
-        dect2::openUrl(dir);
-    }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\n%s", dir.c_str(), tr("Put a whisper.cpp model file (ggml-*.bin) here to use it. The folder is made if it does not exist."));
-    const int ls = gLoadState.load();
-    if (C.enabled && !modelPresent(C.model)) {
-        ImGui::PushTextWrapPos(0);
-        ImGui::TextColored(pal::warnAmber(), "%s", tr("No speech model yet. Download one below, or put a model file in the models folder."));
-        ImGui::PopTextWrapPos();
-    } else if (C.enabled && ls == 1) ImGui::TextDisabled("%s", tr("Loading the speech model ..."));
-    else if (C.enabled && ls == 3) { ImGui::PushTextWrapPos(0); { std::lock_guard<std::mutex> lk(gMu); ImGui::TextColored(pal::badRed(), "%s", gLoadErr.c_str()); } ImGui::PopTextWrapPos(); }
-    else if (C.enabled && backendReady()) ImGui::TextColored(pal::okGreen(), "%s", tr("Speech model loaded."));
-    if (!dect2::whisperAvailable()) { ImGui::TextColored(pal::badRed(), "%s", tr("This build has no speech engine.")); }
+    if (!modelPresent(C.model)) ImGui::TextDisabled("%s", tr("No locally installed model selected. Download one under Speech model > Whisper."));
+}
 
-    // download, on an explicit click
-    const auto st = gDl.state();
-    if (st == dect2::ModelDownloader::State::Downloading || st == dect2::ModelDownloader::State::Verifying) {
-        const double tot = (double)std::max<uint64_t>(1, gDl.totalBytes());
-        char ov[96];
-        snprintf(ov, sizeof ov, "%s %.0f / %.0f MB", st == dect2::ModelDownloader::State::Verifying ? tr("checking") : gDl.modelId().c_str(), (double)gDl.doneBytes() / 1048576.0, tot / 1048576.0);
-        ImGui::ProgressBar((float)(gDl.doneBytes() / tot), ImVec2(320 * gUi, 0), ov);
-        ImGui::SameLine();
-        if (ImGui::Button(tr("Cancel##txdl"))) gDl.cancel();
-    } else {
-        if (st == dect2::ModelDownloader::State::Failed) {
-            ImGui::PushTextWrapPos(0);
-            ImGui::TextColored(pal::badRed(), "%s", gDl.error().c_str());
-            ImGui::PopTextWrapPos();
-        }
-        ImGui::TextDisabled("%s", tr("Download speech model:"));
-        for (const char* id : {"tiny.en", "base.en", "small.en"}) {
-            const dect2::SpeechModel* m = dect2::findSpeechModel(id);
-            if (!m) continue;
-            ImGui::SameLine();
-            char b[96];
-            snprintf(b, sizeof b, tr("%s %d MB"), m->id, m->mib);
-            const bool have = dect2::speechModelInstalled(dir, *m);
-            ImGui::BeginDisabled(have);
-            if (ImGui::Button((std::string(b) + "##dl" + id).c_str())) U.askModel = m;
-            ImGui::EndDisabled();
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", have ? tr("Already downloaded") : tr("English only. tiny is the fastest (real time on a laptop), small hears more words and needs a stronger computer."));
-        }
-        if (ImGui::TreeNode(trw("Other languages (multilingual models)"))) {
-            for (const char* id : {"tiny", "base", "small"}) {
-                const dect2::SpeechModel* m = dect2::findSpeechModel(id);
-                if (!m) continue;
-                char b[96];
-                snprintf(b, sizeof b, tr("%s %d MB"), m->id, m->mib);
-                const bool have = dect2::speechModelInstalled(dir, *m);
-                ImGui::BeginDisabled(have);
-                if (ImGui::Button((std::string(b) + "##dl" + id).c_str())) U.askModel = m;
-                ImGui::EndDisabled();
-                ImGui::SameLine();
+// Wrap long runtime messages at the current settings-pane boundary.
+void processingMessage(const char* message, const ImVec4* color = nullptr) {
+    ImGui::PushTextWrapPos(0);
+    if (color) ImGui::TextColored(*color, "%s", message);
+    else ImGui::TextDisabled("%s", message);
+    ImGui::PopTextWrapPos();
+}
+
+void whisperModelEntry(const std::string& dir, const char* id) {
+    const dect2::SpeechModel* m = dect2::findSpeechModel(id);
+    if (!m) return;
+    const bool installed = dect2::speechModelInstalled(dir, *m);
+    ImGui::PushID(id);
+    ImGui::Text("%s (%d MB)", m->id, m->mib);
+    const float labelEnd = ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x;
+    const char* action = installed ? tr("Installed") : tr("Download");
+    const float actionWidth = installed ? ImGui::CalcTextSize(action).x
+        : ImGui::CalcTextSize(action).x + 2 * ImGui::GetStyle().FramePadding.x;
+    const float right = ImGui::GetContentRegionMax().x - actionWidth;
+    // Keep one row per model. On a very narrow pane, wrap below its label.
+    if (right > labelEnd + ImGui::GetStyle().ItemSpacing.x) ImGui::SameLine(right);
+    if (installed) ImGui::TextDisabled("%s", action);
+    else if (ImGui::SmallButton(action)) U.askModel = m;
+    ImGui::PopID();
+    ImGui::Spacing();
+}
+
+void settingsPanel(App& a) {
+    if (!ImGui::BeginTabBar("##txsettingtabs")) return;
+    if (ImGui::BeginTabItem(tr("Transcription"))) {
+        settingsSection(tr("Speech engine and model"));
+        modelSelector();
+        bool changed = ImGui::Checkbox(tr("Transcribe speech"), &C.enabled);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Enable speech recognition for the selected sources."));
+        if (changed) { save(); applyConfig(); }
+
+        settingsSection(tr("Source"));
+        bool sourcesChanged = false;
+        ImGui::BeginDisabled(!C.enabled);
+        sourcesChanged |= ImGui::Checkbox(tr("Airband channels"), &C.airband);
+        sourcesChanged |= ImGui::Checkbox(tr("Marine VHF"), &C.marine);
+        sourcesChanged |= ImGui::Checkbox(tr("Audio (transcribe what I am listening to)"), &C.other);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Current receiver audio in other supported modes (FM, AM, amateur, CB, digital voice ...). Airband and Marine VHF use their own source switches."));
+        ImGui::EndDisabled();
+        if (sourcesChanged) { save(); applyConfig(); }
+
+        settingsSection(tr("Table headings"));
+        const char* names[] = {tr("Time (UTC)"), tr("Time (local)"), tr("Channel"), tr("Frequency"), tr("Text"), tr("Aircraft"), tr("Confidence")};
+        for (int i = 0; i < 7; ++i) {
+            bool shown = (C.columns & (1 << i)) != 0;
+            if (ImGui::Checkbox((std::string(names[i]) + "##txcol" + std::to_string(i)).c_str(), &shown)) {
+                if (shown) C.columns |= (1 << i); else C.columns &= ~(1 << i);
+                save();
             }
-            ImGui::NewLine();
-            ImGui::TreePop();
+            if (i % 2 == 0 && i != 6) ImGui::SameLine();
         }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Average word confidence reported by the speech recognizer; not a guarantee of accuracy."));
+
+        settingsSection(tr("Translation"));
+        std::string langName = C.lang;
+        for (const auto& l : kLangs) if (C.lang == l[0]) langName = l[1];
+        ImGui::TextUnformatted(tr("Language"));
+        ImGui::SameLine(85 * gUi);
+        ImGui::SetNextItemWidth(-1);
+        if (ImGui::BeginCombo("##txlang", langName.c_str())) {
+            for (const auto& l : kLangs) {
+                if (ImGui::Selectable(l[1], C.lang == l[0])) { C.lang = l[0]; save(); applyConfig(); }
+            }
+            ImGui::EndCombo();
+        }
+        const bool canTranslate = translationSupported();
+        bool checked = canTranslate && C.translate;
+        ImGui::BeginDisabled(!canTranslate);
+        if (ImGui::Checkbox(tr("Translate to English"), &checked)) { C.translate = checked; save(); applyConfig(); }
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+            ImGui::SetTooltip("%s", canTranslate
+                ? tr("Translate foreign-language speech into English offline. Auto-detect is supported with a multilingual model.")
+                : tr("Translation requires a multilingual model and a language other than English. The preference is remembered."));
+        }
+        if (!canTranslate && C.lang != "en") ImGui::TextDisabled("%s", tr("Select a multilingual model to enable translation."));
+
+        settingsSection(tr("Processing and storage"));
+        ImGui::SetNextItemWidth(160 * gUi);
+        if (ImGui::SliderInt(tr("CPU threads"), &C.threads, 1, 8)) { save(); applyConfig(); }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Processor threads used by the speech recognizer for a transmission."));
+        ImGui::SetNextItemWidth(160 * gUi);
+        if (ImGui::SliderInt(tr("Keep transcripts (days)"), &C.days, 1, 90)) { save(); gStore.setLimits(20000, C.days); }
+        ImGui::EndTabItem();
     }
-    // language
-    ImGui::SetNextItemWidth(260 * gUi);
-    std::string langName = C.lang;
-    for (auto& l : kLangs) if (C.lang == l[0]) langName = l[1];
-    if (ImGui::BeginCombo(tr("Language"), langName.c_str())) {
-        for (auto& l : kLangs) if (ImGui::Selectable(l[1], C.lang == l[0])) { C.lang = l[0]; save(); applyConfig(); }
-        ImGui::EndCombo();
+    if (ImGui::BeginTabItem(tr("Subtitles and captions"))) {
+        captionsSettings(a);
+        ImGui::EndTabItem();
     }
-    if (C.lang != "en" && backendReady() && gBackendEnglishOnly) {
-        ImGui::PushTextWrapPos(0);
-        ImGui::TextColored(pal::warnAmber(), "%s", tr("The loaded model is English only: other languages need a multilingual model (tiny, base or small without .en)."));
-        ImGui::PopTextWrapPos();
+    if (ImGui::BeginTabItem(tr("Speech model"))) {
+        if (ImGui::BeginTabBar("##txenginetabs")) {
+            if (ImGui::BeginTabItem(tr("Whisper"))) {
+                const std::string dir = modelsDir();
+                const double now = ImGui::GetTime();
+                if (now - gUserFilesAt > 3) { gUserFiles = dect2::userSpeechModels(dir); gUserFilesAt = now; }
+
+                // The folder action sits on the same baseline as the section heading.
+                ImGui::Spacing();
+                ImGui::TextUnformatted(tr("Models"));
+                const char* folderLabel = tr("Open folder");
+                const float folderWidth = ImGui::CalcTextSize(folderLabel).x + ImGui::GetStyle().FramePadding.x * 2;
+                ImGui::SameLine(std::max(ImGui::GetCursorPosX() + ImGui::GetStyle().ItemSpacing.x,
+                                         ImGui::GetContentRegionMax().x - folderWidth));
+                if (ImGui::SmallButton(folderLabel)) {
+                    std::error_code ec;
+                    std::filesystem::create_directories(dect2::u8file(dir), ec);
+                    dect2::openUrl(dir);
+                }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\n%s", dir.c_str(), tr("Put a whisper.cpp model file (ggml-*.bin) here to use it."));
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                const int ls = gLoadState.load();
+                if (C.enabled && !modelPresent(C.model)) ImGui::TextColored(pal::warnAmber(), "%s", tr("No speech model installed or selected."));
+                else if (C.enabled && ls == 1) ImGui::TextDisabled("%s", tr("Loading the speech model ..."));
+                else if (C.enabled && ls == 3) { std::lock_guard<std::mutex> lk(gMu); ImGui::TextColored(pal::badRed(), "%s", gLoadErr.c_str()); }
+                else if (C.enabled && backendReady()) ImGui::TextColored(pal::okGreen(), "%s", tr("Speech model loaded."));
+                if (!dect2::whisperAvailable()) ImGui::TextColored(pal::badRed(), "%s", tr("This build has no speech engine."));
+
+                const auto st = gDl.state();
+                if (st == dect2::ModelDownloader::State::Downloading || st == dect2::ModelDownloader::State::Verifying) {
+                    const double tot = (double)std::max<uint64_t>(1, gDl.totalBytes());
+                    char ov[96];
+                    snprintf(ov, sizeof ov, "%s %.0f / %.0f MB", st == dect2::ModelDownloader::State::Verifying ? tr("checking") : gDl.modelId().c_str(), (double)gDl.doneBytes() / 1048576.0, tot / 1048576.0);
+                    ImGui::ProgressBar((float)(gDl.doneBytes() / tot), ImVec2(-1, 0), ov);
+                    if (ImGui::SmallButton(tr("Cancel##txdl"))) gDl.cancel();
+                } else if (st == dect2::ModelDownloader::State::Failed) {
+                    ImGui::TextColored(pal::badRed(), "%s", gDl.error().c_str());
+                }
+                ImGui::TextDisabled("%s", tr("English-only models"));
+                for (const char* id : {"tiny.en", "base.en", "small.en"}) whisperModelEntry(dir, id);
+                ImGui::Spacing();
+                ImGui::TextDisabled("%s", tr("Multilingual models"));
+                for (const char* id : {"tiny", "base", "small"}) whisperModelEntry(dir, id);
+                if (!gUserFiles.empty()) {
+                    ImGui::Spacing();
+                    ImGui::TextDisabled("%s", tr("Other installed models"));
+                    for (const auto& f : gUserFiles) ImGui::Text("%s (%s)", f.c_str(), tr("Installed"));
+                }
+
+                settingsSection(tr("Engine information"));
+                ImGui::Text("%s: %s", tr("Library version"), dect2::whisperLibraryVersion());
+                ImGui::Text("%s: %s", tr("Backend"), dect2::whisperAvailable() ? tr("Whisper (CPU)") : tr("Unavailable"));
+                ImGui::Text("%s: %s", tr("Model status"), backendReady() ? tr("Ready") : ls == 1 ? tr("Loading") : ls == 3 ? tr("Failed") : tr("Not loaded"));
+                settingsSection(tr("Processing"));
+                const dect2::TranscriberStats ts = gTr.stats();
+                char processing[512];
+                snprintf(processing, sizeof processing,
+                         tr("Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time"),
+                         (unsigned long long)ts.segments, (unsigned long long)ts.kept,
+                         (unsigned long long)ts.filtered, (unsigned long long)ts.dropped, ts.avgRtf);
+                processingMessage(processing);
+                ImGui::EndTabItem();
+            }
+            ImGui::EndTabBar();
+        }
+        ImGui::EndTabItem();
     }
-    if (ImGui::Checkbox(tr("Translate to English"), &C.translate)) { save(); applyConfig(); }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Speech in another language is also translated to English, offline, next to the original. Needs a multilingual model and costs about 1.5 times more processor time; it is skipped when the engine cannot keep up. Nothing is sent anywhere. Translation into other languages is not available."));
-    if (C.translate && backendReady() && gBackendEnglishOnly) {
-        ImGui::PushTextWrapPos(0);
-        ImGui::TextColored(pal::warnAmber(), "%s", tr("The loaded model is English only: translation needs a multilingual model."));
-        ImGui::PopTextWrapPos();
-    }
-    ImGui::SetNextItemWidth(160 * gUi);
-    if (ImGui::SliderInt(tr("CPU threads"), &C.threads, 1, 8)) { save(); applyConfig(); }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("How many processor threads the speech engine may use for one transmission. Fewer threads use less battery and take longer."));
-    ImGui::SetNextItemWidth(160 * gUi);
-    if (ImGui::SliderInt(tr("Keep transcripts (days)"), &C.days, 1, 90)) { save(); gStore.setLimits(20000, C.days); }
-    const dect2::TranscriberStats ts = gTr.stats();
-    ImGui::TextDisabled(tr("Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time"), (unsigned long long)ts.segments,
-                        (unsigned long long)ts.kept, (unsigned long long)ts.filtered, (unsigned long long)ts.dropped, ts.avgRtf);
+    ImGui::EndTabBar();
 }
 
 void modelPopups() {
@@ -853,116 +967,168 @@ void modelPopups() {
 
 void windowPanel(App& a) {
     load();
-    if (!gWindowOpen) return;
+    if (!gWindowOpen) { U.wasOpen = false; return; }
+    if (!U.splitLoaded) {
+        U.splitLoaded = true;
+        U.splitRatio = std::clamp((float)plat::basePrefs().getI("transcriptsSplitPermille", 500) / 1000.f, 0.15f, 0.85f);
+    }
+    if (!U.wasOpen) {
+        U.wasOpen = true;
+        U.showNotice = !plat::basePrefs().getB("transcriptsPrivacyAccepted", false);
+    }
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x * 0.5f, vp->WorkPos.y + vp->WorkSize.y * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(std::min(1000 * gUi, vp->WorkSize.x * 0.95f), std::min(660 * gUi, vp->WorkSize.y * 0.92f)), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(std::min(1100 * gUi, vp->WorkSize.x * 0.95f), std::min(660 * gUi, vp->WorkSize.y * 0.92f)), ImGuiCond_Appearing);
     if (!ImGui::Begin(trw("Transcripts"), &gWindowOpen)) { ImGui::End(); return; }
+    if (ImGui::SmallButton(U.settings ? tr("Hide settings") : tr("Show settings"))) U.settings = !U.settings;
     std::string ind;
-    if (indicator(ind)) {
+    indicator(ind);
+    const char* status = ind.empty() ? tr("Transcription is off.") : ind.c_str();
+    const float statusWidth = ImGui::CalcTextSize(status).x + (ind.empty() ? 0.f : 20 * gUi);
+    ImGui::SameLine(std::max(ImGui::GetCursorPosX(), ImGui::GetWindowContentRegionMax().x - statusWidth));
+    if (!ind.empty()) {
         ImGui::TextColored(pal::badRed(), "%s", "\xE2\x97\x8F");
         ImGui::SameLine();
         ImGui::TextColored(pal::warnAmber(), "%s", ind.c_str());
-    } else ImGui::TextDisabled("%s", tr("Transcription is off."));
-    ImGui::SameLine();
-    if (ImGui::SmallButton(U.settings ? tr("Hide settings") : tr("Settings and speech model"))) U.settings = !U.settings;
-    if (U.settings || !C.enabled || !backendReady()) {
-        ImGui::BeginChild("##txset", ImVec2(0, (U.settings ? 460.f : 150.f) * gUi), true);
-        settingsPanel();
-        captionsSettings(a);
+    } else ImGui::TextDisabled("%s", status);
+    ImGui::Separator();
+
+    // Draggable split: both panes keep a usable minimum width where possible.
+    // When settings are hidden, the table expands to the entire available width.
+    const float available = ImGui::GetContentRegionAvail().x;
+    if (U.settings) {
+        const float gap = ImGui::GetStyle().ItemSpacing.x;
+        const float handle = 8.f * gUi;
+        const float panes = std::max(1.f, available - handle - 2.f * gap);
+        const float minimum = std::min(190.f * gUi, panes * 0.35f);
+        const float left = std::clamp(panes * U.splitRatio, minimum, panes - minimum);
+        ImGui::BeginChild("##txset", ImVec2(left, 0), true);
+        settingsPanel(a);
         ImGui::EndChild();
+        ImGui::SameLine(0, gap);
+        const ImVec2 grip = ImGui::GetCursorScreenPos();
+        ImGui::InvisibleButton("##txsplitter", ImVec2(handle, ImGui::GetContentRegionAvail().y));
+        const bool dragging = ImGui::IsItemActive();
+        if (ImGui::IsItemHovered() || dragging) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+        const ImU32 lineColor = ImGui::GetColorU32(dragging ? ImGuiCol_SliderGrabActive : ImGuiCol_SeparatorHovered);
+        const float middle = grip.x + handle * 0.5f;
+        ImGui::GetWindowDrawList()->AddLine(ImVec2(middle, grip.y + 8 * gUi),
+                                            ImVec2(middle, grip.y + std::max(8.f * gUi, ImGui::GetItemRectSize().y - 8 * gUi)),
+                                            lineColor, 2.f * gUi);
+        if (dragging && ImGui::GetIO().MouseDelta.x != 0.f) {
+            U.splitRatio = std::clamp((left + ImGui::GetIO().MouseDelta.x) / panes,
+                                      minimum / panes, 1.f - minimum / panes);
+        }
+        if (ImGui::IsItemDeactivated()) {
+            plat::basePrefs().setI("transcriptsSplitPermille", (long)std::lround(U.splitRatio * 1000.f));
+            plat::basePrefs().flush();
+        }
+        ImGui::SameLine(0, gap);
     }
+    ImGui::BeginChild("##txresults", ImVec2(0, 0), false);
     refreshRows();
-    // filters
-    ImGui::SetNextItemWidth(220 * gUi);
+    ImGui::SetNextItemWidth(std::max(90.f * gUi, ImGui::GetContentRegionAvail().x * 0.37f));
     ImGui::InputTextWithHint("##txq", tr("Search the text ..."), U.query, sizeof U.query);
+    ImGui::SameLine();
+    const char* scopes[] = {tr("All"), tr("Channel"), tr("Text"), tr("Aircraft")};
+    ImGui::SetNextItemWidth(std::max(75.f * gUi, ImGui::GetContentRegionAvail().x * 0.20f));
+    if (ImGui::BeginCombo("##txscope", scopes[U.searchIn])) {
+        for (int i = 0; i < 4; ++i) if (ImGui::Selectable(scopes[i], U.searchIn == i)) U.searchIn = i;
+        ImGui::EndCombo();
+    }
     ImGui::SameLine();
     {
         std::string cur = U.freqSel > 0 && (size_t)U.freqSel <= U.freqs.size() ? std::to_string(U.freqs[(size_t)U.freqSel - 1] / 1e6).substr(0, 7) + " MHz" : std::string(tr("All frequencies"));
-        ImGui::SetNextItemWidth(150 * gUi);
+        ImGui::SetNextItemWidth(std::max(90.f * gUi, ImGui::GetContentRegionAvail().x));
         if (ImGui::BeginCombo("##txf", cur.c_str())) {
             if (ImGui::Selectable(tr("All frequencies"), U.freqSel == 0)) U.freqSel = 0;
             for (size_t i = 0; i < U.freqs.size(); i++) {
-                char b[32];
-                snprintf(b, sizeof b, "%.3f MHz", U.freqs[i] / 1e6);
+                char b[32]; snprintf(b, sizeof b, "%.3f MHz", U.freqs[i] / 1e6);
                 if (ImGui::Selectable(b, U.freqSel == (int)i + 1)) U.freqSel = (int)i + 1;
             }
             ImGui::EndCombo();
         }
     }
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(100 * gUi);
-    ImGui::InputTextWithHint("##txa", tr("Aircraft"), U.aircraft, sizeof U.aircraft);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A callsign (DLH123), a registration (N123AB) or an ICAO address (3C6444)"));
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(80 * gUi);
-    ImGui::InputTextWithHint("##txap", tr("Airport"), U.airport, sizeof U.airport);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("An airport code or name found in the channel name or the text (EYVI, Tower)"));
-    ImGui::SameLine();
     ImGui::TextDisabled(tr("%zu of %zu"), U.rows.size(), U.total);
-    // actions
     if (ImGui::SmallButton(tr("Copy all shown"))) ImGui::SetClipboardText(dect2::transcriptsTxt(U.rows).c_str());
     for (const char* ext : {"txt", "srt", "json", "csv"}) {
         ImGui::SameLine();
-        char b[32];
-        snprintf(b, sizeof b, tr("Export %s##txe"), ext);
+        char b[32]; snprintf(b, sizeof b, tr("Export %s##txe"), ext);
         if (ImGui::SmallButton(b)) exportRows(ext);
     }
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("Delete all ..."))) U.askDelete = true;
-    if (!U.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", U.note.c_str()); }
-    // the list
-    if (ImGui::BeginTable("##txlist", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
+    if (!U.note.empty()) { ImGui::TextDisabled("%s", U.note.c_str()); }
+
+    const int count = [&] { int n = 0; for (int i = 0; i < 7; ++i) n += !!(C.columns & (1 << i)); return n; }();
+    if (count && ImGui::BeginTable("##txlist", count, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
         ImGui::TableSetupScrollFreeze(0, 1);
-        ImGui::TableSetupColumn(tr("Time (UTC)"), ImGuiTableColumnFlags_WidthFixed, 120 * gUi);
-        ImGui::TableSetupColumn(tr("Channel"), ImGuiTableColumnFlags_WidthFixed, 150 * gUi);
-        ImGui::TableSetupColumn(tr("Text"), ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn(tr("Aircraft"), ImGuiTableColumnFlags_WidthFixed, 90 * gUi);
-        ImGui::TableSetupColumn(tr("Sure"), ImGuiTableColumnFlags_WidthFixed, 44 * gUi);
+        const char* names[] = {tr("Time (UTC)"), tr("Time (local)"), tr("Channel"), tr("Frequency"), tr("Text"), tr("Aircraft"), tr("Confidence")};
+        for (int i = 0; i < 7; ++i) if (C.columns & (1 << i))
+            ImGui::TableSetupColumn(names[i], i == 4 ? ImGuiTableColumnFlags_WidthStretch : ImGuiTableColumnFlags_WidthFixed, (i <= 1 ? 120.f : i == 2 ? 150.f : i == 3 ? 95.f : i == 5 ? 90.f : 44.f) * gUi);
         ImGui::TableHeadersRow();
         const size_t shown = std::min<size_t>(U.rows.size(), 600);
-        for (size_t i = 0; i < shown; i++) {
-            const auto& e = U.rows[i];
+        for (size_t j = 0; j < shown; ++j) {
+            const auto& e = U.rows[j];
             ImGui::PushID((int)e.id);
             ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            std::tm tm{};
-            const std::time_t t = (std::time_t)e.wall;
+            for (int i = 0; i < 7; ++i) {
+                if (!(C.columns & (1 << i))) continue;
+                ImGui::TableNextColumn();
+                if (i <= 1) {
+                    std::tm tm{};
+                    const std::time_t t = (std::time_t)e.wall;
 #if defined(_WIN32)
-            gmtime_s(&tm, &t);
+                    if (i == 0) gmtime_s(&tm, &t); else localtime_s(&tm, &t);
 #else
-            gmtime_r(&t, &tm);
+                    if (i == 0) gmtime_r(&t, &tm); else localtime_r(&t, &tm);
 #endif
-            char d[32];
-            std::strftime(d, sizeof d, "%m-%d %H:%M:%S", &tm);
-            ImGui::PushFont(a.mono, 0);
-            ImGui::TextUnformatted(d);
-            ImGui::PopFont();
-            ImGui::TableNextColumn();
-            ImGui::TextUnformatted(e.channel.c_str());
-            if (!e.speaker.empty() && ImGui::IsItemHovered()) ImGui::SetTooltip("%s: %s", tr("Speaker (a guess from the wording)"), e.speaker.c_str());
-            ImGui::TableNextColumn();
-            ImGui::PushTextWrapPos(0);
-            ImGui::TextUnformatted(e.text.c_str());
-            if (!e.translation.empty()) {
-                ImGui::TextDisabled("%s > EN", e.lang.empty() ? "?" : e.lang.c_str());
-                ImGui::SameLine();
-                ImGui::TextUnformatted(e.translation.c_str());
+                    char d[32]; std::strftime(d, sizeof d, "%m-%d %H:%M:%S", &tm);
+                    ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(d); ImGui::PopFont();
+                } else if (i == 2) {
+                    ImGui::TextUnformatted(e.channel.c_str());
+                    if (!e.speaker.empty() && ImGui::IsItemHovered()) ImGui::SetTooltip("%s: %s", tr("Speaker (a guess from the wording)"), e.speaker.c_str());
+                } else if (i == 3) {
+                    if (e.freqHz > 0) ImGui::Text("%.3f MHz", e.freqHz / 1e6); else ImGui::TextDisabled("-");
+                } else if (i == 4) {
+                    ImGui::PushTextWrapPos(0);
+                    ImGui::TextUnformatted(e.text.c_str());
+                    if (!e.translation.empty()) {
+                        ImGui::TextDisabled("%s > EN", e.lang.empty() ? "?" : e.lang.c_str());
+                        ImGui::SameLine(); ImGui::TextUnformatted(e.translation.c_str());
+                    }
+                    ImGui::PopTextWrapPos();
+                    if (ImGui::IsItemClicked()) ImGui::SetClipboardText(entryLine(e).c_str());
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Click to copy this line"));
+                } else if (i == 5) {
+                    const std::string ac = !e.callsign.empty() ? e.callsign : e.reg;
+                    if (!ac.empty()) ImGui::TextUnformatted(ac.c_str()); else ImGui::TextDisabled("-");
+                    if (!e.aircraft.empty() && ImGui::IsItemHovered()) ImGui::SetTooltip("%s: %s", tr("Aircraft on the screen"), e.aircraft.c_str());
+                } else ImGui::TextDisabled("%.0f%%", e.confidence * 100.0);
             }
-            ImGui::PopTextWrapPos();
-            if (ImGui::IsItemClicked()) ImGui::SetClipboardText(entryLine(e).c_str());
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Click to copy this line"));
-            ImGui::TableNextColumn();
-            const std::string ac = !e.callsign.empty() ? e.callsign : e.reg;
-            if (!ac.empty()) ImGui::TextUnformatted(ac.c_str()); else ImGui::TextDisabled("-");
-            if (!e.aircraft.empty() && ImGui::IsItemHovered()) ImGui::SetTooltip("%s: %s", tr("Aircraft on the screen"), e.aircraft.c_str());
-            ImGui::TableNextColumn();
-            ImGui::TextDisabled("%.0f%%", e.confidence * 100.0);
             ImGui::PopID();
         }
         ImGui::EndTable();
     }
+    ImGui::EndChild();
     modelPopups();
+    if (U.showNotice) ImGui::OpenPopup("##transcriptsPrivacy");
+    ImGui::SetNextWindowSize(ImVec2(500 * gUi, 0), ImGuiCond_Appearing);
+    if (ImGui::BeginPopupModal("##transcriptsPrivacy", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
+        ImGui::PushTextWrapPos(470 * gUi);
+        ImGui::TextColored(pal::warnAmber(), "%s", tr("Before using transcripts"));
+        ImGui::Spacing();
+        ImGui::TextUnformatted(tr("Privacy: what is said on public aviation radio is public, but the speech engine runs here on your computer and the text is kept in your data folder. Do not use it on private conversations. It is on for what you are listening to (FM, AM, marine, amateur, CB, digital voice ...) once a speech model is installed; untick the boxes in Transcription settings to stop it. A visible line shows what it is doing."));
+        ImGui::PopTextWrapPos();
+        ImGui::Spacing();
+        if (ImGui::Button(tr("I understand and accept"), ImVec2(-1, 0))) {
+            plat::basePrefs().setB("transcriptsPrivacyAccepted", true);
+            plat::basePrefs().flush();
+            U.showNotice = false;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
     ImGui::End();
 }
 
@@ -1129,35 +1295,48 @@ void captionsControls(App& a) {
 void captionsSettings(App& a) {
     (void)a;
     load();
-    ImGui::Spacing();
-    if (!ImGui::TreeNode(trw("Auto subtitles (captions)"))) return;
-    ImGui::PushTextWrapPos(0);
-    ImGui::TextDisabled("%s", tr("Captions from the speech of the sound you hear: FM and AM broadcast, DAB, TV audio, amateur and digital voice. They are made here with the offline speech model, shown on the receiver, and kept only in memory (and in .srt / .vtt files if you save them). Music is skipped. Off until you turn it on."));
-    ImGui::PopTextWrapPos();
     bool ch = false;
+
+    settingsSection(tr("Caption generation"));
     ch |= ImGui::Checkbox(tr("Make captions"), &C.cap);
     ImGui::BeginDisabled(!C.cap);
-    ImGui::TextUnformatted(tr("Modes"));
+    ch |= ImGui::Checkbox(tr("Save .srt and .vtt next to audio recordings"), &C.capSave);
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("%s", tr("Captions are generated locally with the offline speech model and shown on the receiver. They are kept in memory unless you save them. Music is skipped."));
+    ImGui::PopTextWrapPos();
+
+    settingsSection(tr("Sources"));
     int col = 0;
-    for (int s : dect2::captionStandards()) {
-        bool on = C.capModes.count(s) != 0;
-        if (ImGui::Checkbox((std::string(dect2::captionStandardName(s)) + "##capm" + std::to_string(s)).c_str(), &on)) { if (on) C.capModes.insert(s); else C.capModes.erase(s); ch = true; }
-        if (++col % 3) ImGui::SameLine(); 
+    for (int standard : dect2::captionStandards()) {
+        bool on = C.capModes.count(standard) != 0;
+        if (ImGui::Checkbox((std::string(dect2::captionStandardName(standard)) + "##capm" + std::to_string(standard)).c_str(), &on)) {
+            if (on) C.capModes.insert(standard); else C.capModes.erase(standard);
+            ch = true;
+        }
+        if (++col % 2) ImGui::SameLine();
     }
-    if (col % 3) ImGui::NewLine();
-    ImGui::SetNextItemWidth(260 * gUi);
+    if (col % 2) ImGui::NewLine();
+
+    settingsSection(tr("TV subtitles"));
     const char* srcs[] = {tr("Station's own subtitles"), tr("Generated from speech"), tr("Both"), tr("Generated where the station has none")};
-    if (ImGui::BeginCombo(tr("TV subtitles"), srcs[C.capSource])) {
-        for (int i = 0; i < 4; i++) if (ImGui::Selectable(srcs[i], i == C.capSource)) { C.capSource = i; ch = true; }
+    ImGui::SetNextItemWidth(-1);
+    if (ImGui::BeginCombo("##captvsource", srcs[C.capSource])) {
+        for (int i = 0; i < 4; ++i) if (ImGui::Selectable(srcs[i], i == C.capSource)) { C.capSource = i; ch = true; }
         ImGui::EndCombo();
     }
+
+    settingsSection(tr("Caption appearance"));
     const char* shows[] = {tr("As spoken"), tr("English translation"), tr("Both")};
-    ImGui::SetNextItemWidth(260 * gUi);
-    if (ImGui::BeginCombo(tr("Caption text"), shows[C.capShow])) {
-        for (int i = 0; i < 3; i++) if (ImGui::Selectable(shows[i], i == C.capShow)) { C.capShow = i; ch = true; }
+    ImGui::TextUnformatted(tr("Caption text"));
+    ImGui::SetNextItemWidth(-1);
+    if (ImGui::BeginCombo("##captext", shows[C.capShow])) {
+        for (int i = 0; i < 3; ++i) if (ImGui::Selectable(shows[i], i == C.capShow)) { C.capShow = i; ch = true; }
         ImGui::EndCombo();
     }
-    if (C.capShow && !C.translate) ImGui::TextColored(pal::warnAmber(), "%s", tr("Tick Translate to English above (multilingual model) to get translated captions."));
+    if (C.capShow && !(C.translate && translationSupported())) {
+        const ImVec4 warning = pal::warnAmber();
+        processingMessage(tr("Enable Translate to English under Transcription and select a multilingual model to get translated captions."), &warning);
+    }
     ImGui::SetNextItemWidth(160 * gUi);
     ch |= ImGui::SliderInt(tr("Caption size, percent"), &C.capSize, 60, 250);
     ImGui::SetNextItemWidth(160 * gUi);
@@ -1165,13 +1344,21 @@ void captionsSettings(App& a) {
     ImGui::SetNextItemWidth(160 * gUi);
     ch |= ImGui::SliderInt(tr("Lines"), &C.capLines, 1, 4);
     ch |= ImGui::Checkbox(tr("At the top of the picture"), &C.capTop);
-    ch |= ImGui::Checkbox(tr("Save .srt and .vtt next to audio recordings"), &C.capSave);
     ImGui::EndDisabled();
     if (ch) { C.capSize = dect2::CaptionStyle{C.capSize, C.capBg, C.capTop, C.capLines}.clamped().sizePct; save(); applyConfig(); }
+
+    settingsSection(tr("Processing"));
     const dect2::TranscriberStats ts = gCap.stats();
-    ImGui::TextDisabled(tr("Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time"), (unsigned long long)ts.segments, (unsigned long long)ts.musicSkipped, (unsigned long long)ts.dropped, ts.avgRtf);
-    if (ts.avgRtf > 1.0) ImGui::TextColored(pal::warnAmber(), "%s", tr("The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest."));
-    ImGui::TreePop();
+    char processing[512];
+    snprintf(processing, sizeof processing,
+             tr("Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time"),
+             (unsigned long long)ts.segments, (unsigned long long)ts.musicSkipped,
+             (unsigned long long)ts.dropped, ts.avgRtf);
+    processingMessage(processing);
+    if (ts.avgRtf > 1.0) {
+        const ImVec4 warning = pal::warnAmber();
+        processingMessage(tr("The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest."), &warning);
+    }
 }
 
 void captionsRecordStart() {
