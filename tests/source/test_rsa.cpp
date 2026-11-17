@@ -109,9 +109,10 @@ int main(int argc, char** argv) {
         CHECK(num("run_rate") == 3.5e6);
         // a retune: the frequency with a correction, the reference level (the scale follows it). The device takes nothing while it
         // runs, so it is stopped, set and run again; the stream goes on
-        t.centerHz = 7.1e6; t.radio = {{"ppm", "10"}}; t.gainDb = 90;
+        t.centerHz = 7.1e6; t.radio = {{"ppm", "10"}}; t.gainDb = 70;
         CHECK(rx->retune(t, err));
-        CHECK(approx(num("centre"), 7.1e6 / (1 + 10e-6), 1e-3) && num("ref") == -60);
+        CHECK(approx(num("centre"), 7.1e6 / (1 + 10e-6), 1e-3) && num("ref") == -40);
+        CHECK(dev.gainMaxDb == 75);   // a gain beyond the top is taken as the top: -45 dBm
         CHECK(approx(num("centre_run"), 7.1e6 / (1 + 10e-6), 1e-3));
         CHECK(num("run") == 2 && num("stop") == 1 && num("centre_while_running") == 0 && num("bandwidth_while_running") == 0);
         CHECK(tone(ring, mag, step) && approx(mag, 0.5, 0.01) && approx(step, kPi / 4, 1e-3));

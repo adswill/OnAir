@@ -35,7 +35,11 @@ namespace {
 constexpr double kTopRateHz = 56e6, kTopBandwidthHz = 40e6;   // the widest step; every further one is half of both
 constexpr int kRateSteps = 13;                                // down to 13671.875 sps (9765.625 Hz)
 constexpr double kRefTopDbm = 30;          // gain 0 dB = this reference level (the API's highest)
-constexpr double kGainMaxDb = 130;         // -100 dBm
+// -45 dBm. Measured on an RSA306 (an FM station of -67 dBm with a whip): below a reference level of about -25 dBm the device adds no
+// sensitivity (the noise and the signal stay where they are), every dB more only multiplies the samples; and they are not clipped at
+// the reference level (floats; the overrange bit stays clear even 22 dB above it), so below -45 dBm the strong signals of a busy band
+// go beyond 1.0, which OnAir counts as an overflow. 75 dB keeps the gain slider to the part where it does something.
+constexpr double kGainMaxDb = 75;
 constexpr double kZeroDbmAmp = 0.22360679774997896;   // sqrt(0.05): 0 dBm into 50 ohm, as the API counts its volts
 constexpr const char* kMissingMsg =
     "Tektronix RSA API is not installed: the RSA306 / RSA500A / RSA600A need Tektronix's RSA API library (RSA_API), a free download "
@@ -407,7 +411,8 @@ void listRsa(std::vector<DeviceInfo>& out) {
         d.minRateHz = kTopRateHz / double(1 << (kRateSteps - 1));
         d.maxRateHz = kTopRateHz;
         d.gainMinDb = 0; d.gainMaxDb = kGainMaxDb;
-        d.gainNote = "Tektronix RSA: the gain sets the reference level, 0 dB = +30 dBm, each dB more is 1 dB lower (60 dB = -30 dBm)";
+        d.gainNote = "Tektronix RSA: the gain sets the reference level, 0 dB = +30 dBm, each dB more is 1 dB lower (75 dB = -45 dBm; "
+                     "beyond about 55 dB the analyser adds no sensitivity, only level)";
         d.minFreqHz = 9e3; d.maxFreqHz = maxHzOf(ts.first);
         d.settings = rsaSettings();
         list.push_back(d);

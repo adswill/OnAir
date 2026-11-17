@@ -35,7 +35,9 @@ Help > Hardware show a hint that says what to download, and the Fix it panel has
   (5/7 of the rate). OnAir takes the slowest one at or above the rate that was asked for and works with that rate.
 - **Retunes.** The device takes no new frequency, level or rate while it runs, so OnAir stops it, sets the values and runs it again
   at every change. That takes about 50 ms, in which no samples arrive.
-- **Gain** sets the reference level (`CONFIG_SetReferenceLevel`): 0 dB = +30 dBm, each dB more is 1 dB lower (60 dB = -30 dBm). The samples arrive in volts into 50 ohm; OnAir scales them so that the reference level is 1.0.
+- **Gain** sets the reference level (`CONFIG_SetReferenceLevel`): 0 dB = +30 dBm, each dB more is 1 dB lower, up to 75 dB = -45 dBm.
+  Beyond about 55 dB (-25 dBm) the analyser adds no sensitivity, only level; auto gain finds the best point by itself, and its "ADC
+  level low" note can be left alone when the channel's SNR is good. The samples arrive in volts into 50 ohm; OnAir scales them so that the reference level is 1.0.
 - **Radio settings:** frequency correction (ppm) and the RF preamplifier of the models that have one (RSA500A, RSA600A). An RSA306 has
   none: with "On" the start message says that the device did not take it. The attenuator is left to the API (automatic).
 - **The device stays connected** from its first start until OnAir is closed. Connecting takes 1 to 3.5 s and disconnecting 4 s, while a
@@ -63,6 +65,11 @@ short wave on its input and an IC-705 on the same antenna for comparison.
   accepted too, and the samples that follow are garbage (volts in the hundreds) until the device was stopped and run again. A retune
   through OnAir's driver (stop, set, run) takes 40 to 50 ms.
 - The centre frequency goes from 9 kHz to 6.2 GHz; the set functions take any value while the device is stopped.
+- The reference level against what arrives (an FM station on 105.9 MHz, a whip, 7 Msps): at +20, 0, -20, -30, -45 and -70 dBm the
+  noise and signal at the input read -37, -56, -66, -67, -68 and -67 dBm. Below about -25 dBm the device adds no sensitivity. The float
+  samples are not clipped at the reference level: at -70 dBm the peak is 22 dB above it, and the overrange bit stays clear throughout.
+  OnAir counts samples beyond 1.0 as an overflow, so the gain stops at -45 dBm, where the peaks of this band were 1 dB below 1.0 (at
+  56 Msps, with the whole FM band in the capture, they reach 1.0 at about -35 dBm).
 - No preamplifier: `CONFIG_SetRFPreampEnable(true)` returns no error and `CONFIG_GetRFPreampEnable` still says off.
 - Frequency and side: broadcast carriers on short wave (3.955 MHz and others) are on their frequencies, not mirrored.
 - `ALIGN_GetAlignmentNeeded` says yes and `ALIGN_GetWarmupStatus` no right after the device was plugged in; OnAir does not run the
