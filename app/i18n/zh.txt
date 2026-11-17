@@ -1289,8 +1289,8 @@ uncertainty	不确定度
 Draws the uncertainty ellipse (95 percent) of every estimated position.	绘制每个估计位置的不确定度椭圆（百分之九十五）。
 predicted from the last position %s ago, +-%.1f NM	根据 %s 前的最后位置预测，+-%.1f NM
 estimated from the ground station only, within about %.0f NM	仅根据地面站估计，约 %.0f NM 范围内
-Hear this receiver	收听此接收器
-Close receiver	关闭接收器
+Hear this receiver	收听此接收机
+Close receiver	关闭接收机
 Radio: %s	电台：%s
 HD Radio sound needs the HDC codec, which you install yourself (click ?)	HD Radio 的声音需要 HDC 编解码器，需要您自己安装（点击 ?)
 HDC sound codec cannot be used: %s	无法使用 HDC 声音编解码器：%s
@@ -1757,7 +1757,7 @@ Choose what to tell apart in "separately for each" so every thing has its own st
 Columns (optional)	列（可选）
 Confirm this rule...	确认此规则...
 Confirmed	已确认
-Define function on_event(e). e.type, e.mode, e.freq, e.time and the event's fields (e.callsign, e.squawk ...).\n\nActions: notify(title, text), sound(file), record_iq(seconds), record_audio(seconds), save_rewind(seconds), tune(hz, mode), memory(name), webhook(url, text_or_table), screenshot(), log(text), log_row(file, a, b, ...).\nHelpers: distance_km(lat, lon), bearing_deg(lat, lon), now(), hour(), json(table).\nText: s:contains(x), s:starts_with(x), s:ends_with(x), s:matches('a*b'), s:replace(a, b). No io, os, load, require, pcall or pattern matching; 1 million instructions, 250 ms and 16 MB per script.	定义 function on_event(e）。可用 e.type、e.mode、e.freq、e.time 以及事件字段（e.callsign、e.squawk 等）。\n\n动作：notify(title, text）、sound(file）、record_iq(seconds）、record_audio(seconds）、tune(hz, mode）、memory(name）、webhook(url, text_or_table）、screenshot(）、log(text）、log_row(file, a, b, ...）。\n辅助：distance_km(lat, lon）、bearing_deg(lat, lon）、now(）、hour(）、json(table）。\n文本：s:contains(x）、s:starts_with(x）、s:ends_with(x）、s:matches('a*b'）、s:replace(a, b）。没有 io、os、load、require、pcall 和模式匹配；每个脚本限 100 万条指令、250 毫秒和 16 MB。
+Define function on_event(e). e.type, e.mode, e.freq, e.time and the event's fields (e.callsign, e.squawk ...).\n\nActions: notify(title, text), sound(file), record_iq(seconds), record_audio(seconds), save_rewind(seconds), tune(hz, mode), memory(name), webhook(url, text_or_table), screenshot(), log(text), log_row(file, a, b, ...).\nHelpers: distance_km(lat, lon), bearing_deg(lat, lon), now(), hour(), json(table).\nText: s:contains(x), s:starts_with(x), s:ends_with(x), s:matches('a*b'), s:replace(a, b). No io, os, load, require, pcall or pattern matching; 1 million instructions, 250 ms and 16 MB per script.	定义 function on_event(e）。可用 e.type、e.mode、e.freq、e.time 以及事件字段（e.callsign、e.squawk 等）。\n\n动作：notify(title, text）、sound(file）、record_iq(seconds）、record_audio(seconds）、save_rewind(seconds）、tune(hz, mode）、memory(name）、webhook(url, text_or_table）、screenshot(）、log(text）、log_row(file, a, b, ...）。\n辅助：distance_km(lat, lon）、bearing_deg(lat, lon）、now(）、hour(）、json(table）。\n文本：s:contains(x）、s:starts_with(x）、s:ends_with(x）、s:matches('a*b'）、s:replace(a, b）。没有 io、os、load、require、pcall 和模式匹配；每个脚本限 100 万条指令、250 毫秒和 16 MB。
 Delete...	删除...
 Distance, km	距离（公里）
 Does not fire for the sample event:	示例事件不会触发：
