@@ -77,3 +77,7 @@ echo found, equaliser on
 ensemble dots
 ensemble members
 from the dial
+the dial is on no Sigfox zone (listening anyway)
+soft values of the slicer
+pick
+One capture of %.1f Msps or more holds AIS 1, AIS 2 and the long-range channels 75 and 76 (message 27)
