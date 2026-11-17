@@ -1371,7 +1371,7 @@ Fast wideband sweep with a noise-floor measurement, signal log and waterfall	带
 Record audio	录制音频
 Split	分割
 Show recording	显示录音
-Saves the sound you hear, in any mode, to a file (before the volume slider, so the level does not depend on it)	在任何模式下，把你听到的声音保存到文件（在音量之前，所以电平与音量无关）
+Saves the sound you hear, in any mode, to a file (before the volume slider, so the level does not depend on it)	在任何模式下，将接收到的声音保存为文件；录音取自音量滑块调节之前，因此录音电平不受音量设置影响。
 MP3 needs the LAME library (libmp3lame), which is not installed	MP3 需要 LAME 库（libmp3lame），但尚未安装
 WAV: 16-bit, large. FLAC: lossless, about half the size. MP3: small (needs libmp3lame). FM stereo is kept as stereo.	WAV：16 位，较大。FLAC：无损，约一半大小。MP3：较小（需要 libmp3lame）。FM 立体声保持立体声。
 One file per transmission: a new file starts after 3 s of silence	每次发射一个文件：静音 3 秒后开始新文件
@@ -4317,7 +4317,7 @@ The audio level control a mode starts with the first time you use it. Each mode 
 Squelch for new modes	新模式的静噪
 The squelch a mode starts with the first time you use it: off, by level, or by speech-to-noise.	首次使用某模式时的静噪：关闭、按电平或按语音噪声比。
 Squelch opens at (dB)	静噪打开阈值 (dB)
-Level squelch: dBFS. Speech to noise: dB.	电平静噪：dBFS。语音噪声比：dB。
+Level squelch: dBFS. Speech to noise: dB.	电平静噪：dBFS。语音信噪比：dB。
 FM bass (dB)	FM 低音 (dB)
 Tone control of FM broadcast.	FM 广播的音调控制。
 FM treble (dB)	FM 高音 (dB)
@@ -4336,7 +4336,7 @@ Starts a new file when one reaches this size. 0: one file.	文件达到此大小
 Stop recording below free space (MB)	剩余空间低于 (MB) 时停止录制
 An IQ recording stops when the disk has less than this left. 0: only when it is full.	磁盘剩余空间少于此值时停止 IQ 录制。0：仅在磁盘写满时停止。
 SigMF metadata beside IQ files	IQ 文件旁的 SigMF 元数据
-A .sigmf-meta file with the frequency, rate and mode next to each recording.	每个录制旁保存一个含频率、采样率和模式的 .sigmf-meta 文件。
+A .sigmf-meta file with the frequency, rate and mode next to each recording.	在每个录音文件旁保存一个 .sigmf-meta 文件，其中包含频率、采样率和模式信息。
 Audio recording format	音频录制格式
 WAV, FLAC or MP3 (MP3 needs the LAME library).	WAV、FLAC 或 MP3（MP3 需要 LAME 库）。
 Record audio only while there is sound	仅在有声时录制音频
