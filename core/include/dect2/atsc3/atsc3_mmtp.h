@@ -5,7 +5,8 @@
 // file of about two seconds per asset: an MPU metadata part ftyp + mmpu + moov, a movie fragment moof, and the media samples as MFUs) and
 // signalling messages (the MP table lists the assets and the presentation time of each MPU). This reads the packets, puts the MPUs of
 // each asset together and rebuilds them as plain fragmented MP4 (an init segment once, then moof + mdat per MPU, with a running timeline),
-// which is what the remuxer already takes from ROUTE.
+// which is what the remuxer already takes from ROUTE. An MPU may hold several movie fragments (on air it holds one); each goes out as its own
+// moof + mdat.
 #pragma once
 #include "atsc3_ip.h"
 #include <cstddef>
@@ -112,6 +113,8 @@ std::vector<uint8_t> buildMediaSegment(const MpuFragment& f, uint32_t fragmentNu
 struct MmtpStats {
     long packets = 0, bad = 0, signalling = 0, mpts = 0, nonTimed = 0, late = 0, seqRejected = 0;
     long mpusDelivered = 0, mpusDropped = 0, initsDelivered = 0, assetsSkipped = 0;
+    long fragmentsDelivered = 0, fragmentsLost = 0;   // movie fragments (one per MPU on air; ISO/IEC 23008-1 allows several)
+    long seqRestarts = 0;                             // the sender's MPU numbers jumped or went back and the asset carried on from them
 };
 
 class MmtpService {

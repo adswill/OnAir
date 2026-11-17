@@ -14,6 +14,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <map>
 #include <random>
 #include <thread>
@@ -291,6 +292,12 @@ int main(int argc, char** argv) {
         CHECK(parseMpTable(s.data(), s.size(), mt) && mt.tableId == 0x13 && mt.packageId.empty() && mt.assets.size() == 1 && mt.assets[0].mpuTimes[0].first == 8, "subset MP table without the package id");
         t.resize(t.size() - 6);
         CHECK(!parseMpTable(t.data(), t.size(), mt), "a cut MP table is refused");
+        // a location of type 4 (MPEG-2 transport stream over IPv6, 36 bytes) in front of the packet id
+        Bytes l4; l4.push_back(0x20); l4.push_back(1); putBe16(l4, 0); l4.push_back(0xFE); l4.push_back(0); putBe16(l4, 0); l4.push_back(1);
+        l4.push_back(0); putBe32(l4, 0); putBe32(l4, 1); l4.push_back('a'); add(l4, Bytes{'h', 'v', 'c', '1'}); l4.push_back(0xFE);
+        l4.push_back(2); l4.push_back(4); add(l4, Bytes(34, 0x11)); putBe16(l4, 0x0100); l4.push_back(0); putBe16(l4, 77); putBe16(l4, 0);
+        dect2::endian::storeBe16(&l4[2], (uint32_t)l4.size() - 4);
+        CHECK(parseMpTable(l4.data(), l4.size(), mt) && mt.assets.size() == 1 && mt.assets[0].packetIds == std::vector<uint16_t>{77}, "a location of type 4 is stepped over");
     }
     // ---- 3, 12. one asset in order: one init segment of the media track alone, the media samples byte for byte, a running timeline
     const int kMpus = 9;
@@ -427,6 +434,100 @@ int main(int argc, char** argv) {
         MmtpStats st;
         run(s.out, &st);
         CHECK(st.mpusDropped >= 12 && st.mpusDelivered == 0, "unfinished MPUs are dropped");
+    }
+    // ---- 13. MPUs of two movie fragments (mfhd 1 and 2): MFU sample numbers from 1 in each fragment or on through the MPU, the moofs first or
+    // after their samples; a lost sample costs its fragment only, and the next fragment keeps its place in time
+    {
+        auto setMfhd = [](Bytes& moof, uint32_t n) { for (size_t q = 8; q + 16 < moof.size(); q++) if (!memcmp(&moof[q], "mfhd", 4)) { dect2::endian::storeBe32(&moof[q + 8], n); return; } };
+        for (int through = 0; through < 2; through++)
+            for (int moofLast = 0; moofLast < 2; moofLast++) {
+                Sender s{100};
+                const int kTwo = 4;
+                for (int k = 0; k < kTwo; k++) {
+                    const uint32_t seq = 4000 + k;
+                    Mpu f1 = makeMpu(vinit, vseg[0], seq, "video-1"), f2 = makeMpu(vinit, vseg[1], seq, "video-1");
+                    setMfhd(f2.moof, 2);
+                    s.pieces(MpuMetadata, seq, f1.meta, 1);
+                    uint32_t sn = 1;
+                    for (int f = 0; f < 2; f++) {
+                        const Mpu& m = f ? f2 : f1;
+                        if (!f) sn = 1;
+                        if (!through) sn = 1;
+                        if (!moofLast) s.pieces(MpuMovieFragment, seq, m.moof, 2);
+                        for (size_t i = 0; i < m.samples.size(); i++, sn++) {
+                            if (k == 1 && f == 0 && i == 4) continue;   // lost
+                            Bytes du; putBe32(du, (uint32_t)f + 1); putBe32(du, sn); putBe32(du, 0); du.push_back(0); du.push_back(0);
+                            Bytes all(kHint, 0xA0); add(all, m.samples[i]); add(du, all);
+                            s.packet(MmtpMpu, Sender::payload(MpuMfu, 0, 0, seq, du));
+                        }
+                        if (moofLast) s.pieces(MpuMovieFragment, seq, m.moof, 2);
+                    }
+                }
+                MmtpStats st;
+                std::vector<Out> o = run(s.out, &st);
+                bool ok = !o.empty() && o[0].init && (int)o.size() == 1 + 2 * kTwo - 1;
+                uint64_t t0 = 0;
+                Bytes file;
+                for (size_t i = 0; ok && i < o.size(); i++) {
+                    add(file, o[i].data);
+                    if (!i) continue;
+                    Bytes media; uint64_t tfdt = 0; uint32_t mfhd = 0;
+                    ok = readSegment(o[i].data, media, tfdt, mfhd);
+                    const int slot = (int)i - 1 + (i >= 3 ? 1 : 0);   // the third fragment of the stream (MPU 1, fragment 1) was lost
+                    if (i == 1) t0 = tfdt;
+                    Bytes want;
+                    for (auto& x : vm[slot % 2 ? 1 : 0].samples) add(want, x);
+                    ok = ok && tfdt == t0 + (uint64_t)slot * 25 * 512 && media == want;
+                }
+                bool rising = false;
+                double a0 = 0, a1 = 0;
+                CHECK(ok && st.mpusDelivered == kTwo && st.fragmentsDelivered == 2 * kTwo - 1 && st.fragmentsLost == 1 && ffmpegPackets(file, rising, a0, a1) == (2 * kTwo - 1) * 25 && rising,
+                      through ? "two movie fragments per MPU, samples numbered through the MPU" : "two movie fragments per MPU, samples numbered in each fragment");
+            }
+    }
+    // ---- 14. the sender restarts with numbers a little lower; numbers that wrap past 2^32 while the next MPU starts before the last one ends
+    {
+        Sender s{100};
+        for (int k = 0; k < 5; k++) s.mpu(vm[k % kMpus], 500 + k);
+        for (int k = 0; k < 20; k++) s.mpu(vm[k % kMpus], 455 + k);
+        MmtpStats st;
+        std::vector<Out> o = run(s.out, &st);
+        CHECK((int)o.size() >= 1 + 5 + 19 && st.seqRestarts == 1, "a sender restart with lower numbers carries on");
+        std::vector<std::vector<UdpDatagram>> per;
+        for (int k = 0; k < 8; k++) { Sender t{100}; t.mpu(vm[k % kMpus], 0xFFFFFFFCu + (uint32_t)k, true); per.push_back(t.out); }
+        std::vector<UdpDatagram> in;
+        for (size_t k = 0; k < per.size(); k++) {
+            for (size_t i = 0; i + 1 < per[k].size(); i++) in.push_back(per[k][i]);
+            if (k + 1 < per.size()) { in.push_back(per[k + 1][1]); per[k + 1].erase(per[k + 1].begin() + 1); }
+            in.push_back(per[k].back());
+        }
+        o = run(in, &st);
+        CHECK(o.size() == 9 && st.mpusDropped == 0, "MPU numbers wrapping past 2^32 keep their order");
+    }
+    // ---- 15. MFU fragments without data are not kept; tiny ones count what they cost against the limit; an MPU of an asset that stops is
+    // given up once the service has moved on
+    {
+        MmtpStats st;
+        for (int bytes = 0; bytes < 2; bytes++) {
+            Sender s{100};
+            uint32_t off = 0;
+            for (int pk = 0; pk < 4000; pk++) {
+                Bytes pl; putBe16(pl, 0); pl.push_back((uint8_t)(MpuMfu << 4 | 8 | 1)); pl.push_back(0); putBe32(pl, 42);
+                for (int u = 0; u < 90; u++) { putBe16(pl, (uint32_t)(14 + bytes)); putBe32(pl, 1); putBe32(pl, 1); putBe32(pl, off++); pl.push_back(0); pl.push_back(0); if (bytes) pl.push_back(9); }
+                dect2::endian::storeBe16(&pl[0], (uint32_t)pl.size() - 2);
+                s.packet(MmtpMpu, pl);
+            }
+            run(s.out, &st);
+            CHECK(bytes ? st.mpusDropped == 1 : st.mpusDropped == 0, bytes ? "an MPU of 360000 one-byte fragments goes past the limit" : "fragments without data are not kept");
+        }
+        Sender a{100}, b{200};
+        a.mpu(vm[0], 7);
+        a.out.resize(a.out.size() / 2);
+        for (int k = 0; k < 80; k++) b.mpu(vm[k % kMpus], 100 + k);
+        std::vector<UdpDatagram> in = a.out;
+        in.insert(in.end(), b.out.begin(), b.out.end());
+        run(in, &st);
+        CHECK(st.mpusDropped == 1 && st.mpusDelivered == 80, "the unfinished MPU of an asset that stopped is given up");
     }
     // ---- two assets on one timeline: by the MP table's NTP times, or by sequence number
     Mpu am = makeMpu(ainit, aseg[0], 1000, "audio-1");

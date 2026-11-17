@@ -242,10 +242,10 @@ bool parseMpTable(const uint8_t* d, size_t n, MpTable& t) {
             case 0: if (!need(2)) return false; as.packetIds.push_back(loadBe16(d + pos)); skip = 2; break;
             case 1: skip = 12; break;    // IPv4 source, destination, port, packet id: another flow, not followed in this receiver
             case 2: skip = 36; break;    // the same over IPv6
-            case 3: skip = 6; break;     // an MPEG-2 transport stream PID
-            case 4: skip = 28; break;    // the same over IPv6
+            case 3: skip = 6; break;     // an MPEG-2 transport stream: network id, transport stream id, PID
+            case 4: skip = 36; break;    // MPEG-2 transport stream over IPv6: source, destination, port, PID
             case 5: if (!need(1)) return false; skip = 1 + d[pos]; break;   // URL
-            default: return false;
+            default: return false;       // no length to step over it: the rest of the table cannot be read
             }
             if (!need(skip)) return false;
             pos += skip;
@@ -537,18 +537,41 @@ struct Pieces {
     }
 };
 
-struct OpenMpu {
-    Pieces meta, moof;
+// What one stored MFU fragment costs besides its bytes (map node, key, vector): counted against the limits, so that fragments with little or
+// no data cannot hold memory the limits do not see.
+constexpr size_t kMfuEntryCost = 96;
+
+// One movie fragment of an MPU (ISO/IEC 23008-1 lets an MPU have several): its moof, and the MFUs that name its sequence number.
+struct Frag {
+    std::vector<uint8_t> moof;           // the whole movie fragment once it is in
     std::map<std::pair<uint32_t, uint32_t>, std::vector<uint8_t>> mfu;   // (sample, media offset) -> fragment, the hint sample in front at offset 0
     size_t mfuBytes = 0;
-    long born = 0;
-    bool fragRead = false, fragBad = false;
-    MpuFragment frag;
-    size_t bytes() const { return meta.bytes + moof.bytes + mfuBytes; }
+    bool read = false, bad = false;
+    MpuFragment f;
+    size_t bytes() const { return moof.size() + mfuBytes + mfu.size() * kMfuEntryCost; }
 };
 
+// serial number order, for keys that all lie within 2^31 of each other (the open MPUs of an asset stay within kSeqJump of its newest)
+struct SeqLess { bool operator()(uint32_t a, uint32_t b) const { return seqDiff(a, b) < 0; } };
+
+struct OpenMpu {
+    Pieces meta, moofPart;               // the metadata, and a movie fragment sent in pieces
+    std::map<uint32_t, Frag> frags;      // by movie fragment sequence number (the moof's mfhd, the MFU header's first field)
+    long born = 0, touched = 0;
+    // once its first movie fragment went out, the MPU stays open for the ones after it
+    bool started = false;
+    uint32_t fragDone = 0;               // the movie fragments up to this one are delivered or lost
+    uint64_t base = 0, end = 0;          // its start on the asset's timeline, and how far its delivered fragments reach from there
+    size_t bytes() const {
+        size_t n = meta.bytes + moofPart.bytes;
+        for (auto& g : frags) n += g.second.bytes();
+        return n;
+    }
+};
+typedef std::map<uint32_t, OpenMpu, SeqLess> OpenMap;
+
 struct Lane {
-    std::map<uint32_t, OpenMpu> open;    // by MPU sequence number
+    OpenMap open;                        // by MPU sequence number
     bool haveInit = false, skip = false;
     MpuInit init;
     std::vector<uint8_t> sentInit;
@@ -566,10 +589,28 @@ struct Lane {
 };
 
 constexpr int kMaxOpenPerLane = 8;
+constexpr int kMaxFragsPerMpu = 64;
 constexpr size_t kMaxOpenBytes = 128u << 20;
 constexpr size_t kMaxSignallingBytes = 1u << 20;
+constexpr size_t kMaxTimesPerLane = 64;
 constexpr int kSeqJump = 1024, kSeqAgree = 3, kBehind = 3;
+constexpr long kStaleMpus = 64;           // an MPU no packet has added to while the service opened this many others is given up
 constexpr double kOriginSeconds = 10.0;   // the first asset starts this far in, so that another asset's earlier start stays positive
+
+// the sequence number in the mfhd of a movie fragment (moof, then on air the mdat header)
+bool moofSequence(const uint8_t* d, size_t n, uint32_t& seq) {
+    size_t pos = 0;
+    Box b;
+    while (nextBox(d, n, pos, b)) {
+        if (b.type != fourcc("moof")) continue;
+        size_t q = b.pos + b.hdr;
+        Box c;
+        while (nextBox(d, b.pos + b.size, q, c))
+            if (c.type == fourcc("mfhd") && bodySize(c) >= 8) { seq = loadBe32(body(d, c) + 4); return true; }
+        return false;
+    }
+    return false;
+}
 } // namespace
 
 struct MmtpService::Impl {
@@ -633,9 +674,17 @@ struct MmtpService::Impl {
             st.mpts++;
             for (auto& a : t.assets)
                 for (uint16_t ap : a.packetIds) {
+                    if (a.mpuTimes.empty()) continue;
                     auto& tm = lanes[ap].times;
                     for (auto& x : a.mpuTimes) tm[x.first] = x.second;
-                    while (tm.size() > 64) tm.erase(tm.begin());
+                    // keep the times nearest the newest MPU of this table; the oldest by serial number order goes first
+                    const uint32_t newest = a.mpuTimes.back().first;
+                    while (tm.size() > kMaxTimesPerLane) {
+                        auto old = tm.begin();
+                        for (auto it = tm.begin(); it != tm.end(); ++it)
+                            if (seqDiff(it->first, newest) < seqDiff(old->first, newest)) old = it;
+                        tm.erase(old);
+                    }
                 }
             if (t.tableId == 0x20) {
                 {
@@ -653,41 +702,75 @@ struct MmtpService::Impl {
         }
     }
 
-    void drop(Lane& l, std::map<uint32_t, OpenMpu>::iterator it) {
-        openBytes -= std::min(openBytes, it->second.bytes());
+    uint64_t median(const std::deque<uint64_t>& v) const {
+        std::vector<uint64_t> s(v.begin(), v.end());
+        std::nth_element(s.begin(), s.begin() + s.size() / 2, s.end());
+        return s[s.size() / 2];
+    }
+
+    // An MPU leaves the asset: one that sent nothing out is dropped; one that did is over, and the next MPU follows it on the timeline (a
+    // duration far from the usual one, from a damaged table or movie fragments lost at its end, is taken as the usual one).
+    void retire(Lane& l, OpenMap::iterator it) {
+        OpenMpu& o = it->second;
+        openBytes -= std::min(openBytes, o.bytes());
         if (!l.haveDone || seqDiff(it->first, l.lastDone) > 0) { l.lastDone = it->first; l.haveDone = true; }
-        st.mpusDropped++;
+        if (!o.started) st.mpusDropped++;
+        else {
+            for (auto& g : o.frags)
+                if (!g.second.moof.empty() || !g.second.mfu.empty()) {
+                    st.fragmentsLost++;
+                    DIAG_DEBUG_EVERY(586203, 10.0, "MPU %u of an MMTP asset ended with movie fragment %u incomplete, so that part of it is lost.", it->first, g.first);
+                }
+            const uint64_t dur = o.end;
+            uint64_t step = dur;
+            if (l.durs.size() >= 4) {
+                const uint64_t m = median(l.durs);
+                if (dur < m - m / 4 || dur > m + m / 4) step = m;
+            }
+            l.durs.push_back(dur);
+            if (l.durs.size() > 16) l.durs.pop_front();
+            l.nextBase = o.base + step;
+        }
         l.open.erase(it);
     }
 
-    void dropOldestAnywhere() {
+    bool retireOldestAnywhere() {
         Lane* bl = nullptr;
-        std::map<uint32_t, OpenMpu>::iterator bi;
+        OpenMap::iterator bi;
         for (auto& kv : lanes)
             for (auto it = kv.second.open.begin(); it != kv.second.open.end(); ++it)
                 if (!bl || it->second.born < bi->second.born) { bl = &kv.second; bi = it; }
-        if (bl) drop(*bl, bi);
+        if (!bl) return false;
+        retire(*bl, bi);
+        return true;
     }
 
-    // the MPU is whole when its metadata (this MPU's or an earlier one of the asset), its movie fragment and every byte of every media sample are in
-    bool assemble(Lane& l, OpenMpu& o, std::vector<uint8_t>& media) {
-        if (!l.haveInit || !o.moof.complete()) return false;
-        if (!o.fragRead) {
-            o.fragRead = true;
-            const std::vector<uint8_t> m = o.moof.join();
-            o.fragBad = !readMpuFragment(m.data(), m.size(), l.init, o.frag);
+    // a movie fragment is whole when the asset's metadata (from this MPU or an earlier one), its moof and every byte of every media sample are
+    // in; the MFU sample numbers count either from 1 in each movie fragment or on through the MPU, so both are tried
+    bool assemble(Lane& l, Frag& g, std::vector<uint8_t>& media) {
+        if (!l.haveInit || g.moof.empty()) return false;
+        if (!g.read) {
+            g.read = true;
+            g.bad = !readMpuFragment(g.moof.data(), g.moof.size(), l.init, g.f);
         }
-        if (o.fragBad) return false;
-        const MpuFragment& f = o.frag;
-        if (o.mfuBytes < f.mediaBytes + (uint64_t)f.hintSize * f.sizes.size()) return false;
+        if (g.bad || g.mfu.empty()) return false;
+        const MpuFragment& f = g.f;
+        if (g.mfuBytes < f.mediaBytes + (uint64_t)f.hintSize * f.sizes.size()) return false;
+        const uint32_t first = g.mfu.begin()->first.first;
+        if (assembleFrom(g, 0, media)) return true;
+        return first > 1 && assembleFrom(g, first - 1, media);
+    }
+
+    bool assembleFrom(const Frag& g, uint32_t base, std::vector<uint8_t>& media) {
+        const MpuFragment& f = g.f;
         media.clear();
         media.reserve((size_t)f.mediaBytes);
-        auto it = o.mfu.begin();
+        auto it = g.mfu.begin();
         for (uint32_t s = 0; s < f.sizes.size(); s++) {
-            const uint32_t sample = s + 1, want = f.sizes[s];
+            const uint32_t sample = base + s + 1, want = f.sizes[s];
             uint32_t have = 0;
-            while (it != o.mfu.end() && it->first.first < sample) ++it;
-            for (; it != o.mfu.end() && it->first.first == sample; ++it) {
+            while (it != g.mfu.end() && it->first.first < sample) ++it;
+            for (; it != g.mfu.end() && it->first.first == sample; ++it) {
                 const uint32_t off = it->first.second;
                 const uint8_t* p = it->second.data();
                 size_t n = it->second.size();
@@ -698,66 +781,106 @@ struct MmtpService::Impl {
                 const size_t take = std::min<size_t>(n - skip, want - have);
                 media.insert(media.end(), p + skip, p + skip + take);
                 have += (uint32_t)take;
-                if (have == want) { while (it != o.mfu.end() && it->first.first == sample) ++it; break; }
+                if (have == want) { while (it != g.mfu.end() && it->first.first == sample) ++it; break; }
             }
             if (have != want) return false;
         }
         return true;
     }
 
-    uint64_t median(const std::deque<uint64_t>& v) const {
-        std::vector<uint64_t> s(v.begin(), v.end());
-        std::nth_element(s.begin(), s.begin() + s.size() / 2, s.end());
-        return s[s.size() / 2];
-    }
-
-    void deliver(uint16_t pid, Lane& l, uint32_t seq, OpenMpu& o, const std::vector<uint8_t>& media) {
-        const MpuFragment& f = o.frag;
+    // One whole movie fragment of MPU `seq` goes out; `missing` fragments of the MPU before it were lost and are given its duration.
+    void deliver(uint16_t pid, Lane& l, uint32_t seq, OpenMpu& o, const Frag& g, uint32_t missing, const std::vector<uint8_t>& media) {
+        const MpuFragment& f = g.f;
         const uint32_t ts = l.init.timescale;
         uint64_t dur = 0;
         int64_t presMin = INT64_MAX, dts = 0;
         for (size_t i = 0; i < f.durations.size(); i++) { presMin = std::min(presMin, dts + f.compositionOffsets[i]); dts += f.durations[i]; dur += f.durations[i]; }
         if (presMin == INT64_MAX) presMin = 0;
-        uint64_t base;
-        if (!l.anchored) {
-            // the first MPU of an asset: its presentation time on the common timeline, from the MP table's NTP time when there is one, else
-            // from its sequence number against the first MPU of the service (MPUs of all assets start together and last the same)
-            auto t = l.times.find(seq);
-            double sec;
-            if (!alignBySeq && t != l.times.end() && (ntpOrigin || !haveRef)) {
-                if (!ntpOrigin) { ntpOrigin = true; originNtp = t->second - (uint64_t)(kOriginSeconds * 4294967296.0); }
-                sec = (double)(int64_t)(t->second - originNtp) / 4294967296.0;
-                if (!haveRef) { haveRef = true; refSeq = seq; refTime = sec; }
+        const uint64_t lead = (uint64_t)missing * dur;
+        if (!o.started) {
+            uint64_t base;
+            if (!l.anchored) {
+                // the first MPU of an asset: its presentation time on the common timeline, from the MP table's NTP time when there is one,
+                // else from its sequence number against the first MPU of the service (MPUs of all assets start together and last the same)
+                auto t = l.times.find(seq);
+                double sec;
+                if (!alignBySeq && t != l.times.end() && (ntpOrigin || !haveRef)) {
+                    if (!ntpOrigin) { ntpOrigin = true; originNtp = t->second - (uint64_t)(kOriginSeconds * 4294967296.0); }
+                    sec = (double)(int64_t)(t->second - originNtp) / 4294967296.0;
+                    if (!haveRef) { haveRef = true; refSeq = seq; refTime = sec; }
+                } else {
+                    if (!haveRef) { haveRef = true; refSeq = seq; refTime = kOriginSeconds; }
+                    sec = refTime + seqDiff(seq, refSeq) * ((double)dur / ts);
+                }
+                const int64_t b = (int64_t)(sec * ts + 0.5) - presMin;
+                base = b > 0 ? (uint64_t)b : 0;
+                l.anchored = true;
             } else {
-                if (!haveRef) { haveRef = true; refSeq = seq; refTime = kOriginSeconds; }
-                sec = refTime + seqDiff(seq, refSeq) * ((double)dur / ts);
+                base = l.nextBase;
+                const int32_t gap = seqDiff(seq, l.lastDelivered) - 1;
+                if (gap > 0 && gap < kSeqJump && !l.durs.empty()) base += (uint64_t)gap * median(l.durs);
             }
-            const int64_t b = (int64_t)(sec * ts + 0.5) - presMin;
-            base = b > 0 ? (uint64_t)b : 0;
-            l.anchored = true;
-        } else {
-            base = l.nextBase;
-            const int32_t gap = seqDiff(seq, l.lastDelivered) - 1;
-            if (gap > 0 && gap < kSeqJump && !l.durs.empty()) base += (uint64_t)gap * median(l.durs);
+            o.started = true;
+            o.base = base;
+            o.end = 0;
+            l.lastDelivered = seq;
+            st.mpusDelivered++;
         }
-        // the next MPU follows this one; a duration far from the usual one (a damaged table) is taken as the usual one
-        uint64_t step = dur;
-        if (l.durs.size() >= 4) {
-            const uint64_t m = median(l.durs);
-            if (dur < m - m / 4 || dur > m + m / 4) step = m;
-        }
-        l.durs.push_back(dur);
-        if (l.durs.size() > 16) l.durs.pop_front();
-        l.nextBase = base + step;
-        l.lastDelivered = seq;
+        const uint64_t at = o.base + o.end + lead;
+        o.end += lead + dur;
         if (l.sentInit != l.init.init) {
             l.sentInit = l.init.init;
             st.initsDelivered++;
             if (*cb) (*cb)(pid, l.init.handler, true, l.sentInit);
         }
-        const std::vector<uint8_t> seg = buildMediaSegment(f, ++l.fragNo, base, media);
-        st.mpusDelivered++;
+        const std::vector<uint8_t> seg = buildMediaSegment(f, ++l.fragNo, at, media);
+        st.fragmentsDelivered++;
         if (*cb) (*cb)(pid, l.init.handler, false, seg);
+    }
+
+    // a sequence number far from the asset's newest (or well behind its last finished MPU) is believed only when a few packets in a row agree
+    // on it: then the sender has restarted or skipped, the unfinished MPUs are dropped and the asset carries on from the new numbers
+    bool checkSequence(uint16_t pid, Lane& l, uint32_t seq) {
+        if (!l.haveHigh) { l.haveHigh = true; l.high = seq; return true; }
+        const int32_t dh = seqDiff(seq, l.high);
+        const bool far = dh > kSeqJump || dh < -kSeqJump;
+        const bool back = !far && l.haveDone && seqDiff(seq, l.lastDone) < -kBehind;
+        if (!far && !back) {
+            if (dh > 0) l.high = seq;
+            l.candCount = 0;
+            return true;
+        }
+        if (l.candCount > 0 && l.cand == seq) l.candCount++;
+        else { l.cand = seq; l.candCount = 1; }
+        if (l.candCount < kSeqAgree) {
+            if (far) st.seqRejected++;
+            else st.late++;
+            return false;
+        }
+        if (far) DIAG_DEBUG_EVERY(195666, 10.0, "The MPU sequence numbers of MMTP packet id %u jumped from %u to %u, so its unfinished MPUs are dropped and the asset carries on from the new numbers.", (unsigned)pid, l.high, seq);
+        else DIAG_DEBUG_EVERY(824801, 10.0, "The MPU sequence numbers of MMTP packet id %u went back from %u to %u (the sender restarted), so its unfinished MPUs are dropped and the asset carries on from the new numbers.", (unsigned)pid, l.lastDone, seq);
+        st.seqRestarts++;
+        while (!l.open.empty()) retire(l, l.open.begin());
+        l.haveDone = false;
+        l.high = seq;
+        l.lastDelivered = seq - 1;
+        l.candCount = 0;
+        return true;
+    }
+
+    Frag* fragFor(OpenMpu& o, uint32_t n) {
+        if (o.started && n <= o.fragDone) { st.late++; return nullptr; }
+        auto it = o.frags.find(n);
+        if (it != o.frags.end()) return &it->second;
+        if ((int)o.frags.size() >= kMaxFragsPerMpu) { st.bad++; return nullptr; }
+        return &o.frags[n];
+    }
+
+    void takeMoof(OpenMpu& o, const std::vector<uint8_t>& m) {
+        uint32_t n = 0;
+        if (!moofSequence(m.data(), m.size(), n)) { st.bad++; return; }
+        Frag* g = fragFor(o, n);
+        if (g && g->moof.empty()) g->moof = m;
     }
 
     void mpu(uint16_t pid, const MpuPayload& m) {
@@ -765,44 +888,44 @@ struct MmtpService::Impl {
         Lane& l = lanes[pid];
         if (l.skip) return;
         const uint32_t seq = m.mpuSequence;
-        // no checksum protects the sequence number: a far jump is believed only when a few packets agree on it
-        if (l.haveHigh) {
-            const int32_t dh = seqDiff(seq, l.high);
-            if (dh > kSeqJump || dh < -kSeqJump) {
-                if (l.candCount > 0 && l.cand == seq) l.candCount++;
-                else { l.cand = seq; l.candCount = 1; }
-                if (l.candCount < kSeqAgree) { st.seqRejected++; return; }
-                DIAG_DEBUG_EVERY(195666, 10.0, "The MPU sequence numbers of MMTP packet id %u jumped from %u to %u, so its unfinished MPUs are dropped and the asset carries on from the new numbers.", (unsigned)pid, l.high, seq);
-                while (!l.open.empty()) drop(l, l.open.begin());
-                l.haveDone = false;
-                l.high = seq;
-                l.lastDelivered = seq - 1;
-            } else if (dh > 0) l.high = seq;
-            l.candCount = 0;
-        } else { l.haveHigh = true; l.high = seq; }
+        if (!checkSequence(pid, l, seq)) return;
         if (l.haveDone && seqDiff(seq, l.lastDone) <= 0) { st.late++; return; }
         auto it = l.open.find(seq);
         if (it == l.open.end()) {
             it = l.open.emplace(seq, OpenMpu()).first;
-            it->second.born = ++clock;
+            it->second.born = it->second.touched = ++clock;
+            sweep();
         }
         OpenMpu& o = it->second;
+        o.touched = clock;
         const size_t before = o.bytes();
         bool metaDone = false;
         for (auto& u : m.units) {
             if (m.fragmentType == MpuMetadata) { o.meta.add(m.fragmentation, m.fragmentCounter, u.first, u.second); metaDone = o.meta.complete(); }
-            else if (m.fragmentType == MpuMovieFragment) o.moof.add(m.fragmentation, m.fragmentCounter, u.first, u.second);
-            else if (m.fragmentType == MpuMfu) {
+            else if (m.fragmentType == MpuMovieFragment) {
+                // each movie fragment is a data unit of its own: whole, or in pieces from a first one to a last one
+                if (m.fragmentation == 0) { takeMoof(o, std::vector<uint8_t>(u.first, u.first + u.second)); continue; }
+                if (m.fragmentation == 1 && o.moofPart.total > 0) {
+                    auto f0 = o.moofPart.got.find(m.fragmentCounter);
+                    const bool same = f0 != o.moofPart.got.end() && f0->second.size() == u.second && std::equal(u.first, u.first + u.second, f0->second.begin());
+                    if (!same) o.moofPart = Pieces();   // a new movie fragment starts; the one before it lost a piece
+                }
+                o.moofPart.add(m.fragmentation, m.fragmentCounter, u.first, u.second);
+                if (o.moofPart.complete()) { takeMoof(o, o.moofPart.join()); o.moofPart = Pieces(); }
+            } else if (m.fragmentType == MpuMfu) {
                 MfuHeader h;
                 if (!parseMfuHeader(u.first, u.second, h)) { st.bad++; continue; }
-                auto& slot = o.mfu[std::make_pair(h.sample, h.offset)];
-                if (slot.empty()) { slot.assign(u.first + kMfuHeaderBytes, u.first + u.second); o.mfuBytes += slot.size(); }
+                if (u.second == kMfuHeaderBytes) continue;   // no data
+                Frag* g = fragFor(o, h.fragmentSequence);
+                if (!g) continue;
+                auto& slot = g->mfu[std::make_pair(h.sample, h.offset)];
+                if (slot.empty()) { slot.assign(u.first + kMfuHeaderBytes, u.first + u.second); g->mfuBytes += slot.size(); }
             }
         }
         openBytes += o.bytes() - before;
         if (o.bytes() > kMpuMaxBytes) {
             DIAG_DEBUG_EVERY(383065, 10.0, "An MPU of MMTP packet id %u grew past %zu bytes before it was complete, so it is dropped.", (unsigned)pid, kMpuMaxBytes);
-            drop(l, it);
+            retire(l, it);
             return;
         }
         if (metaDone) {
@@ -813,34 +936,58 @@ struct MmtpService::Impl {
                 l.skip = true;
                 st.assetsSkipped++;
                 DIAG_DEBUG_EVERY(627515, 30.0, "MMTP packet id %u carries a %s track, which this receiver does not play yet, so the asset is skipped.", (unsigned)pid, in.handler.c_str());
-                while (!l.open.empty()) drop(l, l.open.begin());
+                while (!l.open.empty()) retire(l, l.open.begin());
                 return;
             } else if (!l.haveInit || in.init != l.init.init || in.trackId != l.init.trackId) {
                 l.init = in;
                 l.haveInit = true;
-                for (auto& x : l.open) { x.second.fragRead = false; x.second.fragBad = false; }
+                for (auto& x : l.open)
+                    for (auto& g : x.second.frags) { g.second.read = false; g.second.bad = false; }
             }
         }
-        // whole MPUs go out in order: the ones before a whole MPU are finished (dropped) first
-        for (auto w = l.open.begin(); w != l.open.end();) {
-            std::vector<uint8_t> media;
-            if (assemble(l, w->second, media)) {
-                const uint32_t s = w->first;
-                while (l.open.begin() != w) drop(l, l.open.begin());
-                deliver(pid, l, s, w->second, media);
-                openBytes -= std::min(openBytes, w->second.bytes());
-                l.lastDone = s;
-                l.haveDone = true;
-                w = l.open.erase(w);
-            } else ++w;
+        // whole movie fragments go out in order: the MPUs before the one a whole fragment belongs to are finished first, and its own
+        // fragments before that one that are not whole are lost
+        for (auto w = l.open.begin(); w != l.open.end(); ++w) {
+            OpenMpu& x = w->second;
+            const size_t xBefore = x.bytes();
+            for (auto g = x.frags.begin(); g != x.frags.end();) {
+                std::vector<uint8_t> media;
+                if (!assemble(l, g->second, media)) { ++g; continue; }
+                while (l.open.begin() != w) retire(l, l.open.begin());
+                for (auto e = x.frags.begin(); e != g;) {
+                    st.fragmentsLost++;
+                    DIAG_DEBUG_EVERY(902417, 10.0, "MPU %u of MMTP packet id %u lost movie fragment %u before a later one was whole, so that part of it is skipped.", w->first, (unsigned)pid, e->first);
+                    e = x.frags.erase(e);
+                }
+                const uint32_t n = g->first;
+                const uint32_t from = x.started ? x.fragDone + 1 : (n > 0 ? 1 : 0);
+                const uint32_t missing = std::min<uint32_t>(n - std::min(n, from), kMaxFragsPerMpu);
+                deliver(pid, l, w->first, x, g->second, missing, media);
+                x.fragDone = n;
+                g = x.frags.erase(g);
+            }
+            openBytes -= std::min(openBytes, xBefore - x.bytes());
         }
         // an MPU far behind the newest one will not be completed any more; nor will one past the per-asset or the total limit
-        while (!l.open.empty() && seqDiff(l.high, l.open.begin()->first) > kBehind) drop(l, l.open.begin());
-        while ((int)l.open.size() > kMaxOpenPerLane) drop(l, l.open.begin());
+        while (!l.open.empty() && seqDiff(l.high, l.open.begin()->first) > kBehind) retire(l, l.open.begin());
+        while ((int)l.open.size() > kMaxOpenPerLane) retire(l, l.open.begin());
         while (openBytes > kMaxOpenBytes) {
             DIAG_DEBUG_EVERY(314154, 10.0, "Unfinished MMTP MPUs hold more than %zu bytes, so the oldest one is dropped.", kMaxOpenBytes);
-            dropOldestAnywhere();
+            if (!retireOldestAnywhere()) { openBytes = 0; break; }
         }
+    }
+
+    // MPUs no packet has added to for a long time (an asset that stopped being sent, so nothing overtakes them) are given up
+    void sweep() {
+        for (auto& kv : lanes)
+            for (auto it = kv.second.open.begin(); it != kv.second.open.end();) {
+                auto next = std::next(it);
+                if (clock - it->second.touched > kStaleMpus) {
+                    DIAG_DEBUG_EVERY(468293, 30.0, "MPU %u of MMTP packet id %u got no packet while the service opened %ld other MPUs, so it is given up.", it->first, (unsigned)kv.first, kStaleMpus);
+                    retire(kv.second, it);
+                }
+                it = next;
+            }
     }
 };
 
