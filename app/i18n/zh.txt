@@ -10352,14 +10352,14 @@ detections	检测
 detections sent	已发送检测
 device or file	设备或文件
 device or file##chpath	设备或文件##chpath
-dial	拨号
+dial	调谐刻度
 digipeaters (optional)	数字中继（可选）
 digital	数字
 disarms in %d s	%d 秒后解除预备
 disk width %	磁盘宽度 %
 distress	遇险
 diversity pair	分集对
-does not look like a reference of this program	看起来不是本程序的参考台
+does not look like a reference of this program	看起来不是本程序的参考数据文件
 does not work on this computer	在此计算机上不可用
 down	向下
 downlink (satellite)	下行链路（卫星）
@@ -10383,7 +10383,7 @@ each row is 0.1 s, newest at the bottom; a burst is a short vertical line	每行
 early landing estimate	早期着陆估计
 earned	已获得
 east	东
-echo found, equaliser on	找到回声，均衡器开启
+echo found, equaliser on	检测到回波，均衡器已开启
 echoes	回声
 effective area for S/N 5	S/N 为 5 的有效面积
 empty = anonymous	留空 = 匿名
