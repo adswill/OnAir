@@ -3,12 +3,13 @@
 
 // Seeded mutation run of the C++ byte parsers that have no fuzz_<mode>_proto of their own, meant for DECT2_SANITIZE=ON: ATSC PSIP
 // sections (MGT, VCT, EIT, ETT, STT, multiple string text, Huffman titles), CEA-608/708 captions, the ATSC 3.0 ALP reassembler, IPv4/UDP
-// reassembly, LLS / AEAT / S-TSID XML, ROUTE/LCT packets and objects, MIME multipart, raw deflate and gzip, the XML reader, the RDS group
+// reassembly, LLS / AEAT / S-TSID XML, ROUTE/LCT packets and objects, MMTP packets, MPUs and the MP table, MIME multipart, raw deflate and gzip, the XML reader, the RDS group
 // decoder (PS, RadioText, RT+, EON, TMC, ODA) and the DVB-T2 baseband-frame unpacker. None may crash, hang or read out of bounds on any
 // bytes at any length (every input is copied to an exactly sized heap block). Also a libFuzzer target with -DONAIR_LIBFUZZER (the first
 // byte picks the parser). ONAIR_FUZZ_ITERS sets the iterations per parser (default 4000, ONAIR_TEST_LONG=1: 100000).
 #include "dect2/atsc3/atsc3_alp.h"
 #include "dect2/atsc3/atsc3_ip.h"
+#include "dect2/atsc3/atsc3_mmtp.h"
 #include "dect2/atsc3/atsc3_route.h"
 #include "dect2/common/inflate.h"
 #include "dect2/common/xmlmini.h"
@@ -139,6 +140,39 @@ void routeOne(const uint8_t* d, size_t n) {
     if (n > 8) { u.payload[0] = 0x10; u.payload[1] = 0x80; svc.push(u); }
 }
 
+void mmtpOne(const uint8_t* d, size_t n) {
+    Heap h(d, n);
+    atsc3::MmtpPacket p;
+    atsc3::parseMmtpPacket(h.p, n, p);
+    atsc3::MpuPayload m;
+    atsc3::parseMpuPayload(h.p, n, m);
+    atsc3::MfuHeader mh;
+    atsc3::parseMfuHeader(h.p, n, mh);
+    std::vector<atsc3::SignallingMessage> msgs;
+    atsc3::parseSignallingMessages(h.p, n, n > 0 && (d[0] & 1), n > 1 && (d[1] & 1), msgs);
+    atsc3::MpTable t;
+    atsc3::parseMpTable(h.p, n, t);
+    atsc3::MpuInit in;
+    atsc3::readMpuMetadata(h.p, n, in);
+    in.trackId = n > 2 ? d[2] % 3 : 1;
+    in.hintTrackId = 2;
+    atsc3::MpuFragment f;
+    if (atsc3::readMpuFragment(h.p, n, in, f)) atsc3::buildMediaSegment(f, 1, 0, std::vector<uint8_t>(d, d + std::min<size_t>(n, (size_t)f.mediaBytes)));
+    // the same bytes as the packets of one MMTP flow, cut at lengths the bytes choose
+    atsc3::MmtpService svc(0, 0xEFFF0001u, 5000);
+    atsc3::UdpDatagram u;
+    u.dstIp = 0xEFFF0001u;
+    u.dstPort = 5000;
+    size_t i = 0;
+    while (i < n) {
+        const size_t len = std::min<size_t>(n - i, 12 + d[i] % 200);
+        u.payload.assign(d + i, d + i + len);
+        if (u.payload.size() > 1) { u.payload[0] = (uint8_t)((u.payload[0] & 0x3F) | 0x40); u.payload[1] &= 0x0F; }
+        svc.push(u);
+        i += len;
+    }
+}
+
 void inflateOne(const uint8_t* d, size_t n) {
     Heap h(d, n);
     std::vector<uint8_t> out;
@@ -196,7 +230,7 @@ void bbOne(const uint8_t* d, size_t n) {
 using Fn = void (*)(const uint8_t*, size_t);
 struct Target { const char* name; Fn fn; };
 const Target kTargets[] = {{"psip", psipOne}, {"captions", ccOne}, {"alp", alpOne}, {"ip/lls/xml", ipOne}, {"route", routeOne},
-                           {"inflate/xml", inflateOne}, {"rds", rdsOne}, {"bbframe", bbOne}};
+                           {"inflate/xml", inflateOne}, {"rds", rdsOne}, {"bbframe", bbOne}, {"mmtp", mmtpOne}};
 
 // valid seeds where a generator exists, so the mutations reach past the first length check
 std::vector<std::vector<uint8_t>> seedsFor(int t, std::mt19937& g) {
@@ -246,6 +280,25 @@ std::vector<std::vector<uint8_t>> seedsFor(int t, std::mt19937& g) {
         s.push_back(std::vector<uint8_t>(fixed, fixed + sizeof fixed - 1));
         const std::string x = "<?xml version=\"1.0\"?><a:b xmlns:a=\"u\" k='v'><c d=\"&amp;&#x41;\">t<![CDATA[z]]></c><!-- n --><e/></a:b>";
         s.push_back(std::vector<uint8_t>(x.begin(), x.end()));
+        break;
+    }
+    case 8: {   // an MMTP MFU packet, a signalling packet with an MP table, and a movie fragment
+        atsc3::MmtpPacket p; p.version = 1; p.packetId = 100; p.sequence = 7;
+        std::vector<uint8_t> pl{0, 0, 0x28, 0, 0, 0, 0, 5};
+        const std::vector<uint8_t> du = rnd(60);
+        pl.insert(pl.end(), du.begin(), du.end());
+        pl[1] = (uint8_t)(pl.size() - 2);
+        s.push_back(atsc3::makeMmtpPacket(p, pl));
+        std::vector<uint8_t> mpt{0x20, 1, 0, 0, 0xFE, 1, 'P', 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 'v', 'h', 'v', 'c', '1', 0xFE, 1, 0, 0, 100, 0, 15, 0, 1, 12};
+        for (int k = 0; k < 12; k++) mpt.push_back((uint8_t)g());
+        mpt[3] = (uint8_t)(mpt.size() - 4);
+        std::vector<uint8_t> sig{0, 0, 0, 0x20, 1, 0, (uint8_t)mpt.size()};
+        sig.insert(sig.end(), mpt.begin(), mpt.end());
+        p.type = 2;
+        s.push_back(atsc3::makeMmtpPacket(p, sig));
+        std::vector<uint8_t> moof{0, 0, 0, 52, 'm', 'o', 'o', 'f', 0, 0, 0, 44, 't', 'r', 'a', 'f', 0, 0, 0, 16, 't', 'f', 'h', 'd', 0, 2, 0, 0, 0, 0, 0, 1,
+                                  0, 0, 0, 20, 't', 'r', 'u', 'n', 0, 0, 2, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 9};
+        s.push_back(moof);
         break;
     }
     default: s.push_back(rnd(400)); break;
