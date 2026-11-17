@@ -10001,7 +10001,7 @@ Winlink password	Winlink 密码
 Wireshark	Wireshark
 Wireshark...	Wireshark……
 With a GPS fix the map shows a chase car, and SondeHub's Chase car option sends this position.	有 GPS 定位时，地图显示追踪车，SondeHub 的「追踪车」选项会发送此位置。
-With a capture of several MHz: reads every Band III ensemble in it at once, no scanning. Click a channel to listen.	用数 MHz 的捕获：一次读取其中所有 Band III 组，无需扫描。点击频道收听。
+With a capture of several MHz: reads every Band III ensemble in it at once, no scanning. Click a channel to listen.	使用数 MHz 带宽的捕获时，可一次读取其中所有 Band III 节目群，无需扫描。点击频道即可收听。
 With an MSK reference	用 MSK 参考
 With an MSK reference##lt	用 MSK 参考##lt
 With audio	带音频
@@ -10082,7 +10082,7 @@ Your radio	你的电台
 Your radio is found. Start the receiver once to check that it opens.	已找到你的电台。启动一次接收机，检查能否打开。
 Your radio works: the receiver ran on it.	你的电台工作正常：接收机已在它上面运行。
 Your radio. OnAir looks for radios on USB and picks one for you; a radio on the network is added by its address. You can also go on without one.	你的电台。OnAir 在 USB 上查找电台并替你选一个；网络上的电台按地址添加。你也可以没有电台继续。
-Your radios and antennas, entered once: modes pick the right ones and the mode list shows what can be received	你的电台和天线，一次录入：模式会选择合适的天线，模式列表会显示可以接收的内容
+Your radios and antennas, entered once: modes pick the right ones and the mode list shows what can be received	一次录入你的电台和天线：各模式会自动选择合适的设备，模式列表会显示可接收的内容。
 Your station	你的台站
 Your station lists no antenna for this frequency. An antenna made for this band will do more than any setting.	你的台站没有列出此频率的天线。为此频段制作的天线胜过任何设置。
 Your text	你的文字
