@@ -43,3 +43,4 @@ Define function on_event(e). e.type
 Level squelch: dBFS. Speech to noise: dB.
 A .sigmf-meta file with the frequency, rate and mode next to each recording.
 Saves the sound you hear, in any mode, to a file (before the volume slider, so the level does not depend on it)
+Hellschreiber is a picture
