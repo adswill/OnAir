@@ -8043,7 +8043,7 @@ Power W	功率 W
 Power lines	电力线
 Pre-emphasis tilt	预加重斜率
 Preamble %zu bits; %zu frames of %zu bits%s	前导 %zu 位；%zu 帧，每帧 %zu 位%s
-Preamble chirps	前导 chirp
+Preamble chirps	前导啁啾
 Predicted from this radio's power table (Advanced > Calibration of this radio): average and peak envelope power of what is being sent. A prediction, not a measurement.	按此电台功率表预测（高级 > 此电台校准）：正在发送内容的平均功率和峰值包络功率。是预测，不是测量。
 Predicted vs observed (green: agree, orange: heard but not predicted, blue: predicted open but not heard, grey: no data)	预测与实测（绿：一致，橙：听到但未预测，蓝：预测通但未听到，灰：无数据）
 Preferred TV language	首选电视语言
@@ -8249,7 +8249,7 @@ Receiving well.	接收良好。
 Receiving: %s %s.	接收中：%s %s。
 Recent alerts	最近警报
 Recent voice clips	最近语音片段
-Reception doctor	接收医生
+Reception doctor	接收诊断
 Reception map (paths coloured by SNR red to green, shaded: night, orange line: terminator, yellow dot: sub-solar point)	接收地图（路径按 SNR 从红到绿着色，阴影：夜晚，橙线：晨昏线，黄点：日下点）
 Recognise a transmitter by its RF fingerprint, even when it sends only a carrier (a repeater keying up). Tune to the station, press Watch, then Capture.	通过 RF 指纹识别发射机，即使它只发载波（中继台开机）。调到该台，按「监视」，再按「捕获」。
 Recognise an individual transmitter by its RF fingerprint (carrier offset, key-up transient, pilot, spurs), also when it sends only a carrier. Logs every transmission.	通过 RF 指纹（载波偏移、按键瞬态、导频、杂散）识别单个发射机，即使它只发载波也可以。记录每次发射。
@@ -8387,7 +8387,7 @@ Restore from a backup	从备份恢复
 Restore last session?	恢复上次会话？
 Restore last session? The settings come back; press Start to listen again.	恢复上次会话？设置会还原；按「开始」继续收听。
 Restore now	立即恢复
-Restore the default spectrum and waterfall levels and the usual half-and-half split (does not change panel layout)	恢复默认的频谱和瀑布图电平及 usual 上下各半的布局（不改变面板布局）
+Restore the default spectrum and waterfall levels and the usual half-and-half split (does not change panel layout)	恢复默认的频谱和瀑布图电平，以及常用的上下各半布局（不改变面板布局）
 Restore the default view	恢复默认视图
 Resume	继续
 Resume a message that was cut off (ask only for the rest)	续传被截断的消息（只请求剩余部分）
