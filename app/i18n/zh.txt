@@ -8005,7 +8005,7 @@ Played (RadioText+ songs)	已播（RadioText+ 歌曲）
 Played (RadioText+ songs)##fmpl	已播（RadioText+ 歌曲）##fmpl
 Playing 	正在播放：
 Playlists, HLS, UDP, RTP	播放列表、HLS、UDP、RTP
-Plays the first of the chosen channels that opens, stays on it until it has been quiet for the hang time, then goes on.	播放所选信道中第一个开放的，保持到静默超过挂起时间，再继续。
+Plays the first of the chosen channels that opens, stays on it until it has been quiet for the hang time, then goes on.	播放所选信道中第一个成功打开的信道；持续收听，直到静默时间达到挂起时长，然后切换到下一个信道。
 Plug in a radio and press Refresh.	插入电台并按「刷新」。
 Plug the radio in on USB 3 for an RX888 MkII.	RX888 MkII 请用 USB 3 连接电台。
 Plug-in events	插件事件
