@@ -8636,7 +8636,7 @@ Send decoded positions to the public map	把解码位置发送到公共地图
 Send keys	发送密钥
 Send my node info first	先发我的节点信息
 Send next	发送下一个
-Send one weather station's values to Weather Underground and CWOP every few minutes. Off until you switch it on; your station id, key and callsign. Windy and AWEKAS are not supported.	每隔几分钟把一个气象站的数值发送到 Weather Underground 和 CWOP。开启前关闭；填你的台站 ID、密钥和呼号。不支持 Windy 和 AWEKAS。
+Send one weather station's values to Weather Underground and CWOP every few minutes. Off until you switch it on; your station id, key and callsign. Windy and AWEKAS are not supported.	每隔几分钟将一个气象站的数据发送到 Weather Underground 和 CWOP。默认关闭；开启后需提供台站 ID、密钥和呼号。不支持 Windy 和 AWEKAS。
 Send positions	发送位置
 Send report	发送报告
 Send the clock time	发送时钟时间
@@ -8739,7 +8739,7 @@ Ship type (ships without a type heard yet are "Not received")	船型（尚未听
 Ships (AIS)	船只（AIS）
 Ships on a map (AIS) and marine radio.	船只在地图上（AIS）和海事电台。
 Ships send their position on 161.975 and 162.025 MHz. Near the sea or a big river you will see them on the map within minutes.	船只在 161.975 和 162.025 MHz 发送位置。在海边或大河附近，几分钟内就能看到它们出现在地图上。
-Short hands-on lessons on the real controls. Each one lights up the part to use and notices when you have done it. Skip any you know already.	针对真实控件的简短动手课程。每课都会点亮要用的部件，并在你完成后察觉。已会的内容可跳过。
+Short hands-on lessons on the real controls. Each one lights up the part to use and notices when you have done it. Skip any you know already.	围绕实际控件设计的简短实操课程。每节课程都会高亮需要操作的控件，并检测你是否已完成操作。已掌握的内容可以跳过。
 Short name (4)	简称（4 字符）
 Shortest (bytes)	最短（字节）
 Shortest path azimuth	最短路径方位角
