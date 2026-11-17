@@ -9045,7 +9045,7 @@ Strikes	闪电
 Strikes per minute, last 60 minutes (right = now)	每分钟闪电次数，最近 60 分钟（右 = 现在）
 Stronger and slower than the default bilateral filter (not used while a picture is still arriving)	比默认双边滤波更强更慢（图像尚未传完时不使用）
 Strongest path comes from bearing	最强路径来自方位角
-Studio	工作室
+Studio	Studio
 Studio (slate, rounded)	Studio（石板色，圆角）
 Sub-GHz sensors (readings)	Sub-GHz 传感器（读数）
 Sub-mode	子模式
