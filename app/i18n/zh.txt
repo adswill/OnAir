@@ -1687,28 +1687,16 @@ Airband is off in the transcript settings	转录设置中已关闭航空频段
 Cannot write %s	无法写入：%s
 Saved %s	已保存：%s
 Transcribe speech	转录语音
-Master switch. While a transmission is going on the audio is cut out, sent to the speech engine and turned into text. Nothing runs while the channels are quiet.	总开关。发射期间，音频被截取、交给语音引擎并转成文字。信道安静时不会运行任何东西。
 Airband channels	航空频段信道
 Marine VHF	海事甚高频
 Speech model	语音模型
 none	无
-Open models folder	打开模型文件夹
-Put a whisper.cpp model file (ggml-*.bin) here to use it. The folder is made if it does not exist.	把 whisper.cpp 模型文件（ggml-*.bin）放在这里即可使用。文件夹不存在时会自动创建。
-No speech model yet. Download one below, or put a model file in the models folder.	还没有语音模型。请在下面下载一个，或把模型文件放入模型文件夹。
 Loading the speech model ...	正在加载语音模型 ...
 Speech model loaded.	语音模型已加载。
 This build has no speech engine.	此版本没有语音引擎。
 checking	校验中
-Download speech model:	下载语音模型：
-%s %d MB	%s %d MB
-Already downloaded	已下载
-English only. tiny is the fastest (real time on a laptop), small hears more words and needs a stronger computer.	仅英语。tiny 最快（笔记本上可实时），small 听到的词更多，但需要更强的电脑。
-Other languages (multilingual models)	其他语言（多语言模型）
-The loaded model is English only: other languages need a multilingual model (tiny, base or small without .en).	已加载的模型仅支持英语：其他语言需要多语言模型（不带 .en 的 tiny、base 或 small）。
 CPU threads	CPU 线程数
-How many processor threads the speech engine may use for one transmission. Fewer threads use less battery and take longer.	语音引擎处理一次发射可使用的处理器线程数。线程越少越省电，但耗时更长。
 Keep transcripts (days)	转录保留天数
-Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time	听到 %llu，保留 %llu，丢弃 %llu（静音、噪声、重复），跳过 %llu（太慢），速度 %.2f x 实时
 Download the speech model %s (%d MB)?	下载语音模型 %s（%d MB）？
 OnAir asks the model repository (huggingface.co) for this one file and sends nothing else. The file is checked against a fixed SHA-256 checksum and thrown away if it does not match. The model is MIT licensed.	OnAir 只向模型仓库（huggingface.co）请求这一个文件，不发送其他任何内容。文件会用固定的 SHA-256 校验和检查，不匹配则丢弃。该模型采用 MIT 许可证。
 Download	下载
@@ -1716,14 +1704,10 @@ Delete all saved transcripts? This cannot be undone.	删除所有已保存的转
 Delete all	全部删除
 Transcription is off.	转录已关闭。
 Hide settings	隐藏设置
-Settings and speech model	设置和语音模型
 Search the text ...	在文本中搜索 ...
 All frequencies	所有频率
-A callsign (DLH123), a registration (N123AB) or an ICAO address (3C6444)	呼号（DLH123）、注册号（N123AB）或 ICAO 地址（3C6444）
-An airport code or name found in the channel name or the text (EYVI, Tower)	信道名称或文本中出现的机场代码或名称（EYVI、Tower）
 %zu of %zu	%zu / %zu
 Copy all shown	复制所有显示的内容
-Export %s	导出 %s
 Delete all ...	全部删除 ...
 Time (UTC)	时间 (UTC)
 Sure	可信度
@@ -2279,8 +2263,6 @@ azimuth only; the picture is just a backdrop	仅方位角；图片只是背景
 column	列
 to (kHz)	频段终点 (kHz)
 Translate to English	翻译成英语
-Speech in another language is also translated to English, offline, next to the original. Needs a multilingual model and costs about 1.5 times more processor time; it is skipped when the engine cannot keep up. Nothing is sent anywhere. Translation into other languages is not available.	其他语言的语音会离线翻译成英语，显示在原文旁边。需要多语言模型，大约多消耗 1.5 倍处理器时间；引擎跟不上时会跳过。不会发送任何数据。不支持翻译成其他语言。
-The loaded model is English only: translation needs a multilingual model.	已加载的模型仅支持英语：翻译需要多语言模型。
 Live: stop the room	直播中：停止房间
 Copy room link	复制房间链接
 Host PIN (to moderate on the room page):	主持人 PIN（用于在房间页面上管理）：
@@ -3011,20 +2993,16 @@ Station's own subtitles	电台自带字幕
 Generated from speech	根据语音生成
 Both	两者
 Generated where the station has none	电台没有字幕时生成
-Auto subtitles (captions)	自动字幕（captions)
-Captions from the speech of the sound you hear: FM and AM broadcast, DAB, TV audio, amateur and digital voice. They are made here with the offline speech model, shown on the receiver, and kept only in memory (and in .srt / .vtt files if you save them). Music is skipped. Off until you turn it on.	根据所听声音中的语音生成字幕：FM 和 AM 广播、DAB、电视伴音、业余无线电和数字语音。它们由离线语音模型在本机生成，显示在接收机上，只保存在内存中（如果您保存，也会写入 .srt / .vtt 文件）。音乐会被跳过。在您打开之前保持关闭。
 Make captions	生成字幕
 TV subtitles	电视字幕
 As spoken	按原话
 English translation	英文翻译
 Caption text	字幕文字
-Tick Translate to English above (multilingual model) to get translated captions.	请勾选上方的“翻译为英语”(需要多语言模型）以获得翻译字幕。
 Caption size, percent	字幕大小（百分比)
 Background, percent	背景（百分比)
 Lines	行数
 At the top of the picture	画面顶部
 Save .srt and .vtt next to audio recordings	在音频录音旁保存 .srt 和 .vtt
-Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time	字幕：%llu 段，跳过音乐 %llu，跳过 %llu(太慢），速度：实时的 %.2f 倍
 The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest.	语音引擎比音频慢：请使用更小的模型或更少的 CPU 线程。最早的语音会被跳过，绝不会跳过最新的。
 category	类别
 from	发送方
@@ -6190,7 +6168,6 @@ Exch sent	交换发出
 Exit program	退出程序
 Expected frequency (MHz)	预期频率（MHz）
 Experimental	实验性
-Export %s##txe	导出 %s##txe
 Export CSV ...	导出 CSV…
 Export CSV ...##tg	导出 CSV…##tg
 Export CSV...##sens	导出 CSV…##sens
@@ -7273,7 +7250,6 @@ Mode##wideMid	模式##wideMid
 Mode's own dwell and hold	模式自身的驻留与保持
 Model	模型
 Model loading ...	模型加载中……
-Model missing: download a speech model (Transcripts > Settings and speech model).	缺少模型：请下载语音模型（转录 > 设置与语音模型）。
 Modes per system	每系统模式数
 Modes shown	显示的模式
 Modes shown...	显示的模式……
@@ -8074,7 +8050,6 @@ Privacy: SondeHub publishes your uploader callsign and, with the box ticked, you
 Privacy: a DX cluster and the Reverse Beacon Network are telnet servers that ask for your callsign; OnAir sends only that. POTA and SOTA spots are read from their public pages; nothing about you is sent. PSK Reporter is asked which stations heard your callsign (the callsign is in the request). Nothing runs while it is off.	隐私：DX 集群和反向信标网络是询问你呼号的 telnet 服务器；OnAir 只发送呼号。POTA 和 SOTA 通报从其公开页面读取；不会发送任何关于你的信息。PSK Reporter 只被询问哪些台站听到了你的呼号（呼号在请求中）。关闭时一切都不会运行。
 Privacy: aggregators publish what you send, and they know your station's position from your account there. Beast and NMEA data carry no key of yours; enter only the address and key your own account gave you. Nothing is sent until you tick a target.	隐私：聚合商会公开你发送的内容，并从你在那边的账号获知台站位置。Beast 和 NMEA 数据不携带你的密钥；只输入你自己账号给的地址和密钥。勾选目标前不会发送任何内容。
 Privacy: the location stays on this computer unless you turn on sending to a public map yourself.	隐私：位置只保留在本机，除非你自行开启发送到公共地图。
-Privacy: what is said on public aviation radio is public, but the speech engine runs here on your computer and the text is kept in your data folder. Do not use it on private conversations. It is on for what you are listening to (FM, AM, marine, amateur, CB, digital voice ...) once a speech model is installed; untick the boxes below to stop it. A visible line shows what it is doing.	隐私：公共航空电台上说的话是公开的，但语音引擎在你的计算机上本地运行，文本保存在你的数据文件夹中。请勿用于私人谈话。安装语音模型后，它对你收听的内容（FM、AM、海事、业余、CB、数字语音……）生效；取消勾选下方各框可停止。有一行可见状态显示它在做什么。
 Privacy: when a service is switched on, each logged QSO is sent to it over HTTPS: the other station's callsign and grid, mode, band and frequency, the reports, the UTC time, and your own callsign and grid. Nothing else, and nothing at all while a service is off. Your keys and passwords stay on this computer and go only to that service. LoTW is not supported (it needs TQSL certificates): export the ADIF log and sign it with TQSL.	隐私：开启某项服务后，每条记录的 QSO 都会通过 HTTPS 发送给它：对方呼号和网格、模式、频段和频率、报告、UTC 时间，以及你自己的呼号和网格。别无其他，服务关闭时完全不发送。你的密钥和密码留在本机，只发给该服务。不支持 LoTW（需要 TQSL 证书）：导出 ADIF 日志并用 TQSL 签名。
 Proba S-band dump	Proba S 频段下传
 Proba-V X-band dump	Proba-V X 频段下传
@@ -9154,7 +9129,6 @@ Take out of the tabs	从标签页中取出
 Takes effect at the next log-in (Log out, then Log in).	下次登录时生效（先注销，再登录）。
 Takes effect the next time an add-on looks for its library (restart if unsure).	在插件下次查找其库时生效（不确定就重启）。
 Takes the passes the filters list, highest priority first. Overlapping passes are trimmed or skipped; a pass you armed always wins over these.	选取筛选列出的过境，优先级最高者先排。重叠的过境被截短或跳过；你预备的过境总是优先。
-Takes the sound you hear in any mode (FM, AM, amateur, CB, digital voice ...) and turns the speech in it into text. Music is skipped.	把你在任何模式（FM、AM、业余、CB、数字语音……）中听到的声音里的语音转成文字。音乐跳过。
 Talk (latched)	通话（锁定）
 Talk to EchoLink stations, links, repeaters and conferences over the Internet	通过互联网与 EchoLink 台站、链路、中继和会议通话
 Talkgroup / ID / NAC / CC	通话组 / ID / NAC / CC
@@ -9606,7 +9580,6 @@ Traffic announcement (TA)	交通公告（TA）
 Traffic map	交通地图
 Traffic programme (TP)	交通节目（TP）
 Train telemetry, 457.9 MHz	列车遥测，457.9 MHz
-Transcribe what I am listening to	转录我正在收听的内容
 Transcribing speech ...	正在转录语音……
 Transmission log	发射日志
 Transmit from the web	从网页发射

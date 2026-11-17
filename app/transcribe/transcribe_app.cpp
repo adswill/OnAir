@@ -797,7 +797,7 @@ void whisperModelEntry(const std::string& dir, const char* id) {
 
 void settingsPanel(App& a) {
     if (!ImGui::BeginTabBar("##txsettingtabs")) return;
-    if (ImGui::BeginTabItem(tr("Transcription"))) {
+    if (ImGui::BeginTabItem(trw("Transcription"))) {
         settingsSection(tr("Speech engine and model"));
         modelSelector();
         bool changed = ImGui::Checkbox(tr("Transcribe speech"), &C.enabled);
@@ -858,13 +858,13 @@ void settingsPanel(App& a) {
         if (ImGui::SliderInt(tr("Keep transcripts (days)"), &C.days, 1, 90)) { save(); gStore.setLimits(20000, C.days); }
         ImGui::EndTabItem();
     }
-    if (ImGui::BeginTabItem(tr("Subtitles and captions"))) {
+    if (ImGui::BeginTabItem(trw("Subtitles and captions"))) {
         captionsSettings(a);
         ImGui::EndTabItem();
     }
-    if (ImGui::BeginTabItem(tr("Speech model"))) {
+    if (ImGui::BeginTabItem(trw("Speech model"))) {
         if (ImGui::BeginTabBar("##txenginetabs")) {
-            if (ImGui::BeginTabItem(tr("Whisper"))) {
+            if (ImGui::BeginTabItem(trw("Whisper"))) {
                 const std::string dir = modelsDir();
                 const double now = ImGui::GetTime();
                 if (now - gUserFilesAt > 3) { gUserFiles = dect2::userSpeechModels(dir); gUserFilesAt = now; }

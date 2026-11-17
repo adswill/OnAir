@@ -1725,28 +1725,16 @@ Airband is off in the transcript settings	Flugfunk ist in den Transkript-Einstel
 Cannot write %s	Kann nicht schreiben: %s
 Saved %s	Gespeichert: %s
 Transcribe speech	Sprache transkribieren
-Master switch. While a transmission is going on the audio is cut out, sent to the speech engine and turned into text. Nothing runs while the channels are quiet.	Hauptschalter. Während einer Aussendung wird der Ton ausgeschnitten, an die Spracherkennung gegeben und in Text umgewandelt. Solange die Kanäle still sind, läuft nichts.
 Airband channels	Flugfunk-Kanäle
 Marine VHF	Seefunk (UKW)
 Speech model	Sprachmodell
 none	keins
-Open models folder	Modelle-Ordner öffnen
-Put a whisper.cpp model file (ggml-*.bin) here to use it. The folder is made if it does not exist.	Lege hier eine whisper.cpp-Modelldatei (ggml-*.bin) ab, um sie zu verwenden. Der Ordner wird angelegt, falls es ihn nicht gibt.
-No speech model yet. Download one below, or put a model file in the models folder.	Noch kein Sprachmodell. Lade unten eines herunter oder lege eine Modelldatei in den Modelle-Ordner.
 Loading the speech model ...	Sprachmodell wird geladen ...
 Speech model loaded.	Sprachmodell geladen.
 This build has no speech engine.	Dieses Programm enthält keine Spracherkennung.
 checking	prüfe
-Download speech model:	Sprachmodell herunterladen:
-%s %d MB	%s %d MB
-Already downloaded	Schon heruntergeladen
-English only. tiny is the fastest (real time on a laptop), small hears more words and needs a stronger computer.	Nur Englisch. tiny ist am schnellsten (Echtzeit auf einem Laptop), small versteht mehr Wörter und braucht einen stärkeren Rechner.
-Other languages (multilingual models)	Andere Sprachen (mehrsprachige Modelle)
-The loaded model is English only: other languages need a multilingual model (tiny, base or small without .en).	Das geladene Modell kann nur Englisch: andere Sprachen brauchen ein mehrsprachiges Modell (tiny, base oder small ohne .en).
 CPU threads	CPU-Threads
-How many processor threads the speech engine may use for one transmission. Fewer threads use less battery and take longer.	Wie viele Prozessor-Threads die Spracherkennung für eine Aussendung nutzen darf. Weniger Threads brauchen weniger Akku und dauern länger.
 Keep transcripts (days)	Transkripte behalten (Tage)
-Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time	Gehört %llu, behalten %llu, verworfen %llu (Stille, Rauschen, Wiederholungen), übersprungen %llu (zu langsam), Tempo %.2f x Echtzeit
 Download the speech model %s (%d MB)?	Das Sprachmodell %s (%d MB) herunterladen?
 OnAir asks the model repository (huggingface.co) for this one file and sends nothing else. The file is checked against a fixed SHA-256 checksum and thrown away if it does not match. The model is MIT licensed.	OnAir fragt das Modell-Archiv (huggingface.co) nach dieser einen Datei und sendet sonst nichts. Die Datei wird gegen eine feste SHA-256-Prüfsumme geprüft und verworfen, wenn sie nicht passt. Das Modell steht unter der MIT-Lizenz.
 Download	Herunterladen
@@ -1754,14 +1742,10 @@ Delete all saved transcripts? This cannot be undone.	Alle gespeicherten Transkri
 Delete all	Alle löschen
 Transcription is off.	Die Transkription ist aus.
 Hide settings	Einstellungen ausblenden
-Settings and speech model	Einstellungen und Sprachmodell
 Search the text ...	Im Text suchen ...
 All frequencies	Alle Frequenzen
-A callsign (DLH123), a registration (N123AB) or an ICAO address (3C6444)	Ein Rufzeichen (DLH123), ein Kennzeichen (N123AB) oder eine ICAO-Adresse (3C6444)
-An airport code or name found in the channel name or the text (EYVI, Tower)	Ein Flughafencode oder -name im Kanalnamen oder im Text (EYVI, Tower)
 %zu of %zu	%zu von %zu
 Copy all shown	Alle angezeigten kopieren
-Export %s	%s exportieren
 Delete all ...	Alle löschen ...
 Time (UTC)	Zeit (UTC)
 Sure	Sicher
@@ -2326,8 +2310,6 @@ azimuth only; the picture is just a backdrop	nur Azimut; das Bild ist nur ein Hi
 column	Spalte
 to (kHz)	bis (kHz)
 Translate to English	Auf Englisch übersetzen
-Speech in another language is also translated to English, offline, next to the original. Needs a multilingual model and costs about 1.5 times more processor time; it is skipped when the engine cannot keep up. Nothing is sent anywhere. Translation into other languages is not available.	Sprache in einer anderen Sprache wird zusätzlich offline ins Englische übersetzt, neben dem Original. Braucht ein mehrsprachiges Modell und kostet etwa 1,5-mal so viel Rechenzeit; wird übersprungen, wenn die Engine nicht mehr mitkommt. Es wird nichts versendet. Übersetzung in andere Sprachen gibt es nicht.
-The loaded model is English only: translation needs a multilingual model.	Das geladene Modell ist nur Englisch: Übersetzung braucht ein mehrsprachiges Modell.
 Live: stop the room	Live: Raum beenden
 Copy room link	Raumlink kopieren
 Host PIN (to moderate on the room page):	Host-PIN (zum Moderieren auf der Raumseite):
@@ -3071,20 +3053,16 @@ Station's own subtitles	Eigene Untertitel des Senders
 Generated from speech	Aus der Sprache erzeugt
 Both	Beide
 Generated where the station has none	Erzeugt, wenn der Sender keine hat
-Auto subtitles (captions)	Auto-Untertitel (Captions)
-Captions from the speech of the sound you hear: FM and AM broadcast, DAB, TV audio, amateur and digital voice. They are made here with the offline speech model, shown on the receiver, and kept only in memory (and in .srt / .vtt files if you save them). Music is skipped. Off until you turn it on.	Untertitel aus der Sprache des gehörten Tons: UKW- und AM-Rundfunk, DAB, Fernsehton, Amateurfunk und digitaler Sprechfunk. Sie entstehen hier mit dem Offline-Sprachmodell, erscheinen am Empfänger und bleiben nur im Speicher (und in .srt-/.vtt-Dateien, wenn Sie sie speichern). Musik wird übersprungen. Aus, bis Sie es einschalten.
 Make captions	Untertitel erzeugen
 TV subtitles	TV-Untertitel
 As spoken	Wie gesprochen
 English translation	Englische Übersetzung
 Caption text	Untertiteltext
-Tick Translate to English above (multilingual model) to get translated captions.	Haken Sie oben „Ins Englische übersetzen“ an (mehrsprachiges Modell), um übersetzte Untertitel zu erhalten.
 Caption size, percent	Untertitelgröße in Prozent
 Background, percent	Hintergrund in Prozent
 Lines	Zeilen
 At the top of the picture	Oben im Bild
 Save .srt and .vtt next to audio recordings	Beim Speichern von Audioaufnahmen .srt und .vtt daneben ablegen
-Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time	Untertitel: %llu Abschnitte, %llu Musik übersprungen, %llu übersprungen (zu langsam), Geschwindigkeit %.2f x Echtzeit
 The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest.	Die Spracherkennung ist langsamer als der Ton: nehmen Sie ein kleineres Modell oder weniger CPU-Threads. Die älteste Sprache wird übersprungen, nie die neueste.
 #  DSC audit
 category	Kategorie

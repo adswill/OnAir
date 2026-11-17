@@ -1711,28 +1711,16 @@ Airband is off in the transcript settings	A repülési sáv ki van kapcsolva az 
 Cannot write %s	Nem írható: %s
 Saved %s	Mentve: %s
 Transcribe speech	Beszéd átírása
-Master switch. While a transmission is going on the audio is cut out, sent to the speech engine and turned into text. Nothing runs while the channels are quiet.	Főkapcsoló. Adás közben a hangot kivágja, a beszédfelismerőnek adja, és szöveggé alakítja. Amíg a csatornák csendesek, semmi sem fut.
 Airband channels	Repülési sáv csatornái
 Marine VHF	Tengeri URH
 Speech model	Beszédmodell
 none	nincs
-Open models folder	Modellek mappájának megnyitása
-Put a whisper.cpp model file (ggml-*.bin) here to use it. The folder is made if it does not exist.	Tegyél ide egy whisper.cpp modellfájlt (ggml-*.bin) a használatához. A mappa létrejön, ha nem létezik.
-No speech model yet. Download one below, or put a model file in the models folder.	Még nincs beszédmodell. Tölts le egyet lent, vagy tegyél egy modellfájlt a modellek mappájába.
 Loading the speech model ...	A beszédmodell betöltése ...
 Speech model loaded.	A beszédmodell betöltve.
 This build has no speech engine.	Ez a változat nem tartalmaz beszédfelismerőt.
 checking	ellenőrzés
-Download speech model:	Beszédmodell letöltése:
-%s %d MB	%s %d MB
-Already downloaded	Már letöltve
-English only. tiny is the fastest (real time on a laptop), small hears more words and needs a stronger computer.	Csak angol. A tiny a leggyorsabb (valós idejű egy laptopon), a small több szót ért meg, és erősebb gépet kér.
-Other languages (multilingual models)	Más nyelvek (többnyelvű modellek)
-The loaded model is English only: other languages need a multilingual model (tiny, base or small without .en).	A betöltött modell csak angolul tud: más nyelvekhez többnyelvű modell kell (tiny, base vagy small .en nélkül).
 CPU threads	CPU-szálak
-How many processor threads the speech engine may use for one transmission. Fewer threads use less battery and take longer.	Hány processzorszálat használhat a beszédfelismerő egy adáshoz. Kevesebb szál kevesebb akkut fogyaszt, és tovább tart.
 Keep transcripts (days)	Átiratok megőrzése (nap)
-Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time	Hallott %llu, megtartott %llu, eldobott %llu (csend, zaj, ismétlés), kihagyott %llu (túl lassú), sebesség %.2f x valós idő
 Download the speech model %s (%d MB)?	Letöltöd a(z) %s beszédmodellt (%d MB)?
 OnAir asks the model repository (huggingface.co) for this one file and sends nothing else. The file is checked against a fixed SHA-256 checksum and thrown away if it does not match. The model is MIT licensed.	Az OnAir ezt az egy fájlt kéri el a modelltárból (huggingface.co), mást nem küld. A fájlt egy rögzített SHA-256 ellenőrzőösszeggel ellenőrzi, és eldobja, ha nem egyezik. A modell MIT licencű.
 Download	Letöltés
@@ -1740,14 +1728,10 @@ Delete all saved transcripts? This cannot be undone.	Törlöd az összes mentett
 Delete all	Összes törlése
 Transcription is off.	Az átírás ki van kapcsolva.
 Hide settings	Beállítások elrejtése
-Settings and speech model	Beállítások és beszédmodell
 Search the text ...	Keresés a szövegben ...
 All frequencies	Minden frekvencia
-A callsign (DLH123), a registration (N123AB) or an ICAO address (3C6444)	Hívójel (DLH123), lajstromjel (N123AB) vagy ICAO-cím (3C6444)
-An airport code or name found in the channel name or the text (EYVI, Tower)	A csatorna nevében vagy a szövegben található repülőtérkód vagy -név (EYVI, Tower)
 %zu of %zu	%zu / %zu
 Copy all shown	Az összes látható másolása
-Export %s	%s exportálása
 Delete all ...	Összes törlése ...
 Time (UTC)	Idő (UTC)
 Sure	Biztos
@@ -2312,8 +2296,6 @@ azimuth only; the picture is just a backdrop	csak azimut; a kép csupán hátté
 column	oszlop
 to (kHz)	eddig (kHz)
 Translate to English	Fordítás angolra
-Speech in another language is also translated to English, offline, next to the original. Needs a multilingual model and costs about 1.5 times more processor time; it is skipped when the engine cannot keep up. Nothing is sent anywhere. Translation into other languages is not available.	A más nyelven elhangzó beszédet a program offline angolra is lefordítja, az eredeti mellett. Többnyelvű modellt igényel, és kb. 1,5-szer több processzoridőbe kerül; kimarad, ha a motor nem bírja tartani a lépést. Semmi sem kerül elküldésre. Más nyelvekre fordítás nem érhető el.
-The loaded model is English only: translation needs a multilingual model.	A betöltött modell csak angol: a fordításhoz többnyelvű modell kell.
 Live: stop the room	Élő: a szoba leállítása
 Copy room link	Szobalink másolása
 Host PIN (to moderate on the room page):	Házigazda PIN (a szoba oldalán történő moderáláshoz):
@@ -3057,20 +3039,16 @@ Station's own subtitles	Az adó saját feliratai
 Generated from speech	Beszédből készített
 Both	Mindkettő
 Generated where the station has none	Készített, ha az adónak nincs
-Auto subtitles (captions)	Automatikus feliratok (captions)
-Captions from the speech of the sound you hear: FM and AM broadcast, DAB, TV audio, amateur and digital voice. They are made here with the offline speech model, shown on the receiver, and kept only in memory (and in .srt / .vtt files if you save them). Music is skipped. Off until you turn it on.	Feliratok a hallott hang beszédéből: FM- és AM-rádió, DAB, tévéhang, rádióamatőr és digitális beszéd. Itt készülnek a kapcsolat nélküli beszédmodellel, a vevőn jelennek meg, és csak a memóriában maradnak (illetve .srt / .vtt fájlban, ha elmenti). A zenét kihagyja. Kikapcsolva, amíg be nem kapcsolja.
 Make captions	Feliratok készítése
 TV subtitles	TV-feliratok
 As spoken	Ahogy elhangzott
 English translation	Angol fordítás
 Caption text	Felirat szövege
-Tick Translate to English above (multilingual model) to get translated captions.	Jelölje be fent az Angolra fordítás lehetőséget (többnyelvű modell) a lefordított feliratokhoz.
 Caption size, percent	Feliratméret, százalékban
 Background, percent	Háttér, százalékban
 Lines	Sorok
 At the top of the picture	A kép tetején
 Save .srt and .vtt next to audio recordings	Hangfelvételek mellé .srt és .vtt mentése
-Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time	Feliratok: %llu darab, %llu zene kihagyva, %llu kihagyva (túl lassú), sebesség: %.2f x valós idő
 The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest.	A beszédfelismerő lassabb a hangnál: használjon kisebb modellt vagy kevesebb CPU-szálat. A legrégebbi beszédet hagyja ki, sosem a legújabbat.
 #  DSC audit
 category	kategória

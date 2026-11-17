@@ -1725,28 +1725,16 @@ Airband is off in the transcript settings	La bande aéronautique est désactivé
 Cannot write %s	Écriture impossible : %s
 Saved %s	Enregistré : %s
 Transcribe speech	Transcrire la voix
-Master switch. While a transmission is going on the audio is cut out, sent to the speech engine and turned into text. Nothing runs while the channels are quiet.	Interrupteur général. Pendant une émission, le son est découpé, envoyé au moteur vocal et converti en texte. Rien ne tourne tant que les canaux sont silencieux.
 Airband channels	Canaux de la bande aéronautique
 Marine VHF	VHF marine
 Speech model	Modèle vocal
 none	aucun
-Open models folder	Ouvrir le dossier des modèles
-Put a whisper.cpp model file (ggml-*.bin) here to use it. The folder is made if it does not exist.	Placez ici un fichier de modèle whisper.cpp (ggml-*.bin) pour l'utiliser. Le dossier est créé s'il n'existe pas.
-No speech model yet. Download one below, or put a model file in the models folder.	Pas encore de modèle vocal. Téléchargez-en un ci-dessous ou placez un fichier de modèle dans le dossier des modèles.
 Loading the speech model ...	Chargement du modèle vocal ...
 Speech model loaded.	Modèle vocal chargé.
 This build has no speech engine.	Cette version n'a pas de moteur vocal.
 checking	vérification
-Download speech model:	Télécharger un modèle vocal :
-%s %d MB	%s %d Mo
-Already downloaded	Déjà téléchargé
-English only. tiny is the fastest (real time on a laptop), small hears more words and needs a stronger computer.	Anglais uniquement. tiny est le plus rapide (temps réel sur un portable), small comprend plus de mots et demande un ordinateur plus puissant.
-Other languages (multilingual models)	Autres langues (modèles multilingues)
-The loaded model is English only: other languages need a multilingual model (tiny, base or small without .en).	Le modèle chargé ne gère que l'anglais : les autres langues demandent un modèle multilingue (tiny, base ou small sans .en).
 CPU threads	Threads du processeur
-How many processor threads the speech engine may use for one transmission. Fewer threads use less battery and take longer.	Combien de threads du processeur le moteur vocal peut utiliser pour une émission. Moins de threads consomment moins de batterie et prennent plus de temps.
 Keep transcripts (days)	Conserver les transcriptions (jours)
-Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time	Entendu %llu, conservé %llu, écarté %llu (silence, bruit, répétitions), ignoré %llu (trop lent), vitesse %.2f x temps réel
 Download the speech model %s (%d MB)?	Télécharger le modèle vocal %s (%d Mo) ?
 OnAir asks the model repository (huggingface.co) for this one file and sends nothing else. The file is checked against a fixed SHA-256 checksum and thrown away if it does not match. The model is MIT licensed.	OnAir demande ce seul fichier au dépôt de modèles (huggingface.co) et n'envoie rien d'autre. Le fichier est vérifié avec une somme SHA-256 fixe et supprimé s'il ne correspond pas. Le modèle est sous licence MIT.
 Download	Télécharger
@@ -1754,14 +1742,10 @@ Delete all saved transcripts? This cannot be undone.	Supprimer toutes les transc
 Delete all	Tout supprimer
 Transcription is off.	La transcription est désactivée.
 Hide settings	Masquer les réglages
-Settings and speech model	Réglages et modèle vocal
 Search the text ...	Rechercher dans le texte ...
 All frequencies	Toutes les fréquences
-A callsign (DLH123), a registration (N123AB) or an ICAO address (3C6444)	Un indicatif (DLH123), une immatriculation (N123AB) ou une adresse OACI (3C6444)
-An airport code or name found in the channel name or the text (EYVI, Tower)	Un code ou un nom d'aéroport trouvé dans le nom du canal ou dans le texte (EYVI, Tower)
 %zu of %zu	%zu sur %zu
 Copy all shown	Copier tout ce qui est affiché
-Export %s	Exporter %s
 Delete all ...	Tout supprimer ...
 Time (UTC)	Heure (UTC)
 Sure	Sûr
@@ -2326,8 +2310,6 @@ azimuth only; the picture is just a backdrop	azimut seulement ; l'image n'est qu
 column	colonne
 to (kHz)	à (kHz)
 Translate to English	Traduire en anglais
-Speech in another language is also translated to English, offline, next to the original. Needs a multilingual model and costs about 1.5 times more processor time; it is skipped when the engine cannot keep up. Nothing is sent anywhere. Translation into other languages is not available.	La parole dans une autre langue est aussi traduite en anglais, hors ligne, à côté de l'original. Nécessite un modèle multilingue et coûte environ 1,5 fois plus de temps processeur ; ignoré quand le moteur ne suit plus. Rien n'est envoyé. La traduction vers d'autres langues n'est pas disponible.
-The loaded model is English only: translation needs a multilingual model.	Le modèle chargé est uniquement anglais : la traduction nécessite un modèle multilingue.
 Live: stop the room	En direct : arrêter la salle
 Copy room link	Copier le lien de la salle
 Host PIN (to moderate on the room page):	PIN de l'hôte (pour modérer sur la page de la salle) :
@@ -3071,20 +3053,16 @@ Station's own subtitles	Sous-titres propres à la chaîne
 Generated from speech	Générés à partir de la parole
 Both	Les deux
 Generated where the station has none	Générés quand la chaîne n'en a pas
-Auto subtitles (captions)	Sous-titres automatiques (captions)
-Captions from the speech of the sound you hear: FM and AM broadcast, DAB, TV audio, amateur and digital voice. They are made here with the offline speech model, shown on the receiver, and kept only in memory (and in .srt / .vtt files if you save them). Music is skipped. Off until you turn it on.	Sous-titres à partir de la parole du son que vous entendez : radio FM et AM, DAB, son de la télévision, radioamateur et voix numérique. Ils sont créés ici avec le modèle vocal hors ligne, affichés sur le récepteur et gardés seulement en mémoire (et dans des fichiers .srt / .vtt si vous les enregistrez). La musique est ignorée. Désactivé tant que vous ne l'activez pas.
 Make captions	Créer des sous-titres
 TV subtitles	Sous-titres TV
 As spoken	Tel que prononcé
 English translation	Traduction en anglais
 Caption text	Texte des sous-titres
-Tick Translate to English above (multilingual model) to get translated captions.	Cochez Traduire en anglais ci-dessus (modèle multilingue) pour obtenir des sous-titres traduits.
 Caption size, percent	Taille des sous-titres, en pourcentage
 Background, percent	Fond, en pourcentage
 Lines	Lignes
 At the top of the picture	En haut de l'image
 Save .srt and .vtt next to audio recordings	Enregistrer .srt et .vtt à côté des enregistrements audio
-Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time	Sous-titres : %llu morceaux, %llu de musique ignorés, %llu ignorés (trop lent), vitesse %.2f x temps réel
 The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest.	Le moteur vocal est plus lent que le son : utilisez un modèle plus petit ou moins de threads CPU. La parole la plus ancienne est ignorée, jamais la plus récente.
 #  DSC audit
 category	catégorie

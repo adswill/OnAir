@@ -1725,28 +1725,16 @@ Airband is off in the transcript settings	文字起こし設定で航空無線�
 Cannot write %s	書き込めません: %s
 Saved %s	保存しました: %s
 Transcribe speech	音声を文字起こしする
-Master switch. While a transmission is going on the audio is cut out, sent to the speech engine and turned into text. Nothing runs while the channels are quiet.	マスタースイッチ。送信中の音声を切り出して音声認識に渡し、テキストにします。チャンネルが静かな間は何も動きません。
 Airband channels	航空無線チャンネル
 Marine VHF	海上VHF
 Speech model	音声モデル
 none	なし
-Open models folder	モデルフォルダーを開く
-Put a whisper.cpp model file (ggml-*.bin) here to use it. The folder is made if it does not exist.	whisper.cpp のモデルファイル（ggml-*.bin）をここに置くと使えます。フォルダーがなければ作成されます。
-No speech model yet. Download one below, or put a model file in the models folder.	音声モデルがまだありません。下からダウンロードするか、モデルファイルをモデルフォルダーに置いてください。
 Loading the speech model ...	音声モデルを読み込み中 ...
 Speech model loaded.	音声モデルを読み込みました。
 This build has no speech engine.	このビルドには音声認識エンジンがありません。
 checking	確認中
-Download speech model:	音声モデルをダウンロード:
-%s %d MB	%s %d MB
-Already downloaded	ダウンロード済み
-English only. tiny is the fastest (real time on a laptop), small hears more words and needs a stronger computer.	英語のみ。tiny が最速（ノートPCでリアルタイム）、small は聞き取れる語が多く、より高性能なコンピューターが必要です。
-Other languages (multilingual models)	その他の言語（多言語モデル）
-The loaded model is English only: other languages need a multilingual model (tiny, base or small without .en).	読み込み済みのモデルは英語専用です。他の言語には多言語モデル（.en なしの tiny、base、small）が必要です。
 CPU threads	CPU スレッド数
-How many processor threads the speech engine may use for one transmission. Fewer threads use less battery and take longer.	1回の送信に音声認識が使えるプロセッサのスレッド数。少ないほど電力を節約しますが、時間がかかります。
 Keep transcripts (days)	文字起こしの保存期間（日）
-Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time	検出 %llu、採用 %llu、除外 %llu（無音、ノイズ、繰り返し）、スキップ %llu（処理が遅い）、速度 %.2f x リアルタイム
 Download the speech model %s (%d MB)?	音声モデル %s（%d MB）をダウンロードしますか？
 OnAir asks the model repository (huggingface.co) for this one file and sends nothing else. The file is checked against a fixed SHA-256 checksum and thrown away if it does not match. The model is MIT licensed.	OnAir はモデルのリポジトリ（huggingface.co）にこの1ファイルだけを要求し、ほかには何も送りません。ファイルは固定の SHA-256 チェックサムで検証され、一致しなければ破棄されます。モデルは MIT ライセンスです。
 Download	ダウンロード
@@ -1754,14 +1742,10 @@ Delete all saved transcripts? This cannot be undone.	保存したすべての文
 Delete all	すべて削除
 Transcription is off.	文字起こしはオフです。
 Hide settings	設定を隠す
-Settings and speech model	設定と音声モデル
 Search the text ...	テキストを検索 ...
 All frequencies	すべての周波数
-A callsign (DLH123), a registration (N123AB) or an ICAO address (3C6444)	コールサイン（DLH123）、登録記号（N123AB）、または ICAO アドレス（3C6444）
-An airport code or name found in the channel name or the text (EYVI, Tower)	チャンネル名またはテキストに含まれる空港コードまたは名前（EYVI、Tower）
 %zu of %zu	%zu / %zu
 Copy all shown	表示中をすべてコピー
-Export %s	%s を書き出す
 Delete all ...	すべて削除 ...
 Time (UTC)	時刻 (UTC)
 Sure	確度
@@ -2326,8 +2310,6 @@ azimuth only; the picture is just a backdrop	方位角のみ。画像は背景�
 column	列
 to (kHz)	帯域の上限 (kHz)
 Translate to English	英語に翻訳
-Speech in another language is also translated to English, offline, next to the original. Needs a multilingual model and costs about 1.5 times more processor time; it is skipped when the engine cannot keep up. Nothing is sent anywhere. Translation into other languages is not available.	他の言語の音声は、原文の横にオフラインで英語にも翻訳されます。多言語モデルが必要で、プロセッサ時間が約1.5倍かかります。エンジンが追いつかない場合はスキップされます。何も送信されません。他の言語への翻訳はできません。
-The loaded model is English only: translation needs a multilingual model.	読み込まれたモデルは英語専用です。翻訳には多言語モデルが必要です。
 Live: stop the room	ライブ中: ルームを停止
 Copy room link	ルームのリンクをコピー
 Host PIN (to moderate on the room page):	ホストPIN（ルームのページで管理するため）:
@@ -3071,20 +3053,16 @@ Station's own subtitles	放送局自身の字幕
 Generated from speech	音声から生成
 Both	両方
 Generated where the station has none	放送局に字幕がないときに生成
-Auto subtitles (captions)	自動字幕(キャプション)
-Captions from the speech of the sound you hear: FM and AM broadcast, DAB, TV audio, amateur and digital voice. They are made here with the offline speech model, shown on the receiver, and kept only in memory (and in .srt / .vtt files if you save them). Music is skipped. Off until you turn it on.	聞こえている音の音声から作る字幕です:FM・AM放送、DAB、テレビの音声、アマチュア無線、デジタル音声。オフラインの音声モデルでここで作られ、受信機に表示され、メモリ内にのみ保持されます(保存した場合は .srt / .vtt ファイルにも)。音楽はスキップされます。オンにするまでオフです。
 Make captions	字幕を作る
 TV subtitles	テレビの字幕
 As spoken	話した言葉のまま
 English translation	英語訳
 Caption text	字幕のテキスト
-Tick Translate to English above (multilingual model) to get translated captions.	翻訳された字幕を得るには、上の「英語に翻訳」にチェックを入れてください(多言語モデルが必要)。
 Caption size, percent	字幕の大きさ(パーセント)
 Background, percent	背景(パーセント)
 Lines	行数
 At the top of the picture	画面の上部
 Save .srt and .vtt next to audio recordings	音声録音の隣に .srt と .vtt を保存する
-Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time	字幕:%llu 区間、音楽スキップ %llu、スキップ %llu(遅すぎ)、速度 リアルタイムの %.2f 倍
 The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest.	音声認識エンジンが音声より遅くなっています。小さいモデルを使うか、CPUスレッドを減らしてください。最も古い音声がスキップされ、最新のものは決してスキップされません。
 #  DSC audit
 category	カテゴリ
