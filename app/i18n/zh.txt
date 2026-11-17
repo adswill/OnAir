@@ -856,7 +856,7 @@ WSJT, 14.084 MHz	WSJT, 14.084 MHz
 WSJT, 14.100 MHz	WSJT, 14.100 MHz
 %s, %llu spots sent in %llu packets, %llu duplicates skipped	%s，已在 %llu 个数据包中发送 %llu 个 spot，跳过 %llu 个重复项
 offset %+.3f %+.3f	偏移 %+.3f %+.3f
-sigma %.3f per axis (%.0f%% of the half-distance to a neighbour)	各轴标准差 %.3f（占与相邻点半间距的 %.0f%%）
+sigma %.3f per axis (%.0f%% of the half-distance to a neighbour)	各坐标轴标准差：%.3f（占相邻目标间距一半的 %.0f%%）
 A second OnAir (Add network radio, rtl_tcp), SDR# or SDR++ connects to this computer's address and the port. Samples are sent as 8-bit IQ at the rate the radio runs at. Without 'allow remote control' the clients cannot change the frequency or gain.	第二个 OnAir（添加网络电台，rtl_tcp）、SDR# 或 SDR++ 可连接到这台计算机的地址和端口。采样以 8 位 IQ 格式按电台运行的速率发送。未勾选“允许远程控制”时，客户端无法更改频率或增益。
 Sends the FT8, FT4, FT2, WSPR, JS8Call, PSK31 and CW stations you decode to pskreporter.info, so they show on its public map and statistics. A report is: the sender's callsign, frequency, SNR, mode, its locator when the message has one, and when it was heard; with your callsign, locator, antenna text and 'OnAir'. Reports are batched and sent every 5 minutes; the same station on the same band is sent once per 10 minutes. Nothing is sent until you tick the box. Spots are public: use your own valid amateur radio callsign. CW and PSK31 are only reported when the text says 'DE callsign'.	将您解码的 FT8、FT4、FT2、WSPR、JS8Call、PSK31 和 CW 电台发送到 pskreporter.info，使其显示在该网站的公开地图和统计中。一条报告包含：发送方呼号、频率、SNR、模式、消息中的网格定位（如有）以及接收时间；同时附带您的呼号、网格定位、天线说明和“OnAir”。报告会批量处理并每 5 分钟发送一次；同一波段上的同一电台每 10 分钟只发送一次。勾选复选框之前不会发送任何内容。接收报告是公开的：请使用您自己的有效业余无线电呼号。CW 和 PSK31 仅在文本中包含“DE 呼号”时才会上报。
 BW	BW
@@ -1829,7 +1829,7 @@ Then do	则执行
 This rule will start the program below, on this computer, every time it fires, with text from the decoded signals in its arguments. Anyone who can send such a signal can influence it. Only allow it if you wrote it or trust the one who did.	每次触发时，此规则都会在这台电脑上启动下面的程序，并把解码信号中的文本放入参数。任何能发出此类信号的人都可能影响它。仅在你自己编写或信任作者时才允许。
 Topic	主题
 WAV file (empty: beeps)	WAV 文件（留空：蜂鸣）
-Webhook	网络回调
+Webhook	Webhook（网络回调）
 Webhook address	Webhook 地址
 What can a script do?	脚本能做什么？
 When this happens	当发生以下情况
@@ -2112,8 +2112,8 @@ cold K	冷 K
 fit rms %.3f K	拟合 rms %.3f K
 hot K	热 K
 no positions yet	尚无位置
-peak K, centre km/s (LSR), FWHM km/s, area K km/s; one sigma	峰值 K，中心速度 km/s（LSR），FWHM km/s，积分面积 K·km/s；误差为 1 个标准差
-sigma	标准差阈值
+peak K, centre km/s (LSR), FWHM km/s, area K km/s; one sigma	峰值温度（K）、中心速度（km/s，LSR）、半高全宽（km/s）、积分强度（K·km/s）；误差范围为 1σ
+sigma	标准差（σ）
 sky + spill K	天空 + 溢出 K
 , %.0f baud	, %.0f 波特
 , %s wide	, 带宽 %s
@@ -2234,7 +2234,7 @@ no measurements yet	还没有测量值
 grey: predicted by the downloaded elements, blue: refined, green: measured, amber: residual of the refined curve	灰色：下载的轨道根数预测，蓝色：精化后，绿色：测量值，琥珀色：精化曲线的残差
 residual %.1f Hz -> %.1f Hz (%d used, %d rejected); receiver offset %+.0f Hz	残差 %.1f Hz -> %.1f Hz(使用 %d，剔除 %d）；接收机偏移 %+.0f Hz
 mean anomaly %+.3f deg, mean motion %+.5f rev/day, inclination %+.4f deg, RAAN %+.4f deg	平近点角 %+.3f 度，平均运动 %+.5f 圈/天，倾角 %+.4f 度，RAAN %+.4f 度
-estimated timing error of the prediction: %.1f s before, %.1f s after (1 sigma)	预测时间误差估计：提前 %.1f 秒，延后 %.1f 秒（1 个标准差）
+estimated timing error of the prediction: %.1f s before, %.1f s after (1 sigma)	预测时间误差估计：提前 %.1f 秒，延后 %.1f 秒（1σ）
 Also share GPS interference cells (counts per area, no aircraft)	同时分享GPS干扰网格（按区域计数，不含飞机信息）
 For every 0.5 degree square (about 55 km) around your ADS-B receiver: how many aircraft were heard in the last hour and how many of them reported a poor GPS position. Only these two numbers per square are sent, never aircraft identities, tracks or your location. It feeds the GPS interference layer of the public map and is an indicator, not proof of jamming. Off until you choose it.	对于ADS-B接收机周围每个0.5度方格（约55公里）：过去一小时听到多少架飞机，其中多少架报告了较差的GPS位置。每个方格只发送这两个数字，绝不发送飞机身份、航迹或您的位置。它用于公共地图的GPS干扰图层，只是迹象，不能证明存在干扰。在您选择之前保持关闭。
 Calibrate...	校准...
@@ -3768,7 +3768,7 @@ Save CSV files	保存 CSV 文件
 could not write to the data folder	无法写入数据文件夹
 Event list	事件列表
 Detection threshold (0 = automatic)	检测阈值（0 = 自动）
-Schumann transients, Jove and CALLISTO bursts: dB over the background. Whistlers: path score. Moon echo and beacon openings: sigma over the noise. Lower finds weaker events and more false ones.	舒曼共振瞬变、木星和 CALLISTO 爆发：高于背景的 dB。哨声：路径评分。月面回波和信标开启：以高于噪声的标准差倍数表示。阈值越低，可检出越弱的事件，但误报也会增加。
+Schumann transients, Jove and CALLISTO bursts: dB over the background. Whistlers: path score. Moon echo and beacon openings: sigma over the noise. Lower finds weaker events and more false ones.	舒曼瞬态、木星射电暴和 CALLISTO 射电暴：以高于背景噪声的分贝数表示。哨声信号：以传播路径评分表示。月面回波和信标开放：以高于噪声的标准差倍数表示。数值越低，越容易检测到较弱事件，但误报也会增多。
 ELF, 7.83 Hz	ELF，7.83 Hz
 VLF, 1 - 10 kHz	VLF，1 - 10 kHz
 EME echo, 144 MHz and up	EME 回波，144 MHz 及以上
@@ -7286,7 +7286,7 @@ Modulation of unknown carriers##csm_mod	未知载波的调制##csm_mod
 Modulation peaks +%.0f / -%.0f %%, clipped %.2f %%, carrier shift %.1f %%	调制峰值 +%.0f / -%.0f %%，削波 %.2f %%，载波偏移 %.1f %%
 Modulation##csm_nm	调制##csm_nm
 Modulation: healthy	调制：正常
-Mono Pro	专业单色
+Mono Pro	Mono Pro
 Mono Pro (OLED, amber)	Mono Pro（OLED，琥珀色）
 Mono saves some bitrate; stereo needs more.	单声道可节省一些码率；立体声则需要更多码率。
 More bitrate generally gives a better picture but uses more of the channel. Auto follows a rule of thumb for this codec, resolution, frame rate and frame types; the estimate on the right shows what the whole stream then needs. Untick Auto to set your own. MPEG-2 has a lowest bitrate for each picture size (about 160 bit/s per 16x16 block, e.g. 150 kbit/s at 640x360): a picture must reach the receiver within about 0.7 s.	更高码率通常画质更好，但占用更多信道。自动按此编码、分辨率、帧率和帧类型的经验规则取值；右侧估算值显示整条码流的需求。取消勾选「自动」可自行设置。MPEG-2 对每种图像大小有最低码率（约每 16x16 块 160 bit/s，640x360 时约 150 kbit/s）：图像必须在约 0.7 s 内到达接收机。
@@ -7874,7 +7874,7 @@ PAT, PMT, SDT	PAT、PMT、SDT
 PES and TS headers, PCR	PES 和 TS 头部、PCR
 PID (0: the link's)	PID（0：本链路的）
 PIDs	PID
-PMT PID	节目映射表 PID
+PMT PID	节目映射表 PID（PMT PID）
 POCSAG + FLEX (both)	POCSAG + FLEX（两者）
 POCSAG is the ITU-R M.584 / CCIR Radiopaging Code No. 1 (RPC1): the same signal, so CCIR paging on the pager bands is decoded here at 512, 1200 and 2400 baud. The CCIR 5-tone selective calls are in the Tones mode.	POCSAG 即 ITU-R M.584 / CCIR 无线寻呼码 No.1（RPC1）：同一信号，因此寻呼频段上的 CCIR 寻呼在此以 512、1200 和 2400 波特解码。CCIR 五音选呼在「音调」模式中。
 PSC only	仅 PSC
@@ -9790,7 +9790,7 @@ Usual	常用
 Utility telemetry	公用事业遥测
 VARA FM	VARA FM
 VARA HF	VARA HF
-VBR / CRF	可变码率 / 恒定质量（VBR / CRF）
+VBR / CRF	可变码率（VBR）/ 恒定质量因子（CRF）
 VC	VC
 VDL Mode 2	VDL 模式 2
 VHF (137-146 MHz)	VHF（137-146 MHz）
