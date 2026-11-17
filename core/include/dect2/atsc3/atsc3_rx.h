@@ -34,6 +34,7 @@ struct Atsc3Telemetry {
     atsc3::FrameInfo frame;
     long tsBytes = 0;
     long droppedBlocks = 0;              // sample blocks dropped because the decoder was behind
+    double droppedSec = 0;               // the signal time they held
     double load = 0;                     // decoding time / signal time over the last seconds (1 = just keeping up)
 };
 
@@ -46,6 +47,10 @@ public:
     void feed(const cf32* x, size_t n);
     void setPaced(bool on) { paced_ = on; }             // the transport stream leaves at the rate of the programme, not in the bursts of the segments
     void setBlocking(bool b) { blocking_ = b; }         // recordings: wait when behind instead of dropping samples
+    // Live radios: how many seconds of samples may wait while the decoder is behind (a frame near the threshold can take seconds). The
+    // memory is taken only while they wait: 8 bytes a sample, 55 MB a second at 6.912 Msps.
+    void setQueueSeconds(double s) { queueSec_ = s; }
+    static constexpr double kQueueSeconds = 6.0;
     void setPacketCallback(std::function<void(const uint8_t*, size_t, double)> f) { cb_ = std::move(f); }
     void selectService(int serviceId);                  // -1: the first video service that appears
     bool telemetry(Atsc3Telemetry& t, uint64_t lastSeq);
@@ -62,6 +67,8 @@ private:
     std::condition_variable cv_, cvSpace_;
     std::deque<std::vector<cf32>> q_;
     size_t queued_ = 0;
+    size_t lost_ = 0;                  // samples dropped from the front of q_ since the worker last took a block
+    std::atomic<double> queueSec_{kQueueSeconds};
     std::atomic<bool> stop_{true}, blocking_{false}, paced_{false};
     std::thread worker_, pump_;
     std::unique_ptr<atsc3::Atsc3Receiver> rx_;
@@ -69,6 +76,7 @@ private:
     std::function<void(const uint8_t*, size_t, double)> cb_;
     std::atomic<int> want_{-1};
     std::atomic<long> dropped_{0}, tsBytes_{0};
+    std::atomic<double> droppedSec_{0};
     std::atomic<double> busySec_{0}, signalSec_{0};
     std::atomic<double> lastFrameWall_{0};
     std::atomic<long> lastFrames_{0};

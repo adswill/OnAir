@@ -182,6 +182,13 @@ bool Atsc3Receiver::pushFrame(const cf32* x, size_t n, const Bootstrap& bs) {
     return commitFrame(decodeFrame(x, n, bs), bs);
 }
 
+void Atsc3Receiver::lostSamples() {
+    std::lock_guard<std::mutex> lk(mu_);
+    cti_.clear();
+    straddle_.clear();
+    for (auto& r : reasm_) r.second.reset();
+}
+
 bool Atsc3Receiver::commitFrame(const FrameResult& fr, const Bootstrap& bs) {
     {
         std::lock_guard<std::mutex> lk(mu_);
