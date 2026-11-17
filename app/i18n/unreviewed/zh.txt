@@ -51,3 +51,6 @@ Open http://this-computer:port/stream.ts in VLC, OBS (media source) or ffplay. W
 Payload (hex)
 Periods are from memory and drift with the Earth's motion; the search covers 0.02 % around the period. Check the ATNF pulsar catalogue before a long run.
 Plays the first of the chosen channels that opens, stays on it until it has been quiet for the hang time, then goes on.
+Reception doctor
+Preamble chirps
+Restore the default spectrum and waterfall levels and the usual half-and-half split (does not change panel layout)
