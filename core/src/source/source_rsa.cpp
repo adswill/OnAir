@@ -71,7 +71,7 @@ std::vector<std::string> rsaLibNames() {
 double maxHzOf(const std::string& type) {
     struct M { const char* start; double hz; };
     static const M k[] = {{"RSA306", 6.2e9}, {"RSA503", 3e9}, {"RSA507", 7.5e9}, {"RSA513", 13.6e9}, {"RSA518", 18e9}, {"RSA603", 3e9}, {"RSA607", 7.5e9}};
-    for (const auto& m : k) if (type.compare(0, strlen(m.start), m.start) == 0) return m.hz;
+    for (const auto& m : k) if (type.rfind(m.start, 0) == 0) return m.hz;
     return 6.2e9;
 }
 
@@ -274,8 +274,7 @@ protected:
         uint32_t said = 0;
         while (run_) {
             int n = 0;
-            rsa::IqInfo info;
-            memset(&info, 0, sizeof info);
+            rsa::IqInfo info{};
             rsa::Status st;
             {
                 std::lock_guard<std::mutex> lk(api.mu);

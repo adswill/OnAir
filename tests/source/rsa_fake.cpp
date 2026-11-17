@@ -223,7 +223,7 @@ FAKE_EXPORT Status IQSTREAM_GetIQData(void* iq, int* samples, IqInfo* info) {
     }
     *samples = kBlock;
     if (info) {
-        memset(info, 0, sizeof *info);
+        *info = IqInfo{};
         info->scaleFactor = 1;
         info->acqStatus = (uint32_t)get("status");
     }

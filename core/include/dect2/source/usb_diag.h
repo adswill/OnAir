@@ -25,6 +25,9 @@ std::vector<UsbRadio> usbRadiosPresent();
 std::vector<std::string> sdrplayApiHints();
 // An Aaronia SPECTRAN (USB vendor 2f72) is plugged in but the RTSA-Suite PRO (its RTSA API library) is not installed: the one hint, or none
 std::vector<std::string> spectranApiHints();
+// A Tektronix RSA306 / RSA500A / RSA600A (USB 0699:a306, 0699:a500) is plugged in but Tektronix's RSA API is not installed: the one hint,
+// or none. By product id, not by vendor: Tektronix's oscilloscopes have the same vendor id.
+std::vector<std::string> rsaApiHints();
 // A LimeSDR Mini is plugged in but LimeSuite is missing or lists no radio: the one hint, or none (any OS)
 std::vector<std::string> limeLibraryHints();
 

@@ -144,7 +144,8 @@ checklist: [docs/SPECTRAN-V6.md](docs/SPECTRAN-V6.md).
 # Tektronix RSA306 (and RSA306B, RSA500A, RSA600A)
 
 Experimental, receive only, tried on an RSA306: Tektronix's USB real-time spectrum analysers through Tektronix's **RSA API** (Windows
-or Linux, a free download from [tek.com](https://www.tek.com/en/products/spectrum-analyzers/rsa306)), which OnAir does not ship. Rates
+or Linux, a free download from tek.com: Support > Software, search for "RSA API"; the Windows version 5.6.0295 is
+[here](https://www.tek.com/en/support/software/application/rsa-application-programming-interface-api-for-64bit-windows-v560295)), which OnAir does not ship. Rates
 of 56 Msps divided by 1 to 4096 (OnAir takes the slowest one that carries the mode), 9 kHz to 6.2 GHz on the RSA306. Close SignalVu-PC
 before starting the device in OnAir; it stays connected to OnAir until OnAir is closed. Install steps, what was measured and a test
 checklist for the other models: [docs/TEKTRONIX-RSA.md](docs/TEKTRONIX-RSA.md).

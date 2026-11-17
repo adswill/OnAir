@@ -8,8 +8,12 @@ them. OnAir does not ship it; it is loaded at run time when it is installed.
 
 ## Install
 
-1. Install the **RSA API** from [tek.com](https://www.tek.com/en/products/spectrum-analyzers/rsa306) (search for "RSA API"; 64-bit
-   Windows or Linux, no macOS build). On Windows it goes to `C:\Tektronix\RSA_API` and brings the USB driver.
+1. Download and install Tektronix's **RSA API** (free; 64-bit Windows or Linux, no macOS build):
+   - Windows: "RSA Application Programming Interface (API) for 64-bit Windows". Version 5.6.0295, the one this driver was tried with:
+     [tek.com, RSA API for 64-bit Windows V5.6.0295](https://www.tek.com/en/support/software/application/rsa-application-programming-interface-api-for-64bit-windows-v560295).
+   - Linux, or a newer version: on [tek.com](https://www.tek.com) go to Support > Software and search for "RSA API"; Tektronix has one
+     page per version and system.
+   - On Windows it goes to `C:\Tektronix\RSA_API` and brings the USB driver.
 2. Close **SignalVu-PC** and any other program that uses the analyser: it can be connected to one program at a time.
 3. Start OnAir and press the refresh button next to the radio list. The device appears as `Tektronix RSA306 <serial> (experimental)`.
 
@@ -21,7 +25,8 @@ OnAir looks for the library in these places:
 - Installed elsewhere: set `ONAIR_RSA_DIR` to the folder that holds the library before starting OnAir.
 
 The log (the terminal, or `onair.log` on Windows) says which library was loaded and how many devices the RSA API lists. Without the
-library the device is not listed.
+library the device is not listed; when an RSA306 or RSA500A / RSA600A is plugged in (USB 0699:a306 or 0699:a500) the radio list and
+Help > Hardware show a hint that says what to download, and the Fix it panel has a button that opens the download page.
 
 ## What it does
 
