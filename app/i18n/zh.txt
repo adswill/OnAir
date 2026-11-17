@@ -6613,7 +6613,7 @@ Heat: entropy	热度：熵
 Heat: how often a bit changes	热度：比特变化频率
 Height	高度
 Height and padding of the touch interface's buttons, top bar and dock. Smaller leaves more room for the panels on small screens.	触控界面按钮、顶栏和停靠区的高度与边距。屏幕较小时，调小可为面板留出更多空间。
-Hellschreiber is a picture: see the Hellschreiber view of the receiver.	Hellschreiber 是一种图像：见接收机的 Hellschreiber 视图。
+Hellschreiber is a picture: see the Hellschreiber view of the receiver.	Hellschreiber 是一种字符图像传输模式：请查看接收机的 Hellschreiber 视图。
 Hermes Lite 2: a short-wave transceiver on the network.	Hermes Lite 2：网络上的短波收发信机。
 Het	差拍
 Hex	十六进制
