@@ -54,3 +54,6 @@ Plays the first of the chosen channels that opens, stays on it until it has been
 Reception doctor
 Preamble chirps
 Restore the default spectrum and waterfall levels and the usual half-and-half split (does not change panel layout)
+Scatter, 144.140 MHz
+Saved to the memory table (group Fast scan).
+S4 comes from the receiver's 1 Hz C/N0: only slow, strong scintillation shows. Multipath is judged at the end of each pass.
