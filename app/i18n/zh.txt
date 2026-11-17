@@ -9417,7 +9417,7 @@ The sensor left the list.	传感器已不在列表中。
 The server's radio is a station too	服务器的电台也算一个台站
 The server's radio is a station too##lt	服务器的电台也算一个台站##lt
 The service lists are left out because the text is too long for one link.	业务列表被省略，因为文本太长，一个链接放不下。
-The shape of the picture on screen. 16:9 stretches an anamorphic 16:9 picture back to its width. Auto follows the wide screen signalling when the video carries it, else 4:3.	屏幕上图形的形状。16:9 把变形 16:9 图像拉回其宽度。自动跟随视频中的宽屏信令，没有则按 4:3。
+The shape of the picture on screen. 16:9 stretches an anamorphic 16:9 picture back to its width. Auto follows the wide screen signalling when the video carries it, else 4:3.	屏幕上图像的宽高比。16:9 会将变形的 16:9 图像恢复为正常宽度。自动模式在视频带有宽屏信令时跟随该信令，否则使用 4:3。
 The sign-in was refused on GitHub.	GitHub 拒绝了登录。
 The signal goes to the transmit radio below. TRANSMIT needs ARM first.	信号送往下方发射电台。「发射」需要先「预备」。
 The signal is too strong for the radio. Auto gain is working on it; a strong station nearby may need a filter or a smaller antenna.	信号对电台来说太强。自动增益正在处理；附近强台可能需要滤波器或更小的天线。
@@ -9601,7 +9601,7 @@ Track and record this pass	跟踪并录制此次过境
 Track and record this pass now	立即跟踪并录制此次过境
 Track and record this pass: at AOS the receiver tunes, sets the mode, follows the Doppler shift and records	跟踪并录制此次过境：AOS 时接收机调谐、设置模式、跟踪多普勒频移并录制
 Track drift (10 min)	跟踪漂移（10 分钟）
-Tracks the next pass of these satellites, starts the receiver by itself at the rise, follows the Doppler and stops at the set.	跟踪这些卫星的下次过境，升段自动启动接收机，跟踪多普勒，至落段停止。
+Tracks the next pass of these satellites, starts the receiver by itself at the rise, follows the Doppler and stops at the set.	跟踪这些卫星的下次过境：卫星升起时自动启动接收机，跟踪多普勒，并在卫星落下时停止。
 Traffic announcement (TA)	交通公告（TA）
 Traffic map	交通地图
 Traffic programme (TP)	交通节目（TP）
@@ -9670,7 +9670,7 @@ Type a name	输入名称
 Type a port to see the vessels that give it as their destination.	输入港口以查看以它为目的地的船只。
 Type and flags	类型和标志
 Type at least four readings, or let the value change slowly (warm the sensor in your hand).	至少输入四组读数，或让数值缓慢变化（用手捂热传感器）。
-Type it by hand if the list does not show your port. host:port is for a rigctld (model 2) on this or another computer.	列表中没有你的港口就手动输入。host:port 用于本机或另一台计算机上的 rigctld（模型 2）。
+Type it by hand if the list does not show your port. host:port is for a rigctld (model 2) on this or another computer.	列表中未显示你的串口时，请手动输入。host:port 用于本机或另一台计算机上的 rigctld（模型 2）。
 Type it on the other node (Pair...). Anyone who sees it can pair, so keep it private. It works once.	在另一台节点上输入（「配对……」）。任何看到它的人都能配对，因此请保密。只能用一次。
 Type the frequency a signal shows with the present setting, and the frequency it should have.	输入当前设置下信号显示的频率，以及它应有的频率。
 Type the pairing code that node shows (32 letters and digits):	输入那台节点显示的配对码（32 个字母和数字）：
@@ -9785,7 +9785,7 @@ Uses current offsets. After calibration this should match the satellite; before 
 Uses the same detector; it stays longer on a step where a conversation is active.	使用相同的检测器；在有通话的频道上会停留更久。
 Uses the stream of a generator of Tools > Digital video generator whose output is "Transmitter" (* = it is sending now). Start it there; click again to clear.	使用「工具 > 数字视频发生器」中输出为「发射机」（* 表示正在发送）的发生器的码流。先在那里启动；再次点击清除。
 Usual	常用
-Utility telemetry	勤务遥测
+Utility telemetry	公用事业遥测
 VARA FM	VARA FM
 VARA HF	VARA HF
 VBR / CRF	可变码率 / 恒定质量（VBR / CRF）
