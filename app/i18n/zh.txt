@@ -2863,24 +2863,24 @@ no callsigns yet	尚无呼号
 start the receiver to read the band	启动接收机以读取波段
 synchronising	正在同步
 unclear	不清楚
-Copies the pings as CSV: id, UTC time, duration, peak level, Doppler, drift, type, beacon frequency.	将 ping 复制为 CSV:ID、UTC 时间、持续时间、峰值电平、多普勒、漂移、类型、信标频率。
+Copies the pings as CSV: id, UTC time, duration, peak level, Doppler, drift, type, beacon frequency.	将流星回波记录复制为 CSV：ID、UTC 时间、持续时间、峰值电平、多普勒频移、漂移率、类型、信标频率。
 Log to file	记录到文件
-Appends every ping to meteor_scatter.csv in the data folder, also when nobody watches the screen.	将每个 ping 追加到数据文件夹中的 meteor_scatter.csv，即使无人查看屏幕。
+Appends every ping to meteor_scatter.csv in the data folder, also when nobody watches the screen.	将每次流星回波记录追加到数据文件夹中的 meteor_scatter.csv，即使无人查看界面也会继续记录。
 threshold %d dB	阈值 %d dB
-How far above its long-term level a spectrum bin must rise to count as an echo. Lower finds weaker pings and more false ones.	频谱单元必须高出其长期电平多少才算回波。越低越能发现更弱的 ping，但误报也更多。
-start the receiver to see the pings	启动接收机以查看 ping
+How far above its long-term level a spectrum bin must rise to count as an echo. Lower finds weaker pings and more false ones.	频谱单元必须高出其长期电平多少才计为一次回波。阈值越低，能检测到的微弱流星回波越多，但误报也会增加。
+start the receiver to see the pings	启动接收机以查看流星回波
 No beacon line found. Tune to the beacon (GRAVES: 143.050 MHz) so that it lies within 4 kHz of the centre, with 1 Msps or more.	未找到信标谱线。请调谐到信标（GRAVES:143.050 MHz），使其位于中心 4 kHz 以内，采样率 1 Msps 或更高。
 Doppler	多普勒
 Drift	漂移
 overdense	过密
 underdense	欠密
-no ping yet: on GRAVES a quiet hour brings a few, a shower peak hundreds	尚无 ping：在 GRAVES 上安静的一小时有几个，流星雨极大时有数百个
+no ping yet: on GRAVES a quiet hour brings a few, a shower peak hundreds	尚未检测到流星回波：GRAVES 平静时每小时也会出现几次，流星雨极大期则可达数百次。
 shape	形状
 overdense: long, flat top	过密：持续长，顶部平坦
 underdense: sharp rise, exponential decay	欠密：急速上升，指数衰减
 start the receiver to see the rates	启动接收机以查看速率
-pings per hour (UTC), the last 24 hours	每小时 ping 数（UTC），最近 24 小时
-pings per day (UTC), the last 30 days; showers marked at their peak	每天 ping 数（UTC），最近 30 天；流星雨标在极大日
+pings per hour (UTC), the last 24 hours	每小时流星回波数（UTC），最近 24 小时
+pings per day (UTC), the last 30 days; showers marked at their peak	每日流星回波数（UTC），最近 30 天；流星雨在极大日标出
 meteor showers now and near (peak date, typical hourly rate for an eye observer)	当前及临近的流星雨（极大日期，肉眼观测者的典型每小时数)
 Shower	流星雨
 Rate	速率
@@ -2898,7 +2898,7 @@ long-term spectrum around the beacon (dB over the noise)	信标周围的长期�
 Pings	流星回波
 Rates	速率
 Echoes	回波
-pings	ping
+pings	流星回波
 not found	未找到
 noise	噪声
 detector	检测器
