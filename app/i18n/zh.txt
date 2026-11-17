@@ -9978,7 +9978,7 @@ Whole-span carrier detector	全频段载波检测器
 Why is nothing decoding? Checks overload, level, offset, bandwidth, interferers, drops and the mode from the live signal, with one-click fixes	为什么没有解码？检查过载、电平、偏移、带宽、干扰、丢包和来自实时信号的模式，并一键修复
 Why this gain?	为什么是这个增益？
 WiFi is receive only: this radio never transmits WiFi.	WiFi 仅接收：此电台从不发送 WiFi。
-Wide spans (over 150 MHz) get wider bins and a short dwell that suit the radio; narrow bands keep the values under Advanced.	宽频段（超过 150 MHz）使用适合电台的更宽频点和更短驻留；窄频段保留「高级」中的值。
+Wide spans (over 150 MHz) get wider bins and a short dwell that suit the radio; narrow bands keep the values under Advanced.	宽频段（超过 150 MHz）使用更宽的频率分辨单元和更短的驻留时间，以适应电台性能；窄频段则沿用「高级」中的设置。
 Wideband, about 25 MHz to 1.3 GHz. Good for airband and scanning.	宽带，约 25 MHz 到 1.3 GHz。适合航空频段和扫描。
 Width (bits)	宽度（位）
 Width (us)	宽度（µs）
