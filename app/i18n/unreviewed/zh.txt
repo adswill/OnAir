@@ -68,3 +68,4 @@ Type it by hand if the list does not show your port. host:port is for a rigctld 
 Tracks the next pass of these satellites, starts the receiver by itself at the rise, follows the Doppler and stops at the set.
 The shape of the picture on screen. 16:9 stretches an anamorphic 16:9 picture back to its width. Auto follows the wide screen signalling when the video carries it, else 4:3.
 Utility telemetry
+Wide spans (over 150 MHz) get wider bins and a short dwell that suit the radio; narrow bands keep the values under Advanced.
