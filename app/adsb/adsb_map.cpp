@@ -68,6 +68,12 @@ std::string kept, temp;
 std::string tileTpl = tileurl::kDefault;   // the tile server address template (set in init(), before the downloads start)
 std::atomic<bool> keepNew{true};
 bool onlineMap = true;   // the "online map" switch, shared by every map
+bool showCoordinateGrid = true;   // shared by all maps, persisted in preferences
+int gridLatitudeLabels = 1;   // 0 left, 1 right, 2 none
+int gridLongitudeLabels = 1;  // 0 top, 1 bottom, 2 none
+int gridLineStyle = 1;        // 0 solid, 1 dotted, 2 dashed
+int gridColor = 2;            // 0 white, 1 light gray, 2 gray, 3 dark gray, 4 black
+int gridThicknessTenths = 15; // thickness in tenths of a screen pixel, 5..30
 
 uint64_t key(int z, int x, int y) { return ((uint64_t)z << 56) | ((uint64_t)x << 28) | (uint64_t)y; }
 
@@ -155,6 +161,13 @@ void init() {
     mbx = cache + "/mbtiles-x";
     keepNew = plat::prefs().getB("mapKeepTiles", true);
     onlineMap = plat::prefs().getB("adsbMap", true);   // the key from when only the ADS-B screen had a map
+    showCoordinateGrid = plat::prefs().getB("mapCoordinateGrid", true);
+    gridLatitudeLabels = std::clamp((int)plat::prefs().getI("mapGridLatLabels", 1), 0, 2);
+    gridLongitudeLabels = std::clamp((int)plat::prefs().getI("mapGridLonLabels", 1), 0, 2);
+    // New keys avoid interpreting a previously saved combined color/style choice as a new style.
+    gridLineStyle = std::clamp((int)plat::prefs().getI("mapGridStyle", 1), 0, 2);
+    gridColor = std::clamp((int)plat::prefs().getI("mapGridColor", 2), 0, 4);
+    gridThicknessTenths = std::clamp((int)plat::prefs().getI("mapGridThickness10", 15), 5, 30);
     std::error_code ec;
     fs::remove_all(fsPath(temp), ec);
     moveTree(cache + "/osm", kept);
@@ -414,6 +427,94 @@ unsigned overlayText() { return mapcol::textOn(scheme().sea); }
 unsigned panelColour() { return mapcol::panelOn(scheme().sea); }
 unsigned legible(unsigned c) { return mapcol::legibleOn(c, scheme().sea); }
 
+// Draw a faint, zoom-adaptive latitude/longitude graticule over the map tiles.
+// Aim for about 130 pixels between lines, choosing human-readable 1/2/5 steps.
+double gridStep(double degrees) {
+    if (!(degrees > 0) || !std::isfinite(degrees)) return 1.0;
+    const double power = std::pow(10.0, std::floor(std::log10(degrees)));
+    const double mantissa = degrees / power;
+    return (mantissa <= 1.0 ? 1.0 : mantissa <= 2.0 ? 2.0 : mantissa <= 5.0 ? 5.0 : 10.0) * power;
+}
+
+void patternedGridLine(ImDrawList* dl, ImVec2 a, ImVec2 b, ImU32 colour, float thickness, float dashLength, float gapLength) {
+    const bool vertical = std::abs(a.x - b.x) < 0.1f;
+    const float begin = vertical ? a.y : a.x;
+    const float end = vertical ? b.y : b.x;
+    for (float t = begin; t < end; t += dashLength + gapLength) {
+        const float stop = std::min(t + dashLength, end);
+        if (vertical) dl->AddLine(ImVec2(a.x, t), ImVec2(a.x, stop), colour, thickness);
+        else dl->AddLine(ImVec2(t, a.y), ImVec2(stop, a.y), colour, thickness);
+    }
+}
+
+void drawCoordinateGrid(ImDrawList* dl, ImVec2 p0, ImVec2 size, int zoom) {
+    if (size.x < 80 || size.y < 80) return;
+    const float left = p0.x, right = p0.x + size.x;
+    const float top = p0.y, bottom = p0.y + size.y;
+    const double ws = worldSize(zoom);
+    const double x0 = gCx - size.x * 0.5, x1 = gCx + size.x * 0.5;
+    const double y0 = gCy - size.y * 0.5, y1 = gCy + size.y * 0.5;
+    const double west = lonOf(x0, zoom), east = lonOf(x1, zoom);
+    const double north = latOf(std::max(0.0, y0), zoom);
+    const double south = latOf(std::min(ws, y1), zoom);
+    const double lonStep = gridStep((east - west) * 130.0 / size.x);
+    const double latStep = gridStep((north - south) * 130.0 / size.y);
+    // Colours are intentionally translucent so tiles and vessel symbols remain legible.
+    // One selected gray level is shared by both grid lines and coordinate labels.
+    constexpr int shades[] = {255, 205, 140, 75, 0};
+    const int shade = shades[gridColor];
+    const ImU32 line = IM_COL32(shade, shade, shade, 120);
+    const ImU32 text = IM_COL32(shade, shade, shade, 230);
+    const ImU32 shadow = shade >= 140 ? IM_COL32(0, 0, 0, 155) : IM_COL32(255, 255, 255, 155);
+    const float thickness = gridThicknessTenths / 10.0f;
+    const auto gridLine = [&](ImVec2 a, ImVec2 b) {
+        if (gridLineStyle == 1) patternedGridLine(dl, a, b, line, thickness, 2.0f, 6.0f);
+        else if (gridLineStyle == 2) patternedGridLine(dl, a, b, line, thickness, 10.0f, 6.0f);
+        else dl->AddLine(a, b, line, thickness);
+    };
+    const auto label = [&](ImVec2 at, const char* value) {
+        dl->AddText(ImVec2(at.x + 1, at.y + 1), shadow, value);
+        dl->AddText(at, text, value);
+    };
+    const auto fmt = [](double deg, double step, bool latitude, char* buf, size_t cap) {
+        const double normalized = latitude ? deg : std::remainder(deg, 360.0);
+        const double absDeg = std::abs(normalized) < 1e-8 ? 0.0 : std::abs(normalized);
+        const int decimals = step >= 1 ? 0 : step >= 0.1 ? 1 : step >= 0.01 ? 2 : step >= 0.001 ? 3 : 4;
+        const char direction = absDeg < 1e-8 ? ' ' : (latitude ? (normalized < 0 ? 'S' : 'N') : (normalized < 0 ? 'W' : 'E'));
+        snprintf(buf, cap, "%.*f\xC2\xB0%c", decimals, absDeg, direction);
+    };
+    // Work with unwrapped longitudes so the labels and lines also cross the dateline.
+    const long long firstLon = (long long)std::ceil(west / lonStep);
+    const long long lastLon = (long long)std::floor(east / lonStep);
+    for (long long i = firstLon; i <= lastLon && i < firstLon + 100; ++i) {
+        const double longitude = i * lonStep;
+        const float x = left + size.x * 0.5f + (float)(mercX(longitude, zoom) - gCx);
+        if (x < left + 4 || x > right - 4) continue;
+        gridLine(ImVec2(x, top), ImVec2(x, bottom));
+        if (gridLongitudeLabels != 2) {
+            char buf[48]; fmt(longitude, lonStep, false, buf, sizeof(buf));
+            const float w = ImGui::CalcTextSize(buf).x;
+            const float ly = gridLongitudeLabels == 0 ? top + 4 : bottom - ImGui::GetTextLineHeight() - 4;
+            if (x + 5 + w < right - 3) label(ImVec2(x + 5, ly), buf);
+        }
+    }
+    const long long firstLat = (long long)std::ceil(south / latStep);
+    const long long lastLat = (long long)std::floor(north / latStep);
+    for (long long i = firstLat; i <= lastLat && i < firstLat + 100; ++i) {
+        const double latitude = i * latStep;
+        if (latitude < -85.05 || latitude > 85.05) continue;
+        const float y = top + size.y * 0.5f + (float)(mercY(latitude, zoom) - gCy);
+        if (y < top + 4 || y > bottom - 4) continue;
+        gridLine(ImVec2(left, y), ImVec2(right, y));
+        if (gridLatitudeLabels != 2) {
+            char buf[48]; fmt(latitude, latStep, true, buf, sizeof(buf));
+            const float w = ImGui::CalcTextSize(buf).x;
+            const float lx = gridLatitudeLabels == 0 ? left + 5 : right - w - 5;
+            if (y + ImGui::GetTextLineHeight() < bottom - 3) label(ImVec2(lx, y + 3), buf);
+        }
+    }
+}
+
 bool draw(View& v, ImVec2 size) {
     init();
     if (onlineMap) start();
@@ -448,11 +549,8 @@ bool draw(View& v, ImVec2 size) {
     gCx = mercX(v.lon, v.zoom); gCy = mercY(v.lat, v.zoom);
     dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
     dl->AddRectFilled(p0, ImVec2(p0.x + size.x, p0.y + size.y), u32(scheme().sea));
-    // graticule every 10 degrees (what remains when there are no tiles)
-    {
-        for (int lo = -180; lo <= 180; lo += (v.zoom < 4 ? 30 : 10)) { const float x = p0.x + size.x * 0.5f + (float)(mercX(lo, v.zoom) - gCx); if (x > p0.x && x < p0.x + size.x) dl->AddLine(ImVec2(x, p0.y), ImVec2(x, p0.y + size.y), u32(gScheme.grid)); }
-        for (int la = -80; la <= 80; la += (v.zoom < 4 ? 30 : 10)) { const float y = p0.y + size.y * 0.5f + (float)(mercY(la, v.zoom) - gCy); if (y > p0.y && y < p0.y + size.y) dl->AddLine(ImVec2(p0.x, y), ImVec2(p0.x + size.x, y), u32(gScheme.grid)); }
-    }
+    // The configurable graticule is drawn above the tiles below; do not draw a
+    // second, fixed 10/30-degree grid underneath (it would ignore the line style).
     // the rough world outline: under the tiles, and what is left when there are none (offline, nothing downloaded yet)
     if (v.zoom <= 8) {
         const double ws = worldSize(v.zoom);
@@ -496,6 +594,7 @@ bool draw(View& v, ImVec2 size) {
                 break;
             }
         }
+    if (showCoordinateGrid) drawCoordinateGrid(dl, p0, size, v.zoom);   // dotted lat/lon overlay
     dl->PopClipRect();
     { std::lock_guard<std::mutex> lk(mu); dropStale(ImGui::GetFrameCount()); evict(ImGui::GetFrameCount()); }
     if (onlineMap && blockedCode) {
@@ -805,12 +904,58 @@ void tileControls(const char* privacy, bool fullBtn) {
     // a line of their own under the screen's buttons when they would run past the map's right edge (a narrow map, a large display scale)
     const ImGuiStyle& st = ImGui::GetStyle();
     const bool canFull = fullBtn && (gFullCtx.body || gFullOn);
-    const float need = ImGui::CalcTextSize("tiles").x + 2 * st.FramePadding.x + 10 * gUi + ImGui::GetFrameHeight() + st.ItemInnerSpacing.x + ImGui::CalcTextSize("online map").x
+    const float tileW = ImGui::CalcTextSize("tiles").x + 2 * st.FramePadding.x;
+    const float gridW = ImGui::CalcTextSize("grid").x + 2 * st.FramePadding.x;
+    const float gap = 6 * gUi;
+    const float need = tileW + gap + gridW + 10 * gUi + ImGui::GetFrameHeight() + st.ItemInnerSpacing.x + ImGui::CalcTextSize("online map").x
                        + (canFull ? ImGui::CalcTextSize(tr("Exit full screen")).x + 2 * st.FramePadding.x + 6 * gUi : 0.f);
     if (ImGui::GetCursorScreenPos().x + need > gOrigin.x + gSize.x - 8 * gUi) ImGui::SetCursorScreenPos(ImVec2(gOrigin.x + 8 * gUi, ImGui::GetItemRectMax().y + 4 * gUi));
-    const ImVec2 at = ImGui::GetCursorScreenPos();   // where "tiles" goes: the checkbox is placed from this, not from the last item
-    tilesMenu(ImVec4(0.06f, 0.07f, 0.08f, 0.85f));   // the colour of the buttons on the maps
-    ImGui::SetCursorScreenPos(ImVec2(at.x + ImGui::CalcTextSize("tiles").x + 2 * st.FramePadding.x + 10 * gUi, at.y));
+    const ImVec2 at = ImGui::GetCursorScreenPos();
+    tilesMenu(ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
+    ImGui::SetCursorScreenPos(ImVec2(at.x + tileW + gap, at.y));
+    // The button opens settings like the tiles button. Visibility is controlled
+    // inside the popup and persisted together with the formatting preferences.
+    ImGui::PushStyleColor(ImGuiCol_Button, showCoordinateGrid ? ImVec4(0.15f, 0.35f, 0.43f, 0.90f) : ImVec4(0.06f, 0.07f, 0.08f, 0.85f));
+    if (ImGui::Button("grid")) ImGui::OpenPopup("##mapgrid");
+    ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Configure the latitude/longitude grid.");
+    if (ImGui::BeginPopup("##mapgrid")) {
+        ImGui::TextUnformatted("Coordinate grid");
+        ImGui::Separator();
+        if (ImGui::Checkbox("Show grid", &showCoordinateGrid)) {
+            plat::prefs().setB("mapCoordinateGrid", showCoordinateGrid);
+            plat::prefs().flush();
+        }
+        const char* latPositions[] = {"Left", "Right", "None"};
+        const char* lonPositions[] = {"Top", "Bottom", "None"};
+        const char* gridStyles[] = {"Line", "Dotted", "Dashed"};
+        const char* gridColors[] = {"White", "Light-gray", "Gray", "Dark-gray", "Black"};
+        if (ImGui::Combo("Latitude labels", &gridLatitudeLabels, latPositions, 3)) {
+            plat::prefs().setI("mapGridLatLabels", gridLatitudeLabels);
+            plat::prefs().flush();
+        }
+        if (ImGui::Combo("Longitude labels", &gridLongitudeLabels, lonPositions, 3)) {
+            plat::prefs().setI("mapGridLonLabels", gridLongitudeLabels);
+            plat::prefs().flush();
+        }
+        if (ImGui::Combo("Grid style", &gridLineStyle, gridStyles, 3)) {
+            plat::prefs().setI("mapGridStyle", gridLineStyle);
+            plat::prefs().flush();
+        }
+        if (ImGui::Combo("Grid and label color", &gridColor, gridColors, 5)) {
+            plat::prefs().setI("mapGridColor", gridColor);
+            plat::prefs().flush();
+        }
+        ImGui::SetNextItemWidth(190 * gUi);
+        if (ImGui::SliderInt("Line thickness", &gridThicknessTenths, 5, 30, "%d", ImGuiSliderFlags_NoInput)) {
+            plat::prefs().setI("mapGridThickness10", gridThicknessTenths);
+            plat::prefs().flush();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("Line thickness: 0.5 to 3.0 pixels.");
+        ImGui::TextDisabled("Thickness: %.1f px", gridThicknessTenths / 10.0f);
+        ImGui::EndPopup();
+    }
+    ImGui::SetCursorScreenPos(ImVec2(at.x + tileW + gap + gridW + 10 * gUi, at.y));
     ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.82f, 0.84f, 1));
     if (ImGui::Checkbox("online map", &onlineMap)) { plat::prefs().setB("adsbMap", onlineMap); plat::prefs().flush(); }
     ImGui::PopStyleColor();
