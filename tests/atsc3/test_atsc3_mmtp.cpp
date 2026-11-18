@@ -5,16 +5,20 @@
 // becomes an MPU the way ATSC 3.0 senders make them (ftyp + mmpu + moov with an MMT hint track in front of the media track, a moof with a
 // hint traf, MFUs that carry a 34-byte hint sample in front of the media and a 14-byte header on every fragment), split into MMTP packets.
 // Checked: the rebuilt fragmented MP4 (media samples byte for byte, one init segment, a running timeline that FFmpeg reads), shuffled,
-// duplicated and lost packets, a corrupted MPU sequence number, the limits, the alignment of two assets, and the whole receiver from an
+// duplicated and lost packets (MPUs repaired down to the samples that can be played, which FFmpeg decodes without an error), a corrupted MPU sequence number, the limits, the alignment of two assets, and the whole receiver from an
 // MMTP service in the service list to a transport stream. Needs the test files: test_atsc3_mmtp <video.mp4> <audio.mp4>
 #include "atsc3_sim.h"
 #include "dect2/atsc3/atsc3_mmtp.h"
 #include "dect2/common/endian.h"
+extern "C" {
+#include <libavcodec/avcodec.h>
+}
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <map>
 #include <random>
 #include <thread>
@@ -131,22 +135,24 @@ struct Sender {
             packet(MmtpMpu, payload(ft, n == 1 ? 0 : k == 0 ? 1 : k == n - 1 ? 3 : 2, n - 1 - k, seq, part));
         }
     }
-    void mpu(const Mpu& m, uint32_t seq, bool moofLast = false) {
+    // `lose` (sample index, fragment index) leaves MFU fragments out; `noMoof` the movie fragment
+    void mpu(const Mpu& m, uint32_t seq, bool moofLast = false, const std::function<bool(size_t, size_t)>& lose = nullptr, bool noMoof = false) {
         pieces(MpuMetadata, seq, m.meta, metaPieces);
-        if (!moofLast) pieces(MpuMovieFragment, seq, m.moof, moofPieces);
+        if (!moofLast && !noMoof) pieces(MpuMovieFragment, seq, m.moof, moofPieces);
         for (size_t s = 0; s < m.samples.size(); s++) {
             Bytes all(kHint, (uint8_t)(0xA0 + s));   // the hint sample, then the media
             add(all, m.samples[s]);
             std::vector<std::pair<uint32_t, Bytes>> frags;
             for (size_t o = 0; o < all.size(); o += mfuPiece) frags.push_back({(uint32_t)(o == 0 ? 0 : o - kHint), Bytes(all.begin() + o, all.begin() + std::min(all.size(), o + mfuPiece))});
             for (size_t k = 0; k < frags.size(); k++) {
+                if (lose && lose(s, k)) { psn++; continue; }
                 Bytes du; putBe32(du, 1); putBe32(du, (uint32_t)s + 1); putBe32(du, frags[k].first); du.push_back(0); du.push_back(0);
                 add(du, frags[k].second);
                 const int n = (int)frags.size();
                 packet(MmtpMpu, payload(MpuMfu, n == 1 ? 0 : k == 0 ? 1 : k + 1 == frags.size() ? 3 : 2, n - 1 - (int)k, seq, du));
             }
         }
-        if (moofLast) pieces(MpuMovieFragment, seq, m.moof, moofPieces);
+        if (moofLast && !noMoof) pieces(MpuMovieFragment, seq, m.moof, moofPieces);
     }
 };
 
@@ -236,6 +242,69 @@ static long ffmpegPackets(const Bytes& file, bool& rising, double& firstSec, dou
     av_freep(&io->buffer);
     avio_context_free(&io);
     return n;
+}
+
+// the number of samples of a rebuilt segment and the sum of their durations (explicit in the trun, or the tfhd's default)
+static bool trunTimes(const Bytes& seg, uint32_t& count, uint64_t& dur) {
+    const auto top = boxes(seg, 0, seg.size());
+    if (top.empty() || top[0].type != "moof") return false;
+    for (const B& c : boxes(seg, 8, top[0].size)) {
+        if (c.type != "traf") continue;
+        uint32_t defDur = 0;
+        for (const B& e : boxes(seg, c.pos + 8, c.pos + c.size)) {
+            const uint32_t fl = loadBe32(&seg[e.pos + 8]) & 0xFFFFFF;
+            if (e.type == "tfhd") {
+                size_t f = e.pos + 16 + (fl & 1 ? 8 : 0) + (fl & 2 ? 4 : 0);
+                if (fl & 8) defDur = loadBe32(&seg[f]);
+            }
+            if (e.type != "trun") continue;
+            count = loadBe32(&seg[e.pos + 12]);
+            size_t f = e.pos + 16 + (fl & 1 ? 4 : 0) + (fl & 4 ? 4 : 0);
+            const size_t per = (fl & 0x100 ? 4 : 0) + (fl & 0x200 ? 4 : 0) + (fl & 0x400 ? 4 : 0) + (fl & 0x800 ? 4 : 0);
+            dur = 0;
+            for (uint32_t i = 0; i < count; i++) dur += (fl & 0x100) ? loadBe32(&seg[f + i * per]) : defDur;
+            return true;
+        }
+    }
+    return false;
+}
+
+// decodes the video of init + segments with FFmpeg: pictures out, and errors (failed calls and messages at error level)
+static long gDecodeErrors = 0;
+static void countErrors(void*, int level, const char*, va_list) { if (level <= AV_LOG_ERROR) gDecodeErrors++; }
+static void decodeVideo(const Bytes& file, long& frames, long& errors) {
+    frames = 0;
+    gDecodeErrors = 0;
+    av_log_set_callback(countErrors);
+    sim::MemIn mi{file.data(), file.size()};
+    unsigned char* iobuf = (unsigned char*)av_malloc(1 << 16);
+    AVIOContext* io = avio_alloc_context(iobuf, 1 << 16, 0, &mi, sim::memRead, nullptr, nullptr);
+    AVFormatContext* ic = avformat_alloc_context();
+    ic->pb = io;
+    if (avformat_open_input(&ic, "", av_find_input_format("mov"), nullptr) >= 0 && avformat_find_stream_info(ic, nullptr) >= 0 && ic->nb_streams > 0) {
+        const AVCodec* codec = avcodec_find_decoder(ic->streams[0]->codecpar->codec_id);
+        AVCodecContext* c = codec ? avcodec_alloc_context3(codec) : nullptr;
+        if (c && avcodec_parameters_to_context(c, ic->streams[0]->codecpar) >= 0 && avcodec_open2(c, codec, nullptr) >= 0) {
+            AVPacket* pk = av_packet_alloc();
+            AVFrame* fr = av_frame_alloc();
+            auto drain = [&] { while (avcodec_receive_frame(c, fr) >= 0) frames++; };
+            while (av_read_frame(ic, pk) >= 0) {
+                if (avcodec_send_packet(c, pk) < 0) gDecodeErrors++;
+                av_packet_unref(pk);
+                drain();
+            }
+            avcodec_send_packet(c, nullptr);
+            drain();
+            av_frame_free(&fr);
+            av_packet_free(&pk);
+        } else gDecodeErrors++;
+        avcodec_free_context(&c);
+        avformat_close_input(&ic);
+    } else gDecodeErrors++;
+    av_freep(&io->buffer);
+    avio_context_free(&io);
+    av_log_set_callback(av_log_default_callback);
+    errors = gDecodeErrors;
 }
 
 int main(int argc, char** argv) {
@@ -368,35 +437,118 @@ int main(int argc, char** argv) {
         for (auto& x : o) inits += x.init;
         CHECK(o.size() == 8 && inits == 2 && o[0].init && o[4].init, "init segment sent once, and again after a moov change");
     }
-    // ---- 7. a lost fragment: that MPU is left out, the ones after it still come, in order, with the gap in their time
+    // ---- 7. lost packets. An MPU missing an MFU fragment goes out with the samples that can be played, in place on the timeline: in decode
+    // order up to the first lost sample other pictures may need (a lost picture that no other one uses costs itself only); sound loses the
+    // lost samples alone, and a lost sound moof is rebuilt from the MPU before. A video MPU without its moof, or without the first picture,
+    // is left out and time goes on across the gap. The picture decodes without an error.
     {
-        for (int trial = 0; trial < 4; trial++) {
-            Sender s{100};
-            std::vector<int> lostMpu;
-            for (int k = 0; k < kMpus; k++) {
-                Sender one{100};
-                one.psn = s.psn;
-                one.mpu(vm[k], 1000 + k);
-                const bool lose = (int)(rng() % 3) == 0 && k > 0 && k + 1 < kMpus;
-                if (lose) { one.out.erase(one.out.begin() + 3 + rng() % (one.out.size() - 4)); lostMpu.push_back(k); }
-                s.out.insert(s.out.end(), one.out.begin(), one.out.end());
-                s.psn = one.psn;
+        // which test pictures no other picture uses, read here from the NAL unit headers (one temporal sub-layer in the test file)
+        auto disposable = [](const Bytes& smp) {
+            for (size_t q = 0; q + 6 <= smp.size();) {
+                const uint32_t n = loadBe32(&smp[q]);
+                const int type = (smp[q + 4] >> 1) & 0x3F;
+                if (type < 32) return type <= 14 && type % 2 == 0 && (smp[q + 5] & 7) == 1;
+                q += 4 + n;
             }
-            MmtpStats st;
-            std::vector<Out> o = run(s.out, &st);
-            bool ok = (int)o.size() == kMpus + 1 - (int)lostMpu.size() && o[0].init;
-            uint64_t t0 = 0;
-            for (size_t i = 1; ok && i < o.size(); i++) {
-                Bytes media; uint64_t tfdt = 0; uint32_t mfhd = 0;
-                ok = readSegment(o[i].data, media, tfdt, mfhd);
-                if (i == 1) t0 = tfdt;
-                // which MPU it is: count the lost ones before it
-                int k = (int)i - 1;
-                for (int l : lostMpu) if (l <= k) k++;
-                ok = ok && tfdt == t0 + (uint64_t)k * 25 * 512;
-            }
-            CHECK(ok && st.mpusDropped >= (long)lostMpu.size(), "a lost fragment costs its MPU only, and time goes on across the gap");
+            return false;
+        };
+        const Mpu& m = vm[3];   // MPU 1003 (vseg[0])
+        const size_t n = m.samples.size();
+        int ref = -1, disp = -1;
+        for (size_t i = 3; i < n; i++) {
+            if (ref < 0 && !disposable(m.samples[i]) && m.samples[i].size() > 12) ref = (int)i;
+            if (disp < 0 && disposable(m.samples[i]) && m.samples[i].size() > 12) disp = (int)i;
         }
+        CHECK(ref > 1 && disp > 0, "the test video has pictures other pictures use and pictures none uses");
+        Sender s{100};
+        s.mfuPiece = kHint + 10;   // the first fragment of a sample holds its first NAL unit header, the pictures are small
+        for (int k = 0; k < kMpus; k++) {
+            std::function<bool(size_t, size_t)> lose;
+            if (k == 3) lose = [&](size_t i, size_t f) { return (int)i == ref && f == 1; };   // a picture others use: cut there
+            if (k == 4) lose = [&](size_t i, size_t f) { return (int)i == disp && f == 1; };  // a picture none uses: that picture only
+            if (k == 5) lose = [&](size_t i, size_t f) { return i == 0 && f == 1; };          // the first picture: nothing to play
+            s.mpu(vm[k], 1000 + k, false, lose, k == 6);                                       // MPU 6 without its moof
+        }
+        std::vector<Out> o = run(s.out);
+        // what each MPU should give: sample indexes
+        std::vector<std::vector<size_t>> want(kMpus);
+        for (int k = 0; k < kMpus; k++)
+            for (size_t i = 0; i < vm[k].samples.size(); i++) {
+                if (k == 3 && (int)i >= ref) continue;
+                if (k == 4 && (int)i == disp) continue;
+                if (k == 5 || k == 6) continue;
+                want[k].push_back(i);
+            }
+        bool ok = o.size() == (size_t)kMpus + 1 - 2 && o[0].init;
+        Bytes file = o.empty() ? Bytes() : o[0].data;
+        size_t at = 1;
+        long frames = 0;
+        uint64_t t0 = 0;
+        for (int k = 0; ok && k < kMpus; k++) {
+            if (want[k].empty()) continue;
+            Bytes media, expect;
+            uint64_t tfdt = 0;
+            uint32_t mfhd = 0, count = 0;
+            uint64_t dur = 0;
+            ok = at < o.size() && readSegment(o[at].data, media, tfdt, mfhd) && trunTimes(o[at].data, count, dur);
+            if (!ok) break;
+            if (k == 0) t0 = tfdt;
+            for (size_t i : want[k]) add(expect, vm[k].samples[i]);
+            ok = media == expect && count == want[k].size() && tfdt == t0 + (uint64_t)k * 25 * 512 && dur == 25 * 512;
+            if (!ok) printf("  MPU %d: %u samples (want %zu), media %s, tfdt %llu (want %llu), duration %llu\n", k, count, want[k].size(), media == expect ? "same" : "differs",
+                            (unsigned long long)tfdt, (unsigned long long)(t0 + (uint64_t)k * 25 * 512), (unsigned long long)dur);
+            frames += (long)want[k].size();
+            add(file, o[at].data);
+            at++;
+        }
+        CHECK(ok, "an MPU with a lost fragment keeps the pictures that can be played, in place; one without its moof or first picture is left out");
+        long decoded = 0, errors = 0;
+        decodeVideo(file, decoded, errors);
+        printf("  repaired video: %ld pictures decoded of %ld sent, %ld decoder errors\n", decoded, frames, errors);
+        CHECK(decoded == frames && errors == 0, "the repaired video decodes without an error");
+        // sound: one sample lost in MPU 2, the moof of MPU 3 lost (rebuilt from MPU 2's), the first sample of MPU 4 lost
+        Sender a{200};
+        const int kA = 6;
+        Mpu am0 = makeMpu(ainit, aseg[0], 1000, "audio-1");
+        const size_t an = am0.samples.size();
+        for (int k = 0; k < kA; k++) {
+            std::function<bool(size_t, size_t)> lose;
+            if (k == 2) lose = [](size_t i, size_t) { return i == 7; };
+            if (k == 4) lose = [](size_t i, size_t) { return i == 0; };
+            a.mpu(makeMpu(ainit, aseg[0], 1000 + k, "audio-1"), 1000 + k, false, lose, k == 3);
+        }
+        o = run(a.out);
+        MpuInit ain;
+        readMpuMetadata(ainit.data(), ainit.size(), ain);
+        MpuFragment af;
+        readMpuFragment(am0.moof.data(), am0.moof.size(), ain, af);
+        uint64_t adur = 0;
+        for (uint32_t d : af.durations) adur += d;
+        ok = o.size() == (size_t)kA + 1;
+        for (int k = 0; ok && k < kA; k++) {
+            Bytes media, expect;
+            uint64_t tfdt = 0, dur = 0;
+            uint32_t mfhd = 0, count = 0;
+            ok = readSegment(o[k + 1].data, media, tfdt, mfhd) && trunTimes(o[k + 1].data, count, dur);
+            if (k == 0) t0 = tfdt;
+            for (size_t i = 0; i < an; i++) if (!(k == 2 && i == 7) && !(k == 4 && i == 0)) add(expect, am0.samples[i]);
+            const uint64_t lead = k == 4 ? af.durations[0] : 0;
+            ok = ok && media == expect && count == an - (k == 2 || k == 4) && tfdt == t0 + (uint64_t)k * adur + lead && dur + lead == adur;
+        }
+        CHECK(ok, "sound loses the lost samples only, keeps its time, and a lost moof is rebuilt from the MPU before");
+        // the first MPU of an asset is not repaired when the receiver came in part of the way through it
+        Sender j{200};
+        for (int k = 0; k < 3; k++) j.mpu(makeMpu(ainit, aseg[0], 1000 + k, "audio-1"), 1000 + k);
+        std::vector<UdpDatagram> late(j.out.begin() + 2 + an / 2, j.out.end());
+        o = run(late);
+        ok = o.size() == 3;
+        if (ok) {
+            Bytes media; uint64_t tfdt = 0; uint32_t mfhd = 0;
+            Bytes expect;
+            for (auto& x : am0.samples) add(expect, x);
+            ok = readSegment(o[1].data, media, tfdt, mfhd) && media == expect;
+        }
+        CHECK(ok, "the end of an MPU the receiver came in on is not played as a repaired MPU");
     }
     // ---- 8. one packet with a corrupted MPU sequence number does not stop the asset
     {
@@ -436,7 +588,7 @@ int main(int argc, char** argv) {
         CHECK(st.mpusDropped >= 12 && st.mpusDelivered == 0, "unfinished MPUs are dropped");
     }
     // ---- 13. MPUs of two movie fragments (mfhd 1 and 2): MFU sample numbers from 1 in each fragment or on through the MPU, the moofs first or
-    // after their samples; a lost sample costs its fragment only, and the next fragment keeps its place in time
+    // after their samples; a lost sample costs its fragment the samples from it on, and the next fragment keeps its place in time
     {
         auto setMfhd = [](Bytes& moof, uint32_t n) { for (size_t q = 8; q + 16 < moof.size(); q++) if (!memcmp(&moof[q], "mfhd", 4)) { dect2::endian::storeBe32(&moof[q + 8], n); return; } };
         for (int through = 0; through < 2; through++)
@@ -465,7 +617,7 @@ int main(int argc, char** argv) {
                 }
                 MmtpStats st;
                 std::vector<Out> o = run(s.out, &st);
-                bool ok = !o.empty() && o[0].init && (int)o.size() == 1 + 2 * kTwo - 1;
+                bool ok = !o.empty() && o[0].init && (int)o.size() == 1 + 2 * kTwo;
                 uint64_t t0 = 0;
                 Bytes file;
                 for (size_t i = 0; ok && i < o.size(); i++) {
@@ -473,15 +625,16 @@ int main(int argc, char** argv) {
                     if (!i) continue;
                     Bytes media; uint64_t tfdt = 0; uint32_t mfhd = 0;
                     ok = readSegment(o[i].data, media, tfdt, mfhd);
-                    const int slot = (int)i - 1 + (i >= 3 ? 1 : 0);   // the third fragment of the stream (MPU 1, fragment 1) was lost
+                    const int slot = (int)i - 1;   // the third fragment of the stream (MPU 1, fragment 1) lost its fifth sample
                     if (i == 1) t0 = tfdt;
                     Bytes want;
-                    for (auto& x : vm[slot % 2 ? 1 : 0].samples) add(want, x);
+                    const auto& smp = vm[slot % 2 ? 1 : 0].samples;
+                    for (size_t x = 0; x < smp.size() && (slot != 2 || x < 4); x++) add(want, smp[x]);
                     ok = ok && tfdt == t0 + (uint64_t)slot * 25 * 512 && media == want;
                 }
                 bool rising = false;
                 double a0 = 0, a1 = 0;
-                CHECK(ok && st.mpusDelivered == kTwo && st.fragmentsDelivered == 2 * kTwo - 1 && st.fragmentsLost == 1 && ffmpegPackets(file, rising, a0, a1) == (2 * kTwo - 1) * 25 && rising,
+                CHECK(ok && st.mpusDelivered == kTwo && st.fragmentsDelivered == 2 * kTwo && st.fragmentsLost == 0 && ffmpegPackets(file, rising, a0, a1) == (2 * kTwo - 1) * 25 + 4 && rising,
                       through ? "two movie fragments per MPU, samples numbered through the MPU" : "two movie fragments per MPU, samples numbered in each fragment");
             }
     }
@@ -527,7 +680,70 @@ int main(int argc, char** argv) {
         std::vector<UdpDatagram> in = a.out;
         in.insert(in.end(), b.out.begin(), b.out.end());
         run(in, &st);
-        CHECK(st.mpusDropped == 1 && st.mpusDelivered == 80, "the unfinished MPU of an asset that stopped is given up");
+        // it has its start, so what came of it goes out as a repaired MPU
+        CHECK(st.mpusDropped == 0 && st.mpusDelivered == 81, "the unfinished MPU of an asset that stopped is given up");
+    }
+    // ---- 16. the parts of the repair: which pictures no other one uses, which samples can be played, the cut-down sample table
+    {
+        MpuInit h;
+        h.nalLengthSize = 4;
+        h.maxTemporalId = 2;
+        auto nal = [](Bytes& v, int type, int tid, size_t body) { putBe32(v, (uint32_t)(2 + body)); v.push_back((uint8_t)(type << 1)); v.push_back((uint8_t)(tid + 1)); v.insert(v.end(), body, 0x11); };
+        Bytes aud; nal(aud, 35, 0, 1);
+        Bytes x = aud; nal(x, 0, 2, 50);   // TRAIL_N in the highest sub-layer
+        CHECK(sampleDisposable(x.data(), x.size(), h) == 1, "a TRAIL_N picture of the highest sub-layer is used by no other");
+        Bytes y = aud; nal(y, 0, 1, 50);
+        CHECK(sampleDisposable(y.data(), y.size(), h) == 0, "a TRAIL_N picture of a lower sub-layer may be used");
+        Bytes z = aud; nal(z, 1, 2, 50);
+        CHECK(sampleDisposable(z.data(), z.size(), h) == 0, "a TRAIL_R picture is used");
+        Bytes w; putBe32(w, 500); w.push_back(39 << 1); w.push_back(1); w.insert(w.end(), 20, 0);
+        CHECK(sampleDisposable(w.data(), w.size(), h) == -1, "not known when the first picture NAL unit is not in the part that came");
+        MpuInit none;
+        CHECK(sampleDisposable(x.data(), x.size(), none) == -1, "not known without an HEVC configuration");
+        CHECK(vin.nalLengthSize == 4 && vin.maxTemporalId == 0, "NAL unit length size and sub-layers from the test video's hvcC");
+
+        MpuFragment f;
+        f.sizes = {10, 20, 30, 40, 50};
+        f.durations = {100, 100, 100, 100, 100};
+        f.compositionOffsets = {0, 200, 0, 0, 0};
+        f.flags = {0, 0x10000, 0x10000, 0, 0x10000};   // sync samples at 0 and 3
+        f.trunFlags = 0x000B01;
+        auto pl = [&](std::vector<char> whole, std::vector<char> disp, const char* hdlr) { return playableSamples(f, hdlr, whole, disp); };
+        CHECK((pl({1, 0, 1, 1, 1}, {-1, -1, -1, -1, -1}, "vide") == std::vector<char>{1, 0, 0, 1, 1}), "after a lost picture others may use, play again from the next sync sample");
+        CHECK((pl({1, 0, 1, 1, 1}, {-1, 1, -1, -1, -1}, "vide") == std::vector<char>{1, 0, 1, 1, 1}), "a lost picture no other uses costs itself only");
+        CHECK((pl({0, 1, 1, 1, 1}, {0, -1, -1, -1, -1}, "vide") == std::vector<char>{0, 0, 0, 1, 1}), "without the first picture nothing plays up to the next sync sample");
+        MpuFragment g = f;
+        g.flags = {0, 0, 0, 0, 0};
+        CHECK((playableSamples(g, "vide", {1, 1, 0, 1, 1}, {-1, -1, -1, -1, -1}) == std::vector<char>{1, 1, 0, 0, 0}), "video with no sync information: only the first sample is a sync sample");
+        CHECK((playableSamples(g, "soun", {1, 1, 0, 1, 1}, {-1, -1, -1, -1, -1}) == std::vector<char>{1, 1, 0, 1, 1}), "sound with no sync information: every sample is one");
+
+        // sdtp (one byte per sample) follows; sbgp is left out
+        Bytes sdtp{0, 0, 0, 0, 1, 2, 3, 4, 5};
+        Bytes sbgp(12, 0);
+        f.trafOther = box("sdtp", sdtp);
+        add(f.trafOther, box("sbgp", sbgp));
+        MpuFragment out;
+        uint64_t lead = 0;
+        CHECK(keepSamples(f, {0, 1, 0, 1, 0}, out, lead) && lead == 100 && out.sizes == std::vector<uint32_t>({20, 40}) && out.durations == std::vector<uint32_t>({200, 200}) &&
+                  out.compositionOffsets == std::vector<int64_t>({200, 0}) && out.mediaBytes == 60 && out.trunFlags == 0xF01 && out.trunEntries.size() == 2 * 16 &&
+                  out.trafOther == box("sdtp", Bytes{0, 0, 0, 0, 2, 4}),
+              "samples left out give their time to the sample before them; the time before the first one kept is the lead");
+        MpuFragment empty;
+        CHECK(!keepSamples(f, {0, 0, 0, 0, 0}, empty, lead), "nothing to keep");
+        // the segment it makes: the data offset at the mdat, the durations kept
+        Bytes seg = buildMediaSegment(out, 7, 1000, Bytes(60, 0x5A));
+        Bytes media; uint64_t tfdt = 0; uint32_t mfhd = 0, count = 0; uint64_t dur = 0;
+        CHECK(readSegment(seg, media, tfdt, mfhd) && trunTimes(seg, count, dur) && media.size() == 60 && tfdt == 1000 && mfhd == 7 && count == 2 && dur == 400, "the cut-down segment");
+
+        // the counters of a repaired service: MPU 3 of the video with its 7th picture's second fragment lost
+        Sender s{100};
+        s.mfuPiece = 100;
+        for (int k = 0; k < 5; k++) s.mpu(vm[k], 1000 + k, false, [&](size_t i, size_t fr) { return k == 3 && i == 6 && fr == 1; });
+        MmtpStats st;
+        run(s.out, &st);
+        CHECK(st.mpusDelivered == 5 && st.mpusDropped == 0 && st.mpusRepaired == 1 && st.fragmentsRepaired == 1 && st.samplesLost == 1 &&
+                  (st.samplesCut == 0 || st.samplesCut == (long)vm[3].samples.size() - 7),
+              "repair counters");
     }
     // ---- two assets on one timeline: by the MP table's NTP times, or by sequence number
     Mpu am = makeMpu(ainit, aseg[0], 1000, "audio-1");

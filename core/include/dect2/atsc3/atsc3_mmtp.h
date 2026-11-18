@@ -6,7 +6,7 @@
 // signalling messages (the MP table lists the assets and the presentation time of each MPU). This reads the packets, puts the MPUs of
 // each asset together and rebuilds them as plain fragmented MP4 (an init segment once, then moof + mdat per MPU, with a running timeline),
 // which is what the remuxer already takes from ROUTE. An MPU may hold several movie fragments (on air it holds one); each goes out as its own
-// moof + mdat.
+// moof + mdat. A movie fragment that lost packets goes out with the samples that can still be played, in their place on the timeline.
 #pragma once
 #include "atsc3_ip.h"
 #include <cstddef>
@@ -84,6 +84,9 @@ struct MpuInit {
     uint32_t trackId = 0, timescale = 0;
     uint32_t trexDuration = 0, trexSize = 0;
     uint32_t hintTrackId = 0, hintTrexSize = 0;
+    uint32_t trexFlags = 0;               // the media track's default sample flags
+    // HEVC video (hvcC): the length field size in front of each NAL unit, and the highest temporal sub-layer (-1: not HEVC or not given)
+    int nalLengthSize = 0, maxTemporalId = -1;
     std::vector<uint8_t> init;            // ftyp + moov of the media track
 };
 bool readMpuMetadata(const uint8_t* data, size_t size, MpuInit& out);
@@ -93,6 +96,7 @@ bool readMpuMetadata(const uint8_t* data, size_t size, MpuInit& out);
 struct MpuFragment {
     std::vector<uint32_t> sizes, durations;   // per media sample
     std::vector<int64_t> compositionOffsets;
+    std::vector<uint32_t> flags;          // per media sample, from the trun, the tfhd or the trex (bit 16 set: not a sync sample)
     uint32_t hintSize = 0;
     uint64_t mediaBytes = 0;
     std::vector<uint8_t> trafOther;       // the media traf's boxes other than tfhd, tfdt and trun (kept as they are)
@@ -109,12 +113,30 @@ bool readMpuFragment(const uint8_t* data, size_t size, const MpuInit& init, MpuF
 // moof + mdat for the media samples (in trun order, `media` their bytes back to back), with the decode time and fragment number given.
 std::vector<uint8_t> buildMediaSegment(const MpuFragment& f, uint32_t fragmentNumber, uint64_t baseTime, const std::vector<uint8_t>& media);
 
+// ---- a movie fragment with samples that did not arrive whole
+// Whether a picture can be left out without harming any other (HEVC: a sub-layer non-reference picture of the highest sub-layer): 1 yes,
+// 0 no, -1 not known (not HEVC, or too little of the sample arrived to read its first picture NAL unit). `data` is the start of the sample.
+int sampleDisposable(const uint8_t* data, size_t size, const MpuInit& init);
+// Which samples of `f` are played when only those marked in `whole` arrived whole, in decode order: a missing sample is left out; after a
+// missing sample that others may depend on (`disposable` not 1), nothing is played up to the next sync sample, so the decoder is never handed
+// a picture whose reference is gone. A track whose table marks no sample as non-sync is taken as all sync for sound, and as sync at its first
+// sample only for video.
+std::vector<char> playableSamples(const MpuFragment& f, const std::string& handler, const std::vector<char>& whole, const std::vector<char>& disposable);
+// `f` cut down to the samples marked in `keep`, the time of each sample left out given to the sample played before it, so every sample left
+// keeps its decode time; `lead` is the time of the samples before the first one kept (to add to the decode time of the fragment). The trun
+// is written with explicit durations, sizes and flags; an sdtp keeps the entries of the samples kept, sample groups and subsample
+// information are not kept. False when no sample is kept.
+bool keepSamples(const MpuFragment& f, const std::vector<char>& keep, MpuFragment& out, uint64_t& lead);
+
 // ---- one service: its MMTP flow, the assets of the MP table, and the rebuilt fragmented MP4 of each video and audio asset
 struct MmtpStats {
     long packets = 0, bad = 0, signalling = 0, mpts = 0, nonTimed = 0, late = 0, seqRejected = 0;
     long mpusDelivered = 0, mpusDropped = 0, initsDelivered = 0, assetsSkipped = 0;
     long fragmentsDelivered = 0, fragmentsLost = 0;   // movie fragments (one per MPU on air; ISO/IEC 23008-1 allows several)
     long seqRestarts = 0;                             // the sender's MPU numbers jumped or went back and the asset carried on from them
+    // MPUs (and movie fragments) with samples missing that went out with the samples that can be played, and the samples left out of them
+    long mpusRepaired = 0, fragmentsRepaired = 0, samplesLost = 0, samplesCut = 0;
+    long moofsRebuilt = 0;                            // movie fragments whose moof was lost, rebuilt from the asset's last one (sound only)
 };
 
 class MmtpService {

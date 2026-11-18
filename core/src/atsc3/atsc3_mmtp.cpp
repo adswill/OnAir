@@ -278,6 +278,38 @@ std::string assetKind(const std::string& t) {
 
 // ---------------------------------------------------------------- MPU -> fragmented MP4
 
+namespace {
+// minf / stbl / stsd / hvc1 or hev1 / hvcC: the NAL unit length size and the number of temporal sub-layers (ISO/IEC 14496-15 8.3.3)
+void hevcConfig(const uint8_t* d, const Box& minf, int& nalLen, int& maxTid) {
+    size_t q = minf.pos + minf.hdr;
+    Box stbl;
+    while (nextBox(d, minf.pos + minf.size, q, stbl)) {
+        if (stbl.type != fourcc("stbl")) continue;
+        size_t r = stbl.pos + stbl.hdr;
+        Box stsd;
+        while (nextBox(d, stbl.pos + stbl.size, r, stsd)) {
+            if (stsd.type != fourcc("stsd") || bodySize(stsd) < 8) continue;
+            size_t e = stsd.pos + stsd.hdr + 8;
+            Box entry;
+            if (!nextBox(d, stsd.pos + stsd.size, e, entry)) return;
+            if (entry.type != fourcc("hvc1") && entry.type != fourcc("hev1")) return;
+            size_t c = entry.pos + entry.hdr + 78;   // after the visual sample entry fields
+            Box cfg;
+            while (c < entry.pos + entry.size && nextBox(d, entry.pos + entry.size, c, cfg)) {
+                if (cfg.type != fourcc("hvcC") || bodySize(cfg) < 22) continue;
+                const uint8_t b = body(d, cfg)[21];
+                nalLen = (b & 3) + 1;
+                const int layers = (b >> 3) & 7;   // 0: not given
+                maxTid = layers ? layers - 1 : -1;
+                if (nalLen == 3) nalLen = 0;       // not a valid length size
+                return;
+            }
+            return;
+        }
+    }
+}
+} // namespace
+
 bool readMpuMetadata(const uint8_t* d, size_t n, MpuInit& out) {
     out = MpuInit();
     size_t pos = 0;
@@ -288,7 +320,7 @@ bool readMpuMetadata(const uint8_t* d, size_t n, MpuInit& out) {
         else if (b.type == fourcc("moov") && !haveMoov) { moov = b; haveMoov = true; }
     }
     if (!haveMoov) return false;
-    struct Trak { Box box; uint32_t id = 0, timescale = 0, handler = 0; };
+    struct Trak { Box box; uint32_t id = 0, timescale = 0, handler = 0; int nalLen = 0, maxTid = -1; };
     std::vector<Trak> traks;
     std::vector<Box> other;
     Box mvex;
@@ -309,6 +341,7 @@ bool readMpuMetadata(const uint8_t* d, size_t n, MpuInit& out) {
                 while (nextBox(d, c.pos + c.size, r, e)) {
                     if (e.type == fourcc("hdlr") && bodySize(e) >= 12) t.handler = loadBe32(body(d, e) + 8);
                     if (e.type == fourcc("mdhd") && bodySize(e) >= 24) t.timescale = loadBe32(body(d, e) + (body(d, e)[0] == 1 ? 20 : 12));
+                    if (e.type == fourcc("minf")) hevcConfig(d, e, t.nalLen, t.maxTid);
                 }
             }
             traks.push_back(t);
@@ -327,6 +360,8 @@ bool readMpuMetadata(const uint8_t* d, size_t n, MpuInit& out) {
     out.handler = fourccText(media->handler);
     out.trackId = media->id;
     out.timescale = media->timescale;
+    out.nalLengthSize = media->nalLen;
+    out.maxTemporalId = media->maxTid;
     if (!out.trackId || !out.timescale) return false;
     std::vector<uint8_t> m;
     for (auto& o : other) append(m, d + o.pos, o.size);
@@ -342,6 +377,7 @@ bool readMpuMetadata(const uint8_t* d, size_t n, MpuInit& out) {
                 if (id != out.trackId) continue;
                 out.trexDuration = loadBe32(t + 12);
                 out.trexSize = loadBe32(t + 16);
+                out.trexFlags = loadBe32(t + 20);
             }
         }
         // only the media track's trex stays
@@ -369,7 +405,7 @@ bool readMpuFragment(const uint8_t* d, size_t n, const MpuInit& init, MpuFragmen
     while (nextBox(d, moof.pos + moof.size, q, traf)) {
         if (traf.type != fourcc("traf")) continue;
         // tfhd first: it says which track the traf is for
-        uint32_t track = 0, tfFlags = 0, defDur = 0, defSize = 0;
+        uint32_t track = 0, tfFlags = 0, defDur = 0, defSize = 0, defFlags = init.trexFlags;
         size_t r = traf.pos + traf.hdr;
         Box c;
         Box tfhd;
@@ -387,7 +423,7 @@ bool readMpuFragment(const uint8_t* d, size_t n, const MpuInit& init, MpuFragmen
             if (tfFlags & 0x02) f += 4;
             if (tfFlags & 0x08) { if (f + 4 > lim) return false; defDur = loadBe32(t + f); f += 4; }
             if (tfFlags & 0x10) { if (f + 4 > lim) return false; defSize = loadBe32(t + f); f += 4; }
-            if (tfFlags & 0x20) f += 4;
+            if (tfFlags & 0x20) { if (f + 4 > lim) return false; defFlags = loadBe32(t + f); f += 4; }
             if (f > lim) return false;
             break;
         }
@@ -452,11 +488,11 @@ bool readMpuFragment(const uint8_t* d, size_t n, const MpuInit& init, MpuFragmen
                 for (uint32_t i = 0; i < count; i++) {
                     const uint8_t* e = t + f + (size_t)i * per;
                     size_t o = 0;
-                    uint32_t dur = dDur, size = dSize;
+                    uint32_t dur = dDur, size = dSize, sf = (i == 0 && (fl & 0x04)) ? out.firstSampleFlags : defFlags;
                     int64_t cto = 0;
                     if (fl & 0x100) { dur = loadBe32(e + o); o += 4; }
                     if (fl & 0x200) { size = loadBe32(e + o); o += 4; }
-                    if (fl & 0x400) o += 4;
+                    if (fl & 0x400) { sf = loadBe32(e + o); o += 4; }
                     if (fl & 0x800) cto = out.trunVersion ? (int64_t)(int32_t)loadBe32(e + o) : (int64_t)loadBe32(e + o);
                     if (size > kMpuMaxSampleBytes) {
                         DIAG_DEBUG_EVERY(815691, 10.0, "An MMTP movie fragment announces a sample of %u bytes, more than this receiver accepts, so its sample table is refused and the MPU is dropped.", size);
@@ -465,6 +501,7 @@ bool readMpuFragment(const uint8_t* d, size_t n, const MpuInit& init, MpuFragmen
                     out.sizes.push_back(size);
                     out.durations.push_back(dur);
                     out.compositionOffsets.push_back(cto);
+                    out.flags.push_back(sf);
                     out.mediaBytes += size;
                 }
                 if (out.mediaBytes > kMpuMaxBytes) {
@@ -511,6 +548,94 @@ std::vector<uint8_t> buildMediaSegment(const MpuFragment& f, uint32_t fragmentNu
     return out;
 }
 
+// ---------------------------------------------------------------- samples that did not arrive whole
+
+int sampleDisposable(const uint8_t* d, size_t n, const MpuInit& init) {
+    const size_t len = (size_t)init.nalLengthSize;
+    if (!len || init.maxTemporalId < 0) return -1;
+    for (size_t pos = 0; pos + len + 2 <= n;) {
+        uint32_t nal = 0;
+        for (size_t k = 0; k < len; k++) nal = nal << 8 | d[pos + k];
+        const int type = (d[pos + len] >> 1) & 0x3F, tid = (d[pos + len + 1] & 7) - 1;
+        if (nal < 2 || tid < 0) return -1;
+        // the first picture NAL unit decides: a sub-layer non-reference picture (TRAIL_N, TSA_N, STSA_N, RADL_N, RASL_N, the reserved _N
+        // types) in the highest sub-layer is used by no other picture (ITU-T H.265 3.137 and 7.4.2.2)
+        if (type < 32) return (type <= 14 && type % 2 == 0 && tid == init.maxTemporalId) ? 1 : 0;
+        if (nal > n - pos - len) return -1;   // the next NAL unit is in a part of the sample that is not here
+        pos += len + nal;
+    }
+    return -1;
+}
+
+std::vector<char> playableSamples(const MpuFragment& f, const std::string& handler, const std::vector<char>& whole, const std::vector<char>& disposable) {
+    const size_t n = f.sizes.size();
+    std::vector<char> keep(n, 0);
+    bool anyNonSync = false;
+    for (size_t i = 0; i < n && i < f.flags.size(); i++) anyNonSync |= (f.flags[i] & 0x10000) != 0;
+    const bool video = handler == "vide";
+    bool ok = true;   // an MPU starts at a point where decoding can start
+    for (size_t i = 0; i < n; i++) {
+        const bool sync = anyNonSync ? (i < f.flags.size() && !(f.flags[i] & 0x10000)) : (!video || i == 0);
+        if (i >= whole.size() || !whole[i]) {
+            if (i >= disposable.size() || disposable[i] != 1) ok = false;
+            continue;
+        }
+        if (sync) ok = true;
+        keep[i] = ok;
+    }
+    return keep;
+}
+
+bool keepSamples(const MpuFragment& f, const std::vector<char>& keep, MpuFragment& out, uint64_t& lead) {
+    out = f;
+    out.sizes.clear();
+    out.durations.clear();
+    out.compositionOffsets.clear();
+    out.flags.clear();
+    out.trunEntries.clear();
+    out.mediaBytes = 0;
+    lead = 0;
+    std::vector<uint64_t> dur;
+    std::vector<size_t> kept;
+    for (size_t i = 0; i < f.sizes.size(); i++) {
+        if (i < keep.size() && keep[i]) {
+            kept.push_back(i);
+            dur.push_back(f.durations[i]);
+        } else if (dur.empty()) lead += f.durations[i];
+        else dur.back() += f.durations[i];   // the sample before it is shown on through its time
+    }
+    if (kept.empty()) return false;
+    out.trunFlags = 0x01 | 0x100 | 0x200 | 0x400 | (f.trunFlags & 0x800);
+    out.firstSampleFlags = 0;
+    for (size_t k = 0; k < kept.size(); k++) {
+        const size_t i = kept[k];
+        if (dur[k] > 0xFFFFFFFFu) return false;
+        out.sizes.push_back(f.sizes[i]);
+        out.durations.push_back((uint32_t)dur[k]);
+        out.compositionOffsets.push_back(f.compositionOffsets[i]);
+        out.flags.push_back(i < f.flags.size() ? f.flags[i] : 0);
+        out.mediaBytes += f.sizes[i];
+        putBe32(out.trunEntries, (uint32_t)dur[k]);
+        putBe32(out.trunEntries, f.sizes[i]);
+        putBe32(out.trunEntries, out.flags.back());
+        if (f.trunFlags & 0x800) putBe32(out.trunEntries, (uint32_t)f.compositionOffsets[i]);
+    }
+    // the per-sample boxes kept with the traf: sdtp follows the samples kept; sample groups and subsample information are left out
+    out.trafOther.clear();
+    const uint8_t* d = f.trafOther.data();
+    size_t pos = 0;
+    Box b;
+    while (nextBox(d, f.trafOther.size(), pos, b)) {
+        if (b.type == fourcc("sgpd")) append(out.trafOther, d + b.pos, b.size);
+        else if (b.type == fourcc("sdtp") && bodySize(b) == 4 + f.sizes.size()) {
+            std::vector<uint8_t> v(body(d, b), body(d, b) + 4);
+            for (size_t i : kept) v.push_back(body(d, b)[4 + i]);
+            putBox(out.trafOther, fourcc("sdtp"), v);
+        }
+    }
+    return true;
+}
+
 // ---------------------------------------------------------------- the service
 
 namespace {
@@ -541,10 +666,16 @@ struct Pieces {
 // no data cannot hold memory the limits do not see.
 constexpr size_t kMfuEntryCost = 96;
 
+// A fragment of an MFU as it came, and whether it is the last fragment of its sample (the fragmentation indicator of its payload)
+struct MfuPiece {
+    std::vector<uint8_t> data;
+    bool last = false;
+};
+
 // One movie fragment of an MPU (ISO/IEC 23008-1 lets an MPU have several): its moof, and the MFUs that name its sequence number.
 struct Frag {
     std::vector<uint8_t> moof;           // the whole movie fragment once it is in
-    std::map<std::pair<uint32_t, uint32_t>, std::vector<uint8_t>> mfu;   // (sample, media offset) -> fragment, the hint sample in front at offset 0
+    std::map<std::pair<uint32_t, uint32_t>, MfuPiece> mfu;   // (sample, media offset) -> fragment, the hint sample in front at offset 0
     size_t mfuBytes = 0;
     bool read = false, bad = false;
     MpuFragment f;
@@ -559,8 +690,11 @@ struct OpenMpu {
     std::map<uint32_t, Frag> frags;      // by movie fragment sequence number (the moof's mfhd, the MFU header's first field)
     long born = 0, touched = 0;
     // once its first movie fragment went out, the MPU stays open for the ones after it
-    bool started = false;
-    uint32_t fragDone = 0;               // the movie fragments up to this one are delivered or lost
+    bool started = false, repaired = false;
+    uint32_t fragDone = 0;
+    // where the MFU sample numbers of the next movie fragment start, once one went out (they may count on through the MPU)
+    bool haveNextSample = false;
+    uint32_t nextSample = 0;               // the movie fragments up to this one are delivered or lost
     uint64_t base = 0, end = 0;          // its start on the asset's timeline, and how far its delivered fragments reach from there
     size_t bytes() const {
         size_t n = meta.bytes + moofPart.bytes;
@@ -571,6 +705,7 @@ struct OpenMpu {
 typedef std::map<uint32_t, OpenMpu, SeqLess> OpenMap;
 
 struct Lane {
+    uint16_t pid = 0;
     OpenMap open;                        // by MPU sequence number
     bool haveInit = false, skip = false;
     MpuInit init;
@@ -586,6 +721,10 @@ struct Lane {
     std::deque<uint64_t> durs;
     uint32_t fragNo = 0;
     std::map<uint32_t, uint64_t> times;  // MPU sequence number -> NTP presentation time (MP table)
+    bool haveLast = false;               // the last movie fragment read, for one whose moof is lost
+    MpuFragment last;
+    bool haveFirst = false;              // the first MPU the asset saw: the receiver may have come in part of the way through it
+    uint32_t firstSeq = 0;
 };
 
 constexpr int kMaxOpenPerLane = 8;
@@ -710,9 +849,18 @@ struct MmtpService::Impl {
 
     // An MPU leaves the asset: one that sent nothing out is dropped; one that did is over, and the next MPU follows it on the timeline (a
     // duration far from the usual one, from a damaged table or movie fragments lost at its end, is taken as the usual one).
-    void retire(Lane& l, OpenMap::iterator it) {
+    // Unless `repair` is false, the movie fragments of an MPU that is the asset's oldest open one go out first with the samples of them that
+    // can be played (see repair).
+    void retire(Lane& l, OpenMap::iterator it, bool repair = true) {
         OpenMpu& o = it->second;
-        openBytes -= std::min(openBytes, o.bytes());
+        const size_t had = o.bytes();
+        if (repair && !l.skip && it == l.open.begin())
+            for (auto g = o.frags.begin(); g != o.frags.end();) {
+                if (o.started && g->first <= o.fragDone) { ++g; continue; }
+                if (repairFrag(l, it->first, o, g)) g = o.frags.erase(g);
+                else ++g;
+            }
+        openBytes -= std::min(openBytes, had);
         if (!l.haveDone || seqDiff(it->first, l.lastDone) > 0) { l.lastDone = it->first; l.haveDone = true; }
         if (!o.started) st.mpusDropped++;
         else {
@@ -741,23 +889,26 @@ struct MmtpService::Impl {
             for (auto it = kv.second.open.begin(); it != kv.second.open.end(); ++it)
                 if (!bl || it->second.born < bi->second.born) { bl = &kv.second; bi = it; }
         if (!bl) return false;
-        retire(*bl, bi);
+        retire(*bl, bi);   // repaired only if it is the oldest of its asset
         return true;
     }
 
     // a movie fragment is whole when the asset's metadata (from this MPU or an earlier one), its moof and every byte of every media sample are
     // in; the MFU sample numbers count either from 1 in each movie fragment or on through the MPU, so both are tried
-    bool assemble(Lane& l, Frag& g, std::vector<uint8_t>& media) {
+    bool assemble(Lane& l, Frag& g, std::vector<uint8_t>& media, uint32_t& base) {
         if (!l.haveInit || g.moof.empty()) return false;
         if (!g.read) {
             g.read = true;
             g.bad = !readMpuFragment(g.moof.data(), g.moof.size(), l.init, g.f);
+            if (!g.bad) { l.last = g.f; l.haveLast = true; }
         }
         if (g.bad || g.mfu.empty()) return false;
         const MpuFragment& f = g.f;
         if (g.mfuBytes < f.mediaBytes + (uint64_t)f.hintSize * f.sizes.size()) return false;
         const uint32_t first = g.mfu.begin()->first.first;
+        base = 0;
         if (assembleFrom(g, 0, media)) return true;
+        base = first - 1;
         return first > 1 && assembleFrom(g, first - 1, media);
     }
 
@@ -772,8 +923,8 @@ struct MmtpService::Impl {
             while (it != g.mfu.end() && it->first.first < sample) ++it;
             for (; it != g.mfu.end() && it->first.first == sample; ++it) {
                 const uint32_t off = it->first.second;
-                const uint8_t* p = it->second.data();
-                size_t n = it->second.size();
+                const uint8_t* p = it->second.data.data();
+                size_t n = it->second.data.size();
                 if (off == 0) { if (n < f.hintSize) return false; p += f.hintSize; n -= f.hintSize; }
                 if (off > have) return false;   // a hole
                 if (off + n <= have) continue;
@@ -788,9 +939,10 @@ struct MmtpService::Impl {
         return true;
     }
 
-    // One whole movie fragment of MPU `seq` goes out; `missing` fragments of the MPU before it were lost and are given its duration.
-    void deliver(uint16_t pid, Lane& l, uint32_t seq, OpenMpu& o, const Frag& g, uint32_t missing, const std::vector<uint8_t>& media) {
-        const MpuFragment& f = g.f;
+    // A movie fragment of MPU `seq` goes out: `f` as sent (its time), `out` what is written (`f` itself when whole, the samples kept when
+    // repaired, starting `lead` after it); `missing` fragments of the MPU before it were lost and are given its duration.
+    void deliver(uint16_t pid, Lane& l, uint32_t seq, OpenMpu& o, const MpuFragment& f, const MpuFragment& out, uint64_t lead2, uint32_t missing,
+                 const std::vector<uint8_t>& media) {
         const uint32_t ts = l.init.timescale;
         uint64_t dur = 0;
         int64_t presMin = INT64_MAX, dts = 0;
@@ -833,9 +985,127 @@ struct MmtpService::Impl {
             st.initsDelivered++;
             if (*cb) (*cb)(pid, l.init.handler, true, l.sentInit);
         }
-        const std::vector<uint8_t> seg = buildMediaSegment(f, ++l.fragNo, at, media);
+        const std::vector<uint8_t> seg = buildMediaSegment(out, ++l.fragNo, at + lead2, media);
         st.fragmentsDelivered++;
         if (*cb) (*cb)(pid, l.init.handler, false, seg);
+    }
+
+    // movie fragment `n` of an MPU goes out, after the ones before it that went out or were lost
+    void send(Lane& l, uint32_t seq, OpenMpu& o, uint32_t n, const MpuFragment& f, const MpuFragment& out, uint64_t lead, const std::vector<uint8_t>& media) {
+        const uint32_t from = o.started ? o.fragDone + 1 : (n > 0 ? 1 : 0);
+        const uint32_t missing = std::min<uint32_t>(n - std::min(n, from), kMaxFragsPerMpu);
+        deliver(l.pid, l, seq, o, f, out, lead, missing, media);
+        o.fragDone = n;
+    }
+
+    // The media bytes of sample `sample` (MFU sample number) that arrived from offset 0 on without a hole, the hint sample in front taken off:
+    // `whole` when they reach `want` bytes (or, with `want` 0, the fragment marked last of its sample), and a pointer to the start of the
+    // sample when its first fragment is there.
+    struct SampleBytes { size_t have = 0; bool whole = false; const uint8_t* start = nullptr; size_t startSize = 0; };
+    static SampleBytes sampleBytes(const Frag& g, uint32_t sample, uint32_t hint, uint32_t want, std::vector<uint8_t>* into) {
+        SampleBytes r;
+        for (auto it = g.mfu.lower_bound(std::make_pair(sample, 0u)); it != g.mfu.end() && it->first.first == sample; ++it) {
+            const uint32_t off = it->first.second;
+            const uint8_t* p = it->second.data.data();
+            size_t n = it->second.data.size();
+            if (off == 0) {
+                if (n < hint) return r;
+                p += hint;
+                n -= hint;
+                r.start = p;
+                r.startSize = n;
+            }
+            if (off > r.have) break;   // a hole
+            if (off + n <= r.have) continue;
+            const size_t skip = r.have - off;
+            const size_t take = want ? std::min<size_t>(n - skip, want - r.have) : n - skip;
+            if (into) into->insert(into->end(), p + skip, p + skip + take);
+            r.have += take;
+            if (want ? r.have == want : it->second.last) { r.whole = true; break; }
+        }
+        // a fragment of the sample that runs past its size: the sample numbers or sizes are not what they seem, so it is not taken as whole
+        if (r.whole && want)
+            for (auto it = g.mfu.lower_bound(std::make_pair(sample, 0u)); it != g.mfu.end() && it->first.first == sample; ++it)
+                if ((uint64_t)it->first.second + it->second.data.size() - (it->first.second == 0 ? hint : 0) > want) { r.whole = false; break; }
+        return r;
+    }
+
+    // A movie fragment that cannot be whole any more goes out with the samples of it that can be played (playableSamples): the samples that
+    // arrived whole, less those whose reference picture is gone. Its time stays the time sent, so the lost samples become a still picture or
+    // a short silence, not a jump. A movie fragment whose moof was lost is rebuilt from the asset's last one when that is safe to copy: every
+    // sample a sync sample, no composition offsets (sound), the same number of samples or fewer here, each sample's size known from its last
+    // MFU fragment. Otherwise, or when no sample can be played, it is lost as before.
+    bool repairFrag(Lane& l, uint32_t seq, OpenMpu& o, std::map<uint32_t, Frag>::iterator gi) {
+        Frag& g = gi->second;
+        if (!l.haveInit || g.mfu.empty()) return false;
+        MpuFragment f;
+        bool rebuilt = false;
+        if (!g.moof.empty()) {
+            if (!g.read) {
+                g.read = true;
+                g.bad = !readMpuFragment(g.moof.data(), g.moof.size(), l.init, g.f);
+                if (!g.bad) { l.last = g.f; l.haveLast = true; }
+            }
+            if (g.bad) return false;
+            f = g.f;
+        } else {
+            if (!l.haveLast || l.init.handler != "soun" || l.last.sizes.empty()) return false;
+            for (size_t i = 0; i < l.last.sizes.size(); i++)
+                if ((i < l.last.flags.size() && (l.last.flags[i] & 0x10000)) || l.last.compositionOffsets[i] != 0) return false;
+            f = l.last;
+            rebuilt = true;
+        }
+        const uint32_t count = (uint32_t)f.sizes.size();
+        // MFU sample numbers from 1 in each movie fragment, or on through the MPU
+        const uint32_t first = g.mfu.begin()->first.first, lastNo = g.mfu.rbegin()->first.first;
+        uint32_t base = 0;
+        if (first < 1 || lastNo > count) {
+            // on through the MPU: from where the movie fragment before ended, else from the first sample number here (when that one is lost,
+            // the sizes do not match and the samples are not taken)
+            base = o.haveNextSample ? o.nextSample : first - 1;
+            if (rebuilt || first <= base || lastNo - base > count) return false;
+        }
+        std::vector<char> whole(count, 0), disposable(count, -1);
+        if (rebuilt) {
+            f.mediaBytes = 0;
+            for (uint32_t s = 0; s < count; s++) {
+                const SampleBytes b = sampleBytes(g, base + s + 1, f.hintSize, 0, nullptr);
+                whole[s] = b.whole && b.have > 0 && b.have <= kMpuMaxSampleBytes;
+                f.sizes[s] = whole[s] ? (uint32_t)b.have : 0;
+                f.mediaBytes += f.sizes[s];
+            }
+        } else {
+            for (uint32_t s = 0; s < count; s++) {
+                const SampleBytes b = sampleBytes(g, base + s + 1, f.hintSize, f.sizes[s], nullptr);
+                whole[s] = b.whole || f.sizes[s] == 0;
+                if (!whole[s] && b.start) disposable[s] = (char)sampleDisposable(b.start, b.startSize, l.init);
+            }
+        }
+        // the first MPU of the asset is only repaired from its start: when the receiver came in part of the way through it, what it has is the
+        // end of an MPU, not an MPU with a hole
+        if (seq == l.firstSeq && (rebuilt || !whole[0])) return false;
+        const std::vector<char> keep = playableSamples(f, l.init.handler, whole, disposable);
+        MpuFragment out;
+        uint64_t lead = 0;
+        if (!keepSamples(f, keep, out, lead)) return false;
+        std::vector<uint8_t> media;
+        media.reserve((size_t)out.mediaBytes);
+        for (uint32_t s = 0; s < count; s++)
+            if (keep[s] && f.sizes[s]) sampleBytes(g, base + s + 1, f.hintSize, f.sizes[s], &media);
+        if (media.size() != out.mediaBytes) return false;
+        long lost = 0, cut = 0;
+        for (uint32_t s = 0; s < count; s++) { lost += !whole[s]; cut += whole[s] && !keep[s]; }
+        if (!o.repaired) { o.repaired = true; st.mpusRepaired++; }
+        st.fragmentsRepaired++;
+        st.samplesLost += lost;
+        st.samplesCut += cut;
+        if (rebuilt) st.moofsRebuilt++;
+        DIAG_DEBUG_EVERY(915773, 10.0, "MPU %u of MMTP packet id %u is incomplete: %u of its %u samples go out, %ld were lost and %ld more are left out until the next sync sample.",
+                         seq, (unsigned)l.pid, (unsigned)out.sizes.size(), count, lost, cut);
+        send(l, seq, o, gi->first, f, out, lead, media);
+        o.haveNextSample = true;
+        o.nextSample = base + count;
+        return true;
     }
 
     // a sequence number far from the asset's newest (or well behind its last finished MPU) is believed only when a few packets in a row agree
@@ -886,12 +1156,14 @@ struct MmtpService::Impl {
     void mpu(uint16_t pid, const MpuPayload& m) {
         if (!m.timed) { st.nonTimed++; return; }
         Lane& l = lanes[pid];
+        l.pid = pid;
         if (l.skip) return;
         const uint32_t seq = m.mpuSequence;
         if (!checkSequence(pid, l, seq)) return;
         if (l.haveDone && seqDiff(seq, l.lastDone) <= 0) { st.late++; return; }
         auto it = l.open.find(seq);
         if (it == l.open.end()) {
+            if (!l.haveFirst) { l.haveFirst = true; l.firstSeq = seq; }
             it = l.open.emplace(seq, OpenMpu()).first;
             it->second.born = it->second.touched = ++clock;
             sweep();
@@ -919,13 +1191,17 @@ struct MmtpService::Impl {
                 Frag* g = fragFor(o, h.fragmentSequence);
                 if (!g) continue;
                 auto& slot = g->mfu[std::make_pair(h.sample, h.offset)];
-                if (slot.empty()) { slot.assign(u.first + kMfuHeaderBytes, u.first + u.second); g->mfuBytes += slot.size(); }
+                if (slot.data.empty()) {
+                    slot.data.assign(u.first + kMfuHeaderBytes, u.first + u.second);
+                    slot.last = m.fragmentation == 0 || m.fragmentation == 3;
+                    g->mfuBytes += slot.data.size();
+                }
             }
         }
         openBytes += o.bytes() - before;
         if (o.bytes() > kMpuMaxBytes) {
             DIAG_DEBUG_EVERY(383065, 10.0, "An MPU of MMTP packet id %u grew past %zu bytes before it was complete, so it is dropped.", (unsigned)pid, kMpuMaxBytes);
-            retire(l, it);
+            retire(l, it, false);
             return;
         }
         if (metaDone) {
@@ -936,7 +1212,7 @@ struct MmtpService::Impl {
                 l.skip = true;
                 st.assetsSkipped++;
                 DIAG_DEBUG_EVERY(627515, 30.0, "MMTP packet id %u carries a %s track, which this receiver does not play yet, so the asset is skipped.", (unsigned)pid, in.handler.c_str());
-                while (!l.open.empty()) retire(l, l.open.begin());
+                while (!l.open.empty()) retire(l, l.open.begin(), false);
                 return;
             } else if (!l.haveInit || in.init != l.init.init || in.trackId != l.init.trackId) {
                 l.init = in;
@@ -952,18 +1228,18 @@ struct MmtpService::Impl {
             const size_t xBefore = x.bytes();
             for (auto g = x.frags.begin(); g != x.frags.end();) {
                 std::vector<uint8_t> media;
-                if (!assemble(l, g->second, media)) { ++g; continue; }
+                uint32_t base = 0;
+                if (!assemble(l, g->second, media, base)) { ++g; continue; }
                 while (l.open.begin() != w) retire(l, l.open.begin());
                 for (auto e = x.frags.begin(); e != g;) {
+                    if (repairFrag(l, w->first, x, e)) { e = x.frags.erase(e); continue; }
                     st.fragmentsLost++;
                     DIAG_DEBUG_EVERY(902417, 10.0, "MPU %u of MMTP packet id %u lost movie fragment %u before a later one was whole, so that part of it is skipped.", w->first, (unsigned)pid, e->first);
                     e = x.frags.erase(e);
                 }
-                const uint32_t n = g->first;
-                const uint32_t from = x.started ? x.fragDone + 1 : (n > 0 ? 1 : 0);
-                const uint32_t missing = std::min<uint32_t>(n - std::min(n, from), kMaxFragsPerMpu);
-                deliver(pid, l, w->first, x, g->second, missing, media);
-                x.fragDone = n;
+                send(l, w->first, x, g->first, g->second.f, g->second.f, 0, media);
+                x.haveNextSample = true;
+                x.nextSample = base + (uint32_t)g->second.f.sizes.size();
                 g = x.frags.erase(g);
             }
             openBytes -= std::min(openBytes, xBefore - x.bytes());

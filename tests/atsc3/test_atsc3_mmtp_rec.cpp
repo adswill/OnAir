@@ -82,14 +82,14 @@ int main() {
     };
     for (auto& u : dg) s.push(u);
     const MmtpStats st = s.stats();
-    printf("  %ld packets, %ld MP tables, %ld MPUs delivered, %ld dropped, %ld late packets, %ld bad, %ld assets skipped\n", st.packets, st.mpts, st.mpusDelivered, st.mpusDropped, st.late, st.bad,
-           st.assetsSkipped);
+    printf("  %ld packets, %ld MP tables, %ld MPUs delivered (%ld of them repaired: %ld samples lost, %ld more left out), %ld dropped, %ld late packets, %ld bad, %ld assets skipped\n", st.packets, st.mpts,
+           st.mpusDelivered, st.mpusRepaired, st.samplesLost, st.samplesCut, st.mpusDropped, st.late, st.bad, st.assetsSkipped);
     int av = 0;
     for (auto& kv : lanes) {
         const Lane& l = kv.second;
         // the first and the last MPU of the recording are cut by its start and end
         const long whole = std::max<long>(1, (long)seen[kv.first].size() - 2);
-        printf("  packet id %u (%s): %d of %ld whole MPUs, %d init segment(s), decode times %s\n", (unsigned)kv.first, l.handler.c_str(), l.segs, whole, l.inits, l.rising ? "rising" : "NOT rising");
+        printf("  packet id %u (%s): %d of %ld MPUs out (whole or repaired), %d init segment(s), decode times %s\n", (unsigned)kv.first, l.handler.c_str(), l.segs, whole, l.inits, l.rising ? "rising" : "NOT rising");
         av++;
         CHECK(l.inits == 1, "one init segment per asset");
         CHECK(l.rising, "decode times only go up");

@@ -31,7 +31,7 @@ struct ReceiverStats {
     // PLPs backed off because they decoded nothing for several frames (decodePlan): times one was backed off, PLP frames in which only its probe
     // blocks were tried and none decoded, and the FEC blocks not tried in those frames
     long plpBackoffs = 0, plpProbeFrames = 0, blocksSkipped = 0;
-    long mpusDelivered = 0, mpusDropped = 0;   // MMTP services: whole MPUs passed on, and MPUs given up because a part of them was lost
+    long mpusDelivered = 0, mpusDropped = 0;   // MMTP services: MPUs passed on (whole, or repaired down to the samples that can be played), and MPUs given up
 };
 
 struct FrameInfo {
