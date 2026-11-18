@@ -112,7 +112,8 @@ void atsc3ReceiverTab(App& a) {
         row("frame", "%dK FFT, guard %d samples, scattered pilots 1 in %d (every %d symbols), %d symbols, %d Preamble symbol(s)", f.fftSize / 1024, f.guard, f.spDx, f.spDy, f.symbols, f.preambleSymbols);
         row("bootstrap", "minor version %d, %d MHz channel, preamble structure %d", f.bootstrapMinor, f.bandwidthMhz, f.preambleStructure);
         for (auto& p : f.plps)
-            row("PLP", "%d: %s, code rate %d/15, %dK LDPC, %d block(s) in the last frame, %d decoded", p.id, modName(p.bitsPerCell), p.rate15, p.nInner / 1000, p.blocks, p.blocksOk);
+            if (p.leftOut) row("PLP", "%d: %s, code rate %d/15, %dK LDPC, left out: the service playing does not use it", p.id, modName(p.bitsPerCell), p.rate15, p.nInner / 1000);
+            else row("PLP","%d: %s, code rate %d/15, %dK LDPC, %d block(s) in the last frame, %d decoded", p.id, modName(p.bitsPerCell), p.rate15, p.nInner / 1000, p.blocks, p.blocksOk);
     }
     row("baseband packets", "%ld (%ld bad)", t.bbPackets, t.bbBad);
     row("link layer", "%ld ALP packets, %ld UDP datagrams, %ld service list tables, %ld ROUTE objects", t.alpPackets, t.udp, t.llsTables, t.routeObjects);

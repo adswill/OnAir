@@ -38,6 +38,7 @@ void Atsc3Rx::start() {
     rx_->remux().setRealtime(paced_);
     sync_.reset(new Atsc3Sync(rate_, rx_.get()));
     sync_->setThreads(std::max(2, std::min(4, (int)std::thread::hardware_concurrency() / 2)));
+    if (allPlps_) rx_->setDecodeAllPlps(true);
     if (want_ >= 0) rx_->selectService(want_); else rx_->setAutoSelect(true);
     stop_ = false;
     queued_ = 0;
@@ -97,6 +98,11 @@ void Atsc3Rx::selectService(int id) {
     want_ = id;
     if (rx_ && id >= 0) rx_->selectService(id);
     if (rx_ && id < 0) rx_->setAutoSelect(true);
+}
+
+void Atsc3Rx::setDecodeAllPlps(bool on) {
+    allPlps_ = on;
+    if (rx_) rx_->setDecodeAllPlps(on);
 }
 
 void Atsc3Rx::autoSelect() {
@@ -164,6 +170,8 @@ void Atsc3Rx::worker() {
             t.tsBytes = tsBytes_;
             t.droppedBlocks = dropped_;
             t.droppedSec = droppedSec_;
+            t.plpMask = rx_->plpDecodeMask();
+            t.plpsLeftOut = rs.plpsLeftOut;
             t.load = signalSec_ > 0 ? busySec_ / signalSec_ : 0;
             t.seq = ++seq_;
             std::lock_guard<std::mutex> lk(tmu_);

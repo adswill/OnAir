@@ -76,7 +76,8 @@ struct Stream {
     size_t vframes = 0, aframes = 0;
 };
 
-inline Stream buildStream(const char* vp, const char* ap, int bytes) {
+// `extraSessions`: more <RS> elements for the S-TSID (another ROUTE session of the service)
+inline Stream buildStream(const char* vp, const char* ap, int bytes, const std::string& extraSessions = "") {
     Stream out;
     auto vf = slurp(vp), af = slurp(ap);
     std::vector<uint8_t> vinit, ainit;
@@ -91,7 +92,7 @@ inline Stream buildStream(const char* vp, const char* ap, int bytes) {
     const std::string stsid =
         "<S-TSID><RS dIpAddr=\"239.255.5.1\" dPort=\"3000\">"
         "<LS tsi=\"10\"><SrcFlow rt=\"true\"><ContentInfo><MediaInfo repId=\"v1\" contentType=\"video\"/></ContentInfo></SrcFlow></LS>"
-        "<LS tsi=\"20\"><SrcFlow rt=\"true\"><ContentInfo><MediaInfo repId=\"a1\" contentType=\"audio\" lang=\"en\"/></ContentInfo></SrcFlow></LS></RS></S-TSID>";
+        "<LS tsi=\"20\"><SrcFlow rt=\"true\"><ContentInfo><MediaInfo repId=\"a1\" contentType=\"audio\" lang=\"en\"/></ContentInfo></SrcFlow></LS></RS>" + extraSessions + "</S-TSID>";
     std::vector<MimePart> parts(3);
     parts[0].headers["content-type"] = "application/route-usd+xml";
     parts[0].body = std::vector<uint8_t>({'<', 'B', 'u', 'n', 'd', 'l', 'e', 'D', 'e', 's', 'c', 'r', 'i', 'p', 't', 'i', 'o', 'n', '/', '>'});

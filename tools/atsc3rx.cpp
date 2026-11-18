@@ -3,7 +3,7 @@
 
 // atsc3rx: decodes an ATSC 3.0 IQ recording to a transport stream and prints what it found (services, statistics). For checking recordings
 // and the receiver without the GUI.
-//   atsc3rx recording.cs8 --rate 10e6 [--format cs8|cu8|cf32] [--out out.ts] [--service id]
+//   atsc3rx recording.cs8 --rate 10e6 [--format cs8|cu8|cf32] [--out out.ts] [--service id] [--all-plps]
 #include "dect2/atsc3/atsc3_sync.h"
 #include <chrono>
 #include <cstdio>
@@ -20,17 +20,19 @@ int main(int argc, char** argv) {
     std::string path, out, format = "cs8";
     double rate = 10e6;
     int service = -1;
+    bool allPlps = false;
     for (int i = 1; i < argc; i++) {
         std::string a = argv[i];
         auto val = [&]() { return i + 1 < argc ? std::string(argv[++i]) : std::string(); };
         if (a == "--rate") rate = atof(val().c_str()); else if (a == "--format") format = val(); else if (a == "--out") out = val();
-        else if (a == "--service") service = atoi(val().c_str()); else if (a[0] != '-') path = a;
+        else if (a == "--service") service = atoi(val().c_str()); else if (a == "--all-plps") allPlps = true; else if (a[0] != '-') path = a;
         else { printf("unknown option %s\n", a.c_str()); return 1; }
     }
-    if (path.empty()) { printf("usage: atsc3rx recording --rate 10e6 [--format cs8|cu8|cf32] [--out out.ts] [--service id]\n"); return 1; }
+    if (path.empty()) { printf("usage: atsc3rx recording --rate 10e6 [--format cs8|cu8|cf32] [--out out.ts] [--service id] [--all-plps]\n"); return 1; }
     std::ifstream f(path, std::ios::binary);
     if (!f) { printf("cannot open %s\n", path.c_str()); return 1; }
     Atsc3Receiver rx;
+    rx.setDecodeAllPlps(allPlps);
     if (service >= 0) rx.selectService(service);
     std::vector<uint8_t> ts;
     std::thread reader([&] { uint8_t buf[8192]; for (;;) { int k = rx.readTs(buf, sizeof buf); if (k <= 0) break; ts.insert(ts.end(), buf, buf + k); } });
@@ -70,13 +72,14 @@ int main(int argc, char** argv) {
     auto fi = rx.frameInfo();
     if (fi.valid) {
         printf("last frame: FFT %d, guard %d, %d symbols, %d preamble symbols\n", fi.fftSize, fi.guard, fi.symbols, fi.preambleSymbols);
-        for (auto& p : fi.plps) printf("  PLP %d: %d bits/cell, rate %d/15, %d-bit LDPC, blocks %d ok %d\n", p.id, p.bitsPerCell, p.rate15, p.nInner, p.blocks, p.blocksOk);
+        for (auto& p : fi.plps) printf("  PLP %d: %d bits/cell, rate %d/15, %d-bit LDPC, %s\n", p.id, p.bitsPerCell, p.rate15, p.nInner, p.leftOut ? "left out (not needed by the service)" : ("blocks " + std::to_string(p.blocks) + " ok " + std::to_string(p.blocksOk)).c_str());
     }
     printf("physical layer: %ld baseband packets (%ld bad), %ld frames failed\n", rs.bbPackets, rs.bbBad, rs.framesFailed);
     printf("link layer: %ld ALP packets (%ld IP, %ld signaling, %ld compressed IP, %ld TS), %ld UDP datagrams, %ld service list tables, %ld ROUTE objects\n",
            rs.alpPackets, rs.alpIp, rs.alpSignaling, rs.alpCompressedIp, rs.alpTs, rs.udp, rs.llsTables, rs.routeObjects);
     for (auto& s : rx.services())
         printf("service %d: %d.%d  %s  category %d  %s\n", s.serviceId, s.majorChannel, s.minorChannel, s.shortName.c_str(), s.category, s.slsProtocol == 1 ? "ROUTE" : s.slsProtocol == 2 ? "MMTP" : "unknown protocol");
+    printf("PLP selection: %ld PLP-frames left out, %ld switches to the service's PLPs, %ld back to every PLP\n", rs.plpsLeftOut, rs.plpSelections, rs.plpRelearns);
     printf("transport stream: %zu bytes\n", ts.size());
     if (!out.empty()) { std::ofstream o(out, std::ios::binary); o.write((const char*)ts.data(), (std::streamsize)ts.size()); printf("written to %s\n", out.c_str()); }
     return ts.empty() ? 2 : 0;
