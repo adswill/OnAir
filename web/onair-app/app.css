@@ -60,6 +60,7 @@ canvas.const,canvas.map,canvas.spark{width:100%;background:#000;border-radius:6p
 .modes button.cur{outline:2px solid var(--acc);outline-offset:-1px}.modes button.private{opacity:.5}
 .settings h3{margin:14px 0 6px;font-size:14px;color:var(--acc)}.settings .it{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:4px 14px;padding:8px 0;border-bottom:1px solid var(--line);align-items:center}
 .settings .it .h{grid-column:1/-1;font-size:12px;color:var(--mut)}.settings .it .r{font-size:11px;color:var(--warn)}
+.settings .it .notice{grid-column:1/-1;white-space:pre-wrap;font-size:13px;margin:4px 0}
 .settings .it input[type=text],.settings .it input[type=number],.settings .it select{width:100%}
 .login{max-width:380px;margin:0 auto;display:flex;flex-direction:column;gap:10px}.login input{width:100%}
 .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 14px;z-index:30;max-width:90vw;box-shadow:0 4px 18px rgba(0,0,0,.3)}

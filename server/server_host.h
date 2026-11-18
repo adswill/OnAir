@@ -9,6 +9,7 @@
 #include "dect2/engine/quality.h"
 #include "dect2/net/remote_api.h"
 #include "dect2/source/gain.h"
+#include "dect2/tetra/tetra_voice_codec.h"
 #include "server_config.h"
 #include <atomic>
 #include <functional>
@@ -85,8 +86,21 @@ public:
     std::string modeId() const;                                     // the chosen mode's id ("fm", "dmr", ...)
     void editConfig(const std::function<void(ConfigFile&)>& f);     // changes the settings file (under the lock); supervise() writes it
 
+    // Voice codec plug-ins (docs/CODECS.md). The server has no notice dialog: a codec's notice counts as accepted when the settings file has
+    // codec_notice_<id>=1 (the key the desktop app uses), set by hand, by --accept-codec-notice or by the owner in the browser app. Accepted
+    // plug-ins are registered at init(), looked for again every 10 s from supervise() (a file dropped in while running), and at once when
+    // force is set. TETRA and Yaesu System Fusion get their decoder from here; the AMBE / IMBE modes ask the codec registry themselves.
+    void codecTick(bool force);
+    // The owner accepts the notice for one patented codec id: stored in the settings file, the plug-in is looked for at once.
+    bool acceptCodecNotice(const std::string& id, std::string& err);
+    // For the browser app's settings: the notice text, the folders searched and each patented codec's state.
+    std::string codecsJson();
+
 private:
     ConfigFile& cfg_;
+    // TETRA and TETRA DMO voice: clear traffic frames to the user's codec plug-in, the speech to the browser. Declared before the engine,
+    // so that it outlives the receivers that hold a pointer to it.
+    dect2::tetra::TetraVoiceSink tetraVoice_;
     dect2::Engine e_;
     mutable std::mutex mu_;                 // the chosen settings and the engine calls
     std::vector<dect2::DeviceInfo> devices_;
@@ -127,6 +141,20 @@ private:
     float voiceLast_ = 0;
     int voiceRate_ = 0;
     void voiceIn(const float* x, size_t n, int rate);
+    void upsampleTo48k(const float* x, size_t n, int rate, std::vector<float>& out);   // voicePhase_ / voiceLast_ / voiceRate_
+    // TETRA speech comes a 2.3 s capture at a time, decoded faster than the air: it is held for the end of a capture that starts from silence
+    // (CaptureLeadIn, as in the app) and handed to the listeners at the pace of the air when they fetch their audio (pumpPaced).
+    std::mutex pMu_;
+    dect2::tetra::CaptureLeadIn tetraLead_{48000, 1, dect2::TetraReceiver::kCaptureSec};
+    std::vector<float> paced_;              // 48 kHz mono, not yet handed out
+    double pacedAt_ = 0;                    // the time up to which paced audio has been handed out
+    void tetraPcm(const int16_t* pcm, size_t n, int rate);
+    void tetraCaptureEnd();
+    void pumpPaced();
+    // codecTick
+    std::mutex codecMu_;
+    double codecAt_ = -1e9;
+    bool fusionCodec_ = false;              // the YSF plug-in was handed to the Fusion receiver (under codecMu_)
     void applyOptionsLocked();              // under mu_: the stored options of the chosen mode
 
     void snapLoop();

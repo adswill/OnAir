@@ -76,6 +76,19 @@ Plain `key=value` lines, `#` for comments. Default place: `~/.config/onair/serve
 | `audio_demod` | `auto`, `nfm`, `am`, `usb`, `lsb` for Listen (automatic picks by frequency; FM broadcast uses its own stereo audio) |
 | `autostart` | `1`: start the receiver when the server starts, and again 10 s after the radio comes back if it was unplugged. Start and Stop in the page set it |
 | `share_rtltcp`, `share_port` | also act as an rtl_tcp server (see above) |
+| `codec_notice_<id>` | `1`: you accepted the speech codec notice for the voice codec plug-in `<id>` (`tetra`, `ysf`, `ambe2`, `ambe`, `imbe`, `tetrapol`, `iridium`, `aeroambe`), see "Voice codecs" below. The same key the desktop app keeps |
+
+## Voice codecs
+
+OnAir includes no patented speech codec. Digital voice needs plug-ins that you build or get yourself and put in a codecs folder of the user the server runs as: `~/.local/share/onair/codecs/` (for the packaged service `/var/lib/onair/.local/share/onair/codecs/`), the folder in `ONAIR_CODEC_DIR`, or `codecs` next to the program. See [CODECS.md](CODECS.md); `tools/codec-builder/build-codecs.sh --out <folder>` builds `tetra`, `ambe2`, `ambe`, `imbe` and `ysf`.
+
+The desktop app loads a plug-in only after you accepted its legal notice in a dialog. The server has no dialog; accept the notice in one of three ways:
+
+* **In the browser app:** Settings (owner) > **Voice codecs** lists every codec plug-in with its state. **Read the notice** and **I accept** store the key and load the plug-in at once.
+* **On the command line:** `onair-server --accept-codec-notice tetra,ysf` (or `all`) prints the notice, stores the keys in the settings file and starts as usual.
+* **In the settings file:** `codec_notice_tetra=1`, one line per codec, then restart.
+
+The server looks for accepted plug-ins at start and again every 10 s, so a file copied in while it runs is found without a restart, and logs one line per codec when its state changes (`voice codec tetra: Codec loaded: tetra.`). The decoded speech of TETRA, TETRA DMO, Yaesu System Fusion, DMR, P25, NXDN, dPMR, D-STAR and M17 goes to the browser's Listen button. DMR, D-STAR, P25 and NXDN also play through mbelib (`libmbe-neo.so*` or `libmbe.so*` in the codecs folder), which needs no notice. `get_codec_status` (MCP) reports per codec whether it is installed and loaded, and why not (for example `notice_required`). Encrypted calls are never decoded.
 
 ## Running it all the time
 
@@ -100,5 +113,5 @@ The desktop app has no "remote server" screen of its own yet.
 
 * One receiver, one radio at a time (the server runs the main receiver only: no second mode, no multi-radio). OnAir Web listeners tune inside that receiver's capture.
 * The browser page covers tuning, spectrum, audio and the common telemetry. The big per-mode tables and screens (service lists, maps, decoded text) are in the desktop app; the telemetry JSON carries the main figures of each mode.
-* Voice modes that need a user-installed codec (mbelib, AMBE) are not played by the server; encrypted traffic is never decoded.
+* Voice modes play only with a codec you installed yourself (see Voice codecs); encrypted traffic is never decoded. TETRAPOL, Iridium and Inmarsat Aero voice decode with their plug-ins but are not sent to the browser yet.
 * Sound card audio of the server machine is silent on purpose: the sound goes to the browser.

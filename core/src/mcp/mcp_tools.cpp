@@ -8,6 +8,7 @@
 #include "dect2/fm/rds_live.h"
 #include "dect2/channels/freq_db.h"
 #include "dect2/codec/codec_paths.h"
+#include "dect2/codec/codec_registry.h"
 #include "dect2/codec/speech_codec.h"
 #include "dect2/engine/engine.h"
 #include "dect2/engine/mode_tuning.h"
@@ -30,6 +31,35 @@ double nowS() { return std::chrono::duration<double>(Clock::now().time_since_epo
 void sleepMs(int ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
 
 std::string lower(std::string s) { for (char& c : s) c = (char)tolower((unsigned char)c); return s; }
+
+// Why an installed codec plug-in is not in use, as a status word and a sentence without paths (the AI is not shown the user's folders).
+void codecNotLoadedReason(const std::string& id, std::string& status, std::string& reason) {
+    codec::CodecLookup r;
+    if (!codec::lastPluginLookup(id, r)) {
+        status = "not_checked";
+        reason = "not loaded yet: no voice mode has asked for this codec since OnAir started";
+        return;
+    }
+    switch (r.status) {
+    case codec::CodecStatus::NoticeRequired:
+        status = "notice_required";
+        reason = "the user has not accepted the speech codec notice for this codec yet. Desktop app: the notice dialog of the voice mode. "
+                 "onair-server: Settings > Voice codecs in the browser app, codec_notice_" + id + "=1 in server.conf, or --accept-codec-notice " + id + ". The AI cannot accept it.";
+        return;
+    case codec::CodecStatus::LoadFailed:
+        status = "load_failed";
+        reason = "the plug-in file is there but would not load (built for another system or processor, or functions missing); OnAir's log says why";
+        return;
+    case codec::CodecStatus::Ready:
+        status = "found";
+        reason = "the plug-in loads; it is put in use when its voice mode starts";
+        return;
+    case codec::CodecStatus::NotInstalled:
+        break;
+    }
+    status = "not_checked";
+    reason = "the plug-in file appeared after the last check; it is looked for again when its voice mode starts";
+}
 
 // ---------------------------------------------------------------- schema helpers
 Json prop(const char* type, const char* desc) {
@@ -1072,7 +1102,8 @@ std::vector<Tool> makeTools() {
     {
         Tool t;
         t.name = "get_codec_status"; t.title = "Voice codec status";
-        t.description = "Which user-installed voice codecs are present (OnAir ships none; digital voice modes need the user to install a codec plug-in, see docs/CODECS.md). Shows installed / not installed per codec and which modes need it. Does not load or run anything.";
+        t.description = "Which user-installed voice codecs are present (OnAir ships none; digital voice modes need the user to install a codec plug-in, see docs/CODECS.md). Shows per codec whether "
+                        "its plug-in file is installed, whether it is loaded (in use) and, when installed but not loaded, why (status, reason), and which modes need it. Does not load or run anything.";
         t.schema = Schema().done();
         t.readOnly = true; t.idempotent = true;
         t.fn = [](ToolCtx&, const Json&) {
@@ -1093,6 +1124,14 @@ std::vector<Tool> makeTools() {
                 j.setStr("modes", cd.modes);
                 j.setBool("installed", !where.empty());
                 if (!where.empty()) j.setStr("found_in", where);
+                const bool loaded = codec::pluginLoaded(cd.id);
+                j.setBool("loaded", loaded);
+                if (!where.empty() && !loaded) {
+                    std::string status, reason;
+                    codecNotLoadedReason(cd.id, status, reason);
+                    j.setStr("status", status);
+                    j.setStr("reason", reason);
+                }
                 arr.push(j);
             }
             Json o = Json::object();

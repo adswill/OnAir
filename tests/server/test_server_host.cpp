@@ -6,10 +6,13 @@
 #include "../../core/src/net/tcp_client.h"
 #include "../../server/server_config.h"
 #include "../../server/server_host.h"
+#include "dect2/codec/codec_registry.h"
+#include "dect2/codec/speech_codec.h"
 #include "dect2/net/remote_api.h"
 #include <chrono>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
 #include <thread>
 using namespace dect2;
 using namespace onair_server;
@@ -250,10 +253,55 @@ static void testHackrfAmp() {
     CHECK(g.amp && g.lna + g.vga + 14 == 110, "110 dB with the amp: amp %d lna %d vga %d", g.amp, g.lna, g.vga);
 }
 
-int main() {
+// ---------------------------------------------------------------- voice codec plug-ins (no notice dialog on the server)
+static void setEnv(const char* k, const std::string& v) {
+#ifdef _WIN32
+    _putenv_s(k, v.c_str());
+#else
+    setenv(k, v.c_str(), 1);
+#endif
+}
+
+// fakeDir: the folder of the fake plug-ins built for the codec guard test (CMake passes it); without it only the refusals are checked
+static void testCodecs(const char* fakeDir) {
+    namespace fs = std::filesystem;
+    const fs::path dir = fs::temp_directory_path() / ("onair_srv_codecs_" + std::to_string((long long)std::chrono::steady_clock::now().time_since_epoch().count()));
+    fs::create_directories(dir / "codecs");
+    setEnv("DECT2_DATA_DIR", dir.string());   // the user's own codecs folder is not looked at
+    setEnv("ONAIR_CODEC_DIR", (dir / "codecs").string());
+    std::error_code ec;
+    const fs::path tetraFile = dir / "codecs" / dect2::codec::speechCodecFileName("tetra");
+    bool real = false;
+    if (fakeDir) real = fs::copy_file(fs::path(fakeDir) / dect2::codec::speechCodecFileName("fakeok"), tetraFile, ec);
+    if (!real) { std::ofstream(tetraFile, std::ios::binary) << "not a library"; }
+
+    ConfigFile cfg;
+    cfg.set("device", "test");
+    ServerHost host(cfg);
+    host.init();   // looks for the plug-ins once
+    std::string j = host.codecsJson();
+    CHECK(j.find("\"notice\":\"") != std::string::npos && j.find("does not include") != std::string::npos, "the notice text is given to the browser app");
+    CHECK(j.find("\"id\":\"tetra\"") != std::string::npos && j.find("\"id\":\"ysf\"") != std::string::npos, "every patented codec is listed");
+    CHECK(!dect2::codec::pluginLoaded("tetra") && j.find("\"accepted\":false,\"loaded\":false,\"status\":\"notice\"") != std::string::npos,
+          "an installed plug-in is not loaded before its notice is accepted: %s", j.c_str());
+    std::string err;
+    CHECK(!host.acceptCodecNotice("nonsense", err) && !err.empty(), "an unknown codec id is refused");
+    CHECK(!host.acceptCodecNotice("", err), "an empty codec id is refused");
+    CHECK(host.acceptCodecNotice("tetra", err), "the notice is accepted: %s", err.c_str());
+    CHECK(cfg.flag("codec_notice_tetra", false) && !cfg.flag("codec_notice_ysf", false), "only that codec's key is stored, under the app's name");
+    j = host.codecsJson();
+    if (real) CHECK(dect2::codec::pluginLoaded("tetra") && j.find("\"accepted\":true,\"loaded\":true,\"status\":\"ready\"") != std::string::npos, "the plug-in is in use at once: %s", j.c_str());
+    else CHECK(!dect2::codec::pluginLoaded("tetra") && j.find("\"status\":\"failed\"") != std::string::npos, "a file that is no library is reported as failed: %s", j.c_str());
+    host.shutdown();
+    dect2::codec::setPluginFactory("tetra", dect2::codec::DecoderFactory());
+    fs::remove_all(dir, ec);
+}
+
+int main(int argc, char** argv) {
     testConfig();
     testHackrfAmp();
     testHost();
     testAutostartAndSupervision();
+    testCodecs(argc > 1 ? argv[1] : nullptr);   // last: it changes the codec folders of this process
     return testSummary("server_host");
 }

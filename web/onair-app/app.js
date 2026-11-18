@@ -381,7 +381,44 @@
       try { const r = await api("settings", body); closeModal(); toast("Saved: " + r.changed.join(", ")); await loadSession(); } catch (e) { err.textContent = e.message; }
     };
     box.append(save, err);
+    box.appendChild(codecSection());
     modal("Settings", box);
+  }
+  // Voice codec plug-ins: OnAir includes none. The owner installs them on the server and accepts the notice here, as in the desktop app's dialog.
+  const CODEC_STATE = { ready: "loaded", notice: "installed: accept the notice to use it", failed: "installed, but it would not load", missing: "not installed" };
+  function codecSection() {
+    const sec = el("div", "codecs");
+    sec.appendChild(el("h3", "", "Voice codecs"));
+    const list = el("div");
+    sec.appendChild(list);
+    const fill = (c) => {
+      list.textContent = "";
+      list.appendChild(el("p", "muted", "Digital voice needs a codec plug-in that you install yourself in a codecs folder on the server: " + c.folders.join(" or ") +
+        ". OnAir includes none and downloads none (docs/CODECS.md). DMR, D-STAR, P25 and NXDN also play through mbelib in that folder."));
+      for (const k of c.codecs) list.appendChild(codecRow(k, c.notice, fill));
+    };
+    api("codecs").then(fill).catch(e => { list.appendChild(el("div", "err", e.message)); });
+    return sec;
+  }
+  function codecRow(k, notice, fill) {
+    const row = el("div", "it");
+    row.appendChild(el("div", "", k.name + " (" + k.modes + ")"));
+    row.appendChild(el("div", k.status === "ready" ? "" : "muted", CODEC_STATE[k.status] || k.status));
+    if (k.status === "missing") row.appendChild(el("div", "h", "File: " + k.file));
+    else if (k.status === "failed") row.appendChild(el("div", "h", k.message));
+    if (k.status !== "notice") return row;
+    const show = el("button", "", "Read the notice");
+    show.onclick = () => {
+      show.remove();
+      const err = el("div", "err"), ok = el("button", "p", "I accept");
+      ok.onclick = async () => {
+        ok.disabled = true;
+        try { fill(await api("codecs/accept", { id: k.id })); toast("Notice accepted: " + k.name); } catch (e) { err.textContent = e.message; ok.disabled = false; }
+      };
+      row.append(el("p", "notice", notice), ok, err);
+    };
+    row.appendChild(show);
+    return row;
   }
   function showChangePassword() {
     const box = el("div", "login");

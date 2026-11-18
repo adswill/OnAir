@@ -9,6 +9,9 @@
 #include "dect2/engine/widespan.h"
 #include "dect2/audio/audio_monitor.h"
 #include "dect2/audio/hf_demod.h"
+#include "dect2/codec/codec_paths.h"
+#include "dect2/codec/codec_registry.h"
+#include "dect2/tetra/tetra_traffic.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/engine/rate_choice.h"
 #include "dect2/mesh/mesh_rx.h"
@@ -60,7 +63,7 @@ ServerHost::ServerHost(ConfigFile& cfg) : cfg_(cfg) {
     e_.specx().setSilent(true); e_.uplink().setSilent(true); e_.specan().setSilent(true); e_.astro().setSilent(true);
     e_.iono().setSilent(true); e_.qo100().setSilent(true); e_.general().setSilent(true); e_.hfbeacon().setSilent(true);
     e_.same().setSilent(true); e_.dstar().setSilent(true); e_.nxdn().setSilent(true); e_.dpmr().setSilent(true);
-    e_.p25().setSilent(true); e_.mac().setSilent(true); e_.dmr().setSilent(true);
+    e_.p25().setSilent(true); e_.mac().setSilent(true); e_.dmr().setSilent(true); e_.fusion().setSilent(true);
     // Digital voice: the receivers' decoded speech (the same sound the desktop plays) goes to the browser while such a mode is chosen.
     // Only clear calls reach these taps: encrypted voice is decoded only with keys the user imported, as in the desktop app.
     auto v8 = [this](const float* x, size_t n) { if (voiceTap_.load(std::memory_order_relaxed)) voiceIn(x, n, 8000); };
@@ -68,6 +71,12 @@ ServerHost::ServerHost(ConfigFile& cfg) : cfg_(cfg) {
     e_.p25().setAudioTap(v8); e_.p25p2().setAudioTap(v8); e_.nxdn().setAudioTap(v8); e_.dpmr().setAudioTap(v8);
     e_.dstar().setAudioTap(v8); e_.m17().setAudioTap(v8);
     e_.fusion().setAudioTap([this](const float* x, size_t n, int rate) { if (voiceTap_.load(std::memory_order_relaxed)) voiceIn(x, n, rate); });
+    // TETRA (and TETRA DMO, which shares the sink as in the app): processTrafficBurst() refuses encrypted and unknown calls before the sink sees them
+    tetraVoice_.setFrameDecoder(tetra::makeTrafficFrameDecoder());   // channel decoding (EN 300 395-2 clause 5.5); the codec is the user's plug-in
+    tetraVoice_.setPcmOut([this](const int16_t* pcm, size_t n, int rate) { if (voiceTap_.load(std::memory_order_relaxed)) tetraPcm(pcm, n, rate); });
+    tetraVoice_.setCaptureEnd([this] { tetraCaptureEnd(); });
+    e_.tetra().setVoiceSink(&tetraVoice_);
+    e_.tetradmo().setVoiceSink(&tetraVoice_);
     e_.fm().setAudioTap([this](const float* l, const float* r, size_t n) { if (fmTap_.load(std::memory_order_relaxed)) audioIn(l, r, n, false); });
     e_.monitor().setSink([this](const float* s, int frames) { audioIn(s, nullptr, (size_t)frames, true); });
     buildModes();
@@ -77,6 +86,8 @@ ServerHost::~ServerHost() {
     quit_ = true;
     if (snapTh_.joinable()) snapTh_.join();
     e_.stop();
+    e_.tetra().setVoiceSink(nullptr);
+    e_.tetradmo().setVoiceSink(nullptr);
 }
 
 void ServerHost::buildModes() {
@@ -144,20 +155,101 @@ void ServerHost::pickDevice(const std::string& want) {
 }
 
 void ServerHost::init() {
-    std::lock_guard<std::mutex> lk(mu_);
-    refreshDevices(true);
-    pickDevice(cfg_.get("device"));
-    const ModeEntry* m = findMode(cfg_.get("mode", "fm"));
-    if (!m) m = findMode("fm");
-    modeIdx_ = (int)(m - modes_.data());
-    freqHz_ = cfg_.num("freq_mhz", m->defMhz) * 1e6;
-    rateHz_ = cfg_.num("rate_msps", 0) * 1e6;
-    captureBwMhz_ = cfg_.num("capture_bw_mhz", 0);
-    gainDb_ = cfg_.num("gain_db", 30);
-    const int dm = demodFromName(cfg_.get("audio_demod", "auto"));
-    demod_ = dm < 0 ? 4 : dm;
-    wantRun_ = cfg_.flag("autostart", false);
-    snapTh_ = dect2::namedThread("onair-snap", [this] { snapLoop(); });
+    {
+        std::lock_guard<std::mutex> lk(mu_);
+        refreshDevices(true);
+        pickDevice(cfg_.get("device"));
+        const ModeEntry* m = findMode(cfg_.get("mode", "fm"));
+        if (!m) m = findMode("fm");
+        modeIdx_ = (int)(m - modes_.data());
+        freqHz_ = cfg_.num("freq_mhz", m->defMhz) * 1e6;
+        rateHz_ = cfg_.num("rate_msps", 0) * 1e6;
+        captureBwMhz_ = cfg_.num("capture_bw_mhz", 0);
+        gainDb_ = cfg_.num("gain_db", 30);
+        const int dm = demodFromName(cfg_.get("audio_demod", "auto"));
+        demod_ = dm < 0 ? 4 : dm;
+        wantRun_ = cfg_.flag("autostart", false);
+        snapTh_ = dect2::namedThread("onair-snap", [this] { snapLoop(); });
+    }
+    codecTick(true);   // before the first start: the voice modes find their plug-ins at once
+}
+
+// ---------------------------------------------------------------- voice codec plug-ins
+namespace {
+std::string noticeKey(const std::string& id) { return "codec_notice_" + id; }
+bool patentedCodec(const std::string& id) {
+    const codec::CodecInfo* c = codec::findCodec(id);
+    return c && c->kind == codec::CodecKind::Patented;
+}
+const char* codecStatusWord(codec::CodecStatus st) {
+    switch (st) {
+    case codec::CodecStatus::Ready: return "ready";
+    case codec::CodecStatus::NoticeRequired: return "notice";
+    case codec::CodecStatus::LoadFailed: return "failed";
+    case codec::CodecStatus::NotInstalled: break;
+    }
+    return "missing";
+}
+std::vector<std::string> codecFolders() {
+    std::vector<std::string> v;
+    for (const codec::CodecDir& d : codec::systemCodecDirs()) v.push_back(d.path);
+    return v;
+}
+} // namespace
+
+void ServerHost::codecTick(bool force) {
+    std::lock_guard<std::mutex> ck(codecMu_);
+    const double now = nowSec();
+    if (!force && now - codecAt_ < 10) return;
+    codecAt_ = now;
+    std::vector<std::string> accepted;
+    {
+        std::lock_guard<std::mutex> lk(mu_);
+        for (const codec::CodecInfo& c : codec::codecTable())
+            if (c.kind == codec::CodecKind::Patented && *c.id && cfg_.flag(noticeKey(c.id), false)) accepted.emplace_back(c.id);
+    }
+    const auto isAccepted = [&accepted](const std::string& id) { return std::find(accepted.begin(), accepted.end(), id) != accepted.end(); };
+    const auto log = [](const std::string& id, const codec::CodecLookup& r) {
+        if (r.status != codec::CodecStatus::NotInstalled) fprintf(stderr, "onair-server: voice codec %s: %s\n", id.c_str(), r.message.c_str());
+    };
+    for (const std::string& id : codec::registerAcceptedPlugins(codecFolders(), isAccepted, log))
+        printf("onair-server: voice codec plug-in %s registered\n", id.c_str());
+    // the two modes that take their decoder from the host rather than from the registry
+    if (!tetraVoice_.hasCodec() && codec::pluginLoaded("tetra")) tetraVoice_.setCodec(codec::pluginVocoder("tetra"));
+    if (!fusionCodec_ && codec::pluginLoaded("ysf")) {
+        if (auto c = codec::pluginVocoder("ysf")) { e_.fusion().setSpeechCodec(std::move(c)); fusionCodec_ = true; }
+    }
+}
+
+bool ServerHost::acceptCodecNotice(const std::string& id, std::string& err) {
+    if (!patentedCodec(id)) { err = "no such codec: " + id; return false; }
+    editConfig([&id](ConfigFile& c) { c.set(noticeKey(id), "1"); });
+    codecTick(true);
+    return true;
+}
+
+std::string ServerHost::codecsJson() {
+    std::string o = "{\"notice\":\"" + jsonEscape(codec::speechCodecNotice()) + "\",\"folders\":[";
+    const std::vector<std::string> folders = codecFolders();
+    for (size_t i = 0; i < folders.size(); i++) o += std::string(i ? "," : "") + "\"" + jsonEscape(folders[i]) + "\"";
+    o += "],\"codecs\":[";
+    bool first = true;
+    for (const codec::CodecInfo& c : codec::codecTable()) {
+        if (c.kind != codec::CodecKind::Patented || !*c.id) continue;
+        bool accepted;
+        { std::lock_guard<std::mutex> lk(mu_); accepted = cfg_.flag(noticeKey(c.id), false); }
+        codec::CodecLookup r;
+        const bool looked = codec::lastPluginLookup(c.id, r);
+        const bool loaded = codec::pluginLoaded(c.id);
+        std::string status = "missing";
+        if (loaded) status = "ready";
+        else if (looked) status = codecStatusWord(r.status);
+        o += std::string(first ? "" : ",") + "{\"id\":\"" + jsonEscape(c.id) + "\",\"name\":\"" + jsonEscape(c.name) + "\",\"modes\":\"" + jsonEscape(c.modes) +
+             "\",\"file\":\"" + jsonEscape(codec::speechCodecFileName(c.id)) + "\",\"accepted\":" + (accepted ? "true" : "false") + ",\"loaded\":" + (loaded ? "true" : "false") +
+             ",\"status\":\"" + status + "\",\"message\":\"" + jsonEscape(looked ? r.message : std::string()) + "\"}";
+        first = false;
+    }
+    return o + "]}";
 }
 
 // ---------------------------------------------------------------- tuning and start
@@ -223,7 +315,13 @@ bool ServerHost::startLocked(std::string& err) {
     {
         const ModeTuning* mt = modeTuning(m.family);
         const std::string id = mt && mt->id ? mt->id : "";
-        voiceTap_ = id == "dmr" || id == "p25" || id == "p25p2" || id == "nxdn" || id == "dpmr" || id == "dstar" || id == "m17" || id == "fusion";
+        voiceTap_ = id == "dmr" || id == "p25" || id == "p25p2" || id == "nxdn" || id == "dpmr" || id == "dstar" || id == "m17" || id == "fusion" ||
+                    id == "tetra" || id == "tetradmo";
+    }
+    {   // TETRA speech still waiting from the last run must not play over the new one
+        std::lock_guard<std::mutex> pl(pMu_);
+        paced_.clear();
+        tetraLead_ = tetra::CaptureLeadIn(48000, 1, TetraReceiver::kCaptureSec);
     }
     applyOptionsLocked();
     quality_.reset();
@@ -313,6 +411,7 @@ void ServerHost::supervise(const std::string& path) {
             else err_.clear();
         }
     }
+    codecTick(false);
     if (dirty_.exchange(false)) {
         std::string err;
         std::lock_guard<std::mutex> lk(mu_);
@@ -623,11 +722,11 @@ std::string ServerHost::audioSource() const {
 
 // ---------------------------------------------------------------- audio for the browser
 // Speech at its codec's rate (8 kHz for AMBE, IMBE, Codec2) up to the 48 kHz audioIn takes, by linear interpolation
-void ServerHost::voiceIn(const float* x, size_t n, int rate) {
+void ServerHost::upsampleTo48k(const float* x, size_t n, int rate, std::vector<float>& out) {
+    out.clear();
     if (!x || !n || rate <= 0 || rate > 48000) return;
     if (rate != voiceRate_) { voiceRate_ = rate; voicePhase_ = 0; voiceLast_ = 0; }
     const double step = (double)rate / 48000.0;
-    std::vector<float> out;
     out.reserve((size_t)((double)n / step) + 2);
     for (size_t i = 0; i < n; i++) {
         const float a = voiceLast_, b = x[i];
@@ -635,7 +734,51 @@ void ServerHost::voiceIn(const float* x, size_t n, int rate) {
         voicePhase_ -= 1.0;
         voiceLast_ = b;
     }
-    audioIn(out.data(), out.data(), out.size(), false);
+}
+
+void ServerHost::voiceIn(const float* x, size_t n, int rate) {
+    std::vector<float> out;
+    upsampleTo48k(x, n, rate, out);
+    if (!out.empty()) audioIn(out.data(), out.data(), out.size(), false);
+}
+
+// The receiver's thread, once per decoded TETRA frame (a capture's frames come in one run)
+void ServerHost::tetraPcm(const int16_t* pcm, size_t n, int rate) {
+    std::vector<float> x(n), up, out;
+    for (size_t i = 0; i < n; i++) x[i] = pcm[i] / 32768.f;
+    upsampleTo48k(x.data(), n, rate, up);
+    if (up.empty()) return;
+    std::lock_guard<std::mutex> lk(pMu_);
+    const bool idle = paced_.empty();
+    if (idle && !tetraLead_.holding()) pacedAt_ = nowSec();
+    tetraLead_.push(up.data(), up.size(), idle, out);
+    paced_.insert(paced_.end(), out.begin(), out.end());
+    const size_t cap = 48000 * 10;   // nobody fetches: keep the last 10 s, not the whole call
+    if (paced_.size() > cap) paced_.erase(paced_.begin(), paced_.begin() + (std::ptrdiff_t)(paced_.size() - cap));
+}
+
+void ServerHost::tetraCaptureEnd() {
+    std::vector<float> out;
+    std::lock_guard<std::mutex> lk(pMu_);
+    if (paced_.empty()) pacedAt_ = nowSec();
+    tetraLead_.captureEnd(out);
+    paced_.insert(paced_.end(), out.begin(), out.end());
+}
+
+// From audioRead (each listener every 40 ms): the paced audio that is due by now goes to every listener
+void ServerHost::pumpPaced() {
+    std::vector<float> due;
+    {
+        std::lock_guard<std::mutex> lk(pMu_);
+        const double now = nowSec();
+        if (paced_.empty()) { pacedAt_ = now; return; }
+        const size_t n = std::min(paced_.size(), (size_t)std::max(0.0, (now - pacedAt_) * 48000.0));
+        if (n == 0) return;
+        due.assign(paced_.begin(), paced_.begin() + (std::ptrdiff_t)n);
+        paced_.erase(paced_.begin(), paced_.begin() + (std::ptrdiff_t)n);
+        pacedAt_ += (double)n / 48000.0;
+    }
+    audioIn(due.data(), due.data(), due.size(), false);
 }
 
 void ServerHost::audioIn(const float* a, const float* b, size_t n, bool interleaved) {
@@ -676,6 +819,7 @@ int ServerHost::audioOpen(int rateHz) {
 }
 
 bool ServerHost::audioRead(int id, std::string& pcm) {
+    pumpPaced();
     std::lock_guard<std::mutex> lk(aMu_);
     auto it = listeners_.find(id);
     if (it == listeners_.end()) return false;
