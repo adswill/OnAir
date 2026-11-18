@@ -119,9 +119,13 @@ std::vector<uint8_t> buildMediaSegment(const MpuFragment& f, uint32_t fragmentNu
 int sampleDisposable(const uint8_t* data, size_t size, const MpuInit& init);
 // Which samples of `f` are played when only those marked in `whole` arrived whole, in decode order: a missing sample is left out; after a
 // missing sample that others may depend on (`disposable` not 1), nothing is played up to the next sync sample, so the decoder is never handed
-// a picture whose reference is gone. A track whose table marks no sample as non-sync is taken as all sync for sound, and as sync at its first
-// sample only for video.
-std::vector<char> playableSamples(const MpuFragment& f, const std::string& handler, const std::vector<char>& whole, const std::vector<char>& disposable);
+// a picture whose reference is gone. With composition offsets and `gapAfter` (a gap in time follows the fragment), when the fragment ends in
+// samples left out, the pictures kept are those presented before every picture of that run: the last ones in decode order that would be
+// presented after one left out are left out as well, from the last one backwards so that none kept loses its reference (a sync sample too,
+// as with the leading pictures of an open GOP). A track whose table marks no sample as non-sync is taken as all sync for sound, and as sync
+// at its first sample only for video.
+std::vector<char> playableSamples(const MpuFragment& f, const std::string& handler, const std::vector<char>& whole, const std::vector<char>& disposable,
+                                  bool gapAfter);
 // `f` cut down to the samples marked in `keep`, the time of each sample left out given to the sample played before it, so every sample left
 // keeps its decode time; `lead` is the time of the samples before the first one kept (to add to the decode time of the fragment). The trun
 // is written with explicit durations, sizes and flags; an sdtp keeps the entries of the samples kept, sample groups and subsample

@@ -567,7 +567,8 @@ int sampleDisposable(const uint8_t* d, size_t n, const MpuInit& init) {
     return -1;
 }
 
-std::vector<char> playableSamples(const MpuFragment& f, const std::string& handler, const std::vector<char>& whole, const std::vector<char>& disposable) {
+std::vector<char> playableSamples(const MpuFragment& f, const std::string& handler, const std::vector<char>& whole, const std::vector<char>& disposable,
+                                  bool gapAfter) {
     const size_t n = f.sizes.size();
     std::vector<char> keep(n, 0);
     bool anyNonSync = false;
@@ -582,6 +583,28 @@ std::vector<char> playableSamples(const MpuFragment& f, const std::string& handl
         }
         if (sync) ok = true;
         keep[i] = ok;
+    }
+    // The fragment ends in samples left out and a gap in time follows it: pictures reordered by composition offsets that are kept before
+    // that run may be presented after pictures of it, which are gone, so the picture shown last runs ahead of the decode time the fragment
+    // ends with. A player that closes a gap in time (ffmpeg does over 10 s of a transport stream) then puts the next picture it gets before
+    // pictures it already showed. So the last ones kept are left out too, from the last one backwards (so no picture kept loses its
+    // reference; a sync sample too, when it is presented after one left out, as with the leading pictures of an open GOP), until every
+    // picture kept is presented before every picture left out at the end. When the next fragment follows on time nothing more is left out:
+    // the run is then a still picture between two times that both stand.
+    size_t s = n;   // where the run of samples left out at the end starts
+    while (s > 0 && !keep[s - 1]) s--;
+    if (!gapAfter || s == n || s == 0 || !(f.trunFlags & 0x800) || f.durations.size() < n || f.compositionOffsets.size() < n) return keep;
+    std::vector<int64_t> pt(n);
+    int64_t t = 0;
+    for (size_t i = 0; i < n; i++) { pt[i] = t + f.compositionOffsets[i]; t += f.durations[i]; }
+    int64_t first = INT64_MAX;   // the earliest presentation time left out at the end
+    for (size_t j = s; j < n; j++) first = std::min(first, pt[j]);
+    std::vector<int64_t> last(s);   // last[k]: the latest presentation time kept in samples 0..k
+    for (size_t k = 0; k < s; k++) last[k] = std::max(k ? last[k - 1] : INT64_MIN, keep[k] ? pt[k] : INT64_MIN);
+    for (size_t k = s; k-- > 0;) {
+        if (keep[k] && last[k] < first) break;
+        keep[k] = 0;
+        first = std::min(first, pt[k]);   // and a sample left out further back is now at the end as well
     }
     return keep;
 }
@@ -1030,11 +1053,34 @@ struct MmtpService::Impl {
         return r;
     }
 
+    // Whether what comes right after movie fragment `gi` of MPU `seq` is in already, so that no gap in time follows it: the next movie
+    // fragment of the MPU with its moof, or, when this one ends the MPU (it reaches the usual MPU duration, or with none known yet it is the
+    // last fragment here), the next MPU having started or holding a moof. Not known means a gap.
+    bool followsOnTime(Lane& l, uint32_t seq, OpenMpu& o, std::map<uint32_t, Frag>::iterator gi, const MpuFragment& f) {
+        auto nx = std::next(gi);
+        if (nx != o.frags.end()) return nx->first == gi->first + 1 && !nx->second.moof.empty();
+        uint64_t dur = 0;
+        for (uint32_t d : f.durations) dur += d;
+        const uint32_t from = o.started ? o.fragDone + 1 : (gi->first > 0 ? 1 : 0);
+        const uint64_t reach = (o.started ? o.end : 0) + (uint64_t)(std::min<uint32_t>(gi->first - std::min(gi->first, from), kMaxFragsPerMpu) + 1) * dur;
+        if (!l.durs.empty()) {
+            const uint64_t m = median(l.durs);
+            if (reach < m - m / 4) return false;   // movie fragments after this one were lost
+        }
+        auto it = l.open.find(seq + 1);
+        if (it == l.open.end()) return false;
+        if (it->second.started) return true;
+        for (auto& g : it->second.frags)
+            if (!g.second.moof.empty()) return true;
+        return false;
+    }
+
     // A movie fragment that cannot be whole any more goes out with the samples of it that can be played (playableSamples): the samples that
-    // arrived whole, less those whose reference picture is gone. Its time stays the time sent, so the lost samples become a still picture or
-    // a short silence, not a jump. A movie fragment whose moof was lost is rebuilt from the asset's last one when that is safe to copy: every
-    // sample a sync sample, no composition offsets (sound), the same number of samples or fewer here, each sample's size known from its last
-    // MFU fragment. Otherwise, or when no sample can be played, it is lost as before.
+    // arrived whole, less those whose reference picture is gone or, when a gap in time follows (followsOnTime), that would be presented
+    // after a picture cut at its end. Its time stays the time sent, so the lost samples become a still picture or a short silence, not a
+    // jump. A movie fragment whose moof was lost is rebuilt from the asset's last one when that is safe to copy: every sample a sync
+    // sample, no composition offsets (sound), the same number of samples or fewer here, each sample's size known from its last MFU fragment.
+    // Otherwise, or when no sample can be played, it is lost as before.
     bool repairFrag(Lane& l, uint32_t seq, OpenMpu& o, std::map<uint32_t, Frag>::iterator gi) {
         Frag& g = gi->second;
         if (!l.haveInit || g.mfu.empty()) return false;
@@ -1084,7 +1130,7 @@ struct MmtpService::Impl {
         // the first MPU of the asset is only repaired from its start: when the receiver came in part of the way through it, what it has is the
         // end of an MPU, not an MPU with a hole
         if (seq == l.firstSeq && (rebuilt || !whole[0])) return false;
-        const std::vector<char> keep = playableSamples(f, l.init.handler, whole, disposable);
+        const std::vector<char> keep = playableSamples(f, l.init.handler, whole, disposable, !followsOnTime(l, seq, o, gi, f));
         MpuFragment out;
         uint64_t lead = 0;
         if (!keepSamples(f, keep, out, lead)) return false;
@@ -1100,7 +1146,7 @@ struct MmtpService::Impl {
         st.samplesLost += lost;
         st.samplesCut += cut;
         if (rebuilt) st.moofsRebuilt++;
-        DIAG_DEBUG_EVERY(915773, 10.0, "MPU %u of MMTP packet id %u is incomplete: %u of its %u samples go out, %ld were lost and %ld more are left out until the next sync sample.",
+        DIAG_DEBUG_EVERY(915773, 10.0, "MPU %u of MMTP packet id %u is incomplete: %u of its %u samples go out, %ld were lost and %ld more are left out (up to the next sync sample, or presented after one lost).",
                          seq, (unsigned)l.pid, (unsigned)out.sizes.size(), count, lost, cut);
         send(l, seq, o, gi->first, f, out, lead, media);
         o.haveNextSample = true;

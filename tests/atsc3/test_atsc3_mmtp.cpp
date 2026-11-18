@@ -377,6 +377,20 @@ int main(int argc, char** argv) {
     std::vector<Out> ref = run(sv.out);
     MpuInit vin;
     readMpuMetadata(vinit.data(), vinit.size(), vin);
+    // how many pictures of a video MPU are played when everything from its sample `cut` on (in decode order) is gone: those before it, less
+    // the last ones that would be presented after a picture that is gone
+    auto playedBefore = [&](const Mpu& m, size_t cut) {
+        MpuFragment f;
+        if (!readMpuFragment(m.moof.data(), m.moof.size(), vin, f)) return (size_t)0;
+        std::vector<int64_t> pt;
+        int64_t t = 0;
+        for (size_t i = 0; i < f.sizes.size(); i++) { pt.push_back(t + f.compositionOffsets[i]); t += f.durations[i]; }
+        int64_t first = INT64_MAX;
+        for (size_t i = cut; i < pt.size(); i++) first = std::min(first, pt[i]);
+        size_t n = cut;
+        while (n > 1 && *std::max_element(pt.begin(), pt.begin() + n) >= first) { n--; first = std::min(first, pt[n]); }
+        return n;
+    };
     {
         CHECK(ref.size() == kMpus + 1 && ref[0].init, "one init segment, then one media segment per MPU");
         const Bytes& init = ref[0].data;
@@ -438,9 +452,10 @@ int main(int argc, char** argv) {
         CHECK(o.size() == 8 && inits == 2 && o[0].init && o[4].init, "init segment sent once, and again after a moov change");
     }
     // ---- 7. lost packets. An MPU missing an MFU fragment goes out with the samples that can be played, in place on the timeline: in decode
-    // order up to the first lost sample other pictures may need (a lost picture that no other one uses costs itself only); sound loses the
-    // lost samples alone, and a lost sound moof is rebuilt from the MPU before. A video MPU without its moof, or without the first picture,
-    // is left out and time goes on across the gap. The picture decodes without an error.
+    // order up to the first lost sample other pictures may need (a lost picture that no other one uses costs itself only); when MPUs after
+    // it are lost too, less the last ones before it that would be presented after a picture that is gone; sound loses the lost samples alone, and a lost sound moof is rebuilt
+    // from the MPU before. A video MPU without its moof, or without the first picture, is left out and time goes on across the gap. The
+    // picture decodes without an error.
     {
         // which test pictures no other picture uses, read here from the NAL unit headers (one temporal sub-layer in the test file)
         auto disposable = [](const Bytes& smp) {
@@ -472,9 +487,11 @@ int main(int argc, char** argv) {
         std::vector<Out> o = run(s.out);
         // what each MPU should give: sample indexes
         std::vector<std::vector<size_t>> want(kMpus);
+        const size_t played3 = (size_t)ref;   // MPU 4 follows on time
+        CHECK(playedBefore(vm[3], (size_t)ref) < (size_t)ref, "the test video has pictures before the cut presented after it");
         for (int k = 0; k < kMpus; k++)
             for (size_t i = 0; i < vm[k].samples.size(); i++) {
-                if (k == 3 && (int)i >= ref) continue;
+                if (k == 3 && i >= played3) continue;
                 if (k == 4 && (int)i == disp) continue;
                 if (k == 5 || k == 6) continue;
                 want[k].push_back(i);
@@ -506,6 +523,44 @@ int main(int argc, char** argv) {
         decodeVideo(file, decoded, errors);
         printf("  repaired video: %ld pictures decoded of %ld sent, %ld decoder errors\n", decoded, frames, errors);
         CHECK(decoded == frames && errors == 0, "the repaired video decodes without an error");
+        // the same cut in MPU 3, now with MPUs 4 and 5 lost whole: the pictures before the cut presented after it are left out as well
+        {
+            Sender g{100};
+            g.mfuPiece = kHint + 10;
+            for (int k = 0; k < kMpus; k++) {
+                if (k == 4 || k == 5) continue;
+                std::function<bool(size_t, size_t)> lose;
+                if (k == 3) lose = [&](size_t i, size_t f) { return (int)i == ref && f == 1; };
+                g.mpu(vm[k], 1000 + k, false, lose);
+            }
+            MmtpStats gs;
+            std::vector<Out> go = run(g.out, &gs);
+            const size_t trimmed = playedBefore(vm[3], (size_t)ref);
+            bool gok = go.size() == (size_t)kMpus + 1 - 2 && go[0].init;
+            Bytes gfile = gok ? go[0].data : Bytes();
+            uint64_t g0 = 0;
+            long gframes = 0;
+            for (int k = 0, at = 1; gok && k < kMpus; k++) {
+                if (k == 4 || k == 5) continue;
+                Bytes media, expect;
+                uint64_t tfdt = 0, dur = 0;
+                uint32_t mfhd = 0, count = 0;
+                gok = readSegment(go[at].data, media, tfdt, mfhd) && trunTimes(go[at].data, count, dur);
+                if (!gok) break;
+                if (k == 0) g0 = tfdt;
+                const size_t keep = k == 3 ? trimmed : vm[k].samples.size();
+                for (size_t i = 0; i < keep; i++) add(expect, vm[k].samples[i]);
+                gok = media == expect && count == keep && tfdt == g0 + (uint64_t)k * 25 * 512 && dur == 25 * 512;
+                gframes += (long)keep;
+                add(gfile, go[at].data);
+                at++;
+            }
+            CHECK(gok && gs.samplesCut == (long)(vm[3].samples.size() - 1 - trimmed),
+                  "before MPUs lost whole, the pictures kept are those presented before every picture cut");
+            long gdec = 0, gerr = 0;
+            decodeVideo(gfile, gdec, gerr);
+            CHECK(gdec == gframes && gerr == 0, "and that video decodes without an error");
+        }
         // sound: one sample lost in MPU 2, the moof of MPU 3 lost (rebuilt from MPU 2's), the first sample of MPU 4 lost
         Sender a{200};
         const int kA = 6;
@@ -588,7 +643,8 @@ int main(int argc, char** argv) {
         CHECK(st.mpusDropped >= 12 && st.mpusDelivered == 0, "unfinished MPUs are dropped");
     }
     // ---- 13. MPUs of two movie fragments (mfhd 1 and 2): MFU sample numbers from 1 in each fragment or on through the MPU, the moofs first or
-    // after their samples; a lost sample costs its fragment the samples from it on, and the next fragment keeps its place in time
+    // after their samples; a lost sample costs its fragment the samples from it on (and those before it presented after it), and the next
+    // fragment keeps its place in time
     {
         auto setMfhd = [](Bytes& moof, uint32_t n) { for (size_t q = 8; q + 16 < moof.size(); q++) if (!memcmp(&moof[q], "mfhd", 4)) { dect2::endian::storeBe32(&moof[q + 8], n); return; } };
         for (int through = 0; through < 2; through++)
@@ -617,6 +673,7 @@ int main(int argc, char** argv) {
                 }
                 MmtpStats st;
                 std::vector<Out> o = run(s.out, &st);
+                const size_t played = 4;   // the fragment after it follows on time: the pictures before the lost one all play
                 bool ok = !o.empty() && o[0].init && (int)o.size() == 1 + 2 * kTwo;
                 uint64_t t0 = 0;
                 Bytes file;
@@ -629,12 +686,12 @@ int main(int argc, char** argv) {
                     if (i == 1) t0 = tfdt;
                     Bytes want;
                     const auto& smp = vm[slot % 2 ? 1 : 0].samples;
-                    for (size_t x = 0; x < smp.size() && (slot != 2 || x < 4); x++) add(want, smp[x]);
+                    for (size_t x = 0; x < smp.size() && (slot != 2 || x < played); x++) add(want, smp[x]);
                     ok = ok && tfdt == t0 + (uint64_t)slot * 25 * 512 && media == want;
                 }
                 bool rising = false;
                 double a0 = 0, a1 = 0;
-                CHECK(ok && st.mpusDelivered == kTwo && st.fragmentsDelivered == 2 * kTwo && st.fragmentsLost == 0 && ffmpegPackets(file, rising, a0, a1) == (2 * kTwo - 1) * 25 + 4 && rising,
+                CHECK(ok && st.mpusDelivered == kTwo && st.fragmentsDelivered == 2 * kTwo && st.fragmentsLost == 0 && ffmpegPackets(file, rising, a0, a1) == (2 * kTwo - 1) * 25 + (long)played && rising,
                       through ? "two movie fragments per MPU, samples numbered through the MPU" : "two movie fragments per MPU, samples numbered in each fragment");
             }
     }
@@ -708,14 +765,52 @@ int main(int argc, char** argv) {
         f.compositionOffsets = {0, 200, 0, 0, 0};
         f.flags = {0, 0x10000, 0x10000, 0, 0x10000};   // sync samples at 0 and 3
         f.trunFlags = 0x000B01;
-        auto pl = [&](std::vector<char> whole, std::vector<char> disp, const char* hdlr) { return playableSamples(f, hdlr, whole, disp); };
+        auto pl = [&](std::vector<char> whole, std::vector<char> disp, const char* hdlr) { return playableSamples(f, hdlr, whole, disp, true); };
         CHECK((pl({1, 0, 1, 1, 1}, {-1, -1, -1, -1, -1}, "vide") == std::vector<char>{1, 0, 0, 1, 1}), "after a lost picture others may use, play again from the next sync sample");
         CHECK((pl({1, 0, 1, 1, 1}, {-1, 1, -1, -1, -1}, "vide") == std::vector<char>{1, 0, 1, 1, 1}), "a lost picture no other uses costs itself only");
         CHECK((pl({0, 1, 1, 1, 1}, {0, -1, -1, -1, -1}, "vide") == std::vector<char>{0, 0, 0, 1, 1}), "without the first picture nothing plays up to the next sync sample");
         MpuFragment g = f;
         g.flags = {0, 0, 0, 0, 0};
-        CHECK((playableSamples(g, "vide", {1, 1, 0, 1, 1}, {-1, -1, -1, -1, -1}) == std::vector<char>{1, 1, 0, 0, 0}), "video with no sync information: only the first sample is a sync sample");
-        CHECK((playableSamples(g, "soun", {1, 1, 0, 1, 1}, {-1, -1, -1, -1, -1}) == std::vector<char>{1, 1, 0, 1, 1}), "sound with no sync information: every sample is one");
+        g.compositionOffsets = {0, 0, 0, 0, 0};
+        CHECK((playableSamples(g, "vide", {1, 1, 0, 1, 1}, {-1, -1, -1, -1, -1}, true) == std::vector<char>{1, 1, 0, 0, 0}), "video with no sync information: only the first sample is a sync sample");
+        CHECK((playableSamples(g, "soun", {1, 1, 0, 1, 1}, {-1, -1, -1, -1, -1}, true) == std::vector<char>{1, 1, 0, 1, 1}), "sound with no sync information: every sample is one");
+        {
+            // reordered pictures, presented at 200, 300, ... 1000: decode order I(200) P(600) B(400) b(300) b(500) P(1000) B(800) b(700) b(900)
+            MpuFragment r;
+            r.sizes.assign(9, 10);
+            r.durations.assign(9, 100);
+            r.compositionOffsets = {200, 500, 200, 0, 100, 500, 200, 0, 100};
+            r.flags = {0, 0x10000, 0x10000, 0x10000, 0x10000, 0x10000, 0x10000, 0x10000, 0x10000};
+            r.trunFlags = 0x000F01;
+            auto rp = [&](const MpuFragment& m, int lost, int disp, bool gap = true) {
+                std::vector<char> whole(9, 1), d(9, -1);
+                whole[lost] = 0;
+                d[lost] = (char)disp;
+                return playableSamples(m, "vide", whole, d, gap);
+            };
+            CHECK((rp(r, 6, 0) == std::vector<char>{1, 1, 1, 1, 1, 0, 0, 0, 0}), "a picture kept that would be presented after one cut (P at 1000 after 700) is left out too");
+            CHECK((rp(r, 7, -1) == std::vector<char>{1, 1, 1, 1, 1, 0, 0, 0, 0}), "left out from the last one kept backwards, up to where all kept come before all cut");
+            CHECK((rp(r, 7, 1) == std::vector<char>{1, 1, 1, 1, 1, 1, 1, 0, 1}), "a lost picture no other uses still costs itself only");
+            CHECK((rp(r, 3, 0) == std::vector<char>{1, 0, 0, 0, 0, 0, 0, 0, 0}), "back to the sync sample when needed");
+            MpuFragment late = r;
+            late.compositionOffsets[0] = 400;
+            CHECK((rp(late, 3, 0) == std::vector<char>{0, 0, 0, 0, 0, 0, 0, 0, 0}), "a sync sample presented after a picture cut goes too");
+            CHECK((rp(r, 1, 0) == std::vector<char>{1, 0, 0, 0, 0, 0, 0, 0, 0}), "nothing to cut back when only a sync sample presented first is kept");
+            CHECK((rp(r, 6, 0, false) == std::vector<char>{1, 1, 1, 1, 1, 1, 0, 0, 0}), "when the next fragment follows on time nothing more is left out");
+            MpuFragment two = r;   // a second sync sample: P(1000) as a CRA, B(800) b(700) b(900) its leading pictures
+            two.flags[5] = 0;
+            CHECK((rp(two, 3, 0) == std::vector<char>{1, 1, 1, 0, 0, 1, 1, 1, 1}), "a cut that ends at a sync sample kept costs nothing more");
+            CHECK((rp(two, 7, -1) == std::vector<char>{1, 1, 1, 1, 1, 0, 0, 0, 0}), "a sync sample of an open GOP presented after its lost leading pictures goes too");
+            {
+                std::vector<char> whole(9, 1), d(9, -1);
+                whole[3] = whole[6] = 0;
+                CHECK((playableSamples(two, "vide", whole, d, true) == std::vector<char>{1, 0, 0, 0, 0, 0, 0, 0, 0}),
+                      "cut back past an earlier run of samples left out, which is then at the end too");
+            }
+            MpuFragment flat = r;
+            flat.trunFlags = 0x000301;
+            CHECK((rp(flat, 6, 0) == std::vector<char>{1, 1, 1, 1, 1, 1, 0, 0, 0}), "without composition offsets nothing more is left out");
+        }
 
         // sdtp (one byte per sample) follows; sbgp is left out
         Bytes sdtp{0, 0, 0, 0, 1, 2, 3, 4, 5};

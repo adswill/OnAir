@@ -162,7 +162,7 @@ void mmtpOne(const uint8_t* d, size_t n) {
         // the repair of a fragment with samples missing: which samples arrived whole and which no other uses, from the bytes
         std::vector<char> whole(f.sizes.size()), disp(f.sizes.size());
         for (size_t i = 0; i < whole.size(); i++) { whole[i] = (d[i % n] >> 1) & 1; disp[i] = (char)((d[i % n] >> 2) % 3) - 1; }
-        const std::vector<char> keep = atsc3::playableSamples(f, n > 3 && (d[3] & 1) ? "vide" : "soun", whole, disp);
+        const std::vector<char> keep = atsc3::playableSamples(f, n > 3 && (d[3] & 1) ? "vide" : "soun", whole, disp, n > 6 && (d[6] & 1));
         atsc3::MpuFragment out;
         uint64_t lead = 0;
         if (atsc3::keepSamples(f, keep, out, lead)) atsc3::buildMediaSegment(out, 2, lead, std::vector<uint8_t>((size_t)std::min<uint64_t>(out.mediaBytes, 1u << 16), 0));
