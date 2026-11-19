@@ -342,7 +342,10 @@ void wideAllWindow(App& a) {
             if (ImGui::Checkbox("##pin", &pin)) ws.setPinned(e.id, pin);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Pinned: never paused by the CPU limit"));
             ImGui::TableNextColumn();
-            if (ImGui::SmallButton(tr("Listen##l"))) { ws.setListen(e.id); a.wideAllListen = e.id; }
+            if (ImGui::SmallButton(tr("Listen##l"))) {
+                const double mhz = (e.absHz > 0 ? e.absHz : radioCenterMhz(a) * 1e6 + e.offsetHz) / 1e6;
+                if (!voiceScoutSelectFrequency(a, mhz)) { ws.setListen(e.id); a.wideAllListen = e.id; }
+            }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Follow this signal's sound; it is never paused by the CPU limit"));
             ImGui::SameLine(0, 3 * gUi);
             if (ImGui::SmallButton("x##rm")) ws.remove(e.id);

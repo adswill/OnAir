@@ -547,6 +547,15 @@ void WideModes::setLoadOverride(int m, double v) { if (BankBase* b = p_->bank(m)
 
 void WideModes::setSelected(int id) { p_->sel = id; for (auto& [m, b] : p_->banks) b->setSelected(id); }
 void WideModes::setMuted(bool mu) { p_->muted = mu; for (auto& [m, b] : p_->banks) b->setMuted(mu); }
+void WideModes::setAudioFocus(int standardMode, int carrierId) {
+    for (auto& [m, b] : p_->banks) {
+        if (standardMode < 0) { b->setMuted(false); b->setSelected(0); continue; }
+        const bool chosen = m == standardMode && carrierId > 0;
+        // Set selection before opening audio; all other decoder banks stay silent.
+        b->setMuted(true);
+        if (chosen) { b->setSelected(carrierId); b->setMuted(false); }
+    }
+}
 
 void WideModes::setVolume(float v) {
     p_->volume = v;

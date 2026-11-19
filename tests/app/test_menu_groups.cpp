@@ -47,6 +47,7 @@ static const char* const kOld[] = {
     "Show Frequencies as a tab",
     "Transmit...",
     "Map",
+    "Voice scout",
     "Sweep scanner",
     "Station health",
     "Search everything heard",

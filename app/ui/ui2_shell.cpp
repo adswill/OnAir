@@ -624,6 +624,7 @@ static void toolMenuItem(App& a, const menugroups::ToolItem& it) {
         case T::Transmit: ImGui::MenuItem(lab, nullptr, &txViewFlag()); break;
         case T::Map: ImGui::MenuItem(lab, nullptr, &a.mapOpen);
             tip(tr("A world map: find a position by coordinates or Maidenhead locator, distance and bearing from your location")); break;
+        case T::VoiceScout: ImGui::MenuItem(lab, nullptr, &a.voiceScoutOpen); break;
         case T::Sweep: ImGui::MenuItem(lab, nullptr, &a.sweepOpen); break;
         case T::StationHealth: ImGui::MenuItem(lab, nullptr, &a.stationHealthOpen); break;
         case T::Heard: ImGui::MenuItem(lab, nullptr, &a.heardOpen); break;
