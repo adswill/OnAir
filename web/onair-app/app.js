@@ -299,7 +299,15 @@
   $("bw").onchange = () => api("bandwidth", { hz: Number($("bw").value) * 1e6 }).catch(e => toast(e.message, true));
   $("dev").onchange = () => { if (S.status && S.status.running) api("start", { device: Number($("dev").value) }).catch(e => toast(e.message, true)); };
   $("fps").onchange = () => { S.fps = Number($("fps").value); sub(); };
-  $("bins").onchange = () => { S.bins = Number($("bins").value); sub(); };
+  // "Auto": one bin per canvas pixel (the server accepts 64 to 4096); the fixed choices stay
+  function wantBins() { return $("bins").value === "auto" ? L.autoBins(S.spec ? S.spec.wf.width : 1024) : Number($("bins").value); }
+  let binsTimer = 0;
+  function resizeBins() {   // the canvas changed size: in Auto ask for a matching count, once the resizing has settled
+    if ($("bins").value !== "auto") return;
+    clearTimeout(binsTimer);
+    binsTimer = setTimeout(() => { const b = wantBins(); if (b !== S.bins) { S.bins = b; sub(); } }, 250);
+  }
+  $("bins").onchange = () => { S.bins = wantBins(); sub(); };
   $("specon").onchange = () => { sub(); if (!$("specon").checked) S.spec.clear(); };
   $("panelrate").onchange = () => { S.panelMs = Math.round(1000 / Number($("panelrate").value)); sub(); };
   $("arate").onchange = () => { S.arate = Number($("arate").value); if (S.listening) { send({ type: "sub", audio: false }); sub(); } };
@@ -416,6 +424,9 @@
   // ---- start
   async function main() {
     S.spec = new window.SpectrumView($("spec"), $("wf"), $("tuneline"), (hz, live) => tune(hz, live));
+    S.spec.onResize = resizeBins;
+    S.spec.resize();
+    S.bins = wantBins();
     S.spec.onZoom = (z) => { $("zoomtxt").textContent = z + "\u00d7"; sub(); };
     $("zoomin").onclick = () => S.spec.zoomBy(1);
     $("zoomout").onclick = () => S.spec.zoomBy(-1);

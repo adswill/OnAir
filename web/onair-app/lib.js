@@ -96,6 +96,12 @@
     return t;
   }
 
+  // the bins to ask the server for when the waterfall is widthPx pixels wide: one per pixel, inside the server's 64..4096
+  function autoBins(widthPx) {
+    const w = Math.round(Number(widthPx));
+    return isFinite(w) && w > 0 ? Math.max(64, Math.min(4096, w)) : 1024;
+  }
+
   // ---- the waterfall's row history
   // A fixed-size ring of rows, newest first. A row is {u8, centreHz, rateHz, floorDb, topDb}: the 8-bit bins are scaled to that frame's own
   // floor and top, so a row cannot be drawn again without its header.
@@ -313,6 +319,6 @@
     return { control: !!h.control, owner: !!h.owner, role: h.role || "none" };
   }
 
-  return { formatMhz, parseFreq, tuneStep, decodeSpectrum, decodeAudio, xToHz, hzToX, RowRing, rowToPixels, binLevels, colourTable, modeSearch, buildPanel, tableColumns, humanize, formatValue, groupSettings, settingValue, permissions,
+  return { formatMhz, parseFreq, tuneStep, decodeSpectrum, decodeAudio, xToHz, hzToX, RowRing, rowToPixels, binLevels, colourTable, autoBins, modeSearch, buildPanel, tableColumns, humanize, formatValue, groupSettings, settingValue, permissions,
            zoomStep, zoomCentre, zoomAbout, zoomFollow, ZOOM_MAX, buildOptions, optionValue, maskToggle };
 });

@@ -18,10 +18,16 @@
       this.pal = SpectrumView.palette();
       this.rows = 0;
       this.ring = new L.RowRing(SpectrumView.HISTORY);   // every received row, newest first (see paintWaterfall)
+      this.dpr = 1;
       this.pending = 0; this.raf = 0;   // rows stored since the last paint; the scheduled animation frame
       this.view = null; this.full = true; this.pix = null;   // the span the waterfall was last drawn for, and whether it must be drawn again
       this.zoom = 1; this.zoomHz = 0; this.capCentre = 0; this.capRate = 0; this.onZoom = null;
       const wrap = specCanvas.parentElement;
+      this.onResize = null;
+      if (typeof ResizeObserver === "function") {   // the canvases follow their CSS box times the device pixel ratio (no blur)
+        const ro = new ResizeObserver(() => this.resize());
+        ro.observe(specCanvas); ro.observe(wfCanvas);
+      }
       let dragging = false, moved = false, lastSend = 0, id = null;
       const hzAt = (ev) => {
         const b = wrap.getBoundingClientRect();
@@ -68,7 +74,30 @@
         this.onTune(this.tuneHz + (ev.deltaY < 0 ? step : -step), false);
       }, { passive: false });
     }
+    // Setting a canvas's size clears it, so the stored rows are painted again afterwards. A box of size 0 (a hidden tab) is left alone.
+    resize() {
+      const k = Math.max(1, root.devicePixelRatio || 1);
+      let changed = false;
+      for (const cv of [this.spec, this.wf]) {
+        const b = cv.getBoundingClientRect();
+        const w = Math.round(b.width * k), h = Math.round(b.height * k);
+        if (w < 1 || h < 1) continue;
+        if (cv === this.spec && this.dpr !== k) { this.dpr = k; changed = true; }   // the ratio only counts with the size it was measured for
+        if (cv.width !== w) { cv.width = w; changed = true; }
+        if (cv.height !== h) { cv.height = h; changed = true; }
+      }
+      if (!changed) return;
+      this.im = null;
+      this.ring.grow(Math.min(SpectrumView.HISTORY_MAX, this.wf.height));   // every pixel row of the waterfall can be drawn again
+      // a size change cleared the canvases: paint now, not at the next animation frame, or they flicker
+      this.full = true;
+      if (this.raf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.raf);
+      this.raf = 0;
+      this.render();
+      if (this.onResize) this.onResize(this.wf.width);
+    }
     static get HISTORY() { return 2048; }
+    static get HISTORY_MAX() { return 4096; }
     static palette() {
       const p = new Uint8ClampedArray(256 * 3);
       for (let i = 0; i < 256; i++) {
@@ -151,7 +180,8 @@
       else for (let i = 0; i < n; i++) this.peak[i] = Math.max(db[i], this.peak[i] - 0.3);
     }
     drawSpec(f) {
-      const c = this.sc, w = this.spec.width, h = this.spec.height, db = f.db, n = db.length;
+      const c = this.sc, k = this.dpr, w = this.spec.width / k, h = this.spec.height / k, db = f.db, n = db.length;
+      c.setTransform(k, 0, 0, k, 0, 0);   // drawn in CSS pixels
       c.fillStyle = "#000"; c.fillRect(0, 0, w, h);
       const y = (v) => h - (v - this.minDb) / (this.maxDb - this.minDb) * (h - 14) - 2;
       // grid

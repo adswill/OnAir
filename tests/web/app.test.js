@@ -103,6 +103,14 @@ test("colourTable: bins map through the frame's own floor and top into the displ
   assert.strictEqual(L.colourTable(pal, -50, -50, -50, -50)[4], 0);
 });
 
+test("autoBins: one bin per canvas pixel inside the server's 64..4096", () => {
+  assert.strictEqual(L.autoBins(1500), 1500);
+  assert.strictEqual(L.autoBins(1500.4), 1500);
+  assert.strictEqual(L.autoBins(10), 64);
+  assert.strictEqual(L.autoBins(9000), 4096);
+  assert.strictEqual(L.autoBins(0), 1024); assert.strictEqual(L.autoBins(NaN), 1024); assert.strictEqual(L.autoBins(undefined), 1024);
+});
+
 // ---- the waterfall's row history
 test("RowRing keeps the newest rows first and forgets the oldest", () => {
   const r = new L.RowRing(3);
@@ -341,6 +349,83 @@ test("mode options: Simple / Advanced, values, kinds", () => {
   assert.strictEqual(L.maskToggle(1, 2, true), 3);
   assert.strictEqual(L.maskToggle(3, 1, false), 2);
   assert.strictEqual(L.maskToggle(0, 2, false), 0);
+});
+
+// ---- SpectrumView with fake canvases (no browser)
+function spectrumFixture(specW, specH, wfW, wfH) {
+  const frames = [];
+  globalThis.OnAirLib = L;
+  globalThis.requestAnimationFrame = (f) => { frames.push(f); return frames.length; };
+  globalThis.cancelAnimationFrame = () => { frames.length = 0; };
+  const mk = (w, h) => {
+    const ctx = { puts: 0, copies: 0, fills: 0, fillRect() { this.fills++; }, drawImage() { this.copies++; }, putImageData() { this.puts++; },
+      createImageData(iw, ih) { return { width: iw, height: ih, data: new Uint8ClampedArray(iw * ih * 4) }; },
+      beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {}, stroke() {}, fillText() {}, measureText() { return { width: 5 }; }, setTransform() {} };
+    const cv = { width: w, height: h, cssW: w, cssH: h, parentElement: { addEventListener() {}, getBoundingClientRect() { return { left: 0, width: cv.cssW, height: cv.cssH }; } },
+      getContext() { return ctx; }, getBoundingClientRect() { return { width: cv.cssW, height: cv.cssH }; }, ctx };
+    return cv;
+  };
+  delete require.cache[require.resolve(path.join(__dirname, "../../web/onair-app/spectrum.js"))];
+  require(path.join(__dirname, "../../web/onair-app/spectrum.js"));
+  const spec = mk(specW, specH), wf = mk(wfW, wfH);
+  const view = new globalThis.SpectrumView(spec, wf, { style: {} }, () => {});
+  const frame = (centreHz, n) => {
+    const u8 = new Uint8Array(n || 16).map((_, i) => i * 8);
+    return { centreHz, rateHz: 2e6, floorDb: -100, topDb: -20, u8, db: Float32Array.from(u8, v => -100 + v / 255 * 80) };
+  };
+  const flush = () => { const f = frames.splice(0); f.forEach(fn => fn()); };
+  return { view, spec, wf, frame, flush, frames };
+}
+test("SpectrumView: an empty frame is ignored", () => {
+  const t = spectrumFixture(100, 50, 100, 40);
+  t.view.push({ centreHz: 1e6, rateHz: 1e6, floorDb: 0, topDb: 1, u8: new Uint8Array(0), db: new Float32Array(0) });
+  assert.strictEqual(t.view.frame, null); assert.strictEqual(t.view.pending, 0); assert.strictEqual(t.frames.length, 0);
+  t.view.push(t.frame(100e6)); t.flush();
+  t.view.push({ centreHz: 5e6, rateHz: 1e6, floorDb: 0, topDb: 1, u8: new Uint8Array(0), db: new Float32Array(0) });
+  assert.strictEqual(t.view.frame.centreHz, 100e6, "the last real frame stays");
+  assert.strictEqual(t.frames.length, 0, "no repaint is scheduled");
+});
+test("SpectrumView: the paint is one animation frame; incremental while the span holds, full after a retune", () => {
+  const t = spectrumFixture(100, 50, 100, 40), c = t.wf.ctx;
+  t.view.push(t.frame(100e6)); t.view.push(t.frame(100e6));
+  assert.strictEqual(c.puts, 0, "push alone paints nothing"); assert.strictEqual(t.frames.length, 1);
+  t.flush();
+  assert.strictEqual(c.puts, 2, "the first paint draws both stored rows"); assert.strictEqual(c.copies, 0);
+  c.puts = 0;
+  t.view.push(t.frame(100e6)); t.view.push(t.frame(100e6)); t.view.push(t.frame(100e6)); t.flush();
+  assert.strictEqual(c.copies, 1, "the picture scrolls once"); assert.strictEqual(c.puts, 3, "and every new row is painted");
+  c.puts = 0; c.copies = 0;
+  t.view.push(t.frame(101e6)); t.flush();
+  assert.strictEqual(c.copies, 0, "a retune paints again from the history"); assert.strictEqual(c.puts, 6);
+  c.puts = 0; t.view.setRange(-90, -30); t.flush();
+  assert.strictEqual(c.puts, 6, "a range change too");
+});
+test("SpectrumView: clear forgets the frame, so a resize does not draw the old trace", () => {
+  globalThis.devicePixelRatio = 1;
+  const t = spectrumFixture(100, 50, 100, 40);
+  t.view.push(t.frame(100e6)); t.flush();
+  t.view.clear();
+  assert.strictEqual(t.view.frame, null);
+  t.wf.ctx.puts = 0; t.wf.cssW = 120;
+  t.view.resize();
+  assert.strictEqual(t.wf.ctx.puts, 0); assert.strictEqual(t.frames.length, 0);
+});
+test("SpectrumView: a resize repaints at once, keeps the history, grows the ring and tracks the pixel ratio", () => {
+  globalThis.devicePixelRatio = 2;
+  const t = spectrumFixture(100, 50, 100, 40);
+  t.view.push(t.frame(100e6)); t.flush();
+  t.view.push(t.frame(100e6));   // a paint is scheduled but has not run
+  t.spec.cssW = 150; t.spec.cssH = 60; t.wf.cssW = 150; t.wf.cssH = 3000;
+  t.wf.ctx.puts = 0;
+  t.view.resize();
+  assert.strictEqual(t.wf.width, 300); assert.strictEqual(t.wf.height, 6000); assert.strictEqual(t.view.dpr, 2);
+  assert.strictEqual(t.wf.ctx.puts, 2, "painted synchronously from the stored rows"); assert.strictEqual(t.frames.length, 0, "no pending frame left");
+  assert.strictEqual(t.view.ring.cap, 4096, "capped"); assert.strictEqual(t.view.ring.count, 2);
+  // a hidden canvas (size 0) changes neither size nor ratio
+  globalThis.devicePixelRatio = 3; t.spec.cssW = 0; t.wf.cssW = 0;
+  t.view.resize();
+  assert.strictEqual(t.view.dpr, 2); assert.strictEqual(t.wf.width, 300);
+  delete globalThis.devicePixelRatio;
 });
 
 console.log("app.test.js: " + passed + " passed" + (process.exitCode ? ", some FAILED" : ""));
