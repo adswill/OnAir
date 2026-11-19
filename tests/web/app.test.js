@@ -55,6 +55,67 @@ test("decodeSpectrum reads the server's u8 frame", () => {
   assert.strictEqual(L.decodeSpectrum(new ArrayBuffer(3)), null);
   d.setUint8(0, 9); assert.strictEqual(L.decodeSpectrum(buf), null);
 });
+test("decodeSpectrum keeps the 8-bit bins next to the dB values", () => {
+  const buf = new ArrayBuffer(21 + 3), d = new DataView(buf);
+  d.setUint8(0, 1); d.setFloat32(5, 1e6, true); d.setFloat32(9, 1e3, true); d.setFloat32(13, -100, true); d.setFloat32(17, -50, true);
+  d.setUint8(21, 0); d.setUint8(22, 128); d.setUint8(23, 255);
+  const f = L.decodeSpectrum(buf);
+  assert.deepStrictEqual(Array.from(f.u8), [0, 128, 255]);
+  near(f.db[2], -50, 1e-3);
+});
+
+// ---- the waterfall's row history
+test("RowRing keeps the newest rows first and forgets the oldest", () => {
+  const r = new L.RowRing(3);
+  assert.strictEqual(r.get(0), null);
+  for (let i = 1; i <= 5; i++) r.push({ id: i });
+  assert.strictEqual(r.count, 3);
+  assert.deepStrictEqual([r.get(0).id, r.get(1).id, r.get(2).id], [5, 4, 3]);
+  assert.strictEqual(r.get(3), null); assert.strictEqual(r.get(-1), null);
+  r.clear(); assert.strictEqual(r.count, 0); assert.strictEqual(r.get(0), null);
+});
+test("RowRing.grow keeps the stored rows in order and then keeps filling", () => {
+  const r = new L.RowRing(3);
+  for (let i = 1; i <= 5; i++) r.push({ id: i });   // holds 3, 4, 5
+  r.grow(2); assert.strictEqual(r.cap, 3);
+  r.grow(6);
+  assert.strictEqual(r.cap, 6); assert.strictEqual(r.count, 3);
+  assert.deepStrictEqual([r.get(0).id, r.get(1).id, r.get(2).id, r.get(3)], [5, 4, 3, null]);
+  for (let i = 6; i <= 9; i++) r.push({ id: i });
+  assert.strictEqual(r.count, 6);
+  assert.deepStrictEqual([0, 1, 2, 3, 4, 5].map(a => r.get(a).id), [9, 8, 7, 6, 5, 4]);
+  const e = new L.RowRing(2); e.grow(4); e.push({ id: 1 }); assert.strictEqual(e.get(0).id, 1);
+});
+test("rowToPixels: the same span maps bin to pixel, several bins take the maximum", () => {
+  const row = { u8: Uint8Array.from([1, 2, 3, 4, 5, 6, 7, 8]), centreHz: 100e6, rateHz: 8e3, floorDb: -100, topDb: 0 };
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6, 8e3, 8)), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6, 8e3, 4)), [2, 4, 6, 8]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6, 8e3, 16)).slice(0, 4), [1, 1, 2, 2]);
+});
+test("rowToPixels: equal spans with as many pixels as bins map bin x to pixel x exactly", () => {
+  for (const [n, rate, centre] of [[1337, 2.4e6, 100e6], [1920, 3.2e6, 433.92e6], [1024, 2e6, 98.1e6], [4096, 2.048e6, 1.5e9]]) {
+    const u8 = new Uint8Array(n).map((_, i) => (i * 7 + 3) & 255);
+    const out = L.rowToPixels({ u8, centreHz: centre, rateHz: rate }, centre, rate, n);
+    let bad = 0;
+    for (let x = 0; x < n; x++) if (out[x] !== u8[x]) bad++;
+    assert.strictEqual(bad, 0, n + " bins: " + bad + " wrong pixels");
+  }
+});
+test("rowToPixels: a zoomed view picks the bins by frequency, uncovered pixels are -1", () => {
+  const row = { u8: Uint8Array.from([10, 20, 30, 40]), centreHz: 100e6, rateHz: 4e3, floorDb: -100, topDb: 0 };   // 99.998 .. 100.002 MHz
+  // the upper half of the row's span
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6 + 1e3, 2e3, 2)), [30, 40]);
+  // a view twice as wide, same centre: the row covers the middle half
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6, 8e3, 4)), [-1, 20, 40, -1]);
+  // retuned past the row: nothing is covered
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 120e6, 4e3, 4)), [-1, -1, -1, -1]);
+  // a view that overlaps the row's upper edge only
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6 + 3e3, 4e3, 4)), [40, -1, -1, -1]);
+  // degenerate input
+  assert.deepStrictEqual(Array.from(L.rowToPixels({ u8: new Uint8Array(0), centreHz: 1, rateHz: 1 }, 1, 1, 3)), [-1, -1, -1]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6, 0, 2)), [-1, -1]);
+});
+
 test("decodeAudio reads PCM16 with its rate", () => {
   const buf = new ArrayBuffer(5 + 4), d = new DataView(buf);
   d.setUint8(0, 2); d.setUint32(1, 16000, true); d.setInt16(5, 16384, true); d.setInt16(7, -32768, true);

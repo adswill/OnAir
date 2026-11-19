@@ -55,7 +55,7 @@
     const db = new Float32Array(n);
     const u8 = new Uint8Array(buf, 21, n);
     for (let i = 0; i < n; i++) db[i] = lo + u8[i] / 255 * (hi - lo);
-    return { seq, centreHz: centre, rateHz: rate, floorDb: lo, topDb: hi, db };
+    return { seq, centreHz: centre, rateHz: rate, floorDb: lo, topDb: hi, db, u8 };
   }
   // audio: [2][rate u32][pcm16le mono...]
   function decodeAudio(buf) {
@@ -70,6 +70,43 @@
   // x (0..1 across the canvas) <-> Hz for a frame
   function xToHz(x, centreHz, rateHz) { return centreHz + (x - 0.5) * rateHz; }
   function hzToX(hz, centreHz, rateHz) { return rateHz > 0 ? (hz - centreHz) / rateHz + 0.5 : 0.5; }
+
+  // ---- the waterfall's row history
+  // A fixed-size ring of rows, newest first. A row is {u8, centreHz, rateHz, floorDb, topDb}: the 8-bit bins are scaled to that frame's own
+  // floor and top, so a row cannot be drawn again without its header.
+  class RowRing {
+    constructor(capacity) { this.cap = Math.max(1, capacity | 0); this.rows = new Array(this.cap); this.head = 0; this.count = 0; }
+    push(row) { this.head = (this.head + 1) % this.cap; this.rows[this.head] = row; if (this.count < this.cap) this.count++; }
+    // age 0 = the newest row
+    get(age) { return age >= 0 && age < this.count ? this.rows[(this.head - age + this.cap) % this.cap] : null; }
+    clear() { this.rows.fill(undefined); this.count = 0; }
+    // a larger capacity keeps the rows already stored (a smaller one is ignored)
+    grow(capacity) {
+      const cap = capacity | 0;
+      if (cap <= this.cap) return;
+      const rows = new Array(cap);
+      for (let a = 0; a < this.count; a++) rows[this.count - 1 - a] = this.get(a);   // oldest first, so that head ends on the newest
+      this.rows = rows; this.cap = cap; this.head = this.count - 1;
+    }
+  }
+  // Map one row onto w pixels of a view (viewCentreHz, viewRateHz) by frequency: out[x] = the strongest 8-bit bin under pixel x, or -1 where
+  // the row's own span does not reach the pixel (drawn black). Pixels that cover several bins take the maximum; one bin spans several pixels.
+  function rowToPixels(row, viewCentreHz, viewRateHz, w, out) {
+    const u8 = row.u8, n = u8.length, res = out || new Int16Array(w);
+    if (!n || !(row.rateHz > 0) || !(viewRateHz > 0)) { res.fill(-1); return res; }
+    const rowLo = row.centreHz - row.rateHz / 2, viewLo = viewCentreHz - viewRateHz / 2;
+    // bins per pixel in one division, so that equal spans with w == n give exactly one bin per pixel (no x - 1 from rounding)
+    const k = n / row.rateHz, scale = (viewRateHz * n) / (w * row.rateHz), off = (viewLo - rowLo) * k;
+    for (let x = 0; x < w; x++) {
+      const a = off + x * scale, b = off + (x + 1) * scale;
+      if (b <= 0 || a >= n) { res[x] = -1; continue; }
+      const i0 = Math.max(0, Math.floor(a)), i1 = Math.min(n, Math.max(i0 + 1, Math.floor(b)));
+      let v = 0;
+      for (let i = i0; i < i1; i++) if (u8[i] > v) v = u8[i];
+      res[x] = v;
+    }
+    return res;
+  }
 
   // ---- modes: ranked search over name, blurb, sub id and group
   function modeSearch(modes, groups, query) {
@@ -251,6 +288,6 @@
     return { control: !!h.control, owner: !!h.owner, role: h.role || "none" };
   }
 
-  return { formatMhz, parseFreq, tuneStep, decodeSpectrum, decodeAudio, xToHz, hzToX, modeSearch, buildPanel, tableColumns, humanize, formatValue, groupSettings, settingValue, permissions,
+  return { formatMhz, parseFreq, tuneStep, decodeSpectrum, decodeAudio, xToHz, hzToX, RowRing, rowToPixels, modeSearch, buildPanel, tableColumns, humanize, formatValue, groupSettings, settingValue, permissions,
            zoomStep, zoomCentre, zoomAbout, zoomFollow, ZOOM_MAX, buildOptions, optionValue, maskToggle };
 });
