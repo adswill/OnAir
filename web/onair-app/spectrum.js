@@ -18,6 +18,7 @@
       this.pal = SpectrumView.palette();
       this.rows = 0;
       this.ring = new L.RowRing(SpectrumView.HISTORY);   // every received row, newest first (see paintWaterfall)
+      this.pending = 0; this.raf = 0;   // rows stored since the last paint; the scheduled animation frame
       this.view = null; this.full = true; this.pix = null;   // the span the waterfall was last drawn for, and whether it must be drawn again
       this.zoom = 1; this.zoomHz = 0; this.capCentre = 0; this.capRate = 0; this.onZoom = null;
       const wrap = specCanvas.parentElement;
@@ -97,11 +98,24 @@
       if (z === this.zoom && Math.abs(centreHz - this.zoomHz) < 1) return;
       this.zoom = z; this.zoomHz = centreHz;
       this.peak = null;
-      this.full = true;   // the next paint maps every stored row into the new span by frequency
+      this.invalidate();   // the next paint maps every stored row into the new span by frequency
       if (this.onZoom) this.onZoom(z, centreHz);
     }
     // a new display range or palette, or a canvas of another size: draw the stored rows again
-    invalidate() { this.full = true; }
+    invalidate() { this.full = true; this.schedule(); }
+    // painting happens once per animation frame; it adds every row stored since the last one
+    schedule() {
+      if (this.raf || typeof requestAnimationFrame !== "function") return;
+      this.raf = requestAnimationFrame(() => { this.raf = 0; this.render(); });
+    }
+    render() {
+      const fresh = this.pending;
+      this.pending = 0;
+      if (!this.frame) return;
+      this.drawSpec(this.frame);
+      this.paintWaterfall(fresh);
+      this.drawLine();
+    }
     setRange(minDb, maxDb) { this.auto = false; this.minDb = minDb; this.maxDb = maxDb; this.invalidate(); }
     setPalette(pal) { this.pal = pal; this.invalidate(); }
     drawLine() {
@@ -113,9 +127,9 @@
       this.line.style.borderColor = isFinite(this.dragHz) ? "#ffd166" : "";
     }
     push(frame) {
-      this.frame = frame;
       const db = frame.db, n = db.length;
-      if (!n) return;
+      if (!n) return;   // an empty frame changes nothing
+      this.frame = frame;
       this.ring.push({ u8: frame.u8, centreHz: frame.centreHz, rateHz: frame.rateHz, floorDb: frame.floorDb, topDb: frame.topDb });
       if (this.zoom > 1 && !isFinite(this.dragHz)) {   // the tuned frequency left the part shown: follow it
         const f = L.zoomFollow(frame.centreHz, frame.rateHz, this.tuneHz);
@@ -127,10 +141,14 @@
         const lo = s[Math.floor(n * 0.1)] - 5, hi = s[n - 1] + 5;
         this.minDb += (lo - this.minDb) * 0.1; this.maxDb += (Math.max(hi, lo + 30) - this.maxDb) * 0.1;
       }
-      this.drawSpec(frame);
-      this.paintWaterfall(1);
-      this.drawLine();
-      this.rows++;
+      if (this.peakHold) this.updatePeak(db);
+      this.pending++; this.rows++;
+      this.schedule();   // the paint itself waits for the next animation frame
+    }
+    updatePeak(db) {
+      const n = db.length;
+      if (!this.peak || this.peak.length !== n) this.peak = Float32Array.from(db);
+      else for (let i = 0; i < n; i++) this.peak[i] = Math.max(db[i], this.peak[i] - 0.3);
     }
     drawSpec(f) {
       const c = this.sc, w = this.spec.width, h = this.spec.height, db = f.db, n = db.length;
@@ -150,9 +168,7 @@
       for (let i = 0; i < n; i++) { const px = i * w / (n - 1), py = y(db[i]); if (i) c.lineTo(px, py); else c.moveTo(px, py); }
       c.stroke();
       // peak hold
-      if (this.peakHold) {
-        if (!this.peak || this.peak.length !== n) this.peak = Float32Array.from(db);
-        else for (let i = 0; i < n; i++) this.peak[i] = Math.max(db[i], this.peak[i] - 0.3);
+      if (this.peakHold && this.peak && this.peak.length === n) {
         c.strokeStyle = "rgba(255,209,102,.6)"; c.beginPath();
         for (let i = 0; i < n; i++) { const px = i * w / (n - 1), py = y(this.peak[i]); if (i) c.lineTo(px, py); else c.moveTo(px, py); }
         c.stroke();
@@ -200,7 +216,7 @@
       }
       c.putImageData(im, 0, y);
     }
-    clear() { this.sc.fillStyle = "#000"; this.sc.fillRect(0, 0, this.spec.width, this.spec.height); this.wc.fillStyle = "#000"; this.wc.fillRect(0, 0, this.wf.width, this.wf.height); this.peak = null; this.ring.clear(); this.full = true; }
+    clear() { if (this.raf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.raf); this.raf = 0; this.sc.fillStyle = "#000"; this.sc.fillRect(0, 0, this.spec.width, this.spec.height); this.wc.fillStyle = "#000"; this.wc.fillRect(0, 0, this.wf.width, this.wf.height); this.peak = null; this.ring.clear(); this.pending = 0; this.full = true; this.frame = null; }
   }
   root.SpectrumView = SpectrumView;
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -99,10 +99,12 @@
       if (typeof m.data === "string") { onText(JSON.parse(m.data)); return; }
       const d = new DataView(m.data);
       const t = d.getUint8(0);
-      if (t === 1) { const f = L.decodeSpectrum(m.data); if (f) { S.spec.push(f); $("specinfo").textContent = (f.rateHz / 1e6).toFixed(3) + " Msps, " + f.db.length + " bins"; } }
+      if (t === 1) { const f = L.decodeSpectrum(m.data); if (f) { S.spec.push(f); specInfo((f.rateHz / 1e6).toFixed(3) + " Msps, " + f.db.length + " bins"); } }
       else if (t === 2 && S.audio) { const a = L.decodeAudio(m.data); if (a) S.audio.push(a.samples, a.rate); }
     };
   }
+  let lastInfo = "";
+  function specInfo(text) { if (text !== lastInfo) { lastInfo = text; $("specinfo").textContent = text; } }   // not rewritten when unchanged
   function send(o) { if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o)); }
   function sub() { send({ type: "sub", panel: true, status: true, spectrum: $("specon").checked, bins: S.bins, fps: S.fps, panelMs: S.panelMs, audio: S.listening, rate: S.arate,
                           zoom: S.spec ? S.spec.zoom : 1, zoomHz: S.spec ? S.spec.zoomHz : 0 }); }
