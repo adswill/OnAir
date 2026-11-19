@@ -64,6 +64,45 @@ test("decodeSpectrum keeps the 8-bit bins next to the dB values", () => {
   near(f.db[2], -50, 1e-3);
 });
 
+// ---- levels and colours from the 8-bit bins
+test("binLevels: the 10th percentile and the maximum agree with a sort of the dB values", () => {
+  const floor = -120, top = -20, n = 200, u8 = new Uint8Array(n);
+  let seed = 7;
+  for (let i = 0; i < n; i++) { seed = (seed * 1103515245 + 12345) & 0x7fffffff; u8[i] = seed % 256; }
+  for (const frac of [0, 0.1, 0.5, 0.99]) {
+    const sorted = Array.from(u8).sort((a, b) => a - b).map(v => floor + v / 255 * (top - floor));
+    const r = L.binLevels(u8, frac, floor, top);
+    near(r.lowDb, sorted[Math.floor(n * frac)], 1e-9, "frac " + frac);
+    near(r.highDb, sorted[n - 1], 1e-9, "max");
+  }
+});
+test("binLevels: flat, single-bin and empty frames", () => {
+  const flat = new Uint8Array(50).fill(100);
+  const r = L.binLevels(flat, 0.1, -100, 0);
+  near(r.lowDb, -100 + 100 / 255 * 100, 1e-9); near(r.highDb, r.lowDb, 1e-9);
+  near(L.binLevels(Uint8Array.from([255]), 0.1, -90, -30).lowDb, -30, 1e-9);
+  assert.deepStrictEqual(L.binLevels(new Uint8Array(0), 0.1, -90, -30), { lowDb: -90, highDb: -90 });
+  near(L.binLevels(Uint8Array.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 255]), 0.1, -100, 0).lowDb, -100, 1e-9);   // index 1 of 10 is still a 0
+});
+test("colourTable: bins map through the frame's own floor and top into the display range", () => {
+  const pal = new Uint8ClampedArray(768);
+  for (let i = 0; i < 256; i++) { pal[3 * i] = i; pal[3 * i + 1] = 255 - i; pal[3 * i + 2] = 7; }
+  // the frame spans exactly the display range: bin value = palette index
+  const t = L.colourTable(pal, -100, 0, -100, 0);
+  assert.strictEqual(t.length, 1024);
+  assert.deepStrictEqual([t[0], t[1], t[2], t[3]], [0, 255, 7, 255]);
+  assert.deepStrictEqual([t[4 * 255], t[4 * 255 + 1], t[4 * 255 + 3]], [255, 0, 255]);
+  assert.strictEqual(t[4 * 128], 128);
+  // a frame with another top: bin 255 is -50 dB, halfway up the range
+  const h = L.colourTable(pal, -100, -50, -100, 0);
+  assert.strictEqual(h[4 * 255], Math.round(0.5 * 255));
+  // values outside the range clamp; the out buffer is reused
+  const o = new Uint8ClampedArray(1024), r = L.colourTable(pal, -100, 100, -100, 0, o);
+  assert.strictEqual(r, o); assert.strictEqual(o[4 * 255], 255); assert.strictEqual(o[4 * 255 + 1], 0);
+  // an empty range does not divide by zero
+  assert.strictEqual(L.colourTable(pal, -50, -50, -50, -50)[4], 0);
+});
+
 // ---- the waterfall's row history
 test("RowRing keeps the newest rows first and forgets the oldest", () => {
   const r = new L.RowRing(3);

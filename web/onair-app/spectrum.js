@@ -137,8 +137,8 @@
       }
       // automatic range: the noise floor (10th percentile) a little under, the peak a little over, moving slowly
       if (this.auto) {
-        const s = Array.from(db).sort((a, b) => a - b);
-        const lo = s[Math.floor(n * 0.1)] - 5, hi = s[n - 1] + 5;
+        const lv = L.binLevels(frame.u8, 0.1, frame.floorDb, frame.topDb);
+        const lo = lv.lowDb - 5, hi = lv.highDb + 5;
         this.minDb += (lo - this.minDb) * 0.1; this.maxDb += (Math.max(hi, lo + 30) - this.maxDb) * 0.1;
       }
       if (this.peakHold) this.updatePeak(db);
@@ -203,18 +203,21 @@
       for (let a = 0; a < k; a++) this.paintRow(this.ring.get(a), a);
     }
     paintRow(row, y) {
-      const c = this.wc, w = this.wf.width, im = c.createImageData(w, 1), d = im.data, p = this.pal;
-      const span = this.maxDb - this.minDb, v = this.view;
-      if (!this.pix || this.pix.length !== w) this.pix = new Int16Array(w);
-      const px = L.rowToPixels(row, v.centreHz, v.rateHz, w, this.pix);
-      const lo = row.floorDb, step = (row.topDb - row.floorDb) / 255;
-      for (let x = 0; x < w; x++) {
-        d[4 * x + 3] = 255;
-        if (px[x] < 0) continue;   // not covered by this row: black
-        const u = Math.max(0, Math.min(255, Math.round((lo + px[x] * step - this.minDb) / span * 255)));
-        d[4 * x] = p[3 * u]; d[4 * x + 1] = p[3 * u + 1]; d[4 * x + 2] = p[3 * u + 2];
+      const c = this.wc, w = this.wf.width, v = this.view;
+      if (!this.im || this.im.width !== w) { this.im = c.createImageData(w, 1); this.pix = new Int16Array(w); }   // one row, reused
+      const d = this.im.data, lut = this.lut || (this.lut = new Uint8ClampedArray(1024)), k = this.lutKey || (this.lutKey = [NaN, NaN, NaN, NaN]);
+      if (k[0] !== row.floorDb || k[1] !== row.topDb || k[2] !== this.minDb || k[3] !== this.maxDb || this.lutPal !== this.pal) {
+        L.colourTable(this.pal, row.floorDb, row.topDb, this.minDb, this.maxDb, lut);
+        k[0] = row.floorDb; k[1] = row.topDb; k[2] = this.minDb; k[3] = this.maxDb; this.lutPal = this.pal;
       }
-      c.putImageData(im, 0, y);
+      const px = L.rowToPixels(row, v.centreHz, v.rateHz, w, this.pix);
+      for (let x = 0, o = 0; x < w; x++, o += 4) {
+        const u = px[x];
+        if (u < 0) { d[o] = 0; d[o + 1] = 0; d[o + 2] = 0; d[o + 3] = 255; continue; }   // not covered by this row: black
+        const t = 4 * u;
+        d[o] = lut[t]; d[o + 1] = lut[t + 1]; d[o + 2] = lut[t + 2]; d[o + 3] = 255;
+      }
+      c.putImageData(this.im, 0, y);
     }
     clear() { if (this.raf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.raf); this.raf = 0; this.sc.fillStyle = "#000"; this.sc.fillRect(0, 0, this.spec.width, this.spec.height); this.wc.fillStyle = "#000"; this.wc.fillRect(0, 0, this.wf.width, this.wf.height); this.peak = null; this.ring.clear(); this.pending = 0; this.full = true; this.frame = null; }
   }

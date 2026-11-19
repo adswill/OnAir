@@ -71,6 +71,31 @@
   function xToHz(x, centreHz, rateHz) { return centreHz + (x - 0.5) * rateHz; }
   function hzToX(hz, centreHz, rateHz) { return rateHz > 0 ? (hz - centreHz) / rateHz + 0.5 : 0.5; }
 
+  // ---- levels and colours straight from the 8-bit bins
+  // The frac quantile (the noise floor for 0.1) and the maximum of a frame, in dB, from a 256-entry histogram of its bins instead of a sort
+  // of the dB values. The quantile is the value at sorted index floor(n * frac), as a sort would give it.
+  function binLevels(u8, frac, floorDb, topDb) {
+    const n = u8.length, hist = new Uint32Array(256);
+    if (!n) return { lowDb: floorDb, highDb: floorDb };
+    let top = 0;
+    for (let i = 0; i < n; i++) { const v = u8[i]; hist[v]++; if (v > top) top = v; }
+    const k = Math.min(n - 1, Math.floor(n * frac));
+    let q = 0, seen = hist[0];
+    while (seen <= k && q < 255) seen += hist[++q];
+    const db = (u) => floorDb + u / 255 * (topDb - floorDb);
+    return { lowDb: db(q), highDb: db(top) };
+  }
+  // One colour per 8-bit bin value for a row: bin -> dB with the row's own floor and top -> index into the 256-colour palette pal
+  // (RGB triples) for the display range minDb..maxDb. out (optional, 1024 bytes) receives RGBA.
+  function colourTable(pal, floorDb, topDb, minDb, maxDb, out) {
+    const t = out || new Uint8ClampedArray(1024), span = maxDb - minDb, step = (topDb - floorDb) / 255;
+    for (let i = 0; i < 256; i++) {
+      const u = span > 0 ? Math.max(0, Math.min(255, Math.round((floorDb + i * step - minDb) / span * 255))) : 0;
+      t[4 * i] = pal[3 * u]; t[4 * i + 1] = pal[3 * u + 1]; t[4 * i + 2] = pal[3 * u + 2]; t[4 * i + 3] = 255;
+    }
+    return t;
+  }
+
   // ---- the waterfall's row history
   // A fixed-size ring of rows, newest first. A row is {u8, centreHz, rateHz, floorDb, topDb}: the 8-bit bins are scaled to that frame's own
   // floor and top, so a row cannot be drawn again without its header.
@@ -288,6 +313,6 @@
     return { control: !!h.control, owner: !!h.owner, role: h.role || "none" };
   }
 
-  return { formatMhz, parseFreq, tuneStep, decodeSpectrum, decodeAudio, xToHz, hzToX, RowRing, rowToPixels, modeSearch, buildPanel, tableColumns, humanize, formatValue, groupSettings, settingValue, permissions,
+  return { formatMhz, parseFreq, tuneStep, decodeSpectrum, decodeAudio, xToHz, hzToX, RowRing, rowToPixels, binLevels, colourTable, modeSearch, buildPanel, tableColumns, humanize, formatValue, groupSettings, settingValue, permissions,
            zoomStep, zoomCentre, zoomAbout, zoomFollow, ZOOM_MAX, buildOptions, optionValue, maskToggle };
 });
