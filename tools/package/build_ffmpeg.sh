@@ -1,12 +1,13 @@
 #!/bin/bash
-# Builds a small static FFmpeg with only what OnAir uses, so that the Linux packages need no FFmpeg from the system (system FFmpeg
-# versions change with every Linux release and a package built against one does not install on the next).
-#   tools/package/build_ffmpeg_static.sh <prefix> [ffmpeg-8.0.tar.xz]
+# Builds a small shared FFmpeg with only what OnAir uses, so that the Linux packages need no FFmpeg from the system (system FFmpeg
+# versions change with every Linux release and a package built against one does not install on the next). OnAir links these libraries
+# dynamically and ships them with the program: Linux lib/ffmpeg of the package, macOS OnAir.app/Contents/Frameworks.
+#   tools/package/build_ffmpeg.sh <prefix> [ffmpeg-8.0.tar.xz]
 # Used for the Linux packages and the macOS app; LGPL-2.1-or-later only: no --enable-gpl, --enable-version3 or --enable-nonfree, no external libraries
 # (the script stops if the finished configuration says otherwise). Network: only FFmpeg's own tcp and rtmp protocols, for the video generator's
 # RTMP server input (core/src/tv/videogen_rtmp.cpp; LGPL like the rest, no librtmp, no TLS). Then build OnAir with -DDECT2_FFMPEG_PREFIX=<prefix>. Needs a C compiler, make and nasm (on x86-64); downloads the source when no tarball is given.
 set -e
-PREFIX=${1:?usage: build_ffmpeg_static.sh <prefix> [tarball]}
+PREFIX=${1:?usage: build_ffmpeg.sh <prefix> [tarball]}
 VER=8.0
 TARBALL=${2:-}
 WORK=$(mktemp -d)
@@ -21,9 +22,11 @@ EXTRA=
 if [ "$(uname -s)" = "Darwin" ]; then
   # hardware decoding through Apple's VideoToolbox (the system framework, no extra library); the deployment target is the app's
   EXTRA="--enable-videotoolbox --enable-hwaccel=h264_videotoolbox,hevc_videotoolbox,mpeg2_videotoolbox --extra-cflags=-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-15.0} --extra-ldflags=-mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET:-15.0}"
+else
+  command -v patchelf >/dev/null || { echo "patchelf is needed (the FFmpeg libraries get RUNPATH \$ORIGIN)"; exit 1; }
 fi
 [ "$(uname -m)" = "x86_64" ] && ! command -v nasm >/dev/null && { echo "nasm is needed for the fast x86-64 code"; exit 1; }
-"$WORK"/ffmpeg-$VER/configure --prefix="$PREFIX" --enable-static --disable-shared --enable-pic \
+"$WORK"/ffmpeg-$VER/configure --prefix="$PREFIX" --enable-shared --disable-static --enable-pic \
   --disable-programs --disable-doc --disable-debug --disable-autodetect \
   --disable-avdevice --disable-avfilter \
   --disable-everything \
@@ -43,5 +46,9 @@ fi
 grep -m1 FFMPEG_CONFIGURATION config.h | sed -E 's/^#define FFMPEG_CONFIGURATION "(.*)"$/\1/' > "$WORK/configuration.txt"
 make -j"${FFMPEG_JOBS:-$(sysctl -n hw.ncpu 2>/dev/null || nproc)}" >/dev/null
 make install >/dev/null
+# Linux: the libraries find each other in their own folder (lib/ffmpeg of the package), never a system FFmpeg of the same major version
+if [ "$(uname -s)" != "Darwin" ]; then
+  for l in "$PREFIX"/lib/lib*.so.*; do [ -L "$l" ] || patchelf --set-rpath '$ORIGIN' "$l"; done
+fi
 mkdir -p "$PREFIX/share"; cp "$WORK/configuration.txt" "$PREFIX/share/ffmpeg-configuration.txt"   # shipped with the app as part of the source offer
 echo "FFmpeg $VER installed in $PREFIX"

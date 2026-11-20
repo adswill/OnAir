@@ -99,7 +99,7 @@ const Row kRows[] = {
     {"/api/v1/status", Ep::Status, false},       {"/api/v1/devices", Ep::Devices, false},   {"/api/v1/modes", Ep::Modes, false},
     {"/api/v1/telemetry", Ep::Telemetry, false}, {"/api/v1/spectrum", Ep::Spectrum, false}, {"/api/v1/rotator", Ep::Rotator, false},
     {"/api/v1/ws", Ep::Ws, false},               {"/api/v1/events", Ep::Events, false},     {"/api/v1/memories", Ep::Memories, false}, {"/api/v1/sessions", Ep::Sessions, false},
-    {"/api/v1/scheduler", Ep::Scheduler, false}, {"/api/v1/audio", Ep::Audio, false},       {"/api/v1/recording", Ep::Recording, false},
+    {"/api/v1/scheduler", Ep::Scheduler, false}, {"/api/v1/audio", Ep::Audio, false},       {"/api/v1/recording", Ep::Recording, false}, {"/api/v1/metrics", Ep::Metrics, false},
     {"/api/v1/start", Ep::Start, true},          {"/api/v1/stop", Ep::Stop, true},          {"/api/v1/mode", Ep::Mode, true},
     {"/api/v1/frequency", Ep::Frequency, true},  {"/api/v1/samplerate", Ep::SampleRate, true}, {"/api/v1/gain", Ep::Gain, true},
     {"/api/v1/autogain", Ep::AutoGain, true},    {"/api/v1/bandwidth", Ep::Bandwidth, true}, {"/api/v1/squelch", Ep::Squelch, true},
@@ -383,6 +383,44 @@ std::string rigctlHandle(const std::string& lineIn, RigctlRadio& radio, bool& qu
     if (cmd == "\\chk_vfo") return "0\n";
     if (cmd == "\\get_powerstat") return "1\n";
     return rprt(-4);
+}
+
+// ------------------------------------------------------------------ metrics
+namespace {
+std::string labelEscape(const std::string& v) {
+    std::string o;
+    for (char c : v) {
+        if (c == '\\') o += "\\\\";
+        else if (c == '"') o += "\\\"";
+        else if (c == '\n') o += "\\n";
+        else if ((unsigned char)c >= 0x20) o += c;
+    }
+    return o;
+}
+std::string promNum(double v) {
+    char b[48];
+    snprintf(b, sizeof b, "%.15g", v);
+    return b;
+}
+void metric(std::string& o, const char* name, const char* type, const char* help, const std::string& value) {
+    o += std::string("# HELP ") + name + " " + help + "\n# TYPE " + name + " " + type + "\n" + name + " " + value + "\n";
+}
+} // namespace
+
+std::string metricsText(const Metrics& m) {
+    std::string o;
+    o += "# HELP onair_info The active mode and radio (always 1).\n# TYPE onair_info gauge\nonair_info{mode=\"" + labelEscape(m.mode) + "\",device=\"" + labelEscape(m.device) + "\"} 1\n";
+    metric(o, "onair_receiver_running", "gauge", "1 while the receiver is running.", m.running ? "1" : "0");
+    metric(o, "onair_frequency_hertz", "gauge", "Tuned frequency.", promNum(m.frequencyHz));
+    metric(o, "onair_sample_rate_hertz", "gauge", "Sample rate of the radio.", promNum(m.sampleRateHz));
+    metric(o, "onair_gain_decibels", "gauge", "Total gain setting.", promNum(m.gainDb));
+    metric(o, "onair_dropped_samples_total", "counter", "Samples dropped on the OnAir side (the receiver could not keep up).", std::to_string((unsigned long long)m.droppedSamples));
+    metric(o, "onair_radio_loss_seconds_total", "counter", "Seconds of signal lost between the radio and OnAir.", promNum(m.radioLossSec));
+    metric(o, "onair_cpu_loss_seconds_total", "counter", "Seconds of signal lost because the receiver was too slow.", promNum(m.cpuLossSec));
+    metric(o, "onair_load_percent", "gauge", "Receiver share of real time on the sample thread (100 = just keeping up).", promNum(m.loadPct));
+    if (m.deliveredPct >= 0) metric(o, "onair_delivered_percent", "gauge", "Samples the radio handed over, percent of its set rate.", promNum(m.deliveredPct));
+    metric(o, "onair_events_total", "counter", "Decoded messages since the program started.", std::to_string((unsigned long long)m.events));
+    return o;
 }
 
 } // namespace dect2::apipol

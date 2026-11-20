@@ -181,11 +181,19 @@ jobs:
       - name: Build the installer from the zip
         env:
           VER: ${{ needs.version.outputs.ver }}
+          WIN_SIGN_PFX_BASE64: ${{ secrets.WIN_SIGN_PFX_BASE64 }}
+          WIN_SIGN_PFX_PASSWORD: ${{ secrets.WIN_SIGN_PFX_PASSWORD }}
         run: |
           set -eu
           mkdir unz && unzip -q "dist/OnAir-$VER-windows-x64.zip" -d unz
           SRC=$(cd "unz/OnAir-$VER-windows-x64" && pwd)
+          # signing (a no-op without the repository secrets, docs/SIGNING.md): the programs, then the zip is made again, then the installer
+          if [ -n "${WIN_SIGN_PFX_BASE64:-}" ]; then
+            find "$SRC" -maxdepth 2 \( -name '*.exe' -o -name '*.dll' \) -print0 | xargs -0 -n1 tools/release/sign_windows.sh
+            (cd unz && rm -f "../dist/OnAir-$VER-windows-x64.zip" && zip -qr "../dist/OnAir-$VER-windows-x64.zip" "OnAir-$VER-windows-x64")
+          fi
           makensis -V2 -DVERSION="$VER" -DSRC="$SRC" -DICON="$PWD/packaging/windows/OnAir.ico" -DOUTFILE="$PWD/dist/OnAir-$VER-windows-x64-setup.exe" packaging/windows/onair.nsi
+          tools/release/sign_windows.sh "dist/OnAir-$VER-windows-x64-setup.exe"
           ls -la dist
       - uses: actions/upload-artifact@v7
         with:
@@ -217,14 +225,14 @@ jobs:
       - uses: actions/checkout@v7
       - name: Install dependencies
         run: tools/release/retry.sh brew install cmake pkg-config nasm ccache hackrf soapysdr soapyremote libusb glfw librtlsdr airspy airspyhf libbladerf limesuite uhd hamlib openssl@3   # radio libraries and Hamlib go into the app (tools/package/bundle_macos.py)
-      # No Homebrew FFmpeg (it is --enable-gpl): the LGPL static build of tools/package/build_ffmpeg_static.sh, cached per architecture and script version
-      - name: Cache the static FFmpeg
+      # No Homebrew FFmpeg (it is --enable-gpl): the LGPL shared build of tools/package/build_ffmpeg.sh, cached per architecture and script version
+      - name: Cache the shared FFmpeg
         id: ffmpeg
         uses: actions/cache@v6
-        with: { path: ~/ffmpeg, key: "ffmpeg-8.0-static-macos-${{ matrix.arch }}-${{ hashFiles('tools/package/build_ffmpeg_static.sh') }}" }
-      - name: Build FFmpeg (LGPL, static, only what OnAir uses)
+        with: { path: ~/ffmpeg, key: "ffmpeg-8.0-shared-macos-${{ matrix.arch }}-${{ hashFiles('tools/package/build_ffmpeg.sh') }}" }
+      - name: Build FFmpeg (LGPL, shared, only what OnAir uses)
         if: steps.ffmpeg.outputs.cache-hit != 'true'
-        run: tools/package/build_ffmpeg_static.sh "$HOME/ffmpeg"
+        run: tools/package/build_ffmpeg.sh "$HOME/ffmpeg"
       - name: Restore ccache
         uses: actions/cache/restore@v6
         with:
@@ -233,6 +241,28 @@ jobs:
           restore-keys: |
             ccache-release-macos-${{ matrix.arch }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
             ccache-release-macos-${{ matrix.arch }}-
+      - name: Import the Developer ID certificate (only when the secrets exist, docs/SIGNING.md)
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
+          NOTARY_API_KEY_P8_BASE64: ${{ secrets.NOTARY_API_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          if [ -z "$MACOS_CERT_P12_BASE64" ] || [ -z "$MACOS_SIGN_IDENTITY" ]; then echo "no signing secrets: the app stays ad hoc signed"; exit 0; fi
+          KC="$RUNNER_TEMP/sign.keychain-db"; KP=$(uuidgen)
+          security create-keychain -p "$KP" "$KC"; security set-keychain-settings -lut 21600 "$KC"; security unlock-keychain -p "$KP" "$KC"
+          printf '%s' "$MACOS_CERT_P12_BASE64" | base64 -d > "$RUNNER_TEMP/cert.p12"
+          security import "$RUNNER_TEMP/cert.p12" -P "$MACOS_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KP" "$KC" >/dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/cert.p12"
+          echo "ONAIR_MACOS_SIGN_IDENTITY=$MACOS_SIGN_IDENTITY" >> "$GITHUB_ENV"
+          if [ -n "$NOTARY_API_KEY_P8_BASE64" ] && [ -n "$NOTARY_KEY_ID" ] && [ -n "$NOTARY_ISSUER_ID" ]; then
+            printf '%s' "$NOTARY_API_KEY_P8_BASE64" | base64 -d > "$RUNNER_TEMP/notary.p8"
+            { echo "ONAIR_NOTARY_KEY_FILE=$RUNNER_TEMP/notary.p8"; echo "ONAIR_NOTARY_KEY_ID=$NOTARY_KEY_ID"; echo "ONAIR_NOTARY_ISSUER=$NOTARY_ISSUER_ID"; } >> "$GITHUB_ENV"
+          fi
       - name: Build the app and the .dmg
         run: FFMPEG_PREFIX="$HOME/ffmpeg" tools/package/make_dmg.sh "${{ needs.version.outputs.ver }}"
       - name: Debug symbols
@@ -272,13 +302,13 @@ jobs:
         run: |
           tools/release/retry.sh sudo apt-get update
           tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 build-essential file desktop-file-utils cmake pkg-config ccache nasm patchelf curl xz-utils libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libglfw3-dev libairspy0 libbladerf2 libiio0 liblimesuite20.10-1 libuhd4.1.0 libhamlib-dev libssl-dev
-      - name: Cache the static FFmpeg
+      - name: Cache the shared FFmpeg
         id: ffmpeg
         uses: actions/cache@v6
-        with: { path: ~/ffmpeg, key: "ffmpeg-8.0-static-${{ matrix.arch }}-${{ hashFiles('tools/package/build_ffmpeg_static.sh') }}" }
-      - name: "Build FFmpeg (static, only what OnAir uses, so that the packages do not depend on the FFmpeg of the system they are installed on)"
+        with: { path: ~/ffmpeg, key: "ffmpeg-8.0-shared-${{ matrix.arch }}-${{ hashFiles('tools/package/build_ffmpeg.sh') }}" }
+      - name: "Build FFmpeg (shared, only what OnAir uses, shipped in the packages so they do not depend on the FFmpeg of the system they are installed on)"
         if: steps.ffmpeg.outputs.cache-hit != 'true'
-        run: tools/package/build_ffmpeg_static.sh "$HOME/ffmpeg"
+        run: tools/package/build_ffmpeg.sh "$HOME/ffmpeg"
       - name: "Gather the radio libraries (RTL-SDR is built here from the RTL-SDR Blog source: the distribution's librtlsdr0 cannot drive the V4)"
         run: tools/package/collect_radio_libs_linux.sh "$GITHUB_WORKSPACE/build/radiolibs"
       - name: Restore ccache   # same scheme as ci.yml; separate cache per architecture; saved below also when the build fails

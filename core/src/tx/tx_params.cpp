@@ -12,7 +12,10 @@
 #include "dect2/pager/pager_tel.h"
 #include "dect2/psk/psk_tel.h"
 #include "dect2/t2/t2.h"
+#include "dect2/t2/t2gen.h"
+#include "dect2/t2/t2profile.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -178,31 +181,93 @@ void hfAudioPos(std::vector<D>& v, double def, const char* label, const char* ls
 
 // ---------------------------------------------------------------- the DVB / ISDB / DVB-S rows
 
+// ---- DVB-T2: T2-Base or T2-Lite (EN 302 755 annex I). The rules are in t2profile.h; the rows forbid what annex I forbids for T2-Lite (the
+// panel greys those choices out, with the clause as the tooltip). T2-Base keeps the old behaviour: a pilot pattern its table does not allow
+// is a warning (txParamWarnings), not a block. The choice orders: t2.fft 1K 2K 4K 8K 16K 32K, t2.gi as TxParams::giIdx, t2.pp PP1..PP8,
+// t2.plpMod and t2.plpCod as PLP_MOD / PLP_COD.
+int t2v(const std::map<std::string, double>& n, const char* k) {
+    const auto it = n.find(k);
+    return it == n.end() ? 0 : (int)std::lround(it->second);
+}
+bool t2Lite(const std::map<std::string, double>& n) { return t2v(n, "t2.profile") == 1; }
+bool t2Miso(const std::map<std::string, double>& n) { return t2v(n, "t2.miso") == 1; }
+int t2FftN(int choice) { return choice >= 0 && choice < 6 ? 1024 << choice : 0; }
+// s1 (TxParams::s1, the P1 S1 field): 0 T2_SISO, 1 T2_MISO, 3 T2_LITE_SISO, 4 T2_LITE_MISO (table 18). Each row keeps the other's half.
+int t2S1(bool lite, bool miso) { return lite ? (miso ? 4 : 3) : (miso ? 1 : 0); }
+
+const char* t2BlockFft(const std::map<std::string, double>& n, int i) {
+    return t2Lite(n) && !t2LiteFft(t2FftN(i)) ? "T2-Lite has no 1K or 32K FFT (EN 302 755 annex I.7.1)." : nullptr;
+}
+const char* t2BlockGi(const std::map<std::string, double>& n, int i) {
+    if (!t2Lite(n) || t2PilotMask(t2FftN(t2v(n, "t2.fft")), i, t2Miso(n), true)) return nullptr;
+    return t2Miso(n) ? "T2-Lite does not allow this guard interval with this FFT size in MISO (EN 302 755 annex I.7.3, table I.6)."
+                     : "T2-Lite does not allow this guard interval with this FFT size (EN 302 755 annex I.7.3, table I.5).";
+}
+const char* t2BlockPp(const std::map<std::string, double>& n, int i) {
+    if (!t2Lite(n)) return nullptr;
+    if (i == 7) return "T2-Lite does not use pilot pattern PP8 (EN 302 755 annex I.7.2).";
+    if ((t2PilotMask(t2FftN(t2v(n, "t2.fft")), t2v(n, "t2.gi"), t2Miso(n), true) >> i) & 1) return nullptr;
+    return t2Miso(n) ? "T2-Lite does not allow this pilot pattern with this FFT size and guard interval in MISO (EN 302 755 annex I.7.3, table I.6)."
+                     : "T2-Lite does not allow this pilot pattern with this FFT size and guard interval (EN 302 755 annex I.7.3, table I.5).";
+}
+const char* t2BlockMod(const std::map<std::string, double>& n, int i) {
+    return t2Lite(n) && !t2ModCodAllowed(i, t2v(n, "t2.plpCod"), true) && t2CodeRateAllowed(t2v(n, "t2.plpCod"), true)
+               ? "T2-Lite does not use 256-QAM with code rate 2/3 or 3/4 (EN 302 755 annex I.5, table I.4)." : nullptr;
+}
+const char* t2BlockCod(const std::map<std::string, double>& n, int i) {
+    const bool lite = t2Lite(n);
+    if (!t2CodeRateAllowed(i, lite))
+        return lite ? "T2-Lite has no code rate 4/5 or 5/6 (EN 302 755 annex I.3, table I.1)." : "1/3 and 2/5 are code rates of T2-Lite only (EN 302 755 annex I.3, table I.1): choose the T2-Lite profile.";
+    if (!t2ModCodAllowed(t2v(n, "t2.plpMod"), i, lite)) return "T2-Lite does not use 256-QAM with code rate 2/3 or 3/4 (EN 302 755 annex I.5, table I.4).";
+    return nullptr;
+}
+const char* t2BlockRot(const std::map<std::string, double>& n, int i) {
+    return i == 1 && !t2RotationAllowed(t2v(n, "t2.plpMod"), t2Lite(n)) ? "T2-Lite never rotates 256-QAM (EN 302 755 annex I.5, table I.4)." : nullptr;
+}
+const char* t2BlockShort(const std::map<std::string, double>& n, int i) {
+    return i == 0 && t2Lite(n) ? "T2-Lite uses only short 16200-bit FEC frames (EN 302 755 annex I.3): always on." : nullptr;
+}
+D BLK(D d, const char* (*f)(const std::map<std::string, double>&, int)) { d.block = f; return d; }
+
 void dvbt2Rows(std::vector<D>& v) {
     add(v, {
-        PROBE(A(SET(TV(pick("t2.fft", "FFT size", "More carriers are more robust against echoes, fewer against movement.", 3, {"1K", "2K", "4K", "8K", "16K", "32K"}, 0, {3, 0, 2, 1, 4, 5}), 4),
+        PROBE(S(SET(pick("t2.profile", "Profile",
+                         "T2-Base, or T2-Lite for simple mobile and handheld receivers (EN 302 755 annex I): no 1K / 32K FFT, no PP8, short FEC frames only, the extra code rates 1/3 and 2/5, at most 4 Mbit/s for the programme. Choices T2-Lite does not allow are greyed out. A T2-Base signal that keeps to every T2-Lite rule tells T2-Lite receivers so (T2_BASE_LITE).",
+                         0, {"T2-Base", "T2-Lite"}),
+                    [](TxRequest& r, double x) { r.synth.tx.s1 = t2S1(x > 0.5, r.synth.tx.s1 == 1 || r.synth.tx.s1 == 4); })), 0.12),
+        PROBE(A(SET(pick("t2.miso", "Transmitter groups",
+                         "SISO: one transmitter. MISO: the Alamouti code for two transmitter groups of a single-frequency network (EN 302 755 cl. 9.1); this transmitter sends group 1, which a receiver decodes on its own.",
+                         0, {"SISO", "MISO"}),
+                    [](TxRequest& r, double x) { r.synth.tx.s1 = t2S1(r.synth.tx.s1 >= 3, x > 0.5); }), TxPGroup::Modulation), 0.12),
+        PROBE(A(SET(BLK(TV(pick("t2.fft", "FFT size", "More carriers are more robust against echoes, fewer against movement.", 3, {"1K", "2K", "4K", "8K", "16K", "32K"}, 0, {3, 0, 2, 1, 4, 5}), 4), t2BlockFft),
                     [](TxRequest& r, double x) { r.synth.tx.s2field1 = (int)x; }), TxPGroup::Modulation), 0.12),
-        PROBE(A(SET(pick("t2.gi", "Guard interval", "The pause before each symbol that absorbs echoes. Not every pilot pattern is allowed with every guard (EN 302 755 table 59).", 4,
-                         {"1/32", "1/16", "1/8", "1/4", "1/128", "19/128", "19/256"}),
+        PROBE(A(SET(BLK(pick("t2.gi", "Guard interval", "The pause before each symbol that absorbs echoes. Not every pilot pattern is allowed with every guard (EN 302 755 tables 58 and 59; T2-Lite tables I.5 and I.6).", 4,
+                             {"1/32", "1/16", "1/8", "1/4", "1/128", "19/128", "19/256"}), t2BlockGi),
                     [](TxRequest& r, double x) { r.synth.tx.giIdx = (int)x; }), TxPGroup::Modulation), 0.12),
-        PROBE(A(SET(pick("t2.pp", "Pilot pattern", "PP1 to PP8: denser pilots follow faster channels; the allowed ones depend on the FFT size and guard.", 6, {"PP1", "PP2", "PP3", "PP4", "PP5", "PP6", "PP7", "PP8"}),
+        PROBE(A(SET(BLK(pick("t2.pp", "Pilot pattern", "PP1 to PP8: denser pilots follow faster channels; the allowed ones depend on the FFT size and guard.", 6, {"PP1", "PP2", "PP3", "PP4", "PP5", "PP6", "PP7", "PP8"}), t2BlockPp),
                     [](TxRequest& r, double x) { r.synth.tx.pp = (int)x; }), TxPGroup::Modulation), 0.12),
-        PROBE(A(SET(pick("t2.plpMod", "Constellation", "The modulation of the data PLP.", 2, {"QPSK", "16-QAM", "64-QAM", "256-QAM"}),
+        PROBE(A(SET(BLK(pick("t2.plpMod", "Constellation", "The modulation of the data PLP.", 2, {"QPSK", "16-QAM", "64-QAM", "256-QAM"}), t2BlockMod),
                     [](TxRequest& r, double x) { r.synth.tx.plpMod = (int)x; }), TxPGroup::Modulation), 0.12),
-        PROBE(A(SET(pick("t2.plpCod", "Code rate (FEC)", "The LDPC code rate of the data PLP.", 2, {"1/2", "3/5", "2/3", "3/4", "4/5", "5/6"}),
+        PROBE(A(SET(BLK(pick("t2.plpCod", "Code rate (FEC)", "The LDPC code rate of the data PLP. 1/3 and 2/5 are T2-Lite only; T2-Lite has no 4/5 and 5/6.", 2, {"1/2", "3/5", "2/3", "3/4", "4/5", "5/6", "1/3", "2/5"}), t2BlockCod),
                     [](TxRequest& r, double x) { r.synth.tx.plpCod = (int)x; }), TxPGroup::Modulation), 0.12),
-        PROBE(A(SET(flag("t2.rot", "Rotated constellation", "Rotates and delays the constellation so a faded carrier can still be recovered.", true),
+        PROBE(A(SET(BLK(flag("t2.rot", "Rotated constellation", "Rotates and delays the constellation so a faded carrier can still be recovered.", true), t2BlockRot),
                     [](TxRequest& r, double x) { r.synth.tx.plpRot = x > 0.5; }), TxPGroup::Modulation), 0.12),
-        PROBE(A(SET(flag("t2.short", "Short FEC frames", "16200-bit FEC frames instead of 64800: lower latency, a little less efficient.", false),
+        PROBE(A(SET(BLK(flag("t2.short", "Short FEC frames", "16200-bit FEC frames instead of 64800: lower latency, a little less efficient. T2-Lite always uses them.", false), t2BlockShort),
                     [](TxRequest& r, double x) { r.synth.tx.plpShort = x > 0.5; }), TxPGroup::Framing), 0.12),
         PROBE(A(SET(flag("t2.ext", "Extended carriers", "More carriers at the band edges (8K, 16K and 32K only).", false),
                     [](TxRequest& r, double x) { r.synth.tx.ext = x > 0.5; }), TxPGroup::Modulation), 0.12),
-        PROBE(A(SET(intr("t2.ti", "Time-interleaver blocks", "Time-interleaver blocks per frame (0 = none). More spreads a burst error wider.", "", 3, 0, 8),
+        PROBE(A(SET(intr("t2.ti", "Time-interleaver blocks", "Time-interleaver blocks per frame (0 = none). More spreads a burst error wider. T2-Lite: each block holds at most 2^18 cells (annex I.8); fewer FEC blocks are sent when they would not fit.", "", 3, 0, 8),
                     [](TxRequest& r, double x) { r.synth.tx.plpTi = (int)x; }), TxPGroup::Framing), 0.12),
         PROBE(A(SET(pick("t2.l1Mod", "L1 signalling modulation", "The modulation of the L1-post signalling.", 1, {"BPSK", "QPSK", "16-QAM", "64-QAM"}),
                     [](TxRequest& r, double x) { r.synth.tx.l1Mod = (int)x; }), TxPGroup::Framing), 0.12),
         PROBE(A(SET(hexr("t2.cellId", "Cell ID", "CELL_ID of the L1 signalling (16 bits).", 0x1001, 0, 0xFFFF, "0x%04X"),
                     [](TxRequest& r, double x) { r.synth.tx.cellId = (int)x; }), TxPGroup::Framing), 0.12),
+        PROBE(A(SET(intr("t2.plpId", "PLP ID", "PLP_ID of the data PLP (0 - 255).", "", 0, 0, 255),
+                    [](TxRequest& r, double x) { r.synth.tx.plpId = (int)x; }), TxPGroup::Framing), 0.12),
+        PROBE(A(SET(pick("t2.version", "T2 version", "T2_VERSION of the L1 signalling: 1.1.1, 1.2.1 or 1.3.1.", 2, {"1.1.1", "1.2.1", "1.3.1"}),
+                    [](TxRequest& r, double x) { r.synth.tx.t2Version = (int)x; }), TxPGroup::Framing), 0.12),
+        PROBE(W(A(SET(flag("t2.l1Scr", "Scramble L1-post", "Sets the L1_POST_SCRAMBLED bit and scrambles the L1-post (version 1.3.1 only).", true),
+                    [](TxRequest& r, double x) { r.synth.tx.l1Scrambled = x > 0.5; }), TxPGroup::Framing), "t2.version=2"), 0.12),
         PROBE(A(SET(hexr("t2.networkId", "Network ID", "NETWORK_ID of the L1 signalling (16 bits).", 0x3085, 0, 0xFFFF, "0x%04X"),
                     [](TxRequest& r, double x) { r.synth.tx.networkId = (int)x; }), TxPGroup::Framing), 0.12),
         PROBE(A(SET(hexr("t2.systemId", "T2 system ID", "T2_SYSTEM_ID of the L1 signalling (16 bits).", 0x8001, 0, 0xFFFF, "0x%04X"),
@@ -212,11 +277,20 @@ void dvbt2Rows(std::vector<D>& v) {
 
 void dvbtRows(std::vector<D>& v) {
     add(v, {
-        PROBE(A(SET(pick("dvbt.mode", "FFT mode", "2K or 8K carriers.", 1, {"2K", "8K"}), [](TxRequest& r, double x) { r.synth.dvbtMode = (int)x; }), TxPGroup::Modulation), 0.05),
+        PROBE(A(SET(pick("dvbt.mode", "FFT mode", "2K or 8K carriers; 4K is the DVB-H mode of annex F.", 1, {"2K", "8K", "4K (DVB-H)"}, 0, {0, 1, 2}), [](TxRequest& r, double x) { r.synth.dvbtMode = (int)x; }), TxPGroup::Modulation), 0.05),
         PROBE(A(SET(pick("dvbt.guard", "Guard interval", "The pause before each symbol that absorbs echoes.", 2, {"1/32", "1/16", "1/8", "1/4"}),
                     [](TxRequest& r, double x) { r.synth.dvbtGuard = (int)x; }), TxPGroup::Modulation), 0.05),
-        PROBE(A(SET(pick("dvbt.mod", "Constellation", "The modulation of the carriers.", 2, {"QPSK", "16-QAM", "64-QAM"}), [](TxRequest& r, double x) { r.synth.dvbtMod = (int)x; }), TxPGroup::Modulation), 0.05),
-        PROBE(A(SET(pick("dvbt.rate", "Code rate (FEC)", "The convolutional code rate.", 1, {"1/2", "2/3", "3/4", "5/6", "7/8"}), [](TxRequest& r, double x) { r.synth.dvbtRate = (int)x; }), TxPGroup::Modulation), 0.05),
+        PROBE(A(SET(pick("dvbt.mod", "Constellation", "The modulation of the carriers (a hierarchy needs 16-QAM or 64-QAM).", 2, {"QPSK", "16-QAM", "64-QAM"}), [](TxRequest& r, double x) { r.synth.dvbtMod = (int)x; }), TxPGroup::Modulation), 0.05),
+        PROBE(A(SET(pick("dvbt.rate", "Code rate (FEC)", "The convolutional code rate (of the high-priority stream when a hierarchy is on).", 1, {"1/2", "2/3", "3/4", "5/6", "7/8"}), [](TxRequest& r, double x) { r.synth.dvbtRate = (int)x; }), TxPGroup::Modulation), 0.05),
+        PROBE(A(SET(pick("dvbt.hier", "Hierarchy", "Hierarchical modulation: a robust high-priority stream (QPSK) and a low-priority one on top. Alpha is the distance between the constellation quadrants.", 0, {"none", "alpha = 1", "alpha = 2", "alpha = 4"}),
+                    [](TxRequest& r, double x) { r.synth.dvbtHier = (int)x; }), TxPGroup::Modulation), 0.05),
+        PROBE(W(A(SET(pick("dvbt.rateLp", "Low-priority code rate", "The code rate of the low-priority stream.", 1, {"1/2", "2/3", "3/4", "5/6", "7/8"}), [](TxRequest& r, double x) { r.synth.dvbtRateLp = (int)x; }), TxPGroup::Modulation), "dvbt.hier>0"), 0.05),
+        PROBE(A(SET(flag("dvbt.cellOn", "Send the cell ID", "Puts the cell ID into the TPS signalling (the length indicator changes from 23 to 31 bits).", false), [](TxRequest& r, double x) { r.synth.dvbtCellOn = x > 0.5; }), TxPGroup::Framing), 0.12),
+        PROBE(W(A(SET(hexr("dvbt.cellId", "Cell ID", "The cell identifier in the TPS (16 bits).", 0x1001, 0, 0xFFFF, "0x%04X"), [](TxRequest& r, double x) { r.synth.dvbtCellId = (int)x; }), TxPGroup::Framing), "dvbt.cellOn=1"), 0.12),
+        PROBE(W(A(SET(flag("dvbt.indepth", "In-depth interleaver", "The longer symbol interleaver of annex F (2K and 4K only).", false), [](TxRequest& r, double x) { r.synth.dvbtInDepth = x > 0.5; }), TxPGroup::Framing), "dvbt.mode!=1"), 0.05),
+        PROBE(A(SET(flag("dvbt.dvbh", "DVB-H signalling", "Sends the DVB-H length indicator (33 TPS bits) with the two service bits below.", false), [](TxRequest& r, double x) { r.synth.dvbtDvbh = x > 0.5; }), TxPGroup::Framing), 0.12),
+        PROBE(W(A(SET(flag("dvbt.timeSlicing", "Time slicing", "The DVB-H service indication: time slicing is in use.", false), [](TxRequest& r, double x) { r.synth.dvbtTimeSlicing = x > 0.5; }), TxPGroup::Framing), "dvbt.dvbh=1"), 0.12),
+        PROBE(W(A(SET(flag("dvbt.mpeFec", "MPE-FEC", "The DVB-H service indication: MPE-FEC is in use.", false), [](TxRequest& r, double x) { r.synth.dvbtMpeFec = x > 0.5; }), TxPGroup::Framing), "dvbt.dvbh=1"), 0.12),
     });
 }
 
@@ -231,6 +305,26 @@ void isdbtRows(std::vector<D>& v) {
                     [](TxRequest& r, double x) { r.synth.isdbtMod = (int)x; }), TxPGroup::Modulation), 0.05),
         PROBE(A(SET(pick("isdbt.rate", "Code rate (layer B)", "The convolutional code rate of the programme layer.", 2, {"1/2", "2/3", "3/4", "5/6", "7/8"}),
                     [](TxRequest& r, double x) { r.synth.isdbtRate = (int)x; }), TxPGroup::Modulation), 0.05),
+    });
+}
+
+void dvbc2Rows(std::vector<D>& v) {
+    add(v, {
+        PROBE(A(SET(pick("dvbc2.mcs", "Modulation and code rate", "The data PLP's constellation and LDPC rate (EN 302 769 table).", 0,
+                         {"256-QAM 5/6", "16-QAM 4/5", "64-QAM 2/3", "256-QAM 3/4", "64-QAM 9/10", "256-QAM 9/10", "1024-QAM 3/4", "4096-QAM 5/6"}),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[0] = (int)x; }), TxPGroup::Modulation), 0.25),
+        PROBE(A(SET(pick("dvbc2.gi", "Guard interval", "1/64 or 1/128 of the symbol.", 0, {"1/64", "1/128"}),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[1] = (int)x; }), TxPGroup::Modulation), 0.25),
+        PROBE(A(SET(pick("dvbc2.slice", "Data slice type", "Type 1, or Type 2 with the robust or the high-efficiency FECFRAME header.", 0, {"Type 1", "Type 2 robust header", "Type 2 high-efficiency header"}),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[2] = (int)x; }), TxPGroup::Framing), 0.25),
+        PROBE(A(SET(pick("dvbc2.ti", "Time interleaving", "Symbols the data is spread over.", 0, {"none", "4 symbols", "8 symbols", "16 symbols"}),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[3] = (int)x; }), TxPGroup::Framing), 0.25),
+        PROBE(A(SET(flag("dvbc2.notch", "Narrowband notch", "Leaves a narrow band of carriers empty (a protected service in the cable).", false),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[4] = x > 0.5 ? 1 : 0; }), TxPGroup::Modulation), 0.25),
+        PROBE(A(SET(flag("dvbc2.short", "Short FEC frames", "16200-bit FEC frames instead of 64800.", false),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[5] = x > 0.5 ? 1 : 0; }), TxPGroup::Framing), 0.25),
+        PROBE(W(A(SET(flag("dvbc2.plp2", "Second PLP", "A second data PLP in the Type 2 slice.", false),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[6] = x > 0.5 ? 1 : 0; }), TxPGroup::Framing), "dvbc2.slice>0"), 0.25),
     });
 }
 
@@ -271,7 +365,11 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
     switch (k) {
     case TxPayloadKind::TvFile:
         if (id == "dvbt2" || id == "dvbt") {
-            v.push_back(S(FLD(pick("dvb.bw", "Channel width", "The width of the channel the multiplex is sent in.", 0, {"8 MHz", "7 MHz", "6 MHz", "5 MHz"}, 0, {8, 7, 6, 5}), TxPField::BandwidthMhz)));
+            if (id == "dvbt2")   // DVB-T2 also has the 1.7 MHz channel (EN 302 755 table 65: T = 71/131 µs), for T2-Base and T2-Lite; DVB-T has not
+                v.push_back(S(FLD(pick("dvb.bw", "Channel width", "The width of the channel the multiplex is sent in. 1.7 MHz is the narrow DVB-T2 channel (Band III, L-band, amateur TV).", 0,
+                                       {"8 MHz", "7 MHz", "6 MHz", "5 MHz", "1.7 MHz"}, 0, {8, 7, 6, 5, 1.7}), TxPField::BandwidthMhz)));
+            else
+                v.push_back(S(FLD(pick("dvb.bw", "Channel width", "The width of the channel the multiplex is sent in.", 0, {"8 MHz", "7 MHz", "6 MHz", "5 MHz"}, 0, {8, 7, 6, 5}), TxPField::BandwidthMhz)));
             v.back().probeSec = 0.05;
         }
         tvPayload(v, id);
@@ -279,6 +377,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         if (id == "dvbt") dvbtRows(v);
         if (id == "isdbt") isdbtRows(v);
         if (id == "dvbs") dvbsRows(v);
+        if (id == "dvbc2") dvbc2Rows(v);
         if (id == "dtmb" || id == "dvbc" || id == "atsc3" || id == "atsc")
             v.push_back(A(custom("scene.options", "Generator settings", "The generator's own settings (shared with the receiver's test signal); its noise and offset controls do not apply here."), TxPGroup::Modulation));
         break;
@@ -838,7 +937,40 @@ void txParamApply(const TxParamDef& d, double v, const std::string& txt, TxReque
     }
 }
 
-void txParamsApplyNumbers(const std::vector<TxParamDef>& rows, const std::map<std::string, double>& num, TxRequest& r) {
+const char* txParamBlocked(const TxParamDef& d, const std::vector<TxParamDef>& rows, const std::map<std::string, double>& num, int idx) {
+    if (!d.block) return nullptr;
+    std::map<std::string, double> full = num;
+    for (const auto& x : rows) if (!x.custom && x.type != TxPType::Text && x.type != TxPType::File) full.emplace(x.key, x.def);
+    return d.block(full, idx);
+}
+
+bool txParamsFix(const std::vector<TxParamDef>& rows, std::map<std::string, double>& num) {
+    bool any = false;
+    for (int pass = 0, changed = 1; pass < 4 && changed; pass++) {   // a rule may also depend on a row below it: again until nothing moves
+    changed = 0;
+    for (const auto& d : rows) {
+        if (!d.block || (d.type != TxPType::Choice && d.type != TxPType::Bool)) continue;
+        const int n = d.type == TxPType::Bool ? 2 : (int)d.choices.size();
+        const auto it = num.find(d.key);
+        const int cur = (int)std::lround(it == num.end() ? d.def : it->second);
+        if (!txParamBlocked(d, rows, num, cur)) continue;
+        int to = (int)std::lround(d.def);
+        if (txParamBlocked(d, rows, num, to)) {
+            to = -1;
+            for (int i = 0; i < n && to < 0; i++) if (!txParamBlocked(d, rows, num, i)) to = i;
+        }
+        if (to < 0) continue;   // nothing allowed: left as it is (a rule that blocks every value is a table error, see test_tx_t2lite)
+        num[d.key] = to;
+        any = true;
+        changed = 1;
+    }
+    }
+    return any;
+}
+
+void txParamsApplyNumbers(const std::vector<TxParamDef>& rows, const std::map<std::string, double>& num0, TxRequest& r) {
+    std::map<std::string, double> num = num0;
+    txParamsFix(rows, num);   // never a combination the standard forbids (the panel shows the same, it fixes its own values the same way)
     for (const auto& d : rows) {
         if (d.type == TxPType::Text || d.type == TxPType::File || d.custom) continue;
         // a row that is not shown (its condition is false, or a hidden row whose own widget sets it) is not applied: two rows may share one
@@ -896,24 +1028,48 @@ std::vector<std::string> txParamWarnings(const TxModeSpec& m, const TxRequest& r
     std::vector<std::string> w;
     const std::string id = m.id ? m.id : "";
     if (id == "dvbt2") {
-        const int fft = r.synth.tx.s2field1, gi = r.synth.tx.giIdx, pp = r.synth.tx.pp;
-        // EN 302 755 table 59 (SISO): the pilot patterns allowed for each FFT size and guard interval
-        static const char* const allowed[6][7] = {
-            // 1/32      1/16         1/8          1/4      1/128   19/128      19/256
-            {"PP4 PP5", "PP2 PP3", "PP2 PP3", "PP1", "", "", ""},                                 // 2K (0)
-            {"PP4 PP5 PP7", "PP2 PP3 PP8", "PP2 PP3 PP8", "PP1 PP8", "PP7", "PP2 PP3 PP8", "PP2 PP3 PP8"},   // 8K (1)
-            {"PP4 PP5", "PP2 PP3", "PP2 PP3", "PP1", "", "", ""},                                 // 4K (2)
-            {"PP4 PP5", "PP2 PP3", "PP2 PP3", "PP1", "", "", ""},                                 // 1K (3)
-            {"PP4 PP5 PP6 PP7", "PP2 PP3 PP4 PP8", "PP2 PP3 PP8", "PP1 PP8", "PP7", "PP2 PP3 PP8", "PP2 PP3 PP4 PP8"},   // 16K (4)
-            {"PP4 PP6 PP7", "PP2 PP4 PP8", "PP2 PP8", "", "PP7", "PP2 PP8", "PP2 PP4 PP8"},            // 32K (5)
-        };
-        if (fft >= 0 && fft < 6 && gi >= 0 && gi < 7 && pp >= 0 && pp < 8) {
-            const std::string a = allowed[fft][gi];
-            char name[8]; snprintf(name, sizeof name, "PP%d", pp + 1);
-            if (a.empty()) w.push_back("this guard interval is not allowed with this FFT size (EN 302 755 table 59); receivers may not lock");
-            else if (a.find(name) == std::string::npos) w.push_back(std::string(name) + " is not allowed with this FFT size and guard interval (allowed: " + a + "); receivers may not lock");
+        const TxParams& t = r.synth.tx;
+        const FftMode* fm = fftModeFromS2(t.s2field1);
+        const int fft = fm ? fm->n : 0, gi = t.giIdx, pp = t.pp;
+        const bool miso = t.s1 == 1 || t.s1 == 4, lite = t.s1 == 3 || t.s1 == 4;
+        // EN 302 755 tables 58 (SISO) and 59 (MISO); T2-Lite I.5 / I.6 (the panel already keeps T2-Lite inside them, so this is T2-Base)
+        if (fft > 0 && gi >= 0 && gi < 7 && pp >= 0 && pp < 8) {
+            const int mask = t2PilotMask(fft, gi, miso, lite);
+            const std::string table = std::string("EN 302 755 ") + t2PilotTable(miso, lite);
+            std::string allowed;
+            for (int i = 0; i < 8; i++) if ((mask >> i) & 1) allowed += (allowed.empty() ? "PP" : " PP") + std::to_string(i + 1);
+            if (!mask) w.push_back("this guard interval is not allowed with this FFT size (" + table + "); receivers may not lock");
+            else if (!((mask >> pp) & 1)) w.push_back("PP" + std::to_string(pp + 1) + " is not allowed with this FFT size and guard interval (" + table + ", allowed: " + allowed + "); receivers may not lock");
         }
-        if (r.synth.tx.ext && (fft == 0 || fft == 2 || fft == 3)) w.push_back("extended carriers exist only in 8K, 16K and 32K: the setting is ignored");
+        if (t.ext && fft > 0 && fft < 8192) w.push_back("extended carriers exist only in 8K, 16K and 32K: the setting is ignored");
+        if (lite) {
+            // the plan the transmitter will use (t2TxPlan builds a generator twice: kept for the last parameters, as the panel asks every frame)
+            static std::mutex mu;
+            static std::string lastKey;
+            static T2TxPlan last;
+            const double bw = r.bandwidthMhz > 0 ? r.bandwidthMhz : 8;
+            std::array<char, 160> key{};
+            snprintf(key.data(), key.size(), "%d %d %d %d %d %d %d %d %d %d %d %.3f", t.s1, t.s2field1, t.giIdx, (int)t.ext, t.pp, t.plpMod, t.plpCod, (int)t.plpRot,
+                     (int)t.plpShort, t.plpTi, t.l1Mod, bw);
+            T2TxPlan plan;
+            {
+                std::lock_guard<std::mutex> lk(mu);
+                if (lastKey != key.data()) { last = t2TxPlan(t, bw); lastKey = key.data(); }
+                plan = last;
+            }
+            if (plan.capped) {
+                std::array<char, 400> b{};
+                snprintf(b.data(), b.size(),
+                         "T2-Lite carries at most 4 Mbit/s for the programme (EN 302 755 annex I.10, I.8); this channel would carry %.2f Mbit/s. "
+                         "%d of %d FEC blocks a frame are sent, the rest is filler: the transport stream runs at %.2f Mbit/s. "
+                         "Set the video generator's TS mux rate to at most %.2f Mbit/s.",
+                         plan.fitBps / 1e6, plan.blocks, plan.blocksFit, plan.tsBps / 1e6, plan.tsBps / 1e6);
+                w.push_back(b.data());
+            }
+            if (t.plpMod > 0 && t.plpTi > 1)
+                w.push_back("T2-Lite with 16-QAM or more and several time-interleaver blocks a frame is likely to overflow a T2-Lite receiver's "
+                            "de-interleaver (EN 302 755 annex I.11, note 2): use 0 or 1 time-interleaver blocks");
+        }
     }
     if (txPayloadKind(id) == TxPayloadKind::Ftx && r.kind == 2 && r.text.size() > 13) w.push_back("free text longer than 13 characters cannot be sent");
     if (id == "fm" && r.name.size() > 8) w.push_back("the station name has 8 characters: the rest is cut");

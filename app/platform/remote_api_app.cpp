@@ -286,6 +286,24 @@ struct Host : RemoteApiHost {
         return ok;
     }
     bool eventsSince(uint64_t& cursor, size_t maxN, std::vector<std::string>& out, bool& gap) override { ring.since(cursor, maxN, out, &gap); return true; }
+    bool metrics(apipol::Metrics& m) override {   // GET /api/v1/metrics
+        std::string err;
+        const bool ok = run([&](App& a, std::string&) {
+            const DeviceInfo& d = a.devices[(size_t)std::max(0, std::min(a.devIdx, (int)a.devices.size() - 1))];
+            m.running = a.engine.running();
+            for (int i = 0; i < kNumModes; i++) if (kModes[i].family == a.family && (!kModes[i].subId || subIndexOf(kModes[i].subId) == a.sub)) { m.mode = kModes[i].name; break; }
+            m.device = d.name;
+            m.frequencyHz = listenMhz(a) * 1e6;
+            m.sampleRateHz = m.running ? a.engine.radioRate() : a.tune.sampleRate;
+            m.gainDb = d.isGeneric() ? a.tune.gainDb : (double)(a.tune.lnaDb + a.tune.vgaDb + (a.tune.ampOn ? 14 : 0));
+            m.droppedSamples = a.engine.droppedSamples();
+            const SampleLoss sl = a.engine.sampleLoss();
+            m.live = sl.live; m.radioLossSec = sl.radioSec; m.cpuLossSec = sl.cpuSec; m.loadPct = sl.loadPct; m.deliveredPct = sl.deliveredPct;
+            m.events = ring.next();
+            return true;
+        }, err);
+        return ok;
+    }
 
     // ---- the API
     std::string statusJson() override {

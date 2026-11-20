@@ -338,6 +338,7 @@ void memoryTabItem(App& a) {
 }
 
 void memoryMenu(App& a) {
+    menuAccelOpen(5, "###memmenu");   // Alt+E (menugroups::TopMenu::Memory)
     if (ImGui::BeginMenu((std::string(tr("Memory")) + "###memmenu").c_str())) {
         if (ImGui::MenuItem(tr("Memory panel..."), inputmap::shortcut(inputmap::Action::MemoryWin).c_str(), a.memoryOpen)) a.memoryOpen = !a.memoryOpen;
         if (ImGui::MenuItem(tr("Store current..."))) { a.memoryOpen = true; storeCurrent(a); }

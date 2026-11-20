@@ -14,6 +14,7 @@
 #include "dect2/tv/videogen.h"
 #include "dect2/dtmb/dtmb_gen.h"
 #include "dect2/dvbc/dvbc_rx.h"
+#include "dect2/dvbc2/dvbc2_gen.h"
 #include "dect2/dvbs/dvbs_gen.h"
 #include "dect2/dvbt/dvbt.h"
 #include "dect2/dvbt/dvbt_gen.h"
@@ -86,7 +87,7 @@ TxModeSpec mk(const char* id, const char* name, int std, const char* gen, const 
 std::vector<TxModeSpec> makeTxTable() {
     // First eight: the original verified TV / ADS-B list. After that: every other generator-capable mode that is not on the deny-list.
     return {
-        mk("dvbt2", "DVB-T2", 0, "T2Generator, real PLP with the test transport stream", "FFT size, guard interval, pilot pattern, channel width", kTrip, 1, 64e6 / 7, true, 0),
+        mk("dvbt2", "DVB-T2", 0, "T2Generator, real PLP with the test transport stream", "T2-Base or T2-Lite, SISO / MISO, FFT size, guard interval, pilot pattern, constellation, code rate, channel width (1.7 to 8 MHz)", kTrip, 1, 64e6 / 7, true, 0),
         mk("dvbt", "DVB-T", 0, "dvbt::Generator, demo programme", "mode 2K/8K, guard, modulation, code rate, channel width", kTrip, 2, 64e6 / 7, true, 0),
         mk("atsc", "ATSC 1.0 (8-VSB)", 3, "atsc::Generator, demo programme", "none", kTrip, 0, 8e6, false, 6.5e6),
         mk("dab", "DAB / DAB+", 4, "makeDabSynth, transmission mode I with real audio", "none", kTrip, 0, 2.048e6, false, 2e6),
@@ -164,6 +165,7 @@ std::vector<TxModeSpec> makeTxTable() {
         mk("js8", "JS8Call", 39, "makeJs8Synth", kOpt, kUnv),
         mk("nxdn", "NXDN", 40, "makeNxdnSynth", kOpt, kUnv),
         mk("dvbc", "DVB-C", 42, "makeDvbcSynth", kOpt, kUnv),
+        mk("dvbc2", "DVB-C2", 743, "makeDvbc2Synth (EN 302 769), demo programme or a transport stream file", "modulation and code rate, guard interval, data slice type, time interleaving, notch, FEC frame, second PLP", kUnv),
         mk("uplink", "Mode S uplink", 45, "makeUplinkSynth", kOpt, kUnv),
         mk("orbcomm", "Orbcomm", 46, "makeOrbcommSynth", kOpt, kUnv),
         mk("dpmr", "dPMR", 47, "makeDpmrSynth", kOpt, kUnv),
@@ -277,7 +279,7 @@ const TxModeSpec* txModeForList(int family, const char* subId, int dvbVariant) {
 }
 
 TxPayloadKind txPayloadKind(const std::string& id) {
-    if (id == "dvbt2" || id == "dvbt" || id == "atsc" || id == "atsc3" || id == "isdbt" || id == "dvbs" || id == "dtmb" || id == "dvbc")
+    if (id == "dvbt2" || id == "dvbt" || id == "atsc" || id == "atsc3" || id == "isdbt" || id == "dvbs" || id == "dtmb" || id == "dvbc" || id == "dvbc2")
         return TxPayloadKind::TvFile;
     if (id == "atv") return TxPayloadKind::AnalogTv;
     if (id == "dab" || id == "drm" || id == "hdr" || id == "cdr") return TxPayloadKind::BroadcastAudio;
@@ -717,7 +719,7 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
     double native = 0;
     std::function<void(uint8_t*)> fileTs;
     std::string fileNote;
-    const bool wantTs = m.stdMode == 0 || m.stdMode == 3 || m.stdMode == 6 || m.stdMode == 8 || m.stdMode == 9 || m.stdMode == 42;
+    const bool wantTs = m.stdMode == 0 || m.stdMode == 3 || m.stdMode == 6 || m.stdMode == 8 || m.stdMode == 9 || m.stdMode == 42 || m.stdMode == 743;
     if (wantTs && !r.file.empty()) {
         if (!txOpenMpegTs(r.file, fileTs, fileNote)) {
             if (fileNote.empty()) fileNote = "could not use this file as a transport stream; the demo programme is sent";
@@ -744,16 +746,29 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
         native = nativeRateHz(bw);
         if (m.variant == 2) {
             dvbt::Params tp;
-            tp.mode = s.dvbtMode; tp.guard = s.dvbtGuard; tp.mod = s.dvbtMod; tp.crHp = tp.crLp = s.dvbtRate;
+            tp.mode = std::clamp(s.dvbtMode, 0, 2); tp.guard = s.dvbtGuard; tp.mod = s.dvbtMod; tp.crHp = tp.crLp = s.dvbtRate;
+            tp.hier = std::clamp(s.dvbtHier, 0, 3);
+            if (tp.hier) { tp.crLp = std::clamp(s.dvbtRateLp, 0, 4); tp.mod = std::max(tp.mod, (int)dvbt::k16Qam); }   // a hierarchy needs 16-QAM or 64-QAM
+            tp.cellIdLength = s.dvbtCellOn; tp.cellId = s.dvbtCellId & 0xFFFF;
+            tp.indepth = s.dvbtInDepth && tp.mode != dvbt::k8K;   // annex F: 2K and 4K only
+            tp.dvbh = s.dvbtDvbh; tp.timeSlicing = s.dvbtTimeSlicing; tp.mpeFec = s.dvbtMpeFec;
             auto gen = std::make_shared<dvbt::Generator>(tp, namedTs(fileTs, dvbt::netBitrate(tp, native)));
+            if (tp.hier) gen->setLpSource(dvbt::testTsSourceNamed(2, r.serviceId > 0 ? r.serviceId + 100 : 101, "ONAIR LP"));   // the low-priority stream: a second test service
             g = std::make_unique<FrameGen>(native, [gen](std::vector<cf32>& f) { gen->nextSymbol(f); }, 0.25f);
         } else {
-            TxParams tp = s.tx;
-            tp.payload = true;
+            // the frame within 250 ms, and T2-Lite within its 4 Mbit/s and time-interleaver memory (t2TxPlan)
+            const T2TxPlan plan = t2TxPlan(s.tx, bw);
+            TxParams tp = plan.params;
             auto ts = std::make_shared<std::function<void(uint8_t*)>>();   // the padding needs the bit rate, which the generator knows once built
             tp.tsSource = [ts](uint8_t* pk) { (*ts)(pk); };
             auto gen = std::make_shared<T2Generator>(tp);
             *ts = namedTs(fileTs, gen->tsBitrate(native));
+            if (plan.capped) {
+                std::array<char, 256> b{};
+                snprintf(b.data(), b.size(), "T2-Lite: the PLP is held to %.2f Mbit/s (%d of %d FEC blocks a frame: 4 Mbit/s and 2^18 time-interleaver cells, EN 302 755 I.10 and I.8), a transport stream of %.2f Mbit/s",
+                         plan.plpBps / 1e6, plan.blocks, plan.blocksFit, plan.tsBps / 1e6);
+                const_cast<TxRequest&>(r).fileNote += std::string(r.fileNote.empty() ? "" : "; ") + b.data();
+            }
             g = std::make_unique<FrameGen>(native, [gen](std::vector<cf32>& f) { gen->nextFrame(f); }, 0.25f);
         }
     } else if (m.stdMode == 3) {
@@ -776,6 +791,12 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
     } else if (m.stdMode == 42) {
         const double rr = rateHz > 0 ? rateHz : m.nominalRateHz;
         auto ms = makeDvbcSynth(s, rr, namedTs(fileTs, dvbcSynthNetBitrate(s, rr)));
+        if (!ms) { char b[200]; snprintf(b, sizeof b, "the %s generator cannot make a signal at %.3f Msps with these options", m.name, rr / 1e6); err = b; return nullptr; }
+        g = std::make_unique<SynthGen>(std::move(ms), rr);
+        native = rr;
+    } else if (m.stdMode == 743) {
+        const double rr = rateHz > 0 ? rateHz : m.nominalRateHz;
+        auto ms = makeDvbc2Synth(s, rr, namedTs(fileTs, dvbc2SynthNetBitrate(s)));
         if (!ms) { char b[200]; snprintf(b, sizeof b, "the %s generator cannot make a signal at %.3f Msps with these options", m.name, rr / 1e6); err = b; return nullptr; }
         g = std::make_unique<SynthGen>(std::move(ms), rr);
         native = rr;
@@ -1114,6 +1135,8 @@ bool TxSession::start(std::unique_ptr<TxSink> sink, const TxRequest& r, const Tx
             if (k == AudioIn::File) note("audio file not used: " + aerr + "; a 1 kHz tone is sent instead");
             audio_->start(AudioIn::Tone, 48000, {}, req_.toneHz > 0 ? req_.toneHz : 1000, aerr);
         }
+        if (int gid = 0; audio_->kind() == AudioIn::File && vgen::parseGeneratorSpec(arg, gid))
+            note("sound: video generator " + std::to_string(gid) + " (live; silence while it is not sending to the transmitter)");
         audio_->setMuted(req_.audioMute);
         audio_->setGain(req_.micGain > 0 ? req_.micGain : 1.f);
         if (audio_->kind() == AudioIn::File && sink_->name() == "IQ file" && audio_->fileSeconds() > 0) {   // into a file: the audio file is sent once, then the file is closed

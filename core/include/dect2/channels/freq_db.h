@@ -62,6 +62,11 @@ FreqEntry freqFromMemory(const Memory& m);
 // the user's entries as a Memory file (JSON or CSV) and back; import skips entries already in `into` (same mode and frequency)
 std::string freqExportJson(const std::vector<FreqEntry>& v);
 std::string freqExportCsv(const std::vector<FreqEntry>& v);
+// A broadcast schedule list (EiBi's semicolon CSV, or an HFCC / Aoki style list with a header line naming its columns: frequency in kHz, time, days,
+// ITU, station, language, target, remarks, power, azimuth ...): one entry per line, mode "general", the columns kept in the notes. Delimiter ; tab or |.
+// freqImportText() uses this by itself when the file looks like one.
+bool looksLikeFreqSchedule(const std::string& text);
+FreqParseReport freqImportSchedule(const std::string& text, std::vector<FreqEntry>& into);
 FreqParseReport freqImportText(const std::string& text, std::vector<FreqEntry>& into);
 
 } // namespace dect2

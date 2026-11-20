@@ -10,6 +10,7 @@
 // (so a web page cannot send one without a CORS preflight, which is never granted: the server sends no CORS headers), a request that carries an
 // Origin header must come from the server's own origin, and a loopback request must name a loopback Host (DNS rebinding).
 #pragma once
+#include "dect2/net/api_policy.h"
 #include <atomic>
 #include <cstdint>
 #include <map>
@@ -84,6 +85,7 @@ public:
     virtual bool txStart(const std::map<std::string, JsonVal>& /*body*/, std::string& /*json*/, std::string& err) { err = "not supported"; return false; }
     virtual bool txStop(std::string& /*json*/, std::string& err) { err = "not supported"; return false; }
     // Decoded messages (one JSON line each, see apipol::eventLine). cursor UINT64_MAX: from now. Fills `out` with the lines since the cursor and moves it. false: no message stream.
+    virtual bool metrics(apipol::Metrics& /*out*/) { return false; }   // numbers for GET /api/v1/metrics (false: not offered, 501)
     virtual bool eventsSince(uint64_t& /*cursor*/, size_t /*maxN*/, std::vector<std::string>& /*out*/, bool& /*gap*/) { return false; }
     // GET / POST under /api/v1/x/ (the program's own extras). Returns the HTTP status (0: not handled, the server answers 404) and the JSON body in `json`.
     virtual int handleExtra(const std::string& /*method*/, const std::string& /*path*/, const std::map<std::string, JsonVal>& /*body*/, std::string& /*json*/) { return 0; }

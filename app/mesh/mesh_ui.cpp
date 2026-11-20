@@ -261,7 +261,7 @@ void tab(App& a) {
 
 void list(App& a) {
     if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see nodes"); ImGui::PopTextWrapPos(); } return; }
-    if (resultsClearButton("mesh")) a.engine.mesh().clearResults();
+    if (resultsClearButton("mesh")) a.engine.clearResults(22);   // also the whole-span receivers
     const dect2::MeshTelemetry& t = a.rx.mesh;
     size_t msgs = 0;
     for (const auto& m : t.messages) msgs += shows(a, m.protocol) ? 1 : 0;

@@ -139,6 +139,7 @@ std::string transcriptToJson(const TranscriptEntry& e) {
     std::string j = "{";
     snprintf(b, sizeof b, "\"t\":%lld,\"f\":%.0f,\"d\":%.2f,\"p\":%.3f,\"n\":%d", (long long)e.wall, e.freqHz, e.durSec, (double)e.confidence, e.turn);
     j += b;
+    if (!e.confidenceAvailable) j += ",\"ca\":false";
     j += ",\"m\":\"" + jesc(e.mode) + "\",\"c\":\"" + jesc(e.channel) + "\",\"x\":\"" + jesc(e.text) + "\"";
     if (!e.lang.empty()) j += ",\"l\":\"" + jesc(e.lang) + "\"";
     if (!e.translation.empty()) j += ",\"tr\":\"" + jesc(e.translation) + "\"";
@@ -161,6 +162,7 @@ bool transcriptFromJson(const std::string& line, TranscriptEntry& e) {
         else if (k == "f") e.freqHz = atof(v.c_str());
         else if (k == "d") e.durSec = atof(v.c_str());
         else if (k == "p") e.confidence = (float)atof(v.c_str());
+        else if (k == "ca") e.confidenceAvailable = v != "false" && v != "0";
         else if (k == "n") e.turn = atoi(v.c_str());
         else if (k == "m") e.mode = v;
         else if (k == "c") e.channel = v;
@@ -357,7 +359,8 @@ std::string transcriptsCsv(std::vector<TranscriptEntry> v) {
     for (const auto& e : v) {
         snprintf(b, sizeof b, ",%.4f,", e.freqHz / 1e6);
         o += stamp(e.wall) + b + csvField(e.mode) + "," + csvField(e.channel);
-        snprintf(b, sizeof b, ",%.2f,%.2f,", e.durSec, (double)e.confidence);
+        if (e.confidenceAvailable) snprintf(b, sizeof b, ",%.2f,%.2f,", e.durSec, (double)e.confidence);
+        else snprintf(b, sizeof b, ",%.2f,,", e.durSec);
         o += b + csvField(e.speaker) + "," + csvField(e.callsign) + "," + csvField(e.reg) + "," + csvField(e.aircraft) + "," + csvField(e.lang) + "," + csvField(e.text) + "," + csvField(e.translation) + "\r\n";
     }
     return o;

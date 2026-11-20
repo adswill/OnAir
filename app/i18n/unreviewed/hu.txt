@@ -537,3 +537,14 @@ Custom remove-after time (minutes)
 Used by every Remove after row set to Custom.
 Join the Discord to get access to built codecs
 Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.
+Profile
+FFT size
+Constellation
+QPSK
+Per system, set the parameters you want or leave them on Any. The list beside them shows the modes that carry the bitrate within the bandwidth at the C/N, the best first: the smallest bandwidth, then the most C/N margin. Satellite modes have a free symbol rate: their bandwidth is what the bitrate needs, their capacity what the whole bandwidth would carry. The thresholds are the ideal AWGN values of the standards (no implementation margin, phase noise or multipath): keep a few dB in hand. The DVB-T2 bitrate is the ideal cell capacity (P1/P2 symbols and signalling not deducted), so the real one is a few percent lower. DVB-T2 has a Profile: T2-Lite (EN 302 755 annex I, for simple mobile receivers) carries at most 4 Mbit/s a programme and adds the code rates 1/3 and 2/5, which have no C/N figure in the standards and are therefore never proposed.
+T2-Lite does not allow these parameters (EN 302 755 annex I): no 1K or 32K FFT, no PP8, 16 200-bit FEC frames only, no code rate 4/5 or 5/6, no 256-QAM with 2/3 or 3/4.
+The modes that would carry it have no C/N figure in the standards (T2-Lite code rates 1/3 and 2/5: TS 102 831 tables 44 and 45 start at 1/2), so they are not proposed.
+T2-Lite carries at most 4 Mbit/s for a programme (EN 302 755 annex I.10): lower the bitrate, or choose T2-Base.
+A code rate of T2-Lite only (EN 302 755 annex I, table I.1): set the profile to T2-Lite or Any.
+T2-Lite carries at most
+The total rate of the transport stream: video, audio, tables and null packets that pad it to a constant rate. Keep it at or below the net bitrate of the DVB link, e.g. DVB-T 8 MHz, 64-QAM, code rate 2/3, guard interval 1/4 carries about 19.9 Mbit/s; QPSK 1/2 about 5 Mbit/s. For DVB-T2-Lite keep it at or below 4 Mbit/s, the most a T2-Lite programme may carry (the transmitter then says the exact rate). Auto uses the estimate on the right plus a small margin.

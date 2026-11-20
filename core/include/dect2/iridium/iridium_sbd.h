@@ -51,6 +51,7 @@ struct IridiumAcars {
 struct IridiumSbd {
     bool valid = false;
     int type = -1;                   // the first two bytes (0x0600, 0x7608 ...)
+    std::vector<uint8_t> header;     // the type bytes and the headers that follow them (the IMEI and the message counters are in there; not decoded)
     std::vector<uint8_t> payload;    // after the headers
     IridiumAcars acars;              // when the payload is an ACARS message (first byte 0x01)
 };

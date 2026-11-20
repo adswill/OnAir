@@ -58,6 +58,8 @@ public:
     bool telemetry(int stdMode, RxTelemetry& t, uint64_t& lastSeq);
     void setSelected(int carrierId);
     void setMuted(bool m);
+    // Mute every decoder except the explicitly selected carrier in one mode.
+    void setAudioFocus(int standardMode, int carrierId);
     void setVolume(float v);                                // the sound level of the carrier that plays (all carrier receivers, new ones too)
     // The radio's centre frequency: carriers still inside the span after a retune keep running; those that have gone keep their absolute
     // frequency in the logs (any thread)

@@ -14,6 +14,7 @@
 //  9. the transmitter's multiplex of several generators (#492): synthetic streams (new PIDs, PAT / PMT / SDT with good CRCs, continuity,
 //     each input keeps its share so its PCRs still match the packet times), then two real generators read back by FFmpeg as two programmes
 // Run from the source root (the overlay font is third_party/fonts/Inter-Medium.ttf).
+#include "dect2/audio/audioin.h"
 #include "dect2/tv/videogen.h"
 #include "dect2/tv/videogen_rtmp.h"
 #include "dect2/tv/ts_proto.h"
@@ -1365,6 +1366,57 @@ static void testInstancesAndTransmitter(const fs::path& dir, const fs::path& pic
     CHECK(streamUrl(Output::Transmitter, "h", 1).empty() && vlcOpenUrl(Output::Transmitter, "h", 1).empty(), "no network address for the transmitter output");
 }
 
+// ---- 8b. the generator's sound for the analog transmitter (#545) ----
+// The analog TV sound carrier opens "generator:N" as its sound file: it must hear what the generator encodes (here a 440 Hz WAV, encoded at
+// 44.1 kHz so the resampler to the transmitter's 48 kHz is in the way), not the 1 kHz tone it fell back to before.
+static double toneLevel(const std::vector<float>& st, size_t from, double hz) {   // amplitude of hz in the left channel, 48 kHz
+    double re = 0, im = 0;
+    const size_t n = st.size() / 2 - from;
+    for (size_t i = 0; i < n; i++) {
+        const double ph = 2 * M_PI * hz * (double)i / 48000.0;
+        re += st[2 * (from + i)] * std::cos(ph);
+        im -= st[2 * (from + i)] * std::sin(ph);
+    }
+    return n ? 2 * std::sqrt(re * re + im * im) / (double)n : 0;
+}
+
+static void testGeneratorSound(const fs::path& dir, const fs::path& pic) {
+    const fs::path wav = dir / "a440.wav";
+    writeWav(wav, 440, 3);
+    GenConfig c = pictureConfig(pic);
+    c.output = Output::Transmitter;
+    c.instanceId = 3;
+    c.enc.videoEncoder = "mpeg2video";
+    c.enc.sampleRate = 44100;
+    c.audio = AudioSource::AudioFile;
+    c.audioPath = wav.string();
+    dect2::AudioIn in;
+    std::string err;
+    CHECK(in.start(dect2::AudioIn::File, 48000, generatorSpec(3), 1000, err) && in.kind() == dect2::AudioIn::File, "AudioIn opens generator:3: %s", err.c_str());
+    CHECK(generatorHasAudioSink(3), "the sound sink is set");
+    std::vector<float> got, blk(2 * 960);
+    in.read(blk.data(), 960);
+    CHECK(std::all_of(blk.begin(), blk.end(), [](float v) { return v == 0.f; }), "silence while the generator is not running");
+    VideoGenerator g;
+    CHECK(g.start(c, err), "start: %s", err.c_str());
+    const auto t0 = std::chrono::steady_clock::now();
+    auto next = t0;
+    while (std::chrono::steady_clock::now() - t0 < std::chrono::milliseconds(3000)) {   // the transmitter reads at its own clock, 20 ms a block
+        next += std::chrono::milliseconds(20);
+        std::this_thread::sleep_until(next);
+        in.read(blk.data(), 960);
+        got.insert(got.end(), blk.begin(), blk.end());
+        while (generatorQueued(3) > 0) { uint8_t pk[188]; generatorPop(3, pk); }   // the TS goes nowhere here
+    }
+    g.stop();
+    in.stop();
+    CHECK(!generatorHasAudioSink(3), "stop() removes the sound sink");
+    const size_t from = got.size() / 2 > 48000 ? got.size() / 2 - 48000 : 0;   // the last second
+    const double a440 = toneLevel(got, from, 440), a1k = toneLevel(got, from, 1000);
+    std::printf("generator sound: 440 Hz at %.3f, 1 kHz at %.4f (%zu frames read)\n", a440, a1k, got.size() / 2);
+    CHECK(a440 > 0.1 && a1k < a440 * 0.05, "the transmitter hears the generator's 440 Hz (%.3f), not a 1 kHz tone (%.4f)", a440, a1k);
+}
+
 // ---- 9. several generators in one multiplex (#492) ----
 
 // A single-programme CBR stream as FFmpeg's muxer makes it: PAT, PMT (video 0x100 with the PCR, audio 0x101), SDT, then PES-like
@@ -1583,6 +1635,7 @@ int main() {
     testPreviewOnly(dir);
     testArgs();
     testInstancesAndTransmitter(dir, pic);
+    testGeneratorSound(dir, pic);
     testRtmpUrls();
     testRtmpInput(dir);
     testRemuxSynthetic();

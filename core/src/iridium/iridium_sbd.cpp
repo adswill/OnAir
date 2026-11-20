@@ -72,6 +72,7 @@ IridiumSbd iridiumParseSbd(const std::vector<uint8_t>& pk, bool downlink) {
     if (pk.size() > p + 3 && pk[p] == 0x10) p += 3;
     if (p >= pk.size()) return r;
     r.valid = true;
+    r.header.assign(pk.begin(), pk.begin() + p);
     r.payload.assign(pk.begin() + p, pk.end());
     const std::vector<uint8_t>& d = r.payload;
     if (d.size() >= 13 && d[0] == 0x01) {

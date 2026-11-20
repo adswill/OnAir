@@ -12,10 +12,10 @@ BUILD=build-release
 # Homebrew dependencies from the macOS 15 release runners set the supported floor.
 MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-15.0}
 export MACOSX_DEPLOYMENT_TARGET
-# FFmpeg: the LGPL static build of tools/package/build_ffmpeg_static.sh (the same as on Linux), never Homebrew's, which is configured with --enable-gpl.
-# The workflow caches $FFMPEG_PREFIX; built here when it is missing.
+# FFmpeg: the LGPL shared build of tools/package/build_ffmpeg.sh (the same as on Linux), never Homebrew's, which is configured with --enable-gpl.
+# OnAir links its dylibs dynamically; bundle_macos.py copies them into OnAir.app/Contents/Frameworks. The workflow caches $FFMPEG_PREFIX; built here when it is missing.
 FFMPEG_PREFIX=${FFMPEG_PREFIX:-$PWD/$BUILD/ffmpeg}
-[ -f "$FFMPEG_PREFIX/lib/libavcodec.a" ] || tools/package/build_ffmpeg_static.sh "$FFMPEG_PREFIX"
+[ -f "$FFMPEG_PREFIX/lib/libavcodec.dylib" ] || tools/package/build_ffmpeg.sh "$FFMPEG_PREFIX"
 cmake -S . -B $BUILD -DDECT2_FFMPEG_PREFIX="$FFMPEG_PREFIX" -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_TESTS=OFF -DDECT2_BUILD_APP=ON -DDECT2_HAVE_HAMLIB=ON -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET" -DONAIR_VERSION="$VERSION" -DDECT2_WITH_TLS=ON -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)"   # TLS: HTTPS for onair-server and the web.on-air.dev heartbeat; libssl/libcrypto are bundled by bundle_macos.py
 cmake --build $BUILD -j"$(sysctl -n hw.ncpu)" --target dect2 onair-server onair-extcap
 APP=$BUILD/OnAir.app
@@ -72,15 +72,16 @@ bash tools/package/build_rtlsdr_blog_macos.sh "$RTL_FW"
 export ONAIR_RTLSDR_FRAMEWORK="$RTL_FW"
 python3 tools/package/bundle_macos.py "$APP" || { echo "Failed to bundle radio libraries"; exit 1; }
 python3 tools/package/check_macos_target.py "$APP"
-# FFmpeg licence notice and source offer (LGPL-2.1+): how the library inside the program was built, and the script that rebuilds it
+# FFmpeg licence notice and source offer (LGPL-2.1+): how the libraries in Contents/Frameworks were built, and the script that rebuilds them
 mkdir -p "$APP/Contents/Resources/licenses/ffmpeg"
-cp tools/package/build_ffmpeg_static.sh "$APP/Contents/Resources/licenses/ffmpeg/"
+cp tools/package/build_ffmpeg.sh "$APP/Contents/Resources/licenses/ffmpeg/"
 cp "$FFMPEG_PREFIX/share/ffmpeg-configuration.txt" "$APP/Contents/Resources/licenses/ffmpeg/configuration.txt"
 cp LICENSES/LGPL-2.1.txt "$APP/Contents/Resources/licenses/ffmpeg/COPYING.LGPLv2.1"
 cat > "$APP/Contents/Resources/licenses/ffmpeg/NOTICE.md" <<'NOTE'
-OnAir uses the FFmpeg libraries (https://ffmpeg.org, version 8.0), LGPL-2.1-or-later, linked statically into the program.
+OnAir uses the FFmpeg libraries (https://ffmpeg.org, version 8.0), LGPL-2.1-or-later, linked dynamically: the libav*.dylib and
+libsw*.dylib files in OnAir.app/Contents/Frameworks. They can be replaced by a compatible build of the same major versions.
 They were built without --enable-gpl, --enable-version3 and --enable-nonfree: configuration.txt is the exact configure line.
-Source: https://ffmpeg.org/releases/ffmpeg-8.0.tar.xz (unmodified). To rebuild: run build_ffmpeg_static.sh <folder> (this folder),
+Source: https://ffmpeg.org/releases/ffmpeg-8.0.tar.xz (unmodified). To rebuild: run build_ffmpeg.sh <folder> (this folder),
 then build OnAir from its public source with -DDECT2_FFMPEG_PREFIX=<folder> (see LICENSE-NOTICES-BINARIES.md). The patent licences of
 the video and audio formats (H.264, H.265, AAC, AC-3 ...) are the user's matter, as with FFmpeg everywhere.
 NOTE
@@ -106,20 +107,26 @@ done
 for root in /opt/homebrew/opt /usr/local/opt; do
   if [ -d "$root/soapyremote" ]; then mkdir -p "$HBLIC/soapyremote"; for t in "$root"/soapyremote/COPYING* "$root"/soapyremote/LICENSE*; do if [ -f "$t" ]; then cp "$t" "$HBLIC/soapyremote/"; fi; done; fi
 done
-# the app is signed ad hoc (no developer certificate): macOS shows a one-time "unidentified developer" prompt on first launch
+# Signing: ad hoc by default (no developer certificate): macOS then shows a one-time "unidentified developer" prompt on first launch.
+# With ONAIR_MACOS_SIGN_IDENTITY set (a "Developer ID Application: ..." identity already in the keychain; release.yml imports it from
+# repository secrets, docs/SIGNING.md) everything is signed with it, hardened runtime and timestamp, and the dmg is notarised and stapled
+# when the ONAIR_NOTARY_* variables are also set. With none of them set, nothing changes.
+SIGN_ID="${ONAIR_MACOS_SIGN_IDENTITY:--}"
+SIGN_OPTS=""
+if [ "$SIGN_ID" != "-" ]; then SIGN_OPTS="--options runtime --timestamp --entitlements packaging/macos/entitlements.plist"; fi
 python3 tools/package/scrub_paths.py "$APP"   # no build-machine paths in the shipped files (before signing)
 # data files next to the program (the RX888 firmware in MacOS/codecs) must carry a signature too, or signing the app stops with "code object is not signed at all"
 for f in "$APP"/Contents/Frameworks/*.dylib "$APP"/Contents/Frameworks/SoapySDR/modules/* "$APP"/Contents/MacOS/codecs/*; do
   if [ -L "$f" ] || [ ! -f "$f" ]; then continue; fi
-  codesign --force -s - "$f" || echo "warning: could not sign $f"
+  codesign --force $SIGN_OPTS -s "$SIGN_ID" "$f" || echo "warning: could not sign $f"
 done
 # the second program (onair-server) and any other helper in MacOS/ must be signed before the app, or the app signature stops with "code object is not signed at all"
 for f in "$APP"/Contents/MacOS/*; do
   if [ -L "$f" ] || [ ! -f "$f" ] || [ "$(basename "$f")" = "OnAir" ]; then continue; fi
-  codesign --force -s - "$f" || echo "warning: could not sign $f"
+  codesign --force $SIGN_OPTS -s "$SIGN_ID" "$f" || echo "warning: could not sign $f"
 done
 # no --deep: every library and module inside is signed above, and a folder name with an extension (SoapySDR "modules0.8") is read as a malformed bundle, hence "modules"
-codesign --force -s - "$APP" || { echo "Signing the app failed"; codesign -dvvv "$APP" 2>&1 | head -20; exit 1; }
+codesign --force $SIGN_OPTS -s "$SIGN_ID" "$APP" || { echo "Signing the app failed"; codesign -dvvv "$APP" 2>&1 | head -20; exit 1; }
 STAGE=$BUILD/dmg
 rm -rf $STAGE && mkdir -p $STAGE
 cp -R "$APP" $STAGE/
@@ -127,4 +134,13 @@ ln -s /Applications $STAGE/Applications
 DMG="$BUILD/OnAir-$VERSION-macos-$ARCH.dmg"
 rm -f "$DMG"
 hdiutil create -volname "OnAir $VERSION" -srcfolder $STAGE -ov -format UDZO "$DMG" >/dev/null
+if [ "$SIGN_ID" != "-" ]; then
+  codesign --force --timestamp -s "$SIGN_ID" "$DMG" || { echo "Signing the disk image failed"; exit 1; }
+  if [ -n "${ONAIR_NOTARY_KEY_FILE:-}" ] && [ -n "${ONAIR_NOTARY_KEY_ID:-}" ] && [ -n "${ONAIR_NOTARY_ISSUER:-}" ]; then
+    xcrun notarytool submit "$DMG" --key "$ONAIR_NOTARY_KEY_FILE" --key-id "$ONAIR_NOTARY_KEY_ID" --issuer "$ONAIR_NOTARY_ISSUER" --wait || { echo "Notarisation failed"; exit 1; }
+    xcrun stapler staple "$DMG" || echo "warning: could not staple the ticket (Gatekeeper checks online instead)"
+  else
+    echo "signed, not notarised (no ONAIR_NOTARY_* variables)"
+  fi
+fi
 echo "$DMG  ($(du -h "$DMG" | cut -f1))"

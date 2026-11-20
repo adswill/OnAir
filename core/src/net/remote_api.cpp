@@ -277,6 +277,14 @@ struct RemoteApiServer::Impl {
             if (j.empty()) sendErr(s, 501, "not available in this program"); else send(s, 200, j);
             return;
         }
+        if (pr.ep == apipol::Ep::Metrics) {
+            apipol::Metrics mt;
+            bool have;
+            { std::lock_guard<std::mutex> lk(hostMu); have = host.metrics(mt); }
+            if (!have) { sendErr(s, 501, "not available in this program"); return; }
+            send(s, 200, apipol::metricsText(mt), "text/plain; version=0.0.4; charset=utf-8");
+            return;
+        }
         if (pr.ep == apipol::Ep::Events) {   // polling: ?since=N (omitted: from now) &max=N
             const std::string sn = queryParam(rq.query, "since"), mx = queryParam(rq.query, "max");
             uint64_t cur = UINT64_MAX;

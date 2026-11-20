@@ -228,6 +228,7 @@ struct VfoBank::Impl {
     std::vector<std::shared_ptr<Chan>> chans;
     std::vector<VfoConfig> want;
     Sink sink;
+    std::atomic<int> audioSolo{0};
     std::vector<float> mix;
     // load: work seconds vs data seconds over a window
     double workSec = 0, dataSec = 0;
@@ -277,6 +278,7 @@ void VfoBank::setChannels(const std::vector<VfoConfig>& c) {
 
 size_t VfoBank::channelCount() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->chans.size(); }
 void VfoBank::setSink(Sink s) { std::lock_guard<std::mutex> lk(p_->mu); p_->sink = std::move(s); }
+void VfoBank::setAudioSolo(int id) { p_->audioSolo.store(id, std::memory_order_relaxed); }
 
 void VfoBank::feed(const cf32* x, size_t n) {
     std::vector<std::shared_ptr<Chan>> chans; Sink sink; double rate;
@@ -290,6 +292,7 @@ void VfoBank::feed(const cf32* x, size_t n) {
         anyAudio = anyAudio || c->audioKind();
     }
     if (anyAudio && sink) {
+        const int solo = p_->audioSolo.load(std::memory_order_relaxed);
         size_t frames = SIZE_MAX;
         for (auto& c : chans) if (c->audioKind() && c->chRate > 0 && c->enabled.load()) frames = std::min(frames, c->fifo.size());
         if (frames != SIZE_MAX && frames > 0) {
@@ -297,7 +300,7 @@ void VfoBank::feed(const cf32* x, size_t n) {
             mix.assign(frames * 2, 0.f);
             for (auto& c : chans) {
                 if (!c->audioKind() || c->chRate <= 0 || !c->enabled.load()) continue;
-                const bool play = c->open.load() && !c->mute.load();
+                const bool play = (solo == 0 || c->cfg.id == solo) && c->open.load() && !c->mute.load();
                 const float v = c->volume.load(), pan = std::max(-1.f, std::min(1.f, c->pan.load()));
                 const float gl = v * std::sqrt(0.5f * (1 - pan)) * 1.414f, gr = v * std::sqrt(0.5f * (1 + pan)) * 1.414f;
                 for (size_t i = 0; i < frames; i++) {

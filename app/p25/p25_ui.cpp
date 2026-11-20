@@ -886,7 +886,7 @@ void tab(App& a) {
 
 void list(App& a) {
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
-    if (resultsClearButton("p25")) a.engine.p25().clearResults();
+    if (resultsClearButton("p25")) a.engine.clearResults(52);   // also the whole-span receivers
     const auto& tg = a.rx.p25.talkgroups;
     if (!ImGui::BeginTable("##p25l", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupColumn("TG"); ImGui::TableSetupColumn("Heard", ImGuiTableColumnFlags_WidthStretch);

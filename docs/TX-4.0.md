@@ -28,7 +28,7 @@ and the modes' own `*_txgen.cpp`). Rows marked **no** did nothing; **wrong** rea
 | DRM | ensemble name, services | no | DRM reads only the label and the text | removed for DRM |
 | DAB | Text (DRM) | no | DAB has no text here | removed for DAB |
 | ATSC 3.0 | MPEG-TS file, multiplex names | no | the ROUTE / fMP4 demo is always sent | removed (a note says so) |
-| DVB-T2 | FFT size, guard, pilot pattern ... (named in the mode list) | no | only the channel width was in the panel | added: FFT, guard, pilot pattern, constellation, code rate, rotation, short frames, extended carriers, time interleaver, L1 modulation, cell / network / system ID, with a table-59 check |
+| DVB-T2 | FFT size, guard, pilot pattern ... (named in the mode list) | no | only the channel width was in the panel | added: FFT, guard, pilot pattern, constellation, code rate, rotation, short frames, extended carriers, time interleaver, L1 modulation, cell / network / system ID, with a table-59 check; later: profile T2-Base / T2-Lite (EN 302 755 annex I) and transmitter groups SISO / MISO, the T2-Lite code rates 1/3 and 2/5, the 1.7 MHz channel, values T2-Lite forbids greyed out |
 | DVB-T | mode, guard, constellation, code rate | no | not in the panel | added |
 | DVB-S/S2 | code rate as a bare number, no frame size / pilots / inversion | partly | | full list of code rates (S and S2), frame size, pilots, spectral inversion |
 | P25, NXDN, dPMR | Callsign / my ID | no | these take the radio ID only | removed |
@@ -63,7 +63,7 @@ values remembered per mode and the hand-over to the generator need no per-mode c
 | Mode(s) | Rows |
 |---|---|
 | every mode | A Output: trim (0 dB, -40..6), mirror the spectrum (off); A Timing: soft start (2 ms, 0..10 s), timeout timer (off, 0..3600 s) |
-| DVB-T2 | S channel width (8 / 7 / 6 / 5 MHz), TS file, multiplex; A FFT (8K), guard (1/128), pilot pattern (PP7), constellation (64-QAM), code rate (2/3), rotated (on), short FEC frames (off), extended carriers (off), time-interleaver blocks (3), L1 modulation (QPSK), cell ID (0x1001), network ID (0x3085), T2 system ID (0x8001) |
+| DVB-T2 | S channel width (8 / 7 / 6 / 5 / 1.7 MHz), profile (T2-Base; T2-Lite: short FEC frames only, 4 Mbit/s a PLP, EN 302 755 annex I), TS file, multiplex; A transmitter groups (SISO; MISO), FFT (8K), guard (1/128), pilot pattern (PP7), constellation (64-QAM), code rate (2/3), rotated (on), short FEC frames (off), extended carriers (off), time-interleaver blocks (3), L1 modulation (QPSK), cell ID (0x1001), network ID (0x3085), T2 system ID (0x8001) |
 | DVB-T | S channel width, TS file, multiplex; A FFT mode (8K), guard (1/8), constellation (64-QAM), code rate (2/3) |
 | ISDB-T | S channel width (6 MHz), TS file, multiplex; A FFT mode (3), guard (1/8), layer B constellation (64-QAM), layer B code rate (3/4) |
 | DVB-S/S2/S2X | S symbol rate (5 Msym/s), TS file, multiplex; A standard (S2), modulation (QPSK), code rate (S2 list or S list), roll-off (0.35), frame size (normal), pilots (off), spectral inversion (off) |

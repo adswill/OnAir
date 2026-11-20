@@ -223,6 +223,7 @@ static void dragTuneActive(App& a, int plotId) {
 }
 // A new press on the plot body: true when the drag to tune took it
 static bool dragTunePress(App& a, int plotId) {
+    if (voiceScoutScanning()) return false; // Keep RF centre fixed while detecting.
     if (!specDragTunes(a) || gDT.plot >= 0 || !plt::IsPlotHovered()) return false;
     const bool touchUi = touch::on();
     const bool start = touchUi ? touch::longPressHeld() : ImGui::IsMouseClicked(0) && !plt::PressOnScale();
@@ -237,7 +238,38 @@ static bool dragTunePress(App& a, int plotId) {
     return true;
 }
 
+static double gScoutLabelHitMHz = NAN; // current hovered Voice Scout label (spectrum only)
 static void clickToTune(App& a, int plotId) {
+    if (voiceScoutScanning()) {
+        if (plt::IsPlotHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left) &&
+            !plt::PressOnScale() && std::fabs(ImGui::GetMouseDragDelta(0, 0).x) < 4 &&
+            std::fabs(ImGui::GetMouseDragDelta(0, 0).y) < 4) {
+            // Select the nearest visible Voice Scout line within a small
+            // screen-space hit area (on either side). Unlike a fixed MHz
+            // tolerance, this remains easy to click at any zoom level.
+            const plt::Rect lim = plt::GetPlotLimits();
+            const ImVec2 pos = plt::GetPlotPos(), size = plt::GetPlotSize();
+            const float mx = ImGui::GetIO().MousePos.x;
+            const float hitRadiusPx = 10.f * gUi;
+            float nearestPx = hitRadiusPx;
+            double selectedMhz = NAN;
+            if (size.x > 0 && lim.X.Max > lim.X.Min) {
+                for (const auto& marker : voiceScoutMarkers()) {
+                    if (marker.mhz < lim.X.Min || marker.mhz > lim.X.Max) continue;
+                    const float x = pos.x + (float)((marker.mhz - lim.X.Min) /
+                        (lim.X.Max - lim.X.Min)) * size.x;
+                    const float distPx = std::fabs(mx - x);
+                    if (distPx <= nearestPx) {
+                        nearestPx = distPx;
+                        selectedMhz = marker.mhz;
+                    }
+                }
+            }
+            if (std::isfinite(gScoutLabelHitMHz)) selectedMhz = gScoutLabelHitMHz;
+            if (std::isfinite(selectedMhz)) voiceScoutSelectFrequency(a, selectedMhz);
+        }
+        return;
+    }
     if (gDT.plot == plotId) { dragTuneActive(a, plotId); return; }   // a drag to tune under way: nothing else takes the mouse
     if (specDragTunes(a) && touch::on() && plt::IsPlotHovered() && !isGeneralFamily(a.family)) touch::claimLongPress(plt::GetPlotPos(), ImVec2(plt::GetPlotPos().x + plt::GetPlotSize().x, plt::GetPlotPos().y + plt::GetPlotSize().y));
     if (generalAutoHovered()) return;   // the mouse is on a General / Auto label
@@ -464,7 +496,16 @@ static void channelBandMain(const App& a, bool fill) {
     plt::PlotInfLines("bandedges", edges, 2, es);
 }
 
-static void channelBand(const App& a, bool fill) { channelBandMain(a, fill); vfoBands(a, fill); }   // + the multi-VFO channels' bands
+static void channelBand(const App& a, bool fill) {
+    if (voiceScoutScanning()) {
+        // Hide only the normal yellow tuning cursor/red passband. Preserve
+        // the independent VFO tracking bands (blue, green, etc.).
+        vfoBands(a, fill);
+        return;
+    }
+    channelBandMain(a, fill);
+    vfoBands(a, fill);
+}   // + the multi-VFO channels' bands
 
 // "BW 7 MHz auto" in the top right corner of the spectrum: the width the band shows, and a click opens channelWidthPopup().
 // Left out when it would cover yLabel, which the plot draws in its top left corner.
@@ -660,6 +701,96 @@ static void wideMarkers(App& a) {
     }
 }
 
+// Voice scout markers: temporary per-hit overlays, aligned with the existing
+// carrier and VFO tracking lines. They do not change the saved marker list.
+// Plot only in the spectrum; the currently listened-to hit is blue, active hits green,
+// and idle hits subdued. Only the log owns their lifetime/expiry.
+static void voiceScoutMarkerLayer(const App& a) {
+    gScoutLabelHitMHz = NAN;
+    if (!voiceScoutScanning()) return;
+    const auto hits = voiceScoutMarkers();
+    if (hits.empty()) return;
+    const auto lim = plt::GetPlotLimits();
+    std::vector<double> idle, active, selected;
+    idle.reserve(hits.size()); active.reserve(hits.size()); selected.reserve(1);
+    for (const auto& h : hits) {
+        if (h.mhz < lim.X.Min || h.mhz > lim.X.Max) continue;
+        if (h.selected) selected.push_back(h.mhz);
+        else if (h.active) active.push_back(h.mhz);
+        else idle.push_back(h.mhz);
+    }
+    auto draw = [](const char* id, const std::vector<double>& f, ImVec4 color, float weight) {
+        if (f.empty()) return;
+        plt::Spec style; style.LineColor = color; style.LineWeight = weight;
+        plt::PlotInfLines(id, f.data(), (int)f.size(), style);
+    };
+    draw("##scout_idle", idle, ImVec4(0.55f, 0.65f, 0.72f, 0.32f), 1.f);
+    draw("##scout_active", active, ImVec4(0.35f, 0.90f, 0.48f, 0.80f), 1.3f);
+    draw("##scout_listen", selected, ImVec4(0.25f, 0.66f, 1.0f, 0.95f), 2.f);
+    // Use the same collision-aware placement and hit testing as the memory
+    // channel labels (autolabel_logic.h). A label stays centred on its RF
+    // frequency and neighbouring labels move into additional rows.
+    gScoutLabelHitMHz = NAN;
+    const ImVec2 pos = plt::GetPlotPos(), size = plt::GetPlotSize();
+    if (size.x <= 0 || size.y < 60 * gUi || lim.X.Max <= lim.X.Min) return;
+    autolabel::Store store;
+    for (const auto& h : hits) {
+        if (h.id <= 0 || h.mhz < lim.X.Min || h.mhz > lim.X.Max) continue;
+        autolabel::Label l;
+        l.mhz = h.mhz;
+        char id[8]; snprintf(id, sizeof id, "%02d", h.id);
+        l.text = id;
+        l.src = autolabel::Memories; // preserves distinct numbers at nearby frequencies
+        l.prio = h.selected ? 20.f : h.active ? 10.f : 0.f;
+        store.add(std::move(l));
+    }
+    store.finish();
+    if (!store.size()) return;
+    const float fs = ImGui::GetFontSize() * 0.86f;
+    const float padX = 4 * gUi, rowH = fs + 4 * gUi;
+    const float rowGap = 7 * gUi, triH = 5 * gUi;
+    const float y0 = pos.y + ImGui::GetTextLineHeight() + 8 * gUi;
+    autolabel::View view;
+    view.loMhz = lim.X.Min; view.hiMhz = lim.X.Max;
+    view.px0 = pos.x + 2 * gUi;
+    view.px1 = pos.x + size.x - 2 * gUi;
+    view.ax0 = pos.x; view.ax1 = pos.x + size.x;
+    view.maxRows = std::max(1, std::min(3, (int)((size.y * 0.3f - (y0 - pos.y)) / (rowH + rowGap))));
+    view.padX = padX; view.gap = 4 * gUi;
+    ImFont* font = ImGui::GetFont();
+    const auto layout = autolabel::layout(store, view, [&](const autolabel::Label& l, bool) {
+        return font->CalcTextSizeA(fs, FLT_MAX, 0, l.text.c_str()).x + 2 * padX + 3 * gUi;
+    });
+    const ImVec2 mp = ImGui::GetMousePos();
+    const bool plotHover = plt::IsPlotHovered() && !ImGui::IsAnyItemActive();
+    const int hot = plotHover ? autolabel::hit(layout, mp.x, mp.y, y0, rowH, rowGap) : -1;
+    if (hot >= 0) gScoutLabelHitMHz = store.at(layout.placed[(size_t)hot].idx).mhz;
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    dl->PushClipRect(pos, ImVec2(pos.x + size.x, pos.y + size.y), true);
+    for (size_t i = 0; i < layout.placed.size(); ++i) {
+        const auto& p = layout.placed[i];
+        const auto& l = store.at(p.idx);
+        const float y = y0 + p.row * (rowH + rowGap);
+        const bool hovered = (int)i == hot;
+        // As with memory labels, a small triangle points to the actual line,
+        // even when the label has been displaced into a different row.
+        const ImU32 yellow = IM_COL32(240, 215, 100, 255);
+        dl->AddTriangleFilled(ImVec2(p.cx - triH * 0.8f, y + rowH + 1),
+                              ImVec2(p.cx + triH * 0.8f, y + rowH + 1),
+                              ImVec2(p.cx, y + rowH + triH + 1), yellow);
+        dl->AddRectFilled(ImVec2(p.x0, y), ImVec2(p.x1, y + rowH),
+                          hovered ? IM_COL32(40, 46, 54, 245) : IM_COL32(14, 16, 20, 190), 3 * gUi);
+        if (hovered) dl->AddRect(ImVec2(p.x0, y), ImVec2(p.x1, y + rowH), yellow, 3 * gUi);
+        dl->AddText(font, fs, ImVec2(p.x0 + padX + 3 * gUi, y + (rowH - fs) * 0.5f),
+                    IM_COL32(240, 238, 230, 255), l.text.c_str());
+    }
+    dl->PopClipRect();
+    if (hot >= 0) {
+        ImGui::SetTooltip("Voice Scout %s: %s", store.at(layout.placed[(size_t)hot].idx).text.c_str(),
+                          plt::formatFreqUnit(gScoutLabelHitMHz).c_str());
+    }
+}
+
 // The user's frequency markers: a dashed-looking line on both plots, on the spectrum with its number and frequency at the top
 static const std::vector<double>& markers(const App& a) {
     static std::string text = "\x01"; static std::vector<double> v;
@@ -718,7 +849,11 @@ static void setupFreqAxis(const App& a) {
     static double lastC = 0, lastFs = 0;
     const double rc = radioCenterMhz(a);   // the axis shows the radio's real centre, so a signal sits at its true frequency
     const double bLo = rc - fs / 2, bHi = rc + fs / 2, span = gXHi - gXLo;
-    if (lastFs != fs || !(gXHi > gXLo) || (lastC != rc && span >= lastFs * 0.999)) { gXLo = bLo; gXHi = bHi; }   // a new band, or a view that showed all of the old one
+    // Voice Scout keeps the existing user-controlled view during its deferred
+    // capture retune. The plot itself performs the live pan through axis links.
+    if (voiceScoutScanning() && gXHi > gXLo && lastFs == fs) {
+        lastC = rc; lastFs = fs;
+    } else if (lastFs != fs || !(gXHi > gXLo) || (lastC != rc && span >= lastFs * 0.999)) { gXLo = bLo; gXHi = bHi; }   // a new band, or a view that showed all of the old one
     else if (lastC != rc) {   // a retune keeps the user's zoom (#238): the same view if the channel is still in it, else the same span around the channel
         const double chan = a.freqMhz;
         double lo = chan >= gXLo && chan <= gXHi ? gXLo : chan - span / 2;
@@ -729,7 +864,10 @@ static void setupFreqAxis(const App& a) {
     plt::SetupAxisLimits(plt::X1, rc - fs / 2, rc + fs / 2, plt::Cond_Once);
     plt::SetupAxisLinks(plt::X1, &gXLo, &gXHi);
     plt::SetupAxisFormat(plt::X1, "%freq");
-    plt::SetupAxisConstraints(plt::X1, rc - fs / 2, rc + fs / 2);   // pan and zoom stay inside the band the radio hears
+    // During Voice Scout, let the existing plot panner move the visible axis
+    // continuously, even past the fixed IQ capture. The scanner retunes after
+    // the gesture is idle; normal operation keeps the original band clamp.
+    if (!voiceScoutScanning()) plt::SetupAxisConstraints(plt::X1, rc - fs / 2, rc + fs / 2);
     plt::SetupAxisSpan(plt::X1, std::min(kFreqSpanMinMhz, fs), fs);   // the wheel stops where the zoom slider does (#425, #442)
 }
 
@@ -784,7 +922,9 @@ static void applyFreqZoomSlider(App& a, float zoom) {
 }
 
 static void syncSpecZoomFromFreqView(App& a) {
-    specFreqViewUpdate(a);
+    // Keep the view under the pointer while scouting. The usual update
+    // clamps it to the *old* IQ capture and makes a drag appear stuck.
+    if (!voiceScoutScanning()) specFreqViewUpdate(a);
     if (gXHi > gXLo) a.specZoom = freqZoomFromSpan(a, gXHi - gXLo);
 }
 
@@ -792,6 +932,8 @@ static bool gFreqZoomSliderActive = false;
 
 // Target mode: the view keeps the tuner marker in its middle. Switching to it, or tuning in it, eases the view over (a drag or a pinned view stops it).
 static void followTunerMarker(App& a) {
+    // A scan view is owned by the user, not by the tuner marker.
+    if (voiceScoutScanning()) return;
     static bool lastCentre = false, follow = false; static double lastMarker = 0;
     const bool centre = a.centreTuning && a.tuningMode != 1 && !a.fmMode;
     if (centre && (!lastCentre || std::fabs(a.freqMhz - lastMarker) > 1e-9)) follow = true;
@@ -969,12 +1111,20 @@ void specFreqViewUpdate(const App& a) {
     const double fs = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;
     static double lastC = 0, lastFs = 0;
     const double rc = radioCenterMhz(a);
-    if (lastC != rc || lastFs != fs || !(gXHi > gXLo)) { const auto v = tunedrag::viewAfterRetune(gXLo, gXHi, rc, fs, gXHi > gXLo && lastFs == fs); gXLo = v.lo; gXHi = v.hi; }
+    if (!voiceScoutScanning() || lastFs != fs || !(gXHi > gXLo)) {
+        if (lastC != rc || lastFs != fs || !(gXHi > gXLo)) { const auto v = tunedrag::viewAfterRetune(gXLo, gXHi, rc, fs, gXHi > gXLo && lastFs == fs); gXLo = v.lo; gXHi = v.hi; }
+        const double bLo = rc - fs / 2, bHi = rc + fs / 2;
+        if (gXLo < bLo) { const double s = gXHi - gXLo; gXLo = bLo; gXHi = gXLo + s; }
+        if (gXHi > bHi) { const double s = gXHi - gXLo; gXHi = bHi; gXLo = gXHi - s; }
+    }
     lastC = rc;
     lastFs = fs;
-    const double bLo = rc - fs / 2, bHi = rc + fs / 2;
-    if (gXLo < bLo) { const double s = gXHi - gXLo; gXLo = bLo; gXHi = gXLo + s; }
-    if (gXHi > bHi) { const double s = gXHi - gXLo; gXHi = bHi; gXLo = gXHi - s; }
+}
+
+void specFreqViewShift(double deltaMHz) {
+    if (!std::isfinite(deltaMHz) || !(gXHi > gXLo)) return;
+    gXLo += deltaMHz;
+    gXHi += deltaMHz;
 }
 
 void specFreqViewGet(double& loMhz, double& hiMhz) {
@@ -1598,6 +1748,10 @@ static float tuneStyleButtons(App& a, ImVec2 plotMin, ImVec2 plotSize, float rig
 // Dragging the spectrum or waterfall pans the view (plot.cpp). A drag that runs past the band the radio captures retunes the radio centre by
 // the overflow, at most about 14 times a second and coalesced; a file or a stopped radio only pans within its band.
 static void dragRetune(App& a) {
+    // Voice Scout uses the same live axis-link panning as the normal plots.
+    // Its scan controller follows the visible range and retunes only after
+    // one second of inactivity, so there is no extra overflow to accumulate.
+    if (voiceScoutScanning()) return;
     static tunedrag::Pacer pacer;
     const double ov = plt::PanOverflowX();
     static bool dragSaved = true;
@@ -1711,6 +1865,7 @@ static std::string stepText(int hz) {
 // Before BeginPlot of the spectrum or the waterfall: what the wheel does there. The zoom kinds tell the plot which axes to move; the
 // others (tune, pan, scroll, nothing) are done here and take the wheel away from the plot. With the default settings: nothing is changed.
 static void wheelPolicy(App& a, inputmap::Area area, ImVec2 size) {
+    // Spectrum zoom and pan remain available while Voice scout is open.
     const inputmap::Settings& st = inputmap::settings();
     ImGuiIO& io = ImGui::GetIO();
     // This simple, unmodified-wheel preference takes precedence over the advanced Controls mappings.
@@ -1770,15 +1925,22 @@ static void wheelPolicy(App& a, inputmap::Area area, ImVec2 size) {
     io.MouseWheel = 0; io.MouseWheelH = 0;
 }
 
+namespace ui2 { extern bool gFreqHovered; }   // ui2_widgets.cpp: the mouse (or the keyboard digit) is on a frequency readout
+
 // The key and button actions that are not tied to one place in the code. hov: the mouse is over the plots (the plot-only ones need it).
 static void extraInputActions(App& a, bool hov) {
     using namespace inputmap;
     Settings& st = settings();
     // tuning and the step work anywhere in the window (not only over the plots), except while typing in a text box (pressed() checks that)
+    // On a frequency readout the arrow keys belong to the digits (freqDigitsFor: up/down change the digit, left/right pick another), so the
+    // arrow-bound tune and step actions stand aside, or one press would change the frequency twice (#547).
+    const bool onDigits = ui2::gFreqHovered && (ImGui::IsKeyDown(ImGuiKey_UpArrow) || ImGui::IsKeyDown(ImGuiKey_DownArrow) || ImGui::IsKeyDown(ImGuiKey_LeftArrow) || ImGui::IsKeyDown(ImGuiKey_RightArrow));
+    if (!onDigits) {
     if (pressed(Action::TuneUp, true)) tuneBySteps(a, 1);
     if (pressed(Action::TuneDown, true)) tuneBySteps(a, -1);
     if (pressed(Action::StepNext)) { st.stepHz = stepShift(st.stepHz, 1); save(); toast(std::string(tr("Tuning step")) + ": " + stepText(st.stepHz)); }
     if (pressed(Action::StepPrev)) { st.stepHz = stepShift(st.stepHz, -1); save(); toast(std::string(tr("Tuning step")) + ": " + stepText(st.stepHz)); }
+    }
     if (hov) {
         if (gXHi > gXLo) {
             const double sp = gXHi - gXLo;
@@ -1819,9 +1981,9 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
     plt::SetNextPlotLook(plotLook(a, true));
     wheelPolicy(a, inputmap::Area::Spectrum, size);
     if (a.specWheelAction == 0 && isGeneralFamily(a.family)) generalVfoWheel(a, ImGui::GetCursorScreenPos(), size, gXLo, gXHi);   // default: wheel over VFO tunes
-    plt::SetNextZoomMarker(a.freqMhz, 10 * gUi);
+    if (!voiceScoutScanning()) plt::SetNextZoomMarker(a.freqMhz, 10 * gUi);
     plt::SetNextDragTune(specDragTunes(a), std::round(ImGui::GetFontSize() * 1.5f));   // the frequency labels along the bottom edge are the scale that pans
-    if (plt::BeginPlot("##spec", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | plt::Flags_NoDoubleReset | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | ((isGeneralFamily(a.family) && generalDragging(0)) || bandEdgeDragging(0) || fileBoxDragging(0) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
+    if (plt::BeginPlot("##spec", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | plt::Flags_NoDoubleReset | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | (!voiceScoutScanning() && ((isGeneralFamily(a.family) && generalDragging(0)) || bandEdgeDragging(0) || fileBoxDragging(0)) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
         drawn = true;
         plt::SetupAxes(nullptr, kYLabel, (a.specGrid ? 0 : plt::AxisFlags_NoGridLines), plt::AxisFlags_Inside | (a.specGrid ? 0 : plt::AxisFlags_NoGridLines));   // the frequencies along the bottom edge, inside, as in SDR++
         setupFreqAxis(a);
@@ -2011,7 +2173,12 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
         markerLayer(a, true);
         notchLayer(a, true);
         autoLabelsDraw(a, 0, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
+        voiceScoutMarkerLayer(a); // labels above ordinary channel names; selectable as well as the lines
         generalAutoPlot(a, 0, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
+        if (voiceScoutScanning() && plt::IsPlotHovered() &&
+            ((ImGui::IsMouseDragging(0, 3.f) || ImGui::IsMouseDragging(1, 3.f) || ImGui::IsMouseDragging(2, 3.f)) ||
+             ImGui::GetIO().MouseWheel != 0 || ImGui::GetIO().MouseWheelH != 0))
+            voiceScoutSpectrumInteraction(a);
         clickToTune(a, 0);
         identifyPlotInput(a, 0);
         visLo = plt::GetPlotLimits().X.Min; visHi = plt::GetPlotLimits().X.Max;
@@ -2169,9 +2336,9 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
     plt::SetNextPlotLook(plotLook(a, false));
     wheelPolicy(a, inputmap::Area::Waterfall, size);
     if (a.specWheelAction == 0 && isGeneralFamily(a.family)) generalVfoWheel(a, ImGui::GetCursorScreenPos(), size, gXLo, gXHi);
-    plt::SetNextZoomMarker(a.freqMhz, 10 * gUi);
+    if (!voiceScoutScanning()) plt::SetNextZoomMarker(a.freqMhz, 10 * gUi);
     plt::SetNextDragTune(specDragTunes(a), 0);   // no frequency labels of its own: right or middle drag pans
-    if (plt::BeginPlot("##wf", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | plt::Flags_NoDoubleReset | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | ((isGeneralFamily(a.family) && generalDragging(1)) || bandEdgeDragging(1) || fileBoxDragging(1) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
+    if (plt::BeginPlot("##wf", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | plt::Flags_NoDoubleReset | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | (!voiceScoutScanning() && ((isGeneralFamily(a.family) && generalDragging(1)) || bandEdgeDragging(1) || fileBoxDragging(1)) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
         drawn = true;
         plt::SetupAxes(nullptr, a.wf.clockLabels ? tr("time of day") : tr("seconds ago"), plt::AxisFlags_NoTickLabels | (a.specGrid ? 0 : plt::AxisFlags_NoGridLines), plt::AxisFlags_Inside | (a.specGrid ? 0 : plt::AxisFlags_NoGridLines));   // the spectrum above shows the frequencies
         double fs = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;
@@ -2242,10 +2409,14 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
             }
         }
         wfScaleBar(a, plotMin, plotSize);
-        autoLabelsDraw(a, 1, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
-        generalAutoPlot(a, 1, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
-        clickToTune(a, 1);
-        identifyPlotInput(a, 1);
+        if (!voiceScoutScanning()) autoLabelsDraw(a, 1, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
+        if (!voiceScoutScanning()) generalAutoPlot(a, 1, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
+        if (voiceScoutScanning() && plt::IsPlotHovered() &&
+            ((ImGui::IsMouseDragging(0, 3.f) || ImGui::IsMouseDragging(1, 3.f) || ImGui::IsMouseDragging(2, 3.f)) ||
+             ImGui::GetIO().MouseWheel != 0 || ImGui::GetIO().MouseWheelH != 0))
+            voiceScoutSpectrumInteraction(a);
+        if (!voiceScoutScanning()) clickToTune(a, 1);
+        if (!voiceScoutScanning()) identifyPlotInput(a, 1);
         plt::EndPlot();
     }
     if (drawn) wfScaleBarInput(a); else gScale.shown = false;

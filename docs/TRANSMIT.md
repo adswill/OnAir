@@ -43,7 +43,7 @@ This list is taken from the tables in `core/src/tx/tx.cpp` (`txModes()`).
 
 | Id | Mode | Engine code | Generator |
 |---|---|---|---|
-| dvbt2 | DVB-T2 | 0 | T2Generator, real PLP with the test transport stream |
+| dvbt2 | DVB-T2 | 0 | T2Generator, real PLP with the test transport stream; T2-Base or T2-Lite (annex I), SISO / MISO, 1.7 to 8 MHz |
 | dvbt | DVB-T | 0 | dvbt::Generator, demo programme |
 | atsc | ATSC 1.0 (8-VSB) | 3 | atsc::Generator, demo programme |
 | dab | DAB / DAB+ | 4 | makeDabSynth, transmission mode I with real audio |

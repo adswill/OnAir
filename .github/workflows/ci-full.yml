@@ -182,7 +182,8 @@ jobs:
           sudo apt-get install -y build-essential cmake pkg-config ccache libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install cmake pkg-config ccache hackrf soapysdr libusb ffmpeg glfw
+        # the disk image step bundles the radio libraries and Hamlib and builds FFmpeg with nasm, as release.yml does
+        run: brew install cmake pkg-config ccache nasm hackrf soapysdr soapyremote libusb ffmpeg glfw librtlsdr airspy airspyhf libbladerf limesuite uhd hamlib openssl@3
       - name: Restore ccache
         uses: actions/cache/restore@v6
         with:
@@ -207,10 +208,10 @@ jobs:
       - name: Test macOS packaging checks
         if: runner.os == 'macOS'
         run: python3 -m unittest discover -s tools/package -p 'test_*.py' -v
-      - name: Cache the LGPL static FFmpeg (the disk image uses it, not Homebrew's GPL build)
+      - name: Cache the LGPL shared FFmpeg (the disk image uses it, not Homebrew's GPL build)
         if: runner.os == 'macOS' && matrix.extra == ''
         uses: actions/cache@v6
-        with: { path: ~/ffmpeg, key: "ffmpeg-8.0-static-macos-${{ runner.arch }}-${{ hashFiles('tools/package/build_ffmpeg_static.sh') }}" }
+        with: { path: ~/ffmpeg, key: "ffmpeg-8.0-shared-macos-${{ runner.arch }}-${{ hashFiles('tools/package/build_ffmpeg.sh') }}" }
       - name: Build and validate the macOS disk image
         if: runner.os == 'macOS' && matrix.extra == ''
         env:

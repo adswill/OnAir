@@ -32,6 +32,7 @@ GET (no body):
 | `/scheduler` | the TV recorder's scheduled jobs, read only |
 | `/audio` | `{"volume":0..1,"muted":bool}` |
 | `/recording` | IQ and audio recording state (file name only) |
+| `/metrics` | Prometheus / OpenMetrics text: running, frequency, rate, gain, dropped samples, signal lost, load, delivered percent, decoded messages (`onair_*`). Plain text, not JSON; same token rules as the rest. Scrape it with Prometheus or Grafana Agent (`metrics_path: /api/v1/metrics`, `authorization: credentials: <token>`) |
 | `/events?since=N&max=N` | decoded messages since number N (omit `since`: from now); answer `{"gap":bool,"next":N,"events":[...]}` |
 | `/rotator` | antenna rotator state |
 | `/ws` | WebSocket, see below |

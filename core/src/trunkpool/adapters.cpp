@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 // Grants from the P25 / DMR control channel model (dect2/p25/trunk.h) into the pool's protocol-neutral GrantEvent.
+#include "dect2/nxdn/nxdn_proto.h"
 #include "dect2/p25/trunk.h"
 #include "dect2/trunkpool/trunkpool.h"
 
@@ -15,6 +16,16 @@ GrantEvent grantFromTrunk(const trunk::Grant& t) {
     g.slot = t.tdma || t.dmr ? t.slot : -1;
     g.group = t.group; g.emergency = t.emergency; g.encrypted = t.encrypted || (t.algId >= 0 && t.algId != 0x80);
     g.priority = t.priority; g.unplacedType = t.unplacedType;
+    return g;
+}
+
+GrantEvent grantFromNxdn(const nxdn::Msg& m, const ChannelPlan& plan) {
+    GrantEvent g;
+    g.proto = Proto::Nxdn;
+    g.tg = m.dst; g.src = m.src; g.channel = m.channel;
+    g.freqHz = plan.channelHz(m.channel);
+    g.group = m.callType != 4;
+    g.encrypted = m.cipher != 0;
     return g;
 }
 

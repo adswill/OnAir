@@ -46,7 +46,8 @@ public:
     AudioIn(const AudioIn&) = delete;
     AudioIn& operator=(const AudioIn&) = delete;
 
-    // kind Mic: deviceId empty = default. kind File: path is WAV/MP3 (FFmpeg) or 16-bit PCM WAV. Never starts the mic for File/Tone/Silence.
+    // kind Mic: deviceId empty = default. kind File: path is WAV/MP3 (FFmpeg) or 16-bit PCM WAV, or "generator:N" (vgen::generatorSpec): the
+    // sound of that running Digital video generator, live (silence until it sends). Never starts the mic for File/Tone/Silence.
     bool start(Kind k, int sampleRate, const std::string& pathOrDevice, double toneHz, std::string& err);
     void stop();
     void setMuted(bool m);
