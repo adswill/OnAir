@@ -130,6 +130,7 @@ bool memoryRecallApp(App& a, const dect2::Memory& m, bool withMode, std::string&
     if (!r.ok) return false;
     if (h.restart) startReceiver(a);
     else savePrefs(a);
+    voiceScoutExternalTune(a, (double)m.freqHz / 1e6);
     if (note.empty() && !h.wasRunning) note = r.modeChanged ? "set up for the next start" : "";
     return true;
 }
