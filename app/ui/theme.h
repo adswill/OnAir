@@ -53,7 +53,7 @@ inline void applyTheme() {
     // raw instrument look: small rounded corners (3 px) on controls, thin 1 px rules, dense spacing, no decoration
     s.WindowRounding = 0; s.FrameRounding = 3; s.TabRounding = 3; s.ChildRounding = 4; s.GrabRounding = 2; s.PopupRounding = 4; s.ScrollbarRounding = 4;
     s.FramePadding = ImVec2(6, 2); s.ItemSpacing = ImVec2(6, 3); s.WindowPadding = ImVec2(8, 6); s.CellPadding = ImVec2(5, 1);
-    s.FrameBorderSize = 1; s.ChildBorderSize = 1; s.PopupBorderSize = 1; s.TabBarBorderSize = 1; s.ScrollbarSize = 9; s.GrabMinSize = 5;
+    s.FrameBorderSize = 1; s.ChildBorderSize = 1; s.PopupBorderSize = 1; s.TabBarBorderSize = 1; s.ScrollbarSize = 9; s.GrabMinSize = 3;
     ImVec4* c = s.Colors;
     c[ImGuiCol_WindowBg]      = ImVec4(0.055f, 0.058f, 0.062f, 1);
     c[ImGuiCol_ChildBg]       = ImVec4(0, 0, 0, 0);
