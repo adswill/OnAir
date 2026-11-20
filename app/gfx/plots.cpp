@@ -1925,15 +1925,22 @@ static void wheelPolicy(App& a, inputmap::Area area, ImVec2 size) {
     io.MouseWheel = 0; io.MouseWheelH = 0;
 }
 
+namespace ui2 { extern bool gFreqHovered; }   // ui2_widgets.cpp: the mouse (or the keyboard digit) is on a frequency readout
+
 // The key and button actions that are not tied to one place in the code. hov: the mouse is over the plots (the plot-only ones need it).
 static void extraInputActions(App& a, bool hov) {
     using namespace inputmap;
     Settings& st = settings();
     // tuning and the step work anywhere in the window (not only over the plots), except while typing in a text box (pressed() checks that)
+    // On a frequency readout the arrow keys belong to the digits (freqDigitsFor: up/down change the digit, left/right pick another), so the
+    // arrow-bound tune and step actions stand aside, or one press would change the frequency twice (#547).
+    const bool onDigits = ui2::gFreqHovered && (ImGui::IsKeyDown(ImGuiKey_UpArrow) || ImGui::IsKeyDown(ImGuiKey_DownArrow) || ImGui::IsKeyDown(ImGuiKey_LeftArrow) || ImGui::IsKeyDown(ImGuiKey_RightArrow));
+    if (!onDigits) {
     if (pressed(Action::TuneUp, true)) tuneBySteps(a, 1);
     if (pressed(Action::TuneDown, true)) tuneBySteps(a, -1);
     if (pressed(Action::StepNext)) { st.stepHz = stepShift(st.stepHz, 1); save(); toast(std::string(tr("Tuning step")) + ": " + stepText(st.stepHz)); }
     if (pressed(Action::StepPrev)) { st.stepHz = stepShift(st.stepHz, -1); save(); toast(std::string(tr("Tuning step")) + ": " + stepText(st.stepHz)); }
+    }
     if (hov) {
         if (gXHi > gXLo) {
             const double sp = gXHi - gXLo;
