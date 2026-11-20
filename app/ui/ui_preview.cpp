@@ -24,7 +24,7 @@ bool& enabled() {
 Look lookOf(const App& a) {
     Look l;
     l.newUi = a.newUi; l.theme = a.uiTheme; l.mode = a.highContrast ? 2 : a.lightUi ? 1 : 0; l.variant = a.uiVariant; l.unified = a.layoutUnified;
-    l.typography = (int)plat::prefs().getI("uiTypography", 0);   // the saved choice (the fonts follow it at the next start)
+    l.typography = (int)plat::prefs().getI("uiTypography", 1);   // the saved choice (the fonts follow it at the next start)
     l.textScale = a.uiTextScale; l.touch = a.touchUi; l.touchScale = a.touchScale; l.easy = modepanel::easyModeOn();
     l.wfMap = a.wf.map; l.tunerStyle = a.tunerStyle; l.traceColour = a.traceColor;
     l.accentOn = ui2::userAccent(l.accent);

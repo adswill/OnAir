@@ -178,7 +178,7 @@ void writeVal(App& a, const Info& i, const Val& v) {
 bool customChanged(const App& a, const Info& i) {
     if (!strcmp(i.key, "themeMode")) return a.lightUi || a.highContrast;
     if (!strcmp(i.key, "uiLang")) return !a.uiLang.empty();
-    if (!strcmp(i.key, "uiTypography")) return plat::prefs().getI("uiTypography", 0) != 0;
+    if (!strcmp(i.key, "uiTypography")) return plat::prefs().getI("uiTypography", 1) != 1;
     if (!strcmp(i.key, "startMode")) return plat::prefs().getI("startFamily", -1) >= 0;
     if (!strcmp(i.key, "audioDevDefault")) return !plat::prefs().getS("audioDevDefault", "").empty();
     if (!strcmp(i.key, "keysEditor")) return !inputmap::settings().isDefault();
@@ -188,7 +188,7 @@ bool customChanged(const App& a, const Info& i) {
 void customReset(App& a, const Info& i) {
     if (!strcmp(i.key, "themeMode")) { a.lightUi = false; a.highContrast = false; savePrefs(a); }
     else if (!strcmp(i.key, "uiLang")) setUiLanguage(a, "");
-    else if (!strcmp(i.key, "uiTypography")) plat::prefs().setI("uiTypography", 0);
+    else if (!strcmp(i.key, "uiTypography")) plat::prefs().setI("uiTypography", 1);
     else if (!strcmp(i.key, "startMode")) { plat::prefs().setI("startFamily", -1); plat::prefs().setS("startSub", ""); }
     else if (!strcmp(i.key, "audioDevDefault")) { plat::prefs().setS("audioDevDefault", ""); audioDefaultDeviceChanged(); }
     else if (!strcmp(i.key, "keysEditor")) { inputmap::settings().reset(); inputmap::save(); }

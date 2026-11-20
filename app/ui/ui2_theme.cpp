@@ -118,10 +118,10 @@ void accentMenu() {
     ImGui::EndDisabled();
 }
 
-// View > Font look: Current (the default), Clean, Compact. Saved now; the fonts are built at start-up, so it applies after a restart.
+// View > Font look: Clean (the default), Current, Compact. Saved now; the fonts are built at start-up, so it applies after a restart.
 void typographyChoice(bool menu, const App* a) {
     static const char* names[3] = {N_("Current"), N_("Clean"), N_("Compact")};
-    const int cur = (int)plat::prefs().getI("uiTypography", 0);
+    const int cur = (int)plat::prefs().getI("uiTypography", 1);
     ImGui::TextDisabled("%s", tr("Font look (applies after a restart)"));
     for (int i = 0; i < 3; i++) {
         const bool hit = menu ? ImGui::MenuItem(tr(names[i]), nullptr, cur == i) : ImGui::RadioButton(tr(names[i]), cur == i);
