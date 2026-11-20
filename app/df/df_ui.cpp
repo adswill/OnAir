@@ -27,7 +27,7 @@ namespace {
 
 using namespace dect2::df;
 
-enum SrcKind { SrcSim, SrcFile, SrcJson, SrcHub, NumSrc };
+enum SrcKind { SrcSim, SrcFile, SrcJson, SrcHub, SrcPluto, NumSrc };
 
 // A KrakenSDR / KerberosSDR hub found on the USB bus (unverified on real hardware). The group lives here; the source below only forwards to it.
 dect2::df::Hub gHub;
@@ -67,6 +67,8 @@ struct State {
     int sources = 1;
     // file / json
     char path[512] = "";
+    char plutoUri[96] = "ip:192.168.2.1";            // SrcPluto: the libiio address of the two-receiver AD9361 board (#398)
+    float plutoGainDb = 40.f, plutoRateMsps = 2.5f;
     int fileChannels = 5;
     float fileRateKhz = 250.f;
     // calibration
@@ -156,6 +158,12 @@ void rebuildSource(double hz, bool noise = false) {
         }
         S.elements = gHub.group->channels();
         S.source = std::make_unique<HubSource>();
+    } else if (S.src == SrcPluto) {   // RX1 and RX2 of one AD9361 on a shared LO: two coherent channels (not tested on hardware)
+        std::string err;
+        S.source = dect2::df::makePlutoDualSource(S.plutoUri, hz, S.plutoRateMsps * 1e6, S.plutoGainDb, err);
+        if (!S.source) { S.msg = std::string(tr("Dual AD9361: ")) + err; return; }
+        S.elements = 2;
+        S.msg = tr("Two channels: the direction finder needs the antenna array's geometry for them (a pair: use the interferometer) and a calibration.");
     } else if (S.src == SrcSim) {
         SimConfig c;
         c.array = arrayFor(hz); c.freqHz = hz; c.sampleRate = 250e3; c.seed = (uint64_t)ImGui::GetTime() + 1;
@@ -435,7 +443,7 @@ void drawWindow(App& a) {
     const double hz = tunedHz(a);
     bool ch = false;
     {   // source and frequency
-        const char* items[] = {N_("Simulator (demo, no hardware)"), N_("Recording (cf32 / SigMF)"), N_("KrakenSDR bearing file (JSON)"), N_("KrakenSDR / KerberosSDR (USB)")};
+        const char* items[] = {N_("Simulator (demo, no hardware)"), N_("Recording (cf32 / SigMF)"), N_("KrakenSDR bearing file (JSON)"), N_("KrakenSDR / KerberosSDR (USB)"), N_("Dual AD9361 (RX1 + RX2, Pluto clone)")};
         ImGui::SetNextItemWidth(250 * gUi);
         if (ImGui::BeginCombo("##dfsrc", tr(items[S.src]))) {
             for (int i = 0; i < NumSrc; i++) if (ImGui::Selectable(tr(items[i]), S.src == i)) { S.src = i; S.builtKey = -1; S.source.reset(); S.avg.clear(); S.hist.clear(); ch = true; }
@@ -448,6 +456,14 @@ void drawWindow(App& a) {
         else { ImGui::SetNextItemWidth(90 * gUi); ch |= ImGui::InputFloat("MHz##dfmhz", &S.manualMhz, 0, 0, "%.4f"); }
         ImGui::SameLine();
         ImGui::Checkbox(tr("Run"), &S.run);
+    }
+    if (S.src == SrcPluto) {
+        ImGui::SetNextItemWidth(200 * gUi);
+        if (ImGui::InputText(tr("address##dfpl"), S.plutoUri, sizeof S.plutoUri)) { S.builtKey = -1; S.source.reset(); }
+        ImGui::SameLine(); ImGui::SetNextItemWidth(70 * gUi);
+        if (ImGui::InputFloat(tr("gain dB##dfpl"), &S.plutoGainDb, 0, 0, "%.0f")) { S.plutoGainDb = std::clamp(S.plutoGainDb, 0.f, 73.f); S.builtKey = -1; S.source.reset(); }
+        ImGui::SameLine(); ImGui::SetNextItemWidth(70 * gUi);
+        if (ImGui::InputFloat(tr("Msps##dfpl"), &S.plutoRateMsps, 0, 0, "%.2f")) { S.plutoRateMsps = std::clamp(S.plutoRateMsps, 2.1f, 30.f); S.builtKey = -1; S.source.reset(); }
     }
     if (S.src == SrcFile || S.src == SrcJson) {
         ImGui::SetNextItemWidth(380 * gUi);

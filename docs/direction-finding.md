@@ -15,3 +15,7 @@ No KrakenSDR or KerberosSDR has been connected. Unverified: the RTL driver adapt
 ## Not done
 - The RTL adapter and the UI button wiring the hardware noise source to `CoherentGroup::calibrate()` (the UI already has a calibration button for the simulator and file sources).
 - Fractional-sample delay correction.
+
+## Dual AD9361 (RX1 + RX2), issue #398
+
+The Direction finder source **Dual AD9361 (RX1 + RX2, Pluto clone)** reads both receive channels of an AD9361 board that has two (a Pluto clone or a 2R2T firmware) as two coherent channels: both share one local oscillator, so their phase difference is stable. Give the libiio address (`ip:192.168.2.1`, or `usb:...`), the gain and the rate; libiio 0.23 to 0.26 is loaded at run time. With two channels use the interferometer method and a calibration. Not built: the two channels in the normal receive path, and the second transmit channel. **Not tested on hardware**: written from the AD9361 driver's channel layout (RX1 = voltage0 / voltage1, RX2 = voltage2 / voltage3 on cf-ad9361-lpc).

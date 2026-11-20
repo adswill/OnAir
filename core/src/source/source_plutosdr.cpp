@@ -6,6 +6,7 @@
 #include "dect2/common/diag.h"
 #include "dect2/engine/rate_choice.h"
 #include "dect2/source/pluto_ports.h"
+#include "dect2/df/source.h"
 #include "native_common.h"
 #include <cerrno>
 #include <map>
@@ -842,5 +843,84 @@ std::unique_ptr<IqSource> makePluto(const DeviceInfo& d) {
 
 std::unique_ptr<TxSink> makePlutoTx(const DeviceInfo& d) { return std::make_unique<PlutoTx>(d.nativeArgs); }
 
+// ---- both receive channels of one AD9361 (issue #398): a MultiChannelSource for the direction finder
+namespace {
+class PlutoDualSource : public df::MultiChannelSource {
+public:
+    ~PlutoDualSource() override { close(); }
+    bool open(const std::string& uri, double freqHz, double rateHz, double gainDb, std::string& err) {
+        if (iio().v1) { err = IioApi::kV1Msg; return false; }
+        if (!iio().ok) { err = kNoIioMsg; return false; }
+        ctx_ = iio().create_context_from_uri(uri.c_str());
+        if (!ctx_) { err = "PlutoSDR: cannot connect (" + uri + ")"; return false; }
+        iio().context_set_timeout(ctx_, 3000);
+        phy_ = iio().context_find_device(ctx_, "ad9361-phy");
+        rx_ = iio().context_find_device(ctx_, "cf-ad9361-lpc");
+        if (!phy_ || !rx_) { err = "PlutoSDR: the AD9361 devices were not found"; close(); return false; }
+        for (int k = 0; k < 4; k++) ch_[k] = iio().device_find_channel(rx_, k == 0 ? "voltage0" : k == 1 ? "voltage1" : k == 2 ? "voltage2" : "voltage3", false);
+        rxCh_[0] = iio().device_find_channel(phy_, "voltage0", false);
+        rxCh_[1] = iio().device_find_channel(phy_, "voltage1", false);
+        lo_ = iio().device_find_channel(phy_, "altvoltage0", true);
+        if (!ch_[0] || !ch_[1] || !ch_[2] || !ch_[3] || !rxCh_[0] || !rxCh_[1] || !lo_) {
+            err = "this radio has one receive input: two coherent channels need an AD9361 with RX1 and RX2 (a 2R2T board or firmware)";
+            close(); return false;
+        }
+        const double rate = std::min(std::max(rateHz, 2.1e6), 30.72e6);   // both channels together move twice the data: USB 2 keeps up to about 2 Msps each
+        for (int k = 0; k < 2; k++) {
+            if (iio().channel_attr_write) iio().channel_attr_write(rxCh_[k], "gain_control_mode", "manual");   // one gain for both, so they stay comparable
+            iio().channel_attr_write_longlong(rxCh_[k], "hardwaregain", (long long)std::llround(gainDb));
+        }
+        if (iio().channel_attr_write_longlong(rxCh_[0], "sampling_frequency", (long long)std::llround(rate)) != 0) { err = "PlutoSDR: the sample rate was refused"; close(); return false; }
+        if (iio().channel_attr_write_longlong(lo_, "frequency", (long long)std::llround(freqHz)) != 0) { err = "PlutoSDR: the frequency was refused"; close(); return false; }
+        for (int k = 0; k < 4; k++) iio().channel_enable(ch_[k]);
+        buf_ = iio().device_create_buffer(rx_, kBlock, false);
+        if (!buf_) { err = "PlutoSDR: the receive buffer could not be created"; close(); return false; }
+        rate_ = rate; freq_ = freqHz;
+        return true;
+    }
+    int channels() const override { return 2; }
+    double sampleRate() const override { return rate_; }
+    double centerFreq() const override { return freq_; }
+    bool read(df::Frame& out, size_t n) override {
+        if (!buf_) return false;
+        out.assign(2, std::vector<df::cd>());
+        out[0].reserve(n); out[1].reserve(n);
+        while (out[0].size() < n) {
+            const auto got = iio().buffer_refill(buf_);
+            if (got <= 0) return !out[0].empty();
+            const int16_t* p = static_cast<const int16_t*>(iio().buffer_start(buf_));
+            const size_t frames = (size_t)got / 8;   // I1 Q1 I2 Q2, 16 bits each
+            for (size_t k = 0; k < frames && out[0].size() < n; k++) {   // frames beyond n are dropped: the stream is continuous noise-like data for the finder
+                out[0].emplace_back(p[4 * k] / 2048.0, p[4 * k + 1] / 2048.0);
+                out[1].emplace_back(p[4 * k + 2] / 2048.0, p[4 * k + 3] / 2048.0);
+            }
+        }
+        return true;
+    }
+private:
+    void close() {
+        if (buf_) { iio().buffer_destroy(buf_); buf_ = nullptr; }
+        for (int k = 0; k < 4; k++) if (ch_[k]) { iio().channel_disable(ch_[k]); ch_[k] = nullptr; }
+        if (ctx_) { iio().context_destroy(ctx_); ctx_ = nullptr; }
+        phy_ = rx_ = nullptr; rxCh_[0] = rxCh_[1] = lo_ = nullptr;
+    }
+    static constexpr size_t kBlock = 1 << 14;
+    IioApi::iio_context* ctx_ = nullptr;
+    IioApi::iio_device* phy_ = nullptr;
+    IioApi::iio_device* rx_ = nullptr;
+    IioApi::iio_channel* ch_[4] = {nullptr, nullptr, nullptr, nullptr};
+    IioApi::iio_channel* rxCh_[2] = {nullptr, nullptr};
+    IioApi::iio_channel* lo_ = nullptr;
+    IioApi::iio_buffer* buf_ = nullptr;
+    double rate_ = 0, freq_ = 0;
+};
+} // namespace
+
 } // namespace native
+
+std::unique_ptr<df::MultiChannelSource> df::makePlutoDualSource(const std::string& uri, double freqHz, double rateHz, double gainDb, std::string& err) {
+    auto s = std::make_unique<native::PlutoDualSource>();
+    if (!s->open(uri, freqHz, rateHz, gainDb, err)) return nullptr;
+    return s;
+}
 } // namespace dect2

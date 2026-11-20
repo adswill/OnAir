@@ -45,6 +45,12 @@ struct SimConfig {
     uint64_t seed = 1;
 };
 
+// Both receive channels of a two-receiver AD9361 board (an AD9361 SDR with RX1 and RX2 on one LO: a Pluto clone or a 2R2T firmware, issue #398) as
+// two coherent channels for the direction finder or any phase-comparing use. Runs on libiio loaded at run time (0.23 to 0.26). uri: a libiio URI
+// such as "ip:192.168.2.1" or "usb:1.2.5". Null when libiio is missing, the radio cannot be reached or has only one receive channel; err says which.
+// NOT TESTED ON HARDWARE: written from the AD9361 driver's channel layout (RX1 = voltage0 / voltage1, RX2 = voltage2 / voltage3 on cf-ad9361-lpc).
+std::unique_ptr<MultiChannelSource> makePlutoDualSource(const std::string& uri, double freqHz, double rateHz, double gainDb, std::string& err);
+
 class SimMultiChannelSource : public MultiChannelSource {
 public:
     explicit SimMultiChannelSource(SimConfig c);
