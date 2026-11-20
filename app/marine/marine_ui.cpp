@@ -700,7 +700,7 @@ void faxView(App& a) {
     ImGui::SameLine();
     if (ImGui::SmallButton("0")) { S.slant = 0; plat::prefs().setD("marineSlant", 0.0); }
     flowNext(14 * gUi);
-    if (ImGui::SmallButton("fit")) { S.zoom = 0; S.pan = ImVec2(0, 0); }
+    if (ImGui::SmallButton(tr("fit"))) { S.zoom = 0; S.pan = ImVec2(0, 0); }
     ImGui::SameLine();
     if (ImGui::SmallButton("1:1")) { S.zoom = 1; }
     flowNext(14 * gUi);

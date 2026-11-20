@@ -418,7 +418,7 @@ void mapCanvas(App& a, ImVec2 size) {
     ImGui::SameLine(0, 2 * gUi);
     if (ImGui::Button("-", ImVec2(26 * gUi, 0))) { S.map.zoom = std::max(adsbmap::kMinZoom, S.map.zoom - 1); S.mapFollow = false; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom out"));
     ImGui::SameLine(0, 6 * gUi);
-    if (ImGui::Button("fit")) S.mapFollow = true;
+    if (ImGui::Button(tr("fit"))) S.mapFollow = true;
     ImGui::SameLine(0, 6 * gUi);
     if (ImGui::Button("me")) { S.map.lat = rl; S.map.lon = ro; S.mapFollow = false; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Centre the map on my location");
