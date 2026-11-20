@@ -2,6 +2,10 @@
 # transmitter, receiver and the real libfdk-aac USAC decoder, and checks that the tone comes out. Manual (the build of exhale and the test take about 15 min).
 name: DRM xHE-AAC end to end
 on:
+  # a push that touches the test or this file runs it on its own branch too: a new workflow file cannot be dispatched until it is on the default branch
+  push:
+    branches: ["claude/**"]
+    paths: [".github/workflows/xhe-e2e.yml", "tests/drm/test_drm_xhe_e2e.cpp", "core/src/drm/drm_audio.cpp", "core/src/drm/drm_gen.cpp"]
   workflow_dispatch:
     inputs:
       exhale_ref:
@@ -48,7 +52,7 @@ jobs:
           EX=$(find . -name exhale -type f -perm -u+x | head -1)
           echo "EXHALE=$PWD/${EX#./}" | tee -a "$GITHUB_ENV"
       - name: Make the test file (1 kHz tone, 6 s, xHE-AAC)
-        env: { PRESET: "${{ inputs.preset }}", RATE: "${{ inputs.rate }}" }
+        env: { PRESET: "${{ inputs.preset || '3' }}", RATE: "${{ inputs.rate || '48000' }}" }
         run: |
           python3 - <<'PY'
           import math, os, struct, wave
