@@ -53,10 +53,10 @@ inline Palette rawPalette(int n) {
         p.bg = c8(12, 12, 12); p.rail = c8(26, 26, 26); p.edge = c8(51, 51, 51);
         p.text = c8(200, 200, 200); p.dim = c8(120, 120, 120); p.bright = c8(235, 235, 235); p.accent = c8(127, 217, 98);
         p.frame = c8(8, 8, 8); p.button = c8(34, 34, 34); p.plotBg = c8(6, 6, 6);
-    } else if (n == 5) {   // Studio: soft slate-blue, one vivid violet accent
-        p.bg = c8(26, 30, 42); p.rail = c8(33, 38, 54); p.edge = c8(54, 62, 86);
-        p.text = c8(216, 222, 238); p.dim = c8(140, 150, 176); p.bright = c8(246, 248, 255); p.accent = c8(150, 112, 255);
-        p.frame = c8(20, 24, 35); p.button = c8(45, 52, 74); p.plotBg = c8(15, 18, 27);
+    } else if (n == 5) {   // Studio: neutral blue-grey like a bench instrument, one signal-teal accent, 3 px corners
+        p.bg = c8(27, 30, 34); p.rail = c8(33, 37, 42); p.edge = c8(56, 62, 70);
+        p.text = c8(214, 219, 226); p.dim = c8(140, 148, 160); p.bright = c8(245, 247, 250); p.accent = c8(64, 186, 170);
+        p.frame = c8(20, 23, 27); p.button = c8(44, 49, 56); p.plotBg = c8(14, 16, 19);
     } else if (n == 6) {   // Mono Pro: OLED black, amber
         p.bg = c8(3, 3, 3); p.rail = c8(0, 0, 0); p.edge = c8(52, 48, 40);
         p.text = c8(208, 204, 194); p.dim = c8(128, 120, 102); p.bright = c8(255, 240, 210); p.accent = c8(255, 176, 0);
@@ -88,7 +88,7 @@ inline C controlEdge(int n) {
 // corner radius of the controls (style FrameRounding at scale 1) and the spacing of each palette (ui2_theme.cpp applyUiThemeBase)
 struct Metrics { float frameRounding, padX, padY, spaceX, spaceY; };
 inline Metrics metrics(int n) {
-    if (n == 5) return {7, 9, 4.5f, 9, 6};
+    if (n == 5) return {3, 8, 3.5f, 8, 5};
     if (n == 6) return {0, 4, 1, 5, 2};
     if (n == 7) return {5, 8, 4, 8, 5};
     if (n == 3 || n == 4) return {0, 5, 2, 6, 3};

@@ -30,7 +30,7 @@ static void paletteTable() {
     // spot values of the literals loadTheme() had before it read palette_data.h
     CHECK(pack(uipal::palette(3).accent) == rgb8(59, 130, 196), "Dev A accent");
     CHECK(pack(uipal::palette(4).accent) == rgb8(127, 217, 98), "Dev B accent");
-    CHECK(pack(uipal::palette(5).accent) == rgb8(150, 112, 255), "Studio accent");
+    CHECK(pack(uipal::palette(5).accent) == rgb8(64, 186, 170), "Studio accent");
     CHECK(pack(uipal::palette(6).accent) == rgb8(255, 176, 0), "Mono Pro accent");
     CHECK(pack(uipal::palette(0).accent) == pack(0.86f, 0.65f, 0.30f), "terminal accent");
     CHECK(pack(uipal::palette(1).bg) == pack(0.165f, 0.168f, 0.172f), "instrument background");

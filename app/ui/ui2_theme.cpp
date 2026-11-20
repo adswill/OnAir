@@ -277,7 +277,7 @@ static void applyUiThemeBase(App& a) {
     pal::dev() = a.newUi;
     if (a.newUi) loadTheme(a.uiTheme);
     pal::wfMode() = !a.newUi ? 0 : a.uiTheme == 2 ? 1 : a.uiTheme == 5 ? 3 : a.uiTheme == 6 ? 4 : a.uiTheme == 7 ? 5 : 2;
-    pal::roundK() = a.newUi && a.uiTheme == 5 ? 1.f : a.newUi && a.uiTheme == 7 ? 0.5f : 0.f;
+    pal::roundK() = a.newUi && a.uiTheme == 5 ? 0.6f : a.newUi && a.uiTheme == 7 ? 0.5f : 0.f;
     pal::headingRef() = ImVec4(0, 0, 0, 0);
     const bool devLook = a.newUi && a.uiTheme >= 3;
     if (a.newUi && a.uiTheme >= 5 && a.wf.map == Waterfall::NavyHeat) a.wf.map = -1;   // the 3.5 designs bring their own colour map (-1: follow the theme) unless one was picked
@@ -330,13 +330,13 @@ static void applyUiThemeBase(App& a) {
         auto fade = [](const ImVec4& v, float al) { return ImVec4(v.x, v.y, v.z, al); };
         auto mixc = [](const ImVec4& a, const ImVec4& b, float t) { return ImVec4(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, 1); };
         if (a.uiTheme == 5) {   // Studio
-            s.WindowRounding = 8 * gUi; s.ChildRounding = 10 * gUi; s.FrameRounding = 7 * gUi; s.PopupRounding = 10 * gUi; s.TabRounding = 8 * gUi; s.GrabRounding = 8 * gUi; s.ScrollbarRounding = 8 * gUi;
-            s.FramePadding = ImVec2(9 * gUi, 4.5f * gUi); s.ItemSpacing = ImVec2(9 * gUi, 6 * gUi); s.CellPadding = ImVec2(6 * gUi, 3 * gUi); s.WindowPadding = ImVec2(10 * gUi, 8 * gUi);
+            s.WindowRounding = 3 * gUi; s.ChildRounding = 3 * gUi; s.FrameRounding = 3 * gUi; s.PopupRounding = 3 * gUi; s.TabRounding = 3 * gUi; s.GrabRounding = 2 * gUi; s.ScrollbarRounding = 3 * gUi;
+            s.FramePadding = ImVec2(8 * gUi, 3.5f * gUi); s.ItemSpacing = ImVec2(8 * gUi, 5 * gUi); s.CellPadding = ImVec2(6 * gUi, 3 * gUi); s.WindowPadding = ImVec2(10 * gUi, 8 * gUi);
             s.ScrollbarSize = 12 * gUi; s.GrabMinSize = 4 * gUi; s.FrameBorderSize = 0; s.ChildBorderSize = 1; s.TabBarOverlineSize = 0;
-            c[ImGuiCol_ChildBg] = fade(T.rail, 0.55f); c[ImGuiCol_Border] = T.ctlEdge;
-            c[ImGuiCol_Button] = mixc(T.button, T.accent, 0.10f); c[ImGuiCol_ButtonHovered] = mixc(T.button, T.accent, 0.35f); c[ImGuiCol_ButtonActive] = T.accent;
+            c[ImGuiCol_ChildBg] = T.rail; c[ImGuiCol_Border] = T.ctlEdge;
+            c[ImGuiCol_Button] = T.button; c[ImGuiCol_ButtonHovered] = mixc(T.button, T.bright, 0.10f); c[ImGuiCol_ButtonActive] = T.accent;
             c[ImGuiCol_FrameBg] = T.frame; c[ImGuiCol_FrameBgHovered] = mixc(T.frame, T.accent, 0.15f);
-            pal::headingRef() = mixc(T.bright, T.accent, 0.35f);
+            pal::headingRef() = T.bright;
         } else if (a.uiTheme == 6) {   // Mono Pro
             s.WindowRounding = s.ChildRounding = s.FrameRounding = s.PopupRounding = s.TabRounding = s.GrabRounding = s.ScrollbarRounding = 0;
             s.FramePadding = ImVec2(4 * gUi, 1 * gUi); s.ItemSpacing = ImVec2(5 * gUi, 2 * gUi); s.CellPadding = ImVec2(3 * gUi, 0.5f * gUi); s.WindowPadding = ImVec2(5 * gUi, 4 * gUi);
