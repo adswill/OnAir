@@ -398,7 +398,10 @@ void atvPicture(TxUi& s) {
         ImGui::InputText(tr("Video file"), s.file, sizeof s.file);
         ImGui::SameLine();
         if (ImGui::Button(tr("Browse…##atvvid"))) { const std::string p = openFileDialog(); if (!p.empty()) snprintf(s.file, sizeof s.file, "%s", p.c_str()); }
+        int gid = 0;
+        const bool wasGen = dect2::vgen::parseGeneratorSpec(s.file, gid);
         generatorPick(s);
+        if (!wasGen && dect2::vgen::parseGeneratorSpec(s.file, gid) && s.audioSrc == 2) { s.audioSrc = 1; s.synth.modeOpt[3] = 0; }   // its sound too (#545)
     } else if (s.videoSrc == 2) {
         const auto cams = listVideoInputs();
         const char* cur = tr("Default camera");
@@ -417,7 +420,9 @@ void atvPicture(TxUi& s) {
 }
 
 void atvSound(TxUi& s, bool running) {
-    const char* sndn[] = {"1 kHz tone (with gaps)", "melody", "sound carrier only", "no sound carrier", "microphone", "WAV / MP3 file"};
+    int gid = 0;
+    const bool gen = s.videoSrc == 1 && dect2::vgen::parseGeneratorSpec(s.file, gid);   // the picture of a video generator: the file is its sound (#545)
+    const char* sndn[] = {"1 kHz tone (with gaps)", "melody", "sound carrier only", "no sound carrier", "microphone", gen ? tr("Sound of the video generator") : "WAV / MP3 file"};
     const int snd = s.audioSrc == 0 ? 4 : s.audioSrc == 1 ? 5 : std::max(0, std::min(3, s.synth.modeOpt[3]));
     ImGui::SetNextItemWidth(220 * gUi);
     if (ImGui::BeginCombo(tr("Sound carrier"), sndn[snd])) {
@@ -427,7 +432,8 @@ void atvSound(TxUi& s, bool running) {
         }
         ImGui::EndCombo();
     }
-    if (s.audioSrc == 0 || s.audioSrc == 1) audioSourceRow(s, running);
+    if (gen && s.audioSrc == 1) ImGui::TextDisabled("%s", tr("The sound the video generator encodes (its Sound setting), live."));
+    else if (s.audioSrc == 0 || s.audioSrc == 1) audioSourceRow(s, running);
 }
 
 void liveRds(bool running) {

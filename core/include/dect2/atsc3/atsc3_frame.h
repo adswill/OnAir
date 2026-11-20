@@ -3,7 +3,8 @@
 
 // ATSC 3.0 physical layer frame, after the bootstrap: the Preamble and one subframe. buildFrame() makes a frame from baseband packets (for
 // tests and simulations); decodeFrame() reads the Preamble, finds the PLPs described by L1-Detail, and returns the payload of their
-// baseband packets. Time interleaving, LDM, MIMO and further subframes are not part of this version.
+// baseband packets. Time interleaving, LDM, MIMO and further subframes are not part of this version (the receiver decodes the Core layer of an
+// LDM signal).
 #pragma once
 #include "atsc3_bicm.h"
 #include "atsc3_cellmux.h"
@@ -22,6 +23,19 @@ struct FramePlp {
 };
 
 BicmConfig plpBicm(const FramePlp& p);   // from the L1-Detail fields; nInner = 0 when the combination is not supported
+
+// LDM (A/322 6.4): an Enhanced PLP (layer 1) on the cells of a Core PLP (layer 0) is sent as beta (core + alpha enh), alpha^2 = 10^(-injection
+// level / 10) and beta = 1 / sqrt(1 + alpha^2). The Core layer is decoded with the Enhanced layer as noise: its cells are divided by beta and
+// alpha^2 goes on the noise. Without that the cells are beta times the Core constellation plus an Enhanced layer the noise figure leaves out.
+struct LdmCore {
+    bool on = false;            // an Enhanced PLP overlaps this PLP's cells
+    double alpha2 = 0, beta = 1;
+};
+double ldmInjectionDb(int code);   // L1D_plp_ldm_injection_level (A/322 Table 9.24) in dB, -1 for the reserved value
+LdmCore ldmCoreOf(const L1DetailSubframe& sf, const L1DetailPlp& plp);
+// One Core cell with its noise (thermal, from the pilots) and its channel state weight (nullptr: none): back to the Core constellation, the
+// Enhanced layer added to the noise, the weight kept as the ratio of the new noise to the cell's own.
+void ldmCoreCell(const LdmCore& l, cf32& cell, double& noise, float* weight);
 
 struct FrameSetup {
     Bootstrap bs;                  // preamble_structure selects the Preamble

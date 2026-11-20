@@ -5,6 +5,8 @@
 //   gnsstool gen <file.cs8|.cf32> <seconds> [options]     write the simulated sky (8 bit signed pairs, or 32 bit float pairs)
 //   gnsstool rx <file> --rate <Hz> [--format cs8|cu8|cf32] [--center <MHz>] [--secs <s>] [--quiet]   run the receiver over a recording
 //   gnsstool run <seconds> [options]                        generator straight into the receiver (no file)
+// rx: --smooth N sets the carrier smoothing window (epochs, 0 = off); --fixlog <file> writes every fix (signal seconds, ECEF, satellites, residual rms);
+//   --private prints no coordinates
 // rx and run: --rinex <file.obs> writes the measurements as RINEX 3.04 observations (code, Doppler, C/N0) for RTKLIB and similar tools
 // Generator options: --rate Hz (default 4e6)  --cn0 dBHz (zenith, default 44)  --cfo Hz  --sro ppm  --sats N  --cold (start 13 s into the frame)
 //   --seed N  --lat deg --lon deg --height m  --jammer  --dc X  --noise X (rms per component, default 0.14)
@@ -32,6 +34,9 @@ struct Opt {
     bool cold = false, jammer = false, quiet = false;
     std::string format = "cs8";
     std::string rinex;             // --rinex: the observation file to write
+    int smooth = -1;               // --smooth N: carrier smoothing window in epochs (0 off; default: the receiver's own)
+    std::string fixlog;            // --fixlog FILE (rx): one line per fix: signal seconds, ECEF x y z, satellites, residual rms. A private file.
+    bool priv = false;             // --private (rx): print no coordinates (quality only); the position goes to --fixlog alone
 };
 
 static GnssSimConfig simConfig(const Opt& o) {
@@ -67,6 +72,9 @@ static bool parseOpts(int argc, char** argv, int from, Opt& o) {
         else if (a == "--quiet") o.quiet = true;
         else if (a == "--format" && i + 1 < argc) o.format = argv[++i];
         else if (a == "--rinex" && i + 1 < argc) o.rinex = argv[++i];
+        else if (a == "--fixlog" && i + 1 < argc) o.fixlog = argv[++i];
+        else if (a == "--smooth" && next(v)) o.smooth = (int)v;
+        else if (a == "--private") o.priv = true;
         else { fprintf(stderr, "unknown option %s\n", a.c_str()); return false; }
     }
     return true;
@@ -132,6 +140,7 @@ static int cmdRun(const Opt& o, double secs, bool toFile, FILE* fo, bool cs8) {
     RinexOut ro;
     if (!toFile) ro.attach(rx, o);
     if (!toFile) { rx.configure(o.rate); rx.setCenterMhz(o.center); if (o.rxSystems) rx.setSystems(o.rxSystems); rx.setLogCallback([](const std::string& s) { printf("    [log] %s\n", s.c_str()); }); }
+    if (!toFile && o.smooth >= 0) rx.setCarrierSmoothing(o.smooth);
     const size_t block = 65536;
     std::vector<cf32> buf(block);
     const size_t total = (size_t)(secs * o.rate);
@@ -191,7 +200,11 @@ static int cmdRx(const std::string& path, const Opt& o) {
     rx.configure(o.rate);
     rx.setCenterMhz(o.center);
     if (o.rxSystems) rx.setSystems(o.rxSystems);
-    rx.setLogCallback([](const std::string& s) { printf("    [log] %s\n", s.c_str()); });
+    if (!o.priv) rx.setLogCallback([](const std::string& s) { printf("    [log] %s\n", s.c_str()); });
+    if (o.smooth >= 0) rx.setCarrierSmoothing(o.smooth);
+    FILE* fl = o.fixlog.empty() ? nullptr : fopen(o.fixlog.c_str(), "w");
+    if (!o.fixlog.empty() && !fl) { fprintf(stderr, "cannot write %s\n", o.fixlog.c_str()); fclose(f); return 1; }
+    uint32_t loggedFix = 0;
     RinexOut ro;
     ro.attach(rx, o);
     const size_t block = 65536;
@@ -211,10 +224,25 @@ static int cmdRx(const std::string& path, const Opt& o) {
         }
         rx.feed(buf.data(), got);
         done += (double)got / o.rate;
-        if (rx.telemetry(t, seq)) { seq = t.seq; if (!o.quiet && t.signalSecs >= nextPrint) { printTable(t); nextPrint += 5; } }
+        if (rx.telemetry(t, seq)) {
+            seq = t.seq;
+            if (!o.quiet && !o.priv && t.signalSecs >= nextPrint) { printTable(t); nextPrint += 5; }
+            if (fl && t.fix.valid && t.fix.fixCount != loggedFix) {
+                loggedFix = t.fix.fixCount;
+                fprintf(fl, "%.3f %.3f %.3f %.3f %d %.3f\n", t.fix.signalS, t.fix.ecef[0], t.fix.ecef[1], t.fix.ecef[2], t.fix.nSats, t.fix.residualRmsM);
+            }
+        }
         if (o.secs > 0 && done >= o.secs) break;
     }
     fclose(f);
+    if (fl) fclose(fl);
+    if (o.priv) {
+        const GnssFix& fx = t.fix;
+        if (!fx.valid) printf("no position fix\n");
+        else printf("fix: %d satellites, HDOP %.2f PDOP %.2f, residual rms %.2f m, first fix after %.1f s, %u fixes (position not printed)\n", fx.nSats, fx.hdop, fx.pdop, fx.residualRmsM, fx.firstFixSecs, fx.fixCount);
+        ro.write(o, t, rx);
+        return 0;
+    }
     printTable(t);
     printFix(t);
     ro.write(o, t, rx);
@@ -227,6 +255,7 @@ int main(int argc, char** argv) {
     Opt o;
     if (cmd == "gen" && argc >= 4) {
         if (!parseOpts(argc, argv, 4, o)) return 1;
+        if (o.priv || !o.fixlog.empty()) { fprintf(stderr, "--private and --fixlog are for rx only\n"); return 1; }
         const std::string path = argv[2];
         const bool cs8 = path.size() > 4 && path.substr(path.size() - 4) == ".cs8";
         FILE* fo = fopen(path.c_str(), "wb");
@@ -237,6 +266,7 @@ int main(int argc, char** argv) {
     }
     if (cmd == "run" && argc >= 3) {
         if (!parseOpts(argc, argv, 3, o)) return 1;
+        if (o.priv || !o.fixlog.empty()) { fprintf(stderr, "--private and --fixlog are for rx only\n"); return 1; }
         return cmdRun(o, atof(argv[2]), false, nullptr, false);
     }
     if (cmd == "rx" && argc >= 3) {

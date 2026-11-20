@@ -797,6 +797,7 @@ void VideoGenerator::Impl::run(GenConfig c) {
                     } else {
                         std::fill(abuf.begin(), abuf.end(), 0.f);
                     }
+                    if (c.instanceId > 0 && !c.previewOnly) generatorPublishAudio(c.instanceId, abuf.data(), fs, s.sampleRate);   // the analog transmitter's sound (#545)
                     for (int k = 0; k < tracks; k++) {
                         if (av_frame_make_writable(af) < 0 || !fillAudio(af, abuf.data(), fs, ax[(size_t)k]->ch_layout.nb_channels)) { fail("the sound format is not supported"); break; }
                         af->pts = aPts;

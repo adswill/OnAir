@@ -337,12 +337,30 @@ void AlpReassembler::push(const uint8_t* payload, int size, int pointer, std::ve
         else {   // the bytes before the pointer finish the packet in progress
             buf_.insert(buf_.end(), payload, payload + pointer);
             start = pointer;
+            // ... and must end it exactly. They do not when baseband packets in between were lost without a gap being reported (a frame
+            // that was never received, samples a live receiver dropped): the start of one packet and the end of another would be joined, and
+            // what follows read from a wrong place (for example as a transport stream packet). The joined bytes are dropped; the packet
+            // that starts at the pointer is good.
+            if (!buf_.empty() && packetLength(buf_) != (int)buf_.size()) {
+                DIAG_DEBUG_EVERY(530318, 5.0, "An ATSC 3.0 ALP packet does not end where the next baseband packet says the next one starts (%zu bytes held), so baseband packets were lost and the joined packet is dropped.", buf_.size());
+                errors_++;
+                buf_.clear();
+                inSegments_ = false;
+            }
         }
     } else if (!synced_) {
         return;   // no start seen yet, nothing to join
     } else {
         buf_.insert(buf_.end(), payload, payload + size);
         start = size;
+        // no packet starts in this baseband packet, so the one in progress cannot end before its end
+        const int len = packetLength(buf_);
+        if (len > 0 && len < (int)buf_.size()) {
+            DIAG_DEBUG_EVERY(530319, 5.0, "An ATSC 3.0 ALP packet ends inside a baseband packet that says no packet starts in it, so baseband packets were lost and reassembly waits for the next packet start.");
+            errors_++;
+            reset();
+            return;
+        }
     }
     // now buf_ may hold the rest of an earlier packet; drain complete packets and continue with the new bytes
     auto drain = [&]() {

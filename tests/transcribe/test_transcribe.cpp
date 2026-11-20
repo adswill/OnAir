@@ -364,6 +364,19 @@ static void store() {
     e.wall = 5; e.text = "a\tb \"c\" \x01"; e.channel = "z";
     CHECK(transcriptFromJson(transcriptToJson(e), e2) && e2.text == e.text, "control characters survive");
     CHECK(!transcriptFromJson("not json", e2) && !transcriptFromJson("{\"t\":1}", e2), "bad lines");
+    // Moonshine does not report confidence: preserve N/A across persistence/exports.
+    TranscriptEntry moon;
+    moon.wall = 6; moon.text = "recognized speech";
+    moon.confidenceAvailable = false;
+    TranscriptEntry decoded;
+    const std::string moonJson = transcriptToJson(moon);
+    CHECK(moonJson.find("\"ca\":false") != std::string::npos, "unavailable confidence is marked in JSON");
+    CHECK(transcriptFromJson(moonJson, decoded) && !decoded.confidenceAvailable, "unavailable confidence survives JSON reload");
+    CHECK(transcriptsCsv({moon}).find(",0.00,,") != std::string::npos, "unavailable confidence is empty in CSV");
+    TranscriptEntry zero = moon;
+    zero.confidenceAvailable = true;
+    CHECK(transcriptFromJson(transcriptToJson(zero), decoded) && decoded.confidenceAvailable, "genuine zero confidence remains available");
+    CHECK(transcriptsCsv({zero}).find(",0.00,0.00,") != std::string::npos, "genuine zero confidence remains numeric in CSV");
 }
 
 static void models() {

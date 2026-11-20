@@ -92,6 +92,10 @@ int main() {
         {"H.264", {0, 0, 0, 0, 2, 0}, 25, 0},
         {"MPEG-2 video", {0, 0, 0, 0, 3, 0}, 25, 2},
         {"256QAM 13/15 16K", {3, 12, 1, 0, 0, 0}, 40, 0},
+        // near the threshold: the level of the channel estimate matters for 64QAM and 256QAM (both failed below 23 and 26 dB while the
+        // estimate from the pilot comb was 1.18 times too large; now about 16 and 22 dB)
+        {"64QAM 11/15 16K at 18 dB", {2, 10, 1, 0, 0, 0}, 18, 0},
+        {"256QAM 11/15 16K at 24 dB", {3, 10, 1, 0, 0, 0}, 24, 0},
     };
     // the cases are independent: each one runs on its own thread, the output keeps the order of the cases
     testjobs::Jobs jobs;

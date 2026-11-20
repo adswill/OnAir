@@ -75,12 +75,15 @@ PlpResult Atsc3Receiver::runCti(const PlpResult& in) {
         if (c->nextBlock < 0 || (pos - c->nextBlock) % cb != 0) c->nextBlock = pos;
     }
     // cells the equaliser blew up (a deep fade at a carrier makes the channel estimate near zero) are far outside the constellation: they are
-    // treated as erased, which the LDPC decoder copes with; kept, they would be confident wrong bits
+    // treated as erased, which the LDPC decoder copes with; kept, they would be confident wrong bits. Far outside is beyond what the outermost
+    // point plus 3 standard deviations of the PLP's noise reaches (and at least twice its power): at low SNR, or with the Enhanced layer of LDM in
+    // the noise, a fixed limit of twice its power erased up to a quarter of the good cells, the most confident ones first.
     std::vector<cf32> cellsIn(in.cells);
     {
         float pmax = 0;
         for (const cf32& p : c->bicm->constellation()) pmax = std::max(pmax, std::norm(p));
-        const float lim = 2.0f * pmax;
+        const float reach = std::sqrt(pmax) + 3.f * std::sqrt(std::max(in.noise, 0.f));
+        const float lim = std::max(2.0f * pmax, reach * reach);
         for (size_t i = 0; i < cellsIn.size(); i++) if (!(std::norm(cellsIn[i]) <= lim)) cellsIn[i] = cf32(0, 0);
     }
     std::vector<cf32> d = c->deint->process(cellsIn);
@@ -182,6 +185,13 @@ bool Atsc3Receiver::pushFrame(const cf32* x, size_t n, const Bootstrap& bs) {
     return commitFrame(decodeFrame(x, n, bs), bs);
 }
 
+void Atsc3Receiver::lostSamples() {
+    std::lock_guard<std::mutex> lk(mu_);
+    cti_.clear();
+    straddle_.clear();
+    for (auto& r : reasm_) r.second.reset();
+}
+
 bool Atsc3Receiver::commitFrame(const FrameResult& fr, const Bootstrap& bs) {
     {
         std::lock_guard<std::mutex> lk(mu_);
@@ -253,6 +263,10 @@ void Atsc3Receiver::pushBbPackets(int plpId, const std::vector<std::vector<uint8
     for (auto& a : out) onAlp(a);
 }
 
+namespace {
+constexpr int kTsPacketsToSwitch = 16;   // ALP packets of transport stream in a row (up to 16 TS packets each) before the reader takes that stream
+}
+
 void Atsc3Receiver::onAlp(const AlpPacket& a) {
     {
         std::lock_guard<std::mutex> lk(mu_);
@@ -263,10 +277,19 @@ void Atsc3Receiver::onAlp(const AlpPacket& a) {
         else if (a.type == AlpCompressedIp) st_.alpCompressedIp++;
         else st_.alpOther++;
     }
-    if (a.type == AlpIpv4) pushIp(a.data.data(), a.data.size());
-    else if (a.type == AlpTs) {
+    if (a.type == AlpIpv4) {
+        {   // transport stream packets between IP packets are damaged baseband packets, not a stream: they are forgotten, bytes and count
+            std::lock_guard<std::mutex> lk(tsMu_);
+            if (!sawTs_ && tsSeen_ > 0) { tsSeen_ = 0; tsDirect_.clear(); }
+        }
+        pushIp(a.data.data(), a.data.size());
+    } else if (a.type == AlpTs) {
         std::lock_guard<std::mutex> lk(tsMu_);
-        sawTs_ = true;
+        // The reader switches to this stream for good, so one packet is not enough: a damaged baseband packet can look like one. It takes
+        // kTsPacketsToSwitch of them with no IP packet between. A service whose ROUTE media already play is not switched at all; reading only
+        // this stream would leave the remuxed one unread and stopped.
+        if (!sawTs_ && ++tsSeen_ >= kTsPacketsToSwitch && !remux_.started()) sawTs_ = true;
+        if (!sawTs_ && remux_.started()) return;   // not this service's stream
         if (tsDirect_.size() < (size_t)64 << 20) tsDirect_.insert(tsDirect_.end(), a.data.begin(), a.data.end());
         else DIAG_DEBUG_EVERY(546455, 10.0, "The ATSC 3.0 transport stream buffer holds 64 MB that nobody has read, so incoming transport stream data is dropped.");
         tsCv_.notify_all();

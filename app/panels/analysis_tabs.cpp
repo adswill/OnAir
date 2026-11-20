@@ -336,7 +336,7 @@ void signallingTab(App& a) {
         row("cell / network / system", "%d / 0x%04X / 0x%04X", p.cellId, p.networkId, p.systemId);
         row("T2 frames per super-frame", "%d", p.numFrames);
         row("data symbols per frame", "%d", p.numDataSyms);
-        row("T2 version", "%s%s", p.version < 3 ? verN[p.version] : "?", p.lite ? "  (T2-Lite)" : "");
+        row("T2 version", "%s%s", p.version < 3 ? verN[p.version] : "?", p.s1 == 3 || p.s1 == 4 ? "  (T2-Lite)" : p.lite ? "  (T2_BASE_LITE: T2-Lite receivers can take it too)" : "");
         row("RF channels", "%d (current %d)  regen %d  tx-id %d", p.numRf, p.curRf, p.regen, p.txIdAvail);
     } else ImGui::TextDisabled("not decoded yet");
     ImGui::Spacing();
