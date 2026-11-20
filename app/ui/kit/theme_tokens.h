@@ -13,14 +13,14 @@ namespace kit {
 struct Tokens {
     // colour roles
     ImVec4 bg0, bg1, bg2, bg3;      // window, panel / bars, controls, hovered controls
-    ImVec4 border, text, textDim;
+    ImVec4 border, controlBorder, text, textDim;   // border = rules and separators; controlBorder = outlines of controls (3:1 on bg0)
     ImVec4 accent, ok, warn, error; // accent = selection and the active thing only; ok / warn / error carry status
     ImVec4 selection, hover;
     // geometry, unscaled points (kit::px() scales them)
     float s2 = 2, s4 = 4, s6 = 6, s8 = 8, s12 = 12, s16 = 16;   // the spacing scale
-    float rowH = 19;       // table and list rows
-    float controlH = 20;   // buttons, combos, tab strips
-    float headerH = 20;    // panel header bars
+    float rowH = 24;       // table and list rows (WCAG 2.2 target size: 24 px at scale 1)
+    float controlH = 24;   // buttons, combos, tab strips
+    float headerH = 24;    // panel header bars (they collapse on click)
     float radius = 0;      // corner radius (0 in the dev looks)
     float border1 = 1;     // every rule is one pixel
     bool devLook = false;  // Dev A / Dev B: the components take their flat tool-window form

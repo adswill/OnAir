@@ -45,6 +45,13 @@ static void paletteTable() {
     CHECK(accents.size() == (size_t)uipal::kNumPalettes, "every palette has its own accent (%zu)", accents.size());
     CHECK(uipal::metrics(5).frameRounding > uipal::metrics(3).frameRounding, "Studio is rounder than Dev A");
     CHECK(uipal::metrics(6).padY < uipal::metrics(5).padY, "Mono Pro is denser than Studio");
+    // text and control outlines meet WCAG on the window colour (Daylight is checked after the Light pass)
+    for (int n = 0; n < uipal::kNumPalettes; n++) {
+        if (n == 7) continue;
+        const uipal::Palette p = uipal::palette(n);
+        CHECK(uipal::ratio(p.dim, p.bg) >= 4.5f, "palette %d: dim text is %.2f:1 on the window", n, uipal::ratio(p.dim, p.bg));
+        CHECK(uipal::ratio(uipal::controlEdge(n), p.bg) >= 3.f, "palette %d: control outline is %.2f:1 on the window", n, uipal::ratio(uipal::controlEdge(n), p.bg));
+    }
 }
 
 static void themes() {

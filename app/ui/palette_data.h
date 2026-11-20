@@ -6,6 +6,7 @@
 // the real look. No ImGui here: tests/app/test_ui_preview.cpp checks it.
 #pragma once
 #include <algorithm>
+#include <cmath>
 
 namespace uipal {
 
@@ -21,7 +22,20 @@ inline C lightSource(int r, int g, int b) {
     return c8(r + 255 - m - lo, g + 255 - m - lo, b + 255 - m - lo);
 }
 
-inline Palette palette(int n) {
+// WCAG 2.x contrast of two sRGB colours, and the smallest lift of a colour toward white that reaches a ratio on a background
+inline float lum(const C& c) {
+    auto l = [](float v) { return v <= 0.04045f ? v / 12.92f : std::pow((v + 0.055f) / 1.055f, 2.4f); };
+    return 0.2126f * l(c.r) + 0.7152f * l(c.g) + 0.0722f * l(c.b);
+}
+inline float ratio(const C& a, const C& b) { const float x = lum(a), y = lum(b); return (std::max(x, y) + 0.05f) / (std::min(x, y) + 0.05f); }
+inline C liftTo(C c, const C& bg, float want) {
+    for (int i = 0; i < 40 && ratio(c, bg) < want; i++) { c.r += (1 - c.r) * 0.04f; c.g += (1 - c.g) * 0.04f; c.b += (1 - c.b) * 0.04f; }
+    return c;
+}
+constexpr float kDimMinRatio = 4.5f;   // dim text (hints, units, disabled rows) on the window colour: WCAG AA for text
+constexpr float kCtlEdgeMinRatio = 3.f;   // the outline of a control (input, combo, button) on the window colour: WCAG 1.4.11
+
+inline Palette rawPalette(int n) {
     Palette p;
     if (n == 1) {
         p.bg = {0.165f, 0.168f, 0.172f}; p.rail = {0.135f, 0.138f, 0.142f}; p.edge = {0.33f, 0.335f, 0.34f};
@@ -57,6 +71,18 @@ inline Palette palette(int n) {
         p.frame = {0.030f, 0.030f, 0.030f}; p.button = {0.045f, 0.045f, 0.044f}; p.plotBg = {0.030f, 0.030f, 0.030f};
     }
     return p;
+}
+
+// the palettes as drawn, with dim text lifted to 4.5:1 on the window colour (Daylight is written in light colours and keeps its own, checked in the Light pass)
+inline Palette palette(int n) {
+    Palette p = rawPalette(n);
+    if (n != 7) p.dim = liftTo(p.dim, p.bg, kDimMinRatio);
+    return p;
+}
+// the outline colour of the controls: the palette's edge colour lifted to 3:1 on the window colour. Separators and panel rules keep the quieter `edge`.
+inline C controlEdge(int n) {
+    const Palette p = palette(n);
+    return n == 7 ? p.edge : liftTo(p.edge, p.bg, kCtlEdgeMinRatio);
 }
 
 // corner radius of the controls (style FrameRounding at scale 1) and the spacing of each palette (ui2_theme.cpp applyUiThemeBase)

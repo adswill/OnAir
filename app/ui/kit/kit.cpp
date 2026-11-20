@@ -18,7 +18,7 @@ void syncTokens() {
     const ui2::UiTheme& P = ui2::T;
     Tokens& k = tokens();
     k.bg0 = P.bg; k.bg1 = P.rail; k.bg2 = P.button; k.bg3 = mix(P.button, P.bright, 0.10f);
-    k.border = P.edge; k.text = P.text; k.textDim = P.dim; k.accent = P.accent;
+    k.border = P.edge; k.controlBorder = P.ctlEdge; k.text = P.text; k.textDim = P.dim; k.accent = P.accent;
     k.ok = ImVec4(0.42f, 0.75f, 0.45f, 1); k.warn = ImVec4(0.86f, 0.65f, 0.22f, 1); k.error = ImVec4(0.86f, 0.33f, 0.30f, 1);
     k.selection = mix(P.bg, P.accent, 0.22f); k.hover = mix(P.button, P.bright, 0.10f);
 }
@@ -67,7 +67,7 @@ bool sw(const char* label, bool* on) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const float y0 = p.y + (ImGui::GetFrameHeight() - h) * 0.5f;
     dl->AddRectFilled(ImVec2(p.x, y0), ImVec2(p.x + w, y0 + h), C(*on ? mix(k.bg2, k.accent, 0.6f) : k.bg2));
-    dl->AddRect(ImVec2(p.x, y0), ImVec2(p.x + w, y0 + h), C(k.border));
+    dl->AddRect(ImVec2(p.x, y0), ImVec2(p.x + w, y0 + h), C(k.controlBorder));
     const float kx = *on ? p.x + w - h + 2 : p.x + 2;
     dl->AddRectFilled(ImVec2(kx, y0 + 2), ImVec2(kx + h - 4, y0 + h - 2), C(*on ? k.bg0 : k.textDim));
     ImGui::SameLine(0, px(k.s6));
@@ -200,7 +200,7 @@ void meter(float frac, float width, float warnAt, float errorAt) {
     dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), C(k.bg2));
     const ImVec4& col = frac >= errorAt ? k.error : frac >= warnAt ? k.warn : k.ok;
     dl->AddRectFilled(p, ImVec2(p.x + width * frac, p.y + h), C(col));
-    dl->AddRect(p, ImVec2(p.x + width, p.y + h), C(k.border));
+    dl->AddRect(p, ImVec2(p.x + width, p.y + h), C(k.controlBorder));
 }
 void labelValue(const char* label, const char* fmt, ...) {
     ImGui::TextDisabled("%s", label);

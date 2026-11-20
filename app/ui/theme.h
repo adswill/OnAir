@@ -58,7 +58,7 @@ inline void applyTheme() {
     c[ImGuiCol_WindowBg]      = ImVec4(0.055f, 0.058f, 0.062f, 1);
     c[ImGuiCol_ChildBg]       = ImVec4(0, 0, 0, 0);
     c[ImGuiCol_PopupBg]       = ImVec4(0.075f, 0.078f, 0.083f, 1);
-    c[ImGuiCol_Border]        = ImVec4(0.20f, 0.21f, 0.22f, 1);
+    c[ImGuiCol_Border]        = ImVec4(0.37f, 0.38f, 0.39f, 1);   // 3:1 on the window colour: control outlines (was 1.6:1)
     c[ImGuiCol_FrameBg]       = ImVec4(0.035f, 0.037f, 0.040f, 1);
     c[ImGuiCol_FrameBgHovered]= ImVec4(0.10f, 0.105f, 0.11f, 1);
     c[ImGuiCol_FrameBgActive] = ImVec4(0.14f, 0.145f, 0.15f, 1);
@@ -81,7 +81,7 @@ inline void applyTheme() {
     c[ImGuiCol_Separator]     = ImVec4(0.20f, 0.21f, 0.22f, 1);
     c[ImGuiCol_TableRowBgAlt] = ImVec4(1, 1, 1, 0.02f);
     c[ImGuiCol_Text]          = ImVec4(0.82f, 0.84f, 0.85f, 1);
-    c[ImGuiCol_TextDisabled]  = ImVec4(0.45f, 0.47f, 0.49f, 1);
+    c[ImGuiCol_TextDisabled]  = ImVec4(0.52f, 0.54f, 0.56f, 1);   // 5:1 on the window colour (was 4.3:1)
 
     plt::Style& p = plt::GetStyle();   // the plots: dark plate, thin border, faint grid
     p.PlotBg  = ImVec4(0.02f, 0.021f, 0.023f, 1);

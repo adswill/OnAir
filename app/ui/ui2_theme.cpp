@@ -22,6 +22,7 @@ void loadTheme(int n) {
         auto v = [](const uipal::C& c) { return ImVec4(c.r, c.g, c.b, 1); };
         T.bg = v(P.bg); T.rail = v(P.rail); T.edge = v(P.edge); T.text = v(P.text); T.dim = v(P.dim); T.bright = v(P.bright);
         T.accent = v(P.accent); T.frame = v(P.frame); T.button = v(P.button); T.plotBg = v(P.plotBg);
+        T.ctlEdge = v(uipal::controlEdge(n));
     }
     if (n == 1) {
         const ImVec4 s[8] = {ImVec4(0.90f, 0.91f, 0.92f, 1), ImVec4(0.55f, 0.80f, 0.62f, 1), ImVec4(0.88f, 0.68f, 0.42f, 1), ImVec4(0.62f, 0.72f, 0.92f, 1), ImVec4(0.80f, 0.58f, 0.78f, 1), ImVec4(0.55f, 0.56f, 0.58f, 1), ImVec4(0.88f, 0.84f, 0.56f, 1), ImVec4(0.35f, 0.36f, 0.38f, 1)};
@@ -294,7 +295,7 @@ static void applyUiThemeBase(App& a) {
     s.FrameBorderSize = 1; s.ChildBorderSize = 1; s.PopupBorderSize = 1; s.TabBarBorderSize = 1; s.TabBarOverlineSize = 2 * gUi;
     ImVec4* c = s.Colors;
     c[ImGuiCol_WindowBg] = kBg; c[ImGuiCol_ChildBg] = ImVec4(0, 0, 0, 0); c[ImGuiCol_PopupBg] = ImVec4(0.062f, 0.062f, 0.060f, 1);
-    c[ImGuiCol_Border] = kEdge; c[ImGuiCol_Separator] = kEdge;
+    c[ImGuiCol_Border] = T.ctlEdge; c[ImGuiCol_Separator] = kEdge;
     c[ImGuiCol_FrameBg] = T.frame; c[ImGuiCol_FrameBgHovered] = ImVec4(T.frame.x + 0.05f, T.frame.y + 0.05f, T.frame.z + 0.05f, 1); c[ImGuiCol_FrameBgActive] = ImVec4(T.frame.x + 0.08f, T.frame.y + 0.08f, T.frame.z + 0.08f, 1);
     c[ImGuiCol_Button] = T.button; c[ImGuiCol_ButtonHovered] = ImVec4(T.button.x + 0.06f, T.button.y + 0.06f, T.button.z + 0.06f, 1); c[ImGuiCol_ButtonActive] = ImVec4(T.accent.x * 0.45f, T.accent.y * 0.45f, T.accent.z * 0.45f, 1);
     c[ImGuiCol_Header] = ImVec4(1, 0.95f, 0.85f, 0.06f); c[ImGuiCol_HeaderHovered] = ImVec4(1, 0.95f, 0.85f, 0.10f); c[ImGuiCol_HeaderActive] = ImVec4(0.86f, 0.65f, 0.30f, 0.30f);
@@ -332,7 +333,7 @@ static void applyUiThemeBase(App& a) {
             s.WindowRounding = 8 * gUi; s.ChildRounding = 10 * gUi; s.FrameRounding = 7 * gUi; s.PopupRounding = 10 * gUi; s.TabRounding = 8 * gUi; s.GrabRounding = 8 * gUi; s.ScrollbarRounding = 8 * gUi;
             s.FramePadding = ImVec2(9 * gUi, 4.5f * gUi); s.ItemSpacing = ImVec2(9 * gUi, 6 * gUi); s.CellPadding = ImVec2(6 * gUi, 3 * gUi); s.WindowPadding = ImVec2(10 * gUi, 8 * gUi);
             s.ScrollbarSize = 12 * gUi; s.GrabMinSize = 10 * gUi; s.FrameBorderSize = 0; s.ChildBorderSize = 1; s.TabBarOverlineSize = 0;
-            c[ImGuiCol_ChildBg] = fade(T.rail, 0.55f); c[ImGuiCol_Border] = fade(T.edge, 0.7f);
+            c[ImGuiCol_ChildBg] = fade(T.rail, 0.55f); c[ImGuiCol_Border] = T.ctlEdge;
             c[ImGuiCol_Button] = mixc(T.button, T.accent, 0.10f); c[ImGuiCol_ButtonHovered] = mixc(T.button, T.accent, 0.35f); c[ImGuiCol_ButtonActive] = T.accent;
             c[ImGuiCol_FrameBg] = T.frame; c[ImGuiCol_FrameBgHovered] = mixc(T.frame, T.accent, 0.15f);
             pal::headingRef() = mixc(T.bright, T.accent, 0.35f);
