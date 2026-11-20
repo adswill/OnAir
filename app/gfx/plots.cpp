@@ -680,6 +680,24 @@ static void markerLayer(const App& a, bool labels) {
     }
 }
 
+// Channels other people shared for the saved country and city (Spectrum display > Shared channels): a thin line, and on the spectrum the name
+static void sharedLayer(App& a, bool labels) {
+    const std::vector<SharedMark>& m = sharedMarks(a);
+    if (m.empty()) return;
+    const plt::Rect lim = plt::GetPlotLimits();
+    std::vector<double> xs;
+    for (const auto& k : m) if (k.mhz >= lim.X.Min && k.mhz <= lim.X.Max) xs.push_back(k.mhz);
+    if (xs.empty()) return;
+    plt::Spec ms; ms.LineColor = ImVec4(0.45f, 0.78f, 0.95f, labels ? 0.5f : 0.3f); ms.LineWeight = 1.f;
+    plt::PlotInfLines("##sharedch", xs.data(), (int)xs.size(), ms);
+    if (!labels) return;
+    size_t i = 0;
+    for (const auto& k : m) {
+        if (k.mhz < lim.X.Min || k.mhz > lim.X.Max) continue;
+        plt::PlotText(k.label.c_str(), k.mhz, lim.Y.Max, ImVec2(0, bandPlanStripHeight() * 0.5f + 16 * gUi + (float)(2 + i++ % 3) * ImGui::GetTextLineHeight()));
+    }
+}
+
 // The manual notches (app/panels/notch_ui.cpp): a thin dashed line at each one, with a small label on the spectrum; red when on, grey when off.
 // The spectrum is measured after the notches, so a notched carrier reads low there (the tooltip says so).
 static void notchLayer(const App& a, bool labels) {
@@ -1391,6 +1409,11 @@ void specDisplayPopup(App& a) {
     ghostMenu(a, save);
     if (ImGui::Checkbox(tr("Peak markers"), &a.specPeaks)) save = true;
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Frequency and level of the strongest peaks in view"));
+    {
+        bool sc = plat::prefs().getB("scanDbOverlay", false);
+        if (ImGui::Checkbox(tr("Shared channels"), &sc)) plat::prefs().setB("scanDbOverlay", sc);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Names of the channels other people shared for your country and city (Scan > Shared channels). Turning it on downloads that list from github.com/adswill/OnAir-channels."));
+    }
     if (ImGui::Checkbox(tr("Level at the cursor"), &a.specReadout)) save = true;
     if (ImGui::Checkbox(tr("Fill under the line"), &a.specFill)) save = true;
     ImGui::SetNextItemWidth(110 * gUi);
@@ -2009,6 +2032,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
         fileSpikeAndEdges(a, 0, plotMin, plotSize);
         multiMarkers(a);
         markerLayer(a, true);
+        sharedLayer(a, true);
         notchLayer(a, true);
         autoLabelsDraw(a, 0, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
         generalAutoPlot(a, 0, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
@@ -2042,6 +2066,8 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
         if (ImGui::MenuItem(trw("Identify this signal"), nullptr, false, a.engine.running())) identifyAt(a, ctxMhz);
         if (!a.engine.running() && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Start the receiver first"));
         if (ImGui::MenuItem(trw("Identify all signals"), nullptr, false, a.engine.running())) identifyAll(a);
+        if (ImGui::MenuItem(trw("Share this channel..."), nullptr, false, shareChannelAt(a, ctxMhz, false))) shareChannelAt(a, ctxMhz, true);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Adds this channel from your last scan to the public list. You see exactly what is sent first."));
         ImGui::Separator();
         {   // the marker layer
             std::vector<double> m = markers(a);
@@ -2223,6 +2249,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         if (a.wf.viewImg) spaint::wfImage(v, a.wf.viewImg->texture(), texW, H, x0, x1, W, a.wf.rows, frac);
         channelBand(a, false);
         markerLayer(a, false);
+        sharedLayer(a, false);
         notchLayer(a, false);
         plotMin = plt::GetPlotPos(); plotSize = plt::GetPlotSize();
         if (look) {

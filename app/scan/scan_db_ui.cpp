@@ -296,6 +296,10 @@ struct View {
     int sub = 0;
 } vw;
 
+// The shared channels as marks on the spectrum (Spectrum display > Shared channels): the saved country (and city, if it has rows) of the
+// shared list. Switching it on is the yes to the download; the file is the same one the Shared data view reads.
+struct Overlay { JobP job; std::string want, have; } ov;
+
 void sharedView(App& a) {
     const std::string mode = modeFolder(a);
     if (mode.empty()) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("There is no shared data for this mode."); ImGui::PopTextWrapPos(); } return; }
@@ -406,6 +410,40 @@ void scanDbTick(App& a) {
         if (!rows.empty()) { sh.mode = modeFolder(a); sh.rows = rows; sh.pending = true; }
     }
     sh.wasRunning = run;
+}
+
+const std::vector<SharedMark>& sharedMarks(App& a) {
+    static std::vector<SharedMark> out;
+    auto& pr = plat::prefs();
+    const std::string mode = modeFolder(a), iso = pr.getS("scanDbCountry", ""), city = pr.getS("scanDbCity", "");
+    if (!pr.getB("scanDbOverlay", false) || !mode[0] || iso.empty()) { out.clear(); ov.job.reset(); ov.have.clear(); return out; }
+    const std::string key = mode + "/" + iso + "/" + city;
+    if (key != ov.have && (!ov.job || ov.want != key)) { ov.want = key; ov.job = fetchText(mode + "/" + iso + ".csv", false); }
+    if (ov.job && ov.job->state != 0) {
+        out.clear();
+        if (ov.job->state == 1) {
+            auto rows = chdb::parseChannels(ov.job->text);
+            bool anyCity = false;
+            for (const auto& r : rows) if (r.city == city) anyCity = true;
+            for (const auto& r : rows) {
+                if (anyCity && r.city != city) continue;
+                SharedMark m; m.mhz = r.freqMhz;
+                m.label = !r.network.empty() ? r.network : !r.services.empty() ? r.services[0] : r.standard;
+                out.push_back(m);
+            }
+        }
+        ov.have = ov.want; ov.job.reset();   // a failed download is not retried until the settings change
+    }
+    return out;
+}
+
+// Right-click on the spectrum: send the channel of the last scan that sits at this frequency. The dialog is in the Scan tab, so it opens there.
+bool shareChannelAt(App& a, double mhz, bool apply) {
+    std::vector<chdb::Row> hit;
+    for (const auto& r : scanRows(a)) if (std::fabs(r.freqMhz - mhz) <= std::max(0.05, r.bwMhz / 2)) hit.push_back(r);
+    if (hit.empty()) return false;
+    if (apply) { sh.mode = modeFolder(a); sh.rows = hit; sh.pending = true; gForceTab = "Scan"; }
+    return true;
 }
 
 // Tools > Shared channel list: the Scan tab, on the shared channels (only in the modes that have a scan).
