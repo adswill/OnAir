@@ -58,6 +58,10 @@ public:
     // Waits until every frame handed over so far has reached the receiver.
     void flush();
     void push(const cf32* x, size_t n);
+    // `n` samples that followed the ones pushed so far were lost (the receiver fell behind and dropped them). The frame the gap cuts is
+    // abandoned, the search goes straight to where the next bootstrap must be, and the next frame tells the receiver that its time
+    // interleavers and packet reassembly cannot carry on from the frames before.
+    void skip(size_t n);
     SyncStats stats() const;
     double sampleRate() const { return rate_; }
 
@@ -82,6 +86,8 @@ private:
     long bsStart_ = 0;                   // stream index of the bootstrap start
     double minToNextSec_ = 0;
     long searchFrom_ = 0;
+    double period_ = 0;                  // the last frame's bootstrap-to-bootstrap length in radio samples (0: none read yet)
+    bool gapBefore_ = false;             // samples were lost before the next frame
     SyncStats st_;
     int missed_ = 0;
     int hintMisses_ = 0;

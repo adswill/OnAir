@@ -23,7 +23,7 @@ namespace {
 
 const char* const kLinkHelp = N_("What the link offers. The bitrate is what has to be carried: the generator's TS mux rate unless you untick it. The bandwidth is the room you have on the spectrum (a channel, a band-plan segment). The C/N is the ratio of the carrier to the noise you see on the spectrum analyser, in the same bandwidth as the signal.");
 
-const char* const kModesHelp = N_("Per system, set the parameters you want or leave them on Any. The list beside them shows the modes that carry the bitrate within the bandwidth at the C/N, the best first: the smallest bandwidth, then the most C/N margin. Satellite modes have a free symbol rate: their bandwidth is what the bitrate needs, their capacity what the whole bandwidth would carry. The thresholds are the ideal AWGN values of the standards (no implementation margin, phase noise or multipath): keep a few dB in hand. The DVB-T2 bitrate is the ideal cell capacity (P1/P2 symbols and signalling not deducted), so the real one is a few percent lower.");
+const char* const kModesHelp = N_("Per system, set the parameters you want or leave them on Any. The list beside them shows the modes that carry the bitrate within the bandwidth at the C/N, the best first: the smallest bandwidth, then the most C/N margin. Satellite modes have a free symbol rate: their bandwidth is what the bitrate needs, their capacity what the whole bandwidth would carry. The thresholds are the ideal AWGN values of the standards (no implementation margin, phase noise or multipath): keep a few dB in hand. The DVB-T2 bitrate is the ideal cell capacity (P1/P2 symbols and signalling not deducted), so the real one is a few percent lower. DVB-T2 has a Profile: T2-Lite (EN 302 755 annex I, for simple mobile receivers) carries at most 4 Mbit/s a programme and adds the code rates 1/3 and 2/5, which have no C/N figure in the standards and are therefore never proposed.");
 
 const char* const kBestHelp = N_("The mode with the smallest bandwidth that carries the bitrate at this C/N, over all systems and with the parameters set in their blocks; between modes of the same bandwidth, the one with the most C/N margin. Set parameters in a block (or the bandwidth) to steer it, e.g. to a system your receiver has.");
 
@@ -55,24 +55,9 @@ std::string saveText(const Sel& s) {
     std::array<char, 160> b{};
     snprintf(b.data(), b.size(), "gen=%d\nmbps=%.6f\nbw=%.6f\ncn=%.3f\n", s.fromGenerator ? 1 : 0, s.mbps, s.bwMHz, s.cnDb);
     std::string o = b.data();
-    for (int i = 0; i < kNumDvbSystems; i++) {   // "f.DVB-T2=-1,-1,4,..." per system: the index of each parameter's value, -1 = Any
-        o += std::string("f.") + dvbSystemName((DvbSystem)i) + "=";
-        for (size_t k = 0; k < modeParams((DvbSystem)i).size(); k++) o += (k ? "," : "") + std::to_string(s.filter[(size_t)i][k]);
-        o += "\n";
-    }
+    for (int i = 0; i < kNumDvbSystems; i++)   // "f.DVB-T2=-1,-1,4,..." per system: the index of each parameter's value, -1 = Any (filterText)
+        o += std::string("f.") + dvbSystemName((DvbSystem)i) + "=" + filterText((DvbSystem)i, s.filter[(size_t)i]) + "\n";
     return o;
-}
-
-void loadFilter(DvbSystem sys, const std::string& v, ModeFilter& f) {
-    const std::vector<ModeParam>& params = modeParams(sys);
-    size_t pos = 0;
-    for (size_t k = 0; k < params.size() && pos <= v.size(); k++) {
-        const int i = atoi(v.c_str() + pos);
-        f[k] = i >= 0 && i < (int)params[k].values.size() ? i : -1;
-        const size_t comma = v.find(',', pos);
-        if (comma == std::string::npos) break;
-        pos = comma + 1;
-    }
 }
 
 void loadText(const std::string& text, Sel& s) {
@@ -91,7 +76,7 @@ void loadText(const std::string& text, Sel& s) {
         else if (k == "cn") s.cnDb = std::clamp(atof(v.c_str()), -20.0, 60.0);
         else
             for (int i = 0; i < kNumDvbSystems; i++)
-                if (k == std::string("f.") + dvbSystemName((DvbSystem)i)) loadFilter((DvbSystem)i, v, s.filter[(size_t)i]);
+                if (k == std::string("f.") + dvbSystemName((DvbSystem)i)) filterFromText((DvbSystem)i, v, s.filter[(size_t)i]);   // (an older file: Profile on Any)
     }
 }
 
@@ -154,24 +139,35 @@ void linkInputs(Sel& s, int generatorKbps) {
     numberRow(N_("C/N"), "##dmscn", s.cnDb, "%.1f dB", -20, 60, col, w);
 }
 
-// Why no mode of a system works: no mode has the parameters, none carries the bitrate in the bandwidth, or the C/N is too low for those
-// that would
+bool isT2(DvbSystem s) { return s == DvbSystem::T2 || s == DvbSystem::T2Narrow; }
+
+// Why no mode of a system works: no mode has the parameters (for T2-Lite: annex I rules them out), the T2-Lite cap of 4 Mbit/s, none carries
+// the bitrate in the bandwidth, the C/N is too low for those that would, or the standards give no C/N for those that would (T2-Lite 1/3, 2/5)
 std::string whyNone(DvbSystem sys, const ModeFilter& f, const LinkInput& in) {
-    bool any = false;
+    bool any = false, capped = false, noCn = false;
     double bestCn = 1e9;
+    const double need = in.kbps / 1000.0;
     for (const DvbMode& m : dvbModes(sys)) {
         if (!matches(m, f)) continue;
         any = true;
-        LinkInput noCn = in;
-        noCn.cnDb = 1e9;
-        if (fitMode(m, noCn).ok) bestCn = std::min(bestCn, m.cnDb);
+        LinkInput open = in;
+        open.cnDb = 1e9;
+        const auto fit = fitMode(m, open);
+        const bool room = fit.bwMHz <= in.bwMHz * (1 + 1e-9) && fit.capacityMbps * (1 + 1e-9) >= need;
+        if (room && m.hasCn) bestCn = std::min(bestCn, m.cnDb);
+        if (room && !m.hasCn) noCn = true;
+        if (!room && m.capMbps > 0 && fit.bwMHz <= in.bwMHz * (1 + 1e-9) && m.rateMbps >= need) capped = true;
     }
+    if (!any && isT2(sys) && f[kT2ProfileParam] == 1)
+        return tr("T2-Lite does not allow these parameters (EN 302 755 annex I): no 1K or 32K FFT, no PP8, 16 200-bit FEC frames only, no code rate 4/5 or 5/6, no 256-QAM with 2/3 or 3/4.");
     if (!any) return tr("No mode has these parameters.");
     if (bestCn < 1e9) {
         std::array<char, 64> b{};
         snprintf(b.data(), b.size(), "%.1f dB", bestCn);
         return std::string(tr("The C/N is too low: these parameters need at least")) + " " + b.data() + ".";
     }
+    if (noCn) return tr("The modes that would carry it have no C/N figure in the standards (T2-Lite code rates 1/3 and 2/5: TS 102 831 tables 44 and 45 start at 1/2), so they are not proposed.");
+    if (capped) return tr("T2-Lite carries at most 4 Mbit/s for a programme (EN 302 755 annex I.10): lower the bitrate, or choose T2-Base.");
     return tr("No mode with these parameters carries the bitrate within the bandwidth.");
 }
 
@@ -204,12 +200,20 @@ void paramFilters(Sel& s, DvbSystem sys) {
         const char* shown = f[k] < 0 ? tr("Any") : tr(params[k].values[(size_t)f[k]].c_str());
         if (ImGui::BeginCombo("##param", shown)) {
             if (ImGui::Selectable(tr("Any"), f[k] < 0)) f[k] = -1;
-            for (size_t v = 0; v < params[k].values.size(); v++)
+            for (size_t v = 0; v < params[k].values.size(); v++) {
+                // DVB-T2: the code rates 1/3 and 2/5 exist in T2-Lite only (EN 302 755 annex I, table I.1)
+                const bool liteOnly = isT2(sys) && (int)k == kT2CodeRateParam && v >= 6 && f[kT2ProfileParam] == 0;
+                ImGui::BeginDisabled(liteOnly);
                 if (ImGui::Selectable(tr(params[k].values[v].c_str()), f[k] == (int)v)) f[k] = (int)v;
+                ImGui::EndDisabled();
+                if (liteOnly && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                    ImGui::SetTooltip("%s", tr("A code rate of T2-Lite only (EN 302 755 annex I, table I.1): set the profile to T2-Lite or Any."));
+            }
             ImGui::EndCombo();
         }
         ImGui::PopID();
     }
+    if (isT2(sys) && f[kT2ProfileParam] == 0 && f[kT2CodeRateParam] >= 6) f[kT2CodeRateParam] = -1;   // T2-Base has no 1/3 or 2/5
     const bool set = std::any_of(f.begin(), f.end(), [](int v) { return v >= 0; });
     ImGui::BeginDisabled(!set);
     if (ImGui::SmallButton(tr("All on Any"))) f = openFilter();
@@ -222,6 +226,7 @@ void modeTooltip(const DvbMode& m) {
     ImGui::BeginTooltip();
     for (size_t k = 0; k < params.size(); k++) ImGui::Text("%s: %s", tr(params[k].name), tr(params[k].values[(size_t)m.value[k]].c_str()));
     if (!isSatellite(m.system)) ImGui::Text("%s: %.3f Mbit/s", tr("Bitrate"), m.rateMbps);
+    if (m.capMbps > 0) ImGui::Text("%s: %.3f Mbit/s", tr("T2-Lite carries at most"), m.capMbps);
     else ImGui::Text("%s: %.4f bit/symbol", tr("Spectral efficiency"), m.rateMbps);
     ImGui::EndTooltip();
 }

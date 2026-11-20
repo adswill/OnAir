@@ -4,6 +4,7 @@
 #include "dect2/t2/t2gen.h"
 #include "dect2/t2/t2interleave.h"
 #include "dect2/t2/t2fec.h"
+#include "dect2/t2/t2profile.h"
 #include "dect2/dsp/dsp_compat.h"
 #include <cmath>
 #include <cstring>
@@ -112,7 +113,7 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
     post_.plps[0].numBlocksMax = 100; post_.plps[0].groupId = 1; post_.plps[0].timeIlLength = 3; post_.plps[0].plpMode = 1;
     post_.dyn.resize(1);
     post_.dyn[0].numBlocks = 100;
-    pre_.lite = (p.s1 == 3 || p.s1 == 4) ? 1 : 0;
+    pre_.lite = (p.s1 == 0 || p.s1 == 1) && p.baseLite ? 1 : 0;   // T2_BASE_LITE: a Base field, reserved (0) in a T2-Lite signal (cl. 7.2.2)
     if (p.mixed) { post_.fefType = 0; post_.fefLength = p.fefLength & 0x3FFFFF; post_.fefInterval = p.fefInterval; post_.fefLengthMsb = (p.fefLength >> 22) & 3; }
     if (p.payload) {
         L1PlpConf& c = post_.plps[0];
@@ -131,6 +132,7 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
             for (int k = 0; k < k_; k++) cap += types[k] == kCellData;
         }
         plpBlocks_ = d.ok ? (int)(cap / d.cellsPerBlock) : 0;
+        if (p.plpBlocksMax > 0) plpBlocks_ = std::min(plpBlocks_, p.plpBlocksMax);
         c.numBlocksMax = plpBlocks_;
         post_.dyn[0].numBlocks = plpBlocks_;
         post_.dyn[0].start = 0;
@@ -175,6 +177,55 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
 
 T2Generator::~T2Generator() {
     delete i_;
+}
+
+T2TxPlan t2TxPlan(const TxParams& p, double bwMhz) {
+    T2TxPlan r;
+    r.params = p;
+    r.params.payload = true;
+    const double fs = nativeRateHz(bwMhz);
+    {   // cl. 8.3.1: T_F <= 250 ms. The automatic length is timed at 8 MHz; at 1.7 MHz it is about five times longer.
+        T2Generator g(r.params);
+        const double sec = (double)g.frameLength() / fs;
+        if (r.params.dataSymbols <= 0 && sec > kT2MaxFrameSec) {
+            const int nP2 = g.symbolsPerFrame() - g.dataSymbols();
+            const int fit = (int)((0.96 * kT2MaxFrameSec * fs - kP1Len) / (g.fftN() + g.guard()));
+            r.params.dataSymbols = std::max(nP2 + 2, fit);
+            r.shortened = true;
+        }
+    }
+    const bool lite = p.s1 == 3 || p.s1 == 4;
+    T2Generator g(r.params);
+    r.frameSec = (double)g.frameLength() / fs;
+    r.blocksFit = g.plpBlocks();
+    PlpFec f; f.shortFrame = p.plpShort; f.rate = p.plpCod; f.mod = p.plpMod; f.rotation = p.plpRot;
+    const FecDims d = fecDims(f);
+    if (!d.ok || r.frameSec <= 0) return r;
+    r.fitBps = r.blocksFit * (double)(d.kBch - 80) / r.frameSec;
+    r.blocks = r.blocksFit;
+    if (lite) {
+        const int cap = t2LiteMaxBlocks(d.kBch, d.cellsPerBlock, r.frameSec, p.plpTi);
+        if (cap < r.blocks) {
+            r.params.plpBlocksMax = p.plpBlocksMax > 0 ? std::min(p.plpBlocksMax, cap) : cap;
+            r.capped = true;
+        }
+    }
+    // T2-Base within every rule of annex I: FFT and pilots (I.7), short frames and rates (I.3), 256-QAM pairs and rotation (I.5), one PLP of at
+    // most 4 Mbit/s (I.10) and the 2^18 TI cells (I.8)
+    if (!lite) {
+        const int blocks = p.plpBlocksMax > 0 ? std::min(r.blocksFit, p.plpBlocksMax) : r.blocksFit;
+        const bool miso = p.s1 == 1;
+        const bool ti = p.plpTi <= 0 || (long)((blocks + p.plpTi - 1) / p.plpTi) * d.cellsPerBlock <= kT2TiCellsLite;
+        r.baseLite = p.plps.empty() && !p.mixed && t2LiteFft(g.fftN()) && ((t2PilotMask(g.fftN(), p.giIdx, miso, true) >> g.params().pp) & 1) &&
+                     p.plpShort && t2ModCodAllowed(p.plpMod, p.plpCod, true) && (!p.plpRot || t2RotationAllowed(p.plpMod, true)) &&
+                     blocks * (double)(d.kBch - 80) / r.frameSec <= kT2LiteMaxPlpBps && ti;
+        r.params.baseLite = r.baseLite;
+    } else r.params.baseLite = false;
+    T2Generator g2(r.params);
+    r.blocks = g2.plpBlocks();
+    r.plpBps = r.blocks * (double)(d.kBch - 80) / r.frameSec;
+    r.tsBps = g2.tsBitrate(fs);
+    return r;
 }
 
 double T2Generator::tsBitrate(double nativeRate) const {

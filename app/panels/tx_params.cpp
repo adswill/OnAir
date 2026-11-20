@@ -135,6 +135,7 @@ void paramsEnter(TxUi& s, const TxModeSpec& m) {
     paramsFor(s, m);
     defaults(s);
     unpack(s, plat::basePrefs().getS(lastKey(s).c_str(), ""));
+    txParamsFix(s.params, s.pv);   // values saved by an older version may break a rule of the table
     s.pvMode = s.modeId;
 }
 
@@ -222,11 +223,22 @@ bool paramRow(TxUi& s, const PDef& d, bool running) {
         }
     } else if (d.type == TxPType::Bool) {
         bool b = v > 0.5;
+        // the other value forbidden by the row's rule (a standard's "shall not", e.g. T2-Lite): the tick is fixed, the reason is its tooltip
+        const char* why = txParamBlocked(d, s.params, s.pv, b ? 0 : 1);
+        ImGui::BeginDisabled(why != nullptr);
         if (ImGui::Checkbox("##v", &b)) { v = b ? 1 : 0; ch = true; }
+        ImGui::EndDisabled();
+        if (why && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr(why));
     } else {
         const int cur = std::max(0, std::min((int)d.choices.size() - 1, (int)std::lround(v)));
         if (ImGui::BeginCombo("##v", tr(d.choices[(size_t)cur]))) {
-            for (int i = 0; i < (int)d.choices.size(); i++) if (ImGui::Selectable(tr(d.choices[(size_t)i]), i == cur)) { v = i; ch = true; }
+            for (int i = 0; i < (int)d.choices.size(); i++) {
+                const char* why = txParamBlocked(d, s.params, s.pv, i);   // greyed out, with the clause that forbids it
+                ImGui::BeginDisabled(why != nullptr);
+                if (ImGui::Selectable(tr(d.choices[(size_t)i]), i == cur)) { v = i; ch = true; }
+                ImGui::EndDisabled();
+                if (why && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr(why));
+            }
             ImGui::EndCombo();
         }
     }
@@ -238,7 +250,9 @@ bool paramRow(TxUi& s, const PDef& d, bool running) {
 bool drawRow(TxUi& s, const TxModeSpec& mode, const PDef& d, bool running) {
     if (!txParamShown(d, s.params, s.pv)) return false;
     if (d.custom) { ImGui::PushID(d.key); customRow(s, mode, d, running); ImGui::PopID(); return false; }
-    return paramRow(s, d, running);
+    const bool ch = paramRow(s, d, running);
+    if (ch) txParamsFix(s.params, s.pv);   // a change may forbid other values (T2-Lite): they move to allowed ones, so the panel never holds a forbidden set
+    return ch;
 }
 } // namespace
 
@@ -365,7 +379,7 @@ void advancedPanel(TxUi& s, const TxModeSpec& mode, bool running) {
         }
     }
     ImGui::EndDisabled();
-    if (changed) plat::basePrefs().setS(lastKey(s).c_str(), pack(s));
+    if (changed) { txParamsFix(s.params, s.pv); plat::basePrefs().setS(lastKey(s).c_str(), pack(s)); }   // (a preset or Reset too)
 }
 
 } // namespace txui

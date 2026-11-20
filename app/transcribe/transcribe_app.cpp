@@ -13,6 +13,7 @@
 #include "dect2/transcribe/audio_tap.h"
 #include "dect2/transcribe/captions.h"
 #include "dect2/transcribe/models.h"
+#include "dect2/transcribe/moonshine_models.h"
 #include "dect2/transcribe/transcriber.h"
 #include "i18n/i18n.h"
 #include "platform/platform.h"
@@ -78,6 +79,7 @@ dect2::Transcriber gCap(gCapStore);
 std::map<int, std::unique_ptr<dect2::CaptionTrack>> gTracks;   // per receiver (guarded by gMu)
 struct CapCtx { bool valid = false; int rx = 0, std = -1; double freqHz = 0; } gCapCtx;
 dect2::ModelDownloader gDl;
+dect2::MoonshineModelDownloader gMoonDl;
 bool gWindowOpen = false;
 bool gStarted = false;
 
@@ -92,12 +94,20 @@ bool gSinkOn = false;
 std::thread gLoadTh;
 std::atomic<int> gLoadState{0};               // 0 none, 1 loading, 2 ready, 3 failed
 std::string gLoadErr, gLoadedFile, gLoadingFile;
+std::string gLoadedMoonLib, gLoadedOnnxLib, gLoadingMoonLib, gLoadingOnnxLib;
+dect2::MoonshineDiscoveredLibraries gMoonLibraries;
+bool gMoonLibrariesScanned = false;
+void scanMoonLibraries(const std::string& root) {
+    gMoonLibraries = dect2::discoverMoonshineLibraries(root);
+    gMoonLibrariesScanned = true;
+}
 std::shared_ptr<dect2::SpeechBackend> gPending;
 std::shared_ptr<dect2::SpeechBackend> gBackend;
 bool gBackendEnglishOnly = true;
 
 std::string gModelsDirCached;
 std::vector<std::string> gUserFiles;
+std::vector<std::string> gMoonshineDirs;
 double gUserFilesAt = -100;
 
 void save();
@@ -157,11 +167,18 @@ int64_t wallMs() { return std::chrono::duration_cast<std::chrono::milliseconds>(
 
 // the model file name for the setting, "" when there is none
 std::string modelFile(const std::string& setting) {
+    if (setting.compare(0, 10, "moonshine:") == 0) return setting.substr(10);
     if (setting.compare(0, 5, "file:") == 0) return setting.substr(5);
     if (const dect2::SpeechModel* m = dect2::findSpeechModel(setting)) return m->file;
     return "";
 }
 bool modelPresent(const std::string& setting) {
+    if (setting.compare(0, 10, "moonshine:") == 0) {
+        const std::string name = setting.substr(10);
+        if (name.empty() || name == "." || name == ".." || name.find('/') != std::string::npos || name.find('\\') != std::string::npos) return false;
+        std::error_code ec;
+        return std::filesystem::is_directory(dect2::u8file(modelsDir() + "/" + name), ec);
+    }
     if (setting.compare(0, 5, "file:") == 0) {
         std::error_code ec;
         return std::filesystem::is_regular_file(dect2::u8file(modelsDir() + "/" + setting.substr(5)), ec);
@@ -173,7 +190,8 @@ bool modelPresent(const std::string& setting) {
 // The model to use when the chosen one is not in the folder: the best one that is (English first: small.en hears the most words), so a
 // downloaded or copied model works without visiting the settings. Nothing is downloaded here.
 bool autoPickModel() {
-    if (modelPresent(C.model)) return false;
+    if (C.model == "whisper:none" || C.model == "moonshine:none") return false;
+    if (modelPresent(C.model) || C.model.rfind("moonshine:", 0) == 0) return false;
     for (const char* id : {"small.en", "base.en", "tiny.en", "small", "base", "tiny"})
         if (modelPresent(id)) { C.model = id; return true; }
     for (const auto& f : dect2::userSpeechModels(modelsDir())) { C.model = "file:" + f; return true; }
@@ -188,7 +206,7 @@ std::atomic<int64_t> gFirstSoundMs{0};        // when the sound began to arrive 
 // Keep the user's translation preference when switching temporarily to English or
 // an English-only model, but never request translation in those configurations.
 bool translationSupported() {
-    if (C.lang == "en") return false;
+    if (C.lang == "en" || C.model.rfind("moonshine:", 0) == 0) return false;
     if (const dect2::SpeechModel* m = dect2::findSpeechModel(C.model)) return m->multilingual;
     // User-supplied models: use the filename until a backend is loaded.
     return !dect2::speechModelEnglishOnly(modelFile(C.model));
@@ -200,7 +218,7 @@ void applyConfig() {
     c.workers = 1;
     c.threads = C.threads;
     c.language = C.lang;
-    c.translate = C.translate && translationSupported();
+    c.translate = C.translate && translationSupported() && C.model.rfind("moonshine:", 0) != 0;
     c.queueMax = 6;
     gTr.configure(c);
     gStore.setLimits(20000, C.days);
@@ -209,7 +227,7 @@ void applyConfig() {
     k.workers = 1;
     k.threads = C.threads;
     k.language = C.lang;
-    k.translate = C.translate && translationSupported();
+    k.translate = C.translate && translationSupported() && C.model.rfind("moonshine:", 0) != 0;
     k.queueMax = 3;
     k.segmenter.rejectMusic = true;
     k.segmenter.maxSec = 12;     // shorter pieces: the first words show up sooner
@@ -290,11 +308,17 @@ void startLoad(const std::string& file) {
     if (gLoadTh.joinable()) gLoadTh.join();
     gLoadState = 1;
     gLoadingFile = file;
+    const bool isMoon = C.model.rfind("moonshine:", 0) == 0;
+    if (isMoon && !gMoonLibrariesScanned) scanMoonLibraries(modelsDir());
+    gLoadingMoonLib = isMoon ? gMoonLibraries.selectedMoonshine : "";
+    gLoadingOnnxLib = isMoon ? gMoonLibraries.selectedOnnx : "";
     const std::string path = modelsDir() + "/" + file;
     const int workers = 1;
     gLoadTh = dect2::namedThread("onair-asrload", [path, workers] {
         std::string err;
-        auto b = dect2::makeWhisperBackend(path, workers, &err);
+        const bool moonshine = std::filesystem::is_directory(dect2::u8file(path));
+        auto b = moonshine ? dect2::makeMoonshineBackend(path, workers, &err)
+                           : dect2::makeWhisperBackend(path, workers, &err);
         std::lock_guard<std::mutex> lk(gMu);
         if (b) { gPending = b; gLoadErr.clear(); gLoadState = 2; }
         else { DIAG(174763, "The speech model %s could not be loaded (%s), so transcripts and captions stay off.", path.c_str(), err.c_str()); gLoadErr = err; gLoadState = 3; }
@@ -302,13 +326,15 @@ void startLoad(const std::string& file) {
 }
 
 void ensureBackend() {
-    const std::string want = ((C.enabled || C.cap) && modelPresent(C.model)) ? modelFile(C.model) : "";
+    const std::string want = ((C.enabled || C.cap) && modelPresent(C.model) && (C.model.rfind("moonshine:", 0) != 0 || dect2::moonshineAvailable())) ? modelFile(C.model) : "";
     if (gLoadState.load() == 2) {
         std::lock_guard<std::mutex> lk(gMu);
         if (gPending) {
             gBackend = gPending; gPending.reset();
             gBackendEnglishOnly = gBackend->englishOnly();
             gLoadedFile = gLoadingFile;
+            gLoadedMoonLib = gLoadingMoonLib;
+            gLoadedOnnxLib = gLoadingOnnxLib;
             gTr.setBackend(gBackend);
             gCap.setBackend(gBackend);
         }
@@ -319,7 +345,13 @@ void ensureBackend() {
         return;
     }
     if (gLoadState.load() == 1) return;
-    if (want != gLoadedFile && !(gLoadState.load() == 3 && want == gLoadingFile)) startLoad(want);
+    if (C.model.rfind("moonshine:", 0) == 0 && !gMoonLibrariesScanned) scanMoonLibraries(modelsDir());
+    const bool isMoon = C.model.rfind("moonshine:", 0) == 0;
+    const bool matchesLoaded = want == gLoadedFile &&
+        (!isMoon || (gLoadedMoonLib == gMoonLibraries.selectedMoonshine && gLoadedOnnxLib == gMoonLibraries.selectedOnnx));
+    const bool failedSameRequest = gLoadState.load() == 3 && want == gLoadingFile &&
+        (!isMoon || (gLoadingMoonLib == gMoonLibraries.selectedMoonshine && gLoadingOnnxLib == gMoonLibraries.selectedOnnx));
+    if (!matchesLoaded && !failedSameRequest) startLoad(want);
 }
 
 bool backendReady() { return gBackend != nullptr; }
@@ -365,7 +397,7 @@ bool indicator(std::string& text) {
     if (!C.enabled && !C.cap) return false;
     // Transcription is on by default but does nothing until a speech model is installed: that is not news worth a line in every
     // user's status bar. The installer stays in View > Transcripts and in the airband panel; the line shows once a model is there.
-    if (!dect2::whisperAvailable() || (!modelPresent(C.model) && !backendReady())) return false;
+    if (!(dect2::whisperAvailable() || dect2::moonshineAvailable()) || (!modelPresent(C.model) && !backendReady())) return false;
     int lv = 0;
     text = statusLine(&lv);
     (void)lv;
@@ -429,7 +461,7 @@ void tick(App& first) {
       const uint64_t sg = gTr.stats().segments + gCap.stats().segments; if (sg != gSegSeen) { gSegSeen = sg; gSegMs.store(nw); } }
     if (gDl.state() == dect2::ModelDownloader::State::Done) {
         const std::string id = gDl.modelId();
-        if (!modelPresent(C.model)) { C.model = id; save(); }
+        if (!modelPresent(C.model) && C.model != "whisper:none" && C.model != "moonshine:none") { C.model = id; save(); }
     }
 
     const bool ready = backendReady() && C.enabled;
@@ -554,7 +586,7 @@ std::vector<dect2::AcarsLogEntry> voiceForTrack(const std::string& id, const std
     else reg = id;
     std::vector<dect2::AcarsLogEntry> out;
     for (const auto& e : voiceFor(icao, holders == 1 ? label : std::string(), reg, 20)) {
-        if (e.mode != "airband" || e.confidence < 0.5f || e.text.size() < 8) continue;
+        if (e.mode != "airband" || (e.confidenceAvailable && e.confidence < 0.5f) || e.text.size() < 8) continue;
         dect2::AcarsLogEntry m;
         m.wall = e.wall; m.mode = "VOICE"; m.freqMHz = e.freqHz / 1e6; m.label = ""; m.cat = dect2::AcarsCat::Free;
         m.text = e.text; m.flight = e.callsign; m.downlink = true;
@@ -605,7 +637,7 @@ void captions(App& a) {
         ImGui::AlignTextToFramePadding();
         {   // no model installed is the normal state: say "off" quietly, never a warning (the button below opens the installer)
             int lv = 0;
-            const bool noModel = !dect2::whisperAvailable() || (!modelPresent(C.model) && !backendReady());
+            const bool noModel = !(dect2::whisperAvailable() || dect2::moonshineAvailable()) || (!modelPresent(C.model) && !backendReady());
             const std::string sl = C.enabled && !noModel ? statusLine(&lv) : std::string(tr("Live captions: off."));
             ImGui::TextColored(lv == 2 ? pal::warnAmber() : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled), "%s", sl.c_str());
         }
@@ -739,33 +771,103 @@ void settingsSection(const char* heading) {
     ImGui::Spacing();
 }
 
+// Both speech engines use the same Models heading, folder action and spacing.
+void settingsModelsHeading(const std::string& dir, const char* buttonId, const char* tooltip = nullptr) {
+    ImGui::Spacing();
+    ImGui::TextUnformatted(tr("Models"));
+    const char* label = tr("Open folder");
+    const float width = ImGui::CalcTextSize(label).x + 2 * ImGui::GetStyle().FramePadding.x;
+    ImGui::SameLine(std::max(ImGui::GetCursorPosX() + ImGui::GetStyle().ItemSpacing.x,
+                             ImGui::GetContentRegionMax().x - width));
+    if (ImGui::SmallButton(buttonId)) {
+        std::error_code ec;
+        std::filesystem::create_directories(dect2::u8file(dir), ec);
+        dect2::openUrl(dir);
+    }
+    if (tooltip && ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s\n%s", dir.c_str(), tooltip);
+    ImGui::Separator();
+    ImGui::Spacing();
+}
+
+// Position the Installed label or Download button like Whisper's model rows.
+void settingsModelActionAlignment(bool installed) {
+    const float labelEnd = ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x;
+    const char* action = installed ? tr("Installed") : tr("Download");
+    const float actionWidth = ImGui::CalcTextSize(action).x +
+        (installed ? 0.0f : 2 * ImGui::GetStyle().FramePadding.x);
+    const float right = ImGui::GetContentRegionMax().x - actionWidth;
+    // When the pane is too narrow the action follows on its own line.
+    if (right > labelEnd + ImGui::GetStyle().ItemSpacing.x) ImGui::SameLine(right);
+}
+
+void refreshModelLists() {
+    const double now = ImGui::GetTime();
+    if (now - gUserFilesAt <= 3.0) return;
+    gUserFiles = dect2::userSpeechModels(modelsDir());
+    gMoonshineDirs.clear();
+    std::error_code ec;
+    for (std::filesystem::directory_iterator it(dect2::u8file(modelsDir()), ec), end;
+         !ec && it != end; it.increment(ec)) {
+        if (!it->is_directory(ec)) continue;
+        const auto name = it->path().filename().string();
+        if (name.rfind("moonshine-", 0) == 0) gMoonshineDirs.push_back(name);
+    }
+    std::sort(gMoonshineDirs.begin(), gMoonshineDirs.end());
+    gUserFilesAt = now;
+}
+void selectModel(const std::string& id) {
+    C.model = id;
+    if (id.rfind("moonshine:", 0) == 0) {
+        C.translate = false;
+        const auto end = id.find_last_of('-');
+        if (end != std::string::npos) C.lang = id.substr(end + 1);
+    }
+    save(); applyConfig();
+}
 void modelSelector() {
     const std::string dir = modelsDir();
-    const double now = ImGui::GetTime();
-    if (now - gUserFilesAt > 3) { gUserFiles = dect2::userSpeechModels(dir); gUserFilesAt = now; }
+    refreshModelLists();
+    bool moon = C.model.rfind("moonshine:", 0) == 0;
     const float labelWidth = 70 * gUi;
-    ImGui::TextUnformatted(tr("Engine"));
-    ImGui::SameLine(labelWidth);
+    ImGui::TextUnformatted(tr("Engine")); ImGui::SameLine(labelWidth);
     ImGui::SetNextItemWidth(-1);
-    if (ImGui::BeginCombo("##txengine", tr("Whisper"))) {
-        ImGui::Selectable(tr("Whisper"), true);
+    if (ImGui::BeginCombo("##txengine", moon ? "Moonshine" : "Whisper")) {
+        if (ImGui::Selectable("Whisper", !moon)) {
+            std::string chosen = "whisper:none";
+            for (const auto& m : dect2::speechModels()) if (dect2::speechModelInstalled(dir, m)) { chosen = m.id; break; }
+            if (chosen == "whisper:none" && !gUserFiles.empty()) chosen = "file:" + gUserFiles.front();
+            selectModel(chosen);
+        }
+        ImGui::BeginDisabled(!dect2::moonshineAvailable());
+        if (ImGui::Selectable("Moonshine", moon))
+            selectModel(gMoonshineDirs.empty() ? "moonshine:none" : "moonshine:" + gMoonshineDirs.front());
+        ImGui::EndDisabled();
         ImGui::EndCombo();
     }
+    // The engine can change in the combo above; do not reuse the stale value.
+    moon = C.model.rfind("moonshine:", 0) == 0;
     std::string cur = tr("none");
-    if (modelPresent(C.model)) cur = C.model.compare(0, 5, "file:") == 0 ? C.model.substr(5) : C.model;
-    ImGui::TextUnformatted(tr("Model"));
-    ImGui::SameLine(labelWidth);
+    if (modelPresent(C.model)) {
+        if (moon) cur = C.model.substr(std::string("moonshine:").size());
+        else if (C.model.rfind("file:", 0) == 0) cur = C.model.substr(std::string("file:").size());
+        else cur = C.model;
+    }
+    ImGui::TextUnformatted(tr("Model")); ImGui::SameLine(labelWidth);
     ImGui::SetNextItemWidth(-1);
     if (ImGui::BeginCombo("##txmodel", cur.c_str())) {
-        for (const auto& m : dect2::speechModels()) {
-            if (!dect2::speechModelInstalled(dir, m)) continue;
-            if (ImGui::Selectable(m.id, C.model == m.id)) { C.model = m.id; save(); applyConfig(); }
+        if (moon) {
+            for (const auto& name : gMoonshineDirs)
+                if (ImGui::Selectable(name.c_str(), C.model == "moonshine:" + name)) selectModel("moonshine:" + name);
+        } else {
+            for (const auto& m : dect2::speechModels())
+                if (dect2::speechModelInstalled(dir, m) && ImGui::Selectable(m.id, C.model == m.id)) selectModel(m.id);
+            for (const auto& f : gUserFiles)
+                if (ImGui::Selectable(f.c_str(), C.model == "file:" + f)) selectModel("file:" + f);
         }
-        for (const auto& f : gUserFiles)
-            if (ImGui::Selectable(f.c_str(), C.model == "file:" + f)) { C.model = "file:" + f; save(); applyConfig(); }
         ImGui::EndCombo();
     }
-    if (!modelPresent(C.model)) ImGui::TextDisabled("%s", tr("No locally installed model selected. Download one under Speech model > Whisper."));
+    if (!modelPresent(C.model)) ImGui::TextDisabled("No installed model selected. See Speech model settings.");
 }
 
 // Wrap long runtime messages at the current settings-pane boundary.
@@ -782,15 +884,9 @@ void whisperModelEntry(const std::string& dir, const char* id) {
     const bool installed = dect2::speechModelInstalled(dir, *m);
     ImGui::PushID(id);
     ImGui::Text("%s (%d MB)", m->id, m->mib);
-    const float labelEnd = ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x;
-    const char* action = installed ? tr("Installed") : tr("Download");
-    const float actionWidth = installed ? ImGui::CalcTextSize(action).x
-        : ImGui::CalcTextSize(action).x + 2 * ImGui::GetStyle().FramePadding.x;
-    const float right = ImGui::GetContentRegionMax().x - actionWidth;
-    // Keep one row per model. On a very narrow pane, wrap below its label.
-    if (right > labelEnd + ImGui::GetStyle().ItemSpacing.x) ImGui::SameLine(right);
-    if (installed) ImGui::TextDisabled("%s", action);
-    else if (ImGui::SmallButton(action)) U.askModel = m;
+    settingsModelActionAlignment(installed);
+    if (installed) ImGui::TextDisabled("%s", tr("Installed"));
+    else if (ImGui::SmallButton(tr("Download"))) U.askModel = m;
     ImGui::PopID();
     ImGui::Spacing();
 }
@@ -869,21 +965,8 @@ void settingsPanel(App& a) {
                 const double now = ImGui::GetTime();
                 if (now - gUserFilesAt > 3) { gUserFiles = dect2::userSpeechModels(dir); gUserFilesAt = now; }
 
-                // The folder action sits on the same baseline as the section heading.
-                ImGui::Spacing();
-                ImGui::TextUnformatted(tr("Models"));
-                const char* folderLabel = tr("Open folder");
-                const float folderWidth = ImGui::CalcTextSize(folderLabel).x + ImGui::GetStyle().FramePadding.x * 2;
-                ImGui::SameLine(std::max(ImGui::GetCursorPosX() + ImGui::GetStyle().ItemSpacing.x,
-                                         ImGui::GetContentRegionMax().x - folderWidth));
-                if (ImGui::SmallButton(folderLabel)) {
-                    std::error_code ec;
-                    std::filesystem::create_directories(dect2::u8file(dir), ec);
-                    dect2::openUrl(dir);
-                }
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\n%s", dir.c_str(), tr("Put a whisper.cpp model file (ggml-*.bin) here to use it."));
-                ImGui::Separator();
-                ImGui::Spacing();
+                settingsModelsHeading(dir, tr("Open folder"),
+                    tr("Put a whisper.cpp model file (ggml-*.bin) here to use it."));
 
                 const int ls = gLoadState.load();
                 if (C.enabled && !modelPresent(C.model)) ImGui::TextColored(pal::warnAmber(), "%s", tr("No speech model installed or selected."));
@@ -932,6 +1015,99 @@ void settingsPanel(App& a) {
                 processingMessage(processingText.c_str());
                 ImGui::EndTabItem();
             }
+            // Linux desktop only. Preserve a visible, disabled tab elsewhere.
+            ImGui::BeginDisabled(!dect2::moonshineAvailable());
+            if (ImGui::BeginTabItem("Moonshine")) {
+                const std::string dir = modelsDir();
+                refreshModelLists();
+                if (!gMoonLibrariesScanned) scanMoonLibraries(dir);
+                settingsSection("Runtime libraries");
+                const bool librariesSelected = !gMoonLibraries.selectedMoonshine.empty() && !gMoonLibraries.selectedOnnx.empty();
+                ImGui::TextDisabled("Using first colocated libraries for Moonshine and ONNX");
+                // Show paths relative to the searched models root, never absolute system paths.
+                const auto libraryLabel = [&](const std::string& path) {
+                    if (path.empty()) return std::string("not found");
+                    std::error_code ec;
+                    const auto rel = std::filesystem::relative(dect2::u8file(path), dect2::u8file(dir), ec);
+                    if (!ec && !rel.empty() && *rel.begin() != "..") return rel.generic_string();
+                    return std::filesystem::path(dect2::u8file(path)).filename().string();
+                };
+                ImGui::TextUnformatted("Moonshine:");
+                ImGui::TextDisabled("%s", libraryLabel(gMoonLibraries.selectedMoonshine).c_str());
+                ImGui::TextUnformatted("ONNX Runtime:");
+                ImGui::TextDisabled("%s", libraryLabel(gMoonLibraries.selectedOnnx).c_str());
+
+                settingsModelsHeading(dir, "Open folder##moon");
+                const auto downloadState = gMoonDl.state();
+                const bool downloading = downloadState == dect2::MoonshineModelDownloader::State::Downloading ||
+                                         downloadState == dect2::MoonshineModelDownloader::State::Verifying;
+                if (downloading) {
+                    const double total = (double)std::max<uint64_t>(1, gMoonDl.totalBytes());
+                    ImGui::ProgressBar((float)(gMoonDl.doneBytes() / total), ImVec2(-1, 0));
+                    if (ImGui::SmallButton("Cancel Moonshine download")) gMoonDl.cancel();
+                } else if (downloadState == dect2::MoonshineModelDownloader::State::Failed)
+                    ImGui::TextColored(pal::badRed(), "%s", gMoonDl.error().c_str());
+                struct M { const char* name; const char* lang; int arch; };
+                const M presets[] = {{"moonshine-tiny-streaming-en", "en", 2}, {"moonshine-small-streaming-en", "en", 4},
+                                     {"moonshine-tiny-streaming-de", "de", 2}, {"moonshine-small-streaming-de", "de", 4}};
+                static std::map<std::string, uint64_t> cachedModelSizes;
+                static double sizesUpdatedAt = -100;
+                const bool refreshSizes = ImGui::GetTime() - sizesUpdatedAt > 5;
+                const auto modelLine = [&](const std::string& name, const char* lang, int arch, bool canDownload) {
+                    const auto path = dect2::u8file(dir + "/" + name);
+                    std::error_code ec;
+                    const bool installed = std::filesystem::is_directory(path, ec);
+                    uint64_t size = cachedModelSizes[name];
+                    if (installed && (refreshSizes || !size)) {
+                        size = 0;
+                        std::filesystem::recursive_directory_iterator it(path, std::filesystem::directory_options::skip_permission_denied, ec), end;
+                        for (; !ec && it != end; it.increment(ec)) {
+                            if (it->is_regular_file(ec)) size += it->file_size(ec);
+                        }
+                        cachedModelSizes[name] = size;
+                    }
+                    ImGui::PushID(name.c_str());
+                    if (installed) ImGui::Text("%s (%.1f MB)", name.c_str(), size / 1048576.0);
+                    else ImGui::Text("%s (size unknown)", name.c_str());
+                    settingsModelActionAlignment(installed);
+                    if (installed) ImGui::TextDisabled("%s", tr("Installed"));
+                    else if (canDownload) {
+                        ImGui::BeginDisabled(downloading || !librariesSelected);
+                        if (ImGui::SmallButton(tr("Download"))) gMoonDl.start(dir, lang, arch, name);
+                        ImGui::EndDisabled();
+                    }
+                    ImGui::PopID();
+                    ImGui::Spacing();
+                };
+                if (refreshSizes) sizesUpdatedAt = ImGui::GetTime();
+                for (const auto& m : presets) modelLine(m.name, m.lang, m.arch, true);
+                for (const auto& name : gMoonshineDirs) {
+                    bool catalog = false;
+                    for (const auto& m : presets) if (name == m.name) catalog = true;
+                    if (!catalog) modelLine(name, "", 0, false);
+                }
+
+                settingsSection("Engine information");
+                const auto info = dect2::moonshineEngineInfo();
+                const bool selectedInfo = info.moonshinePath == gMoonLibraries.selectedMoonshine && info.onnxPath == gMoonLibraries.selectedOnnx;
+                ImGui::Text("Moonshine library version: %s", selectedInfo && !info.moonshineVersion.empty() ? info.moonshineVersion.c_str() : "Unknown (library unavailable)");
+                ImGui::Text("ONNX Runtime version: %s", selectedInfo && !info.onnxVersion.empty() ? info.onnxVersion.c_str() : "Unknown (library unavailable)");
+                const bool moonLoaded = gBackend && std::strcmp(gBackend->name(), "moonshine-voice") == 0 && gLoadedFile == modelFile(C.model);
+                ImGui::Text("Model status: %s", moonLoaded ? "Loaded" : "Not loaded");
+
+                settingsSection("Processing");
+                const auto stats = gTr.stats();
+                std::ostringstream moonProcessing;
+                moonProcessing << "Heard " << stats.segments << ", kept " << stats.kept
+                               << ", filtered " << stats.filtered << ", dropped " << stats.dropped
+                               << ", errors " << stats.errors << ", speed " << std::fixed
+                               << std::setprecision(2) << stats.avgRtf << " x real time";
+                processingMessage(moonProcessing.str().c_str());
+                ImGui::EndTabItem();
+            }
+            ImGui::EndDisabled();
+            if (!dect2::moonshineAvailable() && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                ImGui::SetTooltip("Moonshine support is currently available on Linux desktop only.");
             ImGui::EndTabBar();
         }
         ImGui::EndTabItem();
@@ -981,6 +1157,11 @@ void windowPanel(App& a) {
     if (!U.wasOpen) {
         U.wasOpen = true;
         U.showNotice = !plat::basePrefs().getB("transcriptsPrivacyAccepted", false);
+        if (dect2::moonshineAvailable()) {
+            scanMoonLibraries(modelsDir());
+            if (!gMoonLibraries.selectedMoonshine.empty() && !gMoonLibraries.selectedOnnx.empty())
+                dect2::initializeMoonshineEngineInfo(modelsDir());
+        }
     }
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x * 0.5f, vp->WorkPos.y + vp->WorkSize.y * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
@@ -1110,7 +1291,8 @@ void windowPanel(App& a) {
                     const std::string ac = !e.callsign.empty() ? e.callsign : e.reg;
                     if (!ac.empty()) ImGui::TextUnformatted(ac.c_str()); else ImGui::TextDisabled("-");
                     if (!e.aircraft.empty() && ImGui::IsItemHovered()) ImGui::SetTooltip("%s: %s", tr("Aircraft on the screen"), e.aircraft.c_str());
-                } else ImGui::TextDisabled("%.0f%%", e.confidence * 100.0);
+                } else if (!e.confidenceAvailable) ImGui::TextDisabled("N/A");
+                else ImGui::TextDisabled("%.0f%%", e.confidence * 100.0);
             }
             ImGui::PopID();
         }
@@ -1404,7 +1586,7 @@ std::string latestLanguage(double freqHz, float* probability) {
     dect2::TranscriptFilter f; f.freqHz = freqHz; f.from = now - 120;
     for (const dect2::TranscriptStore* st : {&gStore, &gCapStore}) {
         const auto v = st->find(f, 1);
-        if (!v.empty() && !v[0].lang.empty()) { if (probability) *probability = v[0].confidence; return v[0].lang; }
+        if (!v.empty() && !v[0].lang.empty()) { if (probability) *probability = v[0].confidenceAvailable ? v[0].confidence : 0.f; return v[0].lang; }
     }
     if (probability) *probability = 0;
     return "";

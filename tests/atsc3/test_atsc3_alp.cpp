@@ -5,6 +5,7 @@
 // baseband packets and reassembled.
 #include "dect2/atsc3/atsc3_alp.h"
 #include "dect2/atsc3/atsc3_bb.h"
+#include <algorithm>
 #include <cstdio>
 #include <random>
 
@@ -84,6 +85,7 @@ int main() {
     const int bytes = 1056;
     AlpReassembler re;
     std::vector<AlpPacket> got;
+    std::vector<std::pair<std::vector<uint8_t>, int>> bbs;   // payload and pointer of every baseband packet, for the loss test below
     size_t pos = 0, nextStart = 0;
     int bbCount = 0;
     while (pos < stream.size()) {
@@ -103,6 +105,7 @@ int main() {
         int take = std::min<int>((int)chunk.size(), (int)body.size());
         // when the packet is not full the padding is in the header; the chunk is then shorter than the room
         re.push(body.data(), take, h.pointer, got);
+        bbs.push_back({std::vector<uint8_t>(body.begin(), body.begin() + take), h.pointer});
         used = take;
         pos += used;
         bbCount++;
@@ -113,6 +116,33 @@ int main() {
     for (size_t i = 0; i < got.size() && i < expected.size(); i++) bad += !equal(got[i], expected[i]);
     printf("  %d ALP packets in %d baseband packets: %zu of %zu input packets back, %d wrong, %ld errors\n", (int)alpPackets.size(), bbCount, got.size(), expected.size(), bad, re.errors());
     CHECK(bad == 0 && re.errors() == 0, "reassembled packets match");
+
+    // Baseband packets lost without a reported gap (a frame that was never received, samples a live receiver dropped): the end of the packet
+    // after the loss must not be joined to the start of the one before it. Such a join is read from a wrong place and gives packets that were
+    // never sent, among them transport stream packets, which made the receiver leave its ROUTE service. Every packet that comes out must be one
+    // that was sent, and reassembly goes on after each loss.
+    {
+        const std::vector<int> lost = {3, 9, 10, 16, 23, 29, 30, 31, 38, 43};
+        AlpReassembler r3;
+        std::vector<AlpPacket> g3;
+        size_t afterLast = 0;
+        for (int i = 0; i < (int)bbs.size(); i++) {
+            if (std::find(lost.begin(), lost.end(), i) != lost.end()) continue;
+            if (i > lost.back() && afterLast == 0) afterLast = g3.size() + 1;
+            r3.push(bbs[i].first.data(), (int)bbs[i].first.size(), bbs[i].second, g3);
+        }
+        int invented = 0, ts = 0;
+        for (auto& a : g3) {
+            bool known = false;
+            for (auto& e : expected) if (equal(a, e)) { known = true; break; }
+            invented += !known;
+            ts += !known && a.type == AlpTs;
+        }
+        printf("  %zu of %d baseband packets lost: %zu packets back, %d never sent (%d of them TS), %ld errors\n", lost.size(), (int)bbs.size(), g3.size(), invented, ts, r3.errors());
+        CHECK(bbs.size() > 45, "the loss test has enough baseband packets");
+        CHECK(invented == 0, "lost baseband packets: no packet that was never sent");
+        CHECK(g3.size() > expected.size() / 2 && afterLast > 0 && g3.size() >= afterLast, "lost baseband packets: reassembly goes on after each loss");
+    }
 
     // A/330 5.4.4 TS header deletion: four packets with the same header and a continuity counter that counts on are sent with one header
     {

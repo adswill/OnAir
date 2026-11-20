@@ -40,6 +40,9 @@ struct TxParams {
     int l1Mod = 1;       // L1-post modulation: 0 BPSK 1 QPSK 2 16QAM 3 64QAM
     bool l1Scrambled = true; // L1_POST_SCRAMBLED bit; the L1-post is only scrambled when t2Version >= 2 (EN 302 755 cl. 7.2.2)
     int t2Version = 2;       // T2_VERSION: 0 = V1.1.1, 1 = V1.2.1, 2 = V1.3.1
+    // T2_BASE_LITE (cl. 7.2.2): a T2-Base signal (s1 0 / 1) that keeps to every rule of annex I, so T2-Lite receivers can take it too
+    // (t2TxPlan works it out). Never sent by a T2-Lite signal (s1 3 / 4): there the bit is reserved, and TS 102 831 says it should be 0.
+    bool baseLite = false;
     // Carry a real transport stream in PLP 0 (baseband framing, BCH, LDPC, bit/cell/time interleaving, mapping) instead of random cells.
     bool payload = false;
     bool plpShort = false;   // 16200-bit FEC frames (T2-Lite uses these, with the extra code rates 1/3 and 2/5)
@@ -47,6 +50,7 @@ struct TxParams {
     int plpCod = 2;          // 0..7 = 1/2 3/5 2/3 3/4 4/5 5/6 1/3 2/5
     bool plpRot = true;      // rotated constellation
     int plpTi = 3;           // time-interleaver blocks per frame (0 = none)
+    int plpBlocksMax = 0;    // single PLP with payload: at most this many FEC blocks a frame (0 = as many as fit); the cells left are dummy cells
     int cellId = 0x1001, networkId = 0x3085, systemId = 0x8001;
     int plpId = 0;           // PLP_ID of the data PLP
     uint32_t seed = 1;
@@ -97,5 +101,24 @@ private:
     int n_, g_, k_, symbols_, nP2_;
     int s2sig_ = 0;   // the S2 field 1 that P1 and L1-pre signal (6 or 7 for 8K or 32K with GI 1/128, 19/256, 19/128)
 };
+
+// How a single-PLP transmitter (tx.cpp) builds its signal in a channel of bwMhz from the panel's parameters p (payload on):
+//  - the automatic frame length (about 60 ms at 8 MHz timing) is shortened where it would pass the 250 ms of cl. 8.3.1 (the 1.7 MHz channel);
+//  - T2-Lite (s1 3 or 4): the FEC blocks a frame are capped to the 4 Mbit/s of annex I.10 and the 2^18 time-interleaver cells of I.8
+//    (t2LiteMaxBlocks); the rest of the frame is dummy cells;
+//  - T2-Base (s1 0 or 1) that keeps to every rule of annex I signals T2_BASE_LITE.
+struct T2TxPlan {
+    TxParams params;       // p with the frame length and the block cap applied
+    double frameSec = 0;   // T2-frame duration
+    int blocksFit = 0;     // FEC blocks a frame that fit
+    int blocks = 0;        // FEC blocks a frame sent
+    double fitBps = 0;     // the PLP rate (Kbch - 80 bits a block) if every block that fits were sent
+    double plpBps = 0;     // the PLP rate sent, as I.10 counts it
+    double tsBps = 0;      // the transport stream rate it carries (T2Generator::tsBitrate)
+    bool capped = false;   // T2-Lite: fewer blocks than fit
+    bool baseLite = false; // T2-Base within every T2-Lite rule: T2_BASE_LITE is set (params.baseLite)
+    bool shortened = false;   // the frame was shortened to stay within 250 ms
+};
+T2TxPlan t2TxPlan(const TxParams& p, double bwMhz);
 
 } // namespace dect2

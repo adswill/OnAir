@@ -23,6 +23,7 @@
 #include <cstring>
 #include <ctime>
 #include <deque>
+#include <map>
 #include <mutex>
 
 namespace dect2 {
@@ -98,6 +99,11 @@ struct GnssReceiver::Impl {
     std::atomic<bool> cfoHintValid{false};
     std::atomic<int> acqRate{10};
     std::atomic<double> elMask{5.0};
+    std::atomic<int> smoothEpochs{100};
+    // Carrier smoothing (Hatch) of the pseudoranges, one state per satellite (key: system * 256 + keyOf)
+    struct Hatch { int n = 0; double prS = 0, prRaw = 0, phaseM = 0; int clockOf = -1; };   // clockOf: the system whose clock unknown the range was taken against
+    std::map<int, Hatch> hatch;
+    void smoothPseudoranges(std::vector<GnssObs>& obs, std::vector<GnssMeasurement>& meas, const std::vector<size_t>& idx);
     std::atomic<double> hintLat{0}, hintLon{0};
     std::atomic<bool> hintValid{false};
     std::atomic<uint32_t> settingsGen{1};
