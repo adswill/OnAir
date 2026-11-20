@@ -470,7 +470,7 @@ void advanced(App& a) {
 
 // ---------------------------------------------------------------- chat
 
-void sideList() {
+void sideList(App& a) {
     const double nowU = (double)std::time(nullptr);
     ImGui::TextColored(pal::heading(), "%s", tr("Channels"));
     for (const Channel& c : D.node.channels()) {
@@ -497,6 +497,15 @@ void sideList() {
     if (!D.chMsg.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::warnAmber(), "%s", D.chMsg.c_str()); ImGui::PopTextWrapPos(); }
     ImGui::Spacing();
     ImGui::TextColored(pal::heading(), "%s (%zu)", tr("Contacts"), D.node.contacts().size());
+    ImGui::SameLine();
+    if (resultsClearButton("meshcore")) {   // the contacts heard (they come back when their next advert is heard) and the decoded lists, as in the other modes (#579)
+        std::vector<std::string> keys;
+        for (const auto& c : D.node.contacts()) keys.push_back(c.pubHex());
+        for (const std::string& k : keys) D.node.removeContact(k);
+        if (D.sel.rfind("p:", 0) == 0) D.sel = "c:Public";
+        D.dirty = true;
+        a.engine.clearResults(22);
+    }
     std::vector<const Contact*> cs;
     for (const auto& c : D.node.contacts()) cs.push_back(&c);
     std::sort(cs.begin(), cs.end(), [](const Contact* x, const Contact* y) { return x->heardAt > y->heardAt; });
@@ -610,7 +619,7 @@ void meshcoreView(App& a) {
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float lw = std::min(260 * gUi, W * 0.35f);
     ImGui::BeginChild("##mcside", ImVec2(lw, H), ImGuiChildFlags_Borders);
-    sideList();
+    sideList(a);
     ImGui::EndChild();
     ImGui::SameLine();
     ImGui::BeginChild("##mcmain", ImVec2(0, H));
