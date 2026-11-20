@@ -98,6 +98,7 @@ inline const char* radioBlurb(const std::string& board, const std::string& name)
         {"rtl_tcp", N_("rtl_tcp: an RTL-SDR shared by another computer over the network.")},
         {"rtltcp", N_("rtl_tcp: an RTL-SDR shared by another computer over the network.")},
         {"airspyhf", N_("Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.")},
+        {"rsa", N_("Tektronix RSA306: a USB spectrum analyser used as a wide receiver, 9 kHz to 6.2 GHz, up to 40 MHz at a time.")},
         {"fobos", N_("Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.")},
         {"rfnm", N_("RFNM: a wideband radio board with one or two daughter boards, on USB or the network.")},
         {"nrspst", N_("SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.")},
