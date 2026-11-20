@@ -68,6 +68,19 @@ inline bool matchesQuery(const char* label, const char* q) {
     return low(a).find(low(b)) != std::string::npos;
 }
 
+// ---- Alt accelerators of the menu bar (#596): Alt+F opens File, so Alt+F then X-style navigation works as on any Windows program ----
+enum class TopMenu { None, File, Mode, View, Tools, Memory, Server, Settings, Help };
+// the menu an Alt+letter opens (the letter in lower or upper case), or None. One letter per top-level menu, the first letter of its English name
+// except Mode (O: Alt+M is the audio mute, audio_control_ui.cpp), Memory (E) and Server (R); Settings is a plain item, so its letter opens the Settings window.
+inline TopMenu menuForAccelerator(char c) {
+    switch (std::tolower((unsigned char)c)) {
+        case 'f': return TopMenu::File;   case 'o': return TopMenu::Mode;   case 'v': return TopMenu::View;
+        case 't': return TopMenu::Tools;  case 'e': return TopMenu::Memory; case 'r': return TopMenu::Server;
+        case 's': return TopMenu::Settings; case 'h': return TopMenu::Help;
+        default:  return TopMenu::None;
+    }
+}
+
 // ---- Mode menu: a category with more than kMaxPerSubmenu modes gets a second level of consecutive chunks (table order) ----
 constexpr int kMaxPerSubmenu = 25;
 inline int chunkCount(int n) { return n <= kMaxPerSubmenu ? 1 : (n + kMaxPerSubmenu - 1) / kMaxPerSubmenu; }

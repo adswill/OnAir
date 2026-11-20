@@ -792,6 +792,7 @@ struct MapCellTower { double lat = 0, lon = 0; int rangeM = 0; std::string label
 void cellMapTowers(const dect2::CellTelemetry& t, std::vector<MapCellTower>& out);   // cell_ui.cpp: the towers placed (OpenCelliD / CSV)
 void mapWindow(App& a);                             // map_ui.cpp: View > Map (a.mapOpen): coordinates, Maidenhead locators, distance and bearing
 void propagationWindow(App& a);                     // prop_ui.cpp: Tools > Propagation (a.propOpen): Simple / Advanced coverage prediction (prop_adv.cpp)
+void menuAccelOpen(int menu, const char* popupId);  // ui2_shell.cpp: call just before BeginMenu: opens that top-level menu when its Alt+letter (menugroups::TopMenu) was pressed this frame (#596)
 void mapSendServerMenu(App& a);                     // map_send.cpp: Server menu (opt-in public map)
 void antennaDesignerWindow(App& a);                 // antd_ui.cpp: Tools > Antenna designer (a.antdOpen): templates, wires, SWR, pattern, optimiser
 void mapSendButton(App& a);                         // classic interface: the same choice as a button
