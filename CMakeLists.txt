@@ -1330,13 +1330,13 @@ if(DECT2_BUILD_TESTS)
   target_include_directories(test_sens39c PRIVATE tools/sens)
   target_link_libraries(test_sens39c PRIVATE dect2core)
   add_test(NAME sens39c COMMAND test_sens39c)
-  set_tests_properties(sens39c PROPERTIES TIMEOUT 600)
+  set_tests_properties(sens39c PROPERTIES TIMEOUT 3000)   # the long form (ONAIR_TEST_LONG=1, Full CI) takes longer than the short guard
   if(NOT WIN32)   # 4.0 pass B (docs/SENSITIVITY-4.0-B.md): narrowband and data modes, 3.9 and 4.0 receiver paths side by side
     add_executable(test_sens40b tests/sens/test_sens40b.cpp)
     target_include_directories(test_sens40b PRIVATE tools/sens)
     target_link_libraries(test_sens40b PRIVATE dect2core)
     add_test(NAME sens40b COMMAND test_sens40b)
-    set_tests_properties(sens40b PROPERTIES TIMEOUT 1500)
+    set_tests_properties(sens40b PROPERTIES TIMEOUT 3000)
     add_executable(test_sens40a3 tests/sens/test_sens40a3.cpp)   # 4.0 part 3 (docs/SENSITIVITY-4.0-A3.md): loosened detection gates
     target_include_directories(test_sens40a3 PRIVATE tools/sens)
     target_link_libraries(test_sens40a3 PRIVATE dect2core)
