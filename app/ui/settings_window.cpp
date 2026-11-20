@@ -111,6 +111,7 @@ const std::map<std::string, Bind>& binds() {
         m["rxAltM"] = Bind{[](App&) -> double { return plat::prefs().getD("rxAltM", 0); },
                            [](App&, double v) { plat::prefs().setD("rxAltM", dect2::station::clampHeightM(v)); }, nullptr, nullptr};
         SW_PT("stationName");
+        SW_PB("midiOn", false); SW_PT("midiPort"); SW_PI("midiChannel", 0); SW_PI("midiCcLna", -1); SW_PI("midiCcVga", -1); SW_PI("midiCcGain", -1);   // #543, app/midi
         SW_PI("threads", -1);   // #372: read in main.cpp before the first thread pool use, so a restart applies it
         PD("rxThread");   // 4.0: Engine::setRxThreadMode at the next Start (toolbar_source.cpp)
         NB("updCheck", a.updCheck); NB("updBeta", a.updPre); NB("updAuto", a.updAuto); NB("updSrc", a.updSrc);

@@ -1071,6 +1071,7 @@ void feedsOpenTab(App& a, int tab);
 void remoteApiSection(App& a);       // the settings panel (in the Data feeds window)
 void mcpDevOpen(App& a);             // dev flag --mcp: Data feeds open on the AI assistant section, switched on (not saved)
 void mcpSection(App& a);             // remote_api_app.cpp: the AI assistant (MCP) panel: switch, token, connection snippets, activity log (docs/MCP.md)
+void midiTick(App& a);               // app/midi/midi_app.cpp: MIDI knobs move the radio gain (Settings > Radio > MIDI controller)
 void shareTick(App& a);             // feeds_ui.cpp: carries out the frequency / gain commands of the clients of "Share my radio" (when allowed)
 void integrationsWindow(App& a);   // app/integrations/integrations_ui.cpp: the Integrations window (View > Integrations); also starts the publisher
 void ssbConvWindow(App& a);   // app/ssbconv/ssbconv_ui.cpp: the Conversations window (View > Conversations); also feeds the finder while it is open and drives auto-listen
