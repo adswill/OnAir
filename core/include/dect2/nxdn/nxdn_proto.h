@@ -47,7 +47,7 @@ void encode(Ch c, const uint8_t* info, uint8_t* air);
 bool decode(Ch c, const float* soft, uint8_t* info, int* errs = nullptr);
 
 // Layer 3 messages (the first byte: 2 flag bits, 6-bit message type)
-enum : int { kVcall = 0x01, kTxRel = 0x08, kIdle = 0x10, kSiteInfo = 0x18, kSrvInfo = 0x19, kStatReq = 0x32, kSdHeader = 0x38, kSdData = 0x39 };
+enum : int { kVcall = 0x01, kVcallAssgn = 0x04, kTxRel = 0x08, kIdle = 0x10, kSiteInfo = 0x18, kSrvInfo = 0x19, kStatReq = 0x32, kSdHeader = 0x38, kSdData = 0x39 };
 struct Msg {
     int type = -1;
     int callType = 1;            // 0 broadcast, 1 group (conference), 4 individual, 6 interconnect

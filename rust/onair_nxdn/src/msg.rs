@@ -6,6 +6,9 @@
 
 /// VCALL: voice call set-up.
 pub const VCALL: i32 = 0x01;
+/// VCALL_ASSGN: voice call assignment on a trunked system's control channel (Type-D): the call's ids and the 10-bit logical channel number
+/// of the traffic channel that carries it. Same ids as VCALL, then the channel; the bit layout is not confirmed on a real system.
+pub const VCALL_ASSGN: i32 = 0x04;
 /// TX_REL: transmission release.
 pub const TX_REL: i32 = 0x08;
 /// IDLE.
@@ -126,6 +129,13 @@ pub fn build(m: &Msg, bits: &mut [u8]) -> usize {
             w.put(m.cipher as u32, 2);
             w.put(m.key_id as u32, 6);
         }
+        VCALL_ASSGN => {
+            w.put(m.call_type as u32, 3);
+            w.put(m.option as u32, 5);
+            w.put(m.src as u32, 16);
+            w.put(m.dst as u32, 16);
+            w.put(m.channel as u32 & 0x3FF, 10);
+        }
         STAT_REQ => {
             w.put(m.call_type as u32, 3);
             w.put(m.option as u32, 5);
@@ -177,6 +187,16 @@ pub fn parse(bits: &[u8], m: &mut Msg) -> bool {
             m.dst = r.get(16) as i32;
             m.cipher = r.get(2) as i32;
             m.key_id = r.get(6) as i32;
+        }
+        VCALL_ASSGN => {
+            if n < 58 {
+                return false;
+            }
+            m.call_type = r.get(3) as i32;
+            m.option = r.get(5) as i32;
+            m.src = r.get(16) as i32;
+            m.dst = r.get(16) as i32;
+            m.channel = r.get(10) as i32;
         }
         STAT_REQ => {
             if n < 56 {
@@ -235,6 +255,7 @@ pub fn parse(bits: &[u8], m: &mut Msg) -> bool {
 pub fn msg_name(t: i32) -> &'static str {
     match t {
         VCALL => "VCALL\0",
+        VCALL_ASSGN => "VCALL_ASSGN\0",
         TX_REL => "TX_REL\0",
         IDLE => "IDLE\0",
         SITE_INFO => "SITE_INFO\0",

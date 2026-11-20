@@ -59,6 +59,7 @@ struct NxdnReceiver::Impl {
     std::function<void(const std::string&)> log;
     std::function<void(const float*, size_t)> tapSet, tap;
     std::function<void(const uint8_t*)> vtapSet, vtap;
+    std::function<void(const nxdn::Msg&)> grantSet, grant;   // a voice call assignment of a trunked system's control channel (see setGrantSink)
     std::atomic<bool> tapReq{false};
     std::atomic<float> volume{1.f};
     std::atomic<bool> muted{false}, silent{false};
@@ -511,6 +512,12 @@ struct NxdnReceiver::Impl {
             event(b);
             break;
         }
+        case nxdn::kVcallAssgn: {   // control channel (Type-D): who talks on which traffic channel; the host tunes there through the trunk pool
+            snprintf(b, sizeof b, "VCALL_ASSGN %s %d -> %d on channel %d", nxdn::callTypeName(m.callType), m.src, m.dst, m.channel);
+            event(b);
+            if (grant) grant(m);
+            break;
+        }
         case nxdn::kTxRel:
             if (sdOn) { endData(); break; }
             if (tel.now.active) { endCall(true); snprintf(b, sizeof b, "TX_REL %d -> %d", m.src, m.dst); event(b); }
@@ -644,7 +651,7 @@ struct NxdnReceiver::Impl {
     }
 
     void report() {
-        if (tapReq.exchange(false)) { std::lock_guard<std::mutex> lk(mu); tap = tapSet; vtap = vtapSet; }
+        if (tapReq.exchange(false)) { std::lock_guard<std::mutex> lk(mu); tap = tapSet; vtap = vtapSet; grant = grantSet; }
         tel.seq++;
         tel.timeSec = sigSec();
         tel.levelDb = nPower ? (float)(10 * std::log10(power / (double)nPower + 1e-20)) : -200.f;
@@ -671,7 +678,7 @@ void NxdnReceiver::feed(const cf32* x, size_t n) {
     Impl& m = *p_;
     if (m.resetReq.exchange(false)) m.resetState();
     m.takeRequests();
-    if (m.tapReq.load()) { std::lock_guard<std::mutex> lk(m.mu); m.tap = m.tapSet; m.vtap = m.vtapSet; m.tapReq = false; }
+    if (m.tapReq.load()) { std::lock_guard<std::mutex> lk(m.mu); m.tap = m.tapSet; m.vtap = m.vtapSet; m.grant = m.grantSet; m.tapReq = false; }
     if (m.rate <= 0 || n == 0) return;
     for (size_t i = 0; i < n; i++) {
         float re = x[i].real(), im = x[i].imag();
@@ -721,6 +728,7 @@ void NxdnReceiver::setMuted(bool m) { p_->muted = m; }
 void NxdnReceiver::setSilent(bool s) { p_->silent = s; }
 void NxdnReceiver::setVoiceMonitor(voice::Monitor* m) { p_->monSet = m; }
 void NxdnReceiver::setAudioTap(std::function<void(const float*, size_t)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->tapSet = std::move(cb); p_->tapReq = true; }
+void NxdnReceiver::setGrantSink(std::function<void(const nxdn::Msg&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->grantSet = std::move(cb); p_->tapReq = true; }
 void NxdnReceiver::setVoiceTap(std::function<void(const uint8_t bits[72])> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->vtapSet = std::move(cb); p_->tapReq = true; }
 
 ModeTuning nxdnTuning() {

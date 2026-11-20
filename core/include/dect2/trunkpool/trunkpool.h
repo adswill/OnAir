@@ -23,6 +23,7 @@
 
 namespace dect2 {
 namespace trunk { struct Grant; }
+namespace nxdn { struct Msg; }
 namespace tpool {
 
 enum class Proto { P25p1, P25p2, DmrTier3, DmrCapPlus, DmrConnectPlus, Tetra, Mpt1327, Edacs, Ltr, Other, MotorolaTypeII, Nxdn };
@@ -349,6 +350,9 @@ private:
 
 // P25 Phase 1 / 2 and DMR Tier III from the existing control channel model (dect2/p25/trunk.h); DMR is Proto::DmrTier3
 GrantEvent grantFromTrunk(const trunk::Grant& g);
+// An NXDN Type-D control channel's VCALL_ASSGN: the traffic channel number is turned into a frequency by plan.channelHz() (the user's channel list,
+// ChannelPlan::importCsv "chan" rows); freqHz stays 0 when the number is not in the plan (the pool then says so).
+GrantEvent grantFromNxdn(const nxdn::Msg& m, const ChannelPlan& plan);
 // MPT 1327: the GTC names a channel number; the frequency follows from the control channel number and frequency and the spacing
 GrantEvent grantMpt1327(int channel, int controlChannel, double controlHz, double spacingHz, int called, int caller, bool group = true);
 // EDACS / LTR / DMR Connect Plus / Capacity Plus: a logical channel number looked up in the plan
