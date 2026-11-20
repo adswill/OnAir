@@ -552,7 +552,7 @@ void stationView(const App& a) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn(); ImGui::Text("%d %s", s.id, s.name);
         ImGui::TableNextColumn();
-        if (g && g->heardDirect) { ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.45f, 0.85f, 0.5f, 1)); ImGui::TextUnformatted(g->utcSync ? "heard, UTC" : "heard"); ImGui::PopStyleColor(); }
+        if (g && g->heardDirect) kit::statusText(kit::Status::Ok, g->utcSync ? "heard, UTC" : "heard");
         else ImGui::TextDisabled("%s", g ? "named by another station" : "not heard");
         ImGui::TableNextColumn(); ImGui::Text("%u", g ? g->squitters : 0u);
         ImGui::TableNextColumn(); if (g && g->freqHz > 0) ImGui::Text("%.0f", g->freqHz / 1e3); else ImGui::TextUnformatted("-");
@@ -627,7 +627,7 @@ void tab(App& a) {
 }
 
 void list(App& a) {
-    if (!live(a)) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see aircraft"); ImGui::PopTextWrapPos(); return; }
+    if (!live(a)) { kit::emptyState(a.engine.running() ? tr("Starting...") : tr("Start the receiver to see aircraft.")); return; }
     if (resultsClearButton("hfdl")) a.engine.hfdl().clearResults();
     const dect2::HfdlTelemetry& t = a.rx.hfdl;
     int heard = 0; for (const auto& g : t.stations) heard += g.heardDirect;

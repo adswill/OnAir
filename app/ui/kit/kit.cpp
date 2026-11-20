@@ -215,3 +215,40 @@ void labelValue(const char* label, const char* fmt, ...) {
 }
 
 }  // namespace kit
+
+namespace kit {
+
+void statusText(Status st, const char* text) {
+    const Tokens& k = tokens();
+    const ImVec4& col = st == Status::Ok ? k.ok : st == Status::Warn ? k.warn : st == Status::Error ? k.error : k.textDim;
+    const float h = ImGui::GetTextLineHeight();
+    const ImVec2 p = ImGui::GetCursorScreenPos();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const ImVec2 c(p.x + h * 0.5f, p.y + h * 0.5f);
+    if (st == Status::Off) dl->AddCircle(c, h * 0.18f, C(col), 0, 1.5f);
+    else icons::draw(st == Status::Ok ? Ic::Check : st == Status::Warn ? Ic::Warning : Ic::Cross, c, h * 0.75f, C(col), dl);
+    ImGui::Dummy(ImVec2(h, h));
+    ImGui::SameLine(0, px(k.s4));
+    ImGui::PushStyleColor(ImGuiCol_Text, col);
+    ImGui::TextUnformatted(text);
+    ImGui::PopStyleColor();
+}
+
+bool emptyState(const char* message, const char* action) {
+    const Tokens& k = tokens();
+    const ImVec2 avail = ImGui::GetContentRegionAvail();
+    const float wrap = std::min(avail.x - px(k.s16) * 2, px(360));
+    const ImVec2 ts = ImGui::CalcTextSize(message, nullptr, false, std::max(wrap, 40.f));
+    const float total = ts.y + (action ? px(k.s8) + px(k.controlH) : 0.f);
+    ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + std::max(0.f, (avail.x - ts.x) * 0.5f), ImGui::GetCursorPosY() + std::max(px(k.s8), (avail.y - total) * 0.4f)));
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + std::max(wrap, 40.f));
+    ImGui::PushStyleColor(ImGuiCol_Text, k.textDim);
+    ImGui::TextUnformatted(message);
+    ImGui::PopStyleColor();
+    ImGui::PopTextWrapPos();
+    bool clicked = false;
+    if (action) { ImGui::Dummy(ImVec2(0, px(k.s8))); clicked = button(action, true); }
+    return clicked;
+}
+
+}  // namespace kit

@@ -10,6 +10,7 @@
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/kit.h"
 #include "dect2/aero/aero_tel.h"
 #include "dect2/audio/audioout.h"
 #include <algorithm>
@@ -586,7 +587,7 @@ void tab(App& a) {
 }
 
 void list(App& a) {
-    if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see aircraft"); ImGui::PopTextWrapPos(); } return; }
+    if (!live(a)) { kit::emptyState(a.engine.running() ? tr("Starting...") : tr("Start the receiver to see aircraft.")); return; }
     if (resultsClearButton("aero")) a.engine.aero().clearResults();
     const dect2::AeroTelemetry& t = a.rx.aero;
     { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%zu aircraft, %zu messages", t.aircraft.size(), t.messages.size()); ImGui::PopTextWrapPos(); }

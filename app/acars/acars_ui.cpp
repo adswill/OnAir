@@ -7,6 +7,7 @@
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/kit.h"
 #include "ui/kit/mode_frame.h"
 #include "../panels/photo_links_ui.h"
 #include "../adsb/adsb_map.h"
@@ -569,7 +570,7 @@ void tab(App& a) {
 }
 
 void list(App& a) {
-    if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see aircraft"); ImGui::PopTextWrapPos(); } return; }
+    if (!live(a)) { kit::emptyState(a.engine.running() ? tr("Starting...") : tr("Start the receiver to see aircraft.")); return; }
     if (resultsClearButton("acars")) a.engine.acars().clearResults();
     const dect2::AcarsTelemetry& t = a.rx.acars;
     { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%zu aircraft, %zu messages", t.aircraft.size(), t.messages.size()); ImGui::PopTextWrapPos(); }

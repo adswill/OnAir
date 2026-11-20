@@ -7,6 +7,7 @@
 #include "../d40/d40_ui.h"
 #include "adsb_internal.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/kit.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/mode_panel.h"
 void vdl2NoteAdsb(const dect2::AdsbTelemetry& t);   // vdl2_ui.cpp: VDL2 links its aircraft to what ADS-B heard
@@ -227,7 +228,7 @@ void command(App& a) {
 }
 
 void list(App& a) {
-    if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see aircraft"); ImGui::PopTextWrapPos(); } return; }
+    if (!live(a)) { kit::emptyState(a.engine.running() ? tr("Starting...") : tr("Start the receiver to see aircraft.")); return; }
     if (resultsClearButton("adsb")) a.engine.adsb().clearResults();
     { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%u aircraft, %u with position", a.rx.adsb.aircraftCount, a.rx.adsb.withPosition); ImGui::PopTextWrapPos(); }
     aircraftTable(a, true);
