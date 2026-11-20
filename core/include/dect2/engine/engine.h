@@ -785,6 +785,7 @@ public:
     double vfoLoad() const { return vfo_.load(); }                       // above 1 the channels fall behind: warn, never refuse
     std::string vfoWarning(int id) const { return vfo_.warning(id); }
     void vfoClearResults() { vfo_.clearResults(); }
+    void setVoiceScoutExclusiveAudio(bool enabled);
     void setVfoSound(bool on) { vfoSoundOn_.store(on); }                // false: decode and measure, never open the sound device (tests, --mute)
     void clearAllResults();                              // the lists of every mode at once (the top bar's Clear all)
     // the files of the DSM-CC carousels of the stream received, saved to dir/pid_XXXX/path (clear broadcast data); returns the number of files written
@@ -989,6 +990,7 @@ private:
     std::atomic<int> vfoN_{0};
     std::atomic<bool> vfoSoundOn_{true};
     std::unique_ptr<AudioOut> vfoOut_;
+    std::atomic<bool> hunterExclusiveAudio_{false};
     std::mutex vfoOutMu_;
     void vfoFeed(const cf32* x, size_t n);
     void vfoCloseSound();

@@ -20,7 +20,7 @@ enum class Tool {
     Transcripts, Passes, Scheduler, Recordings, SatNogs, Df, Rfi, PassiveRadar, Images, Feeds, EchoLink, Wireshark, Swarm, Messages,
     ProtoLab, Esp32, SignalLab, ModeBuilder, TxStudio, VideoGen, Integrations, Conversations, Watchlists, Automations, Plugins, Backup,
     Memory, Datasets, Packs, Frequencies, FreqTab, Transmit, Map, Sweep, StationHealth, Heard, Insights, MyStation, Doctor, RfFp,
-    WideAll, Trunking, Scanner, Propagation, AntDesigner, Rotator, VoiceKeys, Calibrate,
+    WideAll, Trunking, Scanner, VoiceScout, Propagation, AntDesigner, Rotator, VoiceKeys, Calibrate,
     PluginStore,   // new in 4.0: opens the plugin window on its Store tab
 };
 constexpr int kTopLevel = -1;   // shown above the groups
@@ -41,7 +41,7 @@ inline const ToolItem* toolItems(int& n) {
         {Tool::PluginStore, N_("Plugin store..."), kTopLevel},
         {Tool::SignalLab, N_("Signal Lab..."), 0}, {Tool::ProtoLab, N_("Protocol lab..."), 0}, {Tool::RfFp, N_("RF fingerprint"), 0},
         {Tool::WideAll, N_("Everything in view"), 0}, {Tool::Insights, N_("Insights"), 0},
-        {Tool::Sweep, N_("Sweep scanner"), 1}, {Tool::Scanner, N_("Scanner (highly experimental)"), 1}, {Tool::Rfi, N_("Interference hunter"), 1},
+        {Tool::VoiceScout, N_("Voice scout"), 1}, {Tool::Sweep, N_("Sweep scanner"), 1}, {Tool::Scanner, N_("Scanner (highly experimental)"), 1}, {Tool::Rfi, N_("Interference hunter"), 1},
         {Tool::Df, N_("Direction finder"), 1}, {Tool::PassiveRadar, N_("Passive radar"), 1}, {Tool::Trunking, N_("Multi-radio trunking"), 1},
         {Tool::Propagation, N_("Propagation..."), 2}, {Tool::AntDesigner, N_("Antenna designer..."), 2}, {Tool::Rotator, N_("Antenna rotator..."), 2},
         {Tool::MyStation, N_("My station"), 2},
