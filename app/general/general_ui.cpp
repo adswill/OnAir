@@ -732,7 +732,7 @@ void tick(App& a) {
     r.setAmDetector(S.amDet);
     r.setAmAuto(S.amAuto, S.amNr, 0, S.amEnh);
     r.setNoiseBlanker(S.nb && S.demod != dect2::GenWfm, S.nbDb);
-    r.setVolume(a.volume); r.setMuted(a.muted);
+    r.setVolume(a.volume); r.setMuted(a.muted || voiceScoutNavigating());
     r.setAudioFilters(S.afHp, S.afLp, S.afNotch);
     r.setNoiseRemover(nrOffered(S.demod) && S.nrOn[S.demod], S.nrStr[S.demod] / 100.f);
     r.setListenHz(listenHz(a));
