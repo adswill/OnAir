@@ -84,7 +84,7 @@ const std::map<std::string, Bind>& binds() {
         NB("uiTheme", a.uiTheme); NB("uiVariant", a.uiVariant); NB("layoutUnified", a.layoutUnified); NB("uiTextScale", a.uiTextScale);
         NB("touchUi", a.touchUi); NB("touchScale", a.touchScale); NB("touchSize", a.touchSize); NB("perfOverlay", a.perfOverlay);
         NB("wfMap3", a.wf.map); NB("wfAutoFloor", a.wf.autoTrack); NB("wfGamma", a.wf.gamma); NB("wfBright", a.wf.brightness); NB("wfSat", a.wf.sat);
-        NB("wfContrast", a.wf.contrast); NB("wfClock", a.wf.clockLabels); NB("wfAvg", a.wf.rowAverage); NB("wfLowPass", a.wfLowPass);
+        NB("wfContrast", a.wf.contrast); NB("wfClock", a.wf.clockLabels); NB("wfAvg", a.wf.rowAverage); NB("audioBoostDb", a.audioBoostDb); NB("wfRowTau", a.wf.rowTau); NB("wfLowPass", a.wfLowPass);
         NB("specAutoDb", a.specAutoDb); NB("specPerHz", a.specPerHz); NB("specDbm", a.specDbm); NB("specFill", a.specFill);
         NB("specGrid", a.specGrid); NB("specPeaks", a.specPeaks); NB("specReadout", a.specReadout); NB("specLine", a.specLine);
         NB("specAvgSec", a.specAvgSec); NB("holdDecay", a.holdDecay);

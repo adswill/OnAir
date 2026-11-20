@@ -51,6 +51,13 @@ int main() {
     CHECK(k.state == SlotState::Encrypted, "encrypted recorded");
     CHECK(std::strcmp(slotStateText(SlotState::Encrypted), "encrypted, muted") == 0, "encrypted label says muted");
     CHECK(std::strcmp(slotStateText(SlotState::Voice), "voice") == 0, "voice label");
+    { CallEncryption u; // set-up not heard
+      CHECK(voiceVerdict(u) == VoiceVerdict::StateUnknownNotDecoded, "unknown state is muted by default");
+      setPlayUnknownState(true);
+      CHECK(voiceVerdict(u) == VoiceVerdict::Passed, "opt-in plays unknown state");
+      u.encMode = 1; CHECK(voiceVerdict(u) == VoiceVerdict::EncryptedNotDecoded || voiceVerdict(u) == VoiceVerdict::StateUnknownNotDecoded, "opt-in never plays with encrypted signalling");
+      setPlayUnknownState(false); }
+    CHECK(std::strstr(slotStateText(SlotState::Unknown), "unknown") && !std::strstr(slotStateText(SlotState::Unknown), "encrypted"), "unknown-state label does not say encrypted");
     // IDs from the call set-up: an unencrypted call yields them, an encrypted one never does, and the selector then matches (or not)
     {
         CallTracker t; t.setMainCarrier(1234);

@@ -4,11 +4,13 @@
 // DRM test signal: DRM30 transmitter (modes A to D), DRM+ (mode E), the channels of Annex B.1, and the synthetic source.
 #include "dect2/drm/drm_gen.h"
 #include "dect2/common/stable_random.h"
+#include "dect2/drm/drm_audio.h"
 #include "dect2/drm/drm_fec.h"
 #include "dect2/drm/drm_fft.h"
 #include "dect2/dsp/exact_resampler.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <random>
 #include "dect2/common/mathconst.h"
@@ -41,6 +43,58 @@ void DrmPatternSource::nextSuperFrame(int numFrames, int payload, std::vector<st
     pattern(seed_, index_++, numFrames, payload, frames, crc);
 }
 
+// xHE-AAC access units
+namespace {
+class XheListSource : public DrmAudioSource {
+public:
+    explicit XheListSource(std::vector<std::vector<uint8_t>> u) : u_(std::move(u)) {}
+    void nextSuperFrame(int, int, std::vector<std::vector<uint8_t>>&, std::vector<uint8_t>&) override {}
+    bool nextAccessUnit(std::vector<uint8_t>& au) override { if (u_.empty()) return false; au = u_[i_++ % u_.size()]; return true; }
+    std::string describe() const override { return "xHE-AAC access units (" + std::to_string(u_.size()) + ")"; }
+private:
+    std::vector<std::vector<uint8_t>> u_;
+    size_t i_ = 0;
+};
+class XhePatternSource : public DrmAudioSource {
+public:
+    XhePatternSource(uint32_t seed, int lo, int hi) : rng_(seed ? seed : 1), lo_(std::max(1, lo)), hi_(std::max(std::max(1, lo), hi)) {}
+    void nextSuperFrame(int, int, std::vector<std::vector<uint8_t>>&, std::vector<uint8_t>&) override {}
+    bool nextAccessUnit(std::vector<uint8_t>& au) override {
+        const int n = lo_ + (int)(rng_() % (uint32_t)(hi_ - lo_ + 1));
+        au.resize((size_t)n);
+        for (auto& b : au) b = (uint8_t)rng_();
+        au[0] = (uint8_t)((n_++ % 8 == 0) ? (au[0] | 0x80) : (au[0] & 0x7F));   // usacIndependencyFlag is the first bit of the access unit
+        return true;
+    }
+    std::string describe() const override { return "xHE-AAC test pattern"; }
+private:
+    std::mt19937 rng_;
+    int lo_, hi_;
+    uint64_t n_ = 0;
+};
+} // namespace
+std::unique_ptr<DrmAudioSource> makeDrmXheListSource(std::vector<std::vector<uint8_t>> units) {
+    units.erase(std::remove_if(units.begin(), units.end(), [](const std::vector<uint8_t>& v) { return v.empty(); }), units.end());
+    if (units.empty()) return nullptr;
+    return std::make_unique<XheListSource>(std::move(units));
+}
+std::unique_ptr<DrmAudioSource> makeDrmXhePatternSource(uint32_t seed, int minBytes, int maxBytes) { return std::make_unique<XhePatternSource>(seed, minBytes, maxBytes); }
+std::unique_ptr<DrmAudioSource> makeDrmXheFileSource(const std::string& path) {
+    FILE* f = std::fopen(path.c_str(), "rb");
+    if (!f) return nullptr;
+    std::vector<std::vector<uint8_t>> units;
+    uint8_t h[2];
+    while (std::fread(h, 1, 2, f) == 2) {
+        const size_t n = ((size_t)h[0] << 8) | h[1];
+        if (n == 0) continue;
+        std::vector<uint8_t> au(n);
+        if (std::fread(au.data(), 1, n, f) != n) break;
+        units.push_back(std::move(au));
+    }
+    std::fclose(f);
+    return makeDrmXheListSource(std::move(units));
+}
+
 // ---------------------------------------------------------------- transmitter
 
 struct DrmTransmitter::Impl {
@@ -57,6 +111,9 @@ struct DrmTransmitter::Impl {
     int levels = 1;
     int lenA = 0, lenB = 0, textBytes = 0, nAudio = 0, hp = 0, hdr = 0, payload = 0;
     int sdcFieldBytes = 0;
+    bool xhe = false;                         // xHE-AAC: the audio super frame comes from the packer (hdr, nAudio and hp are 0)
+    XheSuperFramePacker xhePack;
+    std::vector<uint8_t> xheLast;             // the last access unit, repeated when the source has none
     // the data service (packet mode stream 1)
     int dataLen = 0;                          // bytes of its logical frame: whole packets
     std::vector<uint8_t> dataQ;               // the data unit being cut into packets
@@ -92,9 +149,17 @@ struct DrmTransmitter::Impl {
         const int qb = cfg.mscQam == 64 ? 6 : cfg.mscQam == 16 ? 4 : 2;   // bits per cell
         levels = qb / 2;
         if (mscProtLevels(mode, qb) <= cfg.protB || cfg.protB < 0) return;
-        nAudio = aacNumFrames(modeE, cfg.audioRateHz);
-        if (!nAudio) return;
-        hdr = aacHeaderBytes(nAudio);
+        xhe = cfg.audioCoding == 3;
+        if (xhe) {
+            static const int ok[6] = {16000, 19200, 24000, 32000, 38400, 48000};
+            if (std::find(ok, ok + 6, cfg.audioRateHz) == ok + 6 || (cfg.audioMode != 0 && cfg.audioMode != 2)) return;
+            cfg.partABytes = 0;                            // equal error protection
+            if (cfg.audioXheConfig.empty()) cfg.audioXheConfig = {0x00};
+        } else {
+            nAudio = aacNumFrames(modeE, cfg.audioRateHz);
+            if (!nAudio) return;
+            hdr = aacHeaderBytes(nAudio);
+        }
         textBytes = cfg.textMessage ? 4 : 0;
         // MSC code: one audio stream, equal or unequal error protection
         MlcParams p;
@@ -130,7 +195,8 @@ struct DrmTransmitter::Impl {
         // mode E: the audio super frame (200 ms) fills two logical frames (100 ms each), half of it in each
         halfBytes = lenA + lenB - textBytes;
         payload = (modeE ? 2 * halfBytes : halfBytes) - hdr - nAudio;
-        if (payload < nAudio * 8) return;
+        if (xhe) { if (payload < 64) return; }
+        else if (payload < nAudio * 8) return;
         // SDC and FAC codes (clause 7.5.1, Tables 36 to 38; mode E: 4-QAM, rate 1/2 or 1/4, and the FAC at rate 1/4)
         MlcParams s;
         s.n2 = L->nSdc;
@@ -215,10 +281,21 @@ struct DrmTransmitter::Impl {
         const int pos = (int)(((int64_t)muxMade - (depth - 1)) % L->frames + L->frames) % L->frames;
         muxMade++;
         if (!modeE || pos % 2 == 0 || secondHalf.empty()) {
-            std::vector<std::vector<uint8_t>> frames;
-            std::vector<uint8_t> crc;
-            audio->nextSuperFrame(n, payload, frames, crc);
-            aacSuperFrameBuild(frames, crc, hp, modeE ? 2 * halfBytes : halfBytes, lf);
+            const int total = modeE ? 2 * halfBytes : halfBytes;
+            if (xhe) {
+                while ((int)xhePack.queuedBytes() < total) {
+                    std::vector<uint8_t> au;
+                    if (audio->nextAccessUnit(au) && !au.empty()) xheLast = au; else au = xheLast;
+                    if (au.empty()) au = {0x80, 0x00, 0x00};   // a source with nothing at all: a frame the decoder will refuse, so the framing stays valid
+                    xhePack.push(au);
+                }
+                if (!xhePack.pack(total, lf)) lf.assign((size_t)total, 0);
+            } else {
+                std::vector<std::vector<uint8_t>> frames;
+                std::vector<uint8_t> crc;
+                audio->nextSuperFrame(n, payload, frames, crc);
+                aacSuperFrameBuild(frames, crc, hp, total, lf);
+            }
             if (modeE) {
                 secondHalf.assign(lf.begin() + halfBytes, lf.end());
                 lf.resize((size_t)halfBytes);
@@ -270,6 +347,12 @@ struct DrmTransmitter::Impl {
         SdcAudio a;
         a.shortId = 0; a.streamId = 0; a.coding = cfg.audioCoding; a.sbr = cfg.audioSbr; a.mode = cfg.audioMode;
         a.rateCode = cfg.audioRateHz == 12000 ? 1 : cfg.audioRateHz == 24000 ? 3 : cfg.audioRateHz == 48000 ? 5 : 3; a.text = cfg.textMessage;
+        if (xhe) {
+            static const int rates[6] = {16000, 19200, 24000, 32000, 38400, 48000};
+            a.rateCode = 2 + (int)(std::find(rates, rates + 6, cfg.audioRateHz) - rates);   // Table: 2 16, 3 19.2, 4 24, 5 32, 6 38.4, 7 48 kHz
+            a.sbr = 0;
+            a.config = cfg.audioXheConfig;
+        }
         field.clear();
         sdcPutEntity(field, 0, 0, sdcEntityMux(mx));
         sdcPutEntity(field, 9, 0, sdcEntityAudio(a));
@@ -388,6 +471,7 @@ struct DrmTransmitter::Impl {
 };
 
 DrmTransmitter::DrmTransmitter(const DrmTxConfig& cfg, std::unique_ptr<DrmAudioSource> audio) {
+    if (!audio && cfg.audioCoding == 3) audio = makeDrmXhePatternSource(cfg.seed);
     if (!audio) audio = makeDrmAacSource(cfg, 2);
     if (!audio) audio = std::make_unique<DrmPatternSource>(cfg.seed);
     p_ = std::make_unique<Impl>(cfg, std::move(audio));

@@ -61,7 +61,7 @@ struct State {
 State S;
 
 // Unencrypted voice: the sink hands each clear traffic frame to the user-installed speech codec and the PCM goes to the speaker.
-// Encrypted calls and calls of unknown encryption state never reach it (tetra_voice.h). OnAir ships no codec.
+// Encrypted calls never reach it, nor do calls of unknown encryption state unless the user turns on "Play calls of unknown state" (tetra_voice.h). OnAir ships no codec.
 dect2::tetra::TetraVoiceSink gVoice;
 dect2::AudioOut gVoiceOut;
 bool gVoiceWired = false;
@@ -243,6 +243,11 @@ void slotPanel(App& a) {
         if (ImGui::Selectable("Single carrier", a.tetraSingle != 0)) a.tetraSingle = 1;
         ImGui::EndCombo();
     }
+    {   bool pu = a.tetraPlayUnknown != 0;
+        ImGui::SameLine(0, 14 * gUi);
+        if (ImGui::Checkbox("Play calls of unknown state", &pu)) a.tetraPlayUnknown = pu ? 1 : 0;
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "When OnAir joins a call after its set-up, nothing says whether it is encrypted. Off (default): such calls are muted. On: they are played when no encrypted signalling is seen in the capture; an encrypted one then sounds like noise. Nothing is decrypted either way.");
+    }
     ImGui::SameLine();
     ImGui::TextDisabled("%s", a.tetraSingle ? "only the 25 kHz channel at the dial frequency is filtered out and decoded" : "every carrier in the span is searched for");
     if (!a.tetraSingle) {   // 3.4: how much of the capture is searched; a wide capture (Advanced > Custom bandwidth / sample rate) lists and decodes every carrier in it
@@ -291,7 +296,7 @@ void slotPanel(App& a) {
         if (k.talkgroup) snprintf(ids, sizeof ids, " TG %u", k.talkgroup);
         if (k.talkgroup) { std::string nm = tetranames::nameOf(dect2::TetraIdKind::Gssi, k.talkgroup, best->mcc, best->mnc); if (nm.empty()) nm = tgdirui::nameOf(dect2::TgKind::Tetra, k.talkgroup); if (!nm.empty()) snprintf(ids + strlen(ids), sizeof ids - strlen(ids), " %s", nm.c_str()); }
         if (k.issi) { snprintf(ids + strlen(ids), sizeof ids - strlen(ids), " ISSI %u", k.issi); const std::string nm = tetranames::nameOf(dect2::TetraIdKind::Issi, k.issi, best->mcc, best->mnc); if (!nm.empty()) snprintf(ids + strlen(ids), sizeof ids - strlen(ids), " %s", nm.c_str()); }
-        const bool enc = k.state == T::SlotState::Encrypted;
+        const bool enc = k.state == T::SlotState::Encrypted || k.state == T::SlotState::Unknown;
         if (enc) ImGui::PushStyleColor(ImGuiCol_Text, pal::warnAmber());
         ImGui::Text("slot %d: %s%s, last heard %s%s", i + 1, T::slotStateText(k.state), ids, heard,
                     (a.tetraSlotMode == 1 && a.tetraSlotNum == i + 1) ? "  <- listening" : "");
@@ -600,7 +605,7 @@ void tgCollect(const App& a) {
         for (const auto& c : a.rx.tetra.cells)
             for (int i = 0; i < 4; i++) {
                 const dect2::tetra::SlotInfo& k = c.slots[i];
-                if (!k.talkgroup || k.state == dect2::tetra::SlotState::Encrypted || k.lastHeardSec < 0) continue;
+                if (!k.talkgroup || k.state == dect2::tetra::SlotState::Encrypted || k.state == dect2::tetra::SlotState::Unknown || k.lastHeardSec < 0) continue;
                 const int64_t t = (int64_t)k.lastHeardSec;
                 TgRow& r = gTg[k.talkgroup];
                 if (r.first == 0) r.first = t;
@@ -686,6 +691,7 @@ void tick(App& a) {
         dect2::tetra::SlotSelect sel; sel.mode = (dect2::tetra::SlotMode)a.tetraSlotMode; sel.slot = a.tetraSlotNum; sel.id = (uint32_t)a.tetraSlotId;
         a.engine.tetra().setVoiceSlot(sel);
         a.engine.tetra().setSingleCarrier(a.tetraSingle != 0);
+        dect2::tetra::setPlayUnknownState(a.tetraPlayUnknown != 0);
         a.engine.tetra().setSearchBand(a.tetraSearchPct / 100.0);
     }
     if (!S.scanning) return;

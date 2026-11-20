@@ -57,8 +57,21 @@ int main(int argc, char** argv) {
                 if (!good) printf("  baud %g shift %g rev %d low %.0f: got %s (in list: %d)\n", kRttyBaudTable[b], kRttyShiftTable[s], rv, low,
                                   h.empty() ? "nothing" : (std::string(std::to_string(h[0].baud)) + " / " + std::to_string(h[0].shiftHz) + (h[0].reverse ? " rev" : "")).c_str(), (int)inList);
             }
-    printf("15 dB, all 40 combinations: %d of %d exactly right, %d right with the neighbouring shift (170/200, 425/450) counted, tone place %d\n", ok, n, okNear, lowOk);
-    if (!sweep) CHECK(okNear == n && ok >= 36 && lowOk >= n - 1, "15 dB: %d exact, %d near, %d tones of %d", ok, okNear, lowOk, n);
+    printf("15 dB, all %d combinations: %d of %d exactly right, %d right with the neighbouring shift (170/200, 425/450) counted, tone place %d\n", n, ok, n, okNear, lowOk);
+    if (!sweep) CHECK(okNear == n && ok * 100 >= n * 90 && lowOk >= n - 1, "15 dB: %d exact, %d near, %d tones of %d", ok, okNear, lowOk, n);
+    // 1b. 85 Hz (weather RTTY, #539) is found by Auto, at every speed and polarity, and is not mistaken for 170 Hz (nor 170 Hz for 85 Hz)
+    {
+        int g = 0, tot = 0;
+        for (int b = 0; b < kRttyBauds; b++)
+            for (int rv = 0; rv < 2; rv++) {
+                const auto a = rtty(b, 5, rv != 0, 1100 + 37.0 * (b * 2 + rv), 15, 14, (uint64_t)(700 + b * 2 + rv));
+                const auto h = rttyAutoAnalyse(a.data(), a.size());
+                tot++;
+                g += !h.empty() && h[0].baudIdx == b && h[0].shiftIdx == 5 && h[0].reverse == (rv != 0);
+            }
+        printf("85 Hz: %d of %d right\n", g, tot);
+        if (!sweep) CHECK(g * 100 >= tot * 75, "85 Hz: %d of %d", g, tot);
+    }
     // 2. noise sweep on the common 45.45 baud / 170 Hz and a 75 baud / 425 Hz reversed signal
     for (double snr : {10.0, 5.0, 2.0, 0.0}) {
         int g = 0, tot = 0;

@@ -168,7 +168,7 @@ bool SynthMediaVideo::open(const std::string& path, std::string& err) {
     d.st = d.ic->streams[d.si];
     const AVCodec* codec = avcodec_find_decoder(d.st->codecpar->codec_id);
     d.cx = codec ? avcodec_alloc_context3(codec) : nullptr;
-    if (!d.cx || avcodec_parameters_to_context(d.cx, d.st->codecpar) < 0 || avcodec_open2(d.cx, codec, nullptr) < 0) { err = "FFmpeg has no decoder for the picture of " + baseName(path); return false; }
+    if (!d.cx || avcodec_parameters_to_context(d.cx, d.st->codecpar) < 0 || avcodec_open2(d.cx, codec, nullptr) < 0) { err = std::string("this build of FFmpeg has no decoder for the picture of ") + baseName(path) + " (" + avcodec_get_name(d.st->codecpar->codec_id) + "; try an H.264 or H.265 file)"; return false; }
     d.fr = av_frame_alloc(); d.cur = av_frame_alloc(); d.pend = av_frame_alloc(); d.pk = av_packet_alloc();
     d.t0 = d.st->start_time != AV_NOPTS_VALUE ? d.st->start_time : 0;
     const AVRational fr = av_guess_frame_rate(d.ic, d.st, nullptr);
@@ -304,13 +304,15 @@ std::shared_ptr<SynthMediaAudio> synthMediaAudioFor(const SynthConfig& cfg, doub
         DIAG(773241, "The synthetic content sound could not be loaded (%s), so the built-in sound is used.", err.c_str());
         return nullptr;
     }
+    // a failed picture stays on screen: the sound's message must not hide it
+    if (synthMediaStatus().rfind("Could not use the picture", 0) != 0)
     synthMediaSetStatus("Carrying the sound of " + baseName(!m.audio.empty() ? m.audio : m.path) + ".");
     return a;
 }
 
 std::shared_ptr<SynthMediaVideo> synthMediaVideoFor(const SynthConfig& cfg) {
     const SynthMedia m = synthMediaOf(cfg);
-    if (!m.kind || m.path.empty()) return nullptr;
+    if (!m.kind || m.path.empty()) { synthMediaSetStatus(""); return nullptr; }
     auto v = std::make_shared<SynthMediaVideo>();
     std::string err;
     if (!v->open(m.path, err)) {

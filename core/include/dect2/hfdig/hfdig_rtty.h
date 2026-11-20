@@ -24,7 +24,7 @@
 namespace dect2 {
 
 constexpr int kRttyBauds = 4, kRttyShifts = 6;
-constexpr int kRttyShiftsAuto = 5;   // Auto searches the first five only: 85 Hz lies too close to 170 / 200 Hz for a safe automatic lock (manual choice, #539)
+constexpr int kRttyShiftsAuto = kRttyShifts;   // Auto searches every shift of the list, 85 Hz included (the decoder's trial decode tells 85 from 170 Hz, #539)
 constexpr double kRttyBaudTable[kRttyBauds] = {45.45, 50.0, 75.0, 100.0};
 constexpr double kRttyShiftTable[kRttyShifts] = {170.0, 200.0, 425.0, 450.0, 850.0, 85.0};   // 85 Hz appended: saved settings keep their indices (DWD 147.3 kHz, #539)
 constexpr size_t kRttyTextMax = 8000;   // characters kept in the telemetry text

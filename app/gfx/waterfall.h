@@ -57,7 +57,7 @@ struct Waterfall {
     float autoBelow = 4.f, autoSpan = 55.f;   // the auto range: it starts autoBelow dB under the noise floor and is autoSpan dB wide
     spipe::FloorTracker floorTrack;           // the noise floor, followed with a 2 s time constant
     double viewU0 = 0, viewU1 = 1;            // the part of the band in view (0..1): its floor is the one the colours follow
-    float rowTau = 0.15f;                     // the rows' time constant (seconds; 0: each row its own frame)
+    float rowTau = 0.f;                       // the rows' time constant (seconds; 0, the default: each row its own raw frame; Settings > Display)
     std::vector<float> rowAvg, rowPow;
     double lastOfferT = 0;
     bool rowAverage = false; // slow rows: the average of the frames in between instead of the highest level (#237)

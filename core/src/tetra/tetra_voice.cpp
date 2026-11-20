@@ -3,11 +3,16 @@
 
 #include "dect2/tetra/tetra_voice.h"
 #include <algorithm>
+#include <atomic>
 
 namespace dect2::tetra {
 
+namespace { std::atomic<bool> g_playUnknown{false}; }
+void setPlayUnknownState(bool on) { g_playUnknown = on; }
+bool playUnknownState() { return g_playUnknown; }
+
 VoiceVerdict voiceVerdict(const CallEncryption& e) {
-    if (!e.known) return VoiceVerdict::StateUnknownNotDecoded;
+    if (!e.known) return g_playUnknown && e.encMode == 0 ? VoiceVerdict::Passed : VoiceVerdict::StateUnknownNotDecoded;
     // A cell that only advertises the air interface encryption service (SYSINFO) is not an encrypted call: many networks offer it and still run
     // clear calls. What counts is the evidence of this call: its set-up PDU was read from clear MAC-RESOURCE signalling and did not say
     // encrypted (`known`), and no PDU of the capture was encrypted (encMode). Anything unclear stays "not decoded"; nothing is ever decrypted.
