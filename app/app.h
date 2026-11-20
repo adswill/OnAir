@@ -1191,6 +1191,8 @@ void appResultsSave(App& a, bool now = false);
 // The Clear of a mode's decoded lists, at the top of its list (results_ui.cpp): true when pressed
 bool resultsClearButton(const char* id);
 void scanDbTick(App& a);   // scan_db_ui.cpp: asks to share a finished scan
+bool sharedChannelsAvailable(App& a);   // scan_db_ui.cpp: this mode has a shared channel list
+void openSharedChannels(App& a);        // scan_db_ui.cpp: Tools > Shared channel list opens it in the Scan tab
 void tuneToChannel(App& a, const SavedChannel& c);
 void followBandwidth(App& a);
 void setDvbBandwidth(App& a, int idx);   // toolbar_source.cpp: the DVB-T2 / DVB-T width kBw[idx] (manual), or idx < 0 for Automatic; a running receiver follows at once

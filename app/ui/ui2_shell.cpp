@@ -779,6 +779,8 @@ static void viewMenu(App& a) {
         ImGui::SetNextItemWidth(220 * gUi);
         ImGui::InputTextWithHint("##toolsearch", tr("Search the tools"), q, sizeof q);
         ImGui::Separator();
+        if (ImGui::MenuItem(tr("Shared channel list"), nullptr, false, sharedChannelsAvailable(a))) openSharedChannels(a);   // the crowd-sourced OnAir-channels data
+        ImGui::Separator();
         int n = 0;
         const menugroups::ToolItem* items = menugroups::toolItems(n);
         if (*q) {

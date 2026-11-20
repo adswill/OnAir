@@ -21,6 +21,7 @@ using namespace dect2;
 namespace fs = std::filesystem;
 
 void scanDbHost(App& a, void (*inner)(App&));
+extern std::string gForceTab;   // main.cpp: select this tab next frame
 
 namespace {
 
@@ -407,6 +408,10 @@ void scanDbTick(App& a) {
     sh.wasRunning = run;
 }
 
+// Tools > Shared channel list: the Scan tab, on the shared channels (only in the modes that have a scan).
+bool sharedChannelsAvailable(App& a) { return modeFolder(a)[0] != 0; }
+void openSharedChannels(App& a) { if (!sharedChannelsAvailable(a)) return; vw.sub = 1; gForceTab = "Scan"; }
+
 // The Scan tab of every mode: the scan itself, or the shared data; the dialog sits on top of both.
 void scanDbHost(App& a, void (*inner)(App&)) {
     static bool devOnce = false;
@@ -415,5 +420,12 @@ void scanDbHost(App& a, void (*inner)(App&)) {
         subNav("scdb", vw.sub, {"Scan", "Shared data"});
         shareDialog(a);
     }
-    if (vw.sub == 1 && modeFolder(a)[0]) sharedView(a); else inner(a);
+    if (vw.sub == 1 && modeFolder(a)[0]) sharedView(a);
+    else {
+        if (modeFolder(a)[0]) {   // the shared list is one click away from the scan, not only a second pill
+            ImGui::TextDisabled("%s", tr("Not sure what is on air here? See the channels other people have shared."));
+            ImGui::SameLine(); if (ImGui::SmallButton(tr("Shared channels"))) vw.sub = 1;
+        }
+        inner(a);
+    }
 }
