@@ -16,7 +16,7 @@ namespace dect2::vgen {
 
 enum class DvbSystem { T, T2, T2Narrow, S, S2, S2X, Count };   // T2: 5-10 MHz channels; T2Narrow: the 1,7 MHz channel
 constexpr int kNumDvbSystems = (int)DvbSystem::Count;
-constexpr int kMaxModeParams = 8;   // DVB-T2: bandwidth, FFT, carrier mode, guard interval, pilot pattern, modulation, code rate, FEC frame
+constexpr int kMaxModeParams = 9;   // DVB-T2: bandwidth, FFT, carrier mode, guard interval, pilot pattern, modulation, code rate, FEC frame, profile
 
 const char* dvbSystemName(DvbSystem s);   // "DVB-T", "DVB-T2 1.7 MHz" ...
 bool isSatellite(DvbSystem s);            // DVB-S / S2 / S2X: the symbol rate is free, bandwidth and bitrate scale with it
@@ -34,11 +34,24 @@ struct DvbMode {
     double bwMHz = 0;      // occupied bandwidth; satellite: at 1 Msym/s, so 1 + roll-off
     double rateMbps = 0;   // net bitrate (useful TS / data-field rate); satellite: at 1 Msym/s, so the spectral efficiency in bit/symbol
     double cnDb = 0;       // minimum C/N on the AWGN channel (satellite: noise bandwidth = symbol rate)
-    bool hasCn = true;     // false where the standard gives no threshold (DVB-S2 short FECFRAME): never counted as available
+    bool hasCn = true;     // false where the standard gives no threshold (DVB-S2 short FECFRAME, the T2-Lite code rates 1/3 and 2/5): never
+                           // counted as available
+    double capMbps = 0;    // > 0: the most the mode may carry whatever its cells hold (T2-Lite: 4 Mbit/s a PLP, EN 302 755 annex I.10)
 };
-// All modes of a system, built once (DVB-T 480, DVB-T2 28 560, DVB-T2 1,7 MHz 5 712, DVB-S 5, DVB-S2 312, DVB-S2X 714 with every roll-off)
+// All modes of a system, built once (DVB-T 480, DVB-T2 35 600 = 28 560 T2-Base + 7 040 T2-Lite, DVB-T2 1,7 MHz 7 120 = 5 712 + 1 408,
+// DVB-S 5, DVB-S2 312, DVB-S2X 714 with every roll-off)
 const std::vector<DvbMode>& dvbModes(DvbSystem s);
 std::string modeName(const DvbMode& m);   // "T-8MHz-8K-GI1/4-64-QAM-2/3", "S2-8PSK-3/4-N-POn-RO0.20" ...
+
+// DVB-T2 (both systems): the index of the parameter "Profile" (T2-Base / T2-Lite) and of the code rates of T2-Lite only (1/3, 2/5). They come
+// last, so the indexes saved by an older version (8 parameters, 6 code rates) keep their meaning.
+constexpr int kT2ProfileParam = 8;
+constexpr int kT2CodeRateParam = 6;
+
+// The filter of a system as saved in <data dir>/videogen_modes.txt ("-1,-1,4,..": the index of each parameter's value, -1 = Any), and back.
+// A text with fewer values (an older version) leaves the rest on Any; a value out of range is Any.
+std::string filterText(DvbSystem s, const std::array<int, kMaxModeParams>& f);
+void filterFromText(DvbSystem s, const std::string& text, std::array<int, kMaxModeParams>& f);
 
 // What the link offers: the bitrate to carry, the bandwidth on the spectrum and the C/N seen on the spectrum analyser
 struct LinkInput {

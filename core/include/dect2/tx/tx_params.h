@@ -5,7 +5,8 @@
 // default, whether it is in the Simple view or under Advanced (and in which group), which sub-mode it applies to, a one-line help, and where its value
 // goes in the TxRequest. The transmit panel is drawn from this table, so every control it shows reaches the generator; tests/tx/test_tx_param_model.cpp
 // checks that every row changes the generated signal (or is marked as not doing so, with the reason) and that no generator reads a key that is not here.
-// Nothing here limits a value to what is lawful: a range is what the generator can make.
+// Nothing here limits a value to what is lawful: a range is what the generator can make. A row's `block` rule only keeps out combinations
+// a standard forbids outright for the signal it makes (DVB-T2-Lite).
 #pragma once
 #include "dect2/tx/tx.h"
 #include <map>
@@ -44,6 +45,11 @@ struct TxParamDef {
     bool hidden = false;           // declared (a generator reads it) but not drawn: a test hook or a value another screen sets
     bool needsAudio = false;       // only changes the signal when the audio is the microphone or a file (the test tone bypasses it)
     const char* meta = nullptr;    // not nullptr: this row does not change the generated samples, and why (shown in docs/TX-4.0.md, skipped by the test)
+    // A Choice or Bool row: may it take value `idx` (a choice index; 0 / 1 for a Bool) with the other values `num` (every row of the table,
+    // see txParamBlocked)? nullptr: yes;
+    // otherwise why not, naming the clause of the standard (the panel greys the choice out with this as its tooltip). Used where a standard
+    // forbids a combination outright (DVB-T2-Lite, EN 302 755 annex I); a combination that merely may not work is a warning (txParamWarnings).
+    const char* (*block)(const std::map<std::string, double>& num, int idx) = nullptr;
     // the test: the value the row is set to (NaN: chosen from the range), and the sample text of a text row (empty: a sample of its field)
     double testValue = 0;
     bool hasTestValue = false;
@@ -64,6 +70,13 @@ const std::vector<TxParamDef>& txParams(const TxModeSpec& m, const TxParamCtx& c
 const TxParamDef* txParamFind(const std::vector<TxParamDef>& rows, const std::string& key);
 // Is the row shown with these values (the `when` condition)? Values missing from `num` count as the row's default.
 bool txParamShown(const TxParamDef& d, const std::vector<TxParamDef>& rows, const std::map<std::string, double>& num);
+// Why the row may not take value idx with these values (its `block` rule), or nullptr when it may. Values missing from `num` count as the
+// rows' defaults: the rule always sees every row of the table.
+const char* txParamBlocked(const TxParamDef& d, const std::vector<TxParamDef>& rows, const std::map<std::string, double>& num, int idx);
+// Every row whose value its `block` rule forbids is moved to an allowed one: its default when that is allowed, else the first allowed choice.
+// Rows are taken in table order, so a row's rule may depend on the rows above it (DVB-T2: profile, then FFT, guard, pilot pattern ...).
+// Returns true when a value changed. txParamsApplyNumbers applies the same to its copy, so a generator never gets a forbidden combination.
+bool txParamsFix(const std::vector<TxParamDef>& rows, std::map<std::string, double>& num);
 // The number sent for a row's value: a Choice index turned into its value, other types unchanged
 double txParamValue(const TxParamDef& d, double v);
 // One row's value into the request: numbers by `field`, `set` or opt[key]; texts (Text / File rows) from `text`

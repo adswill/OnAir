@@ -291,6 +291,11 @@ How the modes are worked out (the formulas and standard tables of the workbook `
 - The DVB-T2 bitrate is the ideal cell capacity: P1 and P2 symbols, signalling and padding are not deducted, so the real one is a few
   percent lower. The DVB-T and DVB-T2 thresholds were simulated for 8 MHz and are used for the other channels as well.
 - DVB-S2 short frames have no threshold in the standard: they are listed in the counts but never as available.
+- DVB-T2 has a parameter **Profile**: T2-Base or T2-Lite (EN 302 755 annex I, for simple and mobile receivers; T2-Lite names end in
+  `-Lite`). T2-Lite modes keep to the annex: FFT 2K to 16K, the pilot patterns of table I.5, 16 200-bit FEC frames, no 4/5 or 5/6 and no
+  256-QAM with 2/3 or 3/4, and at most 4 Mbit/s a programme (I.10): their capacity is held to 4 Mbit/s whatever the cells could carry.
+  T2-Lite adds the code rates 1/3 and 2/5; the standards give no C/N for them (TS 102 831 tables 44 and 45 start at 1/2), so like the
+  DVB-S2 short frames they are counted but never proposed. A saved filter from before the Profile reads as Any.
 - The link inputs and the parameters are kept in `videogen_modes.txt` in the OnAir data folder.
 
 ## When something goes wrong

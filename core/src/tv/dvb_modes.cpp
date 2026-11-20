@@ -4,6 +4,7 @@
 // Digital video generator: the DVB transmission modes and which of them a link can carry (dvb_modes.h). The tables are those of the
 // sheet Std_Tables of DVB_transmission_modes.xlsx, each from the ETSI table named beside it; the formulas are those of its mode sheets.
 #include "dect2/tv/dvb_modes.h"
+#include "dect2/t2/t2profile.h"
 #include <algorithm>
 #include <charconv>
 #include <cmath>
@@ -55,12 +56,14 @@ const char* const kT2Carriers[] = {"Normal", "Extended"};
 const char* const kT2Gi[] = {"1/128", "1/32", "1/16", "19/256", "1/8", "19/128", "1/4"};
 const char* const kT2Pp[] = {"PP1", "PP2", "PP3", "PP4", "PP5", "PP6", "PP7", "PP8"};
 const char* const kT2Mod[] = {"QPSK", "16-QAM", "64-QAM", "256-QAM"};
-const char* const kT2Cr[] = {"1/2", "3/5", "2/3", "3/4", "4/5", "5/6"};
+const char* const kT2Cr[] = {"1/2", "3/5", "2/3", "3/4", "4/5", "5/6", "1/3", "2/5"};   // as PLP_COD (table 32): 1/3 and 2/5 are T2-Lite only
 const char* const kT2Frame[] = {"64 800", "16 200"};
+const char* const kT2Profile[] = {"T2-Base", "T2-Lite"};
 const int kT2Nldpc[] = {64800, 16200};
-// Table 6(a) / 6(b): Kbch [frame][code rate]
-const int kT2Kbch[2][6] = {{32208, 38688, 43040, 48408, 51648, 53840}, {7032, 9552, 10632, 11712, 12432, 13152}};
-// TS 102 831 Tables 44 (64 800) and 45 (16 200): raw (C/N)0 on the Gaussian channel [frame][modulation][code rate]
+// Table 6(a) / 6(b): Kbch [frame][code rate]; 1/3 and 2/5 (16 200 only): annex I table I.1
+const int kT2Kbch[2][8] = {{32208, 38688, 43040, 48408, 51648, 53840, 0, 0}, {7032, 9552, 10632, 11712, 12432, 13152, 5232, 6312}};
+// TS 102 831 Tables 44 (64 800) and 45 (16 200): raw (C/N)0 on the Gaussian channel [frame][modulation][code rate]. The T2-Lite code rates
+// 1/3 and 2/5 have no figure in either table (nor in EN 302 755): those modes have no C/N (hasCn false)
 const double kT2Cn[2][4][6] = {
     {{1.0, 2.3, 3.1, 4.1, 4.7, 5.2}, {6.0, 7.6, 8.9, 10.0, 10.8, 11.4}, {9.9, 12.0, 13.5, 15.1, 16.1, 16.8}, {13.2, 16.1, 17.8, 20.0, 21.3, 22.0}},
     {{0.7, 2.5, 3.4, 4.3, 4.9, 5.5}, {5.5, 7.9, 9.1, 10.3, 11.1, 11.7}, {9.2, 12.3, 13.8, 15.5, 16.4, 17.1}, {12.6, 16.9, 18.1, 20.3, 21.6, 22.4}},
@@ -83,17 +86,9 @@ const T2Pp kT2PpTab[] = {
     {5, 0, 1, 24886, 0.37}, {5, 0, 3, 26022, 0.45}, {5, 0, 5, 26592, 0.48}, {5, 0, 6, 26836, 0.33}, {5, 0, 7, 26812, 0.35},
     {5, 1, 1, 25412, 0.37}, {5, 1, 3, 26572, 0.45}, {5, 1, 5, 27152, 0.48}, {5, 1, 6, 27404, 0.33}, {5, 1, 7, 27376, 0.35},
 };
-// Table 58 (SISO): the pilot patterns allowed per FFT and guard interval, as bit masks of PP1..PP8 (bit 0 = PP1); 0 = combination not
-// allowed. Extended carrier mode allows the same patterns as normal mode. [FFT][guard interval in kT2Gi order]
-constexpr int pp(std::initializer_list<int> l) { int m = 0; for (int p : l) m |= 1 << (p - 1); return m; }
-const int kT2Allowed[6][7] = {
-    /* 1K  */ {0, 0, pp({4, 5}), 0, pp({2, 3}), 0, pp({1})},
-    /* 2K  */ {0, pp({4, 7}), pp({4, 5}), 0, pp({2, 3}), 0, pp({1})},
-    /* 4K  */ {0, pp({4, 7}), pp({4, 5}), 0, pp({2, 3}), 0, pp({1})},
-    /* 8K  */ {pp({7}), pp({4, 7}), pp({4, 5, 8}), pp({4, 5, 8}), pp({2, 3, 8}), pp({2, 3, 8}), pp({1, 8})},
-    /* 16K */ {pp({7}), pp({4, 6, 7}), pp({2, 4, 5, 8}), pp({2, 4, 5, 8}), pp({2, 3, 8}), pp({2, 3, 8}), pp({1, 8})},
-    /* 32K */ {pp({7}), pp({4, 6}), pp({2, 4, 8}), pp({2, 4, 8}), pp({2, 8}), pp({2, 8}), 0},
-};
+// The pilot patterns allowed per FFT and guard interval: tables 58 (T2-Base, SISO) and I.5 (T2-Lite, SISO) in t2profile.h, which numbers the
+// guard intervals as the L1 signalling does. kT2GiL1: the L1 index of each guard interval of kT2Gi. Extended carrier mode allows the same.
+const int kT2GiL1[] = {4, 0, 1, 6, 2, 5, 3};
 
 // ---- DVB-S: EN 300 421 V1.1.2 ----
 
@@ -205,7 +200,8 @@ std::vector<ModeParam> buildParams(DvbSystem s) {
     case DvbSystem::T2:
     case DvbSystem::T2Narrow:
         return {{"Channel", t2bw}, {"FFT", strings(kT2Fft)}, {"Carriers", strings(kT2Carriers)}, {"Guard interval", strings(kT2Gi)},
-                {"Pilot pattern", strings(kT2Pp)}, {"Modulation", strings(kT2Mod)}, {"Code rate", strings(kT2Cr)}, {"FEC frame", strings(kT2Frame)}};
+                {"Pilot pattern", strings(kT2Pp)}, {"Modulation", strings(kT2Mod)}, {"Code rate", strings(kT2Cr)}, {"FEC frame", strings(kT2Frame)},
+                {"Profile", strings(kT2Profile)}};
     case DvbSystem::S:
         return {{"Code rate", strings(kSCr)}};
     case DvbSystem::S2:
@@ -241,30 +237,37 @@ void buildT(std::vector<DvbMode>& out) {
                     }
 }
 
+// T2-Base: every FFT, pilot pattern of table 58, 6 code rates, both FEC frames. T2-Lite (annex I): FFT 2K to 16K (I.7.1), the pilot patterns of
+// table I.5 (I.7.2, I.7.3), 16 200-bit frames (I.3), the code rates 1/3, 2/5, 1/2 .. 3/4 (table I.1) without 256-QAM 2/3 and 3/4 (I.5), and
+// at most 4 Mbit/s a PLP (I.10: capMbps; the cells beyond it are filler). The bitrate is the same cell capacity formula for both.
 void buildT2(std::vector<DvbMode>& out, DvbSystem sys) {
     std::map<std::tuple<int, int, int>, const T2Pp*> ppTab;
     for (const T2Pp& p : kT2PpTab) ppTab[{p.fft, p.ext, p.pp}] = &p;
-    for (int b = 0; b < t2NumBw(sys); b++)
-        for (int f = 0; f < 6; f++)
-            for (int e = 0; e < 2; e++) {
-                if (kT2K[f][e] == 0) continue;
-                for (int g = 0; g < 7; g++)
-                    for (int p = 0; p < 8; p++) {
-                        if (!(kT2Allowed[f][g] & (1 << p))) continue;
-                        const auto it = ppTab.find({f, e, p});
-                        if (it == ppTab.end()) continue;
-                        const double tu = kT2Points[f] * kT2Bw[t2FirstBw(sys) + b].t, ts = tu * (1 + fraction(kT2Gi[g]));
-                        for (int mo = 0; mo < 4; mo++)
-                            for (int c = 0; c < 6; c++)
-                                for (int fr = 0; fr < 2; fr++) {
-                                    DvbMode m = mode(sys, {b, f, e, g, p, mo, c, fr});
-                                    m.bwMHz = kT2K[f][e] / tu;
-                                    m.rateMbps = it->second->cdata * 2.0 * (mo + 1) * (kT2Kbch[fr][c] - 80) / kT2Nldpc[fr] / ts;
-                                    m.cnDb = kT2Cn[fr][mo][c] + it->second->dbp;
-                                    out.push_back(m);
-                                }
-                    }
-            }
+    for (int lite = 0; lite < 2; lite++)
+        for (int b = 0; b < t2NumBw(sys); b++)
+            for (int f = 0; f < 6; f++)
+                for (int e = 0; e < 2; e++) {
+                    if (kT2K[f][e] == 0 || (lite && !t2LiteFft(kT2Points[f]))) continue;
+                    for (int g = 0; g < 7; g++)
+                        for (int p = 0; p < 8; p++) {
+                            if (!((t2PilotMask(kT2Points[f], kT2GiL1[g], false, lite == 1) >> p) & 1)) continue;
+                            const auto it = ppTab.find({f, e, p});
+                            if (it == ppTab.end()) continue;
+                            const double tu = kT2Points[f] * kT2Bw[t2FirstBw(sys) + b].t, ts = tu * (1 + fraction(kT2Gi[g]));
+                            for (int mo = 0; mo < 4; mo++)
+                                for (int c = 0; c < 8; c++)
+                                    for (int fr = lite; fr < 2; fr++) {
+                                        if (!t2ModCodAllowed(mo, c, lite == 1)) continue;
+                                        DvbMode m = mode(sys, {b, f, e, g, p, mo, c, fr, lite});
+                                        m.bwMHz = kT2K[f][e] / tu;
+                                        m.rateMbps = it->second->cdata * 2.0 * (mo + 1) * (kT2Kbch[fr][c] - 80) / kT2Nldpc[fr] / ts;
+                                        m.hasCn = c < 6;
+                                        m.cnDb = m.hasCn ? kT2Cn[fr][mo][c] + it->second->dbp : 0;
+                                        if (lite) m.capMbps = kT2LiteMaxPlpBps / 1e6;
+                                        out.push_back(m);
+                                    }
+                        }
+                }
 }
 
 void buildS(std::vector<DvbMode>& out) {
@@ -355,7 +358,8 @@ std::string modeName(const DvbMode& m) {
     case DvbSystem::T: return "T-" + mhz(0) + "-" + v(1) + "-GI" + v(2) + "-" + v(3) + "-" + v(4);
     case DvbSystem::T2:
     case DvbSystem::T2Narrow:
-        return "T2-" + mhz(0) + "-" + v(1) + (m.value[2] ? "E" : "") + "-GI" + v(3) + "-" + v(4) + "-" + v(5) + "-" + v(6) + (m.value[7] ? "-S" : "-N");
+        return "T2-" + mhz(0) + "-" + v(1) + (m.value[2] ? "E" : "") + "-GI" + v(3) + "-" + v(4) + "-" + v(5) + "-" + v(6) + (m.value[7] ? "-S" : "-N") +
+               (m.value[kT2ProfileParam] ? "-Lite" : "");
     case DvbSystem::S: return "S-QPSK-" + v(0);
     case DvbSystem::S2: return "S2-" + v(0) + "-" + v(1) + (m.value[2] ? "-S" : "-N") + (m.value[3] ? "-POn" : "-POff") + "-RO" + v(4);
     case DvbSystem::S2X: {
@@ -376,11 +380,30 @@ ModeFit fitMode(const DvbMode& m, const LinkInput& in) {
         f.capacityMbps = in.bwMHz / m.bwMHz * m.rateMbps;
     } else {
         f.bwMHz = m.bwMHz;
-        f.capacityMbps = m.rateMbps;
+        f.capacityMbps = m.capMbps > 0 ? std::min(m.rateMbps, m.capMbps) : m.rateMbps;
     }
     f.marginDb = in.cnDb - m.cnDb;
     f.ok = m.hasCn && f.bwMHz <= in.bwMHz * (1 + 1e-9) && f.capacityMbps * (1 + 1e-9) >= need && f.marginDb >= 0;
     return f;
+}
+
+std::string filterText(DvbSystem s, const ModeFilter& f) {
+    std::string o;
+    for (size_t k = 0; k < modeParams(s).size(); k++) o += (k ? "," : "") + std::to_string(f[k]);
+    return o;
+}
+
+void filterFromText(DvbSystem s, const std::string& v, ModeFilter& f) {
+    const std::vector<ModeParam>& params = modeParams(s);
+    size_t pos = 0;
+    for (size_t k = 0; k < params.size() && pos <= v.size(); k++) {
+        int i = -1;
+        std::from_chars(v.data() + pos, v.data() + v.size(), i);
+        f[k] = i >= 0 && i < (int)params[k].values.size() ? i : -1;
+        const size_t comma = v.find(',', pos);
+        if (comma == std::string::npos) break;
+        pos = comma + 1;
+    }
 }
 
 ModeFilter openFilter() {
