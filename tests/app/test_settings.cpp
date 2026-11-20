@@ -52,6 +52,12 @@ int main() {
         check(clampTo(*wheelAction, -1) == 0 && clampTo(*wheelAction, 9) == 2,
               "wheel action rejects invalid saved values");
     }
+    // Streamer tab: the master switch off, the three hide switches on
+    for (const char* k : {"streamerMode", "streamerHideLocation", "streamerHideNetwork", "streamerHidePaths"}) {
+        const Info* r = nullptr;
+        for (const Info& i : t) if (!strcmp(i.key, k)) r = &i;
+        check(r && r->kind == Kind::Bool && std::string(r->cat) == kStreamer && r->def == (!strcmp(k, "streamerMode") ? 0 : 1), "Streamer row present with its default");
+    }
     // reset and changed marker
     const Info* gamma = nullptr;
     for (const Info& i : t) if (!strcmp(i.key, "wfGamma")) gamma = &i;
