@@ -121,6 +121,9 @@ jobs:
       - name: Test (timing tests, a failure retried once)
         if: success() || failure()
         run: test -n "$ONAIR_TEST_LONG" || unset ONAIR_TEST_LONG; ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-timing.log
+      - name: Tests that needed a retry (report only)
+        if: always()
+        run: python3 tools/ci_flaky_report.py ctest-timing.log >> "$GITHUB_STEP_SUMMARY" || true
       - name: CPU figures (CPUCAL)
         if: always()
         run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true
@@ -192,6 +195,9 @@ jobs:
       - name: Test (timing tests, a failure retried once)
         if: success() || failure()
         run: test -n "$ONAIR_TEST_LONG" || unset ONAIR_TEST_LONG; ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-timing.log
+      - name: Tests that needed a retry (report only)
+        if: always()
+        run: python3 tools/ci_flaky_report.py ctest-timing.log >> "$GITHUB_STEP_SUMMARY" || true
       - name: CPU figures (CPUCAL)
         if: always()
         run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true
