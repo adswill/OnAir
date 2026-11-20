@@ -6,6 +6,8 @@
 // No cloud and no relay: the browser connects straight to this program. Access from other computers needs a token; TLS is optional.
 #include "dect2/common/platform.h"
 #include "dect2/engine/crash_report.h"
+#include "dect2/integrations/commands.h"
+#include "dect2/integrations/integrations.h"
 #include "app/webapp.h"
 #include "dect2/mcp/mcp.h"
 #include "dect2/net/remote_api.h"
@@ -22,6 +24,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <memory>
 #include <string>
 #include <thread>
@@ -86,6 +90,30 @@ static void usage() {
            "  --version, --help\n\n"
            "Settings file: plain key=value lines (see docs/headless-server.md).\n",
            ONAIR_SERVER_VERSION, defaultConfigPath().c_str());
+}
+
+// Integrations (MQTT, JSON lines, saved messages, MQTT commands) for the headless server: the same settings file the desktop app writes
+// (docs/INTEGRATIONS.md), read from the config key integrations_file or integrations.json next to the config file. No file: nothing is sent.
+// The webhook sink needs the desktop app's web client and stays off here.
+static bool startIntegrations(ServerHost& host, const std::string& configPath, const ConfigFile& cfg) {
+    namespace ig = dect2::integrations;
+    const std::filesystem::path cp(configPath);
+    std::string file = cfg.get("integrations_file", "");
+    if (file.empty()) file = (cp.has_parent_path() ? cp.parent_path() : std::filesystem::path(".")).string() + "/integrations.json";
+    std::ifstream f(file, std::ios::binary);
+    if (!f) return false;
+    std::stringstream ss;
+    ss << f.rdbuf();
+    ig::Settings s;
+    std::string err;
+    if (!ig::fromJson(ss.str(), s, err)) { fprintf(stderr, "onair-server: %s could not be read (%s): integrations stay off\n", file.c_str(), err.c_str()); return false; }
+    ig::Hub& hub = ig::global();
+    hub.setSettings(s);
+    hub.setCommandHandler([&host](const std::string& name, const std::string& payload) { return ig::runCommand(host, name, payload); });
+    hub.start();
+    if (s.hookFamilies()) dect2::automation::global().setPublisher([](const dect2::automation::Event& e) { dect2::integrations::global().submit(e); }, s.hookFamilies());
+    printf("onair-server: integrations on (%s)%s\n", file.c_str(), s.mqtt.enabled && s.mqtt.commands ? ", MQTT commands accepted" : "");
+    return true;
 }
 
 int main(int argc, char** argv) {
@@ -243,6 +271,7 @@ int main(int argc, char** argv) {
     }
     ServerHost host(cfg);
     host.init();
+    const bool integrationsOn = startIntegrations(host, path, cfg);
     dect2::RemoteApiServer server(host);
     if (!server.configure(api)) {
         fprintf(stderr, "onair-server: %s\n", server.status().lastError.c_str());
@@ -403,6 +432,7 @@ int main(int argc, char** argv) {
     if (web) web->stop();
     host.setWebHub(nullptr);
     if (hub) hub->stop();
+    if (integrationsOn) { dect2::automation::global().setPublisher(nullptr, 0); dect2::integrations::global().stop(); }
     host.supervise(path);
     host.shutdown();   // the receiver stops; the saved "autostart" keeps what the user last chose, so a restart brings it back
     dect2::ShareServer::get().configure(dect2::ShareConfig{});

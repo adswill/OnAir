@@ -30,6 +30,7 @@ struct MqttSettings {
     bool haDiscovery = false;                 // Home Assistant MQTT discovery for a few sensors
     std::string haPrefix = "homeassistant";
     std::string haBase = "onair";             // availability and sensor state topics: <haBase>/status, <haBase>/ha/<sensor>
+    bool commands = false;                    // accept receiver commands on <haBase>/cmd/<name> (commands.h); the answer goes to <haBase>/cmdresult. Off by default
 };
 
 struct WebhookSettings {
@@ -102,6 +103,10 @@ public:
     void setSettings(const Settings& s);      // takes effect at once; switching MQTT off disconnects
     Settings settings() const;
     void setPost(PostFn f);
+    // Runs a command received on <haBase>/cmd/<name> (needs mqtt.commands): returns "" when it ran, else the reason. It is called on the Hub's worker
+    // thread, so it may block briefly. Without a handler every command is answered "not available".
+    using CommandFn = std::function<std::string(const std::string& name, const std::string& payload)>;
+    void setCommandHandler(CommandFn f);
     void setClock(std::function<double()> now);   // tests
     // For the decoder's thread: filters by family, applies the rate limit, queues. Cheap, never blocks, never touches the network.
     void submit(const automation::Event& ev);

@@ -95,6 +95,18 @@ static void testRoutes() {
     for (const std::string& line : endpointList()) CHECK(!pathRefused(line.substr(line.find(' ') + 1)), "an existing endpoint is not refused: %s", line.c_str());
     CHECK(!pathRefused("/api/v1/mute") && !pathRefused("/api/v1/memories") && !pathRefused("/api/v1/samplerate") && !pathRefused("/api/v1/x/stations"), "ordinary names pass");
     CHECK(endpointList().size() >= 28, "endpoint list");
+    {
+        CHECK(parseRoute("GET", "/api/v1/metrics").ep == Ep::Metrics && parseRoute("POST", "/api/v1/metrics").status == 405, "metrics is a GET endpoint");
+        Metrics m; m.running = true; m.mode = "AD\"S-B\n"; m.device = "RTL\\SDR"; m.droppedSamples = 7; m.frequencyHz = 1090e6; m.events = 12;
+        const std::string t = metricsText(m);
+        CHECK(t.find("onair_receiver_running 1\n") != std::string::npos && t.find("onair_dropped_samples_total 7\n") != std::string::npos, "metric values");
+        CHECK(t.find("onair_frequency_hertz 1090000000\n") != std::string::npos && t.find("onair_events_total 12\n") != std::string::npos, "metric numbers");
+        CHECK(t.find("mode=\"AD\\\"S-B\\n\"") != std::string::npos && t.find("device=\"RTL\\\\SDR\"") != std::string::npos, "labels escaped");
+        CHECK(t.find("onair_delivered_percent") == std::string::npos, "not measured: left out");
+        m.deliveredPct = 99.5;
+        CHECK(metricsText(m).find("onair_delivered_percent 99.5\n") != std::string::npos, "measured: present");
+        for (size_t i = 0; i < t.size(); i++) if (t[i] == '\n' && i + 1 < t.size()) CHECK(t[i + 1] == '#' || t[i + 1] == 'o', "every line starts with # or onair_");
+    }
 }
 
 static void testLines() {

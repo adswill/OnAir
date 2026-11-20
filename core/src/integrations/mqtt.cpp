@@ -4,6 +4,7 @@
 #include "dect2/integrations/mqtt.h"
 #include "../net/tcp_client.h"
 #include "../net/tls_conn.h"
+#include <algorithm>
 #include <chrono>
 
 namespace dect2::integrations::mqtt {
@@ -144,6 +145,28 @@ bool decodePuback(const std::string& b, uint16_t& pid) {
     pid = (uint16_t)(((uint8_t)b[0] << 8) | (uint8_t)b[1]);
     return true;
 }
+std::string encodeSubscribe(uint16_t pid, const std::string& filter, int qos) {
+    std::string b;
+    b += char(pid >> 8); b += char(pid & 0xff);
+    putStr(b, filter);
+    b += char(qos > 0 ? 1 : 0);
+    return frame(SUBSCRIBE, 2, b);   // the low flag bits of SUBSCRIBE are fixed at 0010
+}
+bool decodeSubscribe(const Packet& pk, uint16_t& pid, std::string& filter, int& qos) {
+    if (pk.type != SUBSCRIBE || pk.body.size() < 5) return false;
+    pid = (uint16_t)(((uint8_t)pk.body[0] << 8) | (uint8_t)pk.body[1]);
+    size_t pos = 2;
+    if (!getStr(pk.body, pos, filter) || pos + 1 != pk.body.size()) return false;
+    qos = (uint8_t)pk.body[pos] & 3;
+    return true;
+}
+std::string encodeSuback(uint16_t pid, uint8_t rc) { return frame(SUBACK, 0, std::string{char(pid >> 8), char(pid & 0xff), char(rc)}); }
+bool decodeSuback(const std::string& b, uint16_t& pid, uint8_t& rc) {
+    if (b.size() != 3) return false;
+    pid = (uint16_t)(((uint8_t)b[0] << 8) | (uint8_t)b[1]);
+    rc = (uint8_t)b[2];
+    return true;
+}
 std::string encodePingreq() { return frame(PINGREQ, 0, ""); }
 std::string encodePingresp() { return frame(PINGRESP, 0, ""); }
 std::string encodeDisconnect() { return frame(DISCONNECT, 0, ""); }
@@ -174,6 +197,8 @@ struct Client::Impl {
     tls::Conn* tc = nullptr;
     std::string rx;
     uint16_t nextPid = 0;
+    Client::MessageFn onMessage;
+    bool dead = false;   // the last read ended because the connection is gone (not just a timeout)
     std::chrono::steady_clock::time_point lastWrite = std::chrono::steady_clock::now();
 
     bool up() const { return s != kBadSock; }
@@ -182,6 +207,14 @@ struct Client::Impl {
         if (ctx) { tls::freeCtx(ctx); ctx = nullptr; }
         if (s != kBadSock) { sockClose(s); s = kBadSock; }
         rx.clear();
+        dead = false;
+    }
+    // a PUBLISH from the broker: acknowledged (QoS 1), then handed to the handler
+    void incoming(const Packet& pk) {
+        Publish pb;
+        if (!decodePublish(pk, pb)) return;
+        if (pb.qos == 1) write(encodePuback(pb.pid));
+        if (onMessage) onMessage(pb.topic, pb.payload);
     }
     bool write(const std::string& d) {
         const bool ok = tc ? tls::write(tc, d.data(), d.size()) == (long)d.size() : sockSendAll(s, d.data(), d.size());
@@ -207,6 +240,8 @@ struct Client::Impl {
                     if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) continue;
 #endif
                 }
+                // the receive timeout of a TLS read ends it a little early: only a failure well before the end means the connection is gone
+                dead = !tc || std::chrono::steady_clock::now() + std::chrono::milliseconds(50) < end;
                 return false;
             }
             rx.append(buf, (size_t)n);
@@ -259,15 +294,60 @@ bool Client::publish(const std::string& topic, const std::string& payload, int q
         if (left <= 0 || !p_->readPacket(pk, (int)left)) { err = "the broker did not confirm"; p_->close(); return false; }
         uint16_t id = 0;
         if (pk.type == PUBACK && decodePuback(pk.body, id) && id == pb.pid) return true;
+        if (pk.type == PUBLISH) p_->incoming(pk);
     }
 }
 
 bool Client::ping(std::string& err) {
     if (!p_->up()) { err = "not connected"; return false; }
     if (!p_->write(encodePingreq())) { err = "the broker closed the connection"; p_->close(); return false; }
-    Packet pk;
-    if (!p_->readPacket(pk, p_->cfg.ackTimeoutMs) || pk.type != PINGRESP) { err = "the broker stopped answering"; p_->close(); return false; }
-    return true;
+    const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(p_->cfg.ackTimeoutMs);
+    for (;;) {
+        const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(end - std::chrono::steady_clock::now()).count();
+        Packet pk;
+        if (left <= 0 || !p_->readPacket(pk, (int)left)) { err = "the broker stopped answering"; p_->close(); return false; }
+        if (pk.type == PINGRESP) return true;
+        if (pk.type == PUBLISH) p_->incoming(pk);
+    }
+}
+
+void Client::setMessageHandler(MessageFn f) { p_->onMessage = std::move(f); }
+
+bool Client::subscribe(const std::string& filter, int qos, std::string& err) {
+    if (!p_->up()) { err = "not connected"; return false; }
+    if (filter.empty() || filter.size() > 65535) { err = "the topic filter is not valid"; return false; }
+    if (++p_->nextPid == 0) p_->nextPid = 1;
+    const uint16_t pid = p_->nextPid;
+    if (!p_->write(encodeSubscribe(pid, filter, qos))) { err = "the broker closed the connection"; p_->close(); return false; }
+    const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(p_->cfg.ackTimeoutMs);
+    for (;;) {
+        const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(end - std::chrono::steady_clock::now()).count();
+        Packet pk;
+        if (left <= 0 || !p_->readPacket(pk, (int)left)) { err = "the broker did not confirm the subscription"; p_->close(); return false; }
+        if (pk.type == PUBLISH) { p_->incoming(pk); continue; }
+        uint16_t id = 0;
+        uint8_t rc = 0;
+        if (pk.type == SUBACK && decodeSuback(pk.body, id, rc) && id == pid) {
+            if (rc == 0x80) { err = "the broker refused the subscription (not authorised?)"; return false; }
+            return true;
+        }
+    }
+}
+
+bool Client::poll(int ms, std::string& err) {
+    if (!p_->up()) { err = "not connected"; return false; }
+    const auto end = std::chrono::steady_clock::now() + std::chrono::milliseconds(std::max(1, ms));
+    for (;;) {
+        const auto left = std::chrono::duration_cast<std::chrono::milliseconds>(end - std::chrono::steady_clock::now()).count();
+        if (left <= 0) return true;
+        Packet pk;
+        p_->dead = false;
+        if (!p_->readPacket(pk, (int)left)) {
+            if (p_->dead) { err = "the broker closed the connection"; p_->close(); return false; }
+            return true;   // nothing arrived
+        }
+        if (pk.type == PUBLISH) p_->incoming(pk);
+    }
 }
 
 void Client::disconnect() {

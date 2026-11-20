@@ -268,7 +268,7 @@ void tab(App& a) {
 
 void list(App& a) {
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
-    if (resultsClearButton("m17")) a.engine.m17().clearResults();
+    if (resultsClearButton("m17")) a.engine.clearResults(33);   // also the whole-span receivers
     const auto& log = a.rx.m17.log;
     if (!ImGui::BeginTable("##m17l", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupColumn("Station"); ImGui::TableSetupColumn("Heard", ImGuiTableColumnFlags_WidthStretch);

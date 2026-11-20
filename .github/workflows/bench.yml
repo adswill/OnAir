@@ -1,0 +1,34 @@
+# Benchmark gate: runs tools/bench/bench_core (portable kernels) and compares each item's cost with tools/bench/baseline.tsv.
+# Nightly and by hand. Shared runners are noisy, so an item fails only when it is more than THRESHOLD_PCT slower than the baseline
+# in the best of several runs; the table is always written to the job summary. Refresh the baseline with
+#   gh workflow run bench.yml -f update=true     (then copy the printed baseline.tsv into tools/bench/ in a PR)
+name: Benchmarks
+
+on:
+  workflow_dispatch:
+    inputs:
+      update:
+        description: "print a new baseline.tsv instead of comparing"
+        type: boolean
+        default: false
+  schedule:
+    - cron: "23 4 * * *"
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bench:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      THRESHOLD_PCT: "25"
+      DECT2_PORTABLE: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run
+        run: tools/bench/bench_core.sh "$RUNNER_TEMP/bench" -- --best 5 --seconds 1 > bench.txt; cat bench.txt
+      - name: Compare with the baseline
+        env: { UPDATE: "${{ inputs.update }}" }
+        run: python3 tools/bench/bench_compare.py bench.txt tools/bench/baseline.tsv --threshold "$THRESHOLD_PCT" ${UPDATE:+--update} | tee -a "$GITHUB_STEP_SUMMARY"

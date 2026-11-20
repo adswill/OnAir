@@ -47,6 +47,7 @@ static const char* const kOld[] = {
     "Show Frequencies as a tab",
     "Transmit...",
     "Map",
+    "Voice scout",
     "Sweep scanner",
     "Station health",
     "Search everything heard",
@@ -86,6 +87,13 @@ int main() {
     }
     CHECK(perGroup[kTopLevel] >= 3 && perGroup[kTopLevel] <= 6, "top level has %d items", perGroup[kTopLevel]);
     CHECK(matchesQuery("Interference hunter", "HUNT") && matchesQuery("Map", "") && !matchesQuery("Map", "zzz"), "search");
+    // #596: Alt accelerators: one letter per top-level menu, no two the same, anything else opens nothing
+    CHECK(menuForAccelerator('f') == TopMenu::File && menuForAccelerator('F') == TopMenu::File, "Alt+F opens File");
+    CHECK(menuForAccelerator('o') == TopMenu::Mode && menuForAccelerator('m') == TopMenu::None && menuForAccelerator('e') == TopMenu::Memory && menuForAccelerator('h') == TopMenu::Help, "Alt letters");
+    { std::set<int> used; int cnt = 0;
+      for (char c = 'a'; c <= 'z'; c++) { const TopMenu m = menuForAccelerator(c); if (m != TopMenu::None) { cnt++; used.insert((int)m); } }
+      CHECK(cnt == 8 && (int)used.size() == 8, "eight menus, eight distinct letters (%d, %d)", cnt, (int)used.size()); }
+    CHECK(menuForAccelerator('x') == TopMenu::None && menuForAccelerator('1') == TopMenu::None, "unknown letter");
     // chunks: any size from 1 to 400 is covered once, in order, within the limit
     for (int sz = 1; sz <= 400; sz++) {
         int next = 0;

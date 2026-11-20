@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/integrations/integrations.h"
+#include "dect2/integrations/commands.h"
 #include "dect2/automation/json_mini.h"
 #include "dect2/common/thread_name.h"
 #include <algorithm>
@@ -320,6 +321,7 @@ std::string toJson(const Settings& s) {
     m.set("ha", js::Value::boolean(q.haDiscovery));
     m.set("ha_prefix", js::Value::string(q.haPrefix));
     m.set("ha_base", js::Value::string(q.haBase));
+    m.set("commands", js::Value::boolean(q.commands));
     root.set("mqtt", m);
     js::Value w = js::Value::object();
     w.set("enabled", js::Value::boolean(s.webhook.enabled));
@@ -361,6 +363,7 @@ bool fromJson(const std::string& text, Settings& s, std::string& err) {
         q.haDiscovery = m->flag("ha");
         q.haPrefix = m->str("ha_prefix", "homeassistant");
         q.haBase = m->str("ha_base", "onair");
+        q.commands = m->flag("commands");
     }
     if (const js::Value* w = root.get("webhook")) { n.webhook.enabled = w->flag("enabled"); n.webhook.url = trim(w->str("url")); n.webhook.token = w->str("token"); }
     if (const js::Value* j = root.get("jsonl")) { n.jsonl.enabled = j->flag("enabled"); n.jsonl.path = j->str("path"); n.jsonl.maxMegabytes = (int)std::max(0.0, std::min(100000.0, j->num("max_mb", 100))); }
@@ -397,12 +400,17 @@ struct Hub::Impl {
     double nextTry = 0;
     double backoff = 2;
     std::string clientIdUsed, cfgKey;
+    // commands (worker thread, except cmdFn which mu guards)
+    CommandFn cmdFn;
+    std::atomic<bool> cmdPoll{false};   // MQTT on with commands: the worker wakes often to read the broker
+    std::vector<std::pair<std::string, std::string>> cmdResults;   // command name, "" or the reason: published after the poll that read them
 
     static constexpr size_t kQueueMax = 2000;
 
     void refresh() {   // mu held
         active.store(set.anyEnabled());
         mask.store(set.hookFamilies());
+        cmdPoll.store(set.mqtt.enabled && !set.mqtt.host.empty() && set.mqtt.commands && !commandFilter(set.mqtt.haBase).empty());
     }
 
     std::string clientIdFor(const MqttSettings& m) {
@@ -442,6 +450,22 @@ struct Hub::Impl {
         backoff = 2;
         haSensorCfg.clear();
         setMqttStatus("connected");
+        client.setMessageHandler(nullptr);
+        if (m.commands && !commandFilter(m.haBase).empty()) {
+            const std::string base = m.haBase;
+            client.setMessageHandler([this, base](const std::string& topic, const std::string& payload) {
+                const std::string name = commandName(base, topic);
+                if (name.empty() || payload.size() > 256) return;
+                CommandFn fn;
+                { std::lock_guard<std::mutex> lk(mu); fn = cmdFn; }
+                cmdResults.push_back({name, fn ? fn(name, payload) : std::string("not available in this program")});
+            });
+            std::string se;
+            if (!client.subscribe(commandFilter(base), 1, se)) {
+                if (!client.connected()) { setMqttStatus("waiting to retry: " + se); nextTry = now + backoff; return false; }
+                setMqttStatus("connected, but the command topic was refused: " + se);
+            }
+        }
         if (m.haDiscovery) {
             std::string e;
             bool ok = client.publish(m.haBase + "/status", "online", 1, true, e);
@@ -543,6 +567,18 @@ struct Hub::Impl {
         if (!isTest && s.archive.enabled && !s.archive.folder.empty() && fam >= 0 && (archiveFamilies() >> fam & 1)) archiveSave(s.archive, ev);
     }
 
+    // the answers to the commands the last poll read: {"command":..,"ok":..,"error":..} on <haBase>/cmdresult (not under cmd/, which is subscribed)
+    void publishCommandResults(const MqttSettings& m) {
+        std::vector<std::pair<std::string, std::string>> r;
+        r.swap(cmdResults);
+        for (const auto& c : r) {
+            std::string e;
+            const std::string body = "{\"command\":" + js::dump(js::Value::string(c.first)) + ",\"ok\":" + (c.second.empty() ? "true" : "false") +
+                                     (c.second.empty() ? std::string() : ",\"error\":" + js::dump(js::Value::string(c.second))) + "}";
+            if (!client.publish(m.haBase + "/cmdresult", body, 0, false, e)) break;
+        }
+    }
+
     void run() {
         for (;;) {
             au::Event ev;
@@ -552,7 +588,7 @@ struct Hub::Impl {
                 std::unique_lock<std::mutex> lk(qmu);
                 busy = false;
                 qcv.notify_all();
-                qcv.wait_for(lk, std::chrono::seconds(20), [&] { return stopReq || !q.empty() || testReq || cfgChanged; });
+                qcv.wait_for(lk, cmdPoll.load() ? std::chrono::milliseconds(250) : std::chrono::milliseconds(20000), [&] { return stopReq || !q.empty() || testReq || cfgChanged; });
                 if (stopReq) break;
                 if (!q.empty()) { ev = std::move(q.front()); q.pop_front(); have = true; }
                 test = testReq; testReq = false;
@@ -562,7 +598,7 @@ struct Hub::Impl {
             { std::lock_guard<std::mutex> lk(mu); s = set; }
             {   // another broker, login or discovery setting: drop the old connection and try at once
                 const MqttSettings& m = s.mqtt;
-                const std::string key = m.host + "|" + std::to_string(m.port) + "|" + (m.tls ? "t" : "p") + "|" + m.user + "|" + m.password + "|" + m.clientId + "|" + (m.haDiscovery ? m.haBase : "-");
+                const std::string key = m.host + "|" + std::to_string(m.port) + "|" + (m.tls ? "t" : "p") + "|" + m.user + "|" + m.password + "|" + m.clientId + "|" + (m.haDiscovery || m.commands ? m.haBase : "-") + (m.commands ? "|c" : "");
                 if (key != cfgKey) { cfgKey = key; if (client.connected()) client.disconnect(); nextTry = 0; backoff = 2; }
             }
             if (!s.mqtt.enabled || s.mqtt.host.empty()) {
@@ -570,9 +606,17 @@ struct Hub::Impl {
                 haSent = false;
                 std::lock_guard<std::mutex> lk(mu);
                 st.mqttStatus = "off";
-            } else if (!have && !test && client.connected() && client.idleSeconds() > 30) {
-                std::string e;
-                if (!client.ping(e)) { setMqttStatus("waiting to retry: " + e); nextTry = clock() + backoff; }
+            } else {
+                if (s.mqtt.commands && !commandFilter(s.mqtt.haBase).empty()) {   // connect without waiting for an event, then read what the broker sends
+                    if (!client.connected()) ensureMqtt(s);
+                    std::string e;
+                    if (client.connected() && !client.poll(5, e)) { setMqttStatus("waiting to retry: " + e); nextTry = clock() + backoff; }
+                    publishCommandResults(s.mqtt);
+                }
+                if (!have && !test && client.connected() && client.idleSeconds() > 30) {
+                    std::string e;
+                    if (!client.ping(e)) { setMqttStatus("waiting to retry: " + e); nextTry = clock() + backoff; }
+                }
             }
             if (!s.anyEnabled()) { std::lock_guard<std::mutex> lk(qmu); q.clear(); continue; }
             if (test) {
@@ -601,6 +645,7 @@ void Hub::setSettings(const Settings& s) {
 
 Settings Hub::settings() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->set; }
 void Hub::setPost(PostFn f) { std::lock_guard<std::mutex> lk(p_->mu); p_->post = std::move(f); }
+void Hub::setCommandHandler(CommandFn f) { std::lock_guard<std::mutex> lk(p_->mu); p_->cmdFn = std::move(f); }
 void Hub::setClock(std::function<double()> now) { p_->clock = std::move(now); }
 
 void Hub::submit(const au::Event& ev) {
