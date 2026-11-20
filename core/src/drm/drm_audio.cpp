@@ -339,7 +339,8 @@ struct AudioDecoder::Impl {
         open = true;
         char b[120];
         snprintf(b, sizeof b, "xHE-AAC, %.1f kHz %s", cfg.rateHz() / 1000.0, cfg.mode == 2 ? "stereo" : "mono");
-        info = b; baseInfo = b;
+        // FFmpeg is only the fallback: say why libfdk-aac is not the one in use, so a silent service is not a mystery
+        info = std::string(b) + " (FFmpeg" + (fdkWhy.empty() ? std::string() : "; " + fdkWhy) + ")"; baseInfo = info;
         return true;
     }
 
