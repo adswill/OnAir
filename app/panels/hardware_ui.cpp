@@ -245,7 +245,7 @@ std::vector<UsbLine> probeUsb() {
     std::vector<UsbRadioSeen> radios;
     for (const auto& r : dect2::usbRadiosPresent()) radios.push_back(UsbRadioSeen{r.radio, r.vid, r.pid, r.problem});
     std::vector<std::string> hints = dect2::usbRadioHints();
-    for (auto* more : {&dect2::sdrplayApiHints, &dect2::spectranApiHints, &dect2::limeLibraryHints})
+    for (auto* more : {&dect2::sdrplayApiHints, &dect2::spectranApiHints, &dect2::rsaApiHints, &dect2::limeLibraryHints})
         for (auto& h : more()) hints.push_back(h);
     for (auto& l : usbRadioLines(radios, hints)) out.push_back(l);
     return out;
