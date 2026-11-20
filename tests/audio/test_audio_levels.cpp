@@ -110,6 +110,20 @@ int main() {
         for (double t = 0; t < 6.0; t += buf.size() / kRate) { syn->generate(buf.data(), buf.size()); r.feed(buf.data(), buf.size()); }
         row(q.name, m, 48000);
     }
+    {   // the loudness boost: speech-level audio gets louder, a full-scale peak never exceeds 1
+        setOutputBoostDb(kDefaultBoostDb);
+        const float g = outputBoostGain().load();
+        double e0 = 0, e1 = 0; float pk = 0;
+        for (int i = 0; i < 48000; i++) {
+            const float x = 0.0707f * 1.4142f * std::sin(0.05f * (float)i);   // -23 dBFS RMS sine
+            const float y = softLimit(x * g);
+            e0 += x * x; e1 += y * y;
+            pk = std::max(pk, std::fabs(softLimit(2.f * std::sin(0.05f * (float)i) * g)));
+        }
+        const double gain = 10 * std::log10(e1 / e0);
+        printf("boost %.1f dB measured, loudest peak %.3f\n", gain, pk);
+        if (gain < kDefaultBoostDb - 1.5 || pk > 1.0f) { printf("FAIL: loudness boost\n"); fails++; }
+    }
     printf(fails ? "FAILED\n" : "OK\n");
     return fails ? 1 : 0;
 }

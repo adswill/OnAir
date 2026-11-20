@@ -133,6 +133,7 @@ inline const std::vector<Info>& table() {
         {"fmWarm", kAudioC, N_("FM warm sound"), N_("A gentle -3 dB above 6 kHz."), "tone warm", K::Bool, 0},
         {"fmAudioBw", kAudioC, N_("FM audio bandwidth"), N_("Full is 15 kHz; narrower is quieter on a weak station."), "audio bandwidth filter", K::Choice, 0, 0, 0, N_("Full (15 kHz)|12 kHz|8 kHz|5 kHz"), "0,12000,8000,5000"},
         {"smoothGaps", kAudioC, N_("Hide short drop-outs"), N_("Fills short gaps in TV and DAB sound instead of a click."), "conceal gaps drop click", K::Bool, 0, 0, 0, nullptr, nullptr, "", true},
+        {"audioBoostDb", kAudioC, N_("Loudness boost (dB)"), N_("Extra gain after the volume slider, with a soft limiter against clipping. Raise it when the sound is too quiet even at full volume; 0 is the old level."), "loud louder quiet quieter volume gain boost level low", K::Float, 9, 0, 24, nullptr, nullptr, "", true, false, "%.0f"},
         {"audioRate", kAudioC, N_("Sound card rate (Hz)"), N_("The sample rate of the sound card input and output."), "sample rate sound card", K::Choice, 48000, 0, 0, "8000|16000|22050|24000|32000|44100|48000|96000|192000", "8000,16000,22050,24000,32000,44100,48000,96000,192000", "", true, true},
         {"iecDevice", kAudioC, N_("Passthrough output"), N_("The output that goes to the receiver. Empty: the TV sound's output. Linux: an ALSA device such as hdmi:CARD=0,DEV=0 (the receiver's HDMI port)."), "passthrough bitstream device alsa hdmi", K::Text, 0, 0, 0, nullptr, nullptr, "", true},
         // ---- Recording and files
