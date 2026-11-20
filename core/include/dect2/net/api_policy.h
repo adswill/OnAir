@@ -49,7 +49,7 @@ Size checkSizes(size_t headerBytes, const std::string& contentLengthHeader, size
 
 // ---- routes
 enum class Ep {
-    None, Page, Index, Status, Devices, Modes, Telemetry, Spectrum, Rotator, Ws, Events, Memories, Sessions, Scheduler, Audio, Recording,
+    None, Page, Index, Status, Devices, Modes, Telemetry, Spectrum, Rotator, Ws, Events, Memories, Sessions, Scheduler, Audio, Recording, Metrics,
     Start, Stop, Mode, Frequency, SampleRate, Gain, AutoGain, Bandwidth, Squelch, Volume, Mute, RecordStart, RecordStop,
     RotatorGoto, RotatorStop, RotatorPark, TxStatus, TxStart, TxStop, Extra
 };
@@ -107,5 +107,20 @@ std::string rigctlHandle(const std::string& line, RigctlRadio& radio, bool& quit
 // cannot talk to this port. The three-argument overload above is a session with required == false (no token), for the tests of the parser.
 struct RigctlSession { bool required = false; std::string token; bool authed = false; int badAuth = 0; };
 std::string rigctlHandle(const std::string& line, RigctlRadio& radio, bool& quit, RigctlSession& session);
+
+// ---- GET /api/v1/metrics: OpenMetrics / Prometheus text (scrape it from Prometheus or Grafana Agent)
+struct Metrics {
+    bool running = false;
+    bool live = false;            // a live radio (loss counters only mean something then)
+    double frequencyHz = 0, sampleRateHz = 0, gainDb = 0;
+    uint64_t droppedSamples = 0;  // the OnAir side, in samples
+    double radioLossSec = 0, cpuLossSec = 0;   // seconds of signal lost on each side
+    double loadPct = 0;           // the receiver's share of real time (100 = just keeping up)
+    double deliveredPct = -1;     // samples the radio delivered, percent of its rate; < 0: not measured yet
+    uint64_t events = 0;          // decoded messages since the program started
+    std::string mode, device;     // labels of onair_info
+};
+// Text exposition format 0.0.4: HELP and TYPE lines, label values escaped (\\, \", newline). Never contains a secret: only what /status shows.
+std::string metricsText(const Metrics& m);
 
 } // namespace dect2::apipol
