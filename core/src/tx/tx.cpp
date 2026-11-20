@@ -756,6 +756,7 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
         } else {
             TxParams tp = s.tx;
             tp.payload = true;
+            if (tp.plpCod >= 6) tp.plpShort = true;   // the 1/3 and 2/5 codes are short-frame codes
             auto ts = std::make_shared<std::function<void(uint8_t*)>>();   // the padding needs the bit rate, which the generator knows once built
             tp.tsSource = [ts](uint8_t* pk) { (*ts)(pk); };
             auto gen = std::make_shared<T2Generator>(tp);
