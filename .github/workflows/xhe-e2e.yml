@@ -1,0 +1,72 @@
+# DRM xHE-AAC with a real encoder: exhale encodes a 1 kHz tone to xHE-AAC, tests/drm/test_drm_xhe_e2e.cpp sends its access units through the OnAir DRM
+# transmitter, receiver and the real libfdk-aac USAC decoder, and checks that the tone comes out. Manual (the build of exhale and the test take about 15 min).
+name: DRM xHE-AAC end to end
+on:
+  workflow_dispatch:
+    inputs:
+      exhale_ref:
+        description: "exhale git ref (default: the default branch)"
+        default: ""
+      preset:
+        description: "exhale preset 1-9 (bitrate class; higher = more bits)"
+        default: "3"
+      rate:
+        description: "sample rate of the test tone in Hz (xHE rates DRM carries: 16000 24000 32000 48000)"
+        default: "48000"
+permissions:
+  contents: read
+concurrency:
+  group: xhe-e2e-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  e2e:
+    name: DRM xHE-AAC end to end
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPRESS: "true"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies
+        uses: ./.github/actions/linux-deps
+        with: { extra: "libfdk-aac-dev" }
+      - name: Make sure libfdk-aac is there (multiverse)
+        run: |
+          ldconfig -p | grep -q libfdk-aac || { sudo add-apt-repository -y multiverse && sudo apt-get update && sudo apt-get install -y libfdk-aac2 libfdk-aac-dev; }
+          ldconfig -p | grep libfdk-aac
+      - name: Build exhale
+        env: { REF: "${{ inputs.exhale_ref }}" }
+        run: |
+          git clone https://gitlab.com/ecodis/exhale.git "$RUNNER_TEMP/exhale"
+          cd "$RUNNER_TEMP/exhale"
+          [ -z "$REF" ] || git checkout "$REF"
+          git log --oneline -1
+          make -j4
+          EX=$(find . -name exhale -type f -perm -u+x | head -1)
+          echo "EXHALE=$PWD/${EX#./}" | tee -a "$GITHUB_ENV"
+      - name: Make the test file (1 kHz tone, 6 s, xHE-AAC)
+        env: { PRESET: "${{ inputs.preset }}", RATE: "${{ inputs.rate }}" }
+        run: |
+          python3 - <<'PY'
+          import math, os, struct, wave
+          rate = int(os.environ["RATE"])
+          w = wave.open("tone.wav", "wb"); w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
+          w.writeframes(b"".join(struct.pack("<h", int(9000 * math.sin(2 * math.pi * 1000 * i / rate))) for i in range(rate * 6)))
+          w.close()
+          PY
+          "$EXHALE" "$PRESET" tone.wav tone.m4a
+          ls -l tone.m4a
+          ffprobe -hide_banner tone.m4a 2>&1 | tail -5 || true
+      - name: Build the test
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build -j 4 --target test_drm_xhe_e2e
+      - name: Run
+        run: |
+          export DECT2_XHE_FILE="$PWD/tone.m4a"
+          export DECT2_FDKAAC_LIB="$(ldconfig -p | awk '/libfdk-aac\.so\.2 /{print $NF; exit}')"
+          echo "libfdk-aac: $DECT2_FDKAAC_LIB"
+          ctest --test-dir build -R '^drm_xhe_e2e$' --output-on-failure -V --timeout 900
