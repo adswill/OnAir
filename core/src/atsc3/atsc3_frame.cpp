@@ -25,6 +25,34 @@ BicmConfig plpBicm(const FramePlp& p) {
     return c;
 }
 
+double ldmInjectionDb(int code) {
+    if (code < 0 || code > 30) return -1;
+    return code <= 10 ? 0.5 * code : 6.0 + (code - 11);
+}
+
+LdmCore ldmCoreOf(const L1DetailSubframe& sf, const L1DetailPlp& plp) {
+    LdmCore l;
+    if (plp.layer != 0 || plp.size <= 0) return l;
+    for (const auto& q : sf.plps) {
+        if (q.layer != 1 || q.size <= 0 || q.start >= plp.start + plp.size || plp.start >= q.start + q.size) continue;
+        const double db = ldmInjectionDb(q.ldmInjectionLevel);
+        if (db < 0) continue;
+        l.on = true;
+        l.alpha2 = std::pow(10.0, -db / 10.0);
+        l.beta = 1.0 / std::sqrt(1.0 + l.alpha2);
+        break;
+    }
+    return l;
+}
+
+void ldmCoreCell(const LdmCore& l, cf32& cell, double& noise, float* weight) {
+    if (!l.on) return;
+    const double b2 = l.beta * l.beta, n = noise / b2 + l.alpha2;
+    cell /= (float)l.beta;
+    if (weight && *weight > 0 && noise > 0) *weight = (float)(n / (noise / (b2 * *weight) + l.alpha2));   // the cell's noise was noise / w
+    noise = n;
+}
+
 static SubframeParams subframeFrom(const L1Basic& l1, const L1Detail& d) {
     SubframeParams s;
     s.fftSize = fftFromCode(l1.firstSubFftSize);
@@ -230,6 +258,7 @@ FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
             Bicm bicm(bc);
             PlpAlloc a;
             a.start = pl.start; a.size = pl.size; a.dispersed = pl.type == 1; a.numSubslices = pl.numSubslices; a.subsliceInterval = pl.subsliceInterval;
+            const LdmCore ldm = ldmCoreOf(d.subframes[(size_t)si], pl);   // the Core layer of an LDM pair: the Enhanced layer is noise
             auto planeCells = [&](int first, int count, std::vector<cf32>& cells, double& nsum, std::vector<float>* wout = nullptr) {
                 cells.resize((size_t)count);
                 if (wout) wout->assign((size_t)count, 1.f);
@@ -237,8 +266,10 @@ FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
                 for (int i = 0; i < count; i++) {
                     long idx = plpCellIndex(a, first + i);
                     cells[(size_t)i] = idx >= 0 && idx < (long)all.size() ? all[(size_t)idx] : cf32(0, 0);
-                    nsum += idx >= 0 && idx < (long)noise.size() ? noise[(size_t)idx] : 0;
+                    double n = idx >= 0 && idx < (long)noise.size() ? noise[(size_t)idx] : 0;
                     if (wout) (*wout)[(size_t)i] = idx >= 0 && idx < (long)weight.size() ? weight[(size_t)idx] : 0.f;
+                    ldmCoreCell(ldm, cells[(size_t)i], n, wout ? &(*wout)[(size_t)i] : nullptr);
+                    nsum += n;
                 }
             };
             if (bicm.ok() && pl.tiMode == 1 && pl.layer == 0 && a.size > 0) {

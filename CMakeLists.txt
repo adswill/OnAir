@@ -2605,6 +2605,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_atsc3_cticsi tests/atsc3/test_atsc3_cticsi.cpp)   # 4.1: channel state through the convolutional time interleaver (docs/SENSITIVITY-4.1-TV.md)
   target_link_libraries(test_atsc3_cticsi PRIVATE dect2core)
   add_test(NAME atsc3_cticsi COMMAND test_atsc3_cticsi)
+  add_executable(test_atsc3_ldm tests/atsc3/test_atsc3_ldm.cpp)   # the Core layer of LDM through the CTI: Enhanced layer as noise, erasure limit
+  target_link_libraries(test_atsc3_ldm PRIVATE dect2core)
+  add_test(NAME atsc3_ldm COMMAND test_atsc3_ldm)
 
   add_executable(test_atsc3_alp tests/atsc3/test_atsc3_alp.cpp)
   target_link_libraries(test_atsc3_alp PRIVATE dect2core)
