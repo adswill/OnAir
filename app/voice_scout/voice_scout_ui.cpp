@@ -464,7 +464,7 @@ void voiceScoutWindow(App& a) {
         else H.lastHop = ImGui::GetTime();
     }
     if (!a.voiceScoutOpen) return;
-    ImGui::SetNextWindowSize(ImVec2(760 * gUi, 485 * gUi), ImGuiCond_FirstUseEver);
+    firstWindowSize(760 * gUi, 485 * gUi);
     if (!ImGui::Begin(trw("Voice scout"), &a.voiceScoutOpen)) { ImGui::End(); return; }
     ImGui::Text("Spectrum range: %.6f - %.6f MHz (zoom/pan the spectrum to change)", H.fromMHz, H.toMHz);
     ImGui::BeginDisabled(H.scanning);
