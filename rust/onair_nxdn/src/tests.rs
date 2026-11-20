@@ -74,3 +74,15 @@ fn message_round_trips() {
     assert!(!msg::parse(&bits[..70], &mut p));
     assert_eq!(p.typ, msg::SD_DATA);
 }
+
+#[test]
+fn voice_call_assignment_round_trips() {
+    let m = msg::Msg { typ: msg::VCALL_ASSGN, call_type: 1, option: 0, src: 1001, dst: 2002, channel: 517, ..Default::default() };
+    let mut bits = [0u8; 80];
+    assert_eq!(msg::build(&m, &mut bits), 58);
+    let mut p = msg::Msg::default();
+    assert!(msg::parse(&bits[..58], &mut p));
+    assert_eq!(p, m);
+    assert!(!msg::parse(&bits[..40], &mut p));
+    assert_eq!(msg::msg_name(msg::VCALL_ASSGN), "VCALL_ASSGN\0");
+}

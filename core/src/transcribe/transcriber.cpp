@@ -364,6 +364,7 @@ void Transcriber::process(Job& j) {
     e.lang = r.lang.empty() && so.language != "auto" ? so.language : r.lang;
     e.translation = translation;
     e.confidence = r.confidence;
+    e.confidenceAvailable = r.confidenceAvailable;
     e.turn = j.turn;
     std::function<std::string(const CallsignHit&)> res;
     std::function<void(const TranscriptEntry&)> cb;
@@ -392,4 +393,17 @@ std::shared_ptr<SpeechBackend> makeWhisperBackend(const std::string&, int, std::
 bool whisperAvailable() { return false; }
 const char* whisperLibraryVersion() { return "Not available"; }
 }  // namespace dect2
+#endif
+
+#ifndef DECT2_HAVE_MOONSHINE
+namespace dect2 {
+std::shared_ptr<SpeechBackend> makeMoonshineBackend(const std::string&, int, std::string* err) {
+    if (err) *err = "Moonshine supported on Linux desktop only";
+    return nullptr;
+}
+bool moonshineAvailable() { return false; }
+MoonshineDiscoveredLibraries discoverMoonshineLibraries(const std::string&) { return {}; }
+MoonshineEngineInfo moonshineEngineInfo() { return {}; }
+void initializeMoonshineEngineInfo(const std::string&) {}
+}
 #endif

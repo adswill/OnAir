@@ -11,6 +11,8 @@
 #include "dect2/inmc/inmc_pkt.h"
 #include "dect2/inmc/inmc_tel.h"
 #include "ui/msglog_ui.h"
+#include "adsb/adsb_map.h"
+#include "dect2/inmc/inmc_egc.h"
 #include <algorithm>
 #include <cmath>
 #include <cfloat>
@@ -20,7 +22,8 @@ namespace {
 
 struct State {
     bool loaded = false;
-    int viewMode = 0;                    // 0 messages, 1 channels, 2 system
+    int viewMode = 0;                    // 0 messages, 1 channels, 2 system, 3 threads, 4 map
+    adsbmap::View map;                   // the map of the warning areas
     int minPrio = 0;                     // show messages of at least this priority
     int kindFilter = 0;                  // 0 all, 1 SafetyNET, 2 FleetNET
     uint64_t selected = 0;               // key of the message in the reading pane (0 = none)
@@ -181,9 +184,82 @@ void messageView(App& a) {
     ImGui::EndChild();
 }
 
-void channelView(const App& a) {
+
+// Where a NAVAREA / METAREA warning applies, one point per area (the middle of the sea area, rounded: the exact limits are in IMO / WMO
+// publications, and the address bytes of the packets are not decoded). Index = area number 1..21.
+struct AreaPoint { double lat, lon; };
+const AreaPoint kAreaCentre[22] = {
+    {0, 0},
+    {55, -10}, {42, -15}, {37, 15}, {35, -55}, {-20, -30}, {-45, -45}, {-35, 15}, {12, 70}, {22, 62}, {-25, 120}, {32, 140},
+    {35, -135}, {55, 160}, {-40, 175}, {-35, -90}, {-10, -90}, {52, -130}, {72, -95}, {70, 10}, {75, 60}, {75, 140},
+};
+
+// the area number of a message ("NAVAREA IV", "METAREA 9"): 0 when its text names none
+int areaOf(const dect2::InmcMessage& m) {
+    const size_t sp = m.navarea.rfind(' ');
+    return sp == std::string::npos ? 0 : dect2::inmc::areaNumberFromText(m.navarea.substr(sp + 1));
+}
+
+// The messages on a map of the warning areas: a ring per area, coloured by the highest priority heard there (safety, urgency, distress); a click
+// selects the newest message of that area, which the reading pane under the map shows in full.
+void mapView(App& a) {
+    const dect2::InmcTelemetry& t = a.rx.inmc;
+    const bool on = live(a);
+    struct Slot { int n = 0; int prio = 0; uint64_t newest = 0; };
+    Slot slot[22];
+    if (on) for (const auto& m : t.messages) {
+        const int ar = areaOf(m);
+        if (ar < 1 || ar > 21 || !passes(m)) continue;
+        Slot& sl = slot[ar];
+        sl.n++; sl.prio = std::max(sl.prio, m.priority);
+        if (!sl.newest) sl.newest = keyOf(m);   // the list is newest first
+    }
+    ImGui::TextDisabled("Priority"); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(90 * gUi);
+    static const char* prios[] = {"all", "safety +", "urgency +", "distress"};
+    ImGui::Combo("##inmprio", &S.minPrio, prios, 4);
+    ImGui::SameLine(0, 12 * gUi);
+    adsbmap::tileControls("never a position");
+    const float H = ImGui::GetContentRegionAvail().y;
+    const ImVec2 size(ImGui::GetContentRegionAvail().x, std::max(160.f * gUi, H * 0.6f));
+    const ImVec2 p0 = ImGui::GetCursorScreenPos();
+    adsbmap::draw(S.map, size);
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
+    ImVec2 click; const bool clicked = adsbmap::clickedAt(click);
+    int hit = 0; float best = 18 * gUi;
+    const dect2::InmcMessage* selMsg = on ? findMsg(t, S.selected) : nullptr;
+    const int selArea = selMsg ? areaOf(*selMsg) : 0;
+    for (int ar = 1; ar <= 21; ar++) {
+        const Slot& sl = slot[ar];
+        if (!sl.n) continue;
+        const ImVec2 q = adsbmap::project(kAreaCentre[ar].lat, kAreaCentre[ar].lon);
+        if (q.x < p0.x - 40 || q.y < p0.y - 40 || q.x > p0.x + size.x + 40 || q.y > p0.y + size.y + 40) continue;
+        const bool sel = selArea == ar;
+        const ImVec4 c = prioColour(sl.prio);
+        const float r = (sl.prio >= 3 ? 11.f : 8.f) * gUi;
+        dl->AddCircleFilled(q, r, ImGui::ColorConvertFloat4ToU32(ImVec4(c.x, c.y, c.z, 0.35f)));
+        dl->AddCircle(q, r, ImGui::ColorConvertFloat4ToU32(c), 24, sel ? 3.f : 1.8f);
+        char lb[24]; snprintf(lb, sizeof lb, "%s %d", dect2::inmc::romanNumeral(ar).c_str(), sl.n);
+        const ImVec2 ts = ImGui::CalcTextSize(lb);
+        dl->AddText(ImVec2(q.x - ts.x / 2, q.y - ts.y / 2), IM_COL32(255, 255, 255, 255), lb);
+        const float d = std::hypot(q.x - click.x, q.y - click.y);
+        if (clicked && d < best) { best = d; hit = ar; }
+    }
+    if (hit) S.selected = slot[hit].newest;
+    dl->PopClipRect();
+    if (!on) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to see messages on the map"); ImGui::PopTextWrapPos(); }
+    else ImGui::TextDisabled("One ring per NAVAREA / METAREA, at the middle of its sea area (approximate). Red: distress, amber: urgency, blue: safety. Click a ring to read its newest message.");
+    ImGui::BeginChild("##inmmapdet", ImVec2(0, 0));
+    readingPane(a, on ? findMsg(t, S.selected) : nullptr);
+    ImGui::EndChild();
+}
+
+void channelView(App& a) {
     const dect2::InmcTelemetry& t = a.rx.inmc;
     if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to see the channel"); ImGui::PopTextWrapPos(); } return; }
+    if (ImGui::Button("Clear stations##inmles")) a.engine.inmc().reset();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Forget the stations (LES) and channels found so far and search the band again. The messages stay.");
     char b[160];
     snprintf(b, sizeof b, "%s, carrier %s, frames %s", stateName(t.state), t.carrierLock ? "locked" : "not locked", t.frameLock ? "in step" : "not found"); kvLine(a, "state", b);
     snprintf(b, sizeof b, "%u  (%s)", t.frameNumber, t.ncs.valid ? t.ncs.frameTime.c_str() : "-"); kvLine(a, "frame number", b);
@@ -255,9 +331,10 @@ void systemView(const App& a) {
 void tab(App& a) {
     loadState();
     kit::modeHeader({17, "Inmarsat-C", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("inmcv", S.viewMode, {{tr("Live"), 0}, {tr("Threads"), 3}, {tr("Channel"), 1, true}, {tr("System"), 2, true}});
+    kit::modeNav("inmcv", S.viewMode, {{tr("Live"), 0}, {tr("Map"), 4}, {tr("Threads"), 3}, {tr("Channel"), 1, true}, {tr("System"), 2, true}});
     if (S.viewMode == 3) { kit::sessionItems(17, 2, "inmc"); return; }
     if (S.viewMode == 0) messageView(a);
+    else if (S.viewMode == 4) mapView(a);
     else if (S.viewMode == 1) channelView(a);
     else systemView(a);
 }

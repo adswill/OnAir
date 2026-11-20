@@ -19,6 +19,7 @@ struct Fifo { std::deque<uint8_t> bytes; };   // whole 188 byte packets, oldest 
 std::mutex gMu;
 std::map<int, Fifo> gFifo;
 std::map<int, FrameSink> gSink;
+std::map<int, AudioSink> gAudioSink;
 std::map<int, double> gRate;                   // bit/s of each running generator with Output::Transmitter
 constexpr size_t kMaxQueued = 188u * 4000;     // about 6 MB: at 10 Mbit/s a little over 4 s; the oldest packets go first when the transmitter is slower
 }
@@ -115,6 +116,14 @@ void generatorPublishFrame(int id, int w, int h, const uint8_t* rgb24) {
     std::lock_guard<std::mutex> lk(gMu);   // the sink is short (a copy); clearing waits for it, so it never runs after its owner has gone
     auto it = gSink.find(id);
     if (it != gSink.end()) it->second(w, h, rgb24);
+}
+
+void setGeneratorAudioSink(int id, AudioSink s) { std::lock_guard<std::mutex> lk(gMu); if (s) gAudioSink[id] = std::move(s); else gAudioSink.erase(id); }
+bool generatorHasAudioSink(int id) { std::lock_guard<std::mutex> lk(gMu); return gAudioSink.count(id) != 0; }
+void generatorPublishAudio(int id, const float* stereo, int frames, int rate) {
+    std::lock_guard<std::mutex> lk(gMu);   // as the frame sink: short (into a ring), and never called after it was cleared
+    auto it = gAudioSink.find(id);
+    if (it != gAudioSink.end() && frames > 0 && rate > 0) it->second(stereo, frames, rate);
 }
 
 // ---- FFmpeg arguments ----------------------------------------------------------------------------------------------------------
