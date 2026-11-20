@@ -274,7 +274,7 @@ void squelchUi(App& a) {
         ImGui::SliderFloat("##gsql", &S.sqDb, -130, 0, "%.0f dBFS");
         if (ImGui::IsItemDeactivatedAfterEdit()) save();
         nxt(4);
-        if (ImGui::SmallButton("Set") && live(a) && T(a).levelDb > -199) { S.sqDb = std::round(T(a).levelDb + 3); save(); }
+        if (ImGui::SmallButton(tr("Set")) && live(a) && T(a).levelDb > -199) { S.sqDb = std::round(T(a).levelDb + 3); save(); }
         tip("Threshold 3 dB over the level now (set it while no one transmits)");
     }
     sMeter(a);

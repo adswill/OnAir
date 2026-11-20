@@ -7,6 +7,8 @@
 #include "../d40/d40_ui.h"
 #include "adsb_internal.h"
 #include "ui/kit/session_list.h"
+#include "ui/streamer.h"
+#include "ui/kit/kit.h"
 #include "ui/kit/mode_frame.h"
 #include "ui/kit/mode_panel.h"
 void vdl2NoteAdsb(const dect2::AdsbTelemetry& t);   // vdl2_ui.cpp: VDL2 links its aircraft to what ADS-B heard
@@ -90,6 +92,7 @@ void setReference(App& a, double lat, double lon) {
 
 // the antenna position as two numbers and the Locate button: in the Tuner section and in the map's "position" menu
 void positionFields(App& a) {
+    if (streamer::hideLocation()) { ImGui::TextDisabled("%s", tr("Position hidden in Streamer mode")); return; }   // no latitude, longitude or locator on screen
     ImGui::SetNextItemWidth(std::min(110 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     double la = S.refLat, lo = S.refLon;
     bool ch = ImGui::InputDouble("##alat", &la, 0, 0, "%.4f N");
@@ -227,7 +230,7 @@ void command(App& a) {
 }
 
 void list(App& a) {
-    if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see aircraft"); ImGui::PopTextWrapPos(); } return; }
+    if (!live(a)) { kit::emptyState(a.engine.running() ? tr("Starting...") : tr("Start the receiver to see aircraft.")); return; }
     if (resultsClearButton("adsb")) a.engine.adsb().clearResults();
     { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%u aircraft, %u with position", a.rx.adsb.aircraftCount, a.rx.adsb.withPosition); ImGui::PopTextWrapPos(); }
     aircraftTable(a, true);
@@ -439,9 +442,9 @@ void syncAdsbReference(App& a) {
     S.pushedLat = S.refLat; S.pushedLon = S.refLon;
 }
 
-void receiverLocation(double& lat, double& lon) { loadState(); lat = S.refLat; lon = S.refLon; }
+void receiverLocation(double& lat, double& lon) { loadState(); lat = streamer::hideLocation() ? 0.0 : S.refLat; lon = streamer::hideLocation() ? 0.0 : S.refLon; }   // Streamer mode: no home position leaves this function
 
-bool receiverLocationSet() { return plat::prefs().has("adsbLat") && plat::prefs().has("adsbLon") && !plat::prefs().getB("adsbLocCleared", false); }
+bool receiverLocationSet() { return !streamer::hideLocation() && plat::prefs().has("adsbLat") && plat::prefs().has("adsbLon") && !plat::prefs().getB("adsbLocCleared", false); }
 
 double receiverAltitudeM() { loadState(); S.refAltM = plat::prefs().getD("rxAltM", S.refAltM); return S.refAltM; }
 // The antenna height above sea level (the one value the ADS-B planner, the sonde screens and the uploads share), -500 .. 9000 m

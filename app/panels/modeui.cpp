@@ -498,6 +498,9 @@ bool wideFamOn(const App& a, int f) {
     const uint64_t m = f < 64 ? a.wideFamMask : a.wideFamMaskHi[f / 64 - 1];
     return (m >> (f & 63)) & 1;
 }
+void applyWideDefaults(App& a) {   // Whole span is on by default for every mode that offers it; the user's later switch (saved per family) wins
+    for (int f = 0; f < 192; f++) if (modeSupportsWide(f)) setWideFam(a, f, true);
+}
 void setWideFam(App& a, int f, bool on) {
     if (f < 0 || f >= 192) return;
     uint64_t& m = f < 64 ? a.wideFamMask : a.wideFamMaskHi[f / 64 - 1];

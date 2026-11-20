@@ -455,6 +455,7 @@ void loadPrefs(App& a) {
         const std::string lo = "wideMask" + std::to_string(k + 2) + "Lo", hi = "wideMask" + std::to_string(k + 2) + "Hi";
         if (d.has(lo.c_str())) a.wideFamMaskHi[k] = (uint64_t)(uint32_t)d.getI(lo.c_str(), 0) | ((uint64_t)(uint32_t)d.getI(hi.c_str(), 0) << 32);
     }
+    if (!d.has("wideDefaultV1")) applyWideDefaults(a);   // Whole span on by default (4.4): once, so a family switched off afterwards stays off
     {   // the whole-span detector's settings
         dect2::WideTuning& w = a.wideTuning;
         w.onDb = d.getD("wideOnDb", w.onDb); w.offDb = d.getD("wideOffDb", w.offDb); w.minSnrDb = d.getD("wideMinSnr", w.minSnrDb);
@@ -523,6 +524,7 @@ void savePrefs(const App& a) {
     saveSpectrumRanges(d, a);
     if (a.rxId > 1) { d.flush(); return; }   // a further receiver keeps only its own radio, mode, frequency and gains: everything else is shared and written by RX 1
     saveKeys(d, a, true);
+    d.setI("wideDefaultV1", 1);
     d.setI("wideMaskLo", (int)(uint32_t)(a.wideFamMask & 0xffffffffu)); d.setI("wideMaskHi", (int)(uint32_t)(a.wideFamMask >> 32));
     for (int k = 0; k < 2; k++) {
         const std::string lo = "wideMask" + std::to_string(k + 2) + "Lo", hi = "wideMask" + std::to_string(k + 2) + "Hi";

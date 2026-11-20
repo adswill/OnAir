@@ -77,6 +77,12 @@ private:
     bool first_ = true;
 };
 
+// ---- status and empty states
+enum class Status { Ok, Warn, Error, Off };
+void statusText(Status st, const char* text);   // a status is never colour alone: a drawn glyph (check, warning, cross, dot) plus the word, in the status colour
+// what an empty plot, table or pane says: the message centred in the room that is left, dim, wrapped; with `action` a primary button under it (true when clicked)
+bool emptyState(const char* message, const char* action = nullptr);
+
 // ---- meters
 void meter(float frac, float width, float warnAt = 0.8f, float errorAt = 0.95f);   // a level bar: ok colour, then warn, then error
 void labelValue(const char* label, const char* fmt, ...);        // a dim label and a value, same line

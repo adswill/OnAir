@@ -184,6 +184,7 @@ std::vector<OptionalLib> optionalLibraries() {
 #else
         const std::vector<std::string> pats = splitBar(d.patLinux);
 #endif
+        if (pats.empty()) continue;   // a library that exists on other systems only (the G33DDC one is Windows only)
         for (size_t i = 0; i < pats.size(); ++i) { if (i) o.files += ", "; o.files += pats[i]; }
         for (const auto& dir : dirs) {
             for (const auto& f : listDir(cache, dir)) {

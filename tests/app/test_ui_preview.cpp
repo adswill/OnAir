@@ -30,7 +30,7 @@ static void paletteTable() {
     // spot values of the literals loadTheme() had before it read palette_data.h
     CHECK(pack(uipal::palette(3).accent) == rgb8(59, 130, 196), "Dev A accent");
     CHECK(pack(uipal::palette(4).accent) == rgb8(127, 217, 98), "Dev B accent");
-    CHECK(pack(uipal::palette(5).accent) == rgb8(150, 112, 255), "Studio accent");
+    CHECK(pack(uipal::palette(5).accent) == rgb8(64, 186, 170), "Studio accent");
     CHECK(pack(uipal::palette(6).accent) == rgb8(255, 176, 0), "Mono Pro accent");
     CHECK(pack(uipal::palette(0).accent) == pack(0.86f, 0.65f, 0.30f), "terminal accent");
     CHECK(pack(uipal::palette(1).bg) == pack(0.165f, 0.168f, 0.172f), "instrument background");
@@ -45,6 +45,13 @@ static void paletteTable() {
     CHECK(accents.size() == (size_t)uipal::kNumPalettes, "every palette has its own accent (%zu)", accents.size());
     CHECK(uipal::metrics(5).frameRounding > uipal::metrics(3).frameRounding, "Studio is rounder than Dev A");
     CHECK(uipal::metrics(6).padY < uipal::metrics(5).padY, "Mono Pro is denser than Studio");
+    // text and control outlines meet WCAG on the window colour (Daylight is checked after the Light pass)
+    for (int n = 0; n < uipal::kNumPalettes; n++) {
+        if (n == 7) continue;
+        const uipal::Palette p = uipal::palette(n);
+        CHECK(uipal::ratio(p.dim, p.bg) >= 4.5f, "palette %d: dim text is %.2f:1 on the window", n, uipal::ratio(p.dim, p.bg));
+        CHECK(uipal::ratio(uipal::controlEdge(n), p.bg) >= 3.f, "palette %d: control outline is %.2f:1 on the window", n, uipal::ratio(uipal::controlEdge(n), p.bg));
+    }
 }
 
 static void themes() {
@@ -75,7 +82,8 @@ static void themes() {
     CHECK(frameTurned(day) && describe(day).light && lum(describe(day).bg) > 0.8f, "Daylight is light");
     CHECK(!frameTurned(with(day, Opt::Mode, 2)), "High contrast wins over Light");
     // the classic interface
-    const Desc cl = previewFor(cur, Opt::NewUi, 0);
+    Look classicFont = cur; classicFont.typography = 0;   // the default font look is Clean, which rounds the classic panes more (radius 4)
+    const Desc cl = previewFor(classicFont, Opt::NewUi, 0);
     CHECK(cl.layout == kClassic && cl.accent == pack(0.45f, 0.72f, 0.82f) && cl.radius == 3.f, "classic interface");
 }
 

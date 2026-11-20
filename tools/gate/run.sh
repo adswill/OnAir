@@ -45,6 +45,7 @@ android_generated() {
 step "shell syntax" shell_syntax
 step "workflow YAML" workflow_yaml
 step "python syntax" python_syntax
+step "literal colours in panels (tools/lint/ui_literals.py, only goes down)" python3 tools/lint/ui_literals.py
 step "FFI widths" python3 tools/check_ffi_widths.py
 step "CI test selection (tools/ci_select.py)" python3 tools/test_ci_select.py
 step "mode numbers (source)" python3 tools/gate/gate_check.py modes

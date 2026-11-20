@@ -22,6 +22,7 @@ void loadTheme(int n) {
         auto v = [](const uipal::C& c) { return ImVec4(c.r, c.g, c.b, 1); };
         T.bg = v(P.bg); T.rail = v(P.rail); T.edge = v(P.edge); T.text = v(P.text); T.dim = v(P.dim); T.bright = v(P.bright);
         T.accent = v(P.accent); T.frame = v(P.frame); T.button = v(P.button); T.plotBg = v(P.plotBg);
+        T.ctlEdge = v(uipal::controlEdge(n));
     }
     if (n == 1) {
         const ImVec4 s[8] = {ImVec4(0.90f, 0.91f, 0.92f, 1), ImVec4(0.55f, 0.80f, 0.62f, 1), ImVec4(0.88f, 0.68f, 0.42f, 1), ImVec4(0.62f, 0.72f, 0.92f, 1), ImVec4(0.80f, 0.58f, 0.78f, 1), ImVec4(0.55f, 0.56f, 0.58f, 1), ImVec4(0.88f, 0.84f, 0.56f, 1), ImVec4(0.35f, 0.36f, 0.38f, 1)};
@@ -117,10 +118,10 @@ void accentMenu() {
     ImGui::EndDisabled();
 }
 
-// View > Font look: Current (the default), Clean, Compact. Saved now; the fonts are built at start-up, so it applies after a restart.
+// View > Font look: Clean (the default), Current, Compact. Saved now; the fonts are built at start-up, so it applies after a restart.
 void typographyChoice(bool menu, const App* a) {
     static const char* names[3] = {N_("Current"), N_("Clean"), N_("Compact")};
-    const int cur = (int)plat::prefs().getI("uiTypography", 0);
+    const int cur = (int)plat::prefs().getI("uiTypography", 1);
     ImGui::TextDisabled("%s", tr("Font look (applies after a restart)"));
     for (int i = 0; i < 3; i++) {
         const bool hit = menu ? ImGui::MenuItem(tr(names[i]), nullptr, cur == i) : ImGui::RadioButton(tr(names[i]), cur == i);
@@ -276,7 +277,7 @@ static void applyUiThemeBase(App& a) {
     pal::dev() = a.newUi;
     if (a.newUi) loadTheme(a.uiTheme);
     pal::wfMode() = !a.newUi ? 0 : a.uiTheme == 2 ? 1 : a.uiTheme == 5 ? 3 : a.uiTheme == 6 ? 4 : a.uiTheme == 7 ? 5 : 2;
-    pal::roundK() = a.newUi && a.uiTheme == 5 ? 1.f : a.newUi && a.uiTheme == 7 ? 0.5f : 0.f;
+    pal::roundK() = a.newUi && a.uiTheme == 5 ? 0.6f : a.newUi && a.uiTheme == 7 ? 0.5f : 0.f;
     pal::headingRef() = ImVec4(0, 0, 0, 0);
     const bool devLook = a.newUi && a.uiTheme >= 3;
     if (a.newUi && a.uiTheme >= 5 && a.wf.map == Waterfall::NavyHeat) a.wf.map = -1;   // the 3.5 designs bring their own colour map (-1: follow the theme) unless one was picked
@@ -294,7 +295,7 @@ static void applyUiThemeBase(App& a) {
     s.FrameBorderSize = 1; s.ChildBorderSize = 1; s.PopupBorderSize = 1; s.TabBarBorderSize = 1; s.TabBarOverlineSize = 2 * gUi;
     ImVec4* c = s.Colors;
     c[ImGuiCol_WindowBg] = kBg; c[ImGuiCol_ChildBg] = ImVec4(0, 0, 0, 0); c[ImGuiCol_PopupBg] = ImVec4(0.062f, 0.062f, 0.060f, 1);
-    c[ImGuiCol_Border] = kEdge; c[ImGuiCol_Separator] = kEdge;
+    c[ImGuiCol_Border] = T.ctlEdge; c[ImGuiCol_Separator] = kEdge;
     c[ImGuiCol_FrameBg] = T.frame; c[ImGuiCol_FrameBgHovered] = ImVec4(T.frame.x + 0.05f, T.frame.y + 0.05f, T.frame.z + 0.05f, 1); c[ImGuiCol_FrameBgActive] = ImVec4(T.frame.x + 0.08f, T.frame.y + 0.08f, T.frame.z + 0.08f, 1);
     c[ImGuiCol_Button] = T.button; c[ImGuiCol_ButtonHovered] = ImVec4(T.button.x + 0.06f, T.button.y + 0.06f, T.button.z + 0.06f, 1); c[ImGuiCol_ButtonActive] = ImVec4(T.accent.x * 0.45f, T.accent.y * 0.45f, T.accent.z * 0.45f, 1);
     c[ImGuiCol_Header] = ImVec4(1, 0.95f, 0.85f, 0.06f); c[ImGuiCol_HeaderHovered] = ImVec4(1, 0.95f, 0.85f, 0.10f); c[ImGuiCol_HeaderActive] = ImVec4(0.86f, 0.65f, 0.30f, 0.30f);
@@ -302,13 +303,14 @@ static void applyUiThemeBase(App& a) {
     c[ImGuiCol_TabDimmed] = ImVec4(0, 0, 0, 0); c[ImGuiCol_TabDimmedSelected] = ImVec4(1, 0.95f, 0.85f, 0.04f); c[ImGuiCol_TabSelectedOverline] = kAccent;
     c[ImGuiCol_SliderGrab] = ImVec4(T.frame.x + (T.dim.x - T.frame.x) * 0.7f, T.frame.y + (T.dim.y - T.frame.y) * 0.7f, T.frame.z + (T.dim.z - T.frame.z) * 0.7f, 1);   // darker than the value text drawn over it
     c[ImGuiCol_SliderGrabActive] = kAccent; c[ImGuiCol_CheckMark] = kAccent;
+    c[ImGuiCol_NavCursor] = T.bright;   // keyboard focus ring: the brightest text colour, 2 px, visible on every palette (the Light pass turns it dark)
     c[ImGuiCol_Text] = kText; c[ImGuiCol_TextDisabled] = kDim; c[ImGuiCol_MenuBarBg] = kRail;
     c[ImGuiCol_TableRowBgAlt] = ImVec4(1, 0.95f, 0.85f, 0.02f); c[ImGuiCol_TableHeaderBg] = ImVec4(0, 0, 0, 0); c[ImGuiCol_TableBorderLight] = kEdge; c[ImGuiCol_TableBorderStrong] = kEdge;
     c[ImGuiCol_TextSelectedBg] = ImVec4(0.86f, 0.65f, 0.30f, 0.30f);
     if (devLook) {   // Dev A / Dev B: tool-window look, flat fills, 1 px lines, tight rows, the accent marks the selection only
         auto fade = [](const ImVec4& v, float al) { return ImVec4(v.x, v.y, v.z, al); };
         auto mixc = [](const ImVec4& a, const ImVec4& b, float t) { return ImVec4(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, 1); };
-        s.FrameRounding = 0; s.GrabRounding = 0; s.ScrollbarSize = 11 * gUi; s.GrabMinSize = 7 * gUi;
+        s.FrameRounding = 0; s.GrabRounding = 0; s.ScrollbarSize = 11 * gUi; s.GrabMinSize = 3 * gUi;
         s.FramePadding = ImVec2(5 * gUi, 2 * gUi); s.ItemSpacing = ImVec2(6 * gUi, 3 * gUi); s.TabBarOverlineSize = 2 * gUi; s.TabBarBorderSize = 1;
         c[ImGuiCol_PopupBg] = T.rail; c[ImGuiCol_MenuBarBg] = T.rail; c[ImGuiCol_WindowBg] = T.bg;
         c[ImGuiCol_TitleBg] = T.rail; c[ImGuiCol_TitleBgActive] = T.rail; c[ImGuiCol_TitleBgCollapsed] = T.rail;
@@ -329,17 +331,17 @@ static void applyUiThemeBase(App& a) {
         auto fade = [](const ImVec4& v, float al) { return ImVec4(v.x, v.y, v.z, al); };
         auto mixc = [](const ImVec4& a, const ImVec4& b, float t) { return ImVec4(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t, 1); };
         if (a.uiTheme == 5) {   // Studio
-            s.WindowRounding = 8 * gUi; s.ChildRounding = 10 * gUi; s.FrameRounding = 7 * gUi; s.PopupRounding = 10 * gUi; s.TabRounding = 8 * gUi; s.GrabRounding = 8 * gUi; s.ScrollbarRounding = 8 * gUi;
-            s.FramePadding = ImVec2(9 * gUi, 4.5f * gUi); s.ItemSpacing = ImVec2(9 * gUi, 6 * gUi); s.CellPadding = ImVec2(6 * gUi, 3 * gUi); s.WindowPadding = ImVec2(10 * gUi, 8 * gUi);
-            s.ScrollbarSize = 12 * gUi; s.GrabMinSize = 10 * gUi; s.FrameBorderSize = 0; s.ChildBorderSize = 1; s.TabBarOverlineSize = 0;
-            c[ImGuiCol_ChildBg] = fade(T.rail, 0.55f); c[ImGuiCol_Border] = fade(T.edge, 0.7f);
-            c[ImGuiCol_Button] = mixc(T.button, T.accent, 0.10f); c[ImGuiCol_ButtonHovered] = mixc(T.button, T.accent, 0.35f); c[ImGuiCol_ButtonActive] = T.accent;
+            s.WindowRounding = 3 * gUi; s.ChildRounding = 3 * gUi; s.FrameRounding = 3 * gUi; s.PopupRounding = 3 * gUi; s.TabRounding = 3 * gUi; s.GrabRounding = 2 * gUi; s.ScrollbarRounding = 3 * gUi;
+            s.FramePadding = ImVec2(8 * gUi, 3.5f * gUi); s.ItemSpacing = ImVec2(8 * gUi, 5 * gUi); s.CellPadding = ImVec2(6 * gUi, 3 * gUi); s.WindowPadding = ImVec2(10 * gUi, 8 * gUi);
+            s.ScrollbarSize = 12 * gUi; s.GrabMinSize = 4 * gUi; s.FrameBorderSize = 0; s.ChildBorderSize = 1; s.TabBarOverlineSize = 0;
+            c[ImGuiCol_ChildBg] = T.rail; c[ImGuiCol_Border] = T.ctlEdge;
+            c[ImGuiCol_Button] = T.button; c[ImGuiCol_ButtonHovered] = mixc(T.button, T.bright, 0.10f); c[ImGuiCol_ButtonActive] = T.accent;
             c[ImGuiCol_FrameBg] = T.frame; c[ImGuiCol_FrameBgHovered] = mixc(T.frame, T.accent, 0.15f);
-            pal::headingRef() = mixc(T.bright, T.accent, 0.35f);
+            pal::headingRef() = T.bright;
         } else if (a.uiTheme == 6) {   // Mono Pro
             s.WindowRounding = s.ChildRounding = s.FrameRounding = s.PopupRounding = s.TabRounding = s.GrabRounding = s.ScrollbarRounding = 0;
             s.FramePadding = ImVec2(4 * gUi, 1 * gUi); s.ItemSpacing = ImVec2(5 * gUi, 2 * gUi); s.CellPadding = ImVec2(3 * gUi, 0.5f * gUi); s.WindowPadding = ImVec2(5 * gUi, 4 * gUi);
-            s.ScrollbarSize = 8 * gUi; s.GrabMinSize = 6 * gUi; s.FrameBorderSize = 1; s.ChildBorderSize = 1; s.TabBarOverlineSize = 2 * gUi;
+            s.ScrollbarSize = 8 * gUi; s.GrabMinSize = 3 * gUi; s.FrameBorderSize = 1; s.ChildBorderSize = 1; s.TabBarOverlineSize = 2 * gUi;
             c[ImGuiCol_Button] = T.button; c[ImGuiCol_ButtonHovered] = mixc(T.button, T.accent, 0.22f); c[ImGuiCol_ButtonActive] = mixc(T.button, T.accent, 0.55f);
             c[ImGuiCol_Header] = fade(T.accent, 0.16f); c[ImGuiCol_HeaderHovered] = fade(T.accent, 0.10f); c[ImGuiCol_HeaderActive] = fade(T.accent, 0.30f);
             pal::headingRef() = T.accent;

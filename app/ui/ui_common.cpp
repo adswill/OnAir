@@ -58,7 +58,7 @@ void mapCornerButtons(adsbmap::View& map, bool& follow, const char* tileNote) {
     ImGui::SameLine(0, 2 * gUi);
     if (ImGui::Button("-", ImVec2(26 * gUi, 0))) { map.zoom = std::max(adsbmap::kMinZoom, map.zoom - 1); follow = false; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom out"));
     ImGui::SameLine(0, 6 * gUi);
-    if (ImGui::Button("fit")) follow = true;
+    if (ImGui::Button(tr("fit"))) follow = true;
     ImGui::PopStyleColor();
     ImGui::SameLine(0, 6 * gUi);
     adsbmap::tileControls(tileNote);

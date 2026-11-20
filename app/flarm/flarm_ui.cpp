@@ -122,7 +122,7 @@ void positionControls(App& a) {
     ImGui::SetNextItemWidth(std::min(200 * gUi, ImGui::GetContentRegionAvail().x));
     const bool enter = ImGui::InputText("##flpos", S.posText, sizeof S.posText, ImGuiInputTextFlags_EnterReturnsTrue);
     ImGui::SameLine(0, 5 * gUi);
-    if (ImGui::Button("Set") || enter) {
+    if (ImGui::Button(tr("Set")) || enter) {
         double la, lo;
         if (parseCoordinates(S.posText, la, lo)) { setPosition(a, la, lo); S.msg = "position set"; }
         else if (fromMaidenhead(S.posText, la, lo)) { setPosition(a, la, lo); S.msg = "position set from the locator"; }

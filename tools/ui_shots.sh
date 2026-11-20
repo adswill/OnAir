@@ -65,14 +65,18 @@ SHOTS=(
   "x-light-ft8|--light --pick FT8"
   "x-light-modes|--light --pick ACARS"
   "x-specdemo|--specdemo --pick FM"
+  "s-studio-fm|--pick FM"
+  "s-studio-adsb|--pick ADS-B"
+  "s-studio-settings|--settings"
 )
-[ "$SET" = quick ] && SHOTS=("${SHOTS[@]:0:17}" "${SHOTS[@]:27:3}" "d-settings|--settings" "x-light-dvb|--light --pick DVB")
+[ "$SET" = quick ] && SHOTS=("${SHOTS[@]:0:17}" "${SHOTS[@]:27:3}" "d-settings|--settings" "x-light-dvb|--light --pick DVB" "m-fm|--pick FM" "s-studio-fm|--pick FM" "s-studio-adsb|--pick ADS-B")
 
 shoot() {   # name, args string
   local name=$1 args=$2 home png
   home=$(mktemp -d); png="$OUT/shots/$name.png"
   # "keep full drawing" answered, so the software-OpenGL hint does not cover the bottom right of every shot
   mkdir -p "$home/.config/onair"; echo "lowPowerDraw=2" > "$home/.config/onair/settings.conf"
+  case $name in s-*) echo "uiTheme=5" >> "$home/.config/onair/settings.conf" ;; esac   # s-*: the Studio palette
   # the arguments are one string: split it on " --" so a mode name with spaces stays one argument
   local -a argv=()
   local rest=" $args" part
