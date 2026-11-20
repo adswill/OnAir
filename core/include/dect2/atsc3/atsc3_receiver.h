@@ -73,6 +73,7 @@ private:
     std::condition_variable tsCv_;
     std::deque<uint8_t> tsDirect_;
     bool sawTs_ = false, stopped_ = false;
+    int tsSeen_ = 0;                                          // ALP transport stream packets in a row, no IP packet between (sawTs_ needs several)
     void onAlp(const AlpPacket& a);
     void onUdp(const UdpDatagram& d);
     void startRoute();

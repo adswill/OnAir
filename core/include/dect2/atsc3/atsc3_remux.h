@@ -32,7 +32,9 @@ public:
     // Codecs that could not be put into the output (for example AC-4 audio), by name; those components are dropped.
     std::vector<std::string> droppedCodecs() const;
 
-    // Waits (up to the given time) for components that have not shown an init segment before writing the header.
+    // Waits (up to the given time) for components that have not shown an init segment before writing the header, until a picture and a sound
+    // track are there. A component whose init segment comes later is still taken in: the output starts again with it (new PSI tables, the
+    // timestamps go on, the picture of a component new to the output from its next key frame).
     void setStartupWaitMs(int ms);
     // Paces the output to the timestamps: segments arrive in bursts (a second of picture at once), a player needs the pictures at their rate. The
     // first packet leaves `latencyMs` after it was ready and the others by their timestamps; a stream that falls behind is anchored again.
