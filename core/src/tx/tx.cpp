@@ -744,8 +744,14 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
         native = nativeRateHz(bw);
         if (m.variant == 2) {
             dvbt::Params tp;
-            tp.mode = s.dvbtMode; tp.guard = s.dvbtGuard; tp.mod = s.dvbtMod; tp.crHp = tp.crLp = s.dvbtRate;
+            tp.mode = std::clamp(s.dvbtMode, 0, 2); tp.guard = s.dvbtGuard; tp.mod = s.dvbtMod; tp.crHp = tp.crLp = s.dvbtRate;
+            tp.hier = std::clamp(s.dvbtHier, 0, 3);
+            if (tp.hier) { tp.crLp = std::clamp(s.dvbtRateLp, 0, 4); tp.mod = std::max(tp.mod, (int)dvbt::k16Qam); }   // a hierarchy needs 16-QAM or 64-QAM
+            tp.cellIdLength = s.dvbtCellOn; tp.cellId = s.dvbtCellId & 0xFFFF;
+            tp.indepth = s.dvbtInDepth && tp.mode != dvbt::k8K;   // annex F: 2K and 4K only
+            tp.dvbh = s.dvbtDvbh; tp.timeSlicing = s.dvbtTimeSlicing; tp.mpeFec = s.dvbtMpeFec;
             auto gen = std::make_shared<dvbt::Generator>(tp, namedTs(fileTs, dvbt::netBitrate(tp, native)));
+            if (tp.hier) gen->setLpSource(dvbt::testTsSourceNamed(2, r.serviceId > 0 ? r.serviceId + 100 : 101, "ONAIR LP"));   // the low-priority stream: a second test service
             g = std::make_unique<FrameGen>(native, [gen](std::vector<cf32>& f) { gen->nextSymbol(f); }, 0.25f);
         } else {
             TxParams tp = s.tx;
