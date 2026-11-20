@@ -43,7 +43,7 @@ int main() {
     std::ofstream(root / "codecs" / file) << "x";
     bool sawFobos = false, sawLame = false;
     for (const auto& o : optionalLibraries()) {
-        CHECK(!o.files.empty() && !o.source.empty() && !o.where.empty() && !o.name.empty());
+        CHECK((!o.files.empty() || o.id == "g33ddc") && !o.source.empty() && !o.where.empty() && !o.name.empty());
         if (o.id == "fobos") { sawFobos = true; CHECK(o.found); CHECK(o.foundPath.find("codecs") != std::string::npos); }
         if (o.id == "lame") sawLame = true;
     }

@@ -374,7 +374,7 @@ void mapView(App& a, ImVec2 size) {
     ImGui::SameLine(0, 6 * gUi);
     if (ImGui::Button("follow")) { S.mapFollow = true; if (on && t.fix.valid) { S.map.lat = t.fix.latDeg; S.map.lon = t.fix.lonDeg; } }
     ImGui::SameLine(0, 6 * gUi);
-    if (ImGui::Button("fit")) {
+    if (ImGui::Button(tr("fit"))) {
         S.mapFollow = false;
         double la0 = 90, la1 = -90, lo0 = 180, lo1 = -180;
         int n = 0;

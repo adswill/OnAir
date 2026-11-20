@@ -48,7 +48,7 @@ void compassRose(App& a, ImVec2 size) {
         if (d.kind() == AntennaKind::Dipole)
             for (const DirResult& r : d.results()) dl->AddLine(c, pt(r.heading + 180, R * 0.06f + R * 0.94f * (float)r.score / 100.f), IM_COL32(100, 110, 122, 120), 2.f);
         if (d.state() != DirectionFinder::State::Done) {
-            const float pulse = 0.55f + 0.45f * (float)std::sin(ImGui::GetTime() * 5);
+            const float pulse = pal::pulse(ImGui::GetTime(), 5.f, 0.1f);
             const ImU32 col = IM_COL32(255, 205, 60, (int)(255 * pulse));
             dl->AddLine(pt(d.targetHeading(), R * 0.15f), pt(d.targetHeading(), R), col, 3.f);
             const ImVec2 tip = pt(d.targetHeading(), R + 2), l = pt(d.targetHeading() + 5, R - 16), r2 = pt(d.targetHeading() - 5, R - 16);

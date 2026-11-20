@@ -1206,6 +1206,11 @@ void appResultsSave(App& a, bool now = false);
 // The Clear of a mode's decoded lists, at the top of its list (results_ui.cpp): true when pressed
 bool resultsClearButton(const char* id);
 void scanDbTick(App& a);   // scan_db_ui.cpp: asks to share a finished scan
+bool sharedChannelsAvailable(App& a);   // scan_db_ui.cpp: this mode has a shared channel list
+struct SharedMark { double mhz = 0; std::string label; };
+const std::vector<SharedMark>& sharedMarks(App& a);   // scan_db_ui.cpp: shared channels to label on the spectrum (empty when the toggle is off)
+bool shareChannelAt(App& a, double mhz, bool apply);  // scan_db_ui.cpp: the last scan's channel at this frequency; apply opens the share dialog
+void openSharedChannels(App& a);        // scan_db_ui.cpp: Tools > Shared channel list opens it in the Scan tab
 void tuneToChannel(App& a, const SavedChannel& c);
 void followBandwidth(App& a);
 void setDvbBandwidth(App& a, int idx);   // toolbar_source.cpp: the DVB-T2 / DVB-T width kBw[idx] (manual), or idx < 0 for Automatic; a running receiver follows at once

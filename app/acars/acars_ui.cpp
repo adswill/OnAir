@@ -7,6 +7,7 @@
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
+#include "ui/kit/kit.h"
 #include "ui/kit/mode_frame.h"
 #include "../panels/photo_links_ui.h"
 #include "../adsb/adsb_map.h"
@@ -370,7 +371,7 @@ void mapCanvas(App& a, ImVec2 size) {
     ImGui::SameLine(0, 2 * gUi);
     if (ImGui::Button("-", ImVec2(26 * gUi, 0))) { S.map.zoom = std::max(adsbmap::kMinZoom, S.map.zoom - 1); S.mapFollow = false; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom out"));
     ImGui::SameLine(0, 6 * gUi);
-    if (ImGui::Button("fit")) S.mapFollow = true;
+    if (ImGui::Button(tr("fit"))) S.mapFollow = true;
     ImGui::PopStyleColor();
     ImGui::SameLine(0, 6 * gUi);
     gPred.controls();
@@ -569,7 +570,7 @@ void tab(App& a) {
 }
 
 void list(App& a) {
-    if (!live(a)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "starting" : "start the receiver to see aircraft"); ImGui::PopTextWrapPos(); } return; }
+    if (!live(a)) { kit::emptyState(a.engine.running() ? tr("Starting...") : tr("Start the receiver to see aircraft.")); return; }
     if (resultsClearButton("acars")) a.engine.acars().clearResults();
     const dect2::AcarsTelemetry& t = a.rx.acars;
     { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%zu aircraft, %zu messages", t.aircraft.size(), t.messages.size()); ImGui::PopTextWrapPos(); }

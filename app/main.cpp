@@ -345,8 +345,8 @@ int main(int argc, char** argv) {
 
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
-    {   // the font look saved in View > Font look (Current when never changed); read here, before the fonts load
-        const long v = plat::prefs().getI("uiTypography", 0);
+    {   // the font look saved in View > Font look (Clean when never changed); read here, before the fonts load
+        const long v = plat::prefs().getI("uiTypography", 1);
         typo::setVariant(v == 1 ? typo::Clean : v == 2 ? typo::Compact : typo::Classic);
     }
     {   // #372: the number of decoding threads (0 = none beyond the caller, 1..64), saved as "threads" in the settings; automatic when absent. Read before the first pool use;

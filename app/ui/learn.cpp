@@ -169,7 +169,7 @@ void lessonCard(App& a, ImVec2 disp) {
     ImDrawList* fg = ImGui::GetForegroundDrawList();
     if (haveAnchor) {
         dimAround(fg, disp, lo, hi, p, ImVec2(p.x + W, p.y + H));
-        const float pulse = 0.55f + 0.45f * std::sin((float)ImGui::GetTime() * 4.f);
+        const float pulse = pal::pulse(ImGui::GetTime(), 4.f, 0.1f);
         fg->AddRect(lo, hi, ImGui::ColorConvertFloat4ToU32(R.passed ? pal::okGreen() : pal::accent(pulse)), 3.f, 0, 2.f);
     }
 
