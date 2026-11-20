@@ -105,7 +105,7 @@ const std::vector<PrefKey>& keyTable() {
         shared(num("touchSize", AT(a.touchSize), 2, 0, 4, true)),
         num("tetraSlotMode", AT(a.tetraSlotMode), 0, 0, 3, true), num("tetraSlotNum", AT(a.tetraSlotNum), 1, 1, 4, true),
         num("tetraSlotId", AT(a.tetraSlotId), 0, 0, 16777215, true),
-        num("tetraSingle", AT(a.tetraSingle), 0, 0, 1, true),
+        num("tetraSingle", AT(a.tetraSingle), 0, 0, 1, true), num("tetraPlayUnknown", AT(a.tetraPlayUnknown), 0, 0, 1, true),
         num("tetraSearchPct", AT(a.tetraSearchPct), 72, 1, 99, true),
         num("wfMap3", AT(a.wf.map), cmap::NavyHeat, -1, (int)Waterfall::NumMaps - 1, true),   // 3.0: a new key, everyone starts on Navy heat (the old looks set their own maps)
         flagB("wfAutoFloor", AT(a.wf.autoTrack), true),   // new key with the floor-anchored range (3.0): everyone starts on auto

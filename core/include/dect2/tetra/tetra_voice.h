@@ -66,6 +66,10 @@ struct CallEncryption {
     int encMode = 0;
     bool cellOffersEncryption = false;   // the cell advertises the air interface encryption service (information only: a clear call on such a cell is decoded)
 };
+// Opt-in (default off, a process-wide switch set from the TETRA screen): a call whose set-up was not heard (OnAir tuned in mid-call) is treated as clear
+// when no encrypted PDU was seen in the capture. If it was in fact encrypted, the codec only produces noise; nothing is decrypted either way.
+void setPlayUnknownState(bool on);
+bool playUnknownState();
 VoiceVerdict voiceVerdict(const CallEncryption& e);
 const char* voiceVerdictText(VoiceVerdict v);   // "voice (clear)", "encrypted, not decoded", "encryption state unknown, not decoded"
 

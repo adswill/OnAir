@@ -61,7 +61,7 @@ struct State {
 State S;
 
 // Unencrypted voice: the sink hands each clear traffic frame to the user-installed speech codec and the PCM goes to the speaker.
-// Encrypted calls and calls of unknown encryption state never reach it (tetra_voice.h). OnAir ships no codec.
+// Encrypted calls never reach it, nor do calls of unknown encryption state unless the user turns on "Play calls of unknown state" (tetra_voice.h). OnAir ships no codec.
 dect2::tetra::TetraVoiceSink gVoice;
 dect2::AudioOut gVoiceOut;
 bool gVoiceWired = false;
@@ -242,6 +242,11 @@ void slotPanel(App& a) {
         if (ImGui::Selectable("Search span", !a.tetraSingle)) a.tetraSingle = 0;
         if (ImGui::Selectable("Single carrier", a.tetraSingle != 0)) a.tetraSingle = 1;
         ImGui::EndCombo();
+    }
+    {   bool pu = a.tetraPlayUnknown != 0;
+        ImGui::SameLine(0, 14 * gUi);
+        if (ImGui::Checkbox("Play calls of unknown state", &pu)) a.tetraPlayUnknown = pu ? 1 : 0;
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "When OnAir joins a call after its set-up, nothing says whether it is encrypted. Off (default): such calls are muted. On: they are played when no encrypted signalling is seen in the capture; an encrypted one then sounds like noise. Nothing is decrypted either way.");
     }
     ImGui::SameLine();
     ImGui::TextDisabled("%s", a.tetraSingle ? "only the 25 kHz channel at the dial frequency is filtered out and decoded" : "every carrier in the span is searched for");
@@ -686,6 +691,7 @@ void tick(App& a) {
         dect2::tetra::SlotSelect sel; sel.mode = (dect2::tetra::SlotMode)a.tetraSlotMode; sel.slot = a.tetraSlotNum; sel.id = (uint32_t)a.tetraSlotId;
         a.engine.tetra().setVoiceSlot(sel);
         a.engine.tetra().setSingleCarrier(a.tetraSingle != 0);
+        dect2::tetra::setPlayUnknownState(a.tetraPlayUnknown != 0);
         a.engine.tetra().setSearchBand(a.tetraSearchPct / 100.0);
     }
     if (!S.scanning) return;

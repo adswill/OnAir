@@ -237,6 +237,7 @@ struct App {
     VideoTex video;
     float volume = 1.f;
     int tetraSearchPct = 72;   // TETRA: the middle part of the capture the carrier search covers, % (72 = the flat part of a radio's filter; a wide capture can search more); saved
+    int tetraPlayUnknown = 0;   // TETRA: 1 plays calls whose set-up was not heard (state unknown) when nothing in the capture is encrypted; default 0; saved
     int tetraSingle = 0;   // TETRA carrier choice: 0 search the span, 1 single carrier (one 25 kHz channel at the dial frequency); saved
     int tetraSlotMode = 0, tetraSlotNum = 1, tetraSlotId = 0;   // TETRA 'Listen to': 0 auto, 1 slot (tetraSlotNum 1..4), 2 talkgroup, 3 ISSI (tetraSlotId); saved
     bool muted = false, subsOn = true;
