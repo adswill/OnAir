@@ -118,7 +118,7 @@ const std::map<std::string, Bind>& binds() {
         PS("staleVdl2", -1); PS("staleAcars", -1); PS("staleHfdl", -1); PS("staleAdsb", -1); PS("staleAis", -1); PS("staleUat", -1); PS("staleInmsat", -1); PS("staleCustomMin", 120);
         SB("udpHost", std::string(a.udpHost)); NB("udpPort", a.out.port); NB("udpRtp", a.out.rtp);
         // ---- 4.0
-        SW_PI("startFreqMode", 0); SW_PF("startFreqMhz", 100); SW_PB("autoStartRx", false); SW_PB("reduceMotion", false); SW_PB("streamerMode", false); SW_PB("streamerHideLocation", true); SW_PB("streamerHideNetwork", true); SW_PB("streamerHidePaths", true); SW_PB("doctorAutoOpen", true); SW_PI("sessionRestore", 0); SW_PI("confirmExit", 0);
+        SW_PI("startFreqMode", 0); SW_PF("startFreqMhz", 100); SW_PB("autoStartRx", false); SW_PB("reduceMotion", false); SW_PB("streamerMode", false); SW_PB("streamerHideLocation", true); SW_PB("streamerHideCallsign", false); SW_PB("streamerHideNetwork", true); SW_PB("streamerHidePaths", true); SW_PB("doctorAutoOpen", true); SW_PI("sessionRestore", 0); SW_PI("confirmExit", 0);
         SW_PIA("adsbUnits", 0, adsbui::unitsFromPrefs()); SW_PIA("adsbSpeedUnit", 0, adsbui::unitsFromPrefs());
         NB("specFft", a.specFft);
         m["wfRate"] = Bind{[](App& a) -> double { return a.wf.rowsPerSec; }, [](App& a, double v) { a.wf.setRate((float)v); }, nullptr, nullptr};

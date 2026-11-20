@@ -53,10 +53,10 @@ int main() {
               "wheel action rejects invalid saved values");
     }
     // Streamer tab: the master switch off, the three hide switches on
-    for (const char* k : {"streamerMode", "streamerHideLocation", "streamerHideNetwork", "streamerHidePaths"}) {
+    for (const char* k : {"streamerMode", "streamerHideLocation", "streamerHideCallsign", "streamerHideNetwork", "streamerHidePaths"}) {
         const Info* r = nullptr;
         for (const Info& i : t) if (!strcmp(i.key, k)) r = &i;
-        check(r && r->kind == Kind::Bool && std::string(r->cat) == kStreamer && r->def == (!strcmp(k, "streamerMode") ? 0 : 1), "Streamer row present with its default");
+        check(r && r->kind == Kind::Bool && std::string(r->cat) == kStreamer && r->def == (!strcmp(k, "streamerMode") || !strcmp(k, "streamerHideCallsign") ? 0 : 1), "Streamer row present with its default");
     }
     // reset and changed marker
     const Info* gamma = nullptr;

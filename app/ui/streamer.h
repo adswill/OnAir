@@ -5,6 +5,7 @@
 // a switch per kind of detail; each helper is true only while the master is on, so the panels ask one question.
 //   location  the station position (latitude, longitude, locator, name, height): the maps, the markers and range rings, distance and bearing
 //             from home and the region guess treat the position as "not set"
+//   callsign  the callsigns and the rotator serial saved for the uploads and services (off unless chosen: what needs them stops while hidden)
 //   network   the addresses typed in Settings (UDP output host, update mirror, map tile server)
 //   paths     the data folder
 #pragma once
@@ -15,6 +16,7 @@ namespace streamer {
 
 inline bool on() { return plat::prefs().getB("streamerMode", false); }
 inline bool hideLocation() { return on() && plat::prefs().getB("streamerHideLocation", true); }
+// the saved position and callsigns are also hidden at the settings store (state/rx_prefs.cpp, state/streamer_keys.h), so a panel that reads them directly sees "not set"
 inline bool hideNetwork() { return on() && plat::prefs().getB("streamerHideNetwork", true); }
 inline bool hidePaths() { return on() && plat::prefs().getB("streamerHidePaths", true); }
 
