@@ -29,7 +29,7 @@ int main() {
     for (size_t i = 2000; i + 6 < x.size(); i += 6) {
         cf32 d(0, 0);
         for (int k = 0; k < 6; k++) d += x[i + k + 1] * std::conj(x[i + k]);
-        const double f = std::arg(d) / (2 * M_PI) * c.rate / 1e6;
+        const double f = std::arg(d) / (2 * 3.14159265358979323846) * c.rate / 1e6;
         fLo = std::min(fLo, f); fHi = std::max(fHi, f);
     }
     std::printf("FM-ATV frequency range %.2f .. %.2f MHz\n", fLo, fHi);
