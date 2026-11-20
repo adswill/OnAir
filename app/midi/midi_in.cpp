@@ -19,7 +19,7 @@
 #  include <unistd.h>
 #  include <cerrno>
 #  include <fstream>
-#  include <cstring>
+
 #endif
 
 namespace midi {
@@ -65,7 +65,10 @@ Input::Input() : p_(std::make_unique<Impl>()) {}
 Input::~Input() { close(); }
 bool Input::open(const PortInfo& port) {
     close();
-    const UINT dev = (UINT)std::strtoul(port.id.c_str(), nullptr, 10);
+    char* end = nullptr;
+    const unsigned long devL = std::strtoul(port.id.c_str(), &end, 10);
+    if (port.id.empty() || *end != 0 || devL > 255) { p_->err = "Not a MIDI port."; return false; }
+    const UINT dev = (UINT)devL;
     if (midiInOpen(&p_->h, dev, reinterpret_cast<DWORD_PTR>(&Impl::cb), reinterpret_cast<DWORD_PTR>(&p_->q), CALLBACK_FUNCTION) != MMSYSERR_NOERROR) {
         p_->h = nullptr; p_->err = "The MIDI port could not be opened (another program may be using it)."; return false;
     }
@@ -116,7 +119,10 @@ Input::Input() : p_(std::make_unique<Impl>()) {}
 Input::~Input() { close(); }
 bool Input::open(const PortInfo& pi) {
     close();
-    const ItemCount idx = (ItemCount)std::strtoul(pi.id.c_str(), nullptr, 10);
+    char* end = nullptr;
+    const unsigned long idxL = std::strtoul(pi.id.c_str(), &end, 10);
+    if (pi.id.empty() || *end != 0) { p_->err = "Not a MIDI port."; return false; }
+    const ItemCount idx = (ItemCount)idxL;
     if (idx >= MIDIGetNumberOfSources()) { p_->err = "The MIDI port is gone."; return false; }
     if (MIDIClientCreate(CFSTR("OnAir"), nullptr, nullptr, &p_->client) != noErr ||
         MIDIInputPortCreate(p_->client, CFSTR("OnAir in"), &Impl::readProc, &p_->q, &p_->port) != noErr) { p_->err = "CoreMIDI could not open an input."; close(); return false; }
@@ -141,15 +147,20 @@ std::vector<PortInfo> listPorts() {
     DIR* d = opendir("/dev/snd");
     if (!d) return v;
     while (const dirent* e = readdir(d)) {
-        int card = 0, dev = 0;
-        if (std::sscanf(e->d_name, "midiC%dD%d", &card, &dev) != 2) continue;
-        char path[64], idf[64], name[128] = {};
-        std::snprintf(path, sizeof path, "/dev/snd/%s", e->d_name);
-        std::snprintf(idf, sizeof idf, "/proc/asound/card%d/id", card);
-        std::ifstream f(idf);
+        // "midiC<card>D<device>": parsed by hand, digits only, bounded
+        const std::string fn = e->d_name;
+        const size_t d0 = fn.find('D', 5);
+        if (fn.compare(0, 5, "midiC") != 0 || d0 == std::string::npos || d0 == 5 || d0 + 1 >= fn.size() || fn.size() > 20) continue;
+        const std::string cs = fn.substr(5, d0 - 5), ds = fn.substr(d0 + 1);
+        if (cs.find_first_not_of("0123456789") != std::string::npos || ds.find_first_not_of("0123456789") != std::string::npos) continue;
+        const std::string path = "/dev/snd/" + fn;
         std::string cardId;
-        if (f) std::getline(f, cardId);
-        std::snprintf(name, sizeof name, "%s (card %d, device %d)", cardId.empty() ? "MIDI" : cardId.c_str(), card, dev);
+        {
+            std::ifstream f("/proc/asound/card" + cs + "/id");
+            if (f) std::getline(f, cardId);
+        }
+        if (cardId.size() > 40) cardId.resize(40);
+        const std::string name = (cardId.empty() ? "MIDI" : cardId) + " (card " + cs + ", device " + ds + ")";
         v.push_back({path, name});
     }
     closedir(d);
