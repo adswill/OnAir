@@ -4,6 +4,7 @@
 // Dark "instrument" theme: flat neutral greys, thin rules, one muted accent.
 #pragma once
 #include "imgui.h"
+#include <cmath>
 #include "../gfx/plot.h"
 
 // One accent colour for data and highlights; red / amber / green appear only where they mean a status.
@@ -27,6 +28,10 @@ inline bool& dev() { static bool v = false; return v; }
 // heading text in panels: blue in the classic interface, soft white in the new one
 inline ImVec4& headingRef() { static ImVec4 v(0, 0, 0, 0); return v; }   // a design's own heading colour (alpha 0 = none)
 inline ImVec4 heading() { if (dev() && headingRef().w > 0) return headingRef(); return dev() ? ImVec4(0.92f, 0.90f, 0.84f, 1) : ImVec4(0.45f, 0.75f, 1, 1); }
+// Reduce motion (Settings > Appearance): pulsing indicators stay steady at their bright value instead of breathing. Set by settingsFrame().
+inline bool& reduceMotion() { static bool v = false; return v; }
+// a breathing value between lo and 1 at hz cycles per second, or a steady 1 with reduced motion
+inline float pulse(double timeSec, float radPerSec, float lo) { return reduceMotion() ? 1.f : lo + (1.f - lo) * (0.5f + 0.5f * (float)std::sin(timeSec * radPerSec)); }
 inline bool& panel() { static bool v = false; return v; }   // the Panel layout: status lamps are round LEDs
 inline int& wfMode() { static int m = 0; return m; }   // waterfall colours: 0 classic blue-teal, 1 plain grey, 2 turbo (the dev palettes), 3 Magma (Studio), 4 Amber (Mono Pro), 5 Paper (Daylight)
 inline float& roundK() { static float v = 0; return v; }   // corner-radius factor of the dev looks (Studio rounded, the others square)

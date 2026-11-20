@@ -101,6 +101,7 @@ void settingsStartup(App& a, bool plainStart) {
 
 void settingsFrame(App& a) {
     const int frame = ImGui::GetFrameCount();
+    pal::reduceMotion() = plat::prefs().getB("reduceMotion", false);
     if (gPendingMode && frame >= 2) {
         gPendingMode = false;
         const int fam = (int)plat::prefs().getI("startFamily", -1);

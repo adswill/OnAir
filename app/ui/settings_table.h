@@ -49,6 +49,7 @@ inline const std::vector<Info>& table() {
         {"discordFreq", kGeneral, N_("Show the frequency in Discord"), N_("Include the tuned frequency in the Discord status."), "presence", K::Bool, 1, 0, 0, nullptr, nullptr, "", true},
         // ---- Appearance
         {"uiTheme", kAppearance, N_("Colour palette"), N_("Terminal, Instrument, Mono, Dev A (graphite) or Dev B (terminal green)."), "theme look colours", K::Choice, 3, 0, 0, "Terminal|Instrument|Mono|Dev A (graphite)|Dev B (terminal green)"},
+        {"reduceMotion", kAppearance, N_("Reduce motion"), N_("Indicators that pulse (the transmit lamp, the direction finder, the guided tour) stay steady instead."), "motion animation pulse blink accessibility", K::Bool, 0},
         {"themeMode", kAppearance, N_("Light or high contrast"), N_("Dark (default), light, or black/white/yellow high contrast."), "theme light dark contrast accessibility", K::Custom},
         {"accent", kAppearance, N_("Own accent colour"), N_("Replace the accent colour of the interface."), "colour color theme", K::Custom},
         {"uiVariant", kAppearance, N_("Layout of the interface"), N_("Sidebar (default), Scope, Tiles, Faceplate and the Scope variants, Panel."), "layout variant", K::Choice, 0, 0, 0, "Sidebar|Scope|Tiles|Faceplate|Scope: Cinema|Scope: Meters|Scope: Dock|Panel"},
