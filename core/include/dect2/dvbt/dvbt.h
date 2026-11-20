@@ -53,7 +53,14 @@ inline int symbolsPerFrame() { return 68; }
 inline double netBitrate(const Params& p, double fs) {
     static const double rate[5] = {1.0 / 2, 2.0 / 3, 3.0 / 4, 5.0 / 6, 7.0 / 8};
     const double symSec = (double)(fftN(p.mode) + guardSamples(p.mode, p.guard)) / fs;
-    return dataCarriers(p.mode) * (2.0 * (p.mod + 1)) * rate[p.crHp] * (188.0 / 204.0) / symSec;
+    const int bits = p.hier ? 2 : 2 * (p.mod + 1);   // hierarchical: the high-priority stream is the QPSK part of each cell
+    return dataCarriers(p.mode) * bits * rate[p.crHp] * (188.0 / 204.0) / symSec;
+}
+// The low-priority stream of a hierarchical signal: the cell bits beyond the two of the high-priority stream, at the low-priority code rate
+inline double netBitrateLp(const Params& p, double fs) {
+    static const double rate[5] = {1.0 / 2, 2.0 / 3, 3.0 / 4, 5.0 / 6, 7.0 / 8};
+    const double symSec = (double)(fftN(p.mode) + guardSamples(p.mode, p.guard)) / fs;
+    return dataCarriers(p.mode) * (2.0 * (p.mod + 1) - 2) * rate[p.crLp] * (188.0 / 204.0) / symSec;
 }
 inline int bitsPerCell(int mod) { return 2 * (mod + 1); }
 inline int alphaOf(int hier) { return hier == 2 ? 2 : hier == 3 ? 4 : 1; }

@@ -201,11 +201,14 @@ void modePicker(App& a) {
     }
     const std::set<std::string> favs = modevis::parseList(a.modeFavs);
     items.resize((size_t)kNumModes);
+    // "Only my region": modes used only in other countries than the one set in the setup count as hidden (Show hidden or a search lists them)
+    const bool onlyMyRegion = plat::prefs().getB("modesOnlyMyRegion", false);
+    const std::string myCountry = plat::prefs().getS("locCountry", "");
     for (int i = 0; i < kNumModes; i++) {
         const ModeDef& m = kModes[i];
         Item& it = items[i];
         it.name = m.name; it.groupIdx = m.group; it.tags = m.tags; it.text = baseText[i];
-        it.active = modeSelected(a, m); it.hidden = modeHiddenNow(a, m); it.fav = favs.count(m.name) > 0; it.fits = modeFit(a, m).ok;
+        it.active = modeSelected(a, m); it.hidden = modeHiddenNow(a, m) || (onlyMyRegion && !myCountry.empty() && m.name && dect2::ease::modeNotUsedIn(m.name, myCountry)); it.fav = favs.count(m.name) > 0; it.fits = modeFit(a, m).ok;
     }
     const std::vector<std::string> recent = recentOf(a);
     Query q;
@@ -220,6 +223,12 @@ void modePicker(App& a) {
     ImGui::SameLine(0, 12 * gUi);
     ImGui::Checkbox(tr("Show hidden"), &S.showHidden);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("List the modes you hid in Modes shown (a search finds them anyway)"));
+    ImGui::SameLine(0, 12 * gUi);
+    {
+        bool only = plat::prefs().getB("modesOnlyMyRegion", false);
+        if (ImGui::Checkbox(tr("Only my region"), &only)) plat::prefs().setB("modesOnlyMyRegion", only);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hide the modes that are used only in other countries than the one in the setup (for example DTMB or DVB-T2 when you are in North America). Show hidden lists them again."));
+    }
 
     // ---- tabs ----
     Query qn = q; qn.tab = TabAll; qn.tags = 0;   // counts for the tab labels: everything but the tab and the chips

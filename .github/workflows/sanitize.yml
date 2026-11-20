@@ -1,0 +1,67 @@
+# Sanitizer builds: AddressSanitizer + UndefinedBehaviorSanitizer, and ThreadSanitizer on the threaded parts.
+# Nightly and by hand (Actions tab > Sanitizers > Run workflow). Never a PR gate: sanitized builds are slow.
+# The tests run are a fixed list of core, network and threading tests; add names to the env below as they prove clean.
+name: Sanitizers
+
+on:
+  workflow_dispatch:
+    inputs:
+      tests:
+        description: "ctest names for the ASan/UBSan job (default: the list in this file)"
+        default: ""
+  schedule:
+    - cron: "41 3 * * *"
+
+concurrency:
+  group: sanitize-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ASAN_TESTS: "msgdb integrations feeds aprs_gate feed_targets remote_api server_host common_crc common_bits common_str common_endian common_window common_ring_rs common_ring_wait session_modes"
+  TSAN_TESTS: "common_threads common_threads_single spectrum_threads integrations feeds remote_api wide_session session_soak_short"
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CCACHE_BASEDIR: ${{ github.workspace }}
+  CCACHE_MAXSIZE: 1G
+  CCACHE_COMPRESS: "true"
+
+jobs:
+  sanitize:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: "ASan + UBSan", flag: "-DDECT2_SANITIZE=ON", key: asan, env: ASAN_TESTS }
+          - { name: "TSan", flag: "-DDECT2_SANITIZE_THREAD=ON", key: tsan, env: TSAN_TESTS }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/linux-deps
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-sanitize-${{ matrix.key }}-${{ github.run_id }}
+          restore-keys: ccache-sanitize-${{ matrix.key }}-
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDECT2_BUILD_APP=ON ${{ matrix.flag }} -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+      - name: Build and run the tests
+        env:
+          LIST: ${{ matrix.env == 'ASAN_TESTS' && (inputs.tests || env.ASAN_TESTS) || env.TSAN_TESTS }}
+          ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:abort_on_error=0
+          UBSAN_OPTIONS: print_stacktrace=1
+          TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+        run: |
+          T=""; for t in $LIST; do T="$T test_$t"; done
+          ALL=$(ninja -C build -t targets all | cut -d: -f1)
+          SEL=""; for t in $T; do echo "$ALL" | grep -qx "$t" && SEL="$SEL $t" || echo "note: no target $t (skipped)"; done
+          [ -n "$SEL" ] || { echo "nothing to build"; exit 1; }
+          cmake --build build -j 4 --target $SEL
+          R=$(echo $LIST | tr ' ' '\n' | sed 's/.*/^&$/' | paste -sd'|' -)
+          ctest --test-dir build -j 2 -R "$R" --output-on-failure --timeout 1200
+      - uses: actions/cache/save@v6
+        if: always()
+        with:
+          path: .ccache
+          key: ccache-sanitize-${{ matrix.key }}-${{ github.run_id }}

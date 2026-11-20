@@ -121,6 +121,7 @@ inline const char* radioBlurb(const std::string& board, const std::string& name)
         {"kiwi", N_("KiwiSDR: a short-wave receiver somewhere on the internet, shared by its owner.")},
         {"spyserver", N_("SpyServer: a radio shared by another computer over the network.")},
         {"spectran", N_("Aaronia Spectran V6: a real-time spectrum analyser radio, up to 6 GHz or more with the wide models, with a very wide view. Receive only.")},
+        {"rsa", N_("Tektronix RSA306: a real-time spectrum analyser on USB 3, 9 kHz to 6.2 GHz. Needs Tektronix's RSA API library. Receive only.")},
         {"hamlib", N_("A transceiver controlled over CAT, with its sound card for audio.")},
     };
     for (const R& r : k) if (b.find(r.key) != std::string::npos) return r.text;

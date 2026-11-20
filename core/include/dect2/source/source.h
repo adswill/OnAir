@@ -27,7 +27,12 @@ struct SynthConfig {
     bool dab = false;      // generate a DAB (mode I) ensemble instead
     bool demoTv = false;   // DVB-T / ATSC: carry a looping test-card programme (picture and beep) instead of the small test stream
     bool dvbt = false;     // generate DVB-T (with a small test transport stream) instead of DVB-T2
-    int dvbtMode = 1, dvbtGuard = 2, dvbtMod = 2, dvbtRate = 1; // 8K, GI 1/8, 64-QAM, 2/3
+    int dvbtMode = 1, dvbtGuard = 2, dvbtMod = 2, dvbtRate = 1; // 8K (0 2K, 1 8K, 2 4K), GI 1/8, 64-QAM, 2/3
+    // DVB-T, transmitter only: hierarchy (0 none, 1/2/3 = alpha 1/2/4; the high-priority stream is QPSK, the low-priority one carries the rest), the low-priority code rate,
+    // the cell ID in the TPS, the in-depth interleaver and the DVB-H signalling (annex F)
+    int dvbtHier = 0, dvbtRateLp = 1;
+    bool dvbtCellOn = false; int dvbtCellId = 0;
+    bool dvbtInDepth = false, dvbtDvbh = false, dvbtTimeSlicing = false, dvbtMpeFec = false;
     int isdbtBwMhz = 6;    // ISDB-T test signal: channel width 6, 7 or 8 MHz
     int isdbtMode = 3, isdbtGuard = 2, isdbtMod = 3, isdbtRate = 2;   // ISDB-T: mode 1 - 3, guard 1/32 1/16 1/8 1/4 (0 - 3), layer B modulation (0 DQPSK, 1 QPSK, 2 16-QAM, 3 64-QAM) and code rate (0 1/2, 1 2/3, 2 3/4, 3 5/6, 4 7/8); the defaults are mode 3, 1/8, 64-QAM 3/4
     double pace = 1.0;     // 1 = real time; below 1 the signal runs in slow motion (tests on slow machines: the receiver gets 1/pace times the time)

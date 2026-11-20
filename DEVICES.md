@@ -100,6 +100,20 @@ OnAir --device "SDRplay RSPduo YOUR_SERIAL Tuner 1 (native, experimental)" --fm 
 `--device` starts that source and leaves the receiver stopped if it is absent. Bare `--autostart` is a developer option that starts
 the synthetic test signal; its FM test tones are not a received station, even when a broadcast frequency is displayed.
 
+# WiNRADiO G33DDC (Excalibur Pro)
+
+**Not tested on a real G33DDC.** The driver (`core/src/source/source_g33ddc.cpp`) was written from WiNRADiO's public API specification
+(winradio.com/home/g33ddc_sdk-doc.htm) without the radio and without the header file. Windows only: it loads WiNRADiO's `G33DDCAPI.dll`, which
+comes with the G33DDC application (install that first, or copy the DLL next to `OnAir.exe`; use the 64-bit one with the 64-bit program).
+
+- Streams the radio's DDC1 I/Q (9 kHz to 50 MHz). The DDC type with the smallest sample rate that is at least the one asked for is used; the
+  rates come from the radio.
+- The gain slider (0 to 21 dB) is the input attenuator in 3 dB steps (21 dB: no attenuation). Radio settings: preamplifier and ADC dithering.
+- Only the first radio is used. The layout of the API's device list is read as documented, and the order of the callback structure is the one
+  the specification describes: if the radio does not appear or no samples arrive, that is the first place to look. Please report what the log
+  (onair.log) says.
+- The radio's own DDC2 channels, demodulators and audio are not used: OnAir demodulates.
+
 # Fobos SDR (RigExpert)
 
 Not tested on a radio yet: the driver was written against RigExpert's library source and checked with a stand-in for the library

@@ -10,6 +10,7 @@ namespace iridiumui {
 
 void acarsView(App& a);     // ACARS carried in short burst data: messages, aircraft, filters, copy / save
 void packetsView(App& a);   // LAP / IDA traffic: joined packets and single frames, hex + ASCII, filters, copy / save
+void sbdView(App& a);       // short burst data that is not ACARS: headers and payload as text / hex, filters, copy / save
 void pagerView(App& a);     // paging channel: pager messages and the paged identities of the ring alerts, search
 
 } // namespace iridiumui

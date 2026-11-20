@@ -26,6 +26,7 @@ namespace dect2 {
 namespace voice { class Monitor; }
 
 struct NxdnTelemetry;   // nxdn_tel.h
+namespace nxdn { struct Msg; }
 
 class NxdnReceiver {
 public:
@@ -49,6 +50,7 @@ public:
     void setSilent(bool s);              // decode but never open the sound device
     void setVoiceMonitor(voice::Monitor* m);   // the monitor that picks and records the call (voice_monitor.h); default voice::monitor("nxdn") while not silent
     void setAudioTap(std::function<void(const float* x, size_t n)> cb);   // tests: the 8 kHz voice (mbelib only)
+    void setGrantSink(std::function<void(const nxdn::Msg&)> cb);          // every VCALL_ASSGN heard on a control channel (trunking: tpool::grantFromNxdn turns it into a grant)
     void setVoiceTap(std::function<void(const uint8_t bits[72])> cb);      // tests: every voice frame's 72 bits as received
 
 private:

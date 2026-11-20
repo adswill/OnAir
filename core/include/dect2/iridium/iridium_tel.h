@@ -114,6 +114,9 @@ struct IridiumPacketRec {            // a joined IDA packet (short burst data), 
     int sbdType = -1;                // 0x0600, 0x76xx, -1 not short burst data
     uint32_t length = 0;             // bytes of the whole packet
     std::string hex;                 // first 256 bytes
+    std::string headerHex;           // the SBD headers (type bytes and what follows them) as hex, "" when not SBD
+    std::string payloadHex;          // the SBD payload after the headers, first 256 bytes, as hex; "" when not SBD
+    uint32_t payloadLength = 0;      // bytes of the whole payload
     std::string status;              // "ACARS new", "ACARS repeat", "ACARS joined", "SBD", "not SBD", "incomplete"
     uint64_t acarsSerial = 0;        // the listed ACARS message, 0 when none
 };

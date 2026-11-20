@@ -433,10 +433,21 @@ void dscDetail(App& a, const DscCall* c, ImVec2 size) {
     const std::string head = c->kind.empty() ? c->formatName : c->kind;
     if (c->distress) ImGui::TextColored(pal::badRed(), "%s", head.c_str());
     else ImGui::TextColored(pal::heading(), "%s", head.c_str());
+    // one click copies the bare MMSI to the clipboard (for a ship database, AIS lookup or a call plan)
+    auto copyMmsi = [&](const std::string& m, const char* id) {
+        if (m.size() != 9 || m.find_first_not_of("0123456789") != std::string::npos) return;
+        ImGui::PushID(id);
+        ImGui::Dummy(ImVec2(96 * gUi, 0)); ImGui::SameLine(0, 0);
+        if (ImGui::SmallButton(tr("copy MMSI"))) ImGui::SetClipboardText(m.c_str());
+        ImGui::PopID();
+    };
     kv(tr("category"), c->categoryName);
     kv(tr("from"), c->fromMmsi.empty() ? tr("unreadable") : mmsiLine(c->fromMmsi, c->fromType, c->fromCountry));
+    copyMmsi(c->fromMmsi, "cpfrom");
     kv(tr("to"), c->to.size() == 9 && c->to.find_first_not_of("0123456789~") == std::string::npos ? mmsiLine(c->to, c->toType, c->toCountry) : c->to);
+    copyMmsi(c->to, "cpto");
     kv(tr("in distress"), mmsiLine(c->distressMmsi, "", c->distressCountry));
+    copyMmsi(c->distressMmsi, "cpdis");
     kv("nature", c->natureName);
     kv("position", c->posText);
     if (c->hasTime) { char b[16]; snprintf(b, sizeof b, "%02d:%02d UTC", c->utcHour, c->utcMin); kv("time", b); }
