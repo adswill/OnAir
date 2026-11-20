@@ -29,6 +29,10 @@ void setExternalConvert(ExternalConvert f) { gExternal.store(f); }
 #ifdef _WIN32
 // Windows has the ISO 8859 tables built in (code pages 28591..28599, 28603, 28605): no iconv needed.
 std::string convertCharset(const char* charset, const uint8_t* p, int n) {
+    if (ExternalConvert ext = gExternal.load()) {   // a platform converter takes precedence here too (the test of it runs on Windows)
+        std::string r;
+        if (ext(charset, p, n, r)) return r;
+    }
     std::wstring w;
     if (!strcmp(charset, "UCS-2BE")) {
         for (int i = 0; i + 1 < n; i += 2) w += (wchar_t)((p[i] << 8) | p[i + 1]);
