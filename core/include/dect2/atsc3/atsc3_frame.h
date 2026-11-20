@@ -57,16 +57,33 @@ struct PlpResult {
     bool straddle = false;
     std::vector<cf32> head, tail;
     std::vector<float> headW, tailW;              // their channel state weights (empty: none)
+    int skipped = 0;                              // blocks not tried: the PLP is backed off (DecodePlan) and none of its probe blocks decoded
 };
+
+// PLPs that have decoded nothing for a while (Atsc3Receiver::decodePlan): of each such PLP only `blocks` FEC blocks, spread over the frame, are
+// tried first. If one of them decodes, the whole PLP is decoded as usual; if none does, the other blocks are not tried (they count as failed).
+// A PLP that is not listed is decoded in full.
+struct DecodePlan {
+    struct Probe { int id = 0, blocks = 0; };
+    std::vector<Probe> probe;
+    int probeBlocks(int id) const { for (auto& p : probe) if (p.id == id) return p.blocks; return 0; }
+};
+
+// Decodes FEC blocks of one PLP into `pr` (blocks, ok, packets, blocksOk; descrambled baseband packets), in batches on up to `threads` threads.
+// With `probe` > 0 and more blocks than that, only `probe` blocks spread over them are tried first, and the rest only if one of them decoded
+// (DecodePlan); the blocks not tried are counted in pr.skipped.
+void decodeFecBlocks(const Bicm& bicm, const std::vector<std::vector<cf32>>& blocks, float noise, const std::vector<std::vector<float>>* weights,
+                     int probe, int threads, PlpResult& pr);
 
 struct FrameResult {
     PreambleResult preamble;
     bool ok = false;
     std::vector<PlpResult> plps;
     SubframeParams subframe;
+    DecodePlan plan;                              // the plan it was decoded with (the receiver applies it to the PLPs it decodes itself)
 };
 
-FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs);
+FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs, const DecodePlan* plan = nullptr);
 
 // Length of the frame after the bootstrap in samples at the frame's rate: the Preamble and every subframe (from L1; time-aligned excess
 // samples are not included). 0 when the parameters are not valid.
