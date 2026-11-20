@@ -98,6 +98,7 @@
 10 app/hfdig/hfdig_ui.cpp
 24 app/hfdl/hfdl_ui.cpp
 6 app/horus/horus_ui.cpp
+2 app/inmc/inmc_ui.cpp
 28 app/inmsat/inmsat_ui.cpp
 2 app/integrations/integrations_ui.cpp
 35 app/iono/iono_ui.cpp
