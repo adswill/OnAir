@@ -34,6 +34,10 @@ struct State {
     char pgText[96] = "";
     int pgFmt = 0;                   // 0 all, 1 alphanumeric, 2 numeric
     bool pgComplete = false;
+    char sbText[96] = "";
+    int sbDir = 0;
+    bool sbAcars = false;
+    uint64_t sbSel = 0;
     std::string note;
 };
 State S;
@@ -382,6 +386,116 @@ void packetsView(App& a) {
             ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(hd.c_str()); ImGui::PopFont();
             if (ImGui::SmallButton("copy##irpkf")) ImGui::SetClipboardText(hd.c_str());
         }
+    }
+    ImGui::EndChild();
+}
+
+// ---------------------------------------------------------------- short burst data
+// Short burst data that is not ACARS: the SBD headers and the payload of each joined IDA packet, shown as text and hex.
+// The payload is not interpreted further (no multi-packet SBD reassembly, no SMS layer): what the packet carries is shown as it came.
+
+namespace {
+std::string stripHex(const std::string& h) { std::string o; for (char c : h) if (c != ' ' && c != '.') o += c; return o; }
+std::string asciiOf(const std::vector<uint8_t>& b) {
+    std::string s;
+    for (uint8_t c : b) s += (c >= 32 && c < 127) ? (char)c : (c == '\n' || c == '\r') ? ' ' : '.';
+    return s;
+}
+bool mostlyText(const std::vector<uint8_t>& b) {
+    if (b.empty()) return false;
+    size_t n = 0;
+    for (uint8_t c : b) if ((c >= 32 && c < 127) || c == '\n' || c == '\r') n++;
+    return n * 10 >= b.size() * 8;
+}
+} // namespace
+
+void sbdView(App& a) {
+    const IridiumTelemetry& t = a.rx.iridium;
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("Short burst data (SBD) packets that are not ACARS: the data of messages sent by and to Iridium modems. The payload is shown as it was received, as text when it reads as text. Encrypted or binary payloads stay hex.");
+    ImGui::PopTextWrapPos();
+    ImGui::SetNextItemWidth(160 * gUi);
+    ImGui::InputTextWithHint("##sbf", "filter", S.sbText, sizeof S.sbText);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
+    ImGui::Combo("##sbd", &S.sbDir, "all\0down\0up\0");
+    ImGui::SameLine(); ImGui::Checkbox("with ACARS##sbac", &S.sbAcars);
+
+    struct Row { const dect2::IridiumPacketRec* p; std::vector<uint8_t> pay; };
+    std::vector<Row> rows;
+    const std::string f = lower(S.sbText);
+    for (auto it = t.packets.rbegin(); it != t.packets.rend(); ++it) {
+        const auto& p = *it;
+        if (p.sbdType < 0 || p.payloadHex.empty()) continue;
+        if (!S.sbAcars && p.acarsSerial) continue;
+        if (S.sbDir == 1 && !p.downlink) continue;
+        if (S.sbDir == 2 && p.downlink) continue;
+        Row r{&p, dect2::iridiumHexBytes(stripHex(p.payloadHex))};
+        if (!f.empty() && !has(asciiOf(r.pay), f) && !has(p.payloadHex, f)) continue;
+        rows.push_back(std::move(r));
+    }
+    std::string dump = "UTC\tMHz\tdir\ttype\tbytes\ttext\thex\n";
+    for (auto& r : rows) {
+        char b[96];
+        snprintf(b, sizeof b, "%s\t%.4f\t%s\t%04X\t%u\t", utc(r.p->wall).c_str(), r.p->freqHz / 1e6, r.p->downlink ? "down" : "up", r.p->sbdType, r.p->payloadLength);
+        dump += b + (mostlyText(r.pay) ? asciiOf(r.pay) : std::string()) + "\t" + stripHex(r.p->payloadHex) + "\n";
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Copy##irsb")) ImGui::SetClipboardText(dump.c_str());
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Save...##irsb")) saveText("iridium-sbd.tsv", dump);
+    ImGui::SameLine(); ImGui::TextDisabled("%zu packet%s", rows.size(), rows.size() == 1 ? "" : "s");
+
+    const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
+    const float rw = std::min(430.f * gUi, W * 0.42f);
+    ImGui::BeginChild("##irsb_l", ImVec2(W - rw - 8 * gUi, H));
+    if (ImGui::BeginTable("##irsb_t", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn("UTC"); ImGui::TableSetupColumn("MHz"); ImGui::TableSetupColumn("Dir"); ImGui::TableSetupColumn("Bytes");
+        ImGui::TableSetupColumn("Type"); ImGui::TableSetupColumn("Payload", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+        for (auto& r : rows) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::PushID((int)(r.p->serial & 0x7fffffff));
+            if (ImGui::Selectable(utc(r.p->wall).c_str(), S.sbSel == r.p->serial, ImGuiSelectableFlags_SpanAllColumns)) S.sbSel = r.p->serial;
+            ImGui::PopID();
+            ImGui::TableNextColumn(); ImGui::Text("%.4f", r.p->freqHz / 1e6);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(r.p->downlink ? "down" : "up");
+            ImGui::TableNextColumn(); ImGui::Text("%u", r.p->payloadLength);
+            ImGui::TableNextColumn(); ImGui::Text("%04X", r.p->sbdType);
+            ImGui::TableNextColumn();
+            ImGui::PushFont(a.mono, 0);
+            ImGui::TextUnformatted(mostlyText(r.pay) ? asciiOf(r.pay).substr(0, 80).c_str() : stripHex(r.p->payloadHex).substr(0, 60).c_str());
+            ImGui::PopFont();
+        }
+        if (rows.empty()) { ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextDisabled(t.packets.empty() ? (live(a) ? "no short burst data yet" : "start the receiver") : "nothing matches"); }
+        ImGui::EndTable();
+    }
+    ImGui::EndChild();
+    ImGui::SameLine();
+    ImGui::BeginChild("##irsb_r", ImVec2(0, H), ImGuiChildFlags_Borders);
+    const Row* sel = nullptr;
+    for (auto& r : rows) if (r.p->serial == S.sbSel) sel = &r;
+    if (!sel) ImGui::TextDisabled("click a packet");
+    else {
+        ImGui::TextColored(pal::heading(), "SBD %04X, %s", sel->p->sbdType, sel->p->downlink ? "downlink" : "uplink");
+        ImGui::TextDisabled("%.4f MHz, %u payload bytes, %s", sel->p->freqHz / 1e6, sel->p->payloadLength, sel->p->status.c_str());
+        ImGui::Separator();
+        ImGui::TextDisabled("Headers");
+        ImGui::PushFont(a.mono, 0);
+        ImGui::TextWrapped("%s", sel->p->headerHex.c_str());
+        ImGui::PopFont();
+        if (mostlyText(sel->pay)) {
+            ImGui::TextDisabled("Text");
+            const std::string txt = asciiOf(sel->pay);
+            ImGui::PushFont(a.mono, 0); ImGui::TextWrapped("%s", txt.c_str()); ImGui::PopFont();
+            if (ImGui::SmallButton("copy text##irsb")) ImGui::SetClipboardText(txt.c_str());
+        }
+        ImGui::TextDisabled("Payload");
+        const std::string hd = hexAscii(sel->pay);
+        ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(hd.c_str()); ImGui::PopFont();
+        if (sel->p->payloadLength > sel->pay.size()) ImGui::TextDisabled("(first %zu bytes)", sel->pay.size());
+        if (ImGui::SmallButton("copy hex##irsb")) ImGui::SetClipboardText(hd.c_str());
     }
     ImGui::EndChild();
 }
