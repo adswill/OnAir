@@ -394,13 +394,29 @@ void Bicm::decodeBatch(const std::vector<const cf32*>& cells, float noiseVar, st
                 DIAG_DEBUG_EVERY(998925, 10.0, "The GPU LDPC decoder refused a batch of %d ATSC 3.0 FEC blocks, so the CPU decodes them instead.", nb);
             }
         } else gpupol::reportGpu(gpupol::Atsc3, false);
-        for (int b = 0; b < nb; b++) {
-            if (!gOk.empty() && gOk[(size_t)b]) {
+        int decoded = 0;
+        if (!gOk.empty())
+            for (int b = 0; b < nb; b++) {
+                if (!gOk[(size_t)b]) continue;
                 hard.assign(gHard.begin() + (size_t)b * (size_t)cfg_.nInner, gHard.begin() + (size_t)(b + 1) * (size_t)cfg_.nInner);
-                if (finish(hard, payload[(size_t)b])) { ok[(size_t)b] = 1; continue; }
+                if (finish(hard, payload[(size_t)b])) { ok[(size_t)b] = 1; decoded++; }
             }
+        // A word the CPU decoder fails on costs it all 50 iterations (50 to 75 ms for a 64800 bit word). When it has failed on more than a quarter
+        // of a full batch and no word of the batch decoded, it is a damaged frame or a signal below the threshold: as on the Type A path below, the
+        // rest of the batch is not tried, or the whole receiver waits for seconds and falls behind the samples. Counted on the CPU decoder, not on
+        // the GPU: the GPU runs plain min-sum and near the threshold of 256QAM 11/15 it fails on almost every word that the CPU then decodes. A batch
+        // in which words decode (a weak signal, not a hopeless one) and a short batch (the end of a frame) are decoded in full. The words are tried
+        // spread over the batch (bit-reversed order), so a gap that damages the first few blocks does not decide for the clean ones after it.
+        static_assert(Ldpc::kBatch == 16, "the order below is for batches of 16");
+        static const int kOrder[16] = {0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15};
+        int failed = 0;
+        for (int i = 0; i < Ldpc::kBatch && (decoded > 0 || failed * 4 <= Ldpc::kBatch); i++) {
+            const int b = kOrder[i];
+            if (b >= nb || ok[(size_t)b]) continue;
             llrs(cells[(size_t)b], noiseVar, llr, wOf(b));   // the CPU decoder: no GPU, or the GPU did not converge on this word (it also has the 8-bit first pass)
             ok[(size_t)b] = decodeLlr(llr, hard) && finish(hard, payload[(size_t)b]);
+            decoded += ok[(size_t)b];
+            failed += !ok[(size_t)b];
         }
         return;
     }

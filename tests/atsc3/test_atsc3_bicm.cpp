@@ -1,9 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// ATSC 3.0 BICM (FEC frame to cells and back): block interleaver against the examples of A/322, constellation power, and decoding through noise.
+// ATSC 3.0 BICM (FEC frame to cells and back): block interleaver against the examples of A/322, constellation power, decoding through noise, and
+// the bounded cost of a damaged batch in decodeBatch.
 #include "dect2/atsc3/atsc3_bicm.h"
 #include "dect2/common/stable_random.h"
+#include "dect2/common/stage_prof.h"
+#include <array>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <random>
@@ -68,6 +72,60 @@ int main() {
         printf("  n %5d  rate %2d/15  %4d-point  outer %d  SNR %+3.0f dB: %s (%d iterations)\n", t.n, t.rate, 1 << t.eta, t.outer, t.snr, ok && out == in ? "ok" : "FAILED", it);
         snprintf(m, sizeof m, "decode %d/%d/%d", t.n, t.rate, t.eta);
         CHECK(ok && out == in, m);
+    }
+
+    // A hopeless batch in decodeBatch (a signal far below the threshold, or a gap in the samples): once the CPU decoder has failed on more than a
+    // quarter of a full batch and no word decoded, the rest is not tried, so a batch of 16 words of noise costs 5 decoder runs (50 to 75 ms each
+    // at 64800 bits), not 16. The decoder runs are counted by the "a3.ldpc" stage of the CPU profiler (one per decodeLlr). A batch with some
+    // noise words (also 6 at the start, as a gap leaves them), a short batch and a clean batch are decoded in full.
+    {
+        BicmConfig c; c.nInner = 64800; c.rate15 = 11; c.bitsPerCell = 8; c.outer = 0;   // 256QAM 11/15, Type B: the quasi-cyclic path
+        Bicm bicm(c);
+        const float sigma = (float)std::sqrt(std::pow(10.0, -24.0 / 10.0) / 2.0);
+        auto batch = [&](const std::vector<bool>& noise, std::vector<std::vector<uint8_t>>& sent) {
+            std::vector<std::vector<cf32>> cells;
+            sent.clear();
+            for (bool n : noise) {
+                std::vector<uint8_t> in(bicm.kPayload());
+                for (auto& v : in) v = rng() & 1;
+                auto x = bicm.encode(in);
+                for (auto& v : x) v = n ? cf32{g(rng), g(rng)} * 0.7071f : v + cf32{g(rng), g(rng)} * sigma;
+                cells.push_back(x);
+                sent.push_back(in);
+            }
+            return cells;
+        };
+        auto ldpcRuns = [] { uint64_t k = 0; for (auto& s : prof::stageProfSnapshot()) if (s.first == "a3.ldpc") k += s.second.second; return k; };
+        prof::stageProfEnable(true);
+        struct D { const char* name; std::vector<bool> noise; int maxRuns, wantOk; } cases[] = {
+            {"16 words of noise", std::vector<bool>(16, true), 5, 0},
+            {"4 of 16 words noise", {true, false, false, true, false, false, false, true, false, false, false, false, true, false, false, false}, 16, 12},
+            {"6 of 16 words noise, at the start", {true, true, true, true, true, true, false, false, false, false, false, false, false, false, false, false}, 16, 10},
+            {"short batch of 3 noise words", std::vector<bool>(3, true), 3, 0},
+            {"16 clean words", std::vector<bool>(16, false), 16, 16},
+        };
+        for (auto& d : cases) {
+            std::vector<std::vector<uint8_t>> sent;
+            auto cells = batch(d.noise, sent);
+            std::vector<const cf32*> ptr;
+            for (auto& x : cells) ptr.push_back(x.data());
+            std::vector<std::vector<uint8_t>> pl;
+            std::vector<char> good;
+            prof::stageProfReset();
+            const auto t0 = std::chrono::steady_clock::now();
+            bicm.decodeBatch(ptr, 2 * sigma * sigma, pl, good);
+            const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+            const int runs = (int)ldpcRuns();
+            int okN = 0, wrong = 0;
+            for (size_t b = 0; b < good.size(); b++) { okN += good[b] != 0; wrong += good[b] && pl[b] != sent[b]; }
+            printf("  decodeBatch, %s: %d/%zu decoded, %d decoder runs, %.0f ms\n", d.name, okN, d.noise.size(), runs, ms);
+            std::array<char, 160> m;
+            snprintf(m.data(), m.size(), "decodeBatch, %s: at most %d decoder runs (%d)", d.name, d.maxRuns, runs);
+            CHECK(runs <= d.maxRuns, m.data());
+            snprintf(m.data(), m.size(), "decodeBatch, %s: %d words decoded (%d)", d.name, d.wantOk, okN);
+            CHECK(okN == d.wantOk && wrong == 0, m.data());
+        }
+        prof::stageProfEnable(false);
     }
     printf(fails ? "atsc3 bicm: FAILED\n" : "atsc3 bicm: ok\n");
     return fails ? 1 : 0;
