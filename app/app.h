@@ -1182,6 +1182,7 @@ bool modeSupportsWide(int family);
 void registerWideMode(int family);
 bool wideFamOn(const App& a, int family);                 // the whole-span switch of a mode family (kept per family)
 void setWideFam(App& a, int family, bool on);
+void applyWideDefaults(App& a);                          // Whole span on for every mode that offers it (a fresh profile, and once for an older one)
 bool wideActive(const App& a);                          // the switch is on for this mode and the engine runs it
 void wideSync(App& a);                                  // once a frame: pushes the switch, the selected carrier and the mute to the engine
 void wideCarrierCell(const App& a, int carrierId, double relHz);   // a table cell with the carrier's frequency (MHz); "-" for a single channel
