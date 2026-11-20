@@ -291,7 +291,9 @@ FreqParseReport freqImportSchedule(const std::string& text, std::vector<FreqEntr
     std::set<std::string> have;
     for (const FreqEntry& e : into) have.insert(freqKey(e) + "|" + e.name + "|" + e.notes);
     auto roleOf = [](const std::string& h) -> std::string {
-        const std::string x = lowerOf(h);
+        std::string x = lowerOf(h);
+        const size_t colon = x.rfind(':');   // the real EiBi header carries the column width: "kHz:75;Time(UTC):93;..."
+        if (colon != std::string::npos && colon + 1 < x.size() && x.find_first_not_of("0123456789", colon + 1) == std::string::npos) x.resize(colon);
         auto has = [&](const char* k) { return x.find(k) != std::string::npos; };
         if (has("khz") || x == "freq" || x == "frequency") return "freq";
         if (has("time") || x == "utc") return "time";
