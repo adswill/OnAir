@@ -59,7 +59,13 @@ bool fetchTile(const std::string& url, const std::string& part) {
     return ok;
 }
 int failStreak = 0;   // tiles failed in a row (mu): a server that says no is asked again only every 10 minutes
-std::thread worker;
+// Keep a fixed set of sleeping workers: the slider adjusts the number allowed to
+// take jobs without stopping an in-flight HTTP request or recreating threads.
+constexpr int kMaxTileWorkers = 8;
+std::vector<std::thread> workers;
+std::atomic<int> parallelTiles{1};  // 1 by default, including for the public OSM server
+std::atomic<int> fetchCount{0};
+std::mutex capMu;
 std::atomic<bool> stopping{false};
 bool started = false, inited = false;
 // Two folders of tiles: those kept until the user deletes them, and this session's, deleted when OnAir closes. New tiles go to the first
@@ -80,9 +86,11 @@ std::string pathIn(const std::string& root, int z, int x, int y) { char b[64]; s
 dect2::MbTiles mb;
 std::string mbx, mbPath, mbError;
 std::atomic<int> mbMode{0};   // 0 off, 1 after the cache, 2 first
+std::mutex mbMu;  // protects MBTiles open/close and extracted tile files across workers
 
 void mbClose() { mbMode = 0; mb.close(); }
 void mbOpen(const std::string& path, int mode) {
+    std::lock_guard<std::mutex> lk(mbMu);
     mbClose();
     mbPath = path; mbError.clear();
     std::error_code ec;
@@ -91,6 +99,7 @@ void mbOpen(const std::string& path, int mode) {
     if (mb.open(path, &mbError)) mbMode = mode;
 }
 std::string fromMb(int z, int x, int y) {   // the file of a tile of the MBTiles file, or ""
+    std::lock_guard<std::mutex> lk(mbMu);
     if (!mbMode) return std::string();
     const std::string p = pathIn(mbx, z, x, y);
     if (exists(p)) return p;
@@ -155,6 +164,7 @@ void init() {
     mbx = cache + "/mbtiles-x";
     keepNew = plat::prefs().getB("mapKeepTiles", true);
     onlineMap = plat::prefs().getB("adsbMap", true);   // the key from when only the ADS-B screen had a map
+    parallelTiles = std::clamp((int)plat::prefs().getI("mapParallelTiles", 1), 1, kMaxTileWorkers);
     std::error_code ec;
     fs::remove_all(fsPath(temp), ec);
     moveTree(cache + "/osm", kept);
@@ -174,17 +184,17 @@ uint64_t capBytes() {
 }
 void enforceCaps() { dect2::enforceCap(kept, capBytes()); dect2::enforceCap(temp, capBytes()); }
 
-void run() {
-    enforceCaps();   // at start (the cache may have grown under an older or larger setting)
-    int fetches = 0;
+void run(int workerIndex) {
     for (;;) {
         uint64_t k;
         {
             std::unique_lock<std::mutex> lk(mu);
-            cv.wait(lk, [] { return stopping || !queue.empty(); });
+            cv.wait(lk, [workerIndex] { return stopping || (workerIndex < parallelTiles.load() && !queue.empty()); });
             if (stopping) return;
             k = queue.front(); queue.pop_front();
-            tiles[k].state = 1;
+            auto it = tiles.find(k);
+            if (it == tiles.end() || it->second.state != 0) continue;
+            it->second.state = 1;
         }
         const int z = (int)(k >> 56), x = (int)((k >> 28) & 0xFFFFFFF), y = (int)(k & 0xFFFFFFF);
         bool ok = !found(z, x, y).empty();
@@ -200,7 +210,10 @@ void run() {
                 ok = !ec && exists(path);
             }
             if (!ok) fs::remove(fsPath(part), ec);
-            else if (++fetches % 50 == 0) enforceCaps();   // and every 50 downloads
+            else if (++fetchCount % 50 == 0) {
+                std::lock_guard<std::mutex> capLock(capMu);
+                enforceCaps();   // periodic disk-cap maintenance, never in parallel with itself
+            }
         } else dect2::touchTile(found(z, x, y));
         // decoded here, not in the frame: OnAir's own PNG decoder (Linux, Windows) takes milliseconds a tile, and a pan or zoom asks
         // for dozens (docs/PERF-LINUX.md)
@@ -211,9 +224,11 @@ void run() {
             if (path.empty() || !plat::decodeImage(path, w, h, px) || w != 256 || h != 256) px.clear();
         }
         std::lock_guard<std::mutex> lk(mu);
-        tiles[k].state = ok ? 2 : 4;
-        tiles[k].px = std::move(px);
-        tiles[k].failedAt = glfwGetTime();
+        auto it = tiles.find(k);
+        if (it == tiles.end() || it->second.state != 1) continue;  // source or cache was reset while downloading
+        it->second.state = ok ? 2 : 4;
+        it->second.px = std::move(px);
+        it->second.failedAt = glfwGetTime();
         failStreak = ok ? 0 : failStreak + 1;   // under mu
     }
 }
@@ -221,7 +236,10 @@ void run() {
 void start() {
     if (started) return;
     started = true;
-    worker = dect2::namedThread("onair-admap", run);
+    { std::lock_guard<std::mutex> lk(capMu); enforceCaps(); }
+    workers.reserve(kMaxTileWorkers);
+    for (int i = 0; i < kMaxTileWorkers; ++i)
+        workers.push_back(dect2::namedThread("onair-admap", [i] { run(i); }));
 }
 
 // a long session at street level would fill the graphics memory: past this many, the pictures not on the screen go, the oldest first
@@ -271,7 +289,7 @@ ImTextureID tileTexture(int z, int x, int y, bool online, bool& failed) {
         tiles[k] = Tile();
         tiles[k].lastUsed = ImGui::GetFrameCount();
         queue.push_back(k);
-        cv.notify_one();
+        cv.notify_all();
         return 0;
     }
     Tile& t = it->second;
@@ -298,7 +316,7 @@ ImTextureID tileTexture(int z, int x, int y, bool online, bool& failed) {
     }
     if (t.state == 4) {
         failed = true;
-        if (online && !blockedCode && glfwGetTime() - t.failedAt > (failStreak >= 8 ? 600 : 30)) { t.state = 0; t.failedAt = 1e18; queue.push_back(k); cv.notify_one(); }   // try again later
+        if (online && !blockedCode && glfwGetTime() - t.failedAt > (failStreak >= 8 ? 600 : 30)) { t.state = 0; t.failedAt = 1e18; queue.push_back(k); cv.notify_all(); }   // try again later
         return 0;
     }
     return t.state == 3 && t.img ? t.img->texture() : (ImTextureID)0;
@@ -754,6 +772,17 @@ void tilesMenu(ImVec4 buttonColour) {
     ImGui::Separator();
     colourSettings();
     ImGui::Separator();
+    ImGui::TextUnformatted("Concurrent loading");
+    int concurrent = parallelTiles.load();
+    ImGui::SetNextItemWidth(240 * gUi);
+    if (ImGui::SliderInt("tiles in parallel", &concurrent, 1, kMaxTileWorkers)) {
+        parallelTiles = concurrent;
+        plat::prefs().setI("mapParallelTiles", concurrent);
+        plat::prefs().flush();
+        cv.notify_all();  // changes take effect on the next queued tile
+    }
+    ImGui::TextDisabled("Applies to online map tiles. Check your tile provider's request limits.");
+    ImGui::Separator();
     mbSettings();
     ImGui::Separator();
     areaDownload();
@@ -866,7 +895,8 @@ void shutdown() {
     if (started) {
         stopping = true;
         cv.notify_all();
-        if (worker.joinable()) worker.join();
+        for (auto& worker : workers) if (worker.joinable()) worker.join();
+        workers.clear();
     }
     if (inited && !temp.empty()) { std::error_code ec; fs::remove_all(fsPath(temp), ec); }   // this session's tiles (those kept are elsewhere)
 }
