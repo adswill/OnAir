@@ -82,7 +82,8 @@ static void themes() {
     CHECK(frameTurned(day) && describe(day).light && lum(describe(day).bg) > 0.8f, "Daylight is light");
     CHECK(!frameTurned(with(day, Opt::Mode, 2)), "High contrast wins over Light");
     // the classic interface
-    const Desc cl = previewFor(cur, Opt::NewUi, 0);
+    Look classicFont = cur; classicFont.typography = 0;   // the default font look is Clean, which rounds the classic panes more (radius 4)
+    const Desc cl = previewFor(classicFont, Opt::NewUi, 0);
     CHECK(cl.layout == kClassic && cl.accent == pack(0.45f, 0.72f, 0.82f) && cl.radius == 3.f, "classic interface");
 }
 
