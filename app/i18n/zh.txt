@@ -5814,7 +5814,7 @@ Ctrl+Enter saves	Ctrl+回车 保存
 Ctrl-click to type any value (no limit). Keep the signal and its sidebands inside it, and the neighbours outside.	Ctrl+点击可输入任意值（无限制）。让信号及其边带保持在带宽内，邻道信号留在外面。
 CubeSat	立方星
 Current	当前
-Current (default), Clean or Compact.	当前（默认）、简洁或紧凑。
+Clean (default), Current or Compact.	简洁（默认）、当前或紧凑。
 Custom (OBT, VHF / UHF)	自定义（OBT，VHF / UHF）
 Custom decoder (rtl_433 flex syntax)	自定义解码器（rtl_433 flex 语法）
 Custom decoders	自定义解码器
