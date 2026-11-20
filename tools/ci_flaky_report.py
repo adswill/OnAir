@@ -17,13 +17,12 @@ def parse(paths):
     seen = defaultdict(list)   # test -> results in order
     for path in paths:
         try:
-            text = open(path, errors="replace").read()
+            with open(path, errors="replace", encoding="utf-8") as f:
+                text = f.read()
         except OSError:
             continue
         for m in re.finditer(r"^\s*\d+/\d+ Test\s+#\d+: (\S+) \.+\s*(?:\*\*\*)?(Passed|Failed|Timeout|Exception|\S+?)\b", text, re.M):
             seen[m.group(1)].append("pass" if m.group(2) == "Passed" else "fail")
-        for m in re.finditer(r"^\s*Test (?:Passed|Failed)\.?\s*$", text, re.M):
-            pass
     return seen
 
 

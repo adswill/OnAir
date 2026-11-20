@@ -10,13 +10,13 @@ memory and thread count (Linux /proc). Fails when the server dies, the receiver 
 at the end is more than --max-rss-growth percent above the figure after the first quarter of the run (warm-up). Prints a table.
 """
 import argparse
+import http.client
 import os
 import re
-import subprocess
+import subprocess  # nosec B404 - runs the server binary the caller names, without a shell
 import sys
 import tempfile
 import time
-import urllib.request
 
 
 def proc_stats(pid):
@@ -45,10 +45,10 @@ def main():
     a = ap.parse_args()
     with tempfile.TemporaryDirectory() as d:
         conf = os.path.join(d, "server.conf")
-        open(conf, "w").write(f"device=test\nautostart=1\nport={a.port}\n")
+        with open(conf, "w", encoding="utf-8") as cf:
+            cf.write(f"device=test\nautostart=1\nport={a.port}\n")
         env = dict(os.environ, HOME=d)
-        p = subprocess.Popen([a.server, "--config", conf], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        base = f"http://127.0.0.1:{a.port}/api/v1"
+        p = subprocess.Popen([a.server, "--config", conf], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)  # nosec B603
         rows, fail = [], []
         try:
             end = time.time() + a.minutes * 60
@@ -59,7 +59,10 @@ def main():
                     fail.append("the server exited")
                     break
                 try:
-                    txt = urllib.request.urlopen(base + "/metrics", timeout=10).read().decode()
+                    conn = http.client.HTTPConnection("127.0.0.1", a.port, timeout=10)
+                    conn.request("GET", "/api/v1/metrics")
+                    txt = conn.getresponse().read().decode()
+                    conn.close()
                 except Exception as e:   # noqa: BLE001
                     fail.append(f"/metrics did not answer: {e}")
                     break
