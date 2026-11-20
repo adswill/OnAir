@@ -303,6 +303,7 @@ static void applyUiThemeBase(App& a) {
     c[ImGuiCol_TabDimmed] = ImVec4(0, 0, 0, 0); c[ImGuiCol_TabDimmedSelected] = ImVec4(1, 0.95f, 0.85f, 0.04f); c[ImGuiCol_TabSelectedOverline] = kAccent;
     c[ImGuiCol_SliderGrab] = ImVec4(T.frame.x + (T.dim.x - T.frame.x) * 0.7f, T.frame.y + (T.dim.y - T.frame.y) * 0.7f, T.frame.z + (T.dim.z - T.frame.z) * 0.7f, 1);   // darker than the value text drawn over it
     c[ImGuiCol_SliderGrabActive] = kAccent; c[ImGuiCol_CheckMark] = kAccent;
+    c[ImGuiCol_NavCursor] = T.bright;   // keyboard focus ring: the brightest text colour, 2 px, visible on every palette (the Light pass turns it dark)
     c[ImGuiCol_Text] = kText; c[ImGuiCol_TextDisabled] = kDim; c[ImGuiCol_MenuBarBg] = kRail;
     c[ImGuiCol_TableRowBgAlt] = ImVec4(1, 0.95f, 0.85f, 0.02f); c[ImGuiCol_TableHeaderBg] = ImVec4(0, 0, 0, 0); c[ImGuiCol_TableBorderLight] = kEdge; c[ImGuiCol_TableBorderStrong] = kEdge;
     c[ImGuiCol_TextSelectedBg] = ImVec4(0.86f, 0.65f, 0.30f, 0.30f);

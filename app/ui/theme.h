@@ -76,6 +76,7 @@ inline void applyTheme() {
     c[ImGuiCol_Tab]           = ImVec4(0.055f, 0.058f, 0.062f, 1);
     c[ImGuiCol_TabHovered]    = ImVec4(0.14f, 0.15f, 0.16f, 1);
     c[ImGuiCol_TabSelected]   = ImVec4(0.12f, 0.13f, 0.14f, 1);
+    c[ImGuiCol_NavCursor]     = ImVec4(0.96f, 0.97f, 0.98f, 1);   // keyboard focus ring (2 px, drawn by ImGui)
     c[ImGuiCol_TabDimmed]     = ImVec4(0.055f, 0.058f, 0.062f, 1);
     c[ImGuiCol_TabDimmedSelected] = ImVec4(0.10f, 0.11f, 0.12f, 1);
     c[ImGuiCol_TabSelectedOverline] = ImVec4(0.45f, 0.72f, 0.82f, 1);

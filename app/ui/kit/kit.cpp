@@ -94,10 +94,14 @@ bool sliderValue(const char* label, float* v, float lo, float hi, const char* fm
 bool combo(const char* label, int* cur, const char* const* items, int n, float width) {
     if (width > 0) ImGui::SetNextItemWidth(width);
     bool changed = false;
-    if (ImGui::BeginCombo(label, items[std::max(0, std::min(n - 1, *cur))])) {
+    const char* shown = items[std::max(0, std::min(n - 1, *cur))];
+    const float avail = ImGui::CalcItemWidth() - ImGui::GetFrameHeight() - ImGui::GetStyle().FramePadding.x * 2;   // the room left of the arrow
+    const bool clipped = ImGui::CalcTextSize(shown).x > avail;
+    if (ImGui::BeginCombo(label, shown)) {
         for (int i = 0; i < n; i++) if (ImGui::Selectable(items[i], *cur == i)) { *cur = i; changed = true; }
         ImGui::EndCombo();
     }
+    if (clipped && ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("%s", shown);   // the cut-off choice is what the user needs to read
     return changed;
 }
 
