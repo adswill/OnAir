@@ -8,6 +8,7 @@
 #include <cstring>
 #include <vector>
 #include "dect2/common/diag.h"
+#include "dect2/tv/videogen.h"
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -150,6 +151,9 @@ struct AudioFileStream {
 
 namespace {
 
+constexpr double kGenStart = 0.10;   // a video generator's sound: seconds queued before it plays (it comes a picture at a time)
+constexpr double kGenHigh = 0.50;    // more queued than this (the generator's clock runs ahead of the transmitter's): back to kGenLow
+constexpr double kGenLow = 0.20;
 constexpr double kMemorySeconds = 600;   // a file up to this long is decoded whole into memory (48 kHz stereo float: 230 MB at most)
 
 // Opens the file: a short one is decoded into `stereo` (and `stream` is left empty), a long one is returned in `stream`, ready to play.
@@ -245,6 +249,20 @@ bool AudioIn::start(Kind k, int sampleRate, const std::string& pathOrDevice, dou
     p_->overrun = 0;
     p_->actualRate = 0;
     p_->useRs = false;
+    p_->genId = 0;
+    p_->genRate = 0;
+    p_->genPlaying = false;
+    if (int gid = 0; k == File && vgen::parseGeneratorSpec(pathOrDevice, gid)) {   // a Digital video generator's sound, live (#545)
+        p_->genId = gid;
+        Impl* impl = p_.get();
+        const int want = rate_;
+        vgen::setGeneratorAudioSink(gid, [impl, want](const float* st, int n, int rate) {
+            if (rate != impl->genRate) { impl->genRate = rate; if (!impl->setResample(rate, want)) return; }
+            impl->push(st, (uint32_t)n, 2);
+        });
+        running_ = true;
+        return true;
+    }
     if (k == Mic) {
         if (!audioInMicStart(p_.get(), rate_, pathOrDevice, err)) { kind_ = None; return false; }
         if (p_->actualRate > 0) rate_ = p_->actualRate;   // the card would not run at the rate asked for: the real one is reported
@@ -272,6 +290,7 @@ bool AudioIn::start(Kind k, int sampleRate, const std::string& pathOrDevice, dou
 
 void AudioIn::stop() {
     if (kind_ == Mic) audioInMicStop(p_.get());
+    if (p_->genId > 0) { vgen::setGeneratorAudioSink(p_->genId, {}); p_->genId = 0; }
     running_ = false;
     kind_ = None;
     p_->file.clear();
@@ -310,6 +329,23 @@ int AudioIn::read(float* stereo, int n) {
     if (n <= 0) return 0;
     const float g = p_->gain.load();
     const bool mute = p_->muted.load();
+    if (kind_ == File && p_->genId > 0) {   // a video generator's sound: a prebuffer, then what has come; silence while it is not running
+        const uint64_t wr = p_->w.load(std::memory_order_acquire);
+        uint64_t rd = p_->r.load(std::memory_order_relaxed);
+        if (wr - rd > (uint64_t)(kGenHigh * rate_)) rd = wr - (uint64_t)(kGenLow * rate_);
+        if (!p_->genPlaying && wr - rd >= (uint64_t)(kGenStart * rate_)) p_->genPlaying = true;
+        const int have = p_->genPlaying ? (int)std::min<uint64_t>(wr - rd, (uint64_t)n) : 0;
+        const size_t mask = p_->frames - 1;
+        for (int i = 0; i < have; i++) {
+            const size_t k = (size_t)((rd + i) & mask) * 2;
+            stereo[2 * i] = mute ? 0 : p_->ring[k];
+            stereo[2 * i + 1] = mute ? 0 : p_->ring[k + 1];
+        }
+        for (int i = have; i < n; i++) stereo[2 * i] = stereo[2 * i + 1] = 0;
+        if (have < n) p_->genPlaying = false;   // ran dry: wait for a new prebuffer instead of playing scraps
+        p_->r.store(rd + (uint64_t)have, std::memory_order_release);
+        return n;
+    }
     if (kind_ == File && p_->stream) {   // a long file, decoded as it goes; at its end it starts again
         AudioFileStream& d = *p_->stream;
         std::vector<float>& b = p_->streamBuf;
