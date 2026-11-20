@@ -416,6 +416,20 @@ std::string ServerHost::statusJson() {
            "\",\"modeId\":\"" + jsonEscape(m.id) + "\",\"sub\":" + (m.sub.empty() ? "null" : "\"" + jsonEscape(m.sub) + "\"") + ",\"demod\":\"" + demodName(demod_) + "\",\"error\":\"" + jsonEscape(err_) + "\"" + meshJ + b;
 }
 
+bool ServerHost::metrics(dect2::apipol::Metrics& m) {   // GET /api/v1/metrics (the headless server has no message ring yet: events stays 0)
+    std::lock_guard<std::mutex> lk(mu_);
+    m.running = e_.running();
+    m.mode = modes_[(size_t)modeIdx_].name;
+    if (devIdx_ >= 0 && devIdx_ < (int)devices_.size()) m.device = devices_[(size_t)devIdx_].name;
+    m.frequencyHz = freqHz_;
+    m.sampleRateHz = m.running ? e_.radioRate() : (rateHz_ > 0 ? rateHz_ : 0.0);
+    m.gainDb = gainDb_;
+    m.droppedSamples = e_.droppedSamples();
+    const dect2::SampleLoss sl = e_.sampleLoss();
+    m.live = sl.live; m.radioLossSec = sl.radioSec; m.cpuLossSec = sl.cpuSec; m.loadPct = sl.loadPct; m.deliveredPct = sl.deliveredPct;
+    return true;
+}
+
 std::string ServerHost::devicesJson() {
     std::lock_guard<std::mutex> lk(mu_);
     refreshDevices(false);

@@ -519,7 +519,7 @@ void Engine::setPluginSink(PluginIqSink f) {
 
 void Engine::vfoFeed(const cf32* x, size_t n) {
     vfo_.setSink([this](const float* st, size_t frames) {
-        if (!vfoSoundOn_.load()) return;
+        if (!vfoSoundOn_.load() || hunterExclusiveAudio_.load()) return;
         std::lock_guard<std::mutex> lk(vfoOutMu_);
         if (!vfoOut_) { vfoOut_.reset(new AudioOut()); if (!vfoOut_->start(VfoBank::kAudioRate)) { vfoOut_.reset(); return; } }
         vfoOut_->write(st, (int)frames);

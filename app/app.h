@@ -204,6 +204,7 @@ struct App {
     bool insightOpen = false;           // Insights (View > Insights; app/panels/insight_ui.cpp): who hears me, talkgroup activity, trunk load, automatic pages, overdue broadcasts
     bool doctorOpen = false;            // the Reception Doctor window (View > Reception doctor; app/panels/doctor_ui.cpp)
     bool stationHealthOpen = false;     // the station health report window (View > Station health; app/panels/station_health_ui.cpp)
+    bool voiceScoutOpen = false;
     bool sweepOpen = false;             // the sweep scanner window (View > Sweep scanner)
     bool scanViewOpen = false;          // the merged Scanner view: memory table + scan list + tones (View > Scanner)
     bool scannerOpen = false;           // the scanner window (View > Scanner, highly experimental)
@@ -791,6 +792,7 @@ struct MapCellTower { double lat = 0, lon = 0; int rangeM = 0; std::string label
 void cellMapTowers(const dect2::CellTelemetry& t, std::vector<MapCellTower>& out);   // cell_ui.cpp: the towers placed (OpenCelliD / CSV)
 void mapWindow(App& a);                             // map_ui.cpp: View > Map (a.mapOpen): coordinates, Maidenhead locators, distance and bearing
 void propagationWindow(App& a);                     // prop_ui.cpp: Tools > Propagation (a.propOpen): Simple / Advanced coverage prediction (prop_adv.cpp)
+void menuAccelOpen(int menu, const char* popupId);  // ui2_shell.cpp: call just before BeginMenu: opens that top-level menu when its Alt+letter (menugroups::TopMenu) was pressed this frame (#596)
 void mapSendServerMenu(App& a);                     // map_send.cpp: Server menu (opt-in public map)
 void antennaDesignerWindow(App& a);                 // antd_ui.cpp: Tools > Antenna designer (a.antdOpen): templates, wires, SWR, pattern, optimiser
 void mapSendButton(App& a);                         // classic interface: the same choice as a button
@@ -881,6 +883,17 @@ std::string stationUseLine(const App& a, const ModeDef& m);      // station_ui.c
 void receptionDoctorWindow(App& a);                // doctor_ui.cpp: Reception Doctor, why a mode is not decoding, with one-click fixes (a.doctorOpen; docs/RECEPTION-DOCTOR.md)
 void chooseSampleRate(App& a, double hz);          // ui/toolbar_source.cpp: set and apply a sample rate for this mode and radio (0 = Auto)
 void stationHealthWindow(App& a);                  // station_health_ui.cpp: the station and antenna health report (a.stationHealthOpen)
+void voiceScoutWindow(App& a);
+bool voiceScoutSelectFrequency(App& a, double mhz);
+bool voiceScoutScanning();
+void voiceScoutSpectrumInteraction(App& a);
+struct VoiceScoutMarker {
+    double mhz = 0;
+    bool active = false;
+    bool selected = false;
+    int id = 0;
+};
+std::vector<VoiceScoutMarker> voiceScoutMarkers();
 void sweepWindow(App& a);                          // sweep_ui.cpp: the fast sweep scanner window (a.sweepOpen)
 void scannerWindow(App& a);                        // scanner_ui.cpp: the scanner window (a.scannerOpen) and its scan loop, every frame (HIGHLY EXPERIMENTAL)
 void scannerButton(App& a);                        // a button that opens it (the classic interface's Scan tab)
@@ -1064,6 +1077,7 @@ std::string autogainResult(const App& a);      // the last one-shot's result tex
 std::string autogainStatusJson(App& a);        // read-only state for the Web server / remote API (dect2::ag::autogainJson)
 void remoteApiLoadPrefs(App& a);    // remote_api_app.cpp: the remote-control API (HTTP + WebSocket), off by default: its settings, started when on
 void remoteApiSavePrefs(const App& a);
+std::string remoteApiRunCommand(const std::string& name, const std::string& payload);   // a command received over MQTT (integrations/commands.h): "" when it ran, else why not; runs on the main thread through the same hand-over as the API
 void remoteApiTick(App& a);          // every frame: runs the commands the API queued for the main thread, publishes the telemetry
 // the places of the Data feeds window (feeds_ui.cpp); feedsOpenTab opens it on one of them (the old spots of the settings link here)
 enum { kFeedsTabUpload = 0, kFeedsTabPrograms, kFeedsTabShare, kFeedsTabStation, kFeedsTabNmea, kFeedsTabCount };
@@ -1169,6 +1183,7 @@ bool modeSupportsWide(int family);
 void registerWideMode(int family);
 bool wideFamOn(const App& a, int family);                 // the whole-span switch of a mode family (kept per family)
 void setWideFam(App& a, int family, bool on);
+void applyWideDefaults(App& a);                          // Whole span on for every mode that offers it (a fresh profile, and once for an older one)
 bool wideActive(const App& a);                          // the switch is on for this mode and the engine runs it
 void wideSync(App& a);                                  // once a frame: pushes the switch, the selected carrier and the mute to the engine
 void wideCarrierCell(const App& a, int carrierId, double relHz);   // a table cell with the carrier's frequency (MHz); "-" for a single channel
@@ -1192,6 +1207,11 @@ void appResultsSave(App& a, bool now = false);
 // The Clear of a mode's decoded lists, at the top of its list (results_ui.cpp): true when pressed
 bool resultsClearButton(const char* id);
 void scanDbTick(App& a);   // scan_db_ui.cpp: asks to share a finished scan
+bool sharedChannelsAvailable(App& a);   // scan_db_ui.cpp: this mode has a shared channel list
+struct SharedMark { double mhz = 0; std::string label; };
+const std::vector<SharedMark>& sharedMarks(App& a);   // scan_db_ui.cpp: shared channels to label on the spectrum (empty when the toggle is off)
+bool shareChannelAt(App& a, double mhz, bool apply);  // scan_db_ui.cpp: the last scan's channel at this frequency; apply opens the share dialog
+void openSharedChannels(App& a);        // scan_db_ui.cpp: Tools > Shared channel list opens it in the Scan tab
 void tuneToChannel(App& a, const SavedChannel& c);
 void followBandwidth(App& a);
 void setDvbBandwidth(App& a, int idx);   // toolbar_source.cpp: the DVB-T2 / DVB-T width kBw[idx] (manual), or idx < 0 for Automatic; a running receiver follows at once
@@ -1356,6 +1376,7 @@ void channelWidthPopup(App& a);      // automatic or manual, where the mode allo
 void spectrumWaterfall(App& a, float& frac, bool drag);   // the spectrum on top of the waterfall, one panel
 void specFreqViewUpdate(const App& a);                                     // plots.cpp: keep linked frequency pan/zoom in sync with the radio
 void specFreqViewGet(double& loMhz, double& hiMhz);
+void specFreqViewShift(double deltaMHz);
 void specFreqViewWheel(App& a, float mouseNorm, float wheel, double& loMhz, double& hiMhz);
 bool specDbRangeKeys(App& a);                                              // Ctrl+arrows dB range (3D view has no spectrum plot hover)
 float specPlotBwBtnW();                                                    // plots.cpp: layout of corner controls (same frame)
@@ -1532,6 +1553,7 @@ bool dabChannelCombo(App& a);
 // the channel list of the TV modes sets a.freqMhz; the scan ranges are the TV bands of the active plan for the mode (empty: use the built-in lists)
 struct TvRange { std::string label; double startMhz = 0, stopMhz = 0, stepMhz = 0, bwMhz = 0; };
 bool bandPlanPicker(App& a);
+bool bandPlanBoundsAt(const App& a, double hz, double& loMhz, double& hiMhz);
 std::vector<double> bandPlanChannels(const App& a, double loHz, double hiHz);   // the plan's channels of the current mode's bands in the range (whole-span priors)
 bool tvChannelCombo(App& a);   // tvchan_ui.cpp: the Channel selector (previous / next, plan list, region) of every TV mode; true when it changed the frequency
 void tvPlanFollowLocation();     // tvchan_ui.cpp: the setup wizard set a country: the TV channel plans follow it again

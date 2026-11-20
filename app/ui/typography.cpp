@@ -63,7 +63,7 @@ void applyStyle(ImGuiStyle& st) {
     st.ItemInnerSpacing = ImVec2(6, 4);
     st.WindowPadding = c ? ImVec2(8, 6) : ImVec2(10, 8);
     st.CellPadding = c ? ImVec2(5, 2) : ImVec2(6, 3);
-    st.ScrollbarSize = 10; st.GrabMinSize = 6;
+    st.ScrollbarSize = 10; st.GrabMinSize = 3;
     st.FrameRounding = 4; st.TabRounding = 4; st.ChildRounding = 5; st.PopupRounding = 5; st.GrabRounding = 3;
     st.SeparatorTextBorderSize = 1; st.SeparatorTextPadding = ImVec2(c ? 14.f : 18.f, c ? 2.f : 4.f); st.SeparatorTextAlign = ImVec2(0.f, 0.5f);
     ImVec4* col = st.Colors;

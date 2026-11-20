@@ -64,6 +64,8 @@ const Def kDefs[] = {
      "airspyhf.dll|libairspyhf.dll", "libairspyhf*.dylib", "libairspyhf.so*", "https://github.com/airspy/airspyhf (Windows: https://airspy.us/downloads)"},
     {"fobos", "fobos_sdr (RigExpert Fobos SDR)", G2, "the Fobos SDR; not shipped",
      "fobos_sdr.dll|libfobos_sdr.dll", "libfobos_sdr*.dylib", "libfobos_sdr.so*", "https://rigexpert.com (the Fobos SDR software package; open-source library: libfobos)"},
+    {"g33ddc", "G33DDCAPI (WiNRADiO G33DDC)", G2, "the WiNRADiO G33DDC (Windows only); not shipped",
+     "G33DDCAPI.dll", "", "", "https://www.winradio.com/home/developer-g33ddc.htm (the library comes with the G33DDC application)"},
     {"bladerf", "libbladeRF (Nuand bladeRF)", G2, "bladeRF boards; not shipped",
      "bladeRF.dll|libbladeRF.dll", "libbladeRF*.dylib", "libbladeRF.so*", "https://github.com/Nuand/bladeRF and https://www.nuand.com"},
     {"hydrasdr", "libhydrasdr (HydraSDR)", G2, "HydraSDR radios; not shipped",
@@ -182,6 +184,7 @@ std::vector<OptionalLib> optionalLibraries() {
 #else
         const std::vector<std::string> pats = splitBar(d.patLinux);
 #endif
+        if (pats.empty()) continue;   // a library that exists on other systems only (the G33DDC one is Windows only)
         for (size_t i = 0; i < pats.size(); ++i) { if (i) o.files += ", "; o.files += pats[i]; }
         for (const auto& dir : dirs) {
             for (const auto& f : listDir(cache, dir)) {

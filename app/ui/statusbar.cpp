@@ -4,6 +4,7 @@
 // The status bar under the spectrum (lamps, lock state, signal readouts, level and quality gauges, advice) and the
 // gain control. Split from toolbar.cpp; the entry points statusBar() and gainControl() are declared in app.h.
 // Each line of the bar is one function: lamps, state and mode readouts, numbers, gauges, notes.
+#include "streamer.h"
 #include "../app.h"
 #include "dect2/engine/rate_choice.h"
 #include "dect2/source/antenna_ports.h"
@@ -190,6 +191,12 @@ static void statusNotes(App& a, bool run, AdcStatus adc) {
 }
 
 void statusBar(App& a) {
+    if (streamer::on()) {   // always visible while on, and one click ends it
+        ImGui::TextColored(pal::badRed(), "\xE2\x97\x8F"); ImGui::SameLine(0, 4 * gUi);
+        ImGui::TextColored(pal::warnAmber(), "%s", tr("Streamer mode: location and addresses hidden"));
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Turn off"))) plat::prefs().setB("streamerMode", false);
+    }
     autodetStatus(a);   // "TV (auto)" / "Digital voice (auto)": what it found or is doing
     {   // live transcripts are on: always visible
         std::string t;

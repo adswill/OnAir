@@ -3,6 +3,7 @@
 
 // HF digital, the RTTY view of the main tab (called by hfdig_ui.cpp): the settings, the tones found and the decoded text.
 #include "app.h"
+#include "dect2/hfdig/hfdig_synop.h"
 #include "dect2/hfdig/hfdig_rtty.h"
 #include "dect2/hfdig/hfdig_tel.h"
 #include "dect2/engine/updater.h"
@@ -142,8 +143,12 @@ void hfdigRttyTab(App& a, const dect2::HfdigTelemetry& t) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Characters dropped because the start or the stop bit was wrong.");
     flowEnd();
 
+    // weather reports (SYNOP / SHIP, as in the 50 baud bulletins of weather services) found in the text: read into one line each
+    std::vector<dect2::hfdig::WxReport> wx;
+    if (!r.text.empty()) wx = dect2::hfdig::parseWxReports(r.text.size() > 60000 ? r.text.substr(r.text.size() - 60000) : r.text);
+
     // the text, to the end of the tab
-    ImGui::BeginChild("##rttytext", ImVec2(0, 0), ImGuiChildFlags_Borders);
+    ImGui::BeginChild("##rttytext", ImVec2(0, wx.empty() ? 0.f : -std::max(120.f * gUi, ImGui::GetContentRegionAvail().y * 0.35f)), ImGuiChildFlags_Borders);
     ImGui::PushFont(a.mono, 0);
     ImGui::PushTextWrapPos(0);
     if (r.text.empty()) ImGui::TextDisabled("%s", run ? "no text yet" : "start the receiver");
@@ -157,4 +162,18 @@ void hfdigRttyTab(App& a, const dect2::HfdigTelemetry& t) {
     S.lastMax = sm;
     if (S.stick) ImGui::SetScrollHereY(1.f);
     ImGui::EndChild();
+    if (!wx.empty()) {
+        ImGui::BeginChild("##rttywx", ImVec2(0, 0), ImGuiChildFlags_Borders);
+        ImGui::TextDisabled("%s", tr("Weather reports (SYNOP land stations, SHIP ships) found in the text, newest first"));
+        ImGui::SameLine(0, 10 * gUi);
+        if (ImGui::SmallButton(tr("Copy reports"))) {
+            std::string all;
+            for (const auto& w : wx) all += dect2::hfdig::wxLine(w) + "\n";
+            ImGui::SetClipboardText(all.c_str());
+        }
+        ImGui::PushFont(a.mono, 0);
+        for (size_t i = wx.size(); i-- > 0;) ImGui::TextUnformatted(dect2::hfdig::wxLine(wx[i]).c_str());
+        ImGui::PopFont();
+        ImGui::EndChild();
+    }
 }

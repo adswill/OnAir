@@ -573,7 +573,7 @@ void dabTransmittersTab(App& a) {
         ImGui::SameLine(0, 4 * gUi);
         if (ImGui::Button("-", ImVec2(26 * gUi, 0))) { S.map.zoom = std::max(adsbmap::kMinZoom, S.map.zoom - 1); S.fitted = true; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom out"));
         ImGui::SameLine(0, 4 * gUi);
-        if (ImGui::Button("fit")) { S.fitted = false; S.atLat = 1e9; }
+        if (ImGui::Button(tr("fit"))) { S.fitted = false; S.atLat = 1e9; }
         ImGui::SameLine(0, 8 * gUi);
         adsbmap::tileControls("never the position itself");
         ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + size.y - ImGui::GetTextLineHeightWithSpacing()));

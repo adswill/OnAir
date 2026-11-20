@@ -4,6 +4,7 @@
 // The new interface: the shell around the body (menu bar, top bar with the mode combo and summary, bottom bar, the
 // mode list and side bar, the status line and the log console).
 // Split from ui2.cpp; the shared declarations are in ui2_internal.h.
+#include "streamer.h"
 #include "transcribe/transcribe_app.h"
 #include "input_map.h"
 #include "dect2/dsp/baseband_filter.h"
@@ -624,6 +625,7 @@ static void toolMenuItem(App& a, const menugroups::ToolItem& it) {
         case T::Transmit: ImGui::MenuItem(lab, nullptr, &txViewFlag()); break;
         case T::Map: ImGui::MenuItem(lab, nullptr, &a.mapOpen);
             tip(tr("A world map: find a position by coordinates or Maidenhead locator, distance and bearing from your location")); break;
+        case T::VoiceScout: ImGui::MenuItem(lab, nullptr, &a.voiceScoutOpen); break;
         case T::Sweep: ImGui::MenuItem(lab, nullptr, &a.sweepOpen); break;
         case T::StationHealth: ImGui::MenuItem(lab, nullptr, &a.stationHealthOpen); break;
         case T::Heard: ImGui::MenuItem(lab, nullptr, &a.heardOpen); break;
@@ -648,10 +650,13 @@ static void toolMenuItem(App& a, const menugroups::ToolItem& it) {
 }
 
 // the View menu: interface variants, text size, light / high contrast, language, accent, the classic interface
+static menugroups::TopMenu gAltMenu = menugroups::TopMenu::None;   // the menu Alt+letter asked for this frame (set in menuBar)
+
 static void viewMenu(App& a) {
     const float vx0 = ImGui::GetCursorScreenPos().x, vy0 = ImGui::GetWindowPos().y, vy1 = vy0 + ImGui::GetWindowHeight();
     struct Mark { float x0, y0, y1; ~Mark() { tourMark("view", ImVec2(x0, y0), ImVec2(ImGui::GetCursorScreenPos().x, y1)); } } mark{vx0, vy0, vy1};   // the tour points at the View menu
     gViewMenuCentre = ImVec2(ImGui::GetCursorScreenPos().x + ImGui::CalcTextSize(tr("View")).x * 0.5f + 6 * gUi, ImGui::GetCursorScreenPos().y + ImGui::GetFrameHeight() * 0.5f);
+    menuAccelOpen((int)menugroups::TopMenu::View, tr("View"));
     if (ImGui::BeginMenu(tr("View"))) {
         // 4.0: a short top level of submenus (docs/MENUS-4.0.md). hover previews (app/ui/ui_preview.h) follow the items of Layout, Theme and Text.
         if (ImGui::BeginMenu(tr("Layout"))) {
@@ -772,11 +777,14 @@ static void viewMenu(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", inputmap::tip(tr("Fill the display, hiding the taskbar (F11 or Alt+Enter). The same shortcut leaves it."), inputmap::Action::Fullscreen).c_str());
         ImGui::EndMenu();
     }
+    menuAccelOpen((int)menugroups::TopMenu::Tools, tr("Tools"));
     if (ImGui::BeginMenu(tr("Tools"))) {
         // grouped: the table is app/ui/menu_groups.h; a search entry filters across all groups (docs/MENUS-4.0.md)
         static char q[64] = "";
         ImGui::SetNextItemWidth(220 * gUi);
         ImGui::InputTextWithHint("##toolsearch", tr("Search the tools"), q, sizeof q);
+        ImGui::Separator();
+        if (ImGui::MenuItem(tr("Shared channel list"), nullptr, false, sharedChannelsAvailable(a))) openSharedChannels(a);   // the crowd-sourced OnAir-channels data
         ImGui::Separator();
         int n = 0;
         const menugroups::ToolItem* items = menugroups::toolItems(n);
@@ -882,19 +890,31 @@ void restoreDefaultView(App& a) {
 
 float menuBar(App& a) {
     float menuH = 0;
+    // #596: Alt+letter opens the menu (ImGui has no mnemonics); not while typing, not with Ctrl/Shift/Super, not on macOS where Option types characters
+    gAltMenu = menugroups::TopMenu::None;
+    {
+        const ImGuiIO& io = ImGui::GetIO();
+        if (io.KeyAlt && !io.KeyCtrl && !io.KeyShift && !io.KeySuper && !io.WantTextInput && !io.ConfigMacOSXBehaviors)
+            for (int k = ImGuiKey_A; k <= ImGuiKey_Z; k++)
+                if (ImGui::IsKeyPressed((ImGuiKey)k, false)) { gAltMenu = menugroups::menuForAccelerator((char)('a' + (k - ImGuiKey_A))); break; }
+    }
     // a taller bar: the buttons at its right end (credit, Support, version, Clear all) and the menu titles get room below their text
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y + 3 * gUi));
     if (ImGui::BeginMainMenuBar()) {
         menuH = ImGui::GetWindowHeight();
         const bool running = a.engine.running();
+        menuAccelOpen((int)menugroups::TopMenu::File, tr("File"));
         if (ImGui::BeginMenu(tr("File"))) {
             if (ImGui::MenuItem(tr(running ? "Stop receiver" : "Start receiver"), "Space")) { if (running) a.engine.stop(); else startReceiver(a); }
             ImGui::Separator();
             workspaceMenu(a);
             ImGui::Separator();
+            if (ImGui::MenuItem(tr("Streamer mode"), nullptr, streamer::on())) plat::prefs().setB("streamerMode", !streamer::on());   // hides the location and addresses (Settings > Streamer)
+            ImGui::Separator();
             if (ImGui::MenuItem(tr("Exit program"), "Alt+F4")) { if (gWindow) glfwSetWindowShouldClose(gWindow, GLFW_TRUE); }
             ImGui::EndMenu();
         }
+        menuAccelOpen((int)menugroups::TopMenu::Mode, tr("Mode"));
         if (ImGui::BeginMenu(tr("Mode"))) {
             // one submenu per category of the Mode Browser (kGroupNames, table order); a category over 25 modes gets a second level of chunks
             // (menu_groups.h). The keys 1-9 still pick the first nine listed modes in table order, whatever the submenus.
@@ -937,10 +957,12 @@ float menuBar(App& a) {
         const float mx1 = ImGui::GetCursorScreenPos().x;
         tourMark("memory", ImVec2(mx0, my0), ImVec2(mx1, my1));
         mapSendServerMenu(a);
+        if (gAltMenu == menugroups::TopMenu::Settings) { settingsOpen() = !settingsOpen(); gAltMenu = menugroups::TopMenu::None; }   // Alt+S
         if (ImGui::MenuItem(tr("Settings"), inputmap::shortcut(inputmap::Action::OpenSettings).c_str())) settingsOpen() = !settingsOpen();   // a window of its own, not a submenu (Ctrl+, by default; the menu shows the user's key)
         const float sx1 = ImGui::GetCursorScreenPos().x;
         tourMark("server", ImVec2(mx1, my0), ImVec2(sx1, my1));
         const float hx0 = ImGui::GetCursorScreenPos().x;
+        menuAccelOpen((int)menugroups::TopMenu::Help, tr("Help"));
         if (ImGui::BeginMenu(tr("Help"))) {
             if (ImGui::MenuItem(tr("Credits"))) { a.creditsOpen = true; a.creditsTab = 0; }
             ImGui::Separator();
@@ -1162,3 +1184,9 @@ void displayControls(App& a, bool wide) {
 }
 
 }  // namespace ui2
+
+void menuAccelOpen(int menu, const char* popupId) {   // #596: the popup id is the same string BeginMenu gets, in the same ID stack
+    if (menu <= 0 || (int)ui2::gAltMenu != menu) return;
+    ImGui::OpenPopup(popupId);
+    ui2::gAltMenu = menugroups::TopMenu::None;
+}

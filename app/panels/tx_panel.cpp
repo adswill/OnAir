@@ -214,7 +214,7 @@ void drawStatusHeader(App& a, TxUi& s, const DeviceInfo* radio, int conflict, co
     const ImVec4 col = st == State::Idle ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : st == State::Armed || st == State::Preparing ? kAmber
                      : st == State::Test ? pal::accent() : st == State::Done ? kDone : kRed;
     const bool live = st == State::Transmitting || st == State::Carrier;
-    const float pulse = live ? 0.5f + 0.5f * (float)std::sin(ImGui::GetTime() * 5.0) : 1.f;
+    const float pulse = live ? pal::pulse(ImGui::GetTime(), 5.f, 0.f) : 1.f;
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
     const float fh = ImGui::GetFrameHeight(), r = fh * 0.32f;
     ImDrawList* dl = ImGui::GetWindowDrawList();

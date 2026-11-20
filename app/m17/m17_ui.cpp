@@ -219,7 +219,7 @@ void mapView(App& a) {
     ImGui::SameLine(0, 2 * gUi);
     if (ImGui::Button("-", ImVec2(26 * gUi, 0))) { S.map.zoom = std::max(adsbmap::kMinZoom, S.map.zoom - 1); S.mapFollow = false; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom out"));
     ImGui::SameLine(0, 6 * gUi);
-    if (ImGui::Button("fit")) S.mapFollow = true;
+    if (ImGui::Button(tr("fit"))) S.mapFollow = true;
     ImGui::PopStyleColor();
     ImGui::SameLine(0, 6 * gUi);
     adsbmap::tileControls("never the position itself");
@@ -268,7 +268,7 @@ void tab(App& a) {
 
 void list(App& a) {
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
-    if (resultsClearButton("m17")) a.engine.m17().clearResults();
+    if (resultsClearButton("m17")) a.engine.clearResults(33);   // also the whole-span receivers
     const auto& log = a.rx.m17.log;
     if (!ImGui::BeginTable("##m17l", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupColumn("Station"); ImGui::TableSetupColumn("Heard", ImGuiTableColumnFlags_WidthStretch);

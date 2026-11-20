@@ -43,6 +43,7 @@ public:
 
     // RemoteApiHost
     std::string statusJson() override;
+    bool metrics(dect2::apipol::Metrics& m) override;
     std::string devicesJson() override;
     std::string modesJson() override;
     std::string telemetryJson(uint64_t& seq) override;

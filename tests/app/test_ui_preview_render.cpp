@@ -166,7 +166,7 @@ static void lightAndContrast() {
     CHECK(dist(img.at(208, 3), pack(uipal::palette(3).rail)) <= 3, "dark title bar after the Light pass: %08X", img.at(208, 3));
     CHECK(lum(img.at(208, 3)) < 0.1f, "the preview of Dark is dark");
     // and hovering Light from Dark
-    const Look darkCur;
+    Look darkCur; darkCur.typography = 0;   // the sizes below are about layout and scale, so they use the fixed 13 px classic font look
     const Desc lt = previewFor(darkCur, Opt::Mode, 1);
     Img img2(260, 160, 1.f, 0.f, 1.f);
     frame(img2, false, [&](ImDrawList* dl) { draw(dl, 0, 0, 260, 160, lt, unitFor(describe(darkCur), lt, 1.f), false); });

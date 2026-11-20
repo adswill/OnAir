@@ -62,6 +62,9 @@ public:
     void setChannels(const std::vector<VfoConfig>& c);     // any thread; a channel whose id, frequency, width and mode are unchanged keeps its state
     size_t channelCount() const;
     void setSink(Sink s);
+    // 0: normal mix; positive ID: only this channel contributes to audio.
+    // Demodulation, squelch and activity detection continue for every channel.
+    void setAudioSolo(int id);
     void feed(const cf32* x, size_t n);                    // the analysis thread
     void reset();                                          // after a retune: filters and receivers forget the signal (results stay)
 

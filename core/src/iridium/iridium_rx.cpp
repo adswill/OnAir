@@ -307,6 +307,7 @@ struct IridiumReceiver::Impl {
                     t.sbdPackets++;
                     const IridiumSbd sbd = iridiumParseSbd(pk.data, pk.downlink);
                     pr.sbdType = sbd.valid ? sbd.type : -1;
+                    if (sbd.valid) { pr.headerHex = iridiumHexDump(sbd.header, 64); pr.payloadHex = iridiumHexDump(sbd.payload, 256); pr.payloadLength = (uint32_t)sbd.payload.size(); }
                     if (!sbd.valid) pr.status = "not SBD";
                     else if (!sbd.acars.valid) pr.status = "SBD";
                     else {

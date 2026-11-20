@@ -20,7 +20,7 @@ enum class Tool {
     Transcripts, Passes, Scheduler, Recordings, SatNogs, Df, Rfi, PassiveRadar, Images, Feeds, EchoLink, Wireshark, Swarm, Messages,
     ProtoLab, Esp32, SignalLab, ModeBuilder, TxStudio, VideoGen, Integrations, Conversations, Watchlists, Automations, Plugins, Backup,
     Memory, Datasets, Packs, Frequencies, FreqTab, Transmit, Map, Sweep, StationHealth, Heard, Insights, MyStation, Doctor, RfFp,
-    WideAll, Trunking, Scanner, Propagation, AntDesigner, Rotator, VoiceKeys, Calibrate,
+    WideAll, Trunking, Scanner, VoiceScout, Propagation, AntDesigner, Rotator, VoiceKeys, Calibrate,
     PluginStore,   // new in 4.0: opens the plugin window on its Store tab
 };
 constexpr int kTopLevel = -1;   // shown above the groups
@@ -41,7 +41,7 @@ inline const ToolItem* toolItems(int& n) {
         {Tool::PluginStore, N_("Plugin store..."), kTopLevel},
         {Tool::SignalLab, N_("Signal Lab..."), 0}, {Tool::ProtoLab, N_("Protocol lab..."), 0}, {Tool::RfFp, N_("RF fingerprint"), 0},
         {Tool::WideAll, N_("Everything in view"), 0}, {Tool::Insights, N_("Insights"), 0},
-        {Tool::Sweep, N_("Sweep scanner"), 1}, {Tool::Scanner, N_("Scanner (highly experimental)"), 1}, {Tool::Rfi, N_("Interference hunter"), 1},
+        {Tool::VoiceScout, N_("Voice scout"), 1}, {Tool::Sweep, N_("Sweep scanner"), 1}, {Tool::Scanner, N_("Scanner (highly experimental)"), 1}, {Tool::Rfi, N_("Interference hunter"), 1},
         {Tool::Df, N_("Direction finder"), 1}, {Tool::PassiveRadar, N_("Passive radar"), 1}, {Tool::Trunking, N_("Multi-radio trunking"), 1},
         {Tool::Propagation, N_("Propagation..."), 2}, {Tool::AntDesigner, N_("Antenna designer..."), 2}, {Tool::Rotator, N_("Antenna rotator..."), 2},
         {Tool::MyStation, N_("My station"), 2},
@@ -66,6 +66,19 @@ inline bool matchesQuery(const char* label, const char* q) {
     const std::string a = label, b = q;
     auto low = [](std::string s) { for (char& c : s) c = (char)std::tolower((unsigned char)c); return s; };
     return low(a).find(low(b)) != std::string::npos;
+}
+
+// ---- Alt accelerators of the menu bar (#596): Alt+F opens File, so Alt+F then X-style navigation works as on any Windows program ----
+enum class TopMenu { None, File, Mode, View, Tools, Memory, Server, Settings, Help };
+// the menu an Alt+letter opens (the letter in lower or upper case), or None. One letter per top-level menu, the first letter of its English name
+// except Mode (O: Alt+M is the audio mute, audio_control_ui.cpp), Memory (E) and Server (R); Settings is a plain item, so its letter opens the Settings window.
+inline TopMenu menuForAccelerator(char c) {
+    switch (std::tolower((unsigned char)c)) {
+        case 'f': return TopMenu::File;   case 'o': return TopMenu::Mode;   case 'v': return TopMenu::View;
+        case 't': return TopMenu::Tools;  case 'e': return TopMenu::Memory; case 'r': return TopMenu::Server;
+        case 's': return TopMenu::Settings; case 'h': return TopMenu::Help;
+        default:  return TopMenu::None;
+    }
 }
 
 // ---- Mode menu: a category with more than kMaxPerSubmenu modes gets a second level of consecutive chunks (table order) ----

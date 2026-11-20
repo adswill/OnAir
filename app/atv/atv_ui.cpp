@@ -32,6 +32,8 @@ struct State {
     bool snow = false;                          // show the noise of an empty channel instead of nothing (kept in the settings)
     int soundSys = 0;                           // 0 automatic (NICAM, A2), 1 FM / AM sound carrier only
     int dualCh = 0;                             // two-language sound: 0 first, 1 second
+    int denoise = -1;                           // temporal noise reduction: -1 automatic (slows the drawing of a still picture), 0 off, 1 light, 2 medium, 3 strong
+    int pushedDenoise = -9;
     int pushedSnow = -1, pushedSoundSys = -1, pushedDualCh = -1;
     int pushedDeint = -1, pushedSys = -2, pushedCol = -2, pushedDet = -1, pushedMod = -1, pushedLines = -1;
     float pushedFps = -1.f;
@@ -50,6 +52,7 @@ void loadState() {
     S.loaded = true;
     S.deint = (int)plat::prefs().getI("atvDeint", 0) == 1 ? 1 : 0;
     S.snow = plat::prefs().getI("atvSnow", 0) != 0;
+    S.denoise = (int)std::clamp(plat::prefs().getI("atvDenoise", -1), -1L, 3L);
     S.aspect[0] = (int)std::clamp(plat::prefs().getI("atvAspect0", 0), 0L, 2L);
     S.aspect[1] = (int)std::clamp(plat::prefs().getI("atvAspect1", 0), 0L, 2L);
     S.aspect[2] = (int)std::clamp(plat::prefs().getI("atvAspect2", 0), 0L, 2L);
@@ -72,6 +75,7 @@ void pushControls(App& a) {
     if (S.pushedSat != S.saturation) { rx.setSaturation(S.saturation); S.pushedSat = S.saturation; }
     if (S.pushedHue != S.hue) { rx.setHue(S.hue); S.pushedHue = S.hue; }
     if (S.pushedDet != S.detector) { rx.setDetector(S.detector); S.pushedDet = S.detector; }
+    if (S.pushedDenoise != S.denoise) { rx.setNoiseReduction(S.denoise); S.pushedDenoise = S.denoise; }
     if (S.pushedSnow != (int)S.snow) { rx.setShowSnow(S.snow); S.pushedSnow = (int)S.snow; }
     if (S.pushedSoundSys != S.soundSys) { rx.setSoundSystem(S.soundSys); S.pushedSoundSys = S.soundSys; }
     if (S.pushedDualCh != S.dualCh) { rx.setDualSound(S.dualCh); S.pushedDualCh = S.dualCh; }
@@ -87,7 +91,7 @@ void tick(App& a) {
     if (run) {
         if (!S.wasRunning) {   // a new run: send everything again
             S.pushedDeint = -1; S.pushedSys = -2; S.pushedCol = -2; S.pushedDet = -1; S.pushedMod = -1; S.pushedSat = -1.f; S.pushedHue = -999.f; S.pushedVol = -1.f;
-            S.pushedLines = -1; S.pushedFps = -1.f; S.pushedSnow = S.pushedSoundSys = S.pushedDualCh = -1;
+            S.pushedLines = -1; S.pushedFps = -1.f; S.pushedSnow = S.pushedSoundSys = S.pushedDualCh = -1; S.pushedDenoise = -9;
             S.pushedColourOn = !S.colourOn;
         }
         pushControls(a);
@@ -556,6 +560,16 @@ void decoder(App& a, bool&) {
     ImGui::SliderFloat("##atvsat", &S.saturation, 0.f, 2.f, "%.2f");
     nextIf(240);
     if (S.adjust.controls("atv", fit(90))) S.frameSeq = 0;   // the newest frame again, so a still picture changes at once
+    {
+        static const char* const kDn[5] = {"Automatic", "Off", "Light", "Medium", "Strong"};
+        ImGui::TextDisabled("Noise reduction"); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(110));
+        if (ImGui::BeginCombo("##atvdn", kDn[S.denoise + 1])) {
+            for (int i = -1; i <= 3; i++) if (ImGui::Selectable(kDn[i + 1], S.denoise == i)) { S.denoise = i; plat::prefs().setI("atvDenoise", i); }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Averages the pictures to hide noise. Automatic does it when the signal is weak: a still picture then builds up slowly, while moving parts are drawn at once.\nOff draws every picture as it arrives, at the same speed whatever the content.");
+        nextIf(240);
+    }
     if (ImGui::Checkbox("Show snow when there is no picture", &S.snow)) { plat::prefs().setI("atvSnow", S.snow ? 1 : 0); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Without a picture signal, draw the noise of the channel as a TV does with no station (snow) instead of nothing.\nA weak carrier shows up in it before the picture locks. Off by default.");
     if (a.rx.atv.modulation == 0 || a.rx.atv.modulation == 1) {   // not the NBTV pictures, which have their own shape

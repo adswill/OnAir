@@ -212,6 +212,8 @@ struct WideSession::Impl {
     double lastChange = -100;
     uint64_t dropEvents = 0;
     int listen = 0;
+    std::atomic<int> hunterFocusMode{-1}, hunterFocusEntry{0};
+    int hunterAppliedMode = -1, hunterAppliedCarrier = -1;
 
     // load measurement: a window of data time
     double winWork = 0, winData = 0, loadAnalysis = 0;
@@ -235,6 +237,7 @@ struct WideSession::Impl {
     mutable std::mutex snapMu;
     std::vector<WsEntry> snap;
     WsStatus snapSt;
+    uint64_t snapshotSerial = 0;
     std::atomic<int> identStarted{0};
 
     // ---- the identifier's thread
@@ -563,7 +566,7 @@ struct WideSession::Impl {
         }
         for (auto& [m, v] : want) {
             std::sort(v.begin(), v.end());
-            if (!wmConfigured[m]) { wm.configure(m, cfg.spanRate, 0); wmConfigured[m] = true; }
+            if (!wmConfigured[m]) { wm.configure(m, cfg.spanRate, 0); wmConfigured[m] = true; hunterAppliedMode = -999; }
             auto it = followNow.find(m);
             if (it == followNow.end() || it->second != v) { wm.setFollowOnlyFor(m, true, v); followNow[m] = v; }
             modesFollowed.insert(m);
@@ -582,6 +585,33 @@ struct WideSession::Impl {
             if (v.empty()) continue;
             RxTelemetry t; uint64_t seq = rowSeq[m];
             if (wm.telemetry(m, t, seq)) { rowSeq[m] = seq; bankRows[m] = t.wide; }
+        }
+        // Resolve the GUI's entry ID to the independent WideBank carrier ID.
+        // Selecting by mode alone would allow every decoder bank to play at once.
+        const int desiredMode = hunterFocusMode.load(std::memory_order_relaxed);
+        const int desiredEntry = hunterFocusEntry.load(std::memory_order_relaxed);
+        int selectedMode = 0, selectedCarrier = 0;
+        if (desiredMode && desiredEntry) for (const auto& n : nar) {
+            if (n->e.id != desiredEntry || wsKindStdMode(n->e.kind) != desiredMode) continue;
+            auto bi = bankRows.find(desiredMode);
+            if (bi != bankRows.end()) {
+                const WideCarrier* nearest = nullptr; double distance = 1e30;
+                for (const auto& r : bi->second) {
+                    const double d = std::fabs(r.hz - n->e.offsetHz);
+                    if (d < distance) { distance = d; nearest = &r; }
+                }
+                if (nearest && distance < 15000) { selectedMode = desiredMode; selectedCarrier = nearest->id; }
+            }
+            break;
+        }
+        if (desiredMode < 0) selectedMode = -1;
+        // A change of focused carrier or a newly configured decoder bank needs
+        // one atomic audio switch. Avoid toggling decoder audio every 250 ms:
+        // repeated mute/unmute would clip otherwise continuous speech.
+        if (hunterAppliedMode != selectedMode || hunterAppliedCarrier != selectedCarrier) {
+            wm.setAudioFocus(selectedMode, selectedCarrier);
+            hunterAppliedMode = selectedMode;
+            hunterAppliedCarrier = selectedCarrier;
         }
         const auto vst = vfo.status();
         for (auto& n : nar) {
@@ -752,6 +782,7 @@ struct WideSession::Impl {
         for (const WsEntry& e : v) st.running += e.state == WsState::Running;
         st.noiseDb = finder.noiseDb(); st.tvPresent = !tvs.empty(); st.tvWidthMhz = tvWidthMhz;
         std::lock_guard<std::mutex> lk(snapMu);
+        st.snapshotSerial = ++snapshotSerial;
         snap = std::move(v); snapSt = st;
     }
 
@@ -822,6 +853,11 @@ void WideSession::useFrequencyDatabase(bool on) { std::lock_guard<std::mutex> lk
 
 WideModes& WideSession::modes() { return p_->wm; }
 MultiTv* WideSession::tv(bool dvbt) { return p_->mtv[dvbt ? 1 : 0].get(); }
+void WideSession::setAudioSolo(int id) { p_->vfo.setAudioSolo(id); }
+void WideSession::setVoiceAudioFocus(int mode, int entryId) {
+    p_->hunterFocusMode.store(mode, std::memory_order_relaxed);
+    p_->hunterFocusEntry.store(entryId, std::memory_order_relaxed);
+}
 void WideSession::setAudioSink(VfoBank::Sink s) { std::lock_guard<std::mutex> lk(p_->sinkMu); p_->sink = std::move(s); }
 bool WideSession::vfoStatusOf(int id, VfoStatus& s) const {
     for (const VfoStatus& v : p_->vfo.status()) if (v.id == id) { s = v; return true; }

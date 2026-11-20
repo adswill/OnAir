@@ -28,6 +28,22 @@ const bp::Plan* activePlan(const App& a) {
 }
 }  // namespace
 
+// Bounds of the band currently under the tuning cursor. Prefer the smallest
+// matching allocation when plans contain overlapping ranges.
+bool bandPlanBoundsAt(const App& a, double hz, double& loMhz, double& hiMhz) {
+    const bp::Plan* p = activePlan(a);
+    if (!p) return false;
+    const bp::Band* best = nullptr;
+    for (const bp::Band& b : p->bands) {
+        if (!b.contains(hz) || b.endHz <= b.startHz) continue;
+        if (!best || b.endHz - b.startHz < best->endHz - best->startHz) best = &b;
+    }
+    if (!best) return false;
+    loMhz = best->startHz / 1e6;
+    hiMhz = best->endHz / 1e6;
+    return true;
+}
+
 // The General receiver's Auto demodulator (general/general_panels.h): the active plan's band at hz, the narrowest that holds it
 bool bandPlanServiceAt(const App& a, double hz, std::string& service, double& widthHz, std::string& bandName) {
     const bp::Plan* p = activePlan(a);

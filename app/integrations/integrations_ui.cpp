@@ -86,6 +86,7 @@ void start() {
     ig::global().setPost([](const std::string& url, const std::string& body, const std::vector<std::string>& headers) {
         return plat::postRequest(url, body, "application/json", headers, std::string("OnAir/") + ONAIR_VERSION + " (integrations)");
     });
+    ig::global().setCommandHandler([](const std::string& name, const std::string& payload) { return remoteApiRunCommand(name, payload); });
     ig::global().start();
     apply();
 }
@@ -141,6 +142,12 @@ void mqttTab() {
         ImGui::TextWrapped("%s", tr("Announces five sensors (last aircraft, vessel, APRS station, pager message, radiosonde) and an online / offline state. The announcements are retained, as Home Assistant expects."));
         ch |= field(tr("Discovery prefix"), "hapre", S.haPrefix, sizeof S.haPrefix, m.haPrefix, 200);
         ch |= field(tr("State topic base"), "habase", S.haBase, sizeof S.haBase, m.haBase, 200);
+    }
+    ImGui::Separator();
+    ch |= ImGui::Checkbox(tr("Accept commands over MQTT"), &m.commands);
+    if (m.commands) {
+        ImGui::TextWrapped("%s", tr("Subscribes to <base>/cmd/<name> and runs the receiver controls: start, stop, frequency (145.5MHz), samplerate, gain, autogain, mode, volume, mute, record (iq, audio, stop). The answer goes to <base>/cmdresult. Receive only: there is no transmit command. Anyone who can publish to your broker can retune this receiver, so give the broker a login."));
+        if (!m.haDiscovery) ch |= field(tr("State topic base"), "habase", S.haBase, sizeof S.haBase, m.haBase, 200);
     }
     if (ImGui::Button(tr("Send a test message"))) { apply(); ig::global().sendTest(); }
     ImGui::SameLine();

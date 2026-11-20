@@ -359,6 +359,14 @@ void Engine::muteReceiver(int a, bool m) {
     }
 }
 
+void Engine::setVoiceScoutExclusiveAudio(bool enabled) {
+    hunterExclusiveAudio_.store(enabled, std::memory_order_relaxed);
+    // Standard receiver sound is produced independently from wideband VFOs.
+    // It must be muted or it remains audible behind Hunter's selected voice.
+    muteReceiver(activeStd_.load(), enabled);
+    if (secTh_.joinable()) muteReceiver(activeStdFor(secStd_.load()), enabled || !secSound_.load());
+}
+
 void Engine::setSecondarySound(bool on) {
     secSound_ = on;
     std::lock_guard<std::mutex> ck(secCtlMu_);

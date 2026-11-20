@@ -5,10 +5,12 @@
 // fake broker on the loopback (login, QoS 0 and 1, retain, will, reconnect, nothing sent unless switched on) plus the JSON-lines and webhook sinks.
 #include "dect2/integrations/integrations.h"
 #include "dect2/integrations/mqtt.h"
+#include "dect2/integrations/commands.h"
 #include "dect2/automation/json_mini.h"
 #include "../../core/src/net/tcp_client.h"
 #include "../common/test_util.h"
 #include <atomic>
+#include <deque>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>
@@ -42,6 +44,17 @@ struct FakeBroker {
     std::string wantUser, wantPass;     // empty: no login required
     std::atomic<int> dropAfter{-1};     // close the connection after this many PUBLISH packets (once)
     std::atomic<int> accepted{0};
+    std::vector<std::string> subs;       // topic filters of the SUBSCRIBE packets
+    std::deque<std::string> out;         // packets to send to the client (inject())
+    void inject(const std::string& topic, const std::string& payload, int qos) {
+        mq::Publish p; p.topic = topic; p.payload = payload; p.qos = qos; p.pid = 77;
+        std::lock_guard<std::mutex> lk(mu); out.push_back(mq::encodePublish(p));
+    }
+    void flushOut(dect2::sock_t c) {
+        std::deque<std::string> o;
+        { std::lock_guard<std::mutex> lk(mu); o.swap(out); }
+        for (const std::string& d : o) dect2::sockSendAll(c, d.data(), d.size());
+    }
 
     bool start() {
         dect2::netInit();
@@ -72,6 +85,7 @@ struct FakeBroker {
     }
     bool next(dect2::sock_t c, std::string& buf, mq::Packet& pk) {
         for (int i = 0; i < 100 && !stop; i++) {
+            flushOut(c);
             const int k = mq::parsePacket(buf, pk);
             if (k > 0) { buf.erase(0, (size_t)k); return true; }
             if (k < 0) return false;
@@ -102,6 +116,12 @@ struct FakeBroker {
                 { std::lock_guard<std::mutex> lk(mu); got.push_back(p); }
                 if (p.qos == 1) { const std::string a = mq::encodePuback(p.pid); dect2::sockSendAll(c, a.data(), a.size()); }
                 if (dropAfter.load() >= 0 && ++n >= dropAfter.load()) { dropAfter = -1; return; }
+            } else if (pk.type == mq::SUBSCRIBE) {
+                uint16_t pid = 0; std::string f; int q = 0;
+                if (!mq::decodeSubscribe(pk, pid, f, q)) return;
+                { std::lock_guard<std::mutex> lk(mu); subs.push_back(f); }
+                const std::string a = mq::encodeSuback(pid, (uint8_t)q);
+                dect2::sockSendAll(c, a.data(), a.size());
             } else if (pk.type == mq::PINGREQ) {
                 const std::string a = mq::encodePingresp();
                 dect2::sockSendAll(c, a.data(), a.size());
@@ -185,6 +205,13 @@ void testPackets() {
     mq::Publish bp2;
     bad2.type = mq::PUBLISH; bad2.flags = 6;
     CHECK(!mq::decodePublish(bad2, bp2), "QoS 3 refused");
+    {
+        const std::string sb = mq::encodeSubscribe(0x0102, "a/+", 1);
+        mq::Packet sp; uint16_t pid = 0; std::string f; int q = 0;
+        CHECK(mq::parsePacket(sb, sp) == (int)sb.size() && (uint8_t)sb[0] == 0x82 && mq::decodeSubscribe(sp, pid, f, q) && pid == 0x0102 && f == "a/+" && q == 1, "SUBSCRIBE round trip");
+        uint16_t id2 = 0; uint8_t rc = 0;
+        CHECK(mq::decodeSuback(std::string("\x01\x02\x01", 3), id2, rc) && id2 == 0x0102 && rc == 1 && !mq::decodeSuback("x", id2, rc), "SUBACK");
+    }
     CHECK(mq::encodePuback(0x0102) == std::string("\x40\x02\x01\x02", 4), "PUBACK bytes");
     bool sp; uint8_t rc;
     mq::Packet ck;
@@ -590,6 +617,85 @@ void testArchive() {
 }
 }  // namespace
 
+// A RemoteApiHost that records the calls the commands make
+struct CmdHost : dect2::RemoteApiHost {
+    std::string last;
+    std::string statusJson() override { return "{}"; }
+    std::string devicesJson() override { return "[]"; }
+    std::string modesJson() override { return "[]"; }
+    std::string telemetryJson(uint64_t&) override { return "{}"; }
+    std::string spectrumJson(int, uint64_t&) override { return "{}"; }
+    bool start(int d, std::string&) override { last = "start " + std::to_string(d); return true; }
+    bool stop(std::string& e) override { last = "stop"; e = "nothing is running"; return false; }
+    bool setMode(int f, const std::string& s, std::string&) override { last = "mode " + std::to_string(f) + "/" + s; return true; }
+    bool setFrequencyHz(double hz, std::string&) override { last = "freq " + std::to_string((long long)hz); return true; }
+    bool setSampleRateHz(double hz, std::string&) override { last = "rate " + std::to_string((long long)hz); return true; }
+    bool setGainDb(double db, std::string&) override { last = "gain " + std::to_string((int)db); return true; }
+    bool setVolume(double v, std::string&) override { last = "vol " + std::to_string((int)(v * 100 + 0.5)); return true; }
+    bool setMute(bool on, std::string&) override { last = on ? "mute on" : "mute off"; return true; }
+    bool recordStart(const std::string& k, std::string&) override { last = "rec " + k; return true; }
+};
+
+void testCommands() {
+    double hz = 0;
+    CHECK(parseHertz("145.5MHz", hz) && hz == 145.5e6 && parseHertz(" 7100 kHz ", hz) && hz == 7.1e6 && parseHertz("1.09 GHz", hz) && hz == 1.09e9, "frequency units");
+    CHECK(parseHertz("2400000", hz) && hz == 2.4e6 && parseHertz("2.4m", hz) && hz == 2.4e6 && !parseHertz("abc", hz) && !parseHertz("-5", hz) && !parseHertz("", hz), "plain numbers are Hz; junk refused");
+    CHECK(commandFilter("onair") == "onair/cmd/+" && commandFilter("").empty() && commandFilter("a/#").empty() && commandFilter("/a").empty() && commandFilter("a/").empty(), "command filter");
+    CHECK(commandName("onair", "onair/cmd/gain") == "gain" && commandName("onair", "onair/cmd/a/b").empty() && commandName("onair", "other/cmd/gain").empty() && commandName("onair", "onair/cmd/").empty(), "command name");
+    CmdHost h;
+    CHECK(runCommand(h, "frequency", "145.5MHz").empty() && h.last == "freq 145500000", "frequency");
+    CHECK(runCommand(h, "samplerate", "auto").empty() && h.last == "rate 0", "samplerate auto");
+    CHECK(runCommand(h, "gain", " 30 ").empty() && h.last == "gain 30", "gain");
+    CHECK(runCommand(h, "mode", "22/lora").empty() && h.last == "mode 22/lora" && runCommand(h, "mode", "7").empty() && h.last == "mode 7/", "mode");
+    CHECK(runCommand(h, "volume", "50%").empty() && h.last == "vol 50" && !runCommand(h, "volume", "1.5").empty() && !runCommand(h, "volume", "x").empty(), "volume");
+    CHECK(runCommand(h, "mute", "ON").empty() && h.last == "mute on" && !runCommand(h, "mute", "maybe").empty(), "mute");
+    CHECK(runCommand(h, "start", "").empty() && h.last == "start -1" && runCommand(h, "start", "2").empty() && h.last == "start 2" && !runCommand(h, "start", "x").empty(), "start");
+    CHECK(runCommand(h, "stop", "") == "nothing is running", "the host's error is returned");
+    CHECK(runCommand(h, "record", "iq").empty() && h.last == "rec iq" && !runCommand(h, "record", "video").empty(), "record");
+    CHECK(runCommand(h, "autogain", "on") == "not supported", "a control the host lacks says so");
+    CHECK(runCommand(h, "tx", "start") == "unknown command" && runCommand(h, "txstart", "") == "unknown command", "no transmit command exists");
+}
+
+void testCommandsOnBroker() {
+    FakeBroker b;
+    CHECK(b.start(), "fake broker listens");
+    Hub h;
+    std::mutex m;
+    std::vector<std::string> ran;
+    h.setCommandHandler([&](const std::string& name, const std::string& payload) {
+        std::lock_guard<std::mutex> lk(m);
+        ran.push_back(name + "=" + payload);
+        return name == "bad" ? std::string("nope") : std::string();
+    });
+    h.start();
+    Settings s = mqttSettings(b.port);
+    s.mqtt.haBase = "tst";
+    h.setSettings(s);   // commands are off by default: connect only for an event, no subscription
+    h.submit(adsb("A", "B"));
+    CHECK(h.flush(3000) && b.waitFor(1, 3000), "event arrives");
+    { std::lock_guard<std::mutex> lk(b.mu); CHECK(b.subs.empty(), "commands off: nothing subscribed"); }
+    s.mqtt.commands = true;
+    h.setSettings(s);
+    bool subscribed = false;
+    for (int i = 0; i < 300 && !subscribed; i++) { { std::lock_guard<std::mutex> lk(b.mu); subscribed = !b.subs.empty(); } if (!subscribed) std::this_thread::sleep_for(std::chrono::milliseconds(20)); }
+    CHECK(subscribed, "commands on: subscribed without waiting for an event");
+    { std::lock_guard<std::mutex> lk(b.mu); CHECK(!b.subs.empty() && b.subs[0] == "tst/cmd/+", "the filter"); }
+    b.inject("tst/cmd/frequency", "145.5MHz", 1);
+    b.inject("tst/cmd/bad", "x", 0);
+    b.inject("other/cmd/frequency", "1MHz", 0);   // not ours
+    auto resultOf = [&](const std::string& needle) {
+        for (int i = 0; i < 300; i++) {
+            { std::lock_guard<std::mutex> lk(b.mu); for (const auto& p : b.got) if (p.topic == "tst/cmdresult" && p.payload.find(needle) != std::string::npos) return true; }
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+        return false;
+    };
+    CHECK(resultOf("\"command\":\"frequency\",\"ok\":true"), "a command is run and answered");
+    CHECK(resultOf("\"command\":\"bad\",\"ok\":false,\"error\":\"nope\""), "a failing command is answered with the reason");
+    { std::lock_guard<std::mutex> lk(m); CHECK(ran.size() == 2 && ran[0] == "frequency=145.5MHz" && ran[1] == "bad=x", "only topics under the base run"); }
+    h.stop();
+}
+
 int main() {
     testPackets();
     testTopics();
@@ -602,5 +708,7 @@ int main() {
     testTlsRefused();
     testEngineHook();
     testArchive();
+    testCommands();
+    testCommandsOnBroker();
     return testSummary("integrations");
 }

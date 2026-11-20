@@ -4,6 +4,7 @@
 #include "map/my_location.h"
 #include "adsb/adsb_map.h"
 #include "app.h"
+#include "ui/streamer.h"
 #include "dect2/geo/mylocation.h"
 #include "i18n/i18n.h"
 #include "platform/platform.h"
@@ -52,8 +53,8 @@ void drawRing(ImDrawList* dl, double lat, double lon, double km, ImVec2 origin, 
 }
 
 void forceMetric(bool on) { gForceMetric = on; }
-bool markerOn() { return plat::prefs().getB("mapMyLoc", true); }
-bool ringsOn() { return plat::prefs().getB("mapMyLocRings", false); }
+bool markerOn() { return !streamer::hideLocation() && plat::prefs().getB("mapMyLoc", true); }
+bool ringsOn() { return !streamer::hideLocation() && plat::prefs().getB("mapMyLocRings", false); }
 
 bool describeFromMe(double lat, double lon, std::string& out) {
     if (!receiverLocationSet()) return false;
