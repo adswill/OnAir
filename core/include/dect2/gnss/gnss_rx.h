@@ -27,6 +27,9 @@ struct GnssMeasurement {
                                  // (GPS, QZSS: GPS time; Galileo: GST; BeiDou: BDT) or of the day (GLONASS: the satellite's GLONASS time of day)
     double dopplerHz = 0;
     double cn0 = 0;
+    double carrierCycles = 0;    // the carrier since the channel started, cycles (see GnssTracker::carrierCycles); only its change means anything
+    bool hasCarrier = false;
+    int smoothed = 0;            // epochs of carrier smoothing in this satellite's pseudorange (0: not in the solution, 1: the code range alone)
     bool inFix = false;
     double residualM = 0;
 };
@@ -55,6 +58,8 @@ public:
     // Compare the computer's clock with the satellites' UTC (a radio or the test signal, not a file): GnssTelemetry::clockOffsetMs
     void setClockCompare(bool on);
     void setElevationMask(double deg);                   // satellites below this elevation are not used in the fix (default 5)
+    // Carrier smoothing of the pseudoranges (Hatch): the window in measurement epochs, one a second (default 100; 0 or 1 turns it off)
+    void setCarrierSmoothing(int epochs);
     // The navigation data base, for tests and tools (copies; false when the data is not complete yet)
     bool getEphemeris(int prn, GpsEphemeris& e, int* week = nullptr) const;               // GPS
     bool getEphemerisOf(int sys, int prn, GpsEphemeris& e, int* week = nullptr) const;   // any system with one (GPS, QZSS, Galileo, BeiDou)

@@ -216,7 +216,9 @@ bool MultiTv::makeOtherReceiver(Slot& s, int std, double rate, double widthMhz, 
         return true;
     }
     case 4: {
-        auto r = std::make_shared<Atsc3Rx>(); r->configure(rate); r->setPacketCallback(deliver);
+        // one receiver per channel: each keeps the 1.5 s queue the receiver had before its 6 s default, so several channels do not
+        // hold 6 s of samples each (about 360 MB a channel at 7.5 Msps) while they are behind
+        auto r = std::make_shared<Atsc3Rx>(); r->configure(rate); r->setQueueSeconds(1.5); r->setPacketCallback(deliver);
         s.other = r; s.otherFeed = [p = r.get()](const cf32* x, size_t n) { p->feed(x, n); };
         s.otherTel = [p = r.get()](RxTelemetry& t, uint64_t last) {
             Atsc3Telemetry at;

@@ -93,6 +93,7 @@ void GnssTracker::start(const GnssSignalSpec& sp, const uint8_t* chips, int prn_
     isym_.clear(); isymBase_ = 0; nextPart_ = -1; inavPol_ = 1; syncMiss_ = 0; evenAt_ = -1; inavNoSync_ = 0; inavTry_ = 0; inavBase_ = 0;
     events_.clear();
     epochT_.clear(); epochTFirst_ = 0;
+    epochCyc_.clear(); cycles_ = 0;
     scatter_.clear(); cn0Hist_.clear(); lastHistEpoch_ = 0;
     lastEpochT_ = 0;
     // go to the next code epoch boundary: the first (partial) period is not used
@@ -238,7 +239,9 @@ void GnssTracker::epoch(const GnssBand& band, int N, double startIdx) {
     const double tStart = startIdx / fs;
     lastEpochT_ = tStart;
     epochT_.push_back(tStart);
-    if (epochT_.size() > 256) { epochT_.pop_front(); epochTFirst_++; }
+    // the carrier at the start of the code period (the period starts a fraction of a sample before sample pos_)
+    epochCyc_.push_back(cycles_ - fUsed * ((double)pos_ - startIdx) / fs);
+    if (epochT_.size() > 256) { epochT_.pop_front(); epochCyc_.pop_front(); epochTFirst_++; }
     if (locked_) {
         scatter_.push_back({(float)I, (float)Q});
         if (scatter_.size() > 400) scatter_.pop_front();
@@ -259,6 +262,7 @@ void GnssTracker::epoch(const GnssBand& band, int N, double startIdx) {
     ecount_++;
     // advance with the frequency that was used during this epoch
     theta_ = std::fmod(theta_ + fUsed / fs * (double)N, 1.0);
+    cycles_ += fUsed / fs * (double)N;
     pos_ += N;
     phi_ = phiNext;
 }
@@ -762,6 +766,17 @@ bool GnssTracker::transmitTime(double tRx, double* tow) const {
     const double t0 = epochT_[lo], t1 = epochT_[lo + 1];
     const uint64_t k = epochTFirst_ + lo;
     *tow = towAtEpoch0_ + ((double)k + (tRx - t0) / (t1 - t0)) * spec.epochS;
+    return true;
+}
+
+bool GnssTracker::carrierCycles(double tRx, double* cycles) const {
+    const size_t n = epochT_.size();
+    if (n < 3 || epochCyc_.size() != n) return false;
+    if (tRx < epochT_.front() || tRx >= epochT_.back()) return false;
+    size_t lo = 0, hi = n - 1;
+    while (hi - lo > 1) { const size_t mid = (lo + hi) / 2; if (epochT_[mid] <= tRx) lo = mid; else hi = mid; }
+    const double t0 = epochT_[lo], t1 = epochT_[lo + 1];
+    *cycles = epochCyc_[lo] + (epochCyc_[lo + 1] - epochCyc_[lo]) * (tRx - t0) / (t1 - t0);
     return true;
 }
 

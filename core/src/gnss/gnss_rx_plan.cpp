@@ -224,6 +224,7 @@ void GnssReceiver::Impl::replan() {
 
 void GnssReceiver::Impl::resetState() {
     pend.clear();
+    hatch.clear();
     dcI = dcQ = 0; gain = 1; dcInit = false; levelRms = 0; clipFrac = 0; inSamples = 0;
     wallMinCur = wallMinPrev = 1e300; wallWin = 0; offWin.clear(); offHist.clear(); levHist.clear(); snrHist.clear(); offNow = NAN; clkValid = false; histNext = 0;
     interf.configure(rate);

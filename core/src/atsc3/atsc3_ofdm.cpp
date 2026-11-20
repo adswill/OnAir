@@ -294,7 +294,9 @@ bool cirDenoiseChannel(int N, int noc, int D, int k0, const std::vector<cf32>& e
     }
     fft.forward(c.data());
     hch.resize(noc);
-    const float g = 1.f / (float)M;
+    // the response is one comb period (N/D samples) of the inverse transform of the pilots: the transform back gives N/D times the channel,
+    // whatever share of the N carriers the comb covers (1/M, M the pilots in the band, was N/(M D), about N/noc = 1.18 times too large)
+    const float g = (float)D / (float)N;
     for (int k = 0; k < noc; k++) hch[k] = c[bin(k)] * g;
     return true;
 }
