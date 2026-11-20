@@ -308,6 +308,26 @@ void isdbtRows(std::vector<D>& v) {
     });
 }
 
+void dvbc2Rows(std::vector<D>& v) {
+    add(v, {
+        PROBE(A(SET(pick("dvbc2.mcs", "Modulation and code rate", "The data PLP's constellation and LDPC rate (EN 302 769 table).", 0,
+                         {"256-QAM 5/6", "16-QAM 4/5", "64-QAM 2/3", "256-QAM 3/4", "64-QAM 9/10", "256-QAM 9/10", "1024-QAM 3/4", "4096-QAM 5/6"}),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[0] = (int)x; }), TxPGroup::Modulation), 0.25),
+        PROBE(A(SET(pick("dvbc2.gi", "Guard interval", "1/64 or 1/128 of the symbol.", 0, {"1/64", "1/128"}),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[1] = (int)x; }), TxPGroup::Modulation), 0.25),
+        PROBE(A(SET(pick("dvbc2.slice", "Data slice type", "Type 1, or Type 2 with the robust or the high-efficiency FECFRAME header.", 0, {"Type 1", "Type 2 robust header", "Type 2 high-efficiency header"}),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[2] = (int)x; }), TxPGroup::Framing), 0.25),
+        PROBE(A(SET(pick("dvbc2.ti", "Time interleaving", "Symbols the data is spread over.", 0, {"none", "4 symbols", "8 symbols", "16 symbols"}),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[3] = (int)x; }), TxPGroup::Framing), 0.25),
+        PROBE(A(SET(flag("dvbc2.notch", "Narrowband notch", "Leaves a narrow band of carriers empty (a protected service in the cable).", false),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[4] = x > 0.5 ? 1 : 0; }), TxPGroup::Modulation), 0.25),
+        PROBE(A(SET(flag("dvbc2.short", "Short FEC frames", "16200-bit FEC frames instead of 64800.", false),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[5] = x > 0.5 ? 1 : 0; }), TxPGroup::Framing), 0.25),
+        PROBE(W(A(SET(flag("dvbc2.plp2", "Second PLP", "A second data PLP in the Type 2 slice.", false),
+                    [](TxRequest& r, double x) { r.synth.modeOpt[6] = x > 0.5 ? 1 : 0; }), TxPGroup::Framing), "dvbc2.slice>0"), 0.25),
+    });
+}
+
 void dvbsRows(std::vector<D>& v, double symDef = 5e6) {
     add(v, {
         S(SET(TV(num("dvbs.symrate", "Symbol rate", "Symbols a second (QO-100 DATV uses 333 k to 2 M, satellites 22 M to 30 M).", "sym/s", symDef, 25e3, 60e6, "%.0f"), symDef * 0.5),
@@ -357,6 +377,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         if (id == "dvbt") dvbtRows(v);
         if (id == "isdbt") isdbtRows(v);
         if (id == "dvbs") dvbsRows(v);
+        if (id == "dvbc2") dvbc2Rows(v);
         if (id == "dtmb" || id == "dvbc" || id == "atsc3" || id == "atsc")
             v.push_back(A(custom("scene.options", "Generator settings", "The generator's own settings (shared with the receiver's test signal); its noise and offset controls do not apply here."), TxPGroup::Modulation));
         break;

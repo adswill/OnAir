@@ -868,7 +868,7 @@ static void soapyChecks(const std::string& moduleDir) {
 #endif
 
 static TxPayloadKind expectedKind(const std::string& id) {
-    if (id == "dvbt2" || id == "dvbt" || id == "atsc" || id == "atsc3" || id == "isdbt" || id == "dvbs" || id == "dtmb" || id == "dvbc") return TxPayloadKind::TvFile;
+    if (id == "dvbt2" || id == "dvbt" || id == "atsc" || id == "atsc3" || id == "isdbt" || id == "dvbs" || id == "dtmb" || id == "dvbc" || id == "dvbc2") return TxPayloadKind::TvFile;
     if (id == "atv") return TxPayloadKind::AnalogTv;
     if (id == "dab" || id == "drm" || id == "hdr" || id == "cdr") return TxPayloadKind::BroadcastAudio;
     if (id == "ft8" || id == "ft4" || id == "wspr" || id == "ft2" || id == "jt65" || id == "jt9" || id == "q65" || id == "fst4" || id == "msk144") return TxPayloadKind::Ftx;

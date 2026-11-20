@@ -14,6 +14,7 @@
 #include "dect2/tv/videogen.h"
 #include "dect2/dtmb/dtmb_gen.h"
 #include "dect2/dvbc/dvbc_rx.h"
+#include "dect2/dvbc2/dvbc2_gen.h"
 #include "dect2/dvbs/dvbs_gen.h"
 #include "dect2/dvbt/dvbt.h"
 #include "dect2/dvbt/dvbt_gen.h"
@@ -164,6 +165,7 @@ std::vector<TxModeSpec> makeTxTable() {
         mk("js8", "JS8Call", 39, "makeJs8Synth", kOpt, kUnv),
         mk("nxdn", "NXDN", 40, "makeNxdnSynth", kOpt, kUnv),
         mk("dvbc", "DVB-C", 42, "makeDvbcSynth", kOpt, kUnv),
+        mk("dvbc2", "DVB-C2", 743, "makeDvbc2Synth (EN 302 769), demo programme or a transport stream file", "modulation and code rate, guard interval, data slice type, time interleaving, notch, FEC frame, second PLP", kUnv),
         mk("uplink", "Mode S uplink", 45, "makeUplinkSynth", kOpt, kUnv),
         mk("orbcomm", "Orbcomm", 46, "makeOrbcommSynth", kOpt, kUnv),
         mk("dpmr", "dPMR", 47, "makeDpmrSynth", kOpt, kUnv),
@@ -277,7 +279,7 @@ const TxModeSpec* txModeForList(int family, const char* subId, int dvbVariant) {
 }
 
 TxPayloadKind txPayloadKind(const std::string& id) {
-    if (id == "dvbt2" || id == "dvbt" || id == "atsc" || id == "atsc3" || id == "isdbt" || id == "dvbs" || id == "dtmb" || id == "dvbc")
+    if (id == "dvbt2" || id == "dvbt" || id == "atsc" || id == "atsc3" || id == "isdbt" || id == "dvbs" || id == "dtmb" || id == "dvbc" || id == "dvbc2")
         return TxPayloadKind::TvFile;
     if (id == "atv") return TxPayloadKind::AnalogTv;
     if (id == "dab" || id == "drm" || id == "hdr" || id == "cdr") return TxPayloadKind::BroadcastAudio;
@@ -717,7 +719,7 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
     double native = 0;
     std::function<void(uint8_t*)> fileTs;
     std::string fileNote;
-    const bool wantTs = m.stdMode == 0 || m.stdMode == 3 || m.stdMode == 6 || m.stdMode == 8 || m.stdMode == 9 || m.stdMode == 42;
+    const bool wantTs = m.stdMode == 0 || m.stdMode == 3 || m.stdMode == 6 || m.stdMode == 8 || m.stdMode == 9 || m.stdMode == 42 || m.stdMode == 743;
     if (wantTs && !r.file.empty()) {
         if (!txOpenMpegTs(r.file, fileTs, fileNote)) {
             if (fileNote.empty()) fileNote = "could not use this file as a transport stream; the demo programme is sent";
@@ -789,6 +791,12 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
     } else if (m.stdMode == 42) {
         const double rr = rateHz > 0 ? rateHz : m.nominalRateHz;
         auto ms = makeDvbcSynth(s, rr, namedTs(fileTs, dvbcSynthNetBitrate(s, rr)));
+        if (!ms) { char b[200]; snprintf(b, sizeof b, "the %s generator cannot make a signal at %.3f Msps with these options", m.name, rr / 1e6); err = b; return nullptr; }
+        g = std::make_unique<SynthGen>(std::move(ms), rr);
+        native = rr;
+    } else if (m.stdMode == 743) {
+        const double rr = rateHz > 0 ? rateHz : m.nominalRateHz;
+        auto ms = makeDvbc2Synth(s, rr, namedTs(fileTs, dvbc2SynthNetBitrate(s)));
         if (!ms) { char b[200]; snprintf(b, sizeof b, "the %s generator cannot make a signal at %.3f Msps with these options", m.name, rr / 1e6); err = b; return nullptr; }
         g = std::make_unique<SynthGen>(std::move(ms), rr);
         native = rr;
