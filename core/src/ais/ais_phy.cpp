@@ -172,39 +172,6 @@ static bool coherentTry(const cf32* x, size_t n, double tau, int first, const ai
     return !out.good.empty();
 }
 
-// Soft repair of the frame check. The line bits whose frequency integral lies closest to the slicer are the likeliest errors: flip each of the weakest
-// 'singles' alone, then every pair among the weakest 'pairs', and keep the first change that gives a frame whose flags, bit stuffing and FCS all hold
-// (a noise burst passes that with a probability of about 2^-16 a try, and the receiver's own check of the message type comes after). Only the best timing
-// phase is tried, so the work for a burst of noise is a few dozen cheap passes over its bits.
-static bool flipRepair(const ais::Bits& line, const std::vector<double>& m, const std::vector<char>& inside, ais::HdlcResult& out) {
-    constexpr size_t kSingles = 12, kPairs = 8;
-    std::vector<size_t> idx;
-    for (size_t i = 0; i < line.size() && i < m.size(); i++) if (inside[i]) idx.push_back(i);
-    if (idx.size() < 40) return false;
-    const size_t keep = std::min(idx.size(), kSingles);
-    std::partial_sort(idx.begin(), idx.begin() + (long)keep, idx.end(), [&](size_t p, size_t q) { return std::fabs(m[p]) < std::fabs(m[q]); });
-    idx.resize(keep);
-    ais::Bits t = line;
-    auto tryIt = [&]() {
-        ais::HdlcResult r = ais::hdlcFrames(ais::nrziDecode(t, t.empty() ? 1 : t[0]));
-        if (r.good.empty()) return false;
-        out = std::move(r);
-        return true;
-    };
-    for (size_t a = 0; a < keep; a++) {
-        t[idx[a]] ^= 1;
-        if (tryIt()) return true;
-        t[idx[a]] ^= 1;
-    }
-    const size_t np = std::min(keep, kPairs);
-    for (size_t a = 0; a < np; a++) for (size_t b = a + 1; b < np; b++) {
-        t[idx[a]] ^= 1; t[idx[b]] ^= 1;
-        if (tryIt()) return true;
-        t[idx[a]] ^= 1; t[idx[b]] ^= 1;
-    }
-    return false;
-}
-
 } // namespace
 
 static AisBurstResult decodeOnce(const cf32* x, size_t n, size_t core0, size_t core1, const AisPhyConfig& cfg) {
@@ -304,12 +271,6 @@ static AisBurstResult decodeOnce(const cf32* x, size_t n, size_t core0, size_t c
             double offC = off;
             if (coherentTry(x, n, tau, s.first, guideBits, off, rc, fft, fbuf, &lv, &offC)) { r = std::move(rc); off = offC; }
             else if (lv != guideBits && coherentTry(x, n, tau, s.first, lv, off, rc, fft, fbuf, nullptr, &offC)) { r = std::move(rc); off = offC; }   // again, guided by its own levels
-        }
-        if (r.good.empty() && cfg.repair && h == 0 && s.m.size() > 40) {
-            std::vector<char> inside(s.m.size(), 0);
-            for (size_t i = 0; i < s.m.size(); i++) { const double t = tau + kAisSps * (s.first + (int)i); inside[i] = t >= (double)a && t <= (double)b; }
-            ais::HdlcResult rr;
-            if (flipRepair(line, s.m, inside, rr)) r = std::move(rr);
         }
         if (h == 0) res.bad = r.bad;
         if (!r.good.empty()) {

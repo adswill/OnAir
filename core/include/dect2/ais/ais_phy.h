@@ -21,7 +21,6 @@ struct AisPhyConfig {
     double narrowPassHz = 3500, narrowStopHz = 8500;   // the second, narrower filter that is applied to a burst after its own frequency is known (0 = off)
     bool mlse = true;           // when the hard decisions fail, a Viterbi search over the Gaussian pulse's intersymbol interference
     bool coherent = true;       // when that fails too, coherent detection (phase at the bit boundaries, four-state Viterbi) guided by those levels
-    bool repair = true;         // when everything else fails: flip the least certain line bits (one, then two of them) until the frame check holds
     int mode = 0;               // 0 integrate and dump
 };
 
