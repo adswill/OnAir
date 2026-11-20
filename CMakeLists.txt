@@ -549,8 +549,16 @@ if(DECT2_BUNDLE_CODEC2 AND NOT MSVC)
   add_subdirectory(third_party/codec2)
   add_dependencies(dect2core onair_codec2)
 endif()
+# Optional Linux Moonshine Voice backend. Uses libmoonshine.so at runtime (dlopen),
+# so building OnAir does not require the Moonshine SDK or downloaded model weights.
+option(DECT2_WITH_MOONSHINE "Moonshine Voice model adapter for built-in transcripts (Linux)" ON)
+if(DECT2_WITH_MOONSHINE AND CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT ANDROID)
+  target_sources(dect2core PRIVATE core/src/transcribe/moonshine_backend.cpp core/src/transcribe/moonshine_runtime_loader.cpp)
+  target_compile_definitions(dect2core PUBLIC DECT2_HAVE_MOONSHINE)
+  target_link_libraries(dect2core PRIVATE ${CMAKE_DL_LIBS})
+endif()
 # Live transcripts: transcript store and exports, callsign reader, voice segmenter, models list and download, the transcriber (docs/TRANSCRIBE.md)
-target_sources(dect2core PRIVATE core/src/transcribe/transcript.cpp core/src/transcribe/callsign.cpp core/src/transcribe/segmenter.cpp core/src/transcribe/models.cpp core/src/transcribe/transcriber.cpp core/src/transcribe/audio_tap.cpp core/src/transcribe/captions.cpp)
+target_sources(dect2core PRIVATE core/src/transcribe/transcript.cpp core/src/transcribe/callsign.cpp core/src/transcribe/segmenter.cpp core/src/transcribe/models.cpp core/src/transcribe/moonshine_models.cpp core/src/transcribe/transcriber.cpp core/src/transcribe/audio_tap.cpp core/src/transcribe/captions.cpp)
 # whisper.cpp (MIT, ggml authors): speech to text for the live transcripts (docs/TRANSCRIBE.md). Only the CPU back end of ggml is vendored
 # (third_party/whisper); no model is shipped, the user downloads one or drops a file in the models folder.
 option(DECT2_WITH_WHISPER "Speech to text (whisper.cpp) for the live transcripts of airband and marine voice" ON)

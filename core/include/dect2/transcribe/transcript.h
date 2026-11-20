@@ -25,6 +25,7 @@ struct TranscriptEntry {
     std::string lang;            // language of `text` ("de"), "" when not known
     std::string translation;     // English translation of `text` (live translation), "" when none
     float confidence = 0;        // 0..1, mean probability of the words
+    bool confidenceAvailable = true; // false when recognition engine has no confidence score
     int turn = 0;                // transmission counter on this channel since the start
     std::string speaker;         // a guess from the wording: "ATC" (starts with the callsign), "Aircraft" (ends with it), "" (unknown)
     std::string callsign;        // flight id spoken in it, normalised ("DLH123"), "" when none
