@@ -739,7 +739,7 @@ static void command(App& a) {
 extern const ModeUi kAisUi;
 const ModeUi kAisUi = {
     .sideTitle = "VESSELS",
-    .tabName = "Ships",
+    .tabName = "Vessels",
     .tabIcon = Ic::Compass,
     .tab = tab,
     .receiver = receiver,
