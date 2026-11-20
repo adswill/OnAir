@@ -69,3 +69,7 @@ carrier at the centre), `test_atv_radio_sweep` (radio rates, tuning errors, mirr
 In the TV player the box next to Deinterlace sets how the picture fills its window (also in the pop-out and full screen): **Fit** keeps the shape (black bars),
 **Stretch 4:3 to 16:9** widens a 4:3 programme (a 16:9 picture is left alone), **Zoom (crop)** fills the window and cuts the edges, **Fill (stretch)** fills the
 window whatever the shape. It is saved (`videoFit`). Test: `test_video_fit`.
+
+## FM-ATV transmit (issue #584)
+
+Amateur television on 23 cm and the microwave bands frequency-modulates the carrier with the composite video instead of amplitude-modulating it. The analog TV test signal and the TX panel (Analog TV, System) now have **FM-ATV (23 cm, 625 lines)**: 625-line PAL video, sync tip at the lowest frequency, peak white at the highest, 8 MHz peak to peak (fits a 16 MHz channel), constant envelope. Use an output rate of 20 Msps or more. Not in this version: a sound subcarrier (the 6 MHz FM sound of FM-ATV) and CCIR 405 video pre-emphasis. Checked only on generated samples (`tests/atv/test_atv_fm.cpp`: constant envelope, frequency span), not on air.

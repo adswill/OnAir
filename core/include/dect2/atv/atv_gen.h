@@ -50,6 +50,11 @@ struct AtvGenConfig {
     // the tones are 1 kHz (left, sound A) and 1.5 kHz (right, sound B). In a synth the value is modeOpt[3] / 8.
     int sound2 = 0;
     int pattern = 0;              // 0 card, 1 bars, 2 ramp
+    // FM-ATV (amateur television on 23 cm and the microwave bands): the composite video frequency-modulates the carrier at the centre instead of
+    // amplitude-modulating it (no vestigial sideband, constant envelope). fmDevMhz is the peak-to-peak deviation from sync tip to peak white;
+    // 8 MHz fits a 16 MHz channel. No sound subcarrier is made. Needs an output rate of 20 Msps or more.
+    bool fmVideo = false;
+    double fmDevMhz = 8;
     std::string ident;            // text on the test card; empty: ONAIR TEST
     // 48 kHz interleaved stereo for the sound carrier (mic / file). Empty: the built-in tone / melody of `sound`.
     std::function<int(float* stereo, int frames)> pullAudio;

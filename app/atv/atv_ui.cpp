@@ -617,8 +617,8 @@ void synth(App& a, bool& changed) {
         }
     };
     ImGui::TextDisabled("system"); ImGui::SameLine(0, 5 * gUi);
-    combo("##tsys", sc.modeOpt[0], {"B/G", "B (7 MHz)", "I", "D/K", "M", "N", "A (405)", "C", "E (819)", "H", "K'", "L", "L'", "NBTV, AM", "NBTV, FM"}, 90);
-    if (sc.modeOpt[0] >= 13) {   // NBTV: the line count of the test signal (0 = 32) instead of the colour
+    combo("##tsys", sc.modeOpt[0], {"B/G", "B (7 MHz)", "I", "D/K", "M", "N", "A (405)", "C", "E (819)", "H", "K'", "L", "L'", "NBTV, AM", "NBTV, FM", "FM-ATV (23 cm, 625)"}, 90);
+    if (sc.modeOpt[0] == 13 || sc.modeOpt[0] == 14) {   // NBTV: the line count of the test signal (0 = 32) instead of the colour
         nextIf(180);
         ImGui::TextDisabled("lines"); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(90 * gUi);
         int ln = sc.modeOpt[1] > 0 ? sc.modeOpt[1] : 32;
