@@ -19,6 +19,7 @@
 #include "native_common.h"
 #include <condition_variable>
 #include <deque>
+#include <cstddef>
 #include <cstring>
 #include <future>
 #include <functional>
@@ -160,9 +161,8 @@ std::string firstSerial() {
     std::vector<uint8_t> buf((size_t)count * kInfoStride, 0);
     if (g33().GetDeviceList(buf.data(), (uint32_t)buf.size()) <= 0) return std::string();
     static_assert(sizeof(G33DeviceInfoHead) <= kInfoStride, "the device record must fit the stride the list is read with");
-    G33DeviceInfoHead h;
-    std::memcpy(&h, buf.data(), sizeof h);   // a copy: the byte buffer has no alignment promise for the struct
-    return trimmed(h.serial, sizeof h.serial);
+    // the serial is plain characters, so it is read in place at its offset: no struct is laid over the byte buffer
+    return trimmed(reinterpret_cast<const char*>(buf.data()) + offsetof(G33DeviceInfoHead, serial), sizeof(G33DeviceInfoHead::serial));
 }
 
 std::vector<RadioSetting> g33Settings() {
