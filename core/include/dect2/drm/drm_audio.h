@@ -46,6 +46,10 @@ private:
 // fields and the xHE-AAC static config (clause 5.3.2, a compact UsacConfig). Empty when the config cannot be read.
 std::vector<uint8_t> xheAscFromSdc(const SdcAudio& a);
 
+// The inverse, for a transmitter that starts from an encoder's AudioSpecificConfig: coding 3 with mode, rate code and static config. False when DRM cannot carry
+// the stream (a rate outside the DRM list, 768-sample frames without SBR, time-warped MDCT, a decorrelation config).
+bool xheSdcFromAsc(const std::vector<uint8_t>& asc, SdcAudio& out);
+
 // xHE-AAC audio super frame (clause 5.3.1): the frames it completes, each with its CRC checked. The parser keeps the bytes of the frame in progress.
 struct XheFrame { std::vector<uint8_t> au; bool crcOk = false; };
 class XheSuperFrameParser {

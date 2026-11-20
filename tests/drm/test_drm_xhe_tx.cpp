@@ -98,7 +98,40 @@ static void testTransmitReceive() {
     CHECK(inOrder >= good - 3, "and in order (%d of %d)", inOrder, good);
 }
 
+struct Bits { std::vector<uint8_t> b; int n = 0; void put(unsigned v, int k) { for (int i = k - 1; i >= 0; i--) { if ((n & 7) == 0) b.push_back(0); if ((v >> i) & 1) b.back() |= (uint8_t)(0x80 >> (n & 7)); n++; } } };
+
+// the static config -> the encoder's AudioSpecificConfig -> the static config again must give the bytes we started with
+static void roundTripConfig(const char* what, int mode, int rateCode, const std::vector<uint8_t>& staticCfg) {
+    SdcAudio a; a.coding = 3; a.mode = mode; a.rateCode = rateCode; a.config = staticCfg;
+    const std::vector<uint8_t> asc = xheAscFromSdc(a);
+    CHECK(!asc.empty(), "%s: ASC built", what);
+    SdcAudio b;
+    CHECK(xheSdcFromAsc(asc, b), "%s: the ASC is read back", what);
+    CHECK(b.coding == 3 && b.mode == mode && b.rateCode == rateCode, "%s: mode %d rate code %d", what, b.mode, b.rateCode);
+    CHECK(b.config == staticCfg, "%s: static config bytes are the same", what);
+}
+static void testConfigInverse() {
+    Bits m;   // mono, 2:1 SBR, default header, one extension element without config
+    m.put(2, 2); m.put(1, 1); m.put(0, 3); m.put(5, 4); m.put(9, 4); m.put(0, 2);
+    m.put(1, 2); m.put(3, 4); m.put(0, 4); m.put(0, 1); m.put(0, 1);
+    roundTripConfig("mono 38.4 kHz", 0, 6, m.b);
+    Bits st;  // stereo, 2:1 SBR, parametric stereo config 1 with temporal shape, no extension
+    st.put(2, 2); st.put(0, 1); st.put(1, 1); st.put(0, 2); st.put(5, 4); st.put(9, 4); st.put(0, 2);
+    st.put(1, 2); st.put(3, 3); st.put(2, 3); st.put(1, 1); st.put(0, 1); st.put(1, 1); st.put(0, 1); st.put(7, 5); st.put(0, 2);
+    roundTripConfig("stereo 32 kHz", 2, 5, st.b);
+    Bits plain;   // mono, 1024 samples without SBR
+    plain.put(0, 2); plain.put(1, 1); plain.put(0, 2);
+    roundTripConfig("mono 24 kHz no SBR", 0, 4, plain.b);
+    SdcAudio no, back;
+    no.coding = 3; no.mode = 0; no.rateCode = 4; no.config = plain.b;
+    std::vector<uint8_t> asc = xheAscFromSdc(no);
+    asc[0] ^= 0x20;
+    CHECK(!xheSdcFromAsc(asc, back), "an ASC of another audio object type is refused");
+    CHECK(!xheSdcFromAsc({}, back), "an empty ASC is refused");
+}
+
 int main() {
+    testConfigInverse();
     testPacker();
     testTransmitReceive();
     return testSummary("drm_xhe_tx");

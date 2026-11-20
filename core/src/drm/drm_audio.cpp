@@ -169,6 +169,76 @@ std::vector<uint8_t> xheAscFromSdc(const SdcAudio& a) {
     return out.b;
 }
 
+// The other direction, for a transmitter that starts from an encoder's AudioSpecificConfig (audio object type 42): the DRM audio parameters and static
+// config. What DRM cannot carry (time-warped MDCT, 768-sample frames without SBR, a decorrelation config, the speech-only temporal shapes) fails.
+bool xheSdcFromAsc(const std::vector<uint8_t>& asc, SdcAudio& out) {
+    static const int usacRates[32] = {96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350, 0, 0, 57600,
+                                      51200, 40000, 38400, 34150, 28800, 25600, 20000, 19200, 17075, 14400, 12800, 9600, 0, 0, 0, 0};
+    BitIn in(asc.data(), asc.size());
+    if (in.get(5) != 31 || in.get(6) != 10) return false;               // audio object type 42
+    if (in.get(4) == 15) in.get(24);                                    // the ASC's own sampling rate (the UsacConfig repeats it)
+    const uint32_t chan = in.get(4);
+    if (chan != 1 && chan != 2) return false;
+    const bool stereo = chan == 2;
+    const uint32_t ri = in.get(5);
+    const int rate = ri == 31 ? (int)in.get(24) : usacRates[ri];
+    static const int xheRates[6] = {16000, 19200, 24000, 32000, 38400, 48000};
+    const int* rp = std::find(xheRates, xheRates + 6, rate);
+    if (rp == xheRates + 6) return false;
+    const int coreIdx = (int)in.get(3);
+    if (coreIdx < 1 || coreIdx > 4) return false;
+    const int sbrRatioIndex = coreIdx == 2 ? 2 : coreIdx == 3 ? 3 : coreIdx == 4 ? 1 : 0;
+    if (in.get(5) != chan) return false;                                // channelConfigurationIndex
+    const uint32_t numElements = in.escaped(4, 8, 16) + 1;
+    if (numElements > 9) return false;
+    if (in.get(2) != (stereo ? 1u : 0u)) return false;                  // the one core element: SCE or CPE
+    if (in.get(1) != 0) return false;                                   // tw_mdct
+    BitOut st;
+    st.put((uint32_t)coreIdx - 1, 2);
+    st.put(in.get(1), 1);                                               // noiseFilling
+    if (sbrRatioIndex > 0) {
+        for (int bits : {1, 1, 1, 4, 4}) st.put(in.get(bits), bits);   // harmonic, inter-TES, PVC, default start and stop frequency
+        const uint32_t e1 = in.get(1), e2 = in.get(1);
+        st.put(e1, 1); st.put(e2, 1);
+        if (e1) for (int bits : {2, 1, 2}) st.put(in.get(bits), bits);
+        if (e2) for (int bits : {2, 2, 1, 1}) st.put(in.get(bits), bits);
+        if (stereo) {
+            const uint32_t sci = in.get(2);
+            st.put(sci, 2);
+            if (sci > 0) {                                              // Mps212Config -> xHEAACMps212Config
+                st.put(in.get(3), 3); st.put(in.get(3), 3);             // bsFreqRes, bsFixedGainDMX
+                const uint32_t ts = in.get(2);
+                if (ts != 0 && ts != 3) return false;
+                st.put(ts ? 1 : 0, 1);
+                if (in.get(2) != 0) return false;                       // bsDecorrConfig
+                st.put(in.get(1), 1); st.put(in.get(1), 1);             // bsHighRateMode, bsPhaseCoding
+                const uint32_t present = in.get(1);
+                st.put(present, 1);
+                if (present) st.put(in.get(5), 5);
+                if (sci >= 2) { st.put(in.get(5), 5); st.put(in.get(1), 1); }
+            }
+        }
+    }
+    st.escaped(numElements - 1, 2, 4, 8);
+    for (uint32_t i = 1; i < numElements; i++) {
+        if (in.get(2) != 3) return false;                               // only extension elements follow
+        const uint32_t type = in.escaped(4, 8, 16), cfgLen = in.escaped(4, 8, 16);
+        const uint32_t defPresent = in.get(1);
+        const uint32_t defLen = defPresent ? in.escaped(8, 16, 0) : 0;
+        const uint32_t frag = in.get(1);
+        st.escaped(type, 4, 8, 16); st.escaped(cfgLen, 4, 8, 16);
+        st.put(defPresent, 1);
+        if (defPresent) st.escaped(defLen, 8, 16, 0);
+        st.put(frag, 1);
+        for (uint32_t k = 0; k < cfgLen && !in.bad; k++) st.put(in.get(8), 8);
+    }
+    if (in.bad) return false;
+    out = SdcAudio();
+    out.present = true; out.coding = 3; out.mode = stereo ? 2 : 0; out.rateCode = 2 + (int)(rp - xheRates);
+    out.config = st.b;
+    return true;
+}
+
 // ---------------------------------------------------------------- xHE-AAC audio super frame (clause 5.3.1)
 
 void XheSuperFrameParser::reset() { buf_.clear(); inFrame_ = false; tail_.clear(); }
