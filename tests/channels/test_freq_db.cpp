@@ -216,7 +216,30 @@ static void testVdesAsmChannels() {
     CHECK(found == 2, "both ASM channels are listed");
 }
 
+// Discord request: a broadcast schedule (EiBi, HFCC / Aoki style) imports with all its columns
+static void testSchedules() {
+    const std::string eibi = "kHz:75;Time(UTC):93;Days:59;ITU:49;Station:201;Lng:49;Target:62;Remarks:135;P:35;Start:60;Stop:60\n"
+                             "6070;0000-0100;;D;Radio Test;E;NAm;wx;100;;\n"
+                             "6070;0000-0100;;D;Radio Other;G;Eu;;50;;\n"
+                             "bad;line\n";
+    std::vector<FreqEntry> v;
+    FreqParseReport r = freqImportText(eibi, v);
+    CHECK(r.loaded == 2 && v.size() == 2, "EiBi: two lines on one frequency are both kept (%zu)", r.loaded);
+    if (v.size() == 2) {
+        CHECK(v[0].hz == 6070000 && v[0].name == "Radio Test" && v[0].region == "D" && v[0].mode == "general", "EiBi: frequency, station, ITU");
+        CHECK(v[0].notes.find("0000-0100 UTC") != std::string::npos && v[0].notes.find("lang E") != std::string::npos && v[0].notes.find("target NAm") != std::string::npos && v[0].notes.find("power 100 kW") != std::string::npos && v[0].notes.find("wx") != std::string::npos, "EiBi: time, language, target, power and remarks are kept: %s", v[0].notes.c_str());
+    }
+    r = freqImportText(eibi, v);
+    CHECK(r.loaded == 0 && v.size() == 2, "EiBi: the same file again adds nothing");
+    const std::string hfcc = "Freq kHz;Time;Days;Country;Tx site;Station;Power kW;Azimuth;Language\n9500;1200-1300;1234567;F;Issoudun;Test FM;500;120;FRE\n";
+    std::vector<FreqEntry> h;
+    r = freqImportText(hfcc, h);
+    CHECK(r.loaded == 1 && h.size() == 1 && h[0].hz == 9500000, "HFCC style: header names the columns");
+    if (h.size() == 1) CHECK(h[0].notes.find("azimuth 120") != std::string::npos && h[0].notes.find("power 500 kW") != std::string::npos && h[0].notes.find("Issoudun") != std::string::npos, "HFCC style: power, azimuth and site kept: %s", h[0].notes.c_str());
+}
+
 int main() {
+    testSchedules();
     testExportResults();
     testVdesAsmChannels();
     testData();

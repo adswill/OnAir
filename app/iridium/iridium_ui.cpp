@@ -554,13 +554,14 @@ void panels(App& a) {
 void tab(App& a) {
     loadState();
     kit::modeHeader({19, "Iridium", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("iriv", S.view, {{tr("Live"), 0}, {tr("Tracks"), 8}, {tr("Messages"), 1, true}, {tr("Ring alerts"), 2, true}, {tr("Bursts"), 3, true}, {tr("Calls"), 4, true}, {tr("ACARS"), 5, true}, {tr("Log"), 6, true}, {tr("Pager"), 7, true}, {tr("Sky"), 9, true}});
+    kit::modeNav("iriv", S.view, {{tr("Live"), 0}, {tr("Tracks"), 8}, {tr("Messages"), 1, true}, {tr("Ring alerts"), 2, true}, {tr("Bursts"), 3, true}, {tr("Calls"), 4, true}, {tr("ACARS"), 5, true}, {tr("Log"), 6, true}, {tr("Pager"), 7, true}, {tr("SBD"), 10, true}, {tr("Sky"), 9, true}});
     if (S.view == 8) { kit::sessionItems(19, 3, "iridium"); return; }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.view == 4) { callsView(a); return; }
     if (S.view == 5) { iridiumui::acarsView(a); return; }
     if (S.view == 6) { iridiumui::packetsView(a); return; }
     if (S.view == 7) { iridiumui::pagerView(a); return; }
+    if (S.view == 10) { iridiumui::sbdView(a); return; }
     if (S.view == 9) { iridiumSkyView(a, W, H); return; }
     if (S.view == 1) { messages(a, W, H); return; }
     if (S.view == 2) { ringAlerts(a); return; }
