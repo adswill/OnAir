@@ -42,7 +42,17 @@ jobs:
         run: build/soak_session_writer --seconds 600
       - name: Server soak
         env: { MINUTES: "${{ inputs.minutes || '60' }}" }
-        run: python3 tools/soak/soak_server.py --server build/onair-server --minutes "$MINUTES" --interval 30 | tee -a "$GITHUB_STEP_SUMMARY"
+        run: |
+          D=$(mktemp -d)
+          printf 'device=test\nautostart=1\nport=18765\n' > "$D/server.conf"
+          HOME="$D" build/onair-server --config "$D/server.conf" > "$D/server.log" 2>&1 &
+          PID=$!
+          sleep 20
+          python3 tools/soak/soak_server.py --pid "$PID" --port 18765 --minutes "$MINUTES" --interval 30 | tee -a "$GITHUB_STEP_SUMMARY"
+          rc=${PIPESTATUS[0]}
+          kill "$PID" 2>/dev/null || true
+          tail -20 "$D/server.log"
+          exit $rc
       - uses: actions/cache/save@v6
         if: always()
         with:
