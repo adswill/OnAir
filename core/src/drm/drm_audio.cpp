@@ -234,6 +234,53 @@ bool XheSuperFrameParser::parse(const uint8_t* d, int len, std::vector<XheFrame>
     return true;
 }
 
+void XheSuperFramePacker::reset() { q_.clear(); starts_.clear(); delayed_ = 0; }
+
+void XheSuperFramePacker::push(const std::vector<uint8_t>& au) {
+    if (au.empty()) return;
+    starts_.push_back((int)q_.size());
+    q_.insert(q_.end(), au.begin(), au.end());
+    const uint32_t crc = crc16Bytes(au.data(), au.size());
+    q_.push_back((uint8_t)(crc >> 8)); q_.push_back((uint8_t)crc);
+}
+
+bool XheSuperFramePacker::pack(int len, std::vector<uint8_t>& out, int reservoir) {
+    if (len < 4 || (int)q_.size() < len) return false;
+    // The directory holds one element per border, and its size takes from the payload: find the count b that matches the borders of a payload of len - 2 - 2b bytes.
+    // Frames that begin in the payload's last 2 bytes may be announced now or in the next super frame, which settles the cases where the count jumps over b.
+    for (int b = 0; b <= 15; b++) {
+        const int payload = len - 2 - 2 * b;
+        if (payload < 2 || payload >= 0xFFE) break;
+        std::vector<int> now;
+        int last = -1;
+        for (int s : starts_) {
+            if (s >= payload) break;
+            if (s < payload - 2) now.push_back(s); else last = s;
+        }
+        const int base = (delayed_ ? 1 : 0) + (int)now.size();
+        bool declareLast;
+        if (base == b) declareLast = false;
+        else if (last >= 0 && base + 1 == b) declareLast = true;
+        else continue;
+        if (declareLast) now.push_back(last);
+        out.assign(1, (uint8_t)((b << 4) | (reservoir & 15)));
+        out.push_back((uint8_t)crc8Bytes(out.data(), 1));
+        out.insert(out.end(), q_.begin(), q_.begin() + payload);
+        std::vector<int> idx;                                       // the directory, first border first
+        if (delayed_) idx.push_back(delayed_ == 1 ? 0xFFF : 0xFFE);
+        for (int s : now) idx.push_back(s);
+        // the elements go last to first: the last element describes the first border
+        for (size_t k = idx.size(); k-- > 0;) { const int e = (idx[k] << 4) | b; out.push_back((uint8_t)(e >> 8)); out.push_back((uint8_t)e); }
+        delayed_ = (!declareLast && last >= 0) ? payload - last : 0;
+        q_.erase(q_.begin(), q_.begin() + payload);
+        std::vector<int> rest;
+        for (int s : starts_) if (s >= payload) rest.push_back(s - payload);
+        starts_.swap(rest);
+        return true;
+    }
+    return false;
+}
+
 // ---------------------------------------------------------------- the decoder
 
 struct AudioDecoder::Impl {

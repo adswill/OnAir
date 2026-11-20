@@ -72,10 +72,12 @@ struct DrmTxConfig {
     int language = 5;            // Table 18: English
     std::string language3 = "eng", country2 = "ae";
     int programmeType = 10;      // Table 19: pop music
-    int audioCoding = 0;         // 0 AAC (the only coding that is generated)
+    int audioCoding = 0;         // 0 AAC, 3 xHE-AAC (the access units come from the audio source: nextAccessUnit; equal error protection, no part A)
     int audioSbr = 0;
-    int audioMode = 0;           // 0 mono
-    int audioRateHz = 24000;     // 12000 or 24000 (the core sampling rate of the AAC stream): 5 or 10 audio frames per super frame (mode E: 24000, 5 frames
+    int audioMode = 0;           // 0 mono (xHE-AAC: 2 stereo)
+    std::vector<uint8_t> audioXheConfig;   // xHE-AAC: the static config of the SDC entity (clause 5.3.2), as the encoder's stream needs it; empty: a mono 24 kHz 1:1 config
+    int audioRateHz = 24000;     // AAC: 12000 or 24000 (the core sampling rate of the AAC stream); xHE-AAC: 16000, 19200, 24000, 32000, 38400 or 48000.
+                                 // AAC: 5 or 10 audio frames per super frame (mode E: 24000, 5 frames
                                  // in an audio super frame of 200 ms that two logical frames carry)
     bool textMessage = true;
     std::string text = "OnAir DRM test signal";
@@ -108,6 +110,8 @@ public:
     virtual std::string describe() const { return "test pattern"; }
     // bytes of every audio frame that sit in the higher protected part (unequal error protection); 0 for equal protection. Called once, before the first frame.
     virtual void setHigherProtectedBytes(int) {}
+    // xHE-AAC (audioCoding 3): the next access unit of the stream, without its CRC; false when there is none (the transmitter then repeats the last one)
+    virtual bool nextAccessUnit(std::vector<uint8_t>&) { return false; }
 };
 
 // Frames made of a known pseudo random pattern, for tests of the channel coding: frame content = pattern(seed, super frame index)
@@ -125,6 +129,14 @@ private:
 // Audio frames from our own AAC-LC encoder (drm_aacenc.h): kind 0 a melody, 1 a 1 kHz tone, 2 silence, 3 noise-like test sound (no two frames alike). nullptr for a
 // configuration that is not mono AAC at 12 or 24 kHz.
 std::unique_ptr<DrmAudioSource> makeDrmAacSource(const DrmTxConfig& cfg, int kind);
+
+// xHE-AAC access units for a transmitter: a file of access units, each as a 2 byte big endian length and the bytes (the raw output of an encoder such as
+// exhale, cut at the access unit borders); it starts over at the end. nullptr when the file cannot be read or holds no access unit.
+std::unique_ptr<DrmAudioSource> makeDrmXheFileSource(const std::string& path);
+// The same from memory (access units in order, repeated), and a pattern source: access units of a known pseudo random content with the independency
+// flag set on the first of every 8, for tests of the framing and the channel coding.
+std::unique_ptr<DrmAudioSource> makeDrmXheListSource(std::vector<std::vector<uint8_t>> units);
+std::unique_ptr<DrmAudioSource> makeDrmXhePatternSource(uint32_t seed, int minBytes = 40, int maxBytes = 300);
 
 class DrmTransmitter {
 public:

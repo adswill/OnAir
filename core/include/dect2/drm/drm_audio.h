@@ -62,4 +62,22 @@ private:
     int lastBorders_ = 0, lastReservoir_ = 0;
 };
 
+// The other direction (transmitter): access units go in, audio super frames of a fixed length come out. Every access unit gets its CRC-16, the frames follow each
+// other in the payload, and the directory at the end lists the frame borders; a frame that starts in the last 2 bytes of a payload is announced in the next
+// super frame as a delayed border (0xFFE / 0xFFF). The first access unit of a stream must be an independent one (usacIndependencyFlag), which is the
+// encoder's business.
+class XheSuperFramePacker {
+public:
+    void reset();
+    void push(const std::vector<uint8_t>& au);              // one access unit (without CRC)
+    size_t queuedBytes() const { return q_.size(); }        // push until this is at least len, then pack()
+    // len: bytes of the whole audio super frame (header and directory included). false: fewer than len bytes queued, or no directory fits (the frames are
+    // too short for at most 15 borders, or the payload is longer than the 12 bit border index reaches); nothing is consumed then.
+    bool pack(int len, std::vector<uint8_t>& out, int reservoir = 0);
+private:
+    std::vector<uint8_t> q_;           // frame bytes not sent yet
+    std::vector<int> starts_;          // the offsets in q_ where frames begin
+    int delayed_ = 0;                  // 0, or 1 / 2: a frame began 1 / 2 bytes before this super frame's payload
+};
+
 }} // namespace dect2::drm
