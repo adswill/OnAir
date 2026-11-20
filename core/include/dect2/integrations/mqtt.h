@@ -6,6 +6,7 @@
 // (decodeConnect, decodePublish) exists for the tests' fake broker.
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <string>
 
 namespace dect2::integrations::mqtt {
@@ -48,6 +49,11 @@ std::string encodePublish(const Publish& p);
 bool decodePublish(const Packet& pk, Publish& p);
 std::string encodePuback(uint16_t pid);
 bool decodePuback(const std::string& body, uint16_t& pid);
+// SUBSCRIBE for one topic filter and the broker's SUBACK (decoders for the tests' fake broker). rc 0 / 1 = granted QoS, 0x80 = refused.
+std::string encodeSubscribe(uint16_t pid, const std::string& filter, int qos);
+bool decodeSubscribe(const Packet& pk, uint16_t& pid, std::string& filter, int& qos);
+std::string encodeSuback(uint16_t pid, uint8_t rc);
+bool decodeSuback(const std::string& body, uint16_t& pid, uint8_t& rc);
 std::string encodePingreq();
 std::string encodePingresp();
 std::string encodeDisconnect();
@@ -78,6 +84,14 @@ public:
     // QoS 0: written to the socket. QoS 1: waits for the PUBACK (ackTimeoutMs). false and err on any failure (the connection is then closed).
     bool publish(const std::string& topic, const std::string& payload, int qos, bool retain, std::string& err);
     bool ping(std::string& err);                       // PINGREQ and waits for the PINGRESP
+    // Receiving (the Hub's command topic, docs/INTEGRATIONS.md): a message for a subscribed topic calls the handler (on the calling thread, from inside
+    // publish(), ping(), subscribe() or poll()); QoS 1 messages are acknowledged first.
+    using MessageFn = std::function<void(const std::string& topic, const std::string& payload)>;
+    void setMessageHandler(MessageFn f);
+    bool subscribe(const std::string& filter, int qos, std::string& err);   // SUBSCRIBE and waits for the SUBACK (ackTimeoutMs); false and err when refused or on any failure
+    // Waits up to ms for incoming packets and handles them. false: the connection is gone (closed; connected() is then false). true: it is still up,
+    // whether or not something arrived.
+    bool poll(int ms, std::string& err);
     void disconnect();                                 // DISCONNECT, then closes
     double idleSeconds() const;                        // since the last packet was written
 private:

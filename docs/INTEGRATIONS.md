@@ -64,6 +64,29 @@ The "What to send" tab ticks the families. The default is the decoded-message fa
 
 `core/src/integrations/mqtt.cpp` (packet encoder/decoder, the client), `core/src/integrations/integrations.cpp` (topic templates, event JSON, Home Assistant, settings file, the Hub with its worker thread), `app/integrations/integrations_ui.cpp` (the window). Events arrive through a fifth hook of the automation engine (`Engine::setPublisher`), beside the tap (message database), observer (plug-ins), watcher (watchlists) and streamer (remote API). Tests: `tests/integrations/test_integrations.cpp` (packet bytes, topics, JSON, settings, an in-process fake broker for login, QoS 0 and 1, retain, reconnect, Home Assistant, the sinks, the rate limit and "nothing sent unless switched on").
 
+## MQTT commands
+
+Tick "Accept commands over MQTT" (off by default). OnAir subscribes to `<state topic base>/cmd/+` (default `onair/cmd/+`) and runs the receiver controls; the value is the payload. The answer goes to `<base>/cmdresult` as `{"command":"frequency","ok":true}` or with `"ok":false,"error":"..."`.
+
+| Topic | Payload |
+|---|---|
+| `cmd/start` | empty, or a device number from the radio list |
+| `cmd/stop` | empty |
+| `cmd/frequency` | `145.5MHz`, `7100 kHz`, `1.09GHz`; a plain number is Hz |
+| `cmd/samplerate` | the same units, or `auto` |
+| `cmd/gain` | dB, a number |
+| `cmd/autogain` | `on` / `off` |
+| `cmd/mode` | the family number from `/api/v1/modes`, optionally `family/sub-id` |
+| `cmd/volume` | `0.5` or `50%` |
+| `cmd/mute` | `on` / `off` |
+| `cmd/record` | `iq`, `audio` or `stop` |
+
+Receive controls only: there is no transmit command and a payload cannot add one. Anyone who can publish to your broker can retune the receiver, so use a broker login (and TLS beyond your own network). In Home Assistant, an MQTT `number` or `button` entity with `command_topic: onair/cmd/frequency` is enough.
+
+## Headless server
+
+`onair-server` reads the same `integrations.json` (copy it from the desktop app's data folder, or set `integrations_file` in `server.conf`; by default it looks next to `server.conf`). MQTT, JSON lines, saved messages and MQTT commands work there. The webhook sink does not (it needs the desktop app's web client) and shows "no web client". The server's own message stream for `/api/v1/events` is not part of this.
+
 ## Not covered yet
 
-Mesh, SARSAT and other decoders that do not raise an automation event yet are not published (they appear as soon as they emit one). The headless server (`server/`) has no Integrations settings yet. Subscribing (commands from MQTT) is not part of this.
+Mesh, SARSAT and other decoders that do not raise an automation event yet are not published (they appear as soon as they emit one).

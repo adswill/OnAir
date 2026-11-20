@@ -1077,6 +1077,7 @@ std::string autogainResult(const App& a);      // the last one-shot's result tex
 std::string autogainStatusJson(App& a);        // read-only state for the Web server / remote API (dect2::ag::autogainJson)
 void remoteApiLoadPrefs(App& a);    // remote_api_app.cpp: the remote-control API (HTTP + WebSocket), off by default: its settings, started when on
 void remoteApiSavePrefs(const App& a);
+std::string remoteApiRunCommand(const std::string& name, const std::string& payload);   // a command received over MQTT (integrations/commands.h): "" when it ran, else why not; runs on the main thread through the same hand-over as the API
 void remoteApiTick(App& a);          // every frame: runs the commands the API queued for the main thread, publishes the telemetry
 // the places of the Data feeds window (feeds_ui.cpp); feedsOpenTab opens it on one of them (the old spots of the settings link here)
 enum { kFeedsTabUpload = 0, kFeedsTabPrograms, kFeedsTabShare, kFeedsTabStation, kFeedsTabNmea, kFeedsTabCount };
