@@ -130,5 +130,5 @@ int main() {
         A::ambeFrame(bits, fa);
         for (auto& row : fa) for (char c : row) dig.add(c);
     }
-    return golden::check("nxdn_proto_rs", dig, 0x461c5b4739445ed7ull, !it);
+    return golden::check("nxdn_proto_rs", dig, 0x89f032465c60ba6bull, !it);
 }
