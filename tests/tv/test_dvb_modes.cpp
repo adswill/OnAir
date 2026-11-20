@@ -8,6 +8,7 @@
 //  3. the mode names
 //  4. the link fit: the bitrate, the bandwidth and the C/N each rule a mode out; satellite modes scale with the symbol rate
 //  5. the available modes, the best first, and the filters
+//  6. DVB-T2-Lite (EN 302 755 annex I): which modes exist, two bitrates by hand, the 4 Mbit/s cap, the Profile filter, old saved filters
 #include "dect2/tv/dvb_modes.h"
 #include <cmath>
 #include <cstdarg>
@@ -46,7 +47,11 @@ static void expectMode(DvbSystem s, const std::string& name, double bw, double r
 }
 
 static void testCounts() {
-    const size_t want[] = {480, 28560, 5712, 5, 312, 714};
+    // DVB-T2: 28 560 T2-Base modes as before, plus T2-Lite. T2-Lite per channel width: FFT / guard / pilot sets of table I.5 that have a
+    // Cdata entry: 2K 7, 4K 7, 8K 12 and 16K 13, the last two in normal and extended carrier mode: 7 + 7 + 24 + 26 = 64; times the
+    // constellation / code rate pairs of table I.4: 6 + 6 + 6 + 4 (256-QAM without 2/3 and 3/4) = 22; one FEC frame (16 200): 1 408 a width.
+    // DVB-T2 has five widths: 28 560 + 7 040 = 35 600; the 1,7 MHz system one: 5 712 + 1 408 = 7 120.
+    const size_t want[] = {480, 35600, 7120, 5, 312, 714};
     for (int s = 0; s < kNumDvbSystems; s++) {
         const size_t n = dvbModes((DvbSystem)s).size();
         CHECK(n == want[s], "%s: %zu modes, expected %zu", dvbSystemName((DvbSystem)s), n, want[s]);
@@ -123,11 +128,87 @@ static void testAvailable() {
         if (modeName(m).starts_with("T2-1.7MHz")) { fail("DVB-T2 has the 1,7 MHz mode %s", modeName(m).c_str()); break; }
 }
 
+static void testLite() {
+    // every T2-Lite mode obeys annex I; every T2-Base mode is as before (no 1/3 or 2/5)
+    size_t lite = 0, base = 0;
+    for (DvbSystem sys : {DvbSystem::T2, DvbSystem::T2Narrow})
+        for (const DvbMode& m : dvbModes(sys)) {
+            const int fft = m.value[1], pp = m.value[4], mod = m.value[5], cr = m.value[6], fr = m.value[7];
+            if (m.value[kT2ProfileParam] == 0) {
+                base++;
+                CHECK(cr < 6 && m.capMbps == 0, "T2-Base mode %s has a T2-Lite code rate or a cap", modeName(m).c_str());
+                continue;
+            }
+            lite++;
+            const std::string n = modeName(m);
+            CHECK(n.ends_with("-Lite"), "%s: a T2-Lite name ends in -Lite", n.c_str());
+            CHECK(fft >= 1 && fft <= 4, "%s: FFT 1K or 32K (I.7.1)", n.c_str());
+            CHECK(pp != 7, "%s: PP8 (I.7.2)", n.c_str());
+            CHECK(fr == 1, "%s: 64 800-bit frames (I.3)", n.c_str());
+            CHECK(cr != 4 && cr != 5, "%s: code rate 4/5 or 5/6 (table I.1)", n.c_str());
+            CHECK(!(mod == 3 && (cr == 2 || cr == 3)), "%s: 256-QAM 2/3 or 3/4 (table I.4)", n.c_str());
+            CHECK(near(m.capMbps, 4.0), "%s: no 4 Mbit/s cap (I.10)", n.c_str());
+            CHECK(m.hasCn == (cr < 6), "%s: a C/N where the standards give one, none for 1/3 and 2/5", n.c_str());
+        }
+    CHECK(lite == 7040 + 1408 && base == 28560 + 5712, "%zu T2-Lite and %zu T2-Base modes", lite, base);
+    // two of the three combinations table I.5 drops against table 58 (16K 1/32 PP4, 16K 1/16 PP2) exist in T2-Base only
+    CHECK(find(DvbSystem::T2, "T2-8MHz-16K-GI1/32-PP4-QPSK-1/2-S") && !find(DvbSystem::T2, "T2-8MHz-16K-GI1/32-PP4-QPSK-1/2-S-Lite"), "16K 1/32 PP4: Base only");
+    CHECK(find(DvbSystem::T2, "T2-8MHz-16K-GI1/16-PP2-QPSK-1/2-S") && !find(DvbSystem::T2, "T2-8MHz-16K-GI1/16-PP2-QPSK-1/2-S-Lite"), "16K 1/16 PP2: Base only");
+
+    // By hand, 1: 1,7 MHz, 8K, GI 1/4, PP1, QPSK 1/3. T = 71/131 µs (table 65), Tu = 8192 T = 4439.939 µs, Ts = 1.25 Tu = 5549.924 µs;
+    // Cdata 6208 (table 48, 8K PP1); QPSK 2 bits; (Kbch - 80) / Nldpc = (5232 - 80) / 16200 (table I.1) = 0.318025;
+    // 6208 x 2 x 0.318025 / 5549.924 µs = 0.711468 Mbit/s, under the cap. Bandwidth 6817 / Tu = 1.535381 MHz.
+    const DvbMode* a = find(DvbSystem::T2Narrow, "T2-1.7MHz-8K-GI1/4-PP1-QPSK-1/3-S-Lite");
+    CHECK(a && near(a->rateMbps, 0.7114682663884542) && near(a->bwMHz, 1.5353814783230633) && !a->hasCn, "1,7 MHz QPSK 1/3 by hand: %.9f Mbit/s",
+          a ? a->rateMbps : 0.0);
+    if (a) CHECK(near(fitMode(*a, {700, 2, 99}).capacityMbps, 0.7114682663884542) && !fitMode(*a, {700, 2, 99}).ok, "1/3: carries it, but no C/N, so never available");
+    // By hand, 2: 8 MHz, 16K, GI 1/32, PP7, 64-QAM 2/5. T = 7/64 µs, Tu = 16384 T = 1792 µs, Ts = 33/32 Tu = 1848 µs; Cdata 13416 (16K PP7);
+    // 6 bits; (6312 - 80) / 16200; 13416 x 6 x 0.384691 / 1848 µs = 16.756556 Mbit/s of cells, of which T2-Lite may use 4 (I.10).
+    const DvbMode* b = find(DvbSystem::T2, "T2-8MHz-16K-GI1/32-PP7-64-QAM-2/5-S-Lite");
+    CHECK(b && near(b->rateMbps, 16.756556036556038) && near(b->bwMHz, 7.607700892857143), "8 MHz 64-QAM 2/5 by hand: %.9f Mbit/s", b ? b->rateMbps : 0.0);
+    if (b) CHECK(near(fitMode(*b, {3000, 8, 99}).capacityMbps, 4.0), "the T2-Lite cap: %.3f Mbit/s", fitMode(*b, {3000, 8, 99}).capacityMbps);
+
+    // the cap: 5 Mbit/s is never T2-Lite; 3 Mbit/s at 20 dB is, with Profile T2-Lite or Any, never with T2-Base
+    ModeFilter f = openFilter();
+    f[kT2ProfileParam] = 1;
+    for (const ModeChoice& c : availableModes(DvbSystem::T2, f, {5000, 8, 30})) { fail("T2-Lite carries 5 Mbit/s: %s", modeName(*c.mode).c_str()); break; }
+    const auto lite3 = availableModes(DvbSystem::T2, f, {3000, 8, 20});
+    CHECK(!lite3.empty(), "T2-Lite: 3 Mbit/s in 8 MHz at 20 dB");
+    for (const ModeChoice& c : lite3) if (c.mode->value[kT2ProfileParam] != 1 || c.fit.capacityMbps > 4 + 1e-9) { fail("Profile T2-Lite listed %s", modeName(*c.mode).c_str()); break; }
+    f[kT2ProfileParam] = 0;
+    for (const ModeChoice& c : availableModes(DvbSystem::T2, f, {3000, 8, 20})) if (c.mode->value[kT2ProfileParam] != 0) { fail("Profile T2-Base listed %s", modeName(*c.mode).c_str()); break; }
+    bool anyLite = false;
+    for (const ModeChoice& c : availableModes(DvbSystem::T2, openFilter(), {3000, 8, 20})) anyLite |= c.mode->value[kT2ProfileParam] == 1;
+    CHECK(anyLite, "Profile Any lists T2-Lite modes too");
+    f[kT2ProfileParam] = -1;
+    f[kT2CodeRateParam] = 6;   // 1/3: only T2-Lite modes, none of which has a C/N
+    size_t n13 = 0;
+    for (const DvbMode& m : dvbModes(DvbSystem::T2)) if (matches(m, f)) { n13++; CHECK(m.value[kT2ProfileParam] == 1, "1/3 in T2-Base"); }
+    CHECK(n13 > 0 && availableModes(DvbSystem::T2, f, {1000, 8, 40}).empty(), "1/3: %zu modes, none proposed (no C/N)", n13);
+
+    // saved filters: an old file (8 values, no Profile) loads with Profile on Any; the new text round-trips
+    ModeFilter old = openFilter();
+    filterFromText(DvbSystem::T2, "4,3,0,6,1,0,0,1", old);
+    CHECK(old[0] == 4 && old[1] == 3 && old[3] == 6 && old[6] == 0 && old[7] == 1 && old[kT2ProfileParam] == -1, "an old DVB-T2 filter loads, Profile Any");
+    old[kT2ProfileParam] = 1;
+    const std::string txt = filterText(DvbSystem::T2, old);
+    ModeFilter back = openFilter();
+    filterFromText(DvbSystem::T2, txt, back);
+    CHECK(txt == "4,3,0,6,1,0,0,1,1" && back == old, "the filter text round-trips: %s", txt.c_str());
+    ModeFilter bad = openFilter();
+    filterFromText(DvbSystem::T2, "99,-5,x,0", bad);
+    CHECK(bad[0] == -1 && bad[1] == -1 && bad[3] == 0 && bad[kT2ProfileParam] == -1, "out-of-range values read as Any");
+    ModeFilter s2 = openFilter();
+    filterFromText(DvbSystem::S2, "1,2,0,1,2", s2);
+    CHECK(filterText(DvbSystem::S2, s2) == "1,2,0,1,2", "a DVB-S2 filter as before");
+}
+
 int main() {
     testCounts();
     testValues();
     testFit();
     testAvailable();
+    testLite();
     if (failures) { std::printf("%d failure(s)\n", failures); return 1; }
     std::printf("dvb_modes: all checks passed\n");
     return 0;

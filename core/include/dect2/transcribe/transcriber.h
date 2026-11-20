@@ -36,6 +36,7 @@ struct SpeechResult {
     float noSpeechProb = 0;        // the engine's own probability that there was no speech
     float avgLogprob = 0;          // mean log probability of the tokens (<= 0)
     float confidence = 0;          // mean probability of the tokens, 0..1
+    bool confidenceAvailable = true; // false for engines that do not report token probabilities
     std::string lang;              // the language the engine detected or was told ("de"), "" when not known
 };
 
@@ -52,6 +53,23 @@ public:
 std::shared_ptr<SpeechBackend> makeWhisperBackend(const std::string& modelPath, int workers, std::string* err);
 bool whisperAvailable();
 const char* whisperLibraryVersion();
+
+// Moonshine is implemented on Linux desktop; all other platforms link stubs.
+std::shared_ptr<SpeechBackend> makeMoonshineBackend(const std::string& modelDir, int workers, std::string* err);
+bool moonshineAvailable();
+struct MoonshineDiscoveredLibraries {
+    std::vector<std::string> moonshine, onnx;
+    std::string selectedMoonshine, selectedOnnx; // first lexicographic directory containing both
+};
+MoonshineDiscoveredLibraries discoverMoonshineLibraries(const std::string& modelsRoot);
+// Snapshot of the last actual Moonshine initialization, never a discovery-time probe.
+struct MoonshineEngineInfo {
+    std::string moonshinePath, onnxPath, moonshineVersion, onnxVersion, detail;
+    bool initialized = false;
+};
+MoonshineEngineInfo moonshineEngineInfo();
+void initializeMoonshineEngineInfo(const std::string& modelsRoot); // once on first Transcripts window opening
+
 
 // What the filters decide on
 struct FilterConfig {

@@ -9,18 +9,29 @@ SRC=${SRC:-/src}   # the source tree (the build container mounts it at /src)
 VERSION=$(grep -m1 'project(' $SRC/CMakeLists.txt | sed -E 's/.*VERSION ([0-9.]+).*/\1/')
 ARCH=$(uname -m)
 D=$(mktemp -d)/onair-$VERSION-linux-$ARCH-portable
-mkdir -p "$D/bin" "$D/lib"
+mkdir -p "$D/bin" "$D/lib" "$D/lib/ffmpeg"
 cp $B/dect2 "$D/bin/onair"; cp $B/dect2cli "$D/bin/onair-cli"; cp $B/dect2scan "$D/bin/onair-scan"
 cp $B/onair-server "$D/bin/onair-server"   # the headless server (OnAir Web)
 cp $B/onair-extcap "$D/bin/onair-extcap"   # Wireshark capture interface (docs/WIRESHARK-3.8.md)
 SKIP='linux-vdso|ld-linux|/libc\.so|/libm\.so|/libdl\.so|/libpthread\.so|/librt\.so|/libutil\.so|/libresolv\.so|/libstdc\+\+|/libgcc_s|/libGL|/libEGL|/libOpenGL|/libX|/libxcb|/libwayland|/libdrm|/libasound|/libpulse|/libudev|/libdbus|/libsystemd|/libxkbcommon|/libffi|/libgbm|/libva'
+# (FFmpeg goes to lib/ffmpeg: the programs load it only from there)
+FFLIB='^lib(avcodec|avformat|avutil|avdevice|avfilter|swscale|swresample|postproc)\.so'
 collect() {
   ldd "$1" | awk '/=> \//{print $3}' | while read -r lib; do
     echo "$lib" | grep -Eq "$SKIP" && continue
-    [ -f "$D/lib/$(basename "$lib")" ] || { cp -L "$lib" "$D/lib/"; collect "$lib"; }
+    case "$lib" in "$D"/*) continue;; esac   # already in the package
+    t="$D/lib"; basename "$lib" | grep -Eq "$FFLIB" && t="$D/lib/ffmpeg"
+    [ -f "$t/$(basename "$lib")" ] || { cp -L "$lib" "$t/"; collect "$lib"; }
   done
 }
 [ -x "$D/bin/onair-server" ] || { echo "error: onair-server is missing from the portable package"; exit 1; }
+# FFmpeg (LGPL, shared): the build of tools/package/build_ffmpeg.sh the programs were linked with (DECT2_FFMPEG_PREFIX), else the system's (found by ldd)
+FFP=$(sed -n 's/^DECT2_FFMPEG_PREFIX:PATH=//p' "$B/CMakeCache.txt" 2>/dev/null)
+if [ -n "$FFP" ]; then
+  cp -a "$FFP"/lib/lib*.so.* "$D/lib/ffmpeg/"   # the SONAME links (libavcodec.so.62) and the files
+  ls "$D"/lib/ffmpeg/libavcodec.so.* >/dev/null 2>&1 || { echo "error: no libavcodec.so in $FFP/lib (build it with tools/package/build_ffmpeg.sh)"; exit 1; }
+fi
+for p in "$D"/bin/*; do patchelf --set-rpath '$ORIGIN/../lib/ffmpeg:$ORIGIN/../lib' "$p"; done   # (before ldd: FFmpeg is then found in the package)
 for p in "$D"/bin/*; do collect "$p"; done
 # the radio libraries (RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR, USRP), found by name next to the program
 # codec2 (FreeDV and M17 speech, LGPL-2.1, third_party/codec2): its own shared library, next to the radio libraries (OnAir looks in ../lib of its program)
@@ -34,15 +45,15 @@ if [ -f "$SRC/third_party/sddc_fx3/SDDC_FX3.img" ]; then
   cp "$SRC/third_party/sddc_fx3/README-OnAir.md" "$D/licenses/sddc_fx3/NOTICE.md"
 fi
 [ -d "$B/radiolibs" ] && cp -a "$B"/radiolibs/. "$D/lib/"
-for p in "$D"/bin/*; do patchelf --set-rpath '$ORIGIN/../lib' "$p"; done
-for l in "$D"/lib/*.so*; do patchelf --set-rpath '$ORIGIN' "$l" 2>/dev/null || true; done
+for l in "$D"/lib/*.so* "$D"/lib/ffmpeg/*.so*; do [ -L "$l" ] || patchelf --set-rpath '$ORIGIN' "$l" 2>/dev/null || true; done
+"$SRC"/tools/package/check_lgpl_bundle.sh "$D/bin/onair" "$D/lib/ffmpeg" || { echo "error: licence check of the portable package failed"; exit 1; }
 mkdir -p "$D/share/applications" "$D/share/icons"
 cp $SRC/packaging/linux/onair.desktop "$D/share/applications/"; cp $SRC/packaging/icons/onair_1024.png "$D/share/icons/onair.png"
 cp $SRC/LICENSE "$D/LICENSE"
 $SRC/tools/package/add_license_files.sh "$D" "$SRC"   # THIRD_PARTY.md, LICENSES/, LICENSE-NOTICES-BINARIES.md (licence of every bundled library, source offer)
 # the Debian copyright file of each bundled system library (the ones built here, RTL-SDR Blog and codec2, are covered by the files above)
 mkdir -p "$D/licenses/system-libs"
-for l in "$D"/lib/*.so.*; do
+for l in "$D"/lib/*.so.* "$D"/lib/ffmpeg/*.so.*; do
   b=$(basename "$(readlink -f "$l")")
   pkg=$(dpkg -S "*/$b" 2>/dev/null | head -1 | cut -d: -f1)
   [ -n "$pkg" ] && [ -f "/usr/share/doc/$pkg/copyright" ] && cp "/usr/share/doc/$pkg/copyright" "$D/licenses/system-libs/$pkg.copyright"

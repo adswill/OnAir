@@ -32,6 +32,9 @@ struct AudioIn::Impl {
     std::vector<float> streamBuf;     // decoded and not yet read, interleaved stereo
     size_t streamPos = 0;             // samples (not frames) of streamBuf already read
     double toneHz = 1000, tph = 0;
+    int genId = 0;                    // kind File of generatorSpec(n): the sound of that Digital video generator (#545), pushed into the ring
+    int genRate = 0;                  // its sample rate as last seen (the generator thread only; the resampler follows it)
+    bool genPlaying = false;          // the reader has its prebuffer and plays out
     int actualRate = 0;               // set by a backend that cannot deliver the rate asked for (and did not resample to it)
     // A backend that has to capture at the device's own rate (CoreAudio's input unit does no rate conversion) gives that rate and resamples to the wanted one.
     bool setResample(double devRate, double wantRate);

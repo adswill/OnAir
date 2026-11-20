@@ -9,7 +9,7 @@
 // *_gen.h / *_tx.h chain; their roundTrip field says so when that loop-back was not run.
 //
 //   id      mode               generator
-//   dvbt2   DVB-T2             T2Generator with a real PLP and the test transport stream
+//   dvbt2   DVB-T2             T2Generator with a real PLP and the test transport stream; T2-Base or T2-Lite (annex I), SISO / MISO, 1.7 to 8 MHz
 //   dvbt    DVB-T              dvbt::Generator + the demo programme
 //   atsc    ATSC 1.0 (8-VSB)   atsc::Generator + the demo programme
 //   dab     DAB / DAB+         makeDabSynth
