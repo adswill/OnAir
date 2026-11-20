@@ -287,8 +287,8 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             custom("atv.picture", "Picture source", "The test card, a video file or a camera / capture card.", TxPField::File),
             text("atv.ident", "Ident on the card", "The station name drawn on the test card (empty: ONAIR TEST).", TxPField::Name),
             custom("atv.sound", "Sound carrier", "A tone, a melody, an unmodulated carrier, none, the microphone or a file."),
-            A(SET(pick("atv.system", "System", "The line standard and the channel: B/G, I, D/K, M (NTSC) ...", 0, {"B/G", "B (7 MHz)", "I", "D/K", "M (NTSC)", "N", "A (405)", "C", "E (819)", "H", "K'", "L", "L'"}),
-                  [](TxRequest& r, double x) { r.synth.modeOpt[0] = (int)x; }), TxPGroup::Modulation),
+            A(SET(pick("atv.system", "System", "The line standard and the channel: B/G, I, D/K, M (NTSC) ...", 0, {"B/G", "B (7 MHz)", "I", "D/K", "M (NTSC)", "N", "A (405)", "C", "E (819)", "H", "K'", "L", "L'", "FM-ATV (23 cm, 625 lines)"}),
+                  [](TxRequest& r, double x) { r.synth.modeOpt[0] = x >= 13 ? 15 : (int)x; }), TxPGroup::Modulation),   // the last entry is FM-ATV (system option 15; 13 and 14 are NBTV)
             A(SET(TV(pick("atv.colour", "Colour", "The colour system; usual for the system is PAL, or NTSC for M.", 0, {"usual for the system", "PAL", "NTSC", "SECAM", "monochrome"}), 2),
                   [](TxRequest& r, double x) { r.synth.modeOpt[1] = (int)x; }), TxPGroup::Modulation),
             A(TV(pick("atv.aspect", "Picture format", "How the picture is fitted into the frame. 4:3: a wider picture gets bars above and below. 16:9: the anamorphic frame of 16:9 receivers and transceivers such as the Icom IC-905 (a 4:3 picture gets bars at the sides); the wide screen signalling (625 lines, line 23) says which. Auto: 16:9 for a wide camera or file, else 4:3.", 0, {"Auto", "4:3", "16:9"}), 2), TxPGroup::Modulation),
