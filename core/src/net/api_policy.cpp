@@ -397,7 +397,7 @@ std::string labelEscape(const std::string& v) {
     }
     return o;
 }
-std::string num(double v) {
+std::string promNum(double v) {
     char b[48];
     snprintf(b, sizeof b, "%.15g", v);
     return b;
@@ -411,14 +411,14 @@ std::string metricsText(const Metrics& m) {
     std::string o;
     o += "# HELP onair_info The active mode and radio (always 1).\n# TYPE onair_info gauge\nonair_info{mode=\"" + labelEscape(m.mode) + "\",device=\"" + labelEscape(m.device) + "\"} 1\n";
     metric(o, "onair_receiver_running", "gauge", "1 while the receiver is running.", m.running ? "1" : "0");
-    metric(o, "onair_frequency_hertz", "gauge", "Tuned frequency.", num(m.frequencyHz));
-    metric(o, "onair_sample_rate_hertz", "gauge", "Sample rate of the radio.", num(m.sampleRateHz));
-    metric(o, "onair_gain_decibels", "gauge", "Total gain setting.", num(m.gainDb));
+    metric(o, "onair_frequency_hertz", "gauge", "Tuned frequency.", promNum(m.frequencyHz));
+    metric(o, "onair_sample_rate_hertz", "gauge", "Sample rate of the radio.", promNum(m.sampleRateHz));
+    metric(o, "onair_gain_decibels", "gauge", "Total gain setting.", promNum(m.gainDb));
     metric(o, "onair_dropped_samples_total", "counter", "Samples dropped on the OnAir side (the receiver could not keep up).", std::to_string((unsigned long long)m.droppedSamples));
-    metric(o, "onair_radio_loss_seconds_total", "counter", "Seconds of signal lost between the radio and OnAir.", num(m.radioLossSec));
-    metric(o, "onair_cpu_loss_seconds_total", "counter", "Seconds of signal lost because the receiver was too slow.", num(m.cpuLossSec));
-    metric(o, "onair_load_percent", "gauge", "Receiver share of real time on the sample thread (100 = just keeping up).", num(m.loadPct));
-    if (m.deliveredPct >= 0) metric(o, "onair_delivered_percent", "gauge", "Samples the radio handed over, percent of its set rate.", num(m.deliveredPct));
+    metric(o, "onair_radio_loss_seconds_total", "counter", "Seconds of signal lost between the radio and OnAir.", promNum(m.radioLossSec));
+    metric(o, "onair_cpu_loss_seconds_total", "counter", "Seconds of signal lost because the receiver was too slow.", promNum(m.cpuLossSec));
+    metric(o, "onair_load_percent", "gauge", "Receiver share of real time on the sample thread (100 = just keeping up).", promNum(m.loadPct));
+    if (m.deliveredPct >= 0) metric(o, "onair_delivered_percent", "gauge", "Samples the radio handed over, percent of its set rate.", promNum(m.deliveredPct));
     metric(o, "onair_events_total", "counter", "Decoded messages since the program started.", std::to_string((unsigned long long)m.events));
     return o;
 }
