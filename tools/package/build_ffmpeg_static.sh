@@ -28,10 +28,10 @@ fi
   --disable-avdevice --disable-avfilter \
   --disable-everything \
   --enable-protocol=file,tcp,rtmp \
-  --enable-demuxer=mpegts,mov,flv \
+  --enable-demuxer=mpegts,mpegps,mov,flv,matroska,avi,ogg,wav,mp3,flac,aac,ac3,image2,image2pipe,mjpeg,png_pipe,jpeg_pipe,bmp_pipe,webp_pipe,ppm_pipe,pgm_pipe \
   --enable-muxer=mpegts,hls,mp4 \
-  --enable-parser=h264,hevc,mpegvideo,mpegaudio,aac,aac_latm,ac3,dvbsub,cavsvideo \
-  --enable-decoder=h264,hevc,mpeg2video,mp2,mp2float,mp3,mp3float,ac3,eac3,aac,aac_latm,dvbsub,cavs \
+  --enable-parser=h264,hevc,mpegvideo,mpegaudio,aac,aac_latm,ac3,dvbsub,cavsvideo,vp8,vp9,mpeg4video,mjpeg,vorbis,opus,flac \
+  --enable-decoder=h264,hevc,mpeg2video,mp2,mp2float,mp3,mp3float,ac3,eac3,aac,aac_latm,dvbsub,cavs,vp8,vp9,mpeg1video,mpeg4,h263,msmpeg4v3,mjpeg,png,bmp,ppm,pgm,webp,gif,vorbis,opus,flac,alac,wmav2,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le,pcm_u8 \
   --enable-encoder=mpeg2video,mp2,aac,ac3 \
   --enable-bsf=h264_mp4toannexb,hevc_mp4toannexb,aac_adtstoasc,extract_extradata,null,setts,dts2pts \
   $EXTRA \

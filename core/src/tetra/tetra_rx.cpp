@@ -670,7 +670,7 @@ CarrierDecode decodeCarrier(const cf32* x, size_t n, int kMcc, int kMnc, int kCc
             if (v == VoiceVerdict::Passed) out.voicePassed++; else out.voiceNotDecoded++;
             if (traffic[k].tn >= 1 && traffic[k].tn <= 4) {
                 SlotState& st = out.slot[traffic[k].tn - 1];
-                if (v == VoiceVerdict::Passed) { st = SlotState::Voice; if (calls) calls->slotIds(traffic[k].tn, nowSec, out.slotTg[traffic[k].tn - 1], out.slotIssi[traffic[k].tn - 1]); } else if (st != SlotState::Voice) st = SlotState::Encrypted;   // not decoded: encrypted or unknown, shown muted
+                if (v == VoiceVerdict::Passed) { st = SlotState::Voice; if (calls) calls->slotIds(traffic[k].tn, nowSec, out.slotTg[traffic[k].tn - 1], out.slotIssi[traffic[k].tn - 1]); } else if (st != SlotState::Voice) st = ce.known ? SlotState::Encrypted : SlotState::Unknown;   // not decoded, shown muted: "encrypted" only when the call or the cell evidence says so, else "unknown" (set-up not heard)
             }
         }
     }
@@ -1088,7 +1088,7 @@ struct TetraReceiver::Impl {
         for (int i = 0; i < 4; i++) {
             tetra::updateSlot(t->slots[i], d.slot[i], (double)wallNow());
             if (d.slot[i] == tetra::SlotState::Voice) { t->slots[i].talkgroup = d.slotTg[i]; t->slots[i].issi = d.slotIssi[i]; }
-            else if (d.slot[i] == tetra::SlotState::Encrypted) t->slots[i].talkgroup = t->slots[i].issi = 0;   // an encrypted call keeps no IDs
+            else if (d.slot[i] == tetra::SlotState::Encrypted || d.slot[i] == tetra::SlotState::Unknown) t->slots[i].talkgroup = t->slots[i].issi = 0;   // an encrypted call keeps no IDs
         }
         if (d.synced) {
             const tetra::Sync& s = d.sync;

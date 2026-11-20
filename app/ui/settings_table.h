@@ -75,6 +75,7 @@ inline const std::vector<Info>& table() {
         {"wfContrast", kDisplay, N_("Waterfall contrast"), N_("Stretches the levels."), "", K::Float, 1, 0.25, 4, nullptr, nullptr, "", true},
         {"wfClock", kDisplay, N_("Clock time on the waterfall"), N_("Label rows with the clock time instead of seconds ago."), "time scale", K::Bool, 0},
         {"wfAvg", kDisplay, N_("Average slow rows"), N_("A slow waterfall shows the average of the frames in between, not the highest level."), "", K::Bool, 0, 0, 0, nullptr, nullptr, "", true},
+        {"wfRowTau", kDisplay, N_("Waterfall time smoothing (seconds)"), N_("Averages each waterfall row with the rows before it. 0 (default) shows every spectrum frame as it is, with no smoothing in time; higher values smooth the noise but smear short bursts over several rows."), "smoothing smooth blur average persistence time", K::Float, 0, 0, 2, nullptr, nullptr, "", true, false, "%.2f"},
         {"wfLowPass", kDisplay, N_("Waterfall noise reduction"), N_("A 2D smoothing of the waterfall."), "smooth", K::Bool, 0, 0, 0, nullptr, nullptr, "", true},
         {"specAutoDb", kDisplay, N_("Spectrum range follows the noise floor"), N_("The dB range of the spectrum follows the view."), "auto db", K::Bool, 1},
         {"specPerHz", kDisplay, N_("Levels in dB per Hz"), N_("The noise floor stays put when the FFT size changes. Off: dB per bin."), "psd", K::Bool, 1, 0, 0, nullptr, nullptr, "", true},

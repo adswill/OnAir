@@ -111,6 +111,7 @@ const std::vector<PrefKey>& keyTable() {
         flagB("wfAutoFloor", AT(a.wf.autoTrack), true),   // new key with the floor-anchored range (3.0): everyone starts on auto
         flagB("specAutoDb", AT(a.specAutoDb), true), flagB("specPerHz", AT(a.specPerHz), true),
         flagB("wfAvg", AT(a.wf.rowAverage), false, false, true), flagB("wfClock", AT(a.wf.clockLabels), false, false, true),
+        real("wfRowTau", AT(a.wf.rowTau), 0.0, 2.0),
         real("wfGamma", AT(a.wf.gamma), 0.4, 2.5),
         real("wfSat", AT(a.wf.sat), 0.0, 2.0),
         real("wfBright", AT(a.wf.brightness), -0.5, 0.5), real("wfContrast", AT(a.wf.contrast), 0.25, 4),
