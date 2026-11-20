@@ -10,6 +10,7 @@
 #include <thread>
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <map>
 #include "dect2/common/endian.h"

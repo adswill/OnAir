@@ -8,6 +8,7 @@
 #include "../common/test_util.h"
 #include <cstring>
 #include <random>
+#include <cstdlib>
 #include <string>
 using namespace dect2::horus;
 
