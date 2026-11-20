@@ -84,6 +84,34 @@ int main(int argc, char** argv) {
     CHECK(hevc && aacOk, "HEVC video and AAC audio");
     printf("  transport stream: %ld video frames, %ld audio frames\n", vc, ac);
     CHECK(vc >= 70 && ac >= 130, "nearly all frames came through");
+
+    // ---- transport stream in ALP (A/330 5.4): the reader switches to it only for a run of such packets. Single ones between IP packets
+    // (what a damaged baseband packet can look like) are forgotten, bytes and count, however many of them come over time.
+    {
+        Atsc3Receiver r2;
+        auto tsPacket = [](int i) { std::vector<uint8_t> t(188, (uint8_t)i); t[0] = 0x47; t[1] = 0x01; t[2] = 0x00; t[3] = 0x10 | (i & 15); return t; };
+        sim::ipStream.clear();
+        sim::sendUdp(0xEFFF0909u, 5000, std::vector<uint8_t>(100, 0x55));
+        const std::vector<uint8_t> ipPk = sim::ipStream.back();
+        AlpPacket ipA; ipA.type = AlpIpv4; ipA.data = ipPk;
+        auto bbOf = [](const std::vector<uint8_t>& alp) { return makeBbPacket(1200, alp, 0, -1); };
+        std::vector<std::vector<uint8_t>> lone;
+        for (int i = 0; i < 40; i++) { lone.push_back(bbOf(alpSingle(ipA))); lone.push_back(bbOf(alpTs(tsPacket(i)))); }
+        lone.push_back(bbOf(alpSingle(ipA)));
+        r2.pushBbPackets(1, lone);
+        uint8_t buf[8192];
+        const int k0 = r2.readTsTimed(buf, sizeof buf, 200);
+        CHECK(k0 == 0, "40 single transport stream packets between IP packets do not switch the reader");
+        std::vector<std::vector<uint8_t>> run;
+        std::vector<uint8_t> want;
+        for (int i = 0; i < 20; i++) { auto t = tsPacket(100 + i); want.insert(want.end(), t.begin(), t.end()); run.push_back(bbOf(alpTs(t))); }
+        r2.pushBbPackets(1, run);
+        std::vector<uint8_t> got;
+        for (int k; (k = r2.readTsTimed(buf, sizeof buf, 200)) > 0;) got.insert(got.end(), buf, buf + k);
+        printf("  transport stream in ALP: %d bytes after 40 single packets, %zu bytes after a run of 20 (%zu sent)\n", k0, got.size(), want.size());
+        CHECK(got == want, "a run of 20 switches the reader, and only the run comes out");
+        r2.stop();
+    }
     printf(fails ? "atsc3 receiver: FAILED\n" : "atsc3 receiver: ok\n");
     return fails ? 1 : 0;
 }

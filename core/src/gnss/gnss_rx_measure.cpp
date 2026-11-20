@@ -112,6 +112,95 @@ void GnssReceiver::Impl::applyFix(double S, bool solved, GnssSolution& sl, std::
     }
 }
 
+// ------------------------------------------------------------------ carrier smoothing
+// The code pseudorange is noisy (metres) but unbiased; the carrier's CHANGE from one epoch to the next is good to millimetres. Hatch's filter blends
+// them: smoothed = range / n + (n - 1) / n * (smoothed before + the carrier's change), n growing to the window.
+// Two things the textbook form leaves out and this receiver needs. The pseudoranges here are taken against a reference time that is rounded and
+// re-chosen every epoch, and the radio's oscillator adds its own rate to every carrier: both move the code-minus-carrier change of EVERY satellite by
+// the same amount, so that common change is taken out first: the median over the satellites picks those that have not slipped, and their mean is
+// removed; what is left is each satellite's own noise, which is what the filter is for. And a satellite whose change then still differs by more than
+// 30 m has slipped a cycle count or was started again: its filter starts again. (The method and the first correction are those of gr-gpsrx's
+// hatch_smooth, measured there on air.)
+// "The same amount" holds only among satellites on ONE carrier: the oscillator's rate enters a carrier in proportion to its frequency, and a sample
+// clock that is off moves each band's carrier by its own mixing offset. So the common change is taken per carrier frequency (GPS, QZSS and Galileo E1
+// together; BeiDou B1I by itself), and GLONASS, whose satellites each have a carrier of their own, is left unsmoothed: with a +-5 kHz tuning error or
+// a 20 ppm sample clock its channels drift 2 m/s against each other, which smoothing turned into a position error of 60 - 190 m (test_gnss_glonass).
+void GnssReceiver::Impl::smoothPseudoranges(std::vector<GnssObs>& obs, std::vector<GnssMeasurement>& meas, const std::vector<size_t>& idx) {
+    const int M = smoothEpochs.load();
+    if (M <= 1) { hatch.clear(); for (size_t k = 0; k < obs.size(); k++) meas[idx[k]].smoothed = 1; return; }
+    const double kSlipM = 30.0;
+    const size_t n = obs.size();
+    std::vector<int> key(n);
+    std::vector<double> phaseM(n, 0.0), d(n, 0.0);
+    std::vector<char> has(n, 0);
+    std::vector<long long> group(n, 0);           // the carrier frequency in Hz: satellites of one group share the common term; 0: not smoothed
+    std::map<long long, std::vector<double>> ds;
+    for (size_t k = 0; k < n; k++) {
+        const GnssMeasurement& m = meas[idx[k]];
+        key[k] = m.sys * 256 + keyOf(m.sys, m.prn, m.fcn);
+        if (!m.hasCarrier || m.sys == GnssGlonass) continue;
+        double rf = 0;
+        for (auto& t : trackers) if (t->sys == m.sys && t->prn == m.prn && t->fcn == m.fcn) { rf = t->spec.rfHz; break; }
+        if (rf <= 0) continue;
+        group[k] = std::llround(rf);
+        phaseM[k] = -(kC / rf) * m.carrierCycles;
+        auto it = hatch.find(key[k]);
+        // The moment the broadcast offset between two time scales arrives (Galileo word type 10, the BeiDou A0GPS page), a satellite's range is
+        // moved onto the GPS clock: a step of the size of that offset (7.5 m in the simulator), too small to look like a slip, which the filter
+        // then held for the rest of its window - the Galileo satellites stood 7 - 15 m off in height (test_gnss_galileo). A new clock: a new filter.
+        if (it == hatch.end() || it->second.n < 1 || it->second.clockOf != obs[k].sys) continue;
+        d[k] = (obs[k].pr - it->second.prRaw) - (phaseM[k] - it->second.phaseM);
+        has[k] = 1;
+        ds[group[k]].push_back(d[k]);
+    }
+    std::map<long long, double> commonOf;         // only for a group with two satellites or more that were smoothed before
+    for (auto& g : ds) {
+        std::vector<double>& v = g.second;
+        if (v.size() < 2) continue;
+        std::sort(v.begin(), v.end());
+        const double med = v.size() % 2 ? v[v.size() / 2] : 0.5 * (v[v.size() / 2 - 1] + v[v.size() / 2]);
+        // The MEAN of the satellites that have not slipped (the median only says which those are). A median is not linear: the medians of the
+        // epoch-to-epoch changes do not add up to the change of anything, so their sum wandered by 5 - 10 m in a minute (measured on the simulator).
+        // One group alone hides that in its clock; two groups (GPS and BeiDou) wandered apart, and the fix with a shared clock was 7 m off in height.
+        // The mean of changes is the change of the mean: its sum stays within the code noise of the group.
+        double sum = 0; int cnt = 0;
+        for (double x : v) if (std::fabs(x - med) < kSlipM) { sum += x; cnt++; }
+        commonOf[g.first] = cnt ? sum / cnt : med;
+    }
+    std::map<int, Hatch> next;
+    std::vector<Hatch> hs(n);
+    for (size_t k = 0; k < n; k++) {
+        Hatch h;
+        const double raw = obs[k].pr;
+        const auto cm = commonOf.find(group[k]);
+        const double common = cm == commonOf.end() ? 0.0 : cm->second;
+        if (has[k] && cm != commonOf.end() && std::fabs(d[k] - common) < kSlipM) {
+            const Hatch& p = hatch[key[k]];
+            h.n = std::min(p.n + 1, M);
+            h.prS = raw / h.n + (double)(h.n - 1) / h.n * (p.prS + (phaseM[k] - p.phaseM) + common);
+        } else {
+            h.n = 1; h.prS = raw;
+        }
+        h.prRaw = raw; h.phaseM = phaseM[k]; h.clockOf = obs[k].sys;
+        hs[k] = h;
+    }
+    // What the filters of a group have in common is put back on the code ranges every epoch. The common term above is an estimate, and what is
+    // left of its errors stays in every filter that was running at the time - the same in all of them, so harmless until a satellite joins: a new
+    // filter starts on its code range and does not have it. Measured on the simulator: Galileo joining GPS filters 40 s old stood 7 - 15 m off in
+    // height until the old filters forgot. So the mean of (smoothed - code range) over the running filters of a group is taken out of them: the
+    // satellites keep their smoothing against EACH OTHER, which is what steadies the position, and the group as a whole follows its code ranges.
+    std::map<long long, std::pair<double, int>> lag;
+    for (size_t k = 0; k < n; k++) if (group[k] != 0 && hs[k].n >= 2) { auto& l = lag[group[k]]; l.first += hs[k].prS - hs[k].prRaw; l.second++; }
+    for (size_t k = 0; k < n; k++) {
+        Hatch& h = hs[k];
+        if (group[k] != 0 && h.n >= 2) { const auto& l = lag[group[k]]; h.prS -= l.first / l.second; }
+        if (group[k] != 0) next[key[k]] = h;
+        obs[k].pr = h.prS;
+        meas[idx[k]].smoothed = h.n;
+    }
+    hatch.swap(next);       // a satellite that is not measured this epoch starts again when it returns
+}
+
 // ------------------------------------------------------------------ the fix
 void GnssReceiver::Impl::measure(double S) {
     std::vector<GnssObs> obs;
@@ -125,6 +214,8 @@ void GnssReceiver::Impl::measure(double S) {
         if (!t->transmitTime(S, &tow)) continue;
         GnssMeasurement m;
         m.sys = t->sys; m.prn = t->prn; m.fcn = t->fcn; m.rxTime = S; m.txTow = tow; m.dopplerHz = t->dopplerHz(); m.cn0 = t->cn0();
+        // only a phase-locked loop follows the carrier; a channel in pull-in (FLL) or after a phase drop starts its smoothing again
+        m.hasCarrier = t->carrierLocked() && t->carrierCycles(S, &m.carrierCycles);
         if (m.sys == GnssGlonass) m.txTow = std::fmod(tow, 86400.0);
         meas.push_back(m);
     }
@@ -189,6 +280,7 @@ void GnssReceiver::Impl::measure(double S) {
         obs.push_back(o);
         idx.push_back(i);
     }
+    smoothPseudoranges(obs, meas, idx);
     for (auto& s : sol) s = SolInfo();
     for (auto& s : gsol) s = SolInfo();
     for (auto& s : bsol) s = SolInfo();

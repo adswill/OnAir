@@ -74,6 +74,10 @@ public:
     // The GPS time of week of the transmission of the code epoch that began at receive time tRx (seconds of the band's clock); false when no time is known
     // yet or tRx is outside the recent epochs. The transmit time is the satellite's own clock reading.
     bool transmitTime(double tRx, double* tow) const;
+    // The carrier at receive time tRx: whole and fractional cycles of the replica's carrier since this channel started (the integral of the frequency
+    // the loop used, never wrapped). Its CHANGE between two instants is the change of range in wavelengths, far quieter than the code's; the value
+    // itself means nothing. False when tRx is outside the recent epochs.
+    bool carrierCycles(double tRx, double* cycles) const;
     // the latest epoch: its receive time; so the receiver can tell when a measurement instant is covered
     double latestEpochTime() const { return lastEpochT_; }
     // the last prompt values, the carrier phase error and the early-late discriminator for the interface
@@ -187,6 +191,8 @@ private:
     std::vector<GnssSubframeEvent> events_;
     // history of the epoch start times (receive time seconds), for the transmit-time lookup
     std::deque<double> epochT_;       // the last 256
+    std::deque<double> epochCyc_;     // the carrier (cycles since the start, not wrapped) at each of those epoch starts
+    double cycles_ = 0;               // the carrier in cycles since the start at the leading edge of sample pos_, not wrapped
     uint64_t epochTFirst_ = 0;        // epoch number of epochT_.front()
     std::deque<std::pair<float, float>> scatter_;
     std::vector<float> cn0Hist_;

@@ -45,6 +45,8 @@ public:
     bool pushFrame(const cf32* x, size_t n, const Bootstrap& bs);
     // The second half of pushFrame: hands a decoded frame to the link layer. Frames must be committed in order, one at a time.
     bool commitFrame(const FrameResult& fr, const Bootstrap& bs);
+    // Samples were lost between the frame committed last and the next one: the time interleavers and the packet reassembly start again.
+    void lostSamples();
     // Entry below the physical layer: the baseband packets of a PLP (header included), in order. A gap resets the packet reassembly.
     void pushBbPackets(int plpId, const std::vector<std::vector<uint8_t>>& packets, bool gapBefore = false);
     // Entry below the link layer: an IP packet.
@@ -73,6 +75,7 @@ private:
     std::condition_variable tsCv_;
     std::deque<uint8_t> tsDirect_;
     bool sawTs_ = false, stopped_ = false;
+    int tsSeen_ = 0;                                          // ALP transport stream packets in a row, no IP packet between (sawTs_ needs several)
     void onAlp(const AlpPacket& a);
     void onUdp(const UdpDatagram& d);
     void startRoute();

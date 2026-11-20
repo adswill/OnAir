@@ -174,12 +174,13 @@ static bool set_12(Engine& e, const std::string& n, double v) {
     if (n == "setEffort") { call(r, &Rx<decltype(r)>::setEffort, v); return true; }
     return false;
 }
-static const char kOpt_13[] = R"JSON([{"n":"setSystems","k":"int","l":"Systems","h":"gnssSystemBit() of the wanted systems (default: all that the build supports)","t":"s"},{"n":"setSearchRange","k":"num","l":"Search Range","h":"half width of the first search window (default 10 kHz); wider ones follow while nothing is found","u":"kHz","t":"s"},{"n":"setElevationMask","k":"num","l":"Elevation Mask","h":"satellites below this elevation are not used in the fix (default 5)","t":"s"}])JSON";
+static const char kOpt_13[] = R"JSON([{"n":"setSystems","k":"int","l":"Systems","h":"gnssSystemBit() of the wanted systems (default: all that the build supports)","t":"s"},{"n":"setSearchRange","k":"num","l":"Search Range","h":"half width of the first search window (default 10 kHz); wider ones follow while nothing is found","u":"kHz","t":"s"},{"n":"setElevationMask","k":"num","l":"Elevation Mask","h":"satellites below this elevation are not used in the fix (default 5)","t":"s"},{"n":"setCarrierSmoothing","k":"int","l":"Carrier Smoothing","t":"s"}])JSON";
 static bool set_13(Engine& e, const std::string& n, double v) {
     auto& r = e.gnss();
     if (n == "setSystems") { call(r, &Rx<decltype(r)>::setSystems, v); return true; }
     if (n == "setSearchRange") { call(r, &Rx<decltype(r)>::setSearchRange, v); return true; }
     if (n == "setElevationMask") { call(r, &Rx<decltype(r)>::setElevationMask, v); return true; }
+    if (n == "setCarrierSmoothing") { call(r, &Rx<decltype(r)>::setCarrierSmoothing, v); return true; }
     return false;
 }
 static const char kOpt_14[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setSoftDecisions","k":"bool","l":"Soft Decisions","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";

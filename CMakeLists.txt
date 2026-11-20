@@ -2605,6 +2605,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_atsc3_cticsi tests/atsc3/test_atsc3_cticsi.cpp)   # 4.1: channel state through the convolutional time interleaver (docs/SENSITIVITY-4.1-TV.md)
   target_link_libraries(test_atsc3_cticsi PRIVATE dect2core)
   add_test(NAME atsc3_cticsi COMMAND test_atsc3_cticsi)
+  add_executable(test_atsc3_ldm tests/atsc3/test_atsc3_ldm.cpp)   # the Core layer of LDM through the CTI: Enhanced layer as noise, erasure limit
+  target_link_libraries(test_atsc3_ldm PRIVATE dect2core)
+  add_test(NAME atsc3_ldm COMMAND test_atsc3_ldm)
 
   add_executable(test_atsc3_alp tests/atsc3/test_atsc3_alp.cpp)
   target_link_libraries(test_atsc3_alp PRIVATE dect2core)
@@ -2676,6 +2679,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_atsc3_realworld tests/atsc3/test_atsc3_realworld.cpp)
   target_link_libraries(test_atsc3_realworld PRIVATE dect2core)
   add_test(NAME atsc3_realworld COMMAND test_atsc3_realworld)
+  add_executable(test_atsc3_rxqueue tests/atsc3/test_atsc3_rxqueue.cpp)   # the live input queue: stalls drop whole frames, the receiver goes on
+  target_link_libraries(test_atsc3_rxqueue PRIVATE dect2core)
+  add_test(NAME atsc3_rxqueue COMMAND test_atsc3_rxqueue)
 
   add_executable(test_scan_radios tests/engine/test_scan_radios.cpp)
   target_link_libraries(test_scan_radios PRIVATE dect2core)
@@ -2846,6 +2852,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_tsout_udp tests/tv/test_tsout_udp.cpp)
   target_link_libraries(test_tsout_udp PRIVATE dect2core)
   add_test(NAME tsout_udp COMMAND test_tsout_udp)
+  add_executable(test_tsout_file tests/tv/test_tsout_file.cpp)   # TS recording closed while the paced queue is behind: every packet once, in order
+  target_link_libraries(test_tsout_file PRIVATE dect2core)
+  add_test(NAME tsout_file COMMAND test_tsout_file)
   add_executable(test_videogen tests/tv/test_videogen.cpp)   # Digital video generator: bitrate estimate, encoder settings, overlay, .ts file, UDP / RTP
   target_link_libraries(test_videogen PRIVATE dect2core)
   add_test(NAME videogen COMMAND test_videogen WORKING_DIRECTORY ${ONAIR_ROOT})
@@ -3303,7 +3312,7 @@ if(DECT2_BUILD_TESTS)
   # the full CI runs them nightly and on release tags.
   foreach(t gain overload channel t2_payload dvbt_rx dab_rx atsc3_synth_options
             atv_impair atv_interf atv_engine drm_impair drm_rx drm_smooth drm_mrr adsb_engine ism_rx ism_iot_rx btc_rx
-            protolab_sweep signallab_eval gnss_loops gnss_rates gnss_sweep gnss_rate20 gnss_gap gnss_qzss_sbas gnss_galileo gnss_beidou gnss_glonass iq_modes sbas_engine)
+            protolab_sweep signallab_eval gnss_loops gnss_rates gnss_sweep gnss_rate20 gnss_gap gnss_qzss_sbas gnss_galileo gnss_beidou gnss_glonass gnss_smooth iq_modes sbas_engine)
     if(TEST ${t})
       set_tests_properties(${t} PROPERTIES LABELS slow)
     endif()
@@ -3330,7 +3339,7 @@ if(DECT2_BUILD_TESTS)
   # socket/thread timing tests and CPU speed limits: label "timing"; CI runs these apart from the -j 4 run, a failed one twice (ci.yml)
   foreach(t voice_inversion atsc3_synth_basic scan_synth dvbs_engine isdbt_rx radio_mode_glue atv_switch tx wifi_engine multitone_engine native_netradio native_sdrpp feeds feed_targets rooms_net discord_rpc remote_api plugin ais_engine marine_engine inmc_engine scan_soapy dvbc_engine qo100_dvbs_second asterix_engine tx_quality_b tx_quality_a_rt
           halow_engine wisun_engine iono_engine dtmb_engine mesh_rates kaft_engine ebicab_engine rpr_engine protolab time_ntp native_tci native_kiwisdr iridium_engine
-          time_machine pskdsp_engine)   # wall-clock deadlines: failed next to the longest tests when ctest started those first (run 42886049629)
+          time_machine pskdsp_engine atsc3_rxqueue)   # wall-clock deadlines: failed next to the longest tests when ctest started those first (run 42886049629)
     if(TEST ${t})
       set_property(TEST ${t} APPEND PROPERTY LABELS timing)
     endif()
