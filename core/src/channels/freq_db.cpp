@@ -297,7 +297,7 @@ FreqParseReport freqImportSchedule(const std::string& text, std::vector<FreqEntr
         if (has("time") || x == "utc") return "time";
         if (has("day")) return "days";
         if (x == "itu" || has("country") || has("ctry")) return "itu";
-        if (has("station") || has("broadcaster") || x == "name" || has("tx site") || has("site")) return "station";
+        if (has("station") || has("broadcaster") || x == "name") return "station";
         if (has("lng") || has("lang")) return "lang";
         if (has("target") || has("area")) return "target";
         if (has("remark") || has("note")) return "notes";
