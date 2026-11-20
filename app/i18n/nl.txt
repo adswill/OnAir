@@ -1725,28 +1725,16 @@ Airband is off in the transcript settings	Luchtvaartband staat uit in de transcr
 Cannot write %s	Kan niet schrijven: %s
 Saved %s	Opgeslagen: %s
 Transcribe speech	Spraak transcriberen
-Master switch. While a transmission is going on the audio is cut out, sent to the speech engine and turned into text. Nothing runs while the channels are quiet.	Hoofdschakelaar. Tijdens een uitzending wordt het geluid uitgeknipt, naar de spraakengine gestuurd en omgezet in tekst. Zolang de kanalen stil zijn, draait er niets.
 Airband channels	Luchtvaartkanalen
 Marine VHF	Marifoon (VHF)
 Speech model	Spraakmodel
 none	geen
-Open models folder	Modellenmap openen
-Put a whisper.cpp model file (ggml-*.bin) here to use it. The folder is made if it does not exist.	Zet hier een whisper.cpp-modelbestand (ggml-*.bin) neer om het te gebruiken. De map wordt aangemaakt als ze niet bestaat.
-No speech model yet. Download one below, or put a model file in the models folder.	Nog geen spraakmodel. Download er hieronder een of zet een modelbestand in de modellenmap.
 Loading the speech model ...	Spraakmodel wordt geladen ...
 Speech model loaded.	Spraakmodel geladen.
 This build has no speech engine.	Deze versie heeft geen spraakengine.
 checking	controleren
-Download speech model:	Spraakmodel downloaden:
-%s %d MB	%s %d MB
-Already downloaded	Al gedownload
-English only. tiny is the fastest (real time on a laptop), small hears more words and needs a stronger computer.	Alleen Engels. tiny is het snelst (realtime op een laptop), small hoort meer woorden en heeft een krachtigere computer nodig.
-Other languages (multilingual models)	Andere talen (meertalige modellen)
-The loaded model is English only: other languages need a multilingual model (tiny, base or small without .en).	Het geladen model is alleen Engels: andere talen hebben een meertalig model nodig (tiny, base of small zonder .en).
 CPU threads	CPU-threads
-How many processor threads the speech engine may use for one transmission. Fewer threads use less battery and take longer.	Hoeveel processorthreads de spraakengine voor één uitzending mag gebruiken. Minder threads gebruiken minder accu en duren langer.
 Keep transcripts (days)	Transcripties bewaren (dagen)
-Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time	Gehoord %llu, bewaard %llu, weggelaten %llu (stilte, ruis, herhalingen), overgeslagen %llu (te traag), snelheid %.2f x realtime
 Download the speech model %s (%d MB)?	Spraakmodel %s (%d MB) downloaden?
 OnAir asks the model repository (huggingface.co) for this one file and sends nothing else. The file is checked against a fixed SHA-256 checksum and thrown away if it does not match. The model is MIT licensed.	OnAir vraagt dit ene bestand op bij de modelopslag (huggingface.co) en verstuurt verder niets. Het bestand wordt gecontroleerd met een vaste SHA-256-checksum en weggegooid als het niet klopt. Het model heeft een MIT-licentie.
 Download	Downloaden
@@ -1754,14 +1742,10 @@ Delete all saved transcripts? This cannot be undone.	Alle opgeslagen transcripti
 Delete all	Alles verwijderen
 Transcription is off.	Transcriptie staat uit.
 Hide settings	Instellingen verbergen
-Settings and speech model	Instellingen en spraakmodel
 Search the text ...	In de tekst zoeken ...
 All frequencies	Alle frequenties
-A callsign (DLH123), a registration (N123AB) or an ICAO address (3C6444)	Roepletters (DLH123), registratie (N123AB) of ICAO-adres (3C6444)
-An airport code or name found in the channel name or the text (EYVI, Tower)	Een luchthavencode of -naam in de kanaalnaam of de tekst (EYVI, Tower)
 %zu of %zu	%zu van %zu
 Copy all shown	Alles wat getoond wordt kopiëren
-Export %s	%s exporteren
 Delete all ...	Alles verwijderen ...
 Time (UTC)	Tijd (UTC)
 Sure	Zeker
@@ -2326,8 +2310,6 @@ azimuth only; the picture is just a backdrop	alleen azimut; de afbeelding is sle
 column	kolom
 to (kHz)	tot (kHz)
 Translate to English	Vertalen naar Engels
-Speech in another language is also translated to English, offline, next to the original. Needs a multilingual model and costs about 1.5 times more processor time; it is skipped when the engine cannot keep up. Nothing is sent anywhere. Translation into other languages is not available.	Spraak in een andere taal wordt ook offline naar het Engels vertaald, naast het origineel. Vereist een meertalig model en kost ongeveer 1,5 keer meer processortijd; wordt overgeslagen als de engine het niet bijhoudt. Er wordt niets verzonden. Vertalen naar andere talen is niet mogelijk.
-The loaded model is English only: translation needs a multilingual model.	Het geladen model is alleen Engels: vertalen vereist een meertalig model.
 Live: stop the room	Live: de ruimte stoppen
 Copy room link	Ruimtelink kopiëren
 Host PIN (to moderate on the room page):	Host-pincode (om te modereren op de ruimtepagina):
@@ -3071,20 +3053,16 @@ Station's own subtitles	Eigen ondertitels van de zender
 Generated from speech	Gemaakt uit spraak
 Both	Beide
 Generated where the station has none	Gemaakt als de zender er geen heeft
-Auto subtitles (captions)	Automatische ondertitels (captions)
-Captions from the speech of the sound you hear: FM and AM broadcast, DAB, TV audio, amateur and digital voice. They are made here with the offline speech model, shown on the receiver, and kept only in memory (and in .srt / .vtt files if you save them). Music is skipped. Off until you turn it on.	Ondertitels van de spraak in het geluid dat u hoort: FM- en AM-radio, DAB, tv-geluid, amateurradio en digitale spraak. Ze worden hier gemaakt met het offline spraakmodel, getoond op de ontvanger en alleen in het geheugen bewaard (en in .srt- / .vtt-bestanden als u ze opslaat). Muziek wordt overgeslagen. Uit totdat u het aanzet.
 Make captions	Ondertitels maken
 TV subtitles	Tv-ondertitels
 As spoken	Zoals gesproken
 English translation	Engelse vertaling
 Caption text	Tekst van de ondertitels
-Tick Translate to English above (multilingual model) to get translated captions.	Vink hierboven Naar Engels vertalen aan (meertalig model) voor vertaalde ondertitels.
 Caption size, percent	Grootte van de ondertitels, in procenten
 Background, percent	Achtergrond, in procenten
 Lines	Regels
 At the top of the picture	Bovenin het beeld
 Save .srt and .vtt next to audio recordings	Naast audio-opnamen .srt en .vtt opslaan
-Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time	Ondertitels: %llu stukken, %llu muziek overgeslagen, %llu overgeslagen (te traag), snelheid %.2f x realtime
 The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest.	De spraakengine is trager dan het geluid: gebruik een kleiner model of minder CPU-threads. De oudste spraak wordt overgeslagen, nooit de nieuwste.
 #  DSC audit
 category	categorie
