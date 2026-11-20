@@ -9,6 +9,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <map>
+#include <set>
+#include <sstream>
+#include <cctype>
 
 namespace dect2 {
 
@@ -234,7 +237,130 @@ MemoryBank bankOf(const std::vector<FreqEntry>& v) {
 std::string freqExportJson(const std::vector<FreqEntry>& v) { return bankOf(v).toJson(); }
 std::string freqExportCsv(const std::vector<FreqEntry>& v) { return bankOf(v).toCsv(); }
 
+// ---- broadcast schedule files (EiBi, and HFCC / Aoki style lists): one frequency-database entry per line, every column kept ----
+namespace {
+
+std::vector<std::string> splitDelim(const std::string& line, char d) {
+    std::vector<std::string> f; std::string cur; bool q = false;
+    for (char c : line) {
+        if (c == '"') q = !q;
+        else if (c == d && !q) { f.push_back(cur); cur.clear(); }
+        else cur += c;
+    }
+    f.push_back(cur);
+    for (auto& x : f) { size_t a = x.find_first_not_of(" \t"), b = x.find_last_not_of(" \t\r"); x = a == std::string::npos ? "" : x.substr(a, b - a + 1); }
+    return f;
+}
+std::string lowerOf(std::string s) { for (char& c : s) c = (char)std::tolower((unsigned char)c); return s; }
+char delimOf(const std::string& line) {
+    char best = ';'; size_t n = 0;
+    for (char d : {';', '\t', '|', ','}) { const size_t c = (size_t)std::count(line.begin(), line.end(), d); if (c > n) { n = c; best = d; } }
+    return best;
+}
+std::string firstDataLine(const std::string& text) {
+    std::istringstream in(text);
+    for (std::string l; std::getline(in, l);) {
+        if (!l.empty() && l.back() == '\r') l.pop_back();
+        if (l.find_first_not_of(" \t") != std::string::npos && l[0] != '#') return l;
+    }
+    return "";
+}
+
+}  // namespace
+
+bool looksLikeFreqSchedule(const std::string& text) {
+    const std::string l = firstDataLine(text);
+    if (l.empty() || l[0] == '[' || l[0] == '{') return false;
+    const std::string lo = lowerOf(l);
+    const char d = delimOf(l);
+    if (d != ';' && d != '\t' && d != '|') return false;
+    if (lo.find("khz") != std::string::npos && (lo.find("station") != std::string::npos || lo.find("time") != std::string::npos)) return true;
+    const auto f = splitDelim(l, d);   // EiBi without its header: kHz;hhmm-hhmm;days;ITU;station;language;target;...
+    int a = 0, b = 0;
+    return f.size() >= 7 && std::atof(f[0].c_str()) > 0 && std::sscanf(f[1].c_str(), "%d-%d", &a, &b) == 2;
+}
+
+FreqParseReport freqImportSchedule(const std::string& text, std::vector<FreqEntry>& into) {
+    FreqParseReport rep;
+    std::istringstream in(text);
+    std::string line;
+    char d = ';';
+    // columns by role: freq, time, days, itu, station, lang, target, remarks, power, start, stop, and the rest by their own header text
+    std::vector<std::string> head, role;
+    bool haveHead = false, first = true;
+    std::set<std::string> have;
+    for (const FreqEntry& e : into) have.insert(freqKey(e) + "|" + e.name + "|" + e.notes);
+    auto roleOf = [](const std::string& h) -> std::string {
+        const std::string x = lowerOf(h);
+        auto has = [&](const char* k) { return x.find(k) != std::string::npos; };
+        if (has("khz") || x == "freq" || x == "frequency") return "freq";
+        if (has("time") || x == "utc") return "time";
+        if (has("day")) return "days";
+        if (x == "itu" || has("country") || has("ctry")) return "itu";
+        if (has("station") || has("broadcaster") || x == "name" || has("tx site") || has("site")) return "station";
+        if (has("lng") || has("lang")) return "lang";
+        if (has("target") || has("area")) return "target";
+        if (has("remark") || has("note")) return "notes";
+        if (x == "p" || has("power") || has("kw")) return "power";
+        if (has("azim") || has("az")) return "azimuth";
+        return "";
+    };
+    while (std::getline(in, line)) {
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.find_first_not_of(" \t") == std::string::npos || line[0] == '#') continue;
+        if (first) {
+            first = false;
+            d = delimOf(line);
+            const auto f = splitDelim(line, d);
+            if (std::atof(f[0].c_str()) <= 0 && lowerOf(line).find("khz") != std::string::npos) {   // a header line
+                haveHead = true; head = f;
+                for (const auto& h : f) role.push_back(roleOf(h));
+                continue;
+            }
+            role = {"freq", "time", "days", "itu", "station", "lang", "target", "notes", "power", "start", "stop"};   // EiBi's order
+        }
+        const auto f = splitDelim(line, d);
+        std::string v[12];   // freq time days itu station lang target notes power azimuth other
+        std::string other;
+        double khz = 0;
+        for (size_t i = 0; i < f.size() && i < role.size(); i++) {
+            const std::string& r = role[i];
+            if (f[i].empty()) continue;
+            if (r == "freq") khz = std::atof(f[i].c_str());
+            else if (r == "time") v[1] = f[i];
+            else if (r == "days") v[2] = f[i];
+            else if (r == "itu") v[3] = f[i];
+            else if (r == "station") v[4] = f[i];
+            else if (r == "lang") v[5] = f[i];
+            else if (r == "target") v[6] = f[i];
+            else if (r == "notes") v[7] = f[i];
+            else if (r == "power") v[8] = f[i];
+            else if (r == "azimuth") v[9] = f[i];
+            else if (!r.empty() || haveHead) { const std::string label = (haveHead && i < head.size() && !head[i].empty()) ? head[i] : (r.empty() ? std::string() : r); other += (other.empty() ? "" : "; ") + (label.empty() ? "" : label + " ") + f[i]; }
+        }
+        if (khz <= 0 || khz > 30000.0 * 1000.0) { rep.skipped++; continue; }
+        FreqEntry e;
+        e.hz = (uint64_t)std::llround(khz * 1000.0);
+        e.mode = "general"; e.category = "broadcast"; e.user = true;
+        e.region = v[3];
+        e.name = v[4].empty() ? "(unnamed broadcast)" : v[4];
+        std::string n;
+        auto add = [&](const char* label, const std::string& x) { if (!x.empty()) n += (n.empty() ? "" : "; ") + std::string(label) + x; };
+        add("", v[1].empty() ? "" : v[1] + " UTC"); add("days ", v[2]); add("lang ", v[5]); add("target ", v[6]); add("power ", v[8] + (v[8].empty() ? "" : " kW")); add("azimuth ", v[9]); add("", v[7]); add("", other);
+        e.notes = n;
+        e.source = "imported broadcast schedule";
+        e.bwHz = 10000;
+        if (!have.insert(freqKey(e) + "|" + e.name + "|" + e.notes).second) { rep.skipped++; continue; }
+        into.push_back(std::move(e));
+        rep.loaded++;
+    }
+    if (!rep.loaded && !rep.skipped) rep.log.push_back("no schedule lines found");
+    return rep;
+}
+
 FreqParseReport freqImportText(const std::string& text, std::vector<FreqEntry>& into) {
+    if (looksLikeFreqSchedule(text)) return freqImportSchedule(text, into);
+
     FreqParseReport rep;
     MemoryBank b;
     const MemoryLoadReport r = b.importText(text, DupPolicy::Skip);
