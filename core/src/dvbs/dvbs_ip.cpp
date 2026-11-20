@@ -5,6 +5,7 @@
 #include "dect2/wirecap/wire.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 
 namespace dect2 {

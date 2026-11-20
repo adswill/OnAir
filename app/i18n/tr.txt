@@ -1724,28 +1724,16 @@ Airband is off in the transcript settings	Transkript ayarlarında hava bandı ka
 Cannot write %s	%s yazılamıyor
 Saved %s	%s kaydedildi
 Transcribe speech	Konuşmayı yazıya dök
-Master switch. While a transmission is going on the audio is cut out, sent to the speech engine and turned into text. Nothing runs while the channels are quiet.	Ana anahtar. Bir iletim sürerken ses ayrılır, konuşma motoruna gönderilir ve metne dönüştürülür. Kanallar sessizken hiçbir şey çalışmaz.
 Airband channels	Hava bandı kanalları
 Marine VHF	Deniz VHF
 Speech model	Konuşma modeli
 none	yok
-Open models folder	Models klasörünü aç
-Put a whisper.cpp model file (ggml-*.bin) here to use it. The folder is made if it does not exist.	Kullanmak için buraya bir whisper.cpp model dosyası (ggml-*.bin) koyun. Yoksa klasör oluşturulur.
-No speech model yet. Download one below, or put a model file in the models folder.	Henüz konuşma modeli yok. Aşağıdan bir tane indirin veya models klasörüne bir model dosyası koyun.
 Loading the speech model ...	Konuşma modeli yükleniyor ...
 Speech model loaded.	Konuşma modeli yüklendi.
 This build has no speech engine.	Bu sürümde konuşma motoru yok.
 checking	denetleniyor
-Download speech model:	Konuşma modelini indir:
-%s %d MB	%s %d MB
-Already downloaded	Zaten indirildi
-English only. tiny is the fastest (real time on a laptop), small hears more words and needs a stronger computer.	Yalnızca İngilizce. tiny en hızlısıdır (dizüstü bilgisayarda gerçek zamanlı), small daha fazla kelime duyar ve daha güçlü bir bilgisayar gerektirir.
-Other languages (multilingual models)	Diğer diller (çok dilli modeller)
-The loaded model is English only: other languages need a multilingual model (tiny, base or small without .en).	Yüklenen model yalnızca İngilizce: diğer diller çok dilli bir model gerektirir (.en olmayan tiny, base veya small).
 CPU threads	CPU iş parçacıkları
-How many processor threads the speech engine may use for one transmission. Fewer threads use less battery and take longer.	Konuşma motorunun bir iletim için kullanabileceği işlemci iş parçacığı sayısı. Daha az iş parçacığı daha az pil kullanır ve daha uzun sürer.
 Keep transcripts (days)	Transkriptleri sakla (gün)
-Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time	%llu duyuldu, %llu saklandı, %llu dışarıda bırakıldı (sessizlik, gürültü, tekrarlar), %llu atlandı (çok yavaş), hız gerçek zamanın %.2f katı
 Download the speech model %s (%d MB)?	Konuşma modeli %s (%d MB) indirilsin mi?
 OnAir asks the model repository (huggingface.co) for this one file and sends nothing else. The file is checked against a fixed SHA-256 checksum and thrown away if it does not match. The model is MIT licensed.	OnAir model deposundan (huggingface.co) yalnızca bu dosyayı ister ve başka hiçbir şey göndermez. Dosya sabit bir SHA-256 sağlama toplamına karşı denetlenir ve eşleşmezse atılır. Model MIT lisanslıdır.
 Download	İndir
@@ -1753,14 +1741,10 @@ Delete all saved transcripts? This cannot be undone.	Kaydedilen tüm transkriptl
 Delete all	Tümünü sil
 Transcription is off.	Transkripsiyon kapalı.
 Hide settings	Ayarları gizle
-Settings and speech model	Ayarlar ve konuşma modeli
 Search the text ...	Metinde ara ...
 All frequencies	Tüm frekanslar
-A callsign (DLH123), a registration (N123AB) or an ICAO address (3C6444)	Bir çağrı işareti (DLH123), bir tescil (N123AB) veya bir ICAO adresi (3C6444)
-An airport code or name found in the channel name or the text (EYVI, Tower)	Kanal adında veya metinde bulunan bir havalimanı kodu ya da adı (EYVI, Tower)
 %zu of %zu	%zu / %zu
 Copy all shown	Gösterilenlerin tümünü kopyala
-Export %s	%s dışa aktar
 Delete all ...	Tümünü sil ...
 Time (UTC)	Saat (UTC)
 Sure	Eminim
@@ -2325,8 +2309,6 @@ azimuth only; the picture is just a backdrop	yalnızca azimut; resim sadece bir 
 column	sütun
 to (kHz)	bitiş (kHz)
 Translate to English	İngilizceye çevir
-Speech in another language is also translated to English, offline, next to the original. Needs a multilingual model and costs about 1.5 times more processor time; it is skipped when the engine cannot keep up. Nothing is sent anywhere. Translation into other languages is not available.	Başka bir dildeki konuşma da çevrimdışı olarak İngilizceye çevrilir, orijinalin yanında. Çok dilli bir model gerekir ve yaklaşık 1,5 kat daha fazla işlemci zamanı harcar; motor yetişemediğinde atlanır. Hiçbir yere bir şey gönderilmez. Başka dillere çeviri mevcut değildir.
-The loaded model is English only: translation needs a multilingual model.	Yüklenen model yalnızca İngilizce: çeviri için çok dilli bir model gerekir.
 Live: stop the room	Canlı: odayı durdur
 Copy room link	Oda bağlantısını kopyala
 Host PIN (to moderate on the room page):	Sunucu PIN'i (oda sayfasında yönetmek için):
@@ -3069,20 +3051,16 @@ Station's own subtitles	İstasyonun kendi altyazıları
 Generated from speech	Konuşmadan oluşturuldu
 Both	İkisi
 Generated where the station has none	İstasyonun hiç olmadığı yerde oluşturuldu
-Auto subtitles (captions)	Otomatik altyazılar
-Captions from the speech of the sound you hear: FM and AM broadcast, DAB, TV audio, amateur and digital voice. They are made here with the offline speech model, shown on the receiver, and kept only in memory (and in .srt / .vtt files if you save them). Music is skipped. Off until you turn it on.	Duyduğunuz sesin konuşmasından altyazılar: FM ve AM yayını, DAB, TV sesi, amatör ve dijital ses. Burada çevrimdışı konuşma modeliyle oluşturulur, alıcıda gösterilir ve yalnızca bellekte tutulur (kaydederseniz .srt / .vtt dosyalarında da). Müzik atlanır. Siz açana kadar kapalı.
 Make captions	Altyazı oluştur
 TV subtitles	TV altyazıları
 As spoken	Konuşulduğu gibi
 English translation	İngilizce çeviri
 Caption text	Altyazı metni
-Tick Translate to English above (multilingual model) to get translated captions.	Çevrilmiş altyazılar için yukarıdaki İngilizceye çevir'i (çok dilli model) işaretleyin.
 Caption size, percent	Altyazı boyutu, yüzde
 Background, percent	Arka plan, yüzde
 Lines	Satırlar
 At the top of the picture	Görüntünün üstünde
 Save .srt and .vtt next to audio recordings	.srt ve .vtt dosyalarını ses kayıtlarının yanına kaydet
-Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time	Altyazılar: %llu parça, %llu müzik atlandı, %llu atlandı (çok yavaş), hız gerçek zamanın %.2f katı
 The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest.	Konuşma motoru sesten yavaş: daha küçük bir model veya daha az CPU iş parçacığı kullanın. En eski konuşma atlanır, asla en yenisi.
 #  DSC audit
 category	kategori

@@ -14,6 +14,9 @@ constexpr const char* kHackrfFw = "https://hackrf.readthedocs.io/en/latest/updat
 constexpr const char* kCodecs = "https://github.com/adswill/OnAir/blob/main/docs/CODECS.md";
 constexpr const char* kDevices = "https://github.com/adswill/OnAir/blob/main/DEVICES.md";
 constexpr const char* kAaronia = "https://aaronia.com/downloads";
+// (the page of the RSA API 5.6.0295 for 64-bit Windows; Tektronix has one page per version, and the notes say how to find a newer one)
+constexpr const char* kTekRsaApi = "https://www.tek.com/en/support/software/application/rsa-application-programming-interface-api-for-64bit-windows-v560295";
+constexpr const char* kRsaDoc = "https://github.com/adswill/OnAir/blob/main/docs/TEKTRONIX-RSA.md";
 constexpr const char* kSpectranDoc = "https://github.com/adswill/OnAir/blob/main/docs/SPECTRAN-V6.md";
 constexpr const char* kSddcReleases = "https://github.com/renardspark/SDDC_Driver/releases";
 constexpr const char* kUhdImages = "https://files.ettus.com/manual/page_images.html";
@@ -46,6 +49,13 @@ const Entry kTable[] = {
      {N_("Download the RTSA-Suite PRO for Windows from aaronia.com/downloads and install it (with its SPECTRAN V6 driver)."), N_("Restart OnAir."), N_("Press the refresh button next to the radio list."), nullptr},
      {N_("Download the RTSA-Suite PRO for Linux from aaronia.com/downloads and install it (to /opt/aaronia-rtsa-suite)."), N_("Add Aaronia's udev rule as its installer explains, then unplug and replug the SPECTRAN."), N_("Restart OnAir and press the refresh button next to the radio list."), nullptr},
      {{Act::OpenUrl, N_("Open Aaronia downloads"), kAaronia, OsWin | OsLinux}, {Act::OpenUrl, N_("SPECTRAN notes"), kSpectranDoc, OsAll}, {Act::OpenDiagnostics, nullptr, "", 0}}},
+    {"rsa_missing", "RSA API is not installed", N_("Install the Tektronix RSA API"),
+     N_("OnAir drives the Tektronix RSA306, RSA500A and RSA600A through Tektronix's RSA API library, a free download from tek.com. OnAir cannot include it."),
+     NONE,
+     {N_("Tektronix offers the RSA API for Windows and Linux. On a Mac, use the analyser from a Windows or Linux computer."), nullptr},
+     {N_("Download the \"RSA Application Programming Interface (API) for 64-bit Windows\" from tek.com (Support > Software, search for \"RSA API\") and install it; it goes to C:\\Tektronix\\RSA_API and brings the USB driver."), N_("Close SignalVu-PC if it is open."), N_("Restart OnAir and press the refresh button next to the radio list."), nullptr},
+     {N_("Download the RSA API for Linux from tek.com (Support > Software, search for \"RSA API\") and install it as its notes explain, with its udev rule."), N_("Restart OnAir and press the refresh button next to the radio list."), nullptr},
+     {{Act::OpenUrl, N_("Open the RSA API download"), kTekRsaApi, OsWin | OsLinux}, {Act::OpenUrl, N_("Tektronix RSA notes"), kRsaDoc, OsAll}, {Act::OpenDiagnostics, nullptr, "", 0}}},
     {"kernel_driver", "msi2500", N_("Linux grabbed the SDRplay radio"),
      N_("A Linux driver for TV sticks took the radio before the SDRplay software could."),
      {N_("This is a Linux problem. On this system, unplug the radio, plug it in again and press the refresh button."), nullptr}, NONE, NONE,

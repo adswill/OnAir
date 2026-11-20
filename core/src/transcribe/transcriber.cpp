@@ -390,5 +390,6 @@ std::shared_ptr<SpeechBackend> makeWhisperBackend(const std::string&, int, std::
     return nullptr;
 }
 bool whisperAvailable() { return false; }
+const char* whisperLibraryVersion() { return "Not available"; }
 }  // namespace dect2
 #endif

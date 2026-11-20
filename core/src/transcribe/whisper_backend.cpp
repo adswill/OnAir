@@ -113,5 +113,6 @@ std::shared_ptr<SpeechBackend> makeWhisperBackend(const std::string& modelPath, 
 }
 
 bool whisperAvailable() { return true; }
+const char* whisperLibraryVersion() { return whisper_version(); }
 
 }  // namespace dect2

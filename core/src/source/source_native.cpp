@@ -34,6 +34,9 @@ std::unique_ptr<IqSource> makeMirics(const DeviceInfo& d);
 void listSpectran(std::vector<DeviceInfo>& out);
 std::unique_ptr<IqSource> makeSpectran(const DeviceInfo& d);
 std::unique_ptr<TxSink> makeSpectranTx(const DeviceInfo& d);
+// ---- rsa (Tektronix RSA306 / RSA500A / RSA600A through the RSA API, source_rsa.cpp)
+void listRsa(std::vector<DeviceInfo>& out);
+std::unique_ptr<IqSource> makeRsa(const DeviceInfo& d);
 #ifdef DECT2_HAVE_RFNM
 // ---- rfnm
 void listRfnm(std::vector<DeviceInfo>& out);
@@ -59,6 +62,7 @@ std::vector<DeviceInfo> listNativeDevices(std::string& err) {
         native::listRx888(out);      // ---- rx888
         native::listIcom(out);       // ---- icom
         native::listSpectran(out);   // ---- spectran
+        native::listRsa(out);        // ---- rsa
         native::listMirics(out);     // ---- mirics
 #ifdef DECT2_HAVE_RFNM
         native::listRfnm(out);       // ---- rfnm
@@ -126,6 +130,7 @@ std::unique_ptr<IqSource> makeNativeSource(const DeviceInfo& d) {
     if (d.board == "rx888") return native::makeRx888(d);         // ---- rx888
     if (d.board == "icr8600") return native::makeIcom(d);        // ---- icom
     if (d.board == "spectran") return native::makeSpectran(d);   // ---- spectran
+    if (d.board == "rsa") return native::makeRsa(d);             // ---- rsa
     if (d.board == "mirics") return native::makeMirics(d);       // ---- mirics
 #ifdef DECT2_HAVE_RFNM
     if (d.board == "rfnm") return native::makeRfnm(d);           // ---- rfnm

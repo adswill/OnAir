@@ -1725,28 +1725,16 @@ Airband is off in the transcript settings	Aviacijos juosta išjungta transkripci
 Cannot write %s	Nepavyksta įrašyti: %s
 Saved %s	Išsaugota: %s
 Transcribe speech	Transkribuoti kalbą
-Master switch. While a transmission is going on the audio is cut out, sent to the speech engine and turned into text. Nothing runs while the channels are quiet.	Pagrindinis jungiklis. Kol vyksta perdavimas, garsas iškerpamas, perduodamas kalbos varikliui ir paverčiamas tekstu. Kol kanalai tylūs, niekas neveikia.
 Airband channels	Aviacijos juostos kanalai
 Marine VHF	Jūrų VHF
 Speech model	Kalbos modelis
 none	nėra
-Open models folder	Atidaryti modelių aplanką
-Put a whisper.cpp model file (ggml-*.bin) here to use it. The folder is made if it does not exist.	Įdėkite čia whisper.cpp modelio failą (ggml-*.bin), kad jį naudotumėte. Aplankas sukuriamas, jei jo nėra.
-No speech model yet. Download one below, or put a model file in the models folder.	Kalbos modelio dar nėra. Atsisiųskite vieną žemiau arba įdėkite modelio failą į modelių aplanką.
 Loading the speech model ...	Įkeliamas kalbos modelis ...
 Speech model loaded.	Kalbos modelis įkeltas.
 This build has no speech engine.	Šioje versijoje nėra kalbos variklio.
 checking	tikrinama
-Download speech model:	Atsisiųsti kalbos modelį:
-%s %d MB	%s %d MB
-Already downloaded	Jau atsisiųsta
-English only. tiny is the fastest (real time on a laptop), small hears more words and needs a stronger computer.	Tik anglų kalba. tiny greičiausias (realiuoju laiku nešiojamajame), small girdi daugiau žodžių ir reikalauja galingesnio kompiuterio.
-Other languages (multilingual models)	Kitos kalbos (daugiakalbiai modeliai)
-The loaded model is English only: other languages need a multilingual model (tiny, base or small without .en).	Įkeltas modelis tik anglų kalbos: kitoms kalboms reikia daugiakalbio modelio (tiny, base arba small be .en).
 CPU threads	Procesoriaus gijos
-How many processor threads the speech engine may use for one transmission. Fewer threads use less battery and take longer.	Kiek procesoriaus gijų kalbos variklis gali naudoti vienam perdavimui. Mažiau gijų naudoja mažiau baterijos ir trunka ilgiau.
 Keep transcripts (days)	Saugoti transkripcijas (dienomis)
-Heard %llu, kept %llu, left out %llu (silence, noise, repeats), skipped %llu (too slow), speed %.2f x real time	Išgirsta %llu, palikta %llu, atmesta %llu (tyla, triukšmas, pasikartojimai), praleista %llu (per lėtai), greitis %.2f x realusis laikas
 Download the speech model %s (%d MB)?	Atsisiųsti kalbos modelį %s (%d MB)?
 OnAir asks the model repository (huggingface.co) for this one file and sends nothing else. The file is checked against a fixed SHA-256 checksum and thrown away if it does not match. The model is MIT licensed.	OnAir prašo šio vieno failo modelių saugyklos (huggingface.co) ir nieko daugiau nesiunčia. Failas tikrinamas pagal fiksuotą SHA-256 kontrolinę sumą ir išmetamas, jei nesutampa. Modelis licencijuotas pagal MIT.
 Download	Atsisiųsti
@@ -1754,14 +1742,10 @@ Delete all saved transcripts? This cannot be undone.	Ištrinti visas išsaugotas
 Delete all	Ištrinti viską
 Transcription is off.	Transkripcija išjungta.
 Hide settings	Slėpti nustatymus
-Settings and speech model	Nustatymai ir kalbos modelis
 Search the text ...	Ieškoti tekste ...
 All frequencies	Visi dažniai
-A callsign (DLH123), a registration (N123AB) or an ICAO address (3C6444)	Šaukinys (DLH123), registracija (N123AB) arba ICAO adresas (3C6444)
-An airport code or name found in the channel name or the text (EYVI, Tower)	Oro uosto kodas ar pavadinimas, rastas kanalo pavadinime arba tekste (EYVI, Tower)
 %zu of %zu	%zu iš %zu
 Copy all shown	Kopijuoti viską, kas rodoma
-Export %s	Eksportuoti %s
 Delete all ...	Ištrinti viską ...
 Time (UTC)	Laikas (UTC)
 Sure	Tikra
@@ -2326,8 +2310,6 @@ azimuth only; the picture is just a backdrop	tik azimutas; paveikslas yra tik fo
 column	stulpelis
 to (kHz)	iki (kHz)
 Translate to English	Versti į anglų kalbą
-Speech in another language is also translated to English, offline, next to the original. Needs a multilingual model and costs about 1.5 times more processor time; it is skipped when the engine cannot keep up. Nothing is sent anywhere. Translation into other languages is not available.	Kita kalba sakoma kalba papildomai verčiama į anglų kalbą, neprisijungus, šalia originalo. Reikia daugiakalbio modelio, procesoriaus laiko sunaudojama apie 1,5 karto daugiau; praleidžiama, kai variklis nespėja. Niekas nesiunčiama. Vertimo į kitas kalbas nėra.
-The loaded model is English only: translation needs a multilingual model.	Įkeltas modelis tik anglų kalbos: vertimui reikia daugiakalbio modelio.
 Live: stop the room	Gyvai: sustabdyti kambarį
 Copy room link	Kopijuoti kambario nuorodą
 Host PIN (to moderate on the room page):	Šeimininko PIN (moderuoti kambario puslapyje):
@@ -3071,20 +3053,16 @@ Station's own subtitles	Stoties savi subtitrai
 Generated from speech	Sukurti iš kalbos
 Both	Abu
 Generated where the station has none	Sukurti, kai stotis jų neturi
-Auto subtitles (captions)	Automatiniai subtitrai (captions)
-Captions from the speech of the sound you hear: FM and AM broadcast, DAB, TV audio, amateur and digital voice. They are made here with the offline speech model, shown on the receiver, and kept only in memory (and in .srt / .vtt files if you save them). Music is skipped. Off until you turn it on.	Subtitrai iš girdimo garso kalbos: FM ir AM radijas, DAB, TV garsas, radijo mėgėjai ir skaitmeninis balsas. Jie kuriami čia neprisijungusiu kalbos modeliu, rodomi imtuvo lange ir laikomi tik atmintyje (o jei išsaugosite, ir .srt / .vtt failuose). Muzika praleidžiama. Išjungta, kol neįjungsite.
 Make captions	Kurti subtitrus
 TV subtitles	TV subtitrai
 As spoken	Kaip ištarta
 English translation	Vertimas į anglų kalbą
 Caption text	Subtitrų tekstas
-Tick Translate to English above (multilingual model) to get translated captions.	Pažymėkite aukščiau Versti į anglų kalbą (daugiakalbis modelis), kad gautumėte išverstus subtitrus.
 Caption size, percent	Subtitrų dydis, procentais
 Background, percent	Fonas, procentais
 Lines	Eilutės
 At the top of the picture	Paveikslo viršuje
 Save .srt and .vtt next to audio recordings	Šalia garso įrašų išsaugoti .srt ir .vtt
-Captions: %llu pieces, %llu music skipped, %llu skipped (too slow), speed %.2f x real time	Subtitrai: %llu dalių, %llu muzikos praleista, %llu praleista (per lėta), greitis %.2f x realaus laiko
 The speech engine is slower than the audio: use a smaller model or fewer CPU threads. The oldest speech is skipped, never the newest.	Kalbos variklis lėtesnis už garsą: naudokite mažesnį modelį arba mažiau procesoriaus gijų. Seniausia kalba praleidžiama, niekada naujausia.
 #  DSC audit
 category	kategorija

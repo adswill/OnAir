@@ -4,6 +4,7 @@
 #include "qr.h"
 #include <algorithm>
 #include <cstdint>
+#include <cstdlib>
 
 namespace webshare {
 

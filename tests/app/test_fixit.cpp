@@ -46,6 +46,7 @@ int main() {
     CHECK(fixit::lookup("Could not start the radio: LIBUSB_ERROR_ACCESS") == fixit::byId("radio_access"), "access denied");
     CHECK(fixit::lookup("Could not start the radio: LIBUSB_ERROR_NOT_SUPPORTED") == fixit::byId("radio_driver"), "wrong driver");
     CHECK(fixit::lookup("Could not start the radio: Aaronia RTSA-Suite PRO is not installed: the SPECTRAN V6 needs ...") == fixit::byId("spectran_missing"), "spectran");
+    CHECK(fixit::lookup("Could not start the radio: Tektronix RSA API is not installed: the RSA306 / RSA500A / RSA600A need ...") == fixit::byId("rsa_missing"), "tektronix rsa");
     CHECK(fixit::lookup("everything is fine") == nullptr, "no match");
     if (!failures) std::printf("fixit: %d entries OK\n", n);
     return failures ? 1 : 0;

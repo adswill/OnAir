@@ -41,6 +41,7 @@ void Atsc3Rx::start() {
     if (want_ >= 0) rx_->selectService(want_); else rx_->setAutoSelect(true);
     stop_ = false;
     queued_ = 0;
+    lost_ = 0;
     q_.clear();
     busySec_ = 0; signalSec_ = 0; lastFrameWall_ = 0; lastFrames_ = 0; tsBytes_ = 0;
     { std::lock_guard<std::mutex> lk(tmu_); tel_ = Atsc3Telemetry(); }
@@ -70,12 +71,22 @@ void Atsc3Rx::feed(const cf32* x, size_t n) {
     if (stop_) return;
     DECT2_STAGE("a3.input");
     std::unique_lock<std::mutex> lk(mu_);
-    const size_t cap = (size_t)(rate_ * 1.5);   // a second and a half of samples may wait
     if (blocking_) {
+        const size_t cap = (size_t)(rate_ * 1.5);   // a second and a half of samples may wait
         while (queued_ > cap && !stop_) cvSpace_.wait_for(lk, std::chrono::milliseconds(20));
         if (stop_) return;
-    } else {
-        while (queued_ > cap && !q_.empty()) { queued_ -= q_.front().size(); q_.pop_front(); dropped_++; DIAG_EVERY(294979, 10.0, "The ATSC 3.0 decoder cannot keep up with the incoming samples (%llu blocks dropped so far), so signal is lost and frames may fail.", (unsigned long long)dropped_); }
+    } else if (const size_t cap = (size_t)(rate_ * std::max(0.5, queueSec_.load())); queued_ + n > cap && !q_.empty()) {
+        // Behind by more than the queue holds: the oldest samples go in one piece, down to a quarter of the queue, not a block at a time.
+        // Every dropped block cut a frame, a cut frame decodes to nothing at the full cost of its LDPC words, and the decoder fell further
+        // behind until nothing decoded. One gap costs the frames it covers: the synchroniser is told how many samples are missing,
+        // goes straight to the next bootstrap and restarts the time interleavers.
+        size_t lost = 0;
+        long blocks = 0;
+        while (!q_.empty() && queued_ + n > cap / 4) { lost += q_.front().size(); queued_ -= q_.front().size(); q_.pop_front(); blocks++; }
+        lost_ += lost;
+        dropped_ += blocks;
+        droppedSec_ = droppedSec_ + (double)lost / rate_;
+        DIAG_EVERY(294979, 10.0, "The ATSC 3.0 decoder fell %.1f s behind the incoming samples, so %.1f s of signal were dropped (%.1f s so far) and decoding goes on from the next frame.", (double)(queued_ + lost) / rate_, (double)lost / rate_, droppedSec_.load());
     }
     q_.emplace_back(x, x + n);
     queued_ += n;
@@ -101,6 +112,7 @@ void Atsc3Rx::worker() {
     while (!stop_) {
         std::vector<cf32> blk;
         bool have = false;
+        size_t lost = 0;
         {
             std::unique_lock<std::mutex> lk(mu_);
             cv_.wait_for(lk, std::chrono::milliseconds(100), [&] { return stop_ || !q_.empty(); });
@@ -109,6 +121,8 @@ void Atsc3Rx::worker() {
                 blk = std::move(q_.front());
                 q_.pop_front();
                 queued_ -= blk.size();
+                lost = lost_;   // dropped between the block taken last and this one
+                lost_ = 0;
                 have = true;
                 cvSpace_.notify_all();
             }
@@ -116,6 +130,7 @@ void Atsc3Rx::worker() {
         if (have) {
             const double t0 = wallNow();
             DECT2_STAGE_VAR(stSync, "a3.sync");
+            if (lost) sync_->skip(lost);
             sync_->push(blk.data(), blk.size());
             stSync.stop();
             const double dt = wallNow() - t0;
@@ -148,6 +163,7 @@ void Atsc3Rx::worker() {
             t.frame = rx_->frameInfo();
             t.tsBytes = tsBytes_;
             t.droppedBlocks = dropped_;
+            t.droppedSec = droppedSec_;
             t.load = signalSec_ > 0 ? busySec_ / signalSec_ : 0;
             t.seq = ++seq_;
             std::lock_guard<std::mutex> lk(tmu_);

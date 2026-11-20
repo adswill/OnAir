@@ -51,6 +51,7 @@ public:
 // whisper.cpp behind SpeechBackend. nullptr and *err when the model cannot be loaded, or when this build has no whisper.cpp.
 std::shared_ptr<SpeechBackend> makeWhisperBackend(const std::string& modelPath, int workers, std::string* err);
 bool whisperAvailable();
+const char* whisperLibraryVersion();
 
 // What the filters decide on
 struct FilterConfig {

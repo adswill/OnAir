@@ -482,8 +482,8 @@ BootstrapFind findBootstrap(const cf32* x, size_t n, double maxCfo, double cente
 // ---- frame decoding on worker threads
 
 struct Atsc3Sync::Pool {
-    struct Job { long seq; std::vector<cf32> y; Bootstrap bs; };
-    struct Done { FrameResult fr; Bootstrap bs; };
+    struct Job { long seq; std::vector<cf32> y; Bootstrap bs; bool gapBefore; };
+    struct Done { FrameResult fr; Bootstrap bs; bool gapBefore; };
     Atsc3Receiver* rx;
     std::mutex m;
     std::condition_variable cv, cvSpace;
@@ -504,10 +504,10 @@ struct Atsc3Sync::Pool {
         cv.notify_all();
         for (auto& t : th) t.join();
     }
-    void submit(std::vector<cf32>&& y, const Bootstrap& bs) {
+    void submit(std::vector<cf32>&& y, const Bootstrap& bs, bool gapBefore) {
         std::unique_lock<std::mutex> lk(m);
         cvSpace.wait(lk, [&] { return inflight < maxInflight; });
-        jobs.push_back({nextSeq++, std::move(y), bs});
+        jobs.push_back({nextSeq++, std::move(y), bs, gapBefore});
         inflight++;
         cv.notify_one();
     }
@@ -528,7 +528,7 @@ struct Atsc3Sync::Pool {
             }
             const auto t0 = std::chrono::steady_clock::now();
             DECT2_STAGE_VAR(stFr, "a3.frame");
-            Done d{decodeFrame(j.y.data(), j.y.size(), j.bs), j.bs};
+            Done d{decodeFrame(j.y.data(), j.y.size(), j.bs), j.bs, j.gapBefore};
             stFr.stop();
             std::unique_lock<std::mutex> lk(m);
             secDecode += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
@@ -540,7 +540,11 @@ struct Atsc3Sync::Pool {
                 done.erase(done.begin());
                 nextCommit++;
                 lk.unlock();
-                { DECT2_STAGE("a3.upper"); rx->commitFrame(c.fr, c.bs); }
+                {
+                    DECT2_STAGE("a3.upper");
+                    if (c.gapBefore) rx->lostSamples();   // in the order of the frames: the ones before the gap are committed first
+                    rx->commitFrame(c.fr, c.bs);
+                }
                 lk.lock();
                 inflight--;
                 cvSpace.notify_all();
@@ -569,6 +573,25 @@ SyncStats Atsc3Sync::stats() const {
 void Atsc3Sync::push(const cf32* x, size_t n) {
     raw_.insert(raw_.end(), x, x + n);
     work();
+}
+
+void Atsc3Sync::skip(size_t n) {
+    if (n == 0) return;
+    // stream indices go on counting the lost samples, so the place of the next bootstrap is still known after the gap
+    const long gapEnd = rawStart_ + (long)raw_.size() + (long)n;
+    raw_.clear();
+    rawStart_ = gapEnd;
+    locked_ = false;          // a frame the gap cuts would decode to nothing, at the full cost of failing
+    frameSamples_ = 0;
+    predNext_ = -1;           // the clock is not measured across the gap
+    long from = gapEnd;
+    if (haveHint_ && period_ > 0) {   // frames follow each other: the first bootstrap after the gap, a little early for the clock error
+        const double k = std::ceil(((double)gapEnd - bsExact_) / period_);
+        from = std::max(gapEnd, (long)std::floor(bsExact_ + k * period_ - rate_ * 0.002));
+    }
+    searchFrom_ = from;
+    gapBefore_ = true;
+    DIAG_DEBUG_EVERY(731958, 10.0, "%.2f s of ATSC 3.0 samples were lost, so the frame they cut is skipped and the next bootstrap is searched %.0f ms after the gap.", n / rate_, (from - gapEnd) * 1e3 / rate_);
 }
 
 namespace {
@@ -734,10 +757,13 @@ bool Atsc3Sync::cutFrame() {
     // 2. the whole frame: carrier offset removed at the radio's rate, then the rate converted to the frame's
     std::vector<cf32> y;
     resampleExactRot(raw_.data() + (frameStart_ - rawStart_), (size_t)(frameSamples_ + 16), rate, frameRate, y, cfo_, (double)frameStart_);
+    const bool gap = gapBefore_;
+    gapBefore_ = false;
     if (pool_) {
-        pool_->submit(std::move(y), bs_);
+        pool_->submit(std::move(y), bs_, gap);
         st_.frames++;
     } else {
+        if (gap) rx_->lostSamples();
         const auto td = std::chrono::steady_clock::now();
         bool ok = rx_->pushFrame(y.data(), y.size(), bs_);
         st_.secDecode += std::chrono::duration<double>(std::chrono::steady_clock::now() - td).count();
@@ -749,6 +775,7 @@ bool Atsc3Sync::cutFrame() {
     long next = frameStart_ + frameSamples_ - (long)(rate * 0.0005);
     searchFrom_ = next;
     predNext_ = bsExact_ + bs_.numSymbols * 3072 / kBootstrapRate * rate + frameExact_;   // frames follow each other without a gap: the next bootstrap starts here
+    period_ = predNext_ - bsExact_;
     locked_ = false;
     frameSamples_ = 0;
     return true;

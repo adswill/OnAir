@@ -170,6 +170,13 @@ std::vector<std::string> spectranApiHints() {
     return {"An Aaronia SPECTRAN is plugged in but the Aaronia RTSA-Suite PRO is not installed: install it from aaronia.com/downloads (it brings the RTSA API library OnAir uses), then restart OnAir"};
 }
 
+std::vector<std::string> rsaApiHints() {
+    // the product ids are the ones of Tektronix's own USB driver (rsa3usb3.inf): a306 "RSA306", a500 "RSA500/600"
+    if (native::rsaApiInstalled() || !(usbDevicePresent(0x0699, 0xa306) || usbDevicePresent(0x0699, 0xa500))) return {};
+    return {"A Tektronix RSA spectrum analyser is plugged in but the Tektronix RSA API is not installed: download the free \"RSA Application Programming Interface (API)\" "
+            "from tek.com (Support > Software, search for \"RSA API\") and install it, then restart OnAir"};
+}
+
 std::vector<std::string> limeLibraryHints() {
     // the Mini (FTDI FT601, 0403:601f) is on the bus but the radio list has no LimeSDR: LimeSuite is missing, or it lists nothing
     if (!usbDevicePresent(0x0403, 0x601f)) return {};
