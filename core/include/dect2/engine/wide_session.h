@@ -79,6 +79,7 @@ struct WsEntry {
 };
 
 struct WsStatus {
+    uint64_t snapshotSerial = 0; // increments for each published detector pass
     double load = 0;             // all decoders' work as a share of real time (analysis thread + TV receiver threads), 1 = one core
     double budget = 0;           // the limit (0: none)
     bool tooSlow = false;        // the guard has dropped something that is not back yet
@@ -147,7 +148,10 @@ public:
     // ---- results
     WideModes& modes();                             // the banks: telemetry(stdMode, ...) gives the calls / pages / frames of every carrier of that mode
     MultiTv* tv(bool dvbt);                         // the TV receivers (nullptr until a channel of that standard was found)
-    void setAudioSink(VfoBank::Sink s);             // the mixed sound of the AM / NFM entries (48 kHz stereo)
+    void setAudioSink(VfoBank::Sink s);
+    void setAudioSolo(int id);
+    // Focus a single decoded-voice carrier (entry id) across every wideband bank.
+    void setVoiceAudioFocus(int mode, int entryId); // 0: mute digital; -1: normal audio
     bool vfoStatusOf(int id, VfoStatus& s) const;
 
     // test hook: how many identifications were started so far

@@ -10242,7 +10242,7 @@ claimed position is beyond the radio horizon	声称的位置超出无线电地�
 claimed speed does not match the positions	声称的速度与位置不符
 clarifier %+.0f Hz	清晰器 %+.0f Hz
 clear list	清空列表
-clear picture##faxclr	清晰图像##faxclr
+clear picture##faxclr	清除图像##faxclr
 click a row	点击一行
 click to centre the radio on %.4f MHz	点击将电台中心对准 %.4f MHz
 click to decode %.4f MHz (radio centre stays)	点击解码 %.4f MHz（电台中心不变）

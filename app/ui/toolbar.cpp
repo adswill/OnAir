@@ -561,6 +561,7 @@ double settingsRetuneCentreHz(const App& a) {
 }
 
 void spectrumTune(App& a, double absMhz) {
+    if (voiceScoutSelectFrequency(a, absMhz)) return;
     if (!a.second.drawing && !isGeneralFamily(a.family) && fileVfoActive(a)) { fileSetVfo(a, absMhz); return; }   // a recording: the tune box moves, the spectrum stays
     if (a.tuningMode == 1) {
         if (a.fmMode) { a.freqMhz = std::round(std::max(0.0, dialMhzFromAbs(a, absMhz)) * 10.0) / 10.0; tuneDecode(a, absMhz); }
@@ -598,6 +599,7 @@ void tuneFreq(App& a, double mhz) {
 // The big readout's frequency typed, clicked or scrolled (SDR++): inside the captured band only the VFO moves (no radio call at all),
 // past its edge the radio centre goes to it. FM keeps its station stepping; a file or a stopped radio simply takes the frequency.
 void tuneListen(App& a, double mhz) {
+    if (voiceScoutSelectFrequency(a, mhz)) return;
     mhz = std::min(dect2::kMaxTuneMhz, std::max(0.001, mhz));
     if (isGeneralFamily(a.family)) { generalSetListenHz(a, mhz * 1e6); return; }
     const bool file = !a.devices.empty() && a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && (a.devices[a.devIdx].kind == DeviceInfo::File || a.devices[a.devIdx].isAudio());

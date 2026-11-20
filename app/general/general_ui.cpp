@@ -982,6 +982,7 @@ void levelCompact(const App& a, float w) {
 
 // the VFO menu (the right click on the VFO band): opened by generalPlotMouse, drawn in the same ID scope each frame
 int gVfoMenuFrame = -1000;
+double gVfoMenuMhz = 0;   // where the right click landed (#568: Add notch here)
 
 }  // namespace (4.0 pieces; the sidebar sections and the bar follow, outside it)
 
@@ -1311,6 +1312,7 @@ void generalPlotMouse(App& a, int plotId) {
     if (hit != genlayout::Hit::None && dragtune::menuOpens(specDragTunes(a) ? dragtune::Tune : dragtune::Pan, ImGui::IsMouseClicked(ImGuiMouseButton_Right),
                                                            ImGui::IsMouseReleased(ImGuiMouseButton_Right), std::sqrt(ImGui::GetIO().MouseDragMaxDistanceSqr[ImGuiMouseButton_Right]))) {
         gVfoMenuFrame = ImGui::GetFrameCount();
+        gVfoMenuMhz = mhz;
         return;
     }
     if (edgeNear >= 0) {
@@ -1378,9 +1380,17 @@ void generalVfoWheel(App& a, ImVec2 p0, ImVec2 sz, double loMhz, double hiMhz) {
 
 // the VFO menu, once a frame after the plots (spectrumWaterfall): opened by a right click on the VFO band (generalPlotMouse)
 void generalVfoMenu(App& a) {
-    (void)a;
     if (gVfoMenuFrame == ImGui::GetFrameCount()) ImGui::OpenPopup("##gvfomenu");
-    if (ImGui::BeginPopup("##gvfomenu")) { load(); demodMenuBody(); ImGui::EndPopup(); }
+    if (ImGui::BeginPopup("##gvfomenu")) {
+        load(); demodMenuBody();
+        // #568: this menu replaces the spectrum's own one on the VFO band, so the notch has to be offered here too (inside the passband is where it matters)
+        ImGui::Separator();
+        const bool room = (int)notchList(a).size() < dect2::NotchBank::kMax;
+        if (ImGui::MenuItem(tr("Add notch here"), nullptr, false, room)) notchAdd(a, gVfoMenuMhz * 1e6);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", room ? tr("A narrow band-stop at the place you right-clicked, in front of the spectrum and the decoders. Edit its width or remove it in the Auto gain options (Notches).")
+                                                                                                    : tr("The notch list is full (8). Delete one in the Auto gain options (Notches)."));
+        ImGui::EndPopup();
+    }
 }
 
 extern const ModeUi kGeneralUi;

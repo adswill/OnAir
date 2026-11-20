@@ -1035,6 +1035,7 @@ void sendToggle(App& a, bool menu) {
 } // namespace
 
 void mapSendServerMenu(App& a) {
+    menuAccelOpen(6, tr("Server"));   // Alt+R (menugroups::TopMenu::Server)
     if (!ImGui::BeginMenu(tr("Server"))) { mapPopups(a); webshare::drawPopups(a); return; }   // the Share on web window stays up after the menu closes
     sendToggle(a, true);
     nameItem(rootApp(a), true);

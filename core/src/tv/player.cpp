@@ -477,7 +477,7 @@ void Player::threadMain() {
         av_dict_free(&opts);
         auto cleanup = [&](AVFormatContext*& f) {
             if (f) { AVIOContext* pb = f->pb; avformat_close_input(&f); if (pb) { av_freep(&pb->buffer); avio_context_free(&pb); } }
-            else { av_freep(&iobuf); }
+            else if (io) { av_freep(&io->buffer); avio_context_free(&io); }   // a failed open frees the format, not our I/O context; its buffer is not iobuf any more once the probe has grown it (a channel change aborts the open): freeing iobuf was a double free
         };
         if (rc < 0 || stop_ || restart_) { if (rc < 0 && !stop_ && !restart_) DIAG_DEBUG_EVERY(142335, 10.0, "FFmpeg could not open the transport stream input (error %d), so opening is retried every 200 ms.", rc); cleanup(fmt); if (rc < 0 && !stop_ && !restart_) std::this_thread::sleep_for(std::chrono::milliseconds(200)); continue; }
         { const int sr = avformat_find_stream_info(fmt, nullptr); if (sr < 0 && !restart_) DIAG_DEBUG_EVERY(498634, 10.0, "FFmpeg could not find the streams in the input (error %d), so the input is opened again.", sr); if (sr < 0 || restart_) { cleanup(fmt); continue; } }
