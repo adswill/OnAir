@@ -262,6 +262,12 @@ void dvbt2Rows(std::vector<D>& v) {
                     [](TxRequest& r, double x) { r.synth.tx.l1Mod = (int)x; }), TxPGroup::Framing), 0.12),
         PROBE(A(SET(hexr("t2.cellId", "Cell ID", "CELL_ID of the L1 signalling (16 bits).", 0x1001, 0, 0xFFFF, "0x%04X"),
                     [](TxRequest& r, double x) { r.synth.tx.cellId = (int)x; }), TxPGroup::Framing), 0.12),
+        PROBE(A(SET(intr("t2.plpId", "PLP ID", "PLP_ID of the data PLP (0 - 255).", "", 0, 0, 255),
+                    [](TxRequest& r, double x) { r.synth.tx.plpId = (int)x; }), TxPGroup::Framing), 0.12),
+        PROBE(A(SET(pick("t2.version", "T2 version", "T2_VERSION of the L1 signalling: 1.1.1, 1.2.1 or 1.3.1.", 2, {"1.1.1", "1.2.1", "1.3.1"}),
+                    [](TxRequest& r, double x) { r.synth.tx.t2Version = (int)x; }), TxPGroup::Framing), 0.12),
+        PROBE(W(A(SET(flag("t2.l1Scr", "Scramble L1-post", "Sets the L1_POST_SCRAMBLED bit and scrambles the L1-post (version 1.3.1 only).", true),
+                    [](TxRequest& r, double x) { r.synth.tx.l1Scrambled = x > 0.5; }), TxPGroup::Framing), "t2.version=2"), 0.12),
         PROBE(A(SET(hexr("t2.networkId", "Network ID", "NETWORK_ID of the L1 signalling (16 bits).", 0x3085, 0, 0xFFFF, "0x%04X"),
                     [](TxRequest& r, double x) { r.synth.tx.networkId = (int)x; }), TxPGroup::Framing), 0.12),
         PROBE(A(SET(hexr("t2.systemId", "T2 system ID", "T2_SYSTEM_ID of the L1 signalling (16 bits).", 0x8001, 0, 0xFFFF, "0x%04X"),
@@ -271,11 +277,20 @@ void dvbt2Rows(std::vector<D>& v) {
 
 void dvbtRows(std::vector<D>& v) {
     add(v, {
-        PROBE(A(SET(pick("dvbt.mode", "FFT mode", "2K or 8K carriers.", 1, {"2K", "8K"}), [](TxRequest& r, double x) { r.synth.dvbtMode = (int)x; }), TxPGroup::Modulation), 0.05),
+        PROBE(A(SET(pick("dvbt.mode", "FFT mode", "2K or 8K carriers; 4K is the DVB-H mode of annex F.", 1, {"2K", "8K", "4K (DVB-H)"}, 0, {0, 1, 2}), [](TxRequest& r, double x) { r.synth.dvbtMode = (int)x; }), TxPGroup::Modulation), 0.05),
         PROBE(A(SET(pick("dvbt.guard", "Guard interval", "The pause before each symbol that absorbs echoes.", 2, {"1/32", "1/16", "1/8", "1/4"}),
                     [](TxRequest& r, double x) { r.synth.dvbtGuard = (int)x; }), TxPGroup::Modulation), 0.05),
-        PROBE(A(SET(pick("dvbt.mod", "Constellation", "The modulation of the carriers.", 2, {"QPSK", "16-QAM", "64-QAM"}), [](TxRequest& r, double x) { r.synth.dvbtMod = (int)x; }), TxPGroup::Modulation), 0.05),
-        PROBE(A(SET(pick("dvbt.rate", "Code rate (FEC)", "The convolutional code rate.", 1, {"1/2", "2/3", "3/4", "5/6", "7/8"}), [](TxRequest& r, double x) { r.synth.dvbtRate = (int)x; }), TxPGroup::Modulation), 0.05),
+        PROBE(A(SET(pick("dvbt.mod", "Constellation", "The modulation of the carriers (a hierarchy needs 16-QAM or 64-QAM).", 2, {"QPSK", "16-QAM", "64-QAM"}), [](TxRequest& r, double x) { r.synth.dvbtMod = (int)x; }), TxPGroup::Modulation), 0.05),
+        PROBE(A(SET(pick("dvbt.rate", "Code rate (FEC)", "The convolutional code rate (of the high-priority stream when a hierarchy is on).", 1, {"1/2", "2/3", "3/4", "5/6", "7/8"}), [](TxRequest& r, double x) { r.synth.dvbtRate = (int)x; }), TxPGroup::Modulation), 0.05),
+        PROBE(A(SET(pick("dvbt.hier", "Hierarchy", "Hierarchical modulation: a robust high-priority stream (QPSK) and a low-priority one on top. Alpha is the distance between the constellation quadrants.", 0, {"none", "alpha = 1", "alpha = 2", "alpha = 4"}),
+                    [](TxRequest& r, double x) { r.synth.dvbtHier = (int)x; }), TxPGroup::Modulation), 0.05),
+        PROBE(W(A(SET(pick("dvbt.rateLp", "Low-priority code rate", "The code rate of the low-priority stream.", 1, {"1/2", "2/3", "3/4", "5/6", "7/8"}), [](TxRequest& r, double x) { r.synth.dvbtRateLp = (int)x; }), TxPGroup::Modulation), "dvbt.hier>0"), 0.05),
+        PROBE(A(SET(flag("dvbt.cellOn", "Send the cell ID", "Puts the cell ID into the TPS signalling (the length indicator changes from 23 to 31 bits).", false), [](TxRequest& r, double x) { r.synth.dvbtCellOn = x > 0.5; }), TxPGroup::Framing), 0.12),
+        PROBE(W(A(SET(hexr("dvbt.cellId", "Cell ID", "The cell identifier in the TPS (16 bits).", 0x1001, 0, 0xFFFF, "0x%04X"), [](TxRequest& r, double x) { r.synth.dvbtCellId = (int)x; }), TxPGroup::Framing), "dvbt.cellOn=1"), 0.12),
+        PROBE(W(A(SET(flag("dvbt.indepth", "In-depth interleaver", "The longer symbol interleaver of annex F (2K and 4K only).", false), [](TxRequest& r, double x) { r.synth.dvbtInDepth = x > 0.5; }), TxPGroup::Framing), "dvbt.mode!=1"), 0.05),
+        PROBE(A(SET(flag("dvbt.dvbh", "DVB-H signalling", "Sends the DVB-H length indicator (33 TPS bits) with the two service bits below.", false), [](TxRequest& r, double x) { r.synth.dvbtDvbh = x > 0.5; }), TxPGroup::Framing), 0.12),
+        PROBE(W(A(SET(flag("dvbt.timeSlicing", "Time slicing", "The DVB-H service indication: time slicing is in use.", false), [](TxRequest& r, double x) { r.synth.dvbtTimeSlicing = x > 0.5; }), TxPGroup::Framing), "dvbt.dvbh=1"), 0.12),
+        PROBE(W(A(SET(flag("dvbt.mpeFec", "MPE-FEC", "The DVB-H service indication: MPE-FEC is in use.", false), [](TxRequest& r, double x) { r.synth.dvbtMpeFec = x > 0.5; }), TxPGroup::Framing), "dvbt.dvbh=1"), 0.12),
     });
 }
 
