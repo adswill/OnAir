@@ -139,6 +139,7 @@ static void test4285Running() {
         c.std = SerialStd::Stanag4285; c.bps = t.bps; c.longIntl = t.lng;
         const auto ref = prbs((size_t)(t.bps * 45.0), 31 + t.bps);
         auto sig = channel(genSerial(c, ref), 40.0, t.snr, 0, 0, 0, 17);
+        std::printf("running: signal %.1f s, %zu ref bits\n", (double)sig.size() / 24000.0, ref.size());
         sig.erase(sig.begin(), sig.begin() + (long)(24000 * 7));   // joins after the start of message
         auto o = runRx(SerialStd::Stanag4285, sig);
         CHECK(o.bits.size() > 2500, "4285 running %d long=%d: only %zu bits, mode '%s', agreement %.3f", t.bps, t.lng, o.bits.size(), o.st.mode.c_str(), (double)o.st.bestMetric);
@@ -153,6 +154,7 @@ static void test4285Running() {
             }
             CHECK(err < 20, "4285 running %d long=%d: tail errors %zu, mode '%s'", t.bps, t.lng, err, o.st.mode.c_str());
         }
+        std::printf("running: frames %llu state %d snr %.1f\n", (unsigned long long)o.st.frames, o.st.state, o.st.snrDb);
         std::printf("4285 running %d %s: %zu bits, mode '%s'\n", t.bps, t.lng ? "long" : "short", o.bits.size(), o.st.mode.c_str());
     }
 }
