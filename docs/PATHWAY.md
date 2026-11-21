@@ -2440,3 +2440,7 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21 STANAG 4285 on a running signal, stray APRS/ROS log lines (WP7)
+- STANAG 4285 auto mode locked a rate only after the start-of-message pattern, so tuning in to a transmission already running (6348 kHz, 600 bit/s, long interleave) never decoded. New Viterbi gainRatio(): when one rate/interleaver fits the code clearly better than all others (>= 0.6 and 1.35x the runner-up, after 1500 live steps) the receiver follows it without a start of message; skipped once a start/end of message was seen. Test test4285Running (600 long, 1200 short, joined 7 s late). UNVERIFIED on the real recording; thresholds only simulated.
+- Engine::applyReset reset every receiver outside the quiet window, so their start lines (APRS / Packet: listening, ROS: looking for the tone grid) filled the log of other modes (TETRAPOL). It now runs with rxLogQuiet_ set, as start() does. No decoder actually ran: only the log line came from the reset.

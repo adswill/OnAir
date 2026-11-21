@@ -130,7 +130,7 @@ struct Delay4285 {
 }  // namespace
 
 // ---- Viterbi ----
-void Viterbi::reset() { m_.assign(64, 0.f); n_.assign(64, 0.f); dec_.clear(); emitted_ = 0; good_ = total_ = 0; }
+void Viterbi::reset() { m_.assign(64, 0.f); n_.assign(64, 0.f); dec_.clear(); emitted_ = 0; good_ = total_ = gain_ = lo_ = live_ = 0; }
 
 static inline int par(uint32_t v) { return __builtin_parity(v); }
 
@@ -157,10 +157,13 @@ void Viterbi::push(float a, float b) {
     const float lo = std::fabs(a) + std::fabs(b);
     good_ += bestAdd > 0.5f * lo && lo > 0 ? 1 : 0;
     total_ += 1;
-    if (total_ > 20000) { total_ *= 0.5; good_ *= 0.5; }
+    gain_ += best; lo_ += lo; if (lo > 0) live_ += 1;
+    if (total_ > 20000) { total_ *= 0.5; good_ *= 0.5; gain_ *= 0.5; lo_ *= 0.5; live_ *= 0.5; }
     for (size_t i = 0; i < 64; i++) m_[i] = n_[i] - best;
     dec_.push_back(d);
 }
+
+float Viterbi::gainRatio() const { return lo_ > 0 ? (float)(gain_ / lo_) : 0; }
 
 float Viterbi::metricPerStep() const {
     return total_ > 0 ? (float)(good_ / total_) : 0;
@@ -531,6 +534,7 @@ struct SerialRx::Impl {
     };
     std::vector<Hyp> hyps;
     int locked = -1;
+    bool somEver = false;           // a start or end of message was seen on this frame sync
     int frameMissed = 0;
     int modOrderVotes[4] = {0, 0, 0, 0};
     uint64_t fr4285 = 0;
@@ -542,7 +546,7 @@ struct SerialRx::Impl {
         x.clear(); base = cursor = 0;
         mode = 0;
         st = SerialStatus();
-        locked = -1; frameMissed = 0; hyps.clear(); fr4285 = 0;
+        locked = -1; somEver = false; frameMissed = 0; hyps.clear(); fr4285 = 0;
     }
 
     void event(const std::string& s) {
@@ -1007,12 +1011,14 @@ struct SerialRx::Impl {
                         st.state = 2;
                     }
                     h.somSeen = true;
+                    somEver = true;
                     continue;
                 }
                 if (locked == (int)(&h - hyps.data())) {
                     if (h.reg == kEOM) {
                         event("4285: end of message");
                         h.somSeen = false;
+                        somEver = true;
                         locked = -1;
                         continue;
                     }
@@ -1076,6 +1082,25 @@ struct SerialRx::Impl {
         }
     }
 
+    // A transmission that is already running when we tune in has no start-of-message pattern to wait for (Multipsk decodes it too): when one
+    // rate and interleaver gives a code that fits clearly better than every other, follow it.
+    void lockWithoutSom() {
+        if (locked >= 0 || somEver || force >= 0 || hyps.size() < 2) return;
+        int bi = -1;
+        float best = 0, second = 0;
+        for (size_t i = 0; i < hyps.size(); i++) {
+            const Hyp& h = hyps[i];
+            if (!h.p->coded || h.v.liveSteps() < 1500) continue;
+            const float g = h.v.gainRatio();
+            if (g > best) { second = best; best = g; bi = (int)i; } else if (g > second) second = g;
+        }
+        if (bi < 0 || best < 0.6f || best < 1.35f * second) return;
+        locked = bi;
+        st.mode = hyps[(size_t)bi].p->name;
+        st.state = 2;
+        event(std::string("4285: ") + st.mode + " (running transmission, no start of message seen)");
+    }
+
     void processFrame(const std::vector<cf>& y) {
         std::vector<float> ll1, ll2, ll3;
         const double s2 = std::max(eqSigma2, 0.01);
@@ -1090,6 +1115,7 @@ struct SerialRx::Impl {
             Hyp& h = hyps[i];
             pushHyp(h, h.p->phyBits == 1 ? ll1 : h.p->phyBits == 2 ? ll2 : ll3);
         }
+        lockWithoutSom();
     }
 
     bool search4285() {

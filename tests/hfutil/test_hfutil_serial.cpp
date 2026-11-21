@@ -130,6 +130,32 @@ static void test4285Rates() {
     }
 }
 
+// a transmission already running when the receiver starts (no start-of-message pattern): 600 bit/s long and 1200 bit/s short still decode on auto
+static void test4285Running() {
+    struct T { int bps; bool lng; double snr; } tt[] = {{600, true, 10}, {1200, false, 12}};
+    for (const auto& t : tt) {
+        SerialGenCfg c;
+        c.std = SerialStd::Stanag4285; c.bps = t.bps; c.longIntl = t.lng;
+        const auto ref = prbs((size_t)(t.bps * 45.0), 31 + t.bps);
+        auto sig = channel(genSerial(c, ref), 40.0, t.snr, 0, 0, 0, 17);
+        sig.erase(sig.begin(), sig.begin() + (long)(24000 * 7));   // joins after the start of message
+        auto o = runRx(SerialStd::Stanag4285, sig);
+        CHECK(o.bits.size() > 2500, "4285 running %d long=%d: only %zu bits, mode '%s'", t.bps, t.lng, o.bits.size(), o.st.mode.c_str());
+        if (o.bits.size() > 2500) {
+            // the last 2000 decoded bits must appear in the sent stream
+            std::vector<uint8_t> tail(o.bits.end() - 2000, o.bits.end());
+            size_t err = (size_t)-1;
+            for (size_t off = 0; off + tail.size() <= ref.size(); off++) {
+                size_t e = 0;
+                for (size_t i = 0; i < tail.size() && e < err; i++) if (ref[off + i] != tail[i]) e++;
+                if (e < err) err = e;
+            }
+            CHECK(err < 20, "4285 running %d long=%d: tail errors %zu, mode '%s'", t.bps, t.lng, err, o.st.mode.c_str());
+        }
+        std::printf("4285 running %d %s: %zu bits, mode '%s'\n", t.bps, t.lng ? "long" : "short", o.bits.size(), o.st.mode.c_str());
+    }
+}
+
 static void test5066() {
     std::vector<uint8_t> payload;
     for (int i = 0; i < 50; i++) payload.push_back((uint8_t)("OnAir test of STANAG 5066 D_PDU framing, one two."[i % 49]));
@@ -168,6 +194,7 @@ int main(int argc, char** argv) {
     test110Rates();
     test110Multipath();
     test4285Rates();
+    test4285Running();
     test5066();
     testNoLockOnNoise();
     if (fails) std::printf("%d FAILED\n", fails); else std::printf("OK\n");

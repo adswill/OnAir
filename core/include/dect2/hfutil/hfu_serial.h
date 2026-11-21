@@ -27,13 +27,15 @@ public:
     void push(float t1, float t2);
     void take(std::vector<uint8_t>& out);    // the bits that are decided (decision depth 96 steps)
     void flush(std::vector<uint8_t>& out);   // everything left, from the best end state
+    float gainRatio() const;                 // best-path metric gain per unit of soft input: near 1 on a decodable code, far lower on noise or a wrong rate
+    double liveSteps() const { return live_; }
     float metricPerStep() const;             // recent average branch agreement, about 1 for a clean signal, 0 for the wrong hypothesis
 private:
     void trace(size_t endStep, size_t keep, int state, std::vector<uint8_t>* out);
     std::vector<float> m_, n_;
     std::vector<uint64_t> dec_;
     size_t emitted_ = 0;
-    double good_ = 0, total_ = 0;
+    double good_ = 0, total_ = 0, gain_ = 0, lo_ = 0, live_ = 0;
 };
 
 enum class SerialStd { Mil110, Stanag4285 };
