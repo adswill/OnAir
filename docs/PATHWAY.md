@@ -2440,3 +2440,7 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21 - QO-100: band plan, plain status, level against the beacon
+
+The mode already locked on the beacons, corrected the LNB, tracked signals, decoded DVB-S/S2 and ran the auto decoders. Added: the published narrowband band plan (core/src/qo100/qo100_plan.cpp) drawn as shaded, named segments on the spectrum, shown in each signal's tooltip with a note when a signal is too wide for its segment; signal level against the middle beacon (comparable between sessions); a one-sentence plain status line above the lock row; LNB preset names in plain words. Tests: tests/qo100/test_qo100_plan.cpp.

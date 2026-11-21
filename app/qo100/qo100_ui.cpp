@@ -19,6 +19,7 @@
 #include "gfx/plot.h"
 #include "dect2/qo100/qo100_dsp.h"
 #include "dect2/qo100/qo100_gen.h"
+#include "dect2/qo100/qo100_plan.h"
 #include "dect2/qo100/qo100_rx.h"
 #include "dect2/qo100/qo100_tel.h"
 #include "dect2/specan/lnb_cal.h"
@@ -246,6 +247,7 @@ void strip(App& a) {
 }
 
 void lockLine(const App& a) {
+    ImGui::TextWrapped("%s", dect2::qo100::plainStatus(T(a), a.engine.running() && live(a)).c_str());
     const auto& t = T(a);
     const int st = live(a) ? t.state : -1;
     lamp("Beacons", st == 2 ? 1 : st == 3 ? 2 : st == 1 ? 3 : 0, (int)Ic::Lock); flowNext(10 * gUi);
@@ -304,6 +306,19 @@ void narrowView(App& a, float h) {
         plt::SetupAxisLimits(plt::X1, S.viewLo / 1e6, S.viewHi / 1e6, plt::Cond_Always);
         plt::SetupAxisLimits(plt::Y1, S.lo, S.hi, plt::Cond_Always);
         plt::SetupAxisFormat(plt::X1, "%.3f");
+        {   // the band plan: one shaded band per segment, named when it is wide enough on screen
+            int np = 0; const q::PlanSegment* pl = q::bandPlan(np);
+            static const ImVec4 kCol[q::kPlanUses] = {ImVec4(1.f, 0.82f, 0.35f, 0.22f), ImVec4(0.45f, 0.7f, 1.f, 0.10f), ImVec4(0.7f, 0.5f, 1.f, 0.10f),
+                                                      ImVec4(0.9f, 0.5f, 0.9f, 0.10f), ImVec4(0.4f, 0.8f, 0.5f, 0.06f), ImVec4(0.9f, 0.7f, 0.4f, 0.08f)};
+            static const char* const kShort[q::kPlanUses] = {"beacon", "CW", "narrow digital", "digital", "SSB", "mixed"};
+            const double span = S.viewHi - S.viewLo;
+            for (int i = 0; i < np; i++) {
+                if (pl[i].hiHz < S.viewLo || pl[i].loHz > S.viewHi) continue;
+                plt::Spec s; s.FillColor = kCol[pl[i].use];
+                plt::PlotVBand("plan", pl[i].loHz / 1e6, pl[i].hiHz / 1e6, s);
+                if ((pl[i].hiHz - pl[i].loHz) / span > 0.07) plt::PlotText(kShort[pl[i].use], (pl[i].loHz + pl[i].hiHz) / 2e6, S.lo + 6);
+            }
+        }
         { plt::Spec s; s.FillColor = ImVec4(0.4f, 0.8f, 0.5f, S.listen ? 0.18f : 0.08f); plt::PlotVBand("USB", (S.dialHz + 300) / 1e6, (S.dialHz + 3000) / 1e6, s); }
         if (!ys.empty()) { plt::Spec s; s.LineColor = pal::accent(); plt::PlotLine("nb", xs.data(), ys.data(), (int)ys.size(), s); }
         const double bx[3] = {q::kLowBeaconHz / 1e6, q::kPskBeaconHz / 1e6, q::kHighBeaconHz / 1e6};
@@ -845,7 +860,14 @@ void list(App& a) {
         char b[96];
         snprintf(b, sizeof b, "%.4f  %4.0f dB  %s##qs%d", s.rfHz / 1e6, s.snrDb, s.beacon >= 0 ? kB[s.beacon] : s.cls != dect2::kQoUnknown ? dect2::qo100ClassName(s.cls) : s.widthHz > 400 ? "SSB" : "carrier", i++);
         if (ImGui::Selectable(b)) { setDial(s.widthHz > 400 ? s.rfHz - 600 : s.rfHz - 700); S.view = 0; }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s, %.0f Hz wide\nclick: put the dial on it", mhz(s.rfHz, 6).c_str(), s.widthHz);
+        if (ImGui::IsItemHovered()) {
+            const q::PlanSegment* seg = q::segmentAt(s.rfHz);
+            const std::string prob = q::planProblem(s.rfHz, s.widthHz);
+            double rel = 0; const bool hasRel = s.beacon != 1 && q::levelOverBeaconDb(t, s.levelDb, rel);
+            char lv[48] = ""; if (hasRel) snprintf(lv, sizeof lv, "\n%+.0f dB against the middle beacon", rel);
+            ImGui::SetTooltip("%s, %.0f Hz wide\nband plan: %s%s%s%s\nclick: put the dial on it", mhz(s.rfHz, 6).c_str(), s.widthHz, seg ? seg->name : "outside",
+                              s.beacon >= 0 || prob.empty() ? "" : "\nnote: ", s.beacon >= 0 ? "" : prob.c_str(), lv);
+        }
     }
 }
 
