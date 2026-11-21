@@ -322,8 +322,14 @@ void uiTick(App& a) {
             gArQ.pop_front();
         }
         Pending p;
-        p.kind = r.iq ? "record_iq" : "record_audio";
         p.p["seconds"] = std::to_string(r.sec);
+        // With the Rewind on, a rule's IQ clip also keeps the seconds before the call began; with it off, a plain clip starts now.
+        if (r.iq) {
+            p.kind = "save_rewind";
+            const auto rw = doOnUi(a, p);
+            if (rw.first) { a.engine.log("auto-record record_iq (with rewind): " + rw.second); continue; }
+        }
+        p.kind = r.iq ? "record_iq" : "record_audio";
         const auto res = doOnUi(a, p);
         a.engine.log(std::string("auto-record ") + p.kind + ": " + res.second);
     }
