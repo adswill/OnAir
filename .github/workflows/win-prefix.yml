@@ -37,6 +37,12 @@ jobs:
           mkdir -p build-windows-deps/src
           curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o build-windows-deps/src/ffmpeg-8.0.tar.xz https://ffmpeg.org/releases/ffmpeg-8.0.tar.xz
       - name: Build what changed
-        run: tools/package/cross_deps_windows.sh
+        run: |
+          # cross_deps_windows.sh unpacks the MSYS2 packages into its work folder before it looks at the prefix; the UHD and runtime DLLs are already
+          # in the earlier prefix (redist/), so empty stand-ins let it go on to the step that rebuilds what changed.
+          mkdir -p "$HOME/onair-win-work/msys2/ucrt64/bin"
+          touch "$HOME/onair-win-work/msys2/ucrt64/bin/libuhd.dll" "$HOME/onair-win-work/msys2/ucrt64/bin/libstdc++-6.dll"
+          test -f "$HOME/onair-win-prefix/redist/libuhd.dll"
+          tools/package/cross_deps_windows.sh
       - name: Upload the new prefix
         run: tools/release/upload_win_prefix.sh
