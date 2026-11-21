@@ -305,6 +305,8 @@ private:
         if (libusb_submit_transfer(t) != 0) { self->inflight_--; self->gone_ = true; }
     }
 
+    static void LIBUSB_CALL onLostTransfer(libusb_transfer*) {}
+
     void eventLoop() {
         setThreadPriority(ThreadPriority::Realtime);
         timeval tv{0, 100000};
@@ -317,6 +319,17 @@ private:
         if (events_.joinable()) events_.join();
         timeval tv{0, 50000};
         for (int i = 0; i < 100 && inflight_ > 0 && ctx_; i++) libusb_handle_events_timeout_completed(ctx_, &tv, nullptr);
+        if (inflight_ > 0) {
+            // The system did not hand every cancelled transfer back (a slow Windows driver, a phone that lost the cable): freeing one that is
+            // still queued is a crash (#503), so those are kept (a few KB each) and their callback made harmless: it neither touches this
+            // object, which may be gone by then, nor submits again.
+            static std::mutex lostMu;
+            static std::vector<std::vector<uint8_t>> lostBufs;
+            std::lock_guard<std::mutex> lk(lostMu);
+            for (auto*& t : xfers_) if (t) { t->callback = &MiricsSource::onLostTransfer; t->user_data = nullptr; t = nullptr; }
+            for (auto& b : bufs_) lostBufs.push_back(std::move(b));
+            inflight_ = 0;
+        }
         for (auto*& t : xfers_) if (t) { libusb_free_transfer(t); t = nullptr; }
         xfers_.clear(); bufs_.clear();
         if (h_) {

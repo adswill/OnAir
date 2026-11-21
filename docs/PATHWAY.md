@@ -2440,3 +2440,9 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21 Radio sources and Android USB (WP2: #503, #582, #619)
+- Android: `AndroidUsbBackend.hostSupported` no longer needs the `android.hardware.usb.host` system feature, only the UsbManager service; ROMs without the flag (Honor, phones without Google services) greyed the USB picker out (#582).
+- SoapySDR radios given as a manual device string or through SoapyRemote now get the per-antenna entries too, once they were started and listAntennas() was learned (`soapyAntennaEntries`, #619).
+- Mirics driver: cancelled transfers the system has not handed back after 5 s are no longer freed (crash when the USB transfer mode is changed, #503); they are kept with a harmless callback.
+- Skipped: #561 (reported on 4.2.0, before the 4.3 stream-restart fix; needs a libusb log), #435 (USB radios on Android came in 4.2; FC0013 name needs the user's log), #503 restart/"cannot keep up" (needs the reporter's bug-report zip, not downloaded).

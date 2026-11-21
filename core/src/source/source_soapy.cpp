@@ -865,6 +865,26 @@ DeviceInfo soapyDeviceFor(const std::string& args, const std::string& board, con
     return d;
 }
 
+// The extra per-antenna entries of a SoapySDR radio that is not enumerated (a manual device string, a SoapyRemote radio): the same ones the
+// enumeration adds, from the inputs listAntennas() gave when the radio was last started (#619). Empty until it has been started once.
+std::vector<DeviceInfo> soapyAntennaEntries(const DeviceInfo& d) {
+    std::vector<DeviceInfo> out;
+    std::vector<std::string> antennas;
+    {
+        std::lock_guard<std::mutex> lk(gRangesMu);
+        const auto it = gRanges.find(rangesKey(d.serial, d.soapyArgs));
+        if (it != gRanges.end()) antennas = it->second.antennas;
+    }
+    if (antennas.size() < 2) return out;
+    for (const auto& a : antennas) {
+        DeviceInfo e = d;
+        e.soapyArgs = d.soapyArgs + kAntennaTag + a;
+        e.name = d.name + " antenna " + a;
+        out.push_back(e);
+    }
+    return out;
+}
+
 bool soapyLearnRanges(DeviceInfo& d) {
     if (d.kind != DeviceInfo::Soapy) return false;
     std::lock_guard<std::mutex> lk(gRangesMu);

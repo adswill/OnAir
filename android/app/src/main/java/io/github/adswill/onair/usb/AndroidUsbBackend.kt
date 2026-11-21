@@ -8,7 +8,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbManager
@@ -27,8 +26,9 @@ import io.github.adswill.onair.diag.AppLog
 class AndroidUsbBackend(private val ctx: Context) : UsbBackend {
     private val um: UsbManager? = ctx.getSystemService(Context.USB_SERVICE) as? UsbManager
 
-    override val hostSupported: Boolean =
-        um != null && ctx.packageManager.hasSystemFeature(PackageManager.FEATURE_USB_HOST)
+    // The UsbManager service is the real test. Some ROMs (Honor / Magic UI, other phones without a Google framework) leave the
+    // android.hardware.usb.host feature out of the system although the USB host works, and the picker was then greyed out (#582).
+    override val hostSupported: Boolean = um != null
 
     private fun device(name: String): UsbDevice? = um?.deviceList?.get(name)
 
