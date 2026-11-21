@@ -83,12 +83,13 @@ const char* knownWhy(const std::string& id, const char* cond) {
 
 // ------------------------------------------------------------------ modes whose lock alone is not a pass (4.5): they decode frames / text / lines with a check
 // of their own, so the synthetic signal must give a counted decode (blocksOk, characters, saved bytes). Modes that only detect a carrier or measure
-// something (QO-100, SuperSID, Pulsar, TDRS ...) are not listed: for them the lock is the result.
+// something (QO-100, SuperSID, Pulsar, TDRS, the identification-only CIS-36 / OFDM HDR / CIS-128 / CIS-3000, whose result is the 'identified' line that
+// tests/cishf checks ...) are not listed: for them the lock is the result.
 bool needsDecode(const std::string& id, int stdMode) {
     static const char* const ids[] = {"wefax", "geoscan", "lucky7", "spino", "erminaz", "stanag4285", "datawell", "time", "mscatter", "hfbeacon", "pskd", nullptr};
     for (const char* const* p = ids; *p; p++) if (id == *p) return true;
     static const int stds[] = {732, 748, 743, 642, 605, 606, 607, 608, 842, 845, 848, 851, 854, 857, 349, 662, 663, 900, 901, 702, 872, 882,
-                               622, 623, 624, 625, 626, 627, 628, 802, 803, 804, 0};
+                               622, 623, 624, 802, 803, 804, 0};
     for (const int* p = stds; *p; p++) if (stdMode == *p) return true;
     return false;
 }
