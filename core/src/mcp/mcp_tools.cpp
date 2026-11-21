@@ -52,13 +52,13 @@ void codecNotLoadedReason(const std::string& id, std::string& status, std::strin
         return;
     case codec::CodecStatus::Ready:
         status = "found";
-        reason = "the plug-in loads; it is put in use when its voice mode starts";
+        reason = "the plug-in loads; it is put in use when its voice mode starts (onair-server: within 10 s)";
         return;
     case codec::CodecStatus::NotInstalled:
         break;
     }
     status = "not_checked";
-    reason = "the plug-in file appeared after the last check; it is looked for again when its voice mode starts";
+    reason = "the plug-in file appeared after the last check; it is looked for again when its voice mode starts (onair-server: within 10 s)";
 }
 
 // ---------------------------------------------------------------- schema helpers

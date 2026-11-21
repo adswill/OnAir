@@ -34,6 +34,7 @@ int main() {
         const GenParams p = base(dt);
         FusionReceiver r;
         r.setSilent(true);
+        r.setMbeFallback(false);   // no codec at all: mbelib is not looked for either
         run(r, signal({p}, 0, 25));
         const FusionTelemetry t = last(r);
         CHECK(t.headers == 1 && t.terminators == 1, "%s: headers %llu terminators %llu", names[dt], (unsigned long long)t.headers, (unsigned long long)t.terminators);

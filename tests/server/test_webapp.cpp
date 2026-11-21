@@ -134,7 +134,21 @@ struct Ws {
     }
     void close() { if (s != kBadSock) { sockClose(s); s = kBadSock; } }
 };
+static void setEnv(const char* k, const std::string& v) {
+#ifdef _WIN32
+    _putenv_s(k, v.c_str());
+#else
+    setenv(k, v.c_str(), 1);
+#endif
+}
 static bool has(const std::string& s, const std::string& x) { return s.find(x) != std::string::npos; }
+// codecsJson: is the notice of codec id accepted
+static bool accepted(const std::string& codecs, const std::string& id) {
+    const size_t p = codecs.find("{\"id\":\"" + id + "\"");
+    if (p == std::string::npos) return false;
+    const size_t a = codecs.find("\"accepted\":", p);
+    return a != std::string::npos && codecs.compare(a + 11, 4, "true") == 0;
+}
 static int countOf(const std::vector<std::string>& v, const std::string& x) { int n = 0; for (const auto& s : v) if (has(s, x)) n++; return n; }
 
 int main() {
@@ -211,8 +225,10 @@ int main() {
     }
     // ================================================================ part 2: the server
     const auto dir = std::filesystem::temp_directory_path() / ("onair-webapp-test-" + std::to_string((long long)std::chrono::steady_clock::now().time_since_epoch().count()));
-    std::filesystem::create_directories(dir);
+    std::filesystem::create_directories(dir / "codecs");
     const std::string cfgPath = (dir / "server.conf").string();
+    setEnv("DECT2_DATA_DIR", dir.string());   // accepting a codec notice below looks only in an empty codecs folder, not the user's
+    setEnv("ONAIR_CODEC_DIR", (dir / "codecs").string());
     ConfigFile cfg;
     cfg.set("device", "test");
     cfg.set("mode", "fm");
@@ -281,7 +297,15 @@ int main() {
     // CSRF: a POST without the header is refused, with a wrong origin too
     { Client noCsrf{port}; r = noCsrf.post("frequency", "{\"hz\":100e6}"); CHECK(r.status == 403 && has(r.body, "CSRF"), "POST needs the csrf header: %d", r.status); }
     { Client badOrigin = lan; badOrigin.origin = "http://evil.example"; r = badOrigin.post("frequency", "{\"hz\":100e6}"); CHECK(r.status == 403 && has(r.body, "origin"), "a foreign origin is refused: %d", r.status); }
+    { Client noCsrf{port}; r = noCsrf.post("codecs/accept", "{\"id\":\"ysf\"}"); CHECK(r.status == 403, "accepting a codec notice needs the csrf header: %d", r.status); }
     lan.origin = "http://127.0.0.1:" + std::to_string(port);
+    // the voice codec plug-ins (owner): their list, the notice accepted for one id
+    r = lan.get("codecs");
+    CHECK(r.status == 200 && has(r.body, "\"notice\":\"") && has(r.body, "\"id\":\"ysf\",") && has(r.body, "\"accepted\":false"), "codecs: %d %.200s", r.status, r.body.c_str());
+    r = lan.post("codecs/accept", "{\"id\":\"nonsense\"}");
+    CHECK(r.status == 400 && has(r.body, "no such codec"), "an unknown codec id is refused: %d %s", r.status, r.body.c_str());
+    r = lan.post("codecs/accept", "{\"id\":\"ysf\"}");
+    CHECK(r.status == 200 && accepted(r.body, "ysf") && !accepted(r.body, "tetra"), "the owner accepts the ysf notice, only that one: %d %.300s", r.status, r.body.c_str());
     r = lan.post("frequency", "{\"hz\":101300000}");
     CHECK(r.status == 200, "tune: %d %s", r.status, r.body.c_str());
     r = lan.post("start", "{}");
@@ -540,6 +564,10 @@ int main() {
     CHECK(r.status == 403, "a visitor cannot record");
     r = vis.post("tx/start", "{}");
     CHECK(r.status == 403, "a visitor cannot transmit");
+    r = vis.get("codecs");
+    CHECK(r.status == 403, "a visitor does not see the codec list: %d", r.status);
+    r = vis.post("codecs/accept", "{\"id\":\"tetra\"}");
+    CHECK(r.status == 403 && !accepted(lan.get("codecs").body, "tetra"), "a visitor cannot accept a codec notice: %d", r.status);
     r = lan.post("settings", "{\"app_public_tune\":true}");
     r = vis.post("frequency", "{\"hz\":100100000}");
     CHECK(r.status == 200, "public_tune: a visitor tunes: %d %s", r.status, r.body.c_str());

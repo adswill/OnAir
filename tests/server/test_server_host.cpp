@@ -11,7 +11,9 @@
 #include "dect2/net/remote_api.h"
 #include <chrono>
 #include <cstring>
+#include <cstdlib>
 #include <filesystem>
+#include <functional>
 #include <fstream>
 #include <thread>
 using namespace dect2;
@@ -262,6 +264,66 @@ static void setEnv(const char* k, const std::string& v) {
 #endif
 }
 
+// TETRA speech to the browser: a capture's frames come at once and wait for its end (TETRA); TETRA DMO's come at the pace of the air and no capture
+// ends, so the hold is let go after a second; speech from before anybody listened is not played to a listener who comes later.
+namespace {
+class ToneCodec final : public dect2::codec::SpeechCodec {
+public:
+    int sampleRate() const override { return 8000; }
+    std::vector<int16_t> decode(const std::vector<uint8_t>&) override { return std::vector<int16_t>(240, (int16_t)8000); }   // 30 ms
+};
+struct PlayoutCount { size_t bytes = 0, loud = 0; };
+// reads the listener every 20 ms for ms milliseconds; feed (when set) is called every 60 ms, as one TETRA burst each
+PlayoutCount listenFor(ServerHost& host, int id, int ms, const std::function<void()>& feed) {
+    PlayoutCount c;
+    const auto t0 = std::chrono::steady_clock::now();
+    auto next = t0;
+    while (std::chrono::steady_clock::now() - t0 < std::chrono::milliseconds(ms)) {
+        if (feed && std::chrono::steady_clock::now() >= next) { feed(); next += std::chrono::milliseconds(60); }
+        std::string pcm;
+        host.audioRead(id, pcm);
+        c.bytes += pcm.size();
+        for (size_t i = 0; i + 1 < pcm.size(); i += 2) if (std::abs((int16_t)((uint8_t)pcm[i] | ((uint8_t)pcm[i + 1] << 8))) > 1000) c.loud++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+    return c;
+}
+} // namespace
+
+static void testTetraPlayout() {
+    ConfigFile cfg;
+    cfg.set("device", "test");
+    cfg.set("mode", "tetradmo");
+    cfg.set("autostart", "1");
+    ServerHost host(cfg);
+    host.init();
+    host.supervise("");
+    CHECK(host.engine().running() && host.audioSource() == "voice", "TETRA DMO runs with its speech for the browser: %s", host.audioSource().c_str());
+    dect2::tetra::TetraVoiceSink& sink = host.tetraVoice();
+    sink.setFrameDecoder([](const uint8_t*, size_t) { return std::vector<uint8_t>(2 * 137, 0); });   // a TCH/S burst: two frames
+    sink.setCodec(std::make_unique<ToneCodec>());
+    const uint8_t bits[432] = {};
+    const auto burst = [&sink, &bits] { sink.onCodedFrame(bits, sizeof bits); };
+
+    for (int i = 0; i < 40; i++) burst();   // nobody listens
+    const int id = host.audioOpen(16000);
+    CHECK(id > 0, "a listener opens");
+    PlayoutCount c = listenFor(host, id, 300, nullptr);
+    CHECK(c.loud == 0, "speech from before the listener came is not played: %zu loud samples", c.loud);
+
+    // TETRA: a capture decoded at once, held for its end, then played at the pace of the air behind its lead
+    for (int i = 0; i < 17; i++) burst();   // about 1 s of speech
+    sink.onCaptureEnd();
+    c = listenFor(host, id, 3500, nullptr);
+    CHECK(c.loud > 14000 && c.loud < 18000, "a capture's speech reaches the listener once: %zu loud samples at 16 kHz", c.loud);
+
+    // TETRA DMO: a burst every 60 ms and never a capture end; the hold is let go after a second and the speech goes out
+    c = listenFor(host, id, 4500, burst);
+    CHECK(c.loud > 8000, "TETRA DMO speech reaches the listener without a capture end: %zu loud samples", c.loud);
+    host.audioClose(id);
+    host.shutdown();
+}
+
 // fakeDir: the folder of the fake plug-ins built for the codec guard test (CMake passes it); without it only the refusals are checked
 static void testCodecs(const char* fakeDir) {
     namespace fs = std::filesystem;
@@ -302,6 +364,7 @@ int main(int argc, char** argv) {
     testHackrfAmp();
     testHost();
     testAutostartAndSupervision();
+    testTetraPlayout();
     testCodecs(argc > 1 ? argv[1] : nullptr);   // last: it changes the codec folders of this process
     return testSummary("server_host");
 }

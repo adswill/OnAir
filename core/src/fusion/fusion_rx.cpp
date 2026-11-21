@@ -63,13 +63,13 @@ struct FusionReceiver::Impl {
     std::string codecText = "codec not installed";
     bool codecChanged = true;
     std::atomic<float> volume{1.f};
-    std::atomic<bool> muted{false}, silent{false};
+    std::atomic<bool> muted{false}, silent{false}, mbeFallback{true};
     // V/D mode 1 voice is the same 72 bit AMBE+2 frame as DMR and NXDN (the bit positions were checked against MMDVMHost's tables), so the user's own mbelib
-    // (the one DMR and NXDN use) decodes it without the 'ysf' plug-in; not while silent (tests, hidden mode)
+    // (the one DMR and NXDN use) decodes it without the 'ysf' plug-in; not when setMbeFallback(false) (tests that check the plug-in's frames)
     std::unique_ptr<NxdnAmbe> ambe;
     bool ambeTried = false;
     NxdnAmbe* ambeFor(const fusion::VoiceUnit& v) {
-        if (v.kind != 1 || v.bytes.size() != 9 || silent.load()) return nullptr;
+        if (v.kind != 1 || v.bytes.size() != 9 || !mbeFallback.load()) return nullptr;
         if (!ambeTried) { ambeTried = true; auto a = std::make_unique<NxdnAmbe>(); if (a->ok()) ambe = std::move(a); }
         return ambe.get();
     }
@@ -530,6 +530,7 @@ void FusionReceiver::setSpeechCodec(std::unique_ptr<codec::SpeechCodec> c, const
 void FusionReceiver::setVolume(float v) { p_->volume = std::max(0.f, std::min(1.f, v)); }
 void FusionReceiver::setMuted(bool m) { p_->muted = m; }
 void FusionReceiver::setSilent(bool s) { p_->silent = s; }
+void FusionReceiver::setMbeFallback(bool on) { p_->mbeFallback = on; }
 void FusionReceiver::setVoiceMonitor(voice::Monitor* m) { p_->monSet = m; }
 void FusionReceiver::setAudioTap(std::function<void(const float*, size_t, int)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->tap = std::move(cb); }
 

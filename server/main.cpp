@@ -7,6 +7,7 @@
 #include "dect2/codec/codec_registry.h"
 #include "dect2/codec/speech_codec.h"
 #include "dect2/common/platform.h"
+#include "dect2/common/thread_name.h"
 #include "dect2/engine/crash_report.h"
 #include "dect2/integrations/commands.h"
 #include "dect2/integrations/integrations.h"
@@ -22,6 +23,7 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
@@ -30,6 +32,7 @@
 #include <fstream>
 #include <sstream>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <vector>
@@ -68,10 +71,11 @@ private:
 // --accept-codec-notice ID[,ID...] or all: the patented codec ids it names, empty with why set when one is unknown
 static std::vector<std::string> codecIdsFromArg(const std::string& arg, std::string& why) {
     std::vector<std::string> ids;
-    const bool all = arg == "all";
-    for (const dect2::codec::CodecInfo& c : dect2::codec::codecTable())
-        if (all && c.kind == dect2::codec::CodecKind::Patented && *c.id) ids.emplace_back(c.id);
-    if (all) return ids;
+    if (arg == "all") {
+        for (const dect2::codec::CodecInfo& c : dect2::codec::codecTable())
+            if (c.kind == dect2::codec::CodecKind::Patented && *c.id) ids.emplace_back(c.id);
+        return ids;
+    }
     size_t from = 0;
     while (from <= arg.size()) {
         const size_t comma = std::min(arg.find(',', from), arg.size());
@@ -308,7 +312,18 @@ int main(int argc, char** argv) {
         fprintf(stderr, "onair-server: MCP on stdio (transmit tools %s)\n", mcpTx ? "ON" : "off");
         FileBuf fb(proto);
         std::ostream os(&fb);
+        // the codec plug-ins as in the other modes (an accepted one copied in while it runs is found within 10 s); runStdio owns this thread
+        std::mutex tickMu;
+        std::condition_variable tickCv;
+        bool stdinDone = false;
+        std::thread codecTicker = dect2::namedThread("onair-codectick", [&] {
+            std::unique_lock<std::mutex> lk(tickMu);
+            while (!tickCv.wait_for(lk, std::chrono::seconds(1), [&stdinDone] { return stdinDone; })) host.codecTick(false);
+        });
         dect2::mcp::runStdio(mcp, std::cin, os);
+        { std::lock_guard<std::mutex> lk(tickMu); stdinDone = true; }
+        tickCv.notify_one();
+        codecTicker.join();
         host.shutdown();
         return 0;
     }

@@ -95,6 +95,7 @@ public:
     bool acceptCodecNotice(const std::string& id, std::string& err);
     // For the browser app's settings: the notice text, the folders searched and each patented codec's state.
     std::string codecsJson();
+    dect2::tetra::TetraVoiceSink& tetraVoice() { return tetraVoice_; }   // tests: the TETRA speech path into the browser's audio
 
 private:
     ConfigFile& cfg_;
@@ -136,21 +137,33 @@ private:
     int nextListener_ = 1;
     std::atomic<bool> fmTap_{false};
     std::atomic<bool> voiceTap_{false};     // a digital voice mode: its decoded speech goes to the browser instead of the monitor
-    // 8 kHz (or any rate) mono speech -> 48 kHz for audioIn (engine thread only)
-    double voicePhase_ = 0;
-    float voiceLast_ = 0;
-    int voiceRate_ = 0;
+    // 8 kHz (or any rate) mono speech -> 48 kHz for audioIn, by linear interpolation. One state per caller: the engine thread's voice modes and
+    // TETRA's decoder thread (whose last capture can still be decoded while the next mode already speaks).
+    struct Upsampler {
+        double phase = 0;
+        float last = 0;
+        int rate = 0;
+        void run(const float* x, size_t n, int rate, std::vector<float>& out);
+    };
+    Upsampler voiceUp_;                     // engine thread only
     void voiceIn(const float* x, size_t n, int rate);
-    void upsampleTo48k(const float* x, size_t n, int rate, std::vector<float>& out);   // voicePhase_ / voiceLast_ / voiceRate_
     // TETRA speech comes a 2.3 s capture at a time, decoded faster than the air: it is held for the end of a capture that starts from silence
-    // (CaptureLeadIn, as in the app) and handed to the listeners at the pace of the air when they fetch their audio (pumpPaced).
+    // (CaptureLeadIn, as in the app) and handed to the listeners at the pace of the air when they fetch their audio (pumpPaced). TETRA DMO
+    // speaks in real time and never ends a capture: a hold older than kHoldMaxSec is let go (as the app does after a retune). Nothing is kept
+    // while nobody listens.
+    static constexpr double kHoldMaxSec = 1.0;
     std::mutex pMu_;
     dect2::tetra::CaptureLeadIn tetraLead_{48000, 1, dect2::TetraReceiver::kCaptureSec};
+    Upsampler tetraUp_;                     // under pMu_
     std::vector<float> paced_;              // 48 kHz mono, not yet handed out
     double pacedAt_ = 0;                    // the time up to which paced audio has been handed out
+    double holdSince_ = 0;                  // when the hold of tetraLead_ began
     void tetraPcm(const int16_t* pcm, size_t n, int rate);
     void tetraCaptureEnd();
+    void releaseHoldLocked(double now);     // under pMu_: the held audio with its lead into paced_
+    void resetPacedLocked();                // under pMu_: drops the held and the paced audio
     void pumpPaced();
+    bool anyListener();
     // codecTick
     std::mutex codecMu_;
     double codecAt_ = -1e9;

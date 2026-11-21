@@ -64,6 +64,7 @@ ServerHost::ServerHost(ConfigFile& cfg) : cfg_(cfg) {
     e_.iono().setSilent(true); e_.qo100().setSilent(true); e_.general().setSilent(true); e_.hfbeacon().setSilent(true);
     e_.same().setSilent(true); e_.dstar().setSilent(true); e_.nxdn().setSilent(true); e_.dpmr().setSilent(true);
     e_.p25().setSilent(true); e_.mac().setSilent(true); e_.dmr().setSilent(true); e_.fusion().setSilent(true);
+    e_.iridium().voice().setSilent(true); e_.edacs().setSilent(true);
     // Digital voice: the receivers' decoded speech (the same sound the desktop plays) goes to the browser while such a mode is chosen.
     // Only clear calls reach these taps: encrypted voice is decoded only with keys the user imported, as in the desktop app.
     auto v8 = [this](const float* x, size_t n) { if (voiceTap_.load(std::memory_order_relaxed)) voiceIn(x, n, 8000); };
@@ -86,6 +87,10 @@ ServerHost::~ServerHost() {
     quit_ = true;
     if (snapTh_.joinable()) snapTh_.join();
     e_.stop();
+    // TETRA's decoder thread is joined only when its receiver is destroyed, after the members below: it may be flushing a capture now.
+    // The sink calls out under its own lock, so once these are cleared nothing reaches tetraPcm / tetraCaptureEnd any more.
+    tetraVoice_.setPcmOut({});
+    tetraVoice_.setCaptureEnd({});
     e_.tetra().setVoiceSink(nullptr);
     e_.tetradmo().setVoiceSink(nullptr);
 }
@@ -236,7 +241,7 @@ std::string ServerHost::codecsJson() {
     bool first = true;
     for (const codec::CodecInfo& c : codec::codecTable()) {
         if (c.kind != codec::CodecKind::Patented || !*c.id) continue;
-        bool accepted;
+        bool accepted = false;
         { std::lock_guard<std::mutex> lk(mu_); accepted = cfg_.flag(noticeKey(c.id), false); }
         codec::CodecLookup r;
         const bool looked = codec::lastPluginLookup(c.id, r);
@@ -722,47 +727,66 @@ std::string ServerHost::audioSource() const {
 
 // ---------------------------------------------------------------- audio for the browser
 // Speech at its codec's rate (8 kHz for AMBE, IMBE, Codec2) up to the 48 kHz audioIn takes, by linear interpolation
-void ServerHost::upsampleTo48k(const float* x, size_t n, int rate, std::vector<float>& out) {
+void ServerHost::Upsampler::run(const float* x, size_t n, int r, std::vector<float>& out) {
     out.clear();
-    if (!x || !n || rate <= 0 || rate > 48000) return;
-    if (rate != voiceRate_) { voiceRate_ = rate; voicePhase_ = 0; voiceLast_ = 0; }
-    const double step = (double)rate / 48000.0;
+    if (!x || !n || r <= 0 || r > 48000) return;
+    if (r != rate) { rate = r; phase = 0; last = 0; }
+    const double step = (double)r / 48000.0;
     out.reserve((size_t)((double)n / step) + 2);
     for (size_t i = 0; i < n; i++) {
-        const float a = voiceLast_, b = x[i];
-        while (voicePhase_ < 1.0) { out.push_back(a + (b - a) * (float)voicePhase_); voicePhase_ += step; }
-        voicePhase_ -= 1.0;
-        voiceLast_ = b;
+        const float a = last, b = x[i];
+        while (phase < 1.0) { out.push_back(a + (b - a) * (float)phase); phase += step; }
+        phase -= 1.0;
+        last = b;
     }
 }
 
 void ServerHost::voiceIn(const float* x, size_t n, int rate) {
     std::vector<float> out;
-    upsampleTo48k(x, n, rate, out);
+    voiceUp_.run(x, n, rate, out);
     if (!out.empty()) audioIn(out.data(), out.data(), out.size(), false);
 }
 
-// The receiver's thread, once per decoded TETRA frame (a capture's frames come in one run)
+bool ServerHost::anyListener() {
+    std::lock_guard<std::mutex> lk(aMu_);
+    return !listeners_.empty();
+}
+
+// The receiver's thread, once per decoded TETRA frame (a capture's frames come in one run; TETRA DMO's come at the pace of the air)
 void ServerHost::tetraPcm(const int16_t* pcm, size_t n, int rate) {
+    if (!anyListener()) return;   // nobody listens: nothing is kept for a later listener to hear late
     std::vector<float> x(n), up, out;
     for (size_t i = 0; i < n; i++) x[i] = pcm[i] / 32768.f;
-    upsampleTo48k(x.data(), n, rate, up);
-    if (up.empty()) return;
     std::lock_guard<std::mutex> lk(pMu_);
+    tetraUp_.run(x.data(), n, rate, up);
+    if (up.empty()) return;
+    const double now = nowSec();
     const bool idle = paced_.empty();
-    if (idle && !tetraLead_.holding()) pacedAt_ = nowSec();
+    if (idle && !tetraLead_.holding()) { pacedAt_ = now; holdSince_ = now; }
     tetraLead_.push(up.data(), up.size(), idle, out);
     paced_.insert(paced_.end(), out.begin(), out.end());
-    const size_t cap = 48000 * 10;   // nobody fetches: keep the last 10 s, not the whole call
+    if (tetraLead_.holding() && now - holdSince_ > kHoldMaxSec) releaseHoldLocked(now);   // no capture end comes (TETRA DMO)
+    const size_t cap = 48000 * 10;   // a listener that does not fetch: keep the last 10 s, not the whole call
     if (paced_.size() > cap) paced_.erase(paced_.begin(), paced_.begin() + (std::ptrdiff_t)(paced_.size() - cap));
 }
 
-void ServerHost::tetraCaptureEnd() {
+void ServerHost::releaseHoldLocked(double now) {
     std::vector<float> out;
-    std::lock_guard<std::mutex> lk(pMu_);
-    if (paced_.empty()) pacedAt_ = nowSec();
+    if (paced_.empty()) pacedAt_ = now;
     tetraLead_.captureEnd(out);
     paced_.insert(paced_.end(), out.begin(), out.end());
+}
+
+void ServerHost::resetPacedLocked() {
+    std::vector<float> drop;
+    tetraLead_.captureEnd(drop);
+    paced_.clear();
+    pacedAt_ = nowSec();
+}
+
+void ServerHost::tetraCaptureEnd() {
+    std::lock_guard<std::mutex> lk(pMu_);
+    releaseHoldLocked(nowSec());
 }
 
 // From audioRead (each listener every 40 ms): the paced audio that is due by now goes to every listener
@@ -771,6 +795,7 @@ void ServerHost::pumpPaced() {
     {
         std::lock_guard<std::mutex> lk(pMu_);
         const double now = nowSec();
+        if (tetraLead_.holding() && now - holdSince_ > kHoldMaxSec) releaseHoldLocked(now);   // the end of a capture that never came
         if (paced_.empty()) { pacedAt_ = now; return; }
         const size_t n = std::min(paced_.size(), (size_t)std::max(0.0, (now - pacedAt_) * 48000.0));
         if (n == 0) return;
@@ -805,14 +830,17 @@ int ServerHost::audioOpen(int rateHz) {
     int r = 8000;
     for (int x : ok) if (x <= rateHz) r = x;
     int id;
+    bool first = false;
     {
         std::lock_guard<std::mutex> lk(aMu_);
         if (listeners_.size() >= 32) return -1;   // the web app shares one monitor; a listener is only a copy of its audio
+        first = listeners_.empty();
         id = nextListener_++;
         Listener l;
         l.rate = r; l.step = 48000 / r;
         listeners_[id] = l;
     }
+    if (first) { std::lock_guard<std::mutex> lk(pMu_); resetPacedLocked(); }   // TETRA speech from before anybody listened is not played now
     std::lock_guard<std::mutex> lk(mu_);   // the monitor is switched on by the first listener
     applyMonitor();
     return id;
