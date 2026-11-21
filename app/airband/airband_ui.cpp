@@ -34,6 +34,10 @@ struct State {
     float squelch = 6, hang = 0.5f;
     bool nrOn = false; float nrStr = 80;   // neural noise remover
     bool scan = false, hold = false;
+    bool autoOn = true, hopOn = true;    // 4.5: open what keys up by itself, hop across the whole band (no list needed)
+    uint32_t hopSeen = 0;                // the last hop the receiver asked for that was acted on
+    double nextLearnSave = 0;
+    std::string learnSaved;
     bool onlyActive = false;             // channels list: only those open or heard in the last 30 s
     bool defaultList = false;            // the list is the built-in one (test signal) or empty, never saved by the user
     int lastKind = -1;
@@ -70,6 +74,7 @@ void save() {
     S.defaultList = false;
     d.setB("airHold", S.hold); d.setB("airOnlyActive", S.onlyActive);
     d.setB("airNr", S.nrOn); d.setD("airNrStr", S.nrStr);
+    d.setB("airAuto", S.autoOn); d.setB("airHop", S.hopOn);
     d.flush();
     S.dirty = true;
 }
@@ -89,6 +94,8 @@ void load(const App& a) {
     S.squelch = (float)d.getD("airSquelch", 6); S.hang = (float)d.getD("airHang", 0.5); S.scan = d.getB("airScan", false);
     S.nrOn = d.getB("airNr", false); S.nrStr = (float)std::clamp(d.getD("airNrStr", 80), 0.0, 100.0);
     S.rec = d.getB("airRecEach", false);
+    S.autoOn = d.getB("airAuto", true); S.hopOn = d.getB("airHop", true);
+    S.learnSaved = d.getS("airLearn", "");
 }
 
 std::string clipFolder() { return recordingsDir() + "/airband"; }
@@ -117,6 +124,14 @@ const dect2::AirbandChannelState* stateOf(const App& a, size_t i) {
 // ---------------------------------------------------------------- the controls
 
 void controls(App& a) {
+    if (ImGui::Checkbox(tr("Auto##airauto"), &S.autoOn)) save();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Open every carrier that keys up on the airband raster by itself: no list and no airport needed. 121.500 (guard) is always open and has priority. What it hears is remembered."));
+    if (S.autoOn) {
+        flowNext(6 * gUi);
+        if (ImGui::Checkbox(tr("Hop across the band##airhop"), &S.hopOn)) save();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("When the radio cannot take 118 - 137 MHz at once and the list is empty: move between captures, stay where something is said, come back to busy ones more often."));
+    }
+    flowNext(12 * gUi);
     if (ImGui::Checkbox("Scan", &S.scan)) save();
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Play one channel at a time: stop on the first that opens (the priority channel first), go on 2 s after it closed.\nOff: every open channel is mixed; an open priority channel pushes the others 12 dB down.");
     if (S.scan) {
@@ -233,8 +248,8 @@ void captureBanner(App& a) {
     if (!live(a) || S.chans.empty()) return;
     const auto& t = a.rx.airband;
     int in = 0;
-    for (const auto& c : t.channels) in += c.inBand;
-    if (t.channels.size() != S.chans.size() || in == (int)S.chans.size()) return;
+    for (size_t i = 0; i < t.channels.size() && i < S.chans.size(); i++) in += t.channels[i].inBand;
+    if (t.channels.size() < S.chans.size() || in == (int)S.chans.size()) return;
     std::vector<double> f;
     for (const auto& c : S.chans) f.push_back(c.freqHz);
     const auto g = dect2::airbandPlanGroups(f, dect2::airbandUsableSpanHz(a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate));
@@ -264,6 +279,18 @@ void channelView(App& a) {
         for (const auto& c : tel.channels) { inBand += c.inBand; if (c.open) { open++; names += (names.empty() ? "" : ", ") + (c.label.empty() ? c.name : c.label); } }
         if (open) ImGui::TextColored(pal::okGreen(), tr("On air: %s"), names.c_str());
         else if (inBand) ImGui::TextDisabled("%s", tr("No signal: every channel is quiet."));
+    }
+    if (live(a) && tel.autoMode) {   // what the scanner opened by itself
+        std::string on, idle;
+        for (size_t i = S.chans.size(); i < tel.channels.size(); i++) {
+            const auto& c = tel.channels[i];
+            std::string& dst = c.open ? on : idle;
+            dst += (dst.empty() ? "" : ", ") + c.name + (c.label == "guard" ? " (guard)" : c.continuous ? " (continuous)" : "");
+        }
+        if (!on.empty()) ImGui::TextColored(pal::okGreen(), tr("Auto, on air: %s"), on.c_str());
+        if (!idle.empty()) ImGui::TextDisabled(tr("Auto, watching: %s"), idle.c_str());
+        if (on.empty() && idle.empty()) ImGui::TextDisabled("%s", tr("Auto: waiting for a carrier to key up."));
+        if (tel.hopOn && tel.hopGroups > 1) ImGui::TextDisabled(tr("Scanning the band in %d captures, now %d."), tel.hopGroups, tel.hopGroup + 1);
     }
     const int nc = 11;
     if (!ImGui::BeginTable("##airch", nc, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollX, ImVec2(0, ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing()))) return;
@@ -424,6 +451,9 @@ void seenView(App& a) {
         ImGui::TableNextColumn(); ImGui::Text("%u", x.hits);
         ImGui::TableNextColumn(); if (x.activeNow) ImGui::TextColored(pal::okGreen(), "%s", tr("now")); else ImGui::TextDisabled("%.0f s", a.rx.airband.timeSec - x.lastSec);
         ImGui::TableNextColumn();
+        if (ImGui::SmallButton(tr("Listen##seen"))) a.engine.airband().listenTo(x.freqHz, x.is833);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hear it now without adding it to the list."));
+        ImGui::SameLine();
         if (ImGui::SmallButton(tr("Add##seen"))) {
             dect2::AirbandChannel c; c.freqHz = x.freqHz; c.is833 = x.is833; c.label = lb;
             applyChannels({c}, false);
@@ -467,7 +497,7 @@ void activityView(App& a) {
 
 void spectrumView(App& a) {
     ImGui::PushTextWrapPos(0);
-    ImGui::TextDisabled("Every channel of the list: green while open, the light band its filter (8.33 kHz: +-3.4 kHz, 25 kHz: +-5 kHz).");
+    ImGui::TextDisabled("Every channel of the list: green while open, the light band its filter (8.33 kHz: +-3.4 kHz, 25 kHz: +-5 kHz). Click the spectrum to hear that channel now.");
     ImGui::PopTextWrapPos();
     if (!plt::BeginPlot("##airspec", ImVec2(-1, ImGui::GetContentRegionAvail().y), plt::Flags_NoLegend | plt::Flags_NoTitle)) return;
     plt::SetupAxes("frequency (MHz)", "dBFS/bin");
@@ -499,6 +529,14 @@ void spectrumView(App& a) {
         plt::Spec ss; ss.LineColor = pal::accent(); ss.LineWeight = 1.2f;
         plt::PlotLine("spectrum", x.data(), y.data(), (int)std::min(x.size(), y.size()), ss);
     }
+    // a click on the spectrum: hear the nearest channel of the raster now (without adding it to the list)
+    if (live(a) && plt::IsPlotHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        const double hz = plt::GetPlotMousePos().x * 1e6 - a.rx.airband.cfoHz;
+        double f = 0; bool n833 = false;
+        const double k25 = std::round(hz / 25e3) * 25e3, k833 = 118e6 + std::round((hz - 118e6) / (25e6 / 3000)) * (25e6 / 3000);
+        if (hz >= 117.99e6 && hz <= 137.01e6) { f = std::fabs(hz - k25) <= 3000 ? k25 : k833; n833 = f != k25; } else if (hz > 224.9e6 && hz < 400.1e6) f = k25;
+        if (f > 0) a.engine.airband().listenTo(f, n833);
+    }
     plt::EndPlot();
 }
 
@@ -517,6 +555,8 @@ void tick(App& a) {
     dect2::AirbandReceiver& r = a.engine.airband();
     r.setNoiseRemover(S.nrOn, S.nrStr / 100.f);
     if (!S.wasRunning || S.dirty) {
+        r.setAuto(S.autoOn); r.setHop(S.hopOn);
+        if (!S.wasRunning && !S.learnSaved.empty()) r.setLearnedState(S.learnSaved);
         r.setChannels(S.chans); r.setSquelchDb(S.squelch); r.setHangSec(S.hang); r.setScan(S.scan); r.setScanHold(S.hold);
         clipChannels();
         S.dirty = false;
@@ -528,6 +568,15 @@ void tick(App& a) {
     if (!S.clips) { S.clips = std::make_shared<dect2::AirbandClipWriter>(clipFolder()); S.clips->setEnabled(S.rec); clipChannels(); }
     if (!S.wasRunning) { clipChannels(); r.setClipWriter(S.clips); }
     for (auto& c : S.clips->takeFinished()) { S.fresh.insert(S.fresh.begin(), c); if (S.fresh.size() > 300) S.fresh.pop_back(); }
+    if (live(a)) {
+        const auto& t = a.rx.airband;
+        if (S.hopOn && S.autoOn && t.hopSeq != S.hopSeen && t.hopTargetHz > 0) { S.hopSeen = t.hopSeq; airportTuneCentre(a, t.hopTargetHz); }
+        if (t.timeSec >= S.nextLearnSave || t.timeSec < S.nextLearnSave - 120) {   // what was learned goes with the settings now and then
+            S.nextLearnSave = t.timeSec + 30;
+            const std::string l = r.learnedState();
+            if (!l.empty() && l != S.learnSaved) { S.learnSaved = l; plat::prefs().setS("airLearn", l); plat::prefs().flush(); }
+        }
+    }
     S.wasRunning = true;
     (void)run;
 }

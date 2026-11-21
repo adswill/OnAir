@@ -21,6 +21,8 @@ struct AirbandChannelState {
     bool open = false;           // squelch open (a transmission, or its hang time)
     bool playing = false;        // its audio goes to the output now (mute, solo, priority and scan applied)
     bool heterodyne = false;     // a second carrier on the channel (two stations at once)
+    bool autoAdded = false;      // opened by the autonomous scanner (not in the user's list)
+    bool continuous = false;     // a carrier that stays on (ATIS, VOLMET): the scan leaves it for last
     bool muted = false, solo = false, priority = false;
     float levelDb = -200;        // power in the channel filter, dBFS
     float snrDb = -99;           // carrier to noise in the channel (6.8 kHz for 8.33, 10 kHz for 25 kHz channels), dB
@@ -73,6 +75,11 @@ struct AirbandTelemetry {
     float hangSec = 0;
     bool scan = false;           // scan: one channel at a time, stops on activity
     int scanChan = -1;           // the channel the scan stopped on (-1 = scanning)
+    bool autoMode = false;       // the autonomous scanner is on
+    bool hopOn = false;          // hopping across captures is on and in use (auto, no user list, radio too narrow for the band)
+    int hopGroup = -1, hopGroups = 0;   // the capture the radio is on, and how many there are
+    double hopTargetHz = 0;      // the capture the receiver wants next (the app tunes there when hopSeq changes; same meaning as AirbandGroup::centerHz)
+    uint32_t hopSeq = 0;         // grows with every hop asked for
     std::vector<AirbandChannelState> channels;
     std::vector<AirbandSeen> seen;           // carriers on the raster that are not in the list, strongest activity first
     std::vector<AirbandActivity> activity;   // newest first, at most kAirbandLogMax

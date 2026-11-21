@@ -4,6 +4,7 @@
 // The airband channel list as text for the settings file: see airband_store.h.
 #include "dect2/airband/airband_store.h"
 #include <cstdio>
+#include <cmath>
 #include <cstdlib>
 
 namespace dect2 {
@@ -74,4 +75,30 @@ std::vector<AirbandChannel> airbandDecode(const std::string& s) {
     for (const auto& rec : split(s, '\x1e')) if (!rec.empty()) add(v, split(rec, '\x1f'), false);   // 0.2.5 and 0.2.6
     return v;
 }
+
+std::string airbandLearnedEncode(const std::vector<AirbandLearned>& v) {
+    std::string s = "l1:";
+    for (const auto& l : v) {
+        if (l.score < 0.2f && !l.continuous) continue;
+        char b[96];
+        snprintf(b, sizeof b, "%.0f,%.2f,%u,%d;", l.freqHz, (double)l.score, l.opens, l.continuous ? 1 : 0);
+        s += b;
+    }
+    return s;
+}
+
+std::vector<AirbandLearned> airbandLearnedDecode(const std::string& s) {
+    std::vector<AirbandLearned> v;
+    if (s.compare(0, 3, "l1:") != 0) return v;
+    for (const auto& rec : split(s.substr(3), ';')) {
+        if (rec.empty()) continue;
+        double f = 0, sc = 0; unsigned op = 0; int c = 0;
+        if (sscanf(rec.c_str(), "%lf,%lf,%u,%d", &f, &sc, &op, &c) != 4) continue;
+        if (!std::isfinite(f) || !std::isfinite(sc) || f < 117.9e6 || f > 400.1e6 || sc < 0 || sc > 100) continue;
+        v.push_back({f, (float)sc, op, c != 0});
+        if (v.size() >= 512) break;
+    }
+    return v;
+}
+
 }   // namespace dect2
