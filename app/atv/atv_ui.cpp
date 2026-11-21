@@ -5,15 +5,22 @@
 // of the test signal. The receiver (AtvReceiver) makes the pictures; the telemetry carries the waveforms and the numbers.
 #include "app.h"
 #include "dect2/atv/atv_aspect.h"
+#include "dect2/atv/atv_enhance.h"
 #include "dect2/atv/atv_ghost.h"
 #include "panels/enhance_ui.h"
 #include "ui/video_adjust.h"
 #include "dect2/atv/atv_std.h"
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cmath>
+#include <future>
 #include <memory>
+#include <vector>
 
 namespace {
+
+struct VEnhResult { std::vector<uint8_t> rgba; int w = 0, h = 0; std::shared_ptr<const AtvFrame> src; };
 
 struct State {
     bool loaded = false, wasRunning = false;
@@ -42,6 +49,15 @@ struct State {
     float pushedSat = -1.f, pushedHue = -999.f;
     float pushedVol = -1.f;
     bool pushedMute = false;
+    // the video enhancer (atv_enhance.h): runs on a worker so the picture thread never waits for it
+    int vLevel = 1;                             // 0 off, 1 light, 2 full
+    int vSize = 0;                              // 0 as received, 1 720p, 2 1080p
+    float vTemporal = 1.f, vSpatial = 1.f, vChroma = 1.f, vSharpen = 1.f;   // Advanced
+    bool vAdvanced = false, vSquare = false, vReset = false;
+    dect2::AtvEnhancer venh;                    // used by the worker only while vJob is running
+    std::future<VEnhResult> vJob;
+    std::atomic<double> vMs{0};                             // the last picture's time on the worker
+    int lastSys = 0;
 };
 State S;
 
@@ -53,6 +69,12 @@ void loadState() {
     S.loaded = true;
     S.deint = (int)plat::prefs().getI("atvDeint", 0) == 1 ? 1 : 0;
     S.snow = plat::prefs().getI("atvSnow", 0) != 0;
+    S.vLevel = (int)std::clamp(plat::prefs().getI("atvVEnh", 1), 0L, 2L);
+    S.vSize = (int)std::clamp(plat::prefs().getI("atvVEnhSize", 0), 0L, 2L);
+    S.vTemporal = (float)std::clamp(plat::prefs().getI("atvVEnhT", 100), 0L, 200L) / 100.f;
+    S.vSpatial = (float)std::clamp(plat::prefs().getI("atvVEnhS", 100), 0L, 200L) / 100.f;
+    S.vChroma = (float)std::clamp(plat::prefs().getI("atvVEnhC", 100), 0L, 200L) / 100.f;
+    S.vSharpen = (float)std::clamp(plat::prefs().getI("atvVEnhH", 100), 0L, 200L) / 100.f;
     S.denoise = (int)std::clamp(plat::prefs().getI("atvDenoise", -1), -1L, 3L);
     S.letterbox = (int)std::clamp(plat::prefs().getI("atvLetterbox", 0), 0L, 2L);
     S.aspect[0] = (int)std::clamp(plat::prefs().getI("atvAspect0", 0), 0L, 2L);
@@ -222,28 +244,65 @@ void spectrumScope(const App& a, ImVec2 size, bool on) {
 
 // ---------------------------------------------------------------- the picture
 
-void uploadFrame(App& a) {
-    if (!live(a) || !gGfx) return;
-    auto f = a.engine.atv().frame(S.frameSeq);
-    if (!f || f->width <= 0 || f->height <= 0 || f->rgba.size() < (size_t)f->width * f->height * 4) return;
-    if (!S.img || S.imgW != f->width || S.imgH != f->height) {
+// the picture goes to the texture (at its own size, or the enhanced size); the enhancer works on a worker thread on the newest picture
+void showPixels(std::vector<uint32_t>& px, int w, int h, const std::shared_ptr<const AtvFrame>& f) {
+    if (!S.img || S.imgW != w || S.imgH != h) {
         delete S.img;
-        S.img = gGfx->createImage(f->width, f->height, 0xFF000000u);
-        S.imgW = f->width; S.imgH = f->height;
+        S.img = gGfx->createImage(w, h, 0xFF000000u);
+        S.imgW = w; S.imgH = h;
     }
-    std::vector<uint32_t> px((size_t)f->width * f->height);
-    memcpy(px.data(), f->rgba.data(), px.size() * 4);
     S.adjust.load("atv");
     dect2::video::apply(px.data(), px.size(), S.adjust.adj);   // display only: the frame itself is not changed
-    S.img->update(0, 0, f->width, f->height, px.data());
+    S.img->update(0, 0, w, h, px.data());
     S.enh.e.setSource("Analog TV frame");
-    if (S.enh.e.on()) S.enh.feed(px.data(), f->width, f->height, false);
+    if (S.enh.e.on()) S.enh.feed(px.data(), w, h, false);
     S.frame = f;
+}
+
+void uploadFrame(App& a) {
+    if (!live(a) || !gGfx) return;
+    const bool venh = S.vLevel > 0;
+    if (S.vJob.valid()) {   // a finished enhancement is shown; nothing is waited for
+        if (S.vJob.wait_for(std::chrono::seconds(0)) != std::future_status::ready) return;
+        VEnhResult r = S.vJob.get();
+        if (venh && r.src && r.rgba.size() >= (size_t)r.w * r.h * 4 && r.w > 0 && r.h > 0) {
+            std::vector<uint32_t> px((size_t)r.w * r.h);
+            memcpy(px.data(), r.rgba.data(), px.size() * 4);
+            S.vSquare = r.w != r.src->width || r.h != r.src->height;
+            showPixels(px, r.w, r.h, r.src);
+        }
+    }
+    auto f = a.engine.atv().frame(S.frameSeq);
+    if (!f || f->width <= 0 || f->height <= 0 || f->rgba.size() < (size_t)f->width * f->height * 4) return;
+    if (!venh || f->untuned) {   // off (or the snow of an empty channel): the picture as it is
+        S.vSquare = false; S.vReset = true;
+        std::vector<uint32_t> px((size_t)f->width * f->height);
+        memcpy(px.data(), f->rgba.data(), px.size() * 4);
+        showPixels(px, f->width, f->height, f);
+        return;
+    }
+    dect2::AtvEnhParams p;
+    p.level = S.vLevel == 2 ? dect2::AtvEnhLevel::Full : dect2::AtvEnhLevel::Light;
+    p.outHeight = S.vSize == 1 ? 720 : S.vSize == 2 ? 1080 : 0;
+    const int mod = a.rx.atv.modulation;
+    p.displayAspect = (mod >= 0 && mod <= 1) ? dect2::atvDisplayAspect(S.aspect[mod], a.rx.atv.wssText) : (double)f->width / f->height;
+    p.temporal = S.vTemporal; p.spatial = S.vSpatial; p.chroma = S.vChroma; p.sharpen = S.vSharpen;
+    p.keepParity = f->field & 1;
+    if (S.vReset) { S.venh.reset(); S.vReset = false; }
+    S.vJob = std::async(std::launch::async, [f, p]() {
+        VEnhResult r;
+        const auto t0 = std::chrono::steady_clock::now();
+        if (!S.venh.process(f->rgba.data(), f->width, f->height, p, r.rgba, r.w, r.h)) { r.rgba = f->rgba; r.w = f->width; r.h = f->height; }
+        S.vMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+        r.src = f;
+        return r;
+    });
 }
 
 // The aspect the picture is shown with: the setting of the modulation, Auto from the WSS of line 23 (anamorphic 16:9). The NBTV pictures have their own shape.
 float pictureAspect(const App& a) {
     const float own = S.img && S.imgH > 0 ? (float)S.imgW / S.imgH : 4.f / 3.f;
+    if (S.vSquare) return own;   // the video enhancer made square pixels at the right shape (atv_enhance.h)
     const int mod = a.rx.atv.modulation;
     if (mod < 0 || mod > 1 || !live(a)) return own;
     return (float)dect2::atvDisplayAspect(S.aspect[mod], a.rx.atv.wssText);
@@ -311,6 +370,40 @@ void tab(App& a) {
     ImGui::SameLine(0, 4 * gUi);
     if (pillButton("Bob", S.deint == 1)) { S.deint = 1; plat::prefs().setI("atvDeint", 1); savePrefs(a); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("One field at a time, lines doubled: no combing, half the vertical detail.");
+    {   // the video enhancer: one switch with a level and an output size; the sliders only under Advanced
+        static const char* kLv[] = {"Off", "Light", "Full"};
+        static const char* kSz[] = {"As received", "720p", "1080p"};
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(tr("Enhance video"));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90 * gUi);
+        if (ImGui::BeginCombo("##atvvlv", kLv[S.vLevel])) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(kLv[i], S.vLevel == i)) { S.vLevel = i; plat::prefs().setI("atvVEnh", i); }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Light: less noise, cheap. Full: also repairs combing, cleans colour edges, sharpens. Works live and on recordings."));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(110 * gUi);
+        if (ImGui::BeginCombo("##atvvsz", kSz[S.vSize])) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(kSz[i], S.vSize == i)) { S.vSize = i; plat::prefs().setI("atvVEnhSize", i); }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Picture size: square pixels at 720 or 1080 lines, in the shape the picture has (4:3 or 16:9)."));
+        if (S.vLevel > 0 && S.vMs > 0) { ImGui::SameLine(); ImGui::TextDisabled("%.0f ms", (double)S.vMs); }
+        ImGui::SameLine();
+        if (ImGui::SmallButton(S.vAdvanced ? "Advanced <" : "Advanced >")) S.vAdvanced = !S.vAdvanced;
+        if (S.vAdvanced && S.vLevel > 0) {
+            auto sl = [](const char* label, const char* key, float& v, const char* tip) {
+                ImGui::SetNextItemWidth(120 * gUi);
+                if (ImGui::SliderFloat(label, &v, 0.f, 2.f, "%.2f")) plat::prefs().setI(key, (long)std::lround(v * 100));
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tip);
+            };
+            sl("noise (time)##vt", "atvVEnhT", S.vTemporal, "How much earlier pictures are blended in where nothing moves. 1 = the level's setting, 0 = off.");
+            sl("noise (space)##vs", "atvVEnhS", S.vSpatial, "Edge-preserving smoothing inside one picture (Full). 0 = off.");
+            sl("colour edges##vc", "atvVEnhC", S.vChroma, "Pulls the colour back to the brightness edges (Full). 0 = off.");
+            sl("sharpness##vh", "atvVEnhH", S.vSharpen, "Sharpening with noise coring and no ringing (Full). 0 = off.");
+        }
+    }
     S.enh.e.setSource("Analog TV frame");
     S.enh.controls("atvenh");
     const float rest = ImGui::GetContentRegionAvail().y;
