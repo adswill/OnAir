@@ -5,6 +5,7 @@
 #include "dect2/nrf24/nrf24_gen.h"
 #include "dect2/nrf24/nrf24_rx.h"
 #include "dect2/common/mathconst.h"
+#include <algorithm>
 #include <cmath>
 #include <random>
 
@@ -100,7 +101,13 @@ struct Nrf24Generator::Impl {
                 const double f = c.dialOffsetHz + c.cfoHz + cur[pos];
                 phase += 2 * math::kPi * f / c.rate;
                 if (phase > math::kPi) phase -= 2 * math::kPi; else if (phase < -math::kPi) phase += 2 * math::kPi;
-                re = c.amp * std::cos(phase); im = c.amp * std::sin(phase);
+                // the power amplifier ramps up and down over one bit (inside the 2 bits of carrier at each end) instead of being keyed on and off
+                // in one sample: a hard key-up puts a wideband click on the air (-38 dBc more than 3 occupied bandwidths away at 1 Mbit/s)
+                const size_t ramp = (size_t)std::max(2.0, std::round(c.rate / (curRate * 1e3)));
+                double w = 1;
+                if (pos < ramp) w = 0.5 * (1 - std::cos(math::kPi * ((double)pos + 0.5) / (double)ramp));
+                else if (cur.size() - 1 - pos < ramp) w = 0.5 * (1 - std::cos(math::kPi * ((double)(cur.size() - 1 - pos) + 0.5) / (double)ramp));
+                re = c.amp * w * std::cos(phase); im = c.amp * w * std::sin(phase);
                 if (++pos >= cur.size()) { inFrame = false; gapLeft = c.gapSec; }
             }
             if (sigma > 0) { re += sigma * nd(rng); im += sigma * nd(rng); }

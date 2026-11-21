@@ -2440,3 +2440,9 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21 Base CI failures on integ-45
+- tx_quality_b nrf24 (-38.5 dBc far power, Linux and macOS): the nRF24 generator keyed the carrier on and off in one sample, a click spread over the band (reproduced offline at -37.6 dBc). The burst now ramps over one bit inside the 2 bits of carrier at each end (-61 dBc). The test limit is unchanged.
+- native_tci (macOS): sockPeekClosed read a byte instead of peeking it, so the fake TCI/KiwiSDR/nRSP-ST servers (and nettuner, tx_iqstream) could lose the first byte of a message and drop the client, which then reconnected and sent iq_samplerate a second time. It now peeks (MSG_PEEK).
+- webapp (Windows): start and the mode switches used the 4 s HTTP timeout; they get the 20 s the loop over every mode already has.
+- ism_stall, inmsat_engine, winlink_extmodem: wall-clock tests, now labelled timing (run apart at -j 2, retried).

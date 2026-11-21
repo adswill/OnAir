@@ -26,7 +26,7 @@ inline long long sockPeekClosed(sock_t s) {
     fd_set rd; FD_ZERO(&rd); FD_SET(s, &rd);
     timeval tv{0, 0};
     if (select(0, &rd, nullptr, nullptr, &tv) <= 0) return -1;
-    char c; return recv(s, &c, 1, 0);
+    char c; return recv(s, &c, 1, MSG_PEEK);   // peek: a byte of the next message must stay in the stream
 }
 inline void sockShutdown(sock_t s) { shutdown(s, SD_BOTH); }
 inline void sockShutdownRead(sock_t s) { shutdown(s, SD_RECEIVE); }
@@ -52,7 +52,7 @@ constexpr int kSendFlags = 0;
 inline long long sockSend(sock_t s, const void* d, size_t n) { return send(s, d, n, kSendFlags); }
 inline long long sockSendTo(sock_t s, const void* d, size_t n, const sockaddr_in& to) { return sendto(s, d, n, kSendFlags, (const sockaddr*)&to, sizeof to); }
 inline long long sockRecv(sock_t s, void* d, size_t n) { return recv(s, d, n, 0); }
-inline long long sockPeekClosed(sock_t s) { char c; return recv(s, &c, 1, MSG_DONTWAIT); }
+inline long long sockPeekClosed(sock_t s) { char c; return recv(s, &c, 1, MSG_DONTWAIT | MSG_PEEK); }   // peek: a byte of the next message must stay in the stream
 inline void sockShutdown(sock_t s) { shutdown(s, SHUT_RDWR); }
 inline void sockShutdownRead(sock_t s) { shutdown(s, SHUT_RD); }
 } // namespace dect2
