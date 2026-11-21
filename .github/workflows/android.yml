@@ -10,8 +10,14 @@ on:
     tags: ['v*']
     branches: ['android-*']
     paths: ['android/**', '.github/workflows/android.yml']
+  schedule:
+    - cron: "47 3 * * *"   # nightly: the native link check below (and the ccache it saves, which a run on any branch can restore)
   workflow_dispatch:
     inputs:
+      link:
+        description: "Only the native link check on Linux (core + JNI bridge, no APK)"
+        type: boolean
+        default: false
       native:
         description: "Build libonair.so and the release APK (off: quick Kotlin-only debug build)"
         type: boolean
@@ -39,7 +45,7 @@ env:
 jobs:
   check:
     name: Kotlin check (no native library)
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') || (github.event_name == 'workflow_dispatch' && !inputs.native && !inputs.debug)
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/') || (github.event_name == 'workflow_dispatch' && !inputs.native && !inputs.debug && !inputs.link)
     runs-on: ubuntu-24.04
     defaults: { run: { working-directory: android } }
     steps:
@@ -74,9 +80,43 @@ jobs:
       - uses: actions/upload-artifact@v7
         with: { name: onair-android-debug-no-native, path: android/app/build/outputs/apk/debug/*.apk, retention-days: 7 }
 
+  # The link of the core and the JNI bridge with the NDK, on Linux (the APK job below needs macOS). The quick gate (tools/gate/gate_check.py android)
+  # only compares names with tools/gate/android_unreached.txt; this is the real link, so a call the Android library lacks fails the night it
+  # was merged, not on release day (4.4: av_dict_set_int). It also runs by hand (input "link").
+  link:
+    name: Native link (arm64-v8a, Linux)
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.link)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build tools and headers
+        run: tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 pkg-config ccache libhackrf-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
+      - uses: ./.github/actions/android-native-deps
+        with: { ndk: "${{ env.NDK_VERSION }}", cmake: "${{ env.CMAKE_VERSION }}" }
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-android-linux-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'android/native/CMakeLists.txt') }}-${{ github.run_id }}
+          restore-keys: |
+            ccache-android-linux-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'android/native/CMakeLists.txt') }}-
+            ccache-android-linux-
+      - name: libonair.so (core + JNI bridge)
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CCACHE_BASEDIR: ${{ github.workspace }}
+        run: JOBS=$(nproc) android/tools/build_native.sh
+      - name: Save ccache
+        if: always() && github.event_name == 'schedule'
+        uses: actions/cache/save@v6
+        with:
+          path: .ccache
+          key: ccache-android-linux-${{ hashFiles('CMakeLists.txt', 'cmake/**', 'android/native/CMakeLists.txt') }}-${{ github.run_id }}
+
   apk:
     name: Release APK (arm64-v8a)
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (inputs.native || inputs.debug))
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && (inputs.native || inputs.debug) && !inputs.link)
     runs-on: macos-15            # the maintainer's own build host: Homebrew gives the pkg-config headers the core configures with
     timeout-minutes: 120
     steps:
