@@ -31,6 +31,7 @@ AdsbTracker::AdsbTracker() {}
 void AdsbTracker::reset() {
     rec_.clear();
     frames_.clear();
+    pend_.clear();
     good_ = bad_ = corrected_ = 0;
     std::memset(dfCount_, 0, sizeof dfCount_);
     window_ = 0;
@@ -217,6 +218,52 @@ bool AdsbTracker::plausibleReply(const AdsbRaw& raw, int df, int len, uint32_t i
     return true;
 }
 
+// Many squitters repeat bit for bit: DF11 carries only the address, the identity and status messages change every few seconds, a parked or slow
+// aircraft repeats its position frame. Two copies of the same frame, each too noisy to pass the CRC, add up in the soft bits (the energy difference of
+// the half bits is proportional to the log-likelihood ratio, the noise being the same in both): 3 dB for two copies, 4.8 dB for three. Copies are found
+// by the Hamming distance of their hard bits (two copies at a bit error rate p differ in 2p(1-p) of the bits, unrelated frames in half of them), and the
+// only thing that makes a sum count is the 24 bit CRC of a DF11 / 17 / 18 frame, so a wrong match costs nothing but a few XORs.
+bool AdsbTracker::combineCopies(AdsbRaw& raw, bool store) {
+    const int L = raw.bits == 56 ? 56 : 112;
+    const int nb = L / 8;
+    while (!pend_.empty() && raw.timeSec - pend_.front().timeSec > 30.0) pend_.pop_front();
+    auto dist = [&](const AdsbRaw& a, const AdsbRaw& b) { int d = 0; for (int i = 0; i < nb; i++) d += __builtin_popcount((unsigned)(a.bytes[i] ^ b.bytes[i])); return d; };
+    const int limit = (int)(0.32 * L);
+    std::vector<const AdsbRaw*> mates;
+    for (const AdsbRaw& e : pend_) {
+        if (e.bits != L || std::fabs(raw.timeSec - e.timeSec) < 2e-4) continue;   // the same frame sliced again is not a second copy
+        if (dist(raw, e) <= limit) mates.push_back(&e);
+    }
+    bool done = false;
+    if (!mates.empty()) {
+        auto bitOf = [](const AdsbRaw& a, int k) { return (a.bytes[k >> 3] >> (7 - (k & 7))) & 1; };
+        auto attempt = [&](const std::vector<const AdsbRaw*>& g) {
+            AdsbRaw t = raw;
+            for (int k = 0; k < L; k++) {
+                double s = (bitOf(raw, k) ? 1.0 : -1.0) * raw.conf[k];
+                for (const AdsbRaw* e : g) s += (bitOf(*e, k) ? 1.0 : -1.0) * e->conf[k];
+                if (s == 0) continue;
+                const uint8_t m = (uint8_t)(0x80 >> (k & 7));
+                if (s > 0) t.bytes[k >> 3] |= m; else t.bytes[k >> 3] &= (uint8_t)~m;
+                t.conf[k] = (float)std::fabs(s);
+            }
+            const int df = (int)((t.bytes[0] >> 3) & 31);
+            if (L == 112 ? (df != 17 && df != 18) : df != 11) return false;
+            if (crc24(t.bytes, L) != 0) return false;
+            raw = t;
+            return true;
+        };
+        done = attempt(mates);
+        for (size_t i = 0; i < mates.size() && !done && mates.size() > 1; i++) done = attempt({mates[i]});
+        if (done) pend_.erase(std::remove_if(pend_.begin(), pend_.end(), [&](const AdsbRaw& e) { return e.bits == L && dist(raw, e) <= limit; }), pend_.end());
+    }
+    if (!done && store) {
+        pend_.push_back(raw);
+        if (pend_.size() > 24) pend_.pop_front();
+    }
+    return done;
+}
+
 bool AdsbTracker::accept(AdsbRaw& raw, AdsbFrame& out, bool countBad) {
     const double now = raw.timeSec;
     now_ = std::max(now_, now);
@@ -247,6 +294,17 @@ bool AdsbTracker::accept(AdsbRaw& raw, AdsbFrame& out, bool countBad) {
         len = raw.bits;
         icao = bitsAt(raw, 9, 24);
         for (int i = 0; i < 14; i++) fixed += __builtin_popcount(raw.bytes[i] ^ original[i]);
+    }
+    if (!ok && opt_.combine && countBad) {
+        const uint8_t before[14] = {raw.bytes[0], raw.bytes[1], raw.bytes[2], raw.bytes[3], raw.bytes[4], raw.bytes[5], raw.bytes[6], raw.bytes[7],
+                                    raw.bytes[8], raw.bytes[9], raw.bytes[10], raw.bytes[11], raw.bytes[12], raw.bytes[13]};
+        if (combineCopies(raw, true)) {
+            ok = trusted = true;
+            df = (int)bitsAt(raw, 1, 5);
+            len = raw.bits = df == 11 ? 56 : 112;
+            icao = bitsAt(raw, 9, 24);
+            for (int i = 0; i < 14; i++) fixed += __builtin_popcount(raw.bytes[i] ^ before[i]);
+        }
     }
     if (!ok) { if (countBad) bad_++; return false; }
 
