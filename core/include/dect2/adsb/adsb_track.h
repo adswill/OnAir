@@ -39,6 +39,7 @@ struct AdsbFrame {
 
 struct AdsbOptions {
     int fixBits = 1;             // error correction: 0 off, 1 one bit, 2 up to three of the least certain bits, 3 up to five of them for known aircraft whose altitude fits (Advanced)
+    bool combine = true;         // soft-combine repeated copies of frames that failed (identity, status, DF11 and the like repeat bit for bit): about 3 dB for two copies
     bool fixUnknown = false;     // also accept a repaired DF11 / 17 / 18 from an address that has not been heard cleanly
     double expirySec = 60;       // an aircraft that is silent for this long leaves the table
     double dropSec = 0;          // when set: this is the time to leave the table (the display option; expirySec still limits how long a fix is trusted)
@@ -121,6 +122,8 @@ private:
     void commitPosition(Rec& r, double lat, double lon, int kind, double now);
     void noteStats(const Rec& r);
     bool tryCorrect(AdsbRaw& raw, int len, uint32_t rem, double now);
+    bool combineCopies(AdsbRaw& raw, bool store);         // frames that failed: sum the soft bits of copies that agree closely, test the CRC of the sum
+    std::deque<AdsbRaw> pend_;                            // the last failed frames (112 and 56 bits), for combineCopies
     bool plausibleReply(const AdsbRaw& raw, int df, int len, uint32_t icao) const;
 
     AdsbOptions opt_;
