@@ -5,6 +5,7 @@
 // channel now, the user's memories) into a store that is rebuilt only when a source changed, lays them out for the view (autolabel_logic.h),
 // draws them on the spectrum and the waterfall and handles the click (tune, and open the label's mode) and the source toggles. Each plot
 // keeps its layout until the view, the size or the store changes, so a frame with nothing new costs a comparison and the drawing of a few boxes.
+#include "specx/general_auto_click.h"
 #include "../app.h"
 #include "../memory/memory_options.h"
 #include "../ui/ui_common.h"
@@ -266,7 +267,12 @@ void autoLabelsDraw(App& a, int plotId, ImVec2 plotMin, ImVec2 plotSize, double 
     }
     const float y0 = plotMin.y + top;
     dl->PushClipRect(ImVec2(plotMin.x, plotMin.y), ImVec2(plotMin.x + plotSize.x, plotMin.y + plotSize.y), true);
-    const bool plotHover = ImGui::IsMouseHoveringRect(plotMin, ImVec2(plotMin.x + plotSize.x, plotMin.y + plotSize.y)) && !ImGui::IsAnyItemActive();
+    // the plot's own hover (nothing in front) and a press that began on the plot: a list or window over it must not click a name under it (#595)
+    const bool over = ImGui::IsMouseHoveringRect(plotMin, ImVec2(plotMin.x + plotSize.x, plotMin.y + plotSize.y)) && plt::IsPlotHovered();
+    static dect2::genauto::ClickGate gate[2];
+    gate[plotId ? 1 : 0].frame(ImGui::IsMouseClicked(0), over);
+    const bool plotHover = over && !ImGui::IsAnyItemActive();
+    const bool clickOk = gate[plotId ? 1 : 0].accept(ImGui::IsMouseReleased(0), over);
     int hot = -1;
     if (plotHover) hot = autolabel::hit(sl.r, ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y, y0, rowH, rowGap);
     if (hot >= 0) gHovered = true;
@@ -313,7 +319,7 @@ void autoLabelsDraw(App& a, int plotId, ImVec2 plotMin, ImVec2 plotSize, double 
         ImGui::TextDisabled("%s", l.mode.empty() ? tr("Click to tune here") : tr("Click to tune here and open its mode"));
         ImGui::EndTooltip();
         const ImVec2 d = ImGui::GetMouseDragDelta(0, 0);
-        if (ImGui::IsMouseReleased(0) && std::fabs(d.x) < 4 && std::fabs(d.y) < 4) activate(a, l);
+        if (clickOk && std::fabs(d.x) < 4 && std::fabs(d.y) < 4) activate(a, l);
     }
     if (gNoteT > ImGui::GetTime() - 4 && plotId == 0) {
         const ImVec2 ts = ImGui::CalcTextSize(gNote.c_str());
