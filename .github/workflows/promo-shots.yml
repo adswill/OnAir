@@ -85,7 +85,7 @@ jobs:
             while [ -n "$rest" ]; do part=${rest##* --}; rest=${rest% --*}; flag=${part%% *}; val=""; [ "$flag" != "$part" ] && val=${part#* }
               if [ -n "$val" ]; then argv=("--$flag" "$val" "${argv[@]}"); else argv=("--$flag" "${argv[@]}"); fi; done
             HOME=$home XDG_CONFIG_HOME=$home/.config DECT2_UISCALE=$SCALE ONAIR_WINSIZE=$SIZE DECT2_WINSIZE=$SIZE LIBGL_ALWAYS_SOFTWARE=1 \
-              timeout 120 xvfb-run -a -s "-screen 0 $((W+64))x$((H+64))x24" "$D/bin/onair" --hidden --mute --no-first-run --shotdelay 8 --shot "$PWD/out/$name.png" "${argv[@]}" > "out/$name.log" 2>&1 || true
+              timeout 120 xvfb-run -a -s "-screen 0 $((W+64))x$((H+64))x24" "$D/bin/onair" --hidden --mute --no-first-run --autostart --shotdelay 14 --shot "$PWD/out/$name.png" "${argv[@]}" > "out/$name.log" 2>&1 || true
             [ -f "out/$name.png" ] && echo "ok $name" || echo "MISSING $name"
             rm -rf "$home"
           done
