@@ -4,6 +4,7 @@
 #include "dect2/qo100/qo100_plan.h"
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 
 namespace dect2 {
 namespace qo100 {
@@ -46,11 +47,57 @@ bool levelOverBeaconDb(const Qo100Telemetry& t, double levelDb, double& relDb) {
     return false;
 }
 
+ClickTune clickTune(double topHz, double widthHz) {
+    const PlanSegment* seg = segmentAt(topHz - 0.5 * widthHz);
+    const bool cw = widthHz < 400 && (!seg || seg->use == kPlanCw || seg->use == kPlanNarrowDigital || seg->use == kPlanBeacon);
+    if (cw) return {topHz - 700, "CW"};
+    const bool digital = seg && (seg->use == kPlanDigital || seg->use == kPlanNarrowDigital);
+    return {topHz - widthHz - 300, digital ? "USB (digital)" : "USB (SSB)"};
+}
+
+DatvQuality datvQuality(double esN0Db, bool decoding, bool tsLock) {
+    if (decoding && tsLock) return esN0Db >= kDatvThresholdDb + 6 ? kDatvGood : kDatvLocked;
+    if (esN0Db < 1.0) return kDatvNone;
+    if (esN0Db < kDatvThresholdDb + 1.5) return kDatvWeak;
+    return esN0Db >= kDatvThresholdDb + 6 ? kDatvGood : kDatvUsable;
+}
+
+const char* datvQualityName(DatvQuality q) {
+    static const char* const k[] = {"no signal", "weak", "strong enough to try", "locked", "good"};
+    return k[(int)q];
+}
+
+std::string LnbMemory::serialize() const {
+    std::string o;
+    for (const auto& kv : m_) { char b[64]; snprintf(b, sizeof b, "%s%lld:%.4f", o.empty() ? "" : ";", kv.first, kv.second); o += b; }
+    return o;
+}
+
+void LnbMemory::parse(const std::string& s) {
+    size_t at = 0;
+    while (at < s.size()) {
+        size_t e = s.find(';', at); if (e == std::string::npos) e = s.size();
+        const std::string item = s.substr(at, e - at);
+        at = e + 1;
+        const size_t c = item.find(':');
+        if (c == std::string::npos || c == 0) continue;
+        char* end1 = nullptr; char* end2 = nullptr;
+        const long long k = std::strtoll(item.c_str(), &end1, 10);
+        const double v = std::strtod(item.c_str() + c + 1, &end2);
+        if (end1 != item.c_str() + c || end2 == item.c_str() + c + 1 || !std::isfinite(v) || std::fabs(v) > 500) continue;
+        m_[k] = v;
+    }
+}
+
 std::string plainStatus(const Qo100Telemetry& t, bool running) {
     char b[200];
     if (!running) return "Start the receiver. It finds the beacons and corrects your LNB by itself.";
     if (t.rate <= 0) return "Waiting for samples from the radio.";
     if (t.state == 0) return "The narrowband transponder is outside the radio's band: press Narrowband only or Whole downlink.";
+    if (t.state == 1 && t.seeded) {
+        snprintf(b, sizeof b, "Looking for the beacons. Meanwhile the %.1f kHz LNB error remembered from last time is applied.", std::fabs(t.seedErrHz) / 1e3);
+        return b;
+    }
     if (t.state == 1) return "Looking for the two CW beacons. Check the dish points at QO-100 and the LO setting matches your LNB.";
     const double k = std::fabs(t.lnbErrHz) / 1e3;
     const char* held = t.state == 3 ? " Beacons lost for now: using the last correction." : "";

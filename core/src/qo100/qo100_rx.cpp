@@ -133,6 +133,7 @@ struct Qo100Receiver::Impl {
     bool nbOk = false;
     double nbOff = 0, nbRate = 0, nbUse = 0;
     Nco nbNco;
+    std::vector<cf32> inBuf;
     Decimator nbDec;
     Spec nbSpec;
     std::vector<double> nbAcc, nbAvg, srAcc;
@@ -196,7 +197,8 @@ struct Qo100Receiver::Impl {
 
     double tSec() const { return rate > 0 ? (double)inSamples / rate : 0; }
     std::atomic<bool> autoCorr{true};   // off: the beacons are still measured (shown) but no frequency is corrected (a GPS-locked LNB)
-    double corr() const { return corrValid && autoCorr.load() ? lnbErr : 0.0; }
+    std::atomic<double> seedErr{0};     // the error remembered for this LNB, used before the first lock
+    double corr() const { return !autoCorr.load() ? 0.0 : corrValid ? lnbErr : seedErr.load(); }
 
     void log(const char* s) { if (cb) cb(s); }
 
@@ -475,6 +477,7 @@ struct Qo100Receiver::Impl {
         t.state = state; t.rate = rate; t.centreIfHz = centreIf; t.loHz = lo; t.inverted = inv; t.nbOk = nbOk;
         t.wbOk = std::min(rc + 0.45 * rate, kWbHiHz) - std::max(rc - 0.45 * rate, kWbLoHz) >= 2e6;   // at least 2 MHz of the wideband transponder
         t.corrApplied = autoCorr.load();
+        t.seeded = !corrValid && seedErr.load() != 0; t.seedErrHz = seedErr.load();
         t.corrValid = corrValid; t.lnbErrHz = lnbErr; t.lnbErrPpm = lnbErr / lo * 1e6;
         t.lockSec = state == 2 ? tSec() - lockStart : 0;
         t.measurements = meas;
@@ -641,6 +644,7 @@ void Qo100Receiver::setLo(double hz) { if (hz > 0 && hz != p_->loReq.load()) { p
 void Qo100Receiver::setSearchHz(double hz) { p_->searchReq = std::clamp(hz, 5e3, 2e6); }
 void Qo100Receiver::setDialHz(double hz) { p_->dialReq = hz; }
 void Qo100Receiver::setAutoCorrection(bool on) { p_->autoCorr = on; }
+void Qo100Receiver::setSeedErrorHz(double hz) { p_->seedErr = std::isfinite(hz) ? std::clamp(hz, -2e6, 2e6) : 0.0; }
 void Qo100Receiver::setListen(bool on) { p_->listen.on = on; }
 bool Qo100Receiver::listening() const { return p_->listen.on.load(); }
 void Qo100Receiver::setVolume(float v) { p_->listen.volume = std::clamp(v, 0.f, 1.f); }
@@ -665,29 +669,34 @@ void Qo100Receiver::feed(const cf32* x, size_t n) {
     if (m.rate <= 0) return;
     if (m.resetReq.exchange(false) || !m.ok) m.setup();
     const size_t kChunk = 8192;
-    std::vector<cf32> in;
+    std::vector<cf32>& in = m.inBuf;   // kept between calls: no allocation per block
     for (size_t at = 0; at < n; at += kChunk) {
         const size_t c = std::min(kChunk, n - at);
-        in.assign(x + at, x + at + c);
-        for (cf32& v : in) {
+        in.resize(c);
+        if (m.nbOk && m.mixed.size() < c) m.mixed.resize(c);
+        // one pass: clean the samples, turn an inverted spectrum back, add up the power, and mix the narrowband centre to 0 Hz
+        for (size_t k = 0; k < c; k++) {
+            cf32 v = x[at + k];
             if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) v = cf32(0, 0);
             if (m.inv) v = std::conj(v);
             m.power += std::norm(v); m.nPower++;
+            in[k] = v;
+            if (m.nbOk) m.mixed[k] = m.nbNco.mix(v);
         }
-        // wideband: one block of wbN every wbHop samples
-        for (size_t k = 0; k < c; k++) {
-            if (m.wbSkip) { m.wbSkip--; continue; }
-            m.wbSpec.buf.push_back(in[k]);
+        // wideband: one block of wbN every wbHop samples (whole runs copied, the skipped stretches stepped over)
+        for (size_t k = 0; k < c;) {
+            if (m.wbSkip) { const size_t s = (size_t)std::min<uint64_t>(m.wbSkip, c - k); m.wbSkip -= s; k += s; continue; }
+            const size_t take = std::min(c - k, (size_t)m.wbN - m.wbSpec.buf.size());
+            m.wbSpec.buf.insert(m.wbSpec.buf.end(), in.begin() + (long)k, in.begin() + (long)(k + take));
+            k += take;
             if ((int)m.wbSpec.buf.size() == m.wbN) {
                 m.wbSpec.power(m.wbSpec.buf.data(), m.wbAcc); m.wbAccN++;
                 m.wbSpec.buf.clear();
                 m.wbSkip = m.wbHop - (uint64_t)m.wbN;
             }
         }
-        // narrowband: mix its centre to 0 Hz, decimate
+        // narrowband: decimate
         if (m.nbOk) {
-            if (m.mixed.size() < c) m.mixed.resize(c);
-            for (size_t k = 0; k < c; k++) m.mixed[k] = m.nbNco.mix(in[k]);
             m.nbS.clear();
             m.nbDec.process(m.mixed.data(), c, m.nbS);
             std::vector<cf32> nb;

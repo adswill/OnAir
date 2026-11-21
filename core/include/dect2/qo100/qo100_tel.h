@@ -140,6 +140,8 @@ struct Qo100Telemetry {
     bool corrValid = false;
     bool corrApplied = true;    // false: automatic frequency correction is switched off (the error is measured but not applied)
     double lnbErrHz = 0, lnbErrPpm = 0;
+    bool seeded = false;        // not locked yet, but the frequencies are corrected by the error remembered for this LNB (seedErrHz)
+    double seedErrHz = 0;
     double driftHzPerMin = 0;   // over the last 30 s
     bool driftValid = false;
     double lockSec = 0;         // since the lock was taken

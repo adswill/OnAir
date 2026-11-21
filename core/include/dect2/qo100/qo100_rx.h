@@ -44,6 +44,7 @@ public:
     void setSearchHz(double hz);         // how far from nominal the beacons are looked for (default 600 kHz)
     void setDialHz(double rfHz);         // SSB dial (USB suppressed carrier), corrected RF
     void setAutoCorrection(bool on);     // default on: the LNB error measured on the beacons corrects every frequency; off for a GPS-locked LNB
+    void setSeedErrorHz(double hz);      // the LNB error remembered from an earlier session: used until the beacons lock (0: none)
     void setListen(bool on);
     bool listening() const;
     void setVolume(float v);

@@ -100,6 +100,8 @@ struct State {
     RxTelemetry rx2;
     uint64_t rx2Seq = 0;
     std::string dvbsRefused;
+    q::LnbMemory lnbMem;            // the LNB error per LNB (nominal oscillator), prefs qo100LnbMem
+    double memSavedPpm = 1e9, memSavedT = -1e9;
 };
 State S;
 
@@ -133,6 +135,7 @@ void load() {
     S.cpuLimit = (float)std::clamp(p.getD("qo100Cpu", 0.7), 0.1, 4.0);
     S.autoListen = (int)std::clamp(p.getI("qo100AutoListen", 0), 0L, 2L);
     S.squelch = p.getB("qo100Squelch", true);
+    S.lnbMem.parse(p.getS("qo100LnbMem", ""));
 }
 void save() {
     auto& p = plat::prefs();
@@ -384,8 +387,8 @@ void wideView(App& a, float h) {
     if (!on) ImGui::TextDisabled("no spectrum yet");
     else if (!t.wbOk) ImGui::TextDisabled("the wideband transponder (10491 - 10499 MHz) is outside the radio's band: Whole downlink, 10 Msps");
     else if (t.datv.empty()) ImGui::TextDisabled("no DATV carrier seen");
-    else if (ImGui::BeginTable("##qodt", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV)) {
-        ImGui::TableSetupColumn("Downlink"); ImGui::TableSetupColumn("Symbol rate"); ImGui::TableSetupColumn("SNR"); ImGui::TableSetupColumn("");
+    else if (ImGui::BeginTable("##qodt", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV)) {
+        ImGui::TableSetupColumn("Downlink"); ImGui::TableSetupColumn("Symbol rate"); ImGui::TableSetupColumn("Es/N0"); ImGui::TableSetupColumn("Quality"); ImGui::TableSetupColumn("");
         ImGui::TableHeadersRow();
         int i = 0;
         for (const auto& d : t.datv) {
@@ -394,7 +397,17 @@ void wideView(App& a, float h) {
             ImGui::Text("%.3f%s", d.rfHz / 1e6, d.beacon ? " beacon" : "");
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("downlink %s, at the radio %s%s\n-3 dB width %.0f kHz", mhz(d.rfHz).c_str(), mhz(d.ifHz).c_str(), t.inverted ? " (inverted spectrum)" : "", d.bw3Hz / 1e3);
             ImGui::TableNextColumn(); ImGui::Text("%.0f ks/s", d.symRate / 1e3);
-            ImGui::TableNextColumn(); ImGui::Text("%.1f dB", d.snrDb);
+            {   // the carrier being decoded reports its own Es/N0 (the demodulator's); the others are estimated from the spectrum
+                const bool cur = decodingCarrier(a, d);
+                const double es = cur && S.rx2.dvbs.state > 0 ? (double)S.rx2.dvbs.snrDb : (double)d.snrDb;
+                const q::DatvQuality dq = q::datvQuality(es, cur, cur && S.rx2.dvbs.tsLock);
+                ImGui::TableNextColumn(); ImGui::Text("%s%.1f dB", cur ? "" : "~", es);
+                ImGui::TableNextColumn();
+                ImGui::TextColored(dq == q::kDatvGood || dq == q::kDatvLocked ? ImVec4(0.4f, 0.9f, 0.5f, 1.f) : dq == q::kDatvNone ? ImVec4(0.6f, 0.6f, 0.6f, 1.f) : pal::warnAmber(),
+                                   "%s", q::datvQualityName(dq));
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("Es/N0 %.1f dB, %+.1f dB over what DVB-S2 QPSK 1/2 needs (about %.0f dB)%s", es, q::datvMarginDb(es), q::kDatvThresholdDb,
+                                                              cur ? "" : "\nestimated from the spectrum; decode the carrier for the demodulator's own reading");
+            }
             ImGui::TableNextColumn();
             if (d.looksDvbs) {
                 const bool cur = decodingCarrier(a, d);
@@ -749,6 +762,21 @@ void tick(App& a) {
     auto& r = a.engine.qo100();
     r.setLo(loHz());
     r.setAutoCorrection(S.autoCorr);
+    {   // the LNB error remembered for this LNB starts the session already corrected; a lock refreshes it (at most every 30 s, when it moved 0.05 ppm)
+        double mem = 0;
+        r.setSeedErrorHz(S.lnbMem.recall(nominalLoHz(), mem) ? (mem - S.lnbPpm) * 1e-6 * loHz() : 0.0);
+        const auto& tl = T(a);
+        const double now = glfwGetTime();
+        if (live(a) && tl.state == 2 && tl.corrValid && tl.measurements > 5 && now - S.memSavedT > 30) {
+            const double total = S.lnbPpm + tl.lnbErrPpm;
+            if (std::fabs(total - S.memSavedPpm) > 0.05) {
+                S.lnbMem.remember(nominalLoHz(), total);
+                plat::prefs().setS("qo100LnbMem", S.lnbMem.serialize());
+                S.memSavedPpm = total;
+            }
+            S.memSavedT = now;
+        }
+    }
     if (!S.listenConv && !S.autoListen) r.setDialHz(S.dialHz);   // else the receiver moves it with the conversation
     r.setListen(S.listen);
     r.setVolume(a.volume); r.setMuted(a.muted);
@@ -859,14 +887,15 @@ void list(App& a) {
         static const char* const kB[] = {"CW beacon", "PSK beacon", "CW beacon"};
         char b[96];
         snprintf(b, sizeof b, "%.4f  %4.0f dB  %s##qs%d", s.rfHz / 1e6, s.snrDb, s.beacon >= 0 ? kB[s.beacon] : s.cls != dect2::kQoUnknown ? dect2::qo100ClassName(s.cls) : s.widthHz > 400 ? "SSB" : "carrier", i++);
-        if (ImGui::Selectable(b)) { setDial(s.widthHz > 400 ? s.rfHz - 600 : s.rfHz - 700); S.view = 0; }
+        const q::ClickTune ct = q::clickTune(s.rfHz, s.widthHz);
+        if (ImGui::Selectable(b)) { setDial(ct.dialHz); S.view = 0; }
         if (ImGui::IsItemHovered()) {
             const q::PlanSegment* seg = q::segmentAt(s.rfHz);
             const std::string prob = q::planProblem(s.rfHz, s.widthHz);
             double rel = 0; const bool hasRel = s.beacon != 1 && q::levelOverBeaconDb(t, s.levelDb, rel);
             char lv[48] = ""; if (hasRel) snprintf(lv, sizeof lv, "\n%+.0f dB against the middle beacon", rel);
-            ImGui::SetTooltip("%s, %.0f Hz wide\nband plan: %s%s%s%s\nclick: put the dial on it", mhz(s.rfHz, 6).c_str(), s.widthHz, seg ? seg->name : "outside",
-                              s.beacon >= 0 || prob.empty() ? "" : "\nnote: ", s.beacon >= 0 ? "" : prob.c_str(), lv);
+            ImGui::SetTooltip("%s, %.0f Hz wide\nband plan: %s%s%s%s\nclick: tune it in as %s", mhz(s.rfHz, 6).c_str(), s.widthHz, seg ? seg->name : "outside",
+                              s.beacon >= 0 || prob.empty() ? "" : "\nnote: ", s.beacon >= 0 ? "" : prob.c_str(), lv, ct.mode);
         }
     }
 }
