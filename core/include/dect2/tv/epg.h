@@ -20,6 +20,8 @@
 
 namespace dect2 {
 
+struct EpgEvent;   // ts.h: what TsDemux keeps per program (DVB EIT and ATSC PSIP alike)
+
 struct ServiceKey {
     int onid = 0, tsid = 0, sid = 0;
     bool operator<(const ServiceKey& o) const { return onid != o.onid ? onid < o.onid : tsid != o.tsid ? tsid < o.tsid : sid < o.sid; }
@@ -107,6 +109,9 @@ public:
     // `now` bounds what is accepted (expired and far-future events are refused). Returns true when the database changed.
     bool ingest(const ServiceKey& k, const EpgItem& ev, int64_t now);
     void ingestSection(const EitSection& s, int64_t now);
+    // The guide of TsDemux (program number -> events), which also holds what ATSC PSIP (EIT 0xCB + ETT 0xCC) carried: the DVB collector never sees those
+    // tables, so the Guide tab fills from this for an 8-VSB multiplex. Returns the events that changed the database.
+    size_t ingestDemux(int onid, int tsid, const std::map<int, std::vector<EpgEvent>>& epg, int64_t now);
     size_t prune(int64_t now);         // expire; returns the number removed
     void clear();
 

@@ -72,7 +72,7 @@ struct TvRec {
     int padPre = 60, padPost = 300;
     std::vector<ServiceKey> order;
     std::map<ServiceKey, std::vector<EpgItem>> rows;
-    double rowsT = -10;
+    double rowsT = -10, psipT = 0;
     // recordings UI
     std::vector<RecordingEntry> recs;
     std::string msg;
@@ -356,6 +356,11 @@ void tick(App& a) {
         if (s.mode == PmFile && !s.loading && s.feeder.atEnd()) { /* the bar shows "end"; Stop returns to live */ }
     }
     if (s.schedDirty && t - s.lastSave > 5) { s.rec.schedule().save(s.dir + "/schedule.json"); s.schedDirty = false; s.lastSave = t; }
+    // ATSC: the guide of the player (PSIP EIT/ETT) is the only one there is, the DVB collector above never sees it
+    if (a.engine.running() && !a.epg.empty() && t - s.psipT > 2.0 && a.engine.epgIsPsip()) {
+        s.psipT = t;
+        s.epg.ingestDemux(a.ts.onid, a.ts.tsid, a.epg, nowUtc());
+    }
     static double epgSave = 0;
     if (t - epgSave > 300 && s.epg.count() > 0) { epgSave = t; s.epg.save(s.dir + "/epg.json"); }
 }

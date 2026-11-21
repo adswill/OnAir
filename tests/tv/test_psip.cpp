@@ -5,6 +5,7 @@
 #include "dect2/tv/ts.h"
 #include "dect2/tv/ts_proto.h"
 #include "dect2/tv/psip.h"
+#include "dect2/tv/epg.h"
 #include <cstdio>
 #include <cstring>
 #include <vector>
@@ -38,6 +39,15 @@ int main() {
         CHECK(e.duration == 3600, "duration %d", e.duration);
         CHECK(e.start == 1400001000 + 315964800 - 18, "start %lld", (long long)e.start);
         CHECK(e.eventId == 42, "event id %d", e.eventId);
+    }
+    {   // the Guide tab reads EpgDb, which only the DVB collector filled: the PSIP guide of the demux must reach it
+        CHECK(d.epgIsPsip(), "the demux reports a PSIP guide");
+        EpgDb db;
+        const int64_t t0 = 1400001000 + 315964800 - 18;
+        CHECK(db.ingestDemux(0, 1234, ep, t0) == 1, "one event reaches the guide database");
+        EpgItem cur, nx;
+        CHECK(db.nowNext(ServiceKey{0, 1234, 3}, t0 + 60, &cur, &nx) && cur.title == "Evening News" && cur.extended == "Local headlines and weather.", "now/next of program 3 in the database");
+        CHECK(db.count() == 1 && db.services().size() == 1, "one service in the database");
     }
     {   // compressed text: left blank and flagged; damaged section refused
         bool c = false; std::string t;
