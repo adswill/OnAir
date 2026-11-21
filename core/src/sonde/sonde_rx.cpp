@@ -5,6 +5,7 @@
 #include "dect2/session/mode_adapters.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/sonde/sonde_rx.h"
+#include "dect2/net/sonde_activity.h"
 #include "dect2/net/sonde_upload.h"
 #include "dect2/net/sondehub.h"
 #include "dect2/automation/engine.h"
@@ -661,6 +662,7 @@ struct SondeReceiver::Impl {
             if (s.sats >= 0) ev.num("sats", s.sats);
             automation::emit(std::move(ev));
         }
+        sondeactivity::noteFrame();   // any decoded frame: the uploaders may connect and beacon (sonde_activity.h)
         if (f.hasPos && SondeUpload::get().wanted()) {   // the aggregator upload (sonde_upload.h): off unless the user enabled a target; it rate-limits per sonde itself
             SondeInfo up = s;
             up.freqHz = centerHz > 0 ? centerHz + s.offsetHz : r->announcedHz;

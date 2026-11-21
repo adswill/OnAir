@@ -88,7 +88,10 @@ void predictionDraw(ImDrawList* dl, const SondeInfo* sel, float mapW, ImVec2 p0,
     const double now = (double)time(nullptr);
     dect2::tawhiri::Request rq;
     std::string why;
-    if (dect2::tawhiri::requestFor(*sel, S.predBurstKm * 1000.0, S.predDescent, now, rq, &why)) predictor().request(sel->serial, rq, ImGui::GetTime());
+    if (dect2::tawhiri::requestFor(*sel, S.predBurstKm * 1000.0, S.predDescent, now, rq, &why)) {
+        predictor().minGapS = rq.descending && rq.altM < 3000 ? 15 : 60;   // low and falling: the landing point matters, ask every 15 s
+        predictor().request(sel->serial, rq, ImGui::GetTime());
+    }
     dect2::tawhiri::Result r; double made = 0;
     std::string note;
     if (predictor().result(sel->serial, r, made) && r.ok) {
@@ -118,6 +121,7 @@ void predictionDraw(ImDrawList* dl, const SondeInfo* sel, float mapW, ImVec2 p0,
         dl->AddText(ImVec2(e.x + 9 * gUi, e.y - 7 * gUi), col, t);
         char n[160]; snprintf(n, sizeof n, "Prediction (Tawhiri, SondeHub predictor), %.0f s old: a forecast from wind models, not a measurement", ImGui::GetTime() - made);
         note = n;
+        if (!predictor().note().empty()) note += " | newest answer not used: " + predictor().note();
     } else if (r.ok == false && !r.error.empty()) note = "Prediction: " + r.error;
     else note = predictor().busy() ? "Prediction: asking the SondeHub predictor" : "Prediction: " + why;
     if (!note.empty()) {

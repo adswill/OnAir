@@ -3,6 +3,7 @@
 
 // Radiosonde upload to APRS-IS aggregators (sonde_upload.h): formats, one thread, a socket per enabled target.
 #include "dect2/net/sonde_upload.h"
+#include "dect2/net/sonde_activity.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/common/timecompat.h"
 #include "dect2/net/aprs_gate.h"
@@ -192,6 +193,11 @@ struct SondeUpload::Impl {
         const SondeUploadTarget& tg = live[i];
         Live& l = L[i]; SondeUploadStatus& s = st[i];
         if (!tg.enabled) return;
+        if (!sondeactivity::activeAt(t)) {   // no radiosonde decoded lately (DAB, TV, ...): not connected, so no station shows as active
+            if (l.s != kBadSock) closeOne(i);
+            s.state = "idle: connects when a radiosonde is decoded";
+            return;
+        }
         if (tg.host.empty() || tg.port <= 0 || tg.port > 65535) { s.state = "needs a host and a port"; return; }
         if (!aprsValidCallsign(tg.call)) { s.state = "needs a valid callsign (like DG9BFC-10)"; return; }
         if (l.s == kBadSock) {
@@ -338,6 +344,7 @@ void SondeUpload::setStation(double lat, double lon, bool set, double altM) {
 void SondeUpload::setTiming(const SondeUploadTiming& t) { std::lock_guard<std::mutex> lk(impl_->mu); impl_->tm = t; }
 
 void SondeUpload::frame(const SondeInfo& s, double wallUtc) {
+    sondeactivity::noteFrame();
     if (!wanted() || !s.hasPos) return;
     Impl& I = *impl_;
     const std::string name = sondeup::objectName(s);

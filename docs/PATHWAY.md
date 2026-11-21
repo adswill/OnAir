@@ -2485,3 +2485,9 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 - #566: in a protocol entry (Meshtastic, MeshCore, ...) the Map, Chat, Packets and Telemetry views (and the dashboard packet list) now show only that protocol, as Nodes already did. A Clear button exists in the Mesh and MeshCore lists since 4.4.
 - #585: the web app now says on a DAB panel that the station list and DAB audio are only in the desktop and Android apps (no web DAB service list or audio exists yet).
 - #595 and #590 skipped: no cause found in the code, both need a repro (Linux SSB 7.084 Auto notch; Windows 11 wizard clicks).
+## 2026-11-21 SondeHub beacon and end-of-flight prediction (#526, WP5)
+- The SondeHub station record (listener beacon) is now sent only while sonde frames are arriving (one in the last 2 minutes), so DAB, TV and other modes never beacon. Upload itself stays developer-only (ONAIR_SONDEHUB=1) as decided for #526; telemetry validation is up to SondeHub and the owner.
+- Tawhiri prediction: a new answer is checked (landing near the sonde for its height, not in the past, finite); a failed or implausible answer no longer replaces the earlier good one (the map note says so). A falling sonde below 3000 m asks every 15 s instead of 60 s. Test: sonde_map_overlay (plausible).
+
+## 2026-11-21 Balloon uploaders only while a sonde is decoded (#526 follow-up, Sigi)
+- New shared helper dect2/net/sonde_activity.h: the decoder notes every frame; the APRS-IS aggregators (wettersonde.net, radiosondy.info) now connect and beacon only while a frame came in during the last 2 minutes and disconnect when it stays quiet (status "idle"), so the receiver is not shown active in DAB/TV/other modes. The SondeHub station record uses the same helper (replaces its own timer). Upload settings are unchanged. No other balloon uploader exists in the code (Horus has screens only, no upload). Test: test_sonde_upload (idle, then connects).
