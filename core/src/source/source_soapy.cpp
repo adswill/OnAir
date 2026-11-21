@@ -844,25 +844,37 @@ std::vector<DeviceInfo> listSoapyDevices(std::string& err) {
 }
 
 // A SoapySDR device given by its arguments that is not enumerated (a SoapyRemote server the user added): its ranges once it was started
-DeviceInfo soapyDeviceFor(const std::string& args, const std::string& board, const std::string& name) {
+// A radio with several antenna inputs (known from listAntennas() when it was last started) gets one more entry per input, like the enumerated ones.
+void soapyDevicesFor(std::vector<DeviceInfo>& out, const std::string& args, const std::string& board, const std::string& name) {
     DeviceInfo d;
     d.kind = DeviceInfo::Soapy;
     d.board = board;
     d.soapyArgs = args;
     d.name = name;
+    std::vector<std::string> antennas;
     {
         std::lock_guard<std::mutex> lk(gRangesMu);
-        const auto it = gRanges.find(rangesKey(d.serial, d.soapyArgs));
+        const auto it = gRanges.find(rangesKey(d.serial, deviceArgs(d.soapyArgs)));
         if (it != gRanges.end()) {
             const SoapyRanges& r = it->second;
             d.minRateHz = r.minRate; d.maxRateHz = r.maxRate; d.rateRanges = r.rates; d.gainMinDb = r.gainMin; d.gainMaxDb = r.gainMax; d.minFreqHz = r.minFreq; d.maxFreqHz = r.maxFreq;
             d.hasBiasTee = !r.biasKey.empty();
             d.settings = r.settings;
+            antennas = r.antennas;
             applyTxInfo(d, board, &r);
         } else applyTxInfo(d, board, nullptr);
     }
     d.settings.insert(d.settings.begin(), ppmSetting(0.01));
-    return d;
+    out.push_back(d);
+    // a string that already names an antenna ("...#antenna=B") selects it and is not expanded
+    if (antennas.size() > 1 && args.find(kAntennaTag) == std::string::npos) {
+        for (const auto& a : antennas) {
+            DeviceInfo e = d;
+            e.soapyArgs = args + kAntennaTag + a;
+            e.name = name + " antenna " + a;
+            out.push_back(e);
+        }
+    }
 }
 
 bool soapyLearnRanges(DeviceInfo& d) {

@@ -22,7 +22,7 @@
 namespace dect2 {
 
 #ifdef DECT2_HAVE_SOAPY
-DeviceInfo soapyDeviceFor(const std::string& args, const std::string& board, const std::string& name);   // source_soapy.cpp
+void soapyDevicesFor(std::vector<DeviceInfo>& out, const std::string& args, const std::string& board, const std::string& name);   // source_soapy.cpp
 #endif
 
 namespace {
@@ -286,7 +286,7 @@ std::vector<DeviceInfo> netRadioDevices(const std::vector<NetRadio>& v) {
         }
         case NetRadio::SoapyArgs:
 #ifdef DECT2_HAVE_SOAPY
-            if (!r.remote.empty()) out.push_back(soapyDeviceFor(r.remote, "soapy", netRadioDeviceName(r)));
+            if (!r.remote.empty()) soapyDevicesFor(out, r.remote, "soapy", netRadioDeviceName(r));
 #endif
             break;
         case NetRadio::SoapyRemote:
@@ -294,12 +294,12 @@ std::vector<DeviceInfo> netRadioDevices(const std::vector<NetRadio>& v) {
         {
             const std::string hp = hostPort(cleanHost(r.host), netRadioPort(r));
             const auto offers = r.remote.empty() ? soapyRemoteListNoBlock(r) : std::vector<RemoteSoapyDevice>();
-            if (offers.empty()) out.push_back(soapyDeviceFor(soapyArgs(r), "remote", netRadioDeviceName(r)));
+            if (offers.empty()) soapyDevicesFor(out, soapyArgs(r), "remote", netRadioDeviceName(r));
             for (const auto& o : offers) {
                 NetRadio one = r;
                 one.remote = "driver=" + o.driver + (o.serial.empty() ? "" : ",serial=" + o.serial);
                 const std::string det = o.label.empty() ? o.serial : o.label;
-                out.push_back(soapyDeviceFor(soapyArgs(one), "remote", "SoapyRemote " + hp + ": " + o.driver + (det.empty() ? "" : " (" + det + ")") + " (network)"));
+                soapyDevicesFor(out, soapyArgs(one), "remote", "SoapyRemote " + hp + ": " + o.driver + (det.empty() ? "" : " (" + det + ")") + " (network)");
             }
         }
 #endif

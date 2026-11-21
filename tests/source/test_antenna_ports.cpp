@@ -39,6 +39,13 @@ int main() {
     CHECK(antennaSiblings(v, 10).empty());
     CHECK(antennaSiblings(v, 0).empty() && antennaSiblings(v, 99).empty());
     CHECK(!antennaPortHint(v[4], "C").empty());
+    {   // a SoapyRemote / manually entered string: the ports group by everything before the suffix
+        const std::string r = "driver=remote,remote=tcp://192.168.3.141:55132,remote:driver=sdrplay,remote:prot=tcp";
+        std::vector<DeviceInfo> w{soapy(r, ""), soapy(r, "Antenna A"), soapy(r, "Antenna B"), soapy(r, "Antenna C")};
+        auto rs = antennaSiblings(w, 3);
+        CHECK(rs.size() == 3 && rs[0].devIdx == 1 && rs[2].label == "Antenna C");
+        CHECK(antennaSiblings(w, 0).empty());   // the entry without a suffix is the driver's default, not a port
+    }
     if (!fails) puts("antenna ports OK");
     return fails ? 1 : 0;
 }
