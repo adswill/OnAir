@@ -147,10 +147,8 @@ void pruneHits(double now) {
 }
 
 void stop(App& a, bool preserveSelection = false) {
-    if (!H.scanning) {
-        H.restartPending = false;
-        return;
-    }
+    // A stop during a pending restart still has to give the audio back: the restart's earlier stop() calls left the wide-all session and the exclusive audio on.
+    if (!H.scanning && !H.restartPending) return;
     const double now = ImGui::GetTime();
     for (auto& kv : H.hits) finish(kv.second, now);
     H.scanning = false;
@@ -593,7 +591,7 @@ void voiceScoutWindow(App& a) {
         else H.lastHop = ImGui::GetTime();
     }
     if (!a.voiceScoutOpen) return;
-    ImGui::SetNextWindowSize(ImVec2(760 * gUi, 485 * gUi), ImGuiCond_FirstUseEver);
+    firstWindowSize(760 * gUi, 485 * gUi);
     if (!ImGui::Begin(trw("Voice scout"), &a.voiceScoutOpen)) { ImGui::End(); return; }
     ImGui::Text("Scan range: %.6f - %.6f MHz (recentered if the view leaves it)", H.fromMHz, H.toMHz);
     ImGui::BeginDisabled(H.scanning || H.restartPending);
