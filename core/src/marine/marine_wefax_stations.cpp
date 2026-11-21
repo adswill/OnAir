@@ -29,7 +29,6 @@ const std::vector<WefaxStation>& wefaxStations() {
         {"VFA", "Inuvik (CCG, summer)", "VFA", "Canada", "North America", {4292, 8457.8}},
         // Asia
         {"JMH", "Tokyo (Japan Meteorological Agency)", "JMH", "Japan", "Asia", {3622.5, 7795, 13988.5}},
-        {"JJC", "Kyodo News, Tokyo", "JJC", "Japan", "Asia", {4316, 8467.5, 12745.5, 16971, 17069.6, 22542}},
         {"JFX", "Kagoshima (Japan Coast Guard)", "JFX", "Japan", "Asia", {4274, 8658, 13074, 16907.5, 22559.6}},
         {"HLL2", "Seoul (KMA)", "HLL2", "South Korea", "Asia", {3585, 5857.5, 7433.5, 9165, 13570}},
         {"BAF", "Beijing", "BAF", "China", "Asia", {5526.9, 8121.9, 10116.9, 14366.9, 16025.9, 18236.9}},
@@ -88,7 +87,6 @@ const std::vector<WefaxBroadcast>& wefaxBroadcasts() {
         {"JMH", m(900), 120, 576, "Asia surface analysis", true},
         {"JMH", m(1500), 120, 576, "Asia surface analysis", true},
         {"JMH", m(2100), 120, 576, "Asia surface analysis", true},
-        {"JJC", m(0), 60, 576, "Weather charts and news", true},
         {"HLL2", m(330), 120, 576, "Surface analysis", true},
         {"HLL2", m(1530), 120, 576, "Surface analysis", true},
         {"BMF", m(200), 120, 576, "Surface analysis", true},

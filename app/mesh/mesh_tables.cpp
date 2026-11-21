@@ -149,6 +149,7 @@ void telemetryTable(const App& a) {
                   "pressure_hpa", "lat", "lon", "alt_m"};
         const double now = dect2::timesrc::wallNow();
         for (const auto& r : t.readings) {
+            if (!shows(a, r.protocol)) continue;
             const double ep = meshEpochOf(t, r.unixTime, r.timeSec, now);
             x.add({meshTime(ep), resexp::num(a.freqMhz * 1e6, 0), protoName(r.protocol), nameOf(r), r.id, opt(r.batteryPct, 0), opt(r.voltage, 2), opt(r.channelUtilPct, 1),
                    opt(r.airUtilTxPct, 1), r.uptimeS >= 0 ? std::to_string(r.uptimeS) : "", r.hasEnv ? resexp::num(r.tempC, 1) : "", r.hasEnv ? resexp::num(r.humidity, 0) : "",
@@ -168,10 +169,12 @@ void telemetryTable(const App& a) {
     ImGui::TableHeadersRow();
     if (on) {
         ImGuiListClipper clip;   // up to 2000 rows: draw only the visible ones
-        clip.Begin((int)t.readings.size());
+        std::vector<const dect2::MeshReading*> rows;
+        for (size_t i = t.readings.size(); i-- > 0;) if (shows(a, t.readings[i].protocol)) rows.push_back(&t.readings[i]);
+        clip.Begin((int)rows.size());
         while (clip.Step())
             for (int row = clip.DisplayStart; row < clip.DisplayEnd; row++) {
-                const dect2::MeshReading& r = t.readings[t.readings.size() - 1 - (size_t)row];
+                const dect2::MeshReading& r = *rows[(size_t)row];
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();   // clock time (this is a history), the date in the tooltip
                 {
@@ -203,6 +206,7 @@ void packetTable(const App& a) {
                   "detail", "raw", "packet_id", "relay_node", "next_hop", "via_mqtt", "cfo_hz", "jumps_fixed"};
         const double now = dect2::timesrc::wallNow();
         for (const dect2::MeshPacket& p : t.packets) {
+            if (!shows(a, p.protocol)) continue;
             const double ep = meshEpochOf(t, p.unixTime, p.timeSec, now);
             // Meshtastic header: the packet id ties together the copies of one packet (flood) and the same packet seen by the node or MQTT;
             // relay_node is who sent this copy, next_hop who should send it on (last byte of the node number, 0 = none)
@@ -230,6 +234,7 @@ void packetTable(const App& a) {
     if (on) {
         for (size_t i = t.packets.size(); i-- > 0;) {
             const dect2::MeshPacket& p = t.packets[i];
+            if (!shows(a, p.protocol)) continue;
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); ImGui::TextUnformatted(clock(p.timeSec).c_str());
             ImGui::TableNextColumn(); ImGui::TextColored(protoColour(p.protocol), "%s", protoTag(p.protocol));

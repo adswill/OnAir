@@ -32,7 +32,7 @@ void mapView(App& a, ImVec2 size) {
     int shown = 0;
     if (on) {
         for (const auto& n : t.nodes) {
-            if (!n.hasPosition) continue;
+            if (!n.hasPosition || !shows(a, n.protocol)) continue;
             shown++;
             const ImVec2 q = adsbmap::project(n.lat, n.lon);
             const bool sel = S.sel == nodeKey(n);
@@ -54,7 +54,7 @@ void mapView(App& a, ImVec2 size) {
     const dect2::MeshAprsStation* tipA = nullptr;
     if (on) {
         for (const auto& s : t.aprsStations) {
-            if (!s.st.hasPos) continue;
+            if (!s.st.hasPos || !shows(a, s.protocol)) continue;
             shown++;
             const ImVec2 q = adsbmap::project(s.st.lat, s.st.lon);
             const bool sel = S.sel == aprsKey(s);
@@ -163,6 +163,7 @@ void chatView(const App& a) {
     std::vector<std::string> chans;      // "<protocol digit><channel>"
     if (on) {
         for (const auto& m : t.messages) {
+            if (!shows(a, m.protocol)) continue;
             const std::string k = std::to_string(m.protocol) + m.channel;
             if (std::find(chans.begin(), chans.end(), k) == chans.end()) chans.push_back(k);
         }
@@ -181,11 +182,12 @@ void chatView(const App& a) {
         ImGui::EndCombo();
     }
     ImGui::SameLine(0, 10 * gUi);
-    ImGui::TextDisabled("%zu messages", t.messages.size());
+    { size_t nm = 0; for (const auto& m : t.messages) nm += shows(a, m.protocol) ? 1 : 0; ImGui::TextDisabled("%zu messages", nm); }
     ImGui::BeginChild("##mchat", ImVec2(0, 0), ImGuiChildFlags_Borders);
     bool any = false;
     if (on) {
         for (const auto& m : t.messages) {
+            if (!shows(a, m.protocol)) continue;
             if (S.chatChannel > 0 && std::to_string(m.protocol) + m.channel != chans[S.chatChannel - 1]) continue;
             any = true;
             ImGui::TextDisabled("%s", clock(m.timeSec).c_str());

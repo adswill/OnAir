@@ -2440,3 +2440,10 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21: app UI, web and data fixes (#565, #566, #585)
+
+- #565: removed Kyodo (JJC) from the fax station list and its schedule row (service ended 2026-09-22).
+- #566: in a protocol entry (Meshtastic, MeshCore, ...) the Map, Chat, Packets and Telemetry views (and the dashboard packet list) now show only that protocol, as Nodes already did. A Clear button exists in the Mesh and MeshCore lists since 4.4.
+- #585: the web app now says on a DAB panel that the station list and DAB audio are only in the desktop and Android apps (no web DAB service list or audio exists yet).
+- #595 and #590 skipped: no cause found in the code, both need a repro (Linux SSB 7.084 Auto notch; Windows 11 wizard clicks).
