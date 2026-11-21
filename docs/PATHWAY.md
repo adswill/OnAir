@@ -2440,3 +2440,9 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21: Synthetic-signal decode check, family 4 (generator exists, decode not proven)
+
+- The QA sweep (tests/qa/test_qa_sweep.cpp) no longer passes a bare lock for modes that decode frames, text or lines (`needsDecode`); `QA_MODES` accepts `#<std>`. Ran the 32 post-3.9 rows on Linux through quick.yml: 25 decode their own signal clean (blocks counted). FleetSync did not: the chanvoice telemetry counted only calls in `blocksOk`, not MDC-1200 / FleetSync bursts (decoder-side telemetry bug, fixed). CIS-36 / OFDM HDR / CIS-128 / CIS-3000 are identification-only by design (tests/cishf checks the "identified" line), so they are not in the strict set.
+- The 11 lock-only modes of the 3.9 table (Geoscan, Lucky-7, Spino, Erminaz, Weather fax, STANAG 4285, Datawell, Time signals, Meteor scatter, HF beacons, PSK demodulator) count no decode through the engine on Linux and macOS (Geoscan reaches state 1 and no frame; Datawell reaches state 2 and no vector within 8 s). Their unit tests decode through the receiver directly, and several keep their count outside `blocksOk`. Recorded as open in qa_known.inc (`<id>/*`); cause not yet located (decoder or engine path vs generator not decided).
+- Known entries added for rpr (HF offset), cp16 tx and cdma2000 pos/neg/snr (open). Not run: the 14 failing / not-run rows (long slots, silence by design) and the hamsci monitors.
