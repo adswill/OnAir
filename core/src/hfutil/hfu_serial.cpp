@@ -531,6 +531,9 @@ struct SerialRx::Impl {
         uint64_t dataAfterSom = 0;
         uint64_t since = 0;
         float score = 0;
+        std::deque<std::pair<float, float>> pend;   // soft pairs waiting for their decoded bit, to re-encode and compare
+        uint32_t enc = 0;
+        double agree = 0, cmp = 0;
     };
     std::vector<Hyp> hyps;
     int locked = -1;
@@ -995,10 +998,20 @@ struct SerialRx::Impl {
                 for (int r = 0; r < h.p->rep; r++) { a += h.rep[(size_t)(2 * r)]; b += h.rep[(size_t)(2 * r + 1)]; }
                 h.rep.erase(h.rep.begin(), h.rep.begin() + 2 * h.p->rep);
                 h.v.push(a, b);
+                h.pend.push_back({a, b});
             }
             std::vector<uint8_t> o;
             h.v.take(o);
             for (auto b2 : o) {
+                if (!h.pend.empty()) {
+                    const auto pr = h.pend.front();
+                    h.pend.pop_front();
+                    h.enc = (h.enc >> 1) | ((uint32_t)b2 << 6);
+                    const int t1 = par(h.enc & 0b1011011u), t2 = par(h.enc & 0b1111001u);
+                    if (pr.first != 0.f) { h.cmp += 1; if ((t1 == 0) == (pr.first > 0.f)) h.agree += 1; }
+                    if (pr.second != 0.f) { h.cmp += 1; if ((t2 == 0) == (pr.second > 0.f)) h.agree += 1; }
+                    if (h.cmp > 20000) { h.cmp *= 0.5; h.agree *= 0.5; }
+                }
                 h.reg = (h.reg << 1) | b2;
                 h.bitsSeen++;
                 if (h.reg == kSOM) {
@@ -1087,14 +1100,15 @@ struct SerialRx::Impl {
     void lockWithoutSom() {
         if (locked >= 0 || somEver || force >= 0 || hyps.size() < 2) return;
         int bi = -1;
-        float best = 0, second = 0;
+        double best = 0, second = 0;
         for (size_t i = 0; i < hyps.size(); i++) {
             const Hyp& h = hyps[i];
-            if (!h.p->coded || h.v.liveSteps() < 1500) continue;
-            const float g = h.v.gainRatio();
+            if (!h.p->coded || h.cmp < 3000) continue;
+            const double g = h.agree / h.cmp;   // how often the re-encoded decoded bits match the received signs: high only for the right rate and interleaver
             if (g > best) { second = best; best = g; bi = (int)i; } else if (g > second) second = g;
         }
-        if (bi < 0 || best < 0.6f || best < 1.35f * second) return;
+        st.bestMetric = (float)best;
+        if (bi < 0 || best < 0.8 || best - second < 0.12) return;
         locked = bi;
         st.mode = hyps[(size_t)bi].p->name;
         st.state = 2;

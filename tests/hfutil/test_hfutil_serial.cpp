@@ -140,7 +140,7 @@ static void test4285Running() {
         auto sig = channel(genSerial(c, ref), 40.0, t.snr, 0, 0, 0, 17);
         sig.erase(sig.begin(), sig.begin() + (long)(24000 * 7));   // joins after the start of message
         auto o = runRx(SerialStd::Stanag4285, sig);
-        CHECK(o.bits.size() > 2500, "4285 running %d long=%d: only %zu bits, mode '%s'", t.bps, t.lng, o.bits.size(), o.st.mode.c_str());
+        CHECK(o.bits.size() > 2500, "4285 running %d long=%d: only %zu bits, mode '%s', agreement %.3f", t.bps, t.lng, o.bits.size(), o.st.mode.c_str(), (double)o.st.bestMetric);
         if (o.bits.size() > 2500) {
             // the last 2000 decoded bits must appear in the sent stream
             std::vector<uint8_t> tail(o.bits.end() - 2000, o.bits.end());
