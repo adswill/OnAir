@@ -537,7 +537,6 @@ struct SerialRx::Impl {
     };
     std::vector<Hyp> hyps;
     int locked = -1;
-    int diagN = 0;
     bool somEver = false;           // a start or end of message was seen on this frame sync
     int frameMissed = 0;
     int modOrderVotes[4] = {0, 0, 0, 0};
@@ -1110,8 +1109,9 @@ struct SerialRx::Impl {
             if (g > best) { second = best; best = g; bi = (int)i; } else if (g > second) second = g;
         }
         st.bestMetric = (float)best;
-        if (++diagN % 40 == 1) { char m[120]; std::snprintf(m, sizeof m, "4285 diag: best %.3f (%d) second %.3f", best, bi, second); event(m); }   // TEMP
-        if (bi < 0 || best < 0.8 || best - second < 0.12) return;
+        // a wrong rate still matches about 0.9 (the code is loose); the right one matches almost completely: compare the mismatch rates
+        const double eb = 1.0 - best, es = 1.0 - second;
+        if (bi < 0 || eb > 0.15 || es < 2.5 * eb + 0.03) return;
         locked = bi;
         st.mode = hyps[(size_t)bi].p->name;
         st.state = 2;
