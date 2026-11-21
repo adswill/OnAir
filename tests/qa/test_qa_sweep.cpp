@@ -161,6 +161,7 @@ void muteAndConfigure(Engine& e, const Entry& en) {
     e.setStandard(en.stdMode);
     if (en.sub) applySubMode(e, en.sub);
     if (en.stdMode == 22) e.mesh().setTunedHz(en.defMhz * 1e6);
+    if (en.stdMode == 204) { PskdSettings ps = e.pskd().settings(); ps.sync = "1ACFFC1D"; e.pskd().setSettings(ps); }   // the PSK demodulator counts sync words: the one its test signal's frames carry, as a user enters it
 }
 
 double cpuSeconds() {
@@ -216,6 +217,7 @@ uint64_t goodOf(const RxTelemetry& r) {
         const auto& h = r.hfdig;
         return std::max<uint64_t>({r.blocksOk, h.kbd.chars, h.rtty.chars, (uint64_t)h.ftx.decodes.size(), (uint64_t)std::max(0, h.sstv.lines), h.freedv.speechFrames, (uint64_t)std::max(0, h.kbd.hellCols)});
     }
+    case 16: return std::max<uint64_t>(r.blocksOk, r.marine.fax.lines >= 10 ? (uint64_t)r.marine.fax.lines : 0);   // weather fax: the pictures end at the stop tone, which a short test signal never reaches: the picture lines are its decode
     default: return r.blocksOk;
     }
 }
@@ -612,6 +614,8 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
         for (auto& l : e.logSnapshot(n)) fprintf(stderr, "  log: %s\n", l.c_str());
         fprintf(stderr, "  last report: std %d state %d valid %d ok %llu bad %llu cfo %.1f snr %.1f processed %.2f s\n", rx.standard, rx.state, rx.dataValid ? 1 : 0,
                 (unsigned long long)rx.blocksOk, (unsigned long long)rx.blocksBad, rx.cfoHz, rx.dataSnrDb, proc);
+        fprintf(stderr, "  extras: fax state %d lines %d phasing %d | hfu state %d blocks %llu mode '%s' | hfb heard %d | ms pings %zu active %d | pskd state %d syncs %llu bits %llu\n", rx.marine.fax.state, rx.marine.fax.lines, rx.marine.fax.phasingLines,
+                rx.hfutil.state, (unsigned long long)rx.hfutil.blocksOk, rx.hfutil.mode.c_str(), rx.hfb.heardNow, rx.mscatter.pings.size(), rx.mscatter.active ? 1 : 0, rx.pskd.state, (unsigned long long)rx.pskd.syncs, (unsigned long long)rx.pskd.bitsTotal);
         fprintf(stderr, "  ingest: %llu samples, %.1f %% non-zero, rms %.6g\n", (unsigned long long)tap.n.load(), tap.n ? 100.0 * (double)tap.nz.load() / (double)tap.n.load() : 0.0, tap.n ? std::sqrt(tap.p.load() / (double)tap.n.load()) : 0.0);
         if (!tap.psd.empty() && tap.segs > 0) {   // the three strongest 1/64 slices of the input band
             const int nf = (int)tap.psd.size(), sl = nf / 64;
