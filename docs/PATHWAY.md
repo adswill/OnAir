@@ -2440,3 +2440,7 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21 Tuning step switches to Weather Fax by itself (#595)
+- Cause: the General / Auto labels on the spectrum (app/specx/general_auto_ui.cpp) tested the mouse with IsMouseHoveringRect, which ignores a combo list or panel drawn over the plot. Picking an entry of the Tuning step list (or clicking Auto notch) released the mouse on a "Decode" button hidden under it, so the app opened the decoder of that label (the JMH weather fax at 7.793 MHz). Now a label click needs the plot's own hover (nothing in front) and a press that began on the plot (app/specx/general_auto_click.h). New test tests/app/test_genauto_click.cpp. Not built or run locally: GitHub CI only.
+- EIBI import: there is a schedule loader in the Shortwave smart panel (app/shortwave/am_smart_ui.cpp, "Load" a schedule file, parseEibi in core/src/channels/freq_db.cpp); there is no user guidance for it.

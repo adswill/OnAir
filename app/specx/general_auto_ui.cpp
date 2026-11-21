@@ -11,6 +11,8 @@
 #include "state/listen_freq.h"
 #include "ui/theme.h"
 #include "dect2/engine/general_auto.h"
+#include "specx/general_auto_click.h"
+#include "gfx/plot.h"
 #include "dect2/specx/specx_measure.h"
 #include <algorithm>
 #include <cmath>
@@ -23,7 +25,10 @@ namespace si = dect2::sigid;
 
 struct Chip { int id; ImVec2 a, b, decA, decB, xA, xB; bool canDecode; };
 
+using ClickGate = dect2::genauto::ClickGate;
+
 struct State {
+    ClickGate gate[2];
     ga::GeneralAuto g;
     bool waiting = false;
     uint64_t seq = 0;
@@ -178,9 +183,13 @@ void generalAutoPlot(App& a, int plotId, ImVec2 plotMin, ImVec2 plotSize, double
     const ImVec2 mouse = ImGui::GetIO().MousePos;
     auto xOf = [&](double mhz) { return plotMin.x + (float)((mhz - loMhz) / (hiMhz - loMhz)) * plotSize.x; };
     dl->PushClipRect(plotMin, plotMax, true);
-    const bool released = ImGui::IsMouseReleased(0), plotHover = ImGui::IsMouseHoveringRect(plotMin, plotMax) && !ImGui::IsAnyItemActive();
+    // IsMouseHoveringRect ignores a list, menu or panel drawn over the plot: the plot's own hover (plt::IsPlotHovered) does not (#595)
+    const bool released = ImGui::IsMouseReleased(0), over = ImGui::IsMouseHoveringRect(plotMin, plotMax) && plt::IsPlotHovered();
+    ClickGate& gate = S.gate[plotId ? 1 : 0];
+    gate.frame(ImGui::IsMouseClicked(0), over);
+    const bool plotHover = over && !ImGui::IsAnyItemActive();
     const ImVec2 drag = ImGui::GetMouseDragDelta(0, 0);
-    const bool click = released && std::fabs(drag.x) < 4 && std::fabs(drag.y) < 4;
+    const bool click = gate.accept(released, over) && std::fabs(drag.x) < 4 && std::fabs(drag.y) < 4;
     if (decoding) {
         const ga::Label* l = S.g.active();
         if (l && plotId == 0) {   // the banner: what runs, how far the tuning may drift, and the way back
