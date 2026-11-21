@@ -308,7 +308,11 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 71: return pollStd(rxHl_, 71, t, seqs[65], &RxTelemetry::halow);
     case 73: return pollStd(rxCd_, 73, t, seqs[67], &RxTelemetry::codar);
     case 74: return poll74(rxWb_, t, seqs);
-    case 75: return pollStd(rxDw_, 75, t, seqs[69], &RxTelemetry::datawell);
+    case 75: {   // the HXV vectors that passed their parity (clean or repaired) are this mode's checked blocks; the CRC attempt's frames count too
+        const int r = pollStd(rxDw_, 75, t, seqs[69], &RxTelemetry::datawell);
+        if (r) t.blocksOk += t.datawell.hxvClean + t.datawell.hxvRepaired;
+        return r;
+    }
     case 76: return pollStd(rxMt_, 76, t, seqs[70], &RxTelemetry::multitone);
     case 77: return pollStd(rxSame_, 77, t, seqs[71], &RxTelemetry::same);
     case 79: return pollStd(rxDect_, 79, t, seqs[73], &RxTelemetry::dect);

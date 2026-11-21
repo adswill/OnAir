@@ -1,6 +1,7 @@
 // See sd3_gen.h. Formats from SatDump (GPL-3.0, Copyright Aang23 and contributors); code written for OnAir.
 #include "dect2/sd3/sd3_gen.h"
 #include "dect2/sd3/sd3_proto.h"
+#include "dect2/sd3/sd3_rx.h"
 #include "dect2/common/mathconst.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/dsp/rrc.h"
@@ -321,11 +322,23 @@ public:
         Sd3GenConfig g;
         g.profile = profile; g.rate = rate; g.snrDb = cfg.snrDb; g.cfoHz = cfg.cfoHz;
         gen_ = std::make_unique<Sd3Generator>(g);
+        // as the other offset-tuned modes (Sigfox, Mesh): the radio sits tuneOffsetHz above the channel, so the signal is at -tuneOffsetHz in the capture
+        step_ = std::polar(1.0, -2 * M_PI * sd3Tuning(profile).tuneOffsetHz / rate);
+        if (sd3Tuning(profile).tuneOffsetHz == 0) step_ = {1, 0};
     }
     double sampleRate() const override { return r_; }
-    void generate(cf32* out, size_t n) override { gen_->generate(out, n); }
+    void generate(cf32* out, size_t n) override {
+        gen_->generate(out, n);
+        if (step_ == std::complex<double>(1, 0)) return;
+        for (size_t i = 0; i < n; i++) {
+            out[i] *= cf32((float)rot_.real(), (float)rot_.imag());
+            rot_ *= step_;
+            if ((i & 1023) == 1023) rot_ /= std::abs(rot_);
+        }
+    }
 private:
     double r_;
+    std::complex<double> step_{1, 0}, rot_{1, 0};
     std::unique_ptr<Sd3Generator> gen_;
 };
 }

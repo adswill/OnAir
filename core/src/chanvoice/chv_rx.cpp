@@ -980,8 +980,8 @@ bool ChanVoiceReceiver::telemetry(ChvTelemetry& out, uint64_t lastSeq) {
         }
         for (const auto& r : t.rows) if (r.open) { t.state = 2; break; }
         if (t.state == 0) t.state = (I.rate >= chanVoiceTuning(svc).minSampleRate - 1 && I.cfgDone) ? 1 : 0;
-        t.dataValid = t.callsTotal > 0 || !t.mics.empty();
-        t.blocksOk = t.callsTotal;
+        t.dataValid = t.callsTotal > 0 || t.mdcTotal > 0 || t.fsyncTotal > 0 || !t.mics.empty();
+        t.blocksOk = t.callsTotal + t.mdcTotal + t.fsyncTotal;   // the MDC-1200 and FleetSync bursts are decodes (they were not counted: FleetSync read as no decode in the sweep)
         t.seq = I.tel.seq + 1;
         I.tel = std::move(t);
     }
