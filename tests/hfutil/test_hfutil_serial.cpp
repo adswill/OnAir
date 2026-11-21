@@ -143,8 +143,8 @@ static void test4285Running() {
         auto o = runRx(SerialStd::Stanag4285, sig);
         CHECK(o.bits.size() > 2500, "4285 running %d long=%d: only %zu bits, mode '%s', agreement %.3f", t.bps, t.lng, o.bits.size(), o.st.mode.c_str(), (double)o.st.bestMetric);
         if (o.bits.size() > 2500) {
-            // the last 2000 decoded bits must appear in the sent stream
-            std::vector<uint8_t> tail(o.bits.end() - 2000, o.bits.end());
+            // 2000 decoded bits from the middle must appear in the sent stream
+            std::vector<uint8_t> tail(o.bits.begin() + (long)(o.bits.size() / 3), o.bits.begin() + (long)(o.bits.size() / 3 + 2000));   // from the middle: the end carries the end-of-message and padding
             size_t err = (size_t)-1;
             for (size_t off = 0; off + tail.size() <= ref.size(); off++) {
                 size_t e = 0;
