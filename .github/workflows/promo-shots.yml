@@ -1,0 +1,73 @@
+# Screenshots of the released 4.4.0 app for the promo video: the Linux portable package from the release is run headless (xvfb, Mesa)
+# with the generated test signals, one shot per line of the list below. Runs on a push to the branch named in `on.push.branches`
+# that touches this file, and by hand. Output: artifact "promo-shots".
+name: Promo shots
+on:
+  push:
+    branches: ["claude/project-thread-z2n5d9"]
+    paths: [".github/workflows/promo-shots.yml"]
+  workflow_dispatch:
+jobs:
+  shots:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        size: ["1920x1080:1.0", "2560x1440:1.5"]
+    steps:
+      - name: Install xvfb and Mesa
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri
+      - name: Download the 4.4.0 portable package
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release download v4.4.0 -R adswill/OnAir -p 'onair-4.4.0-linux-x86_64-portable.tar.gz'
+          mkdir pkg && tar xzf onair-4.4.0-linux-x86_64-portable.tar.gz -C pkg
+          ls pkg/*/bin
+      - name: Shots
+        run: |
+          D=$(ls -d "$PWD"/pkg/onair-*-portable); SZ=${{ matrix.size }}; SIZE=${SZ%:*}; SCALE=${SZ#*:}
+          W=${SIZE%x*}; H=${SIZE#*x}; mkdir -p out
+          LIST=(
+            "dvb-overview|--pick DVB --tab Overview"
+            "dvb-tv|--pick DVB --tab TV"
+            "dvb-receiver|--pick DVB --tab Receiver"
+            "dvb-analysis|--pick DVB --tab Analysis"
+            "dvbc2|--pick DVB-C2"
+            "atsc3|--pick ATSC 3.0"
+            "adsb|--pick ADS-B"
+            "adsb-map|--pick ADS-B --tab Map"
+            "ais|--pick AIS"
+            "dsc|--pick DSC"
+            "inmarsat-c|--pick Inmarsat-C"
+            "inmarsat-c-map|--pick Inmarsat-C --tab Map"
+            "iridium|--pick Iridium"
+            "nxdn|--pick NXDN"
+            "rtty|--pick RTTY"
+            "analogtv|--pick Analog TV"
+            "dab|--pick DAB / DAB+"
+            "dab-map|--pick DAB / DAB+ --tab Map"
+            "fm|--pick FM"
+            "tetra|--pick TETRA"
+            "drm|--pick DRM"
+            "ft8|--pick FT8"
+            "settings|--settings"
+            "viewmenu|--viewmenu"
+            "tx-dvb|--tx"
+            "tx-dvbt2|--txdry DVB"
+            "light-dvb|--light --pick DVB"
+          )
+          for s in "${LIST[@]}"; do
+            name=${s%%|*}; args=${s#*|}; home=$(mktemp -d); mkdir -p "$home/.config/onair"; echo "lowPowerDraw=2" > "$home/.config/onair/settings.conf"
+            # split on " --" so a mode name with spaces stays one argument
+            argv=(); rest=" $args"
+            while [ -n "$rest" ]; do part=${rest##* --}; rest=${rest% --*}; flag=${part%% *}; val=""; [ "$flag" != "$part" ] && val=${part#* }
+              if [ -n "$val" ]; then argv=("--$flag" "$val" "${argv[@]}"); else argv=("--$flag" "${argv[@]}"); fi; done
+            HOME=$home XDG_CONFIG_HOME=$home/.config DECT2_UISCALE=$SCALE ONAIR_WINSIZE=$SIZE DECT2_WINSIZE=$SIZE LIBGL_ALWAYS_SOFTWARE=1 \
+              timeout 120 xvfb-run -a -s "-screen 0 $((W+64))x$((H+64))x24" "$D/bin/onair" --hidden --mute --no-first-run --shotdelay 8 --shot "$PWD/out/$name.png" "${argv[@]}" > "out/$name.log" 2>&1 || true
+            [ -f "out/$name.png" ] && echo "ok $name" || echo "MISSING $name"
+            rm -rf "$home"
+          done
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with: { name: "promo-shots-${{ strategy.job-index }}", path: out, retention-days: 14 }
