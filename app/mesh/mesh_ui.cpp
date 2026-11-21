@@ -347,6 +347,7 @@ void panels(App& a) {
         if (on) {
             for (size_t i = t.packets.size(); i-- > 0;) {
                 const dect2::MeshPacket& p = t.packets[i];
+                if (!shows(a, p.protocol)) continue;
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn(); ImGui::TextUnformatted(clock(p.timeSec).c_str());
                 ImGui::TableNextColumn(); ImGui::TextColored(protoColour(p.protocol), "%s", protoTag(p.protocol));

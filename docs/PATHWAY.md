@@ -2479,3 +2479,9 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 - SoapySDR radios given as a manual device string or through SoapyRemote now get the per-antenna entries too, once they were started and listAntennas() was learned (`soapyAntennaEntries`, #619).
 - Mirics driver: cancelled transfers the system has not handed back after 5 s are no longer freed (crash when the USB transfer mode is changed, #503); they are kept with a harmless callback.
 - Skipped: #561 (reported on 4.2.0, before the 4.3 stream-restart fix; needs a libusb log), #435 (USB radios on Android came in 4.2; FC0013 name needs the user's log), #503 restart/"cannot keep up" (needs the reporter's bug-report zip, not downloaded).
+## 2026-11-21: app UI, web and data fixes (#565, #566, #585)
+
+- #565: removed Kyodo (JJC) from the fax station list and its schedule row (service ended 2026-09-22).
+- #566: in a protocol entry (Meshtastic, MeshCore, ...) the Map, Chat, Packets and Telemetry views (and the dashboard packet list) now show only that protocol, as Nodes already did. A Clear button exists in the Mesh and MeshCore lists since 4.4.
+- #585: the web app now says on a DAB panel that the station list and DAB audio are only in the desktop and Android apps (no web DAB service list or audio exists yet).
+- #595 and #590 skipped: no cause found in the code, both need a repro (Linux SSB 7.084 Auto notch; Windows 11 wizard clicks).

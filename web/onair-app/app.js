@@ -199,6 +199,7 @@
     $("panelState").textContent = c.standardName ? c.standardName + (c.locked ? " - locked" : c.state === 1 ? " - converging" : " - searching") : "";
     const widgets = L.buildPanel(schema || [], d.fields, c, S.advanced);
     if (!schema && d.common && d.common.details) widgets.push({ kind: "obj", name: "details", label: "Details", value: d.common.details, tier: "s" });
+    if (/DAB/i.test(c.standardName || "")) widgets.push({ kind: "text", name: "dabnote", label: "Note", value: "The web app shows the DAB signal only: the station list and DAB audio are not available here. Use the desktop or Android app for DAB stations.", tier: "s" });
     S.panel.render(widgets, "No fields reported yet.");
   }
   $("advanced").checked = S.advanced;
