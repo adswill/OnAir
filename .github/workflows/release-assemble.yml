@@ -1,0 +1,72 @@
+# Collects the files of finished release builds into a DRAFT release, inside Actions (tools/release/release.sh does the same on a computer that can
+# download artifacts). By hand: Actions > Release assemble > Run workflow, with the ids of the finished runs of release.yml (windows, macos, linux)
+# and android.yml. It never publishes: the draft is checked here (every file, its size) and published by hand (or by release.sh --publish).
+name: Release assemble
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, for example 4.4.0"
+        required: true
+      windows_run:
+        description: "Run id of release.yml with platform windows"
+        required: true
+      macos_run:
+        description: "Run id of release.yml with platform macos"
+        required: true
+      linux_run:
+        description: "Run id of release.yml with platform linux"
+        required: true
+      android_run:
+        description: "Run id of android.yml (native build)"
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  assemble:
+    name: Draft release ${{ inputs.version }}
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+      V: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download the build artifacts
+        run: |
+          set -eu
+          mkdir -p dl/windows dl/macos dl/linux dl/android
+          gh run download "${{ inputs.windows_run }}" --repo "$GITHUB_REPOSITORY" -p windows-x64 --dir dl/windows
+          gh run download "${{ inputs.macos_run }}" --repo "$GITHUB_REPOSITORY" -p 'macos-dmg-*' --dir dl/macos
+          gh run download "${{ inputs.linux_run }}" --repo "$GITHUB_REPOSITORY" -p linux-x86_64 -p linux-arm64 --dir dl/linux
+          gh run download "${{ inputs.android_run }}" --repo "$GITHUB_REPOSITORY" -p onair-android-apk --dir dl/android
+      - name: Collect, check, draft
+        run: |
+          set -eu
+          mkdir -p dist
+          find dl -type f \( -name '*.dmg' -o -name '*.deb' -o -name '*-portable.tar.gz' -o -name '*.AppImage' -o -name '*-windows-x64.zip' -o -name '*-windows-x64-setup.exe' \) -exec cp {} dist/ \;
+          f=$(find dl/android -name '*.apk' | head -1)
+          case "$f" in "") echo "no APK"; exit 1;; *unsigned*) echo "the APK is unsigned"; exit 1;; *) cp "$f" "dist/OnAir-$V-android.apk";; esac
+          want="OnAir-$V-macos-arm64.dmg OnAir-$V-macos-x86_64.dmg onair_${V}_amd64.deb onair_${V}_arm64.deb onair-$V-linux-x86_64-portable.tar.gz onair-$V-linux-aarch64-portable.tar.gz OnAir-$V-linux-x86_64.AppImage OnAir-$V-linux-aarch64.AppImage OnAir-$V-windows-x64.zip OnAir-$V-windows-x64-setup.exe OnAir-$V-android.apk"
+          miss=""; for w in $want; do [ -f "dist/$w" ] || miss="$miss $w"; done
+          [ -z "$miss" ] || { echo "missing files:$miss"; ls -l dist; exit 1; }
+          (cd dist && sha256sum $want > SHA256SUMS && ls -l $want SHA256SUMS)
+          awk 'NR==1{print "# OnAir '"$V"'"; next} {print}' "docs/CHANGELOG-${V%.*}.md" > NOTES.md
+          TAG="v$V"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            [ "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" = true ] || { echo "$TAG is already public"; exit 1; }
+            gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file NOTES.md --title "OnAir $V"
+          else
+            gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --draft --target "$GITHUB_SHA" --title "OnAir $V" --notes-file NOTES.md
+          fi
+          for w in $want SHA256SUMS; do
+            sz=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq ".assets[]|select(.name==\"$w\")|.size")
+            [ "$sz" = "$(wc -c < "dist/$w" | tr -d ' ')" ] || { echo "$w on the draft has size '${sz:-missing}'"; exit 1; }
+          done
+          n=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets|length')
+          [ "$n" = "12" ] || { echo "the draft has $n assets, expected 12"; exit 1; }
+          echo "draft $TAG complete: 12 assets, not published" | tee -a "$GITHUB_STEP_SUMMARY"
