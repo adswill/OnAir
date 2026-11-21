@@ -12,11 +12,11 @@ mkdir -p "$STAGE/include" "$STAGE/lib/pkgconfig"
 for m in libavformat libavcodec libavutil libswscale libswresample libusb-1.0 libhackrf; do
   ver=$(pkg-config --modversion "$m")
   dir=$(pkg-config --variable=includedir "$m")
+  cflags="-I$STAGE/include"
   case "$m" in
-    libusb-1.0) cp -r "$dir/libusb-1.0" "$STAGE/include/" ;;
-    libhackrf)  cp -r "$dir/libhackrf" "$STAGE/include/" ;;
-    *)          cp -r "$dir/$m" "$STAGE/include/" ;;
+    libusb-1.0|libhackrf) cp -r "$dir/$m" "$STAGE/include/"; cflags="$cflags -I$STAGE/include/$m" ;;   # the sources include <libusb.h>, <hackrf.h>
+    *)                    cp -r "$dir/$m" "$STAGE/include/" ;;
   esac
-  printf 'Name: %s\nDescription: headers only (stage_host_headers.sh)\nVersion: %s\nCflags: -I%s/include\n' "$m" "$ver" "$STAGE" > "$STAGE/lib/pkgconfig/$m.pc"
+  printf 'Name: %s\nDescription: headers only (stage_host_headers.sh)\nVersion: %s\nCflags: %s\n' "$m" "$ver" "$cflags" > "$STAGE/lib/pkgconfig/$m.pc"
 done
 echo "staged the headers of FFmpeg, libusb and HackRF in $STAGE"
