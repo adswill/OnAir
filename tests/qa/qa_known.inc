@@ -166,4 +166,3 @@
     {"erminaz/*", "open: counts no decode through the engine in the sweep (4.5 strict check, linux + macOS); the unit test decodes through the receiver directly, and several of these keep their count outside blocksOk: to investigate"},
     {"datawell/*", "open: counts no decode through the engine in the sweep (4.5 strict check, linux + macOS); the unit test decodes through the receiver directly, and several of these keep their count outside blocksOk: to investigate"},
     {"time/*", "open: counts no decode through the engine in the sweep (4.5 strict check, linux + macOS); the unit test decodes through the receiver directly, and several of these keep their count outside blocksOk: to investigate"},
-    {"mscatter/*", "open: counts no decode through the engine in the sweep (4.5 strict check, linux + macOS); the unit test decodes through the receiver directly, and several of these keep their count outside blocksOk: to investigate"},

@@ -17,6 +17,7 @@ struct MscatterGenerator::Impl {
     genutil::NoiseSource noise;
     float sigma = 0;
     double noiseBin = 0;               // noise power in one bin of the detector
+    double gain = 1.0;                 // the whole signal is scaled down when the noise would clip a 16-bit file (a weak beacon over a wide band)
     double carrierPh = 0;
     int64_t n = 0;
     uint32_t rng;
@@ -32,6 +33,11 @@ struct MscatterGenerator::Impl {
             const double v = c.amp * c.amp * c.rate / (100.0 * std::pow(10.0, c.snrDb / 10));
             sigma = (float)std::sqrt(v / 2);
             noiseBin = v * ms::cicNoiseGain(ms::decimation(c.rate)) * 1.5 / ms::kFft;
+            if (sigma > 0.2f) {   // 12 dB in 100 Hz at 2 Msps is a noise of rms 7: scale beacon, echoes and noise together so that nothing clips and the ratios stay
+                gain = 0.2 / sigma;
+                sigma = 0.2f;
+                noiseBin *= gain * gain;
+            }
         } else noiseBin = 1e-14;
         nextSec = c.firstSec;
         nextBurst = c.firstSec + 7.0;
@@ -88,7 +94,7 @@ void MscatterGenerator::generate(cf32* out, size_t cnt) {
         const int64_t i = m.n + (int64_t)k;
         m.carrierPh += w0;
         if (m.carrierPh > math::kPi) m.carrierPh -= 2 * math::kPi;
-        const double ca = m.c.carrierOn ? m.c.amp : 0.0;
+        const double ca = m.c.carrierOn ? m.c.amp * m.gain : 0.0;
         double re = ca * std::cos(m.carrierPh), im = ca * std::sin(m.carrierPh);
         for (auto it = m.active.begin(); it != m.active.end();) {
             auto& e = *it;
