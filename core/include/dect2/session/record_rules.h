@@ -35,7 +35,7 @@ struct RecordRule {
     uint8_t actions = RecAudio;      // RecAudio | RecIq
     bool emergencyOnly = false;
     uint32_t maxSeconds = 3600;      // longest recording of one call (0 = no limit)
-    uint32_t iqSeconds = 10;         // length of an IQ clip (from the start of the call; no pre-roll exists for IQ)
+    uint32_t iqSeconds = 10;         // length of an IQ clip (from the start of the call; with the Rewind on, the clip also holds the Rewind's seconds from before it)
     uint32_t capMB = 0;              // disk cap of all files this rule has made (0 = no cap); at the cap the rule stops asking and says so
     uint64_t usedBytes = 0;          // files made so far (kept in the rules file)
 };
