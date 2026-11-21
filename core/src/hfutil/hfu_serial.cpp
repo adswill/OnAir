@@ -1007,6 +1007,7 @@ struct SerialRx::Impl {
                         st.state = 2;
                     }
                     h.somSeen = true;
+                    st.blocks++;   // a 32-bit start-of-message word came out of the Viterbi decoder: a checked decode
                     continue;
                 }
                 if (locked == (int)(&h - hyps.data())) {

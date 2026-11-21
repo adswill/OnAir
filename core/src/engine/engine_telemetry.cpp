@@ -160,6 +160,7 @@ int poll68(Rx& rx, RxTelemetry& t, uint64_t* seqs) {
             t.state = mt.state;
             t.dataValid = mt.heardNow > 0;
             t.dataSnrDb = 0;
+            for (const auto& b : mt.beacons) if (b.heard && b.conf == 2) t.blocksOk++;   // beacons identified by their keying (the decode of this mode)
             t.rateOk = rx.ready();
             t.hfb = std::move(mt);
             return 1;
