@@ -263,6 +263,9 @@ bool Engine::timeMachineSaveTo(const std::string& path, double preSeconds, doubl
 }
 
 void Engine::applyReset() {
+    // resetting every receiver makes each one say its start line ("APRS / Packet: listening", "ROS: looking for the tone grid", ...): those belong to
+    // other modes, so they stay out of the log, as they do in start() (TETRAPOL log full of APRS and ROS lines, #F5GKW)
+    struct QuietLog { std::atomic<bool>& q; bool was; explicit QuietLog(std::atomic<bool>& a) : q(a), was(a.exchange(true)) {} ~QuietLog() { q.store(was); } } quietLog(rxLogQuiet_);
     rxStartNs_ = steadyNs();   // an overflow in the next seconds belongs to the reset (overflow_cause.h)
     tm_.discard();   // the history is at the old centre frequency
     std::lock_guard<std::mutex> secLk(secFeedMu_);   // the second mode's receiver is reset with the rest, never while it takes a block

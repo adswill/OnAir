@@ -130,7 +130,7 @@ struct Delay4285 {
 }  // namespace
 
 // ---- Viterbi ----
-void Viterbi::reset() { m_.assign(64, 0.f); n_.assign(64, 0.f); dec_.clear(); emitted_ = 0; good_ = total_ = 0; }
+void Viterbi::reset() { m_.assign(64, 0.f); n_.assign(64, 0.f); dec_.clear(); emitted_ = 0; good_ = total_ = gain_ = lo_ = live_ = 0; }
 
 static inline int par(uint32_t v) { return __builtin_parity(v); }
 
@@ -157,10 +157,13 @@ void Viterbi::push(float a, float b) {
     const float lo = std::fabs(a) + std::fabs(b);
     good_ += bestAdd > 0.5f * lo && lo > 0 ? 1 : 0;
     total_ += 1;
-    if (total_ > 20000) { total_ *= 0.5; good_ *= 0.5; }
+    gain_ += best; lo_ += lo; if (lo > 0) live_ += 1;
+    if (total_ > 20000) { total_ *= 0.5; good_ *= 0.5; gain_ *= 0.5; lo_ *= 0.5; live_ *= 0.5; }
     for (size_t i = 0; i < 64; i++) m_[i] = n_[i] - best;
     dec_.push_back(d);
 }
+
+float Viterbi::gainRatio() const { return lo_ > 0 ? (float)(gain_ / lo_) : 0; }
 
 float Viterbi::metricPerStep() const {
     return total_ > 0 ? (float)(good_ / total_) : 0;
@@ -528,9 +531,13 @@ struct SerialRx::Impl {
         uint64_t dataAfterSom = 0;
         uint64_t since = 0;
         float score = 0;
+        std::deque<std::pair<float, float>> pend;   // soft pairs waiting for their decoded bit, to re-encode and compare
+        uint32_t enc = 0;
+        double agree = 0, cmp = 0;
     };
     std::vector<Hyp> hyps;
     int locked = -1;
+    bool somEver = false;           // a start or end of message was seen on this frame sync
     int frameMissed = 0;
     int modOrderVotes[4] = {0, 0, 0, 0};
     uint64_t fr4285 = 0;
@@ -542,7 +549,7 @@ struct SerialRx::Impl {
         x.clear(); base = cursor = 0;
         mode = 0;
         st = SerialStatus();
-        locked = -1; frameMissed = 0; hyps.clear(); fr4285 = 0;
+        locked = -1; somEver = false; frameMissed = 0; hyps.clear(); fr4285 = 0;
     }
 
     void event(const std::string& s) {
@@ -991,10 +998,20 @@ struct SerialRx::Impl {
                 for (int r = 0; r < h.p->rep; r++) { a += h.rep[(size_t)(2 * r)]; b += h.rep[(size_t)(2 * r + 1)]; }
                 h.rep.erase(h.rep.begin(), h.rep.begin() + 2 * h.p->rep);
                 h.v.push(a, b);
+                h.pend.push_back({a, b});
             }
             std::vector<uint8_t> o;
             h.v.take(o);
             for (auto b2 : o) {
+                if (!h.pend.empty()) {
+                    const auto pr = h.pend.front();
+                    h.pend.pop_front();
+                    h.enc = (h.enc >> 1) | ((uint32_t)b2 << 6);
+                    const int t1 = par(h.enc & 0b1011011u), t2 = par(h.enc & 0b1111001u);
+                    if (pr.first != 0.f) { h.cmp += 1; if ((t1 == 0) == (pr.first > 0.f)) h.agree += 1; }
+                    if (pr.second != 0.f) { h.cmp += 1; if ((t2 == 0) == (pr.second > 0.f)) h.agree += 1; }
+                    if (h.cmp > 20000) { h.cmp *= 0.5; h.agree *= 0.5; }
+                }
                 h.reg = (h.reg << 1) | b2;
                 h.bitsSeen++;
                 if (h.reg == kSOM) {
@@ -1007,12 +1024,14 @@ struct SerialRx::Impl {
                         st.state = 2;
                     }
                     h.somSeen = true;
+                    somEver = true;
                     continue;
                 }
                 if (locked == (int)(&h - hyps.data())) {
                     if (h.reg == kEOM) {
                         event("4285: end of message");
                         h.somSeen = false;
+                        somEver = true;
                         locked = -1;
                         continue;
                     }
@@ -1076,6 +1095,29 @@ struct SerialRx::Impl {
         }
     }
 
+    // A transmission that is already running when we tune in has no start-of-message pattern to wait for (Multipsk decodes it too): when one
+    // rate and interleaver gives a code that fits clearly better than every other, follow it.
+    void lockWithoutSom() {
+        if (locked >= 0 || somEver || force >= 0 || hyps.size() < 2) return;
+        int bi = -1;
+        double best = 0, second = 0;
+        for (size_t i = 0; i < hyps.size(); i++) {
+            const Hyp& h = hyps[i];
+            if (!h.p->coded) continue;
+            if (h.cmp < 3000) return;   // a hypothesis with a long interleaver is still filling: compare only when every one has enough to show
+            const double g = h.agree / h.cmp;   // how often the re-encoded decoded bits match the received signs: high only for the right rate and interleaver
+            if (g > best) { second = best; best = g; bi = (int)i; } else if (g > second) second = g;
+        }
+        st.bestMetric = (float)best;
+        // a wrong rate still matches about 0.9 (the code is loose); the right one matches almost completely: compare the mismatch rates
+        const double eb = 1.0 - best, es = 1.0 - second;
+        if (bi < 0 || eb > 0.15 || es < 2.5 * eb + 0.03) return;
+        locked = bi;
+        st.mode = hyps[(size_t)bi].p->name;
+        st.state = 2;
+        event(std::string("4285: ") + st.mode + " (running transmission, no start of message seen)");
+    }
+
     void processFrame(const std::vector<cf>& y) {
         std::vector<float> ll1, ll2, ll3;
         const double s2 = std::max(eqSigma2, 0.01);
@@ -1090,6 +1132,7 @@ struct SerialRx::Impl {
             Hyp& h = hyps[i];
             pushHyp(h, h.p->phyBits == 1 ? ll1 : h.p->phyBits == 2 ? ll2 : ll3);
         }
+        lockWithoutSom();
     }
 
     bool search4285() {
@@ -1114,11 +1157,18 @@ struct SerialRx::Impl {
                     cfoRad = -cfo;
                     cfoPhase = 0;
                     eqReset();
-                    for (int pass = 0; pass < 6; pass++) {
+                    bool edge = false;
+                    for (int pass = 0; pass < 6 && !edge; pass++) {
                         for (auto& v : hist) v = cf(0, 0);
                         phEq = nu = 0;
-                        for (int k = 0; k < 80; k++) { const size_t c = bestP + (size_t)(2 * k); if (c < (size_t)NF / 2 + 1 || c + (size_t)NF / 2 + 2 >= x.size()) return false; eqStep(c, &known80[(size_t)k], nullptr, true); }
+                        for (int k = 0; k < 80; k++) {
+                            const size_t c = bestP + (size_t)(2 * k);
+                            if (c < (size_t)NF / 2 + 1) { edge = true; break; }   // the first frame of a signal already running starts too close to the buffer's start: take the next one
+                            if (c + (size_t)NF / 2 + 2 >= x.size()) return false;
+                            eqStep(c, &known80[(size_t)k], nullptr, true);
+                        }
                     }
+                    if (edge) { cursor = bestP + 1; continue; }
                     pos = bestP;
                     mode = 3;
                     frameMissed = 0;
