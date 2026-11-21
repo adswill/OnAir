@@ -217,6 +217,7 @@ uint64_t goodOf(const RxTelemetry& r) {
         const auto& h = r.hfdig;
         return std::max<uint64_t>({r.blocksOk, h.kbd.chars, h.rtty.chars, (uint64_t)h.ftx.decodes.size(), (uint64_t)std::max(0, h.sstv.lines), h.freedv.speechFrames, (uint64_t)std::max(0, h.kbd.hellCols)});
     }
+    case 16: return std::max<uint64_t>(r.blocksOk, r.marine.fax.lines >= 10 ? (uint64_t)r.marine.fax.lines : 0);   // weather fax: the pictures end at the stop tone, which a short test signal never reaches: the picture lines are its decode
     default: return r.blocksOk;
     }
 }
@@ -1090,7 +1091,7 @@ int main(int argc, char** argv) {
             const bool few = !r.byRes && r.c[0].good > 0 && (r.c[0].good < 8 || r.c[0].first > 0.75 * s) && li + 2 < lens.size();
             // a lock without a block in a 3 s file may only be a track that has not reached its minimum length (the satellite carrier trackers want 2.5 s of line): the 8 s try
             const bool lockShort = !r.byRes && r.c[0].good == 0 && r.c[0].locked && r.secs < 7.5 && li + 2 < lens.size() && maxSamples / rr >= 7.5;
-            if (((r.c[0].good > 0 && !few) || r.byRes || (r.c[0].locked && r.c[0].good == 0) || r.c[0].verdict != "-") && !lockShort) done = true;   // a lock alone ends it only for a mode that counts no blocks
+            if (((r.c[0].good > 0 && !few) || r.byRes || (r.c[0].locked && r.c[0].good == 0 && !needsDecode(r.id, r.stdMode)) || r.c[0].verdict != "-") && !lockShort) done = true;   // a lock alone ends it only for a mode that counts no blocks
             if (!done && !paced) for (auto& c : r.c) c = CondRes();   // the next try starts afresh
         }
         // the transmitter (tx.ci16 from the last generator run), with its own silence as the baseline; when it decodes nothing in a short run,
