@@ -81,7 +81,8 @@ jobs:
   # Windows: cross-built on macOS with the same Homebrew mingw-w64 the dependency prefix was built with (the DLLs of the prefix need that libstdc++;
   # a Linux cross build fails tools/package/check_win_dlls.sh). The prefix is a file of the draft release "ci-windows-prefix" of this repository, put
   # there by tools/release/upload_win_prefix.sh; drafts are visible only to the repository. No prefix for the current cross_deps_windows.sh: a
-  # warning, no Windows files, and the rest of the release goes on.
+  # error annotation; on a v* tag the Windows job fails (win-prefix.yml rebuilds the prefix by itself after a push to main that changes it), on a beta or
+  # manual run there are no Windows files and the rest of the release goes on.
   windows:
     name: Windows x64 package
     needs: version
