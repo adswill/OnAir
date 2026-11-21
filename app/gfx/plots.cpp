@@ -707,7 +707,7 @@ static void wideMarkers(App& a) {
 // and idle hits subdued. Only the log owns their lifetime/expiry.
 static void voiceScoutMarkerLayer(const App& a) {
     gScoutLabelHitMHz = NAN;
-    if (!voiceScoutScanning()) return;
+    if (!voiceScoutNavigating()) return;
     const auto hits = voiceScoutMarkers();
     if (hits.empty()) return;
     const auto lim = plt::GetPlotLimits();
@@ -869,7 +869,7 @@ static void setupFreqAxis(const App& a) {
     const double bLo = rc - fs / 2, bHi = rc + fs / 2, span = gXHi - gXLo;
     // Voice Scout keeps the existing user-controlled view during its deferred
     // capture retune. The plot itself performs the live pan through axis links.
-    if (voiceScoutScanning() && gXHi > gXLo && lastFs == fs) {
+    if (voiceScoutNavigating() && gXHi > gXLo && lastFs == fs) {
         lastC = rc; lastFs = fs;
     } else if (lastFs != fs || !(gXHi > gXLo) || (lastC != rc && span >= lastFs * 0.999)) { gXLo = bLo; gXHi = bHi; }   // a new band, or a view that showed all of the old one
     else if (lastC != rc) {   // a retune keeps the user's zoom (#238): the same view if the channel is still in it, else the same span around the channel
@@ -885,7 +885,7 @@ static void setupFreqAxis(const App& a) {
     // During Voice Scout, let the existing plot panner move the visible axis
     // continuously, even past the fixed IQ capture. The scanner retunes after
     // the gesture is idle; normal operation keeps the original band clamp.
-    if (!voiceScoutScanning()) plt::SetupAxisConstraints(plt::X1, rc - fs / 2, rc + fs / 2);
+    if (!voiceScoutNavigating()) plt::SetupAxisConstraints(plt::X1, rc - fs / 2, rc + fs / 2);
     plt::SetupAxisSpan(plt::X1, std::min(kFreqSpanMinMhz, fs), fs);   // the wheel stops where the zoom slider does (#425, #442)
 }
 
@@ -1129,7 +1129,7 @@ void specFreqViewUpdate(const App& a) {
     const double fs = (a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate) / 1e6;
     static double lastC = 0, lastFs = 0;
     const double rc = radioCenterMhz(a);
-    if (!voiceScoutScanning() || lastFs != fs || !(gXHi > gXLo)) {
+    if (!voiceScoutNavigating() || lastFs != fs || !(gXHi > gXLo)) {
         if (lastC != rc || lastFs != fs || !(gXHi > gXLo)) { const auto v = tunedrag::viewAfterRetune(gXLo, gXHi, rc, fs, gXHi > gXLo && lastFs == fs); gXLo = v.lo; gXHi = v.hi; }
         const double bLo = rc - fs / 2, bHi = rc + fs / 2;
         if (gXLo < bLo) { const double s = gXHi - gXLo; gXLo = bLo; gXHi = gXLo + s; }
@@ -1143,6 +1143,17 @@ void specFreqViewShift(double deltaMHz) {
     if (!std::isfinite(deltaMHz) || !(gXHi > gXLo)) return;
     gXLo += deltaMHz;
     gXHi += deltaMHz;
+}
+
+// An external frequency/mode/sample-rate change is authoritative. Reset the
+// shared spectrum and waterfall axis to the RF capture that OnAir selected.
+// Ordinary Scout panning does NOT call this, so zoom remains independent.
+void specFreqViewCenterOn(const App& a) {
+    const double centre = radioCenterMhz(a);
+    const double rate = a.engine.running() ? a.engine.sampleRate() : a.tune.sampleRate;
+    if (!std::isfinite(centre) || !std::isfinite(rate) || centre <= 0 || rate <= 0) return;
+    gXLo = centre - rate * 0.5e-6;
+    gXHi = centre + rate * 0.5e-6;
 }
 
 void specFreqViewGet(double& loMhz, double& hiMhz) {
@@ -2199,7 +2210,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
         autoLabelsDraw(a, 0, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
         voiceScoutMarkerLayer(a); // labels above ordinary channel names; selectable as well as the lines
         generalAutoPlot(a, 0, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
-        if (voiceScoutScanning() && plt::IsPlotHovered() &&
+        if (voiceScoutNavigating() && plt::IsPlotHovered() &&
             ((ImGui::IsMouseDragging(0, 3.f) || ImGui::IsMouseDragging(1, 3.f) || ImGui::IsMouseDragging(2, 3.f)) ||
              ImGui::GetIO().MouseWheel != 0 || ImGui::GetIO().MouseWheelH != 0))
             voiceScoutSpectrumInteraction(a);
@@ -2438,7 +2449,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         wfScaleBar(a, plotMin, plotSize);
         if (!voiceScoutScanning()) autoLabelsDraw(a, 1, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
         if (!voiceScoutScanning()) generalAutoPlot(a, 1, plotMin, plotSize, plt::GetPlotLimits().X.Min, plt::GetPlotLimits().X.Max);
-        if (voiceScoutScanning() && plt::IsPlotHovered() &&
+        if (voiceScoutNavigating() && plt::IsPlotHovered() &&
             ((ImGui::IsMouseDragging(0, 3.f) || ImGui::IsMouseDragging(1, 3.f) || ImGui::IsMouseDragging(2, 3.f)) ||
              ImGui::GetIO().MouseWheel != 0 || ImGui::GetIO().MouseWheelH != 0))
             voiceScoutSpectrumInteraction(a);

@@ -888,6 +888,9 @@ void stationHealthWindow(App& a);                  // station_health_ui.cpp: the
 void voiceScoutWindow(App& a);
 bool voiceScoutSelectFrequency(App& a, double mhz);
 bool voiceScoutScanning();
+void voiceScoutExternalTune(App& a, double recalledMHz);
+void voiceScoutEnforceAudio(App& a);
+bool voiceScoutNavigating();
 void voiceScoutSpectrumInteraction(App& a);
 struct VoiceScoutMarker {
     double mhz = 0;
@@ -1377,6 +1380,7 @@ std::string widthText(double mhz);   // "7 MHz", "1.536 MHz", "12.5 kHz"
 void channelWidthPopup(App& a);      // automatic or manual, where the mode allows it; otherwise what fixes the width
 void spectrumWaterfall(App& a, float& frac, bool drag);   // the spectrum on top of the waterfall, one panel
 void specFreqViewUpdate(const App& a);                                     // plots.cpp: keep linked frequency pan/zoom in sync with the radio
+void specFreqViewCenterOn(const App& a); // reset plot axes to external receiver tuning
 void specFreqViewGet(double& loMhz, double& hiMhz);
 void specFreqViewShift(double deltaMHz);
 void specFreqViewWheel(App& a, float mouseNorm, float wheel, double& loMhz, double& hiMhz);
