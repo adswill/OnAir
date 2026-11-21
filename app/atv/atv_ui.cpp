@@ -285,6 +285,7 @@ void uploadFrame(App& a) {
     const int mod = a.rx.atv.modulation;
     p.displayAspect = (mod >= 0 && mod <= 1) ? dect2::atvDisplayAspect(S.aspect[mod], a.rx.atv.wssText) : (double)f->width / f->height;
     p.temporal = S.vTemporal; p.spatial = S.vSpatial; p.chroma = S.vChroma; p.sharpen = S.vSharpen;
+    p.keepParity = f->field & 1;
     if (S.vReset) { S.venh.reset(); S.vReset = false; }
     S.vJob = std::async(std::launch::async, [f, p]() {
         VEnhResult r;

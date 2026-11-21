@@ -91,6 +91,11 @@ void scalePlane(const uint8_t* src, int w, int h, uint8_t* dst, int ow, int oh, 
             float acc = 0.f;
             if (s0 >= 0 && s0 + tx.n <= w) for (int k = 0; k < tx.n; k++) acc += wt[k] * (float)s[s0 + k];
             else for (int k = 0; k < tx.n; k++) acc += wt[k] * (float)s[std::min(w - 1, std::max(0, s0 + k))];
+            if (lanczos3) {   // no ringing: stay inside the range of the nearest source samples
+                float lo = 255.f, hi = 0.f;
+                for (int k = tx.n / 2 - 1; k <= tx.n / 2 + 1; k++) { const float v = (float)s[std::min(w - 1, std::max(0, s0 + k))]; lo = std::min(lo, v); hi = std::max(hi, v); }
+                acc = std::min(hi, std::max(lo, acc));
+            }
             d[x] = acc;
         }
     }
@@ -101,6 +106,11 @@ void scalePlane(const uint8_t* src, int w, int h, uint8_t* dst, int ow, int oh, 
         for (int x = 0; x < ow; x++) {
             float a = 0.f;
             for (int k = 0; k < ty.n; k++) a += wt[k] * tmp[(size_t)std::min(h - 1, std::max(0, s0 + k)) * ow + x];
+            if (lanczos3) {
+                float lo = 255.f, hi = 0.f;
+                for (int k = ty.n / 2 - 1; k <= ty.n / 2 + 1; k++) { const float v = tmp[(size_t)std::min(h - 1, std::max(0, s0 + k)) * ow + x]; lo = std::min(lo, v); hi = std::max(hi, v); }
+                a = std::min(hi, std::max(lo, a));
+            }
             d[x] = clamp8f(a);
         }
     }
@@ -162,17 +172,19 @@ bool AtvEnhancer::process(const uint8_t* rgba, int w, int h, const AtvEnhParams&
         }
     }
 
-    // ---- comb repair in moving areas (Full): a line that sticks out from both neighbours, where something moved
+    // ---- comb repair in moving areas (Full): of the two fields woven together, only the older one's lines are replaced (by the mean of the
+    // newer field's lines above and below) where something moved and the line sticks out of both neighbours; the newer field stays as it is
     if (full && have_) {
         const float thr = T * 1.2f + 6.f;
-        std::vector<uint8_t> a(&Y[0], &Y[0] + w);   // the original line above
+        const int keep = p.keepParity & 1;
         for (int y = 1; y + 1 < h; y++) {
-            uint8_t* b = &Y[(size_t)y * w];
+            if ((y & 1) == keep) continue;
+            const uint8_t* a = &Y[(size_t)(y - 1) * w];
+            const uint8_t* b = &Y[(size_t)y * w];
             const uint8_t* c = &Y[(size_t)(y + 1) * w];
-            const std::vector<uint8_t> orig(b, b + w);
             for (int x = 0; x < w; x++) {
                 if (motion[(size_t)y * w + x] <= T) continue;
-                const int up = (int)orig[x] - (int)a[x], dn = (int)orig[x] - (int)c[x];
+                const int up = (int)b[x] - (int)a[x], dn = (int)b[x] - (int)c[x];
                 if (((up > 0) != (dn > 0)) || std::abs(up) < thr || std::abs(dn) < thr) continue;
                 if (std::abs((int)a[x] - (int)c[x]) * 10 > std::min(std::abs(up), std::abs(dn)) * 7) continue;
                 const size_t i = (size_t)y * w + x;
@@ -180,7 +192,6 @@ bool AtvEnhancer::process(const uint8_t* rgba, int w, int h, const AtvEnhParams&
                 Cb[i] = (uint8_t)(((int)Cb[i - w] + (int)Cb[i + w] + 1) >> 1);
                 Cr[i] = (uint8_t)(((int)Cr[i - w] + (int)Cr[i + w] + 1) >> 1);
             }
-            std::memcpy(a.data(), orig.data(), w);
         }
     }
 

@@ -23,3 +23,14 @@ The raw picture is never changed; the Enhance control for stills still works on 
 
 Test: `tests/atv/test_atv_enhance.cpp` (PAL and NTSC test pattern with noise: noise power drops, edge positions and aspect after scaling,
 no trail behind a moving square, comb repair, same bytes for the same input). It also prints the time per picture.
+
+## Cost per picture (measured)
+
+PAL 768x576 input, one thread, GitHub Linux x86_64 runner (quick.yml, best of 6, noisy input; a laptop core is similar or faster):
+
+| Level | to 1280x720 | to 1920x1080 |
+|---|---|---|
+| Light | 16.6 ms | 30.1 ms |
+| Full | 48.1 ms | 76.3 ms |
+
+Light keeps 25 pictures per second at both sizes on one core. Full at 720p keeps about 20 per second on that runner and 1080p about 13: the worker then shows the newest picture it has finished and skips the ones in between (the decoder is never held up), so "Full, 1080p" is a quality choice for a fast machine or a recording, and Light (or Full at 720p) is the live choice. The UI shows the time of the last picture next to the switch.

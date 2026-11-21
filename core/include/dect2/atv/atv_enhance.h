@@ -20,6 +20,7 @@ struct AtvEnhParams {
     AtvEnhLevel level = AtvEnhLevel::Light;
     int outHeight = 0;           // 0 as received (same pixel grid), else 720 or 1080 (any height works); width follows displayAspect, square pixels
     double displayAspect = 0;    // width / height the picture is shown with (4/3, 16/9 ...); 0 = the frame's own width / height
+    int keepParity = 0;          // woven picture: the lines (y & 1) of the newer field (AtvFrame::field); the other lines are the ones repaired
     // advanced: 1 = the level's default, 0 = that step off, up to 2
     float temporal = 1, spatial = 1, chroma = 1, sharpen = 1;
 };

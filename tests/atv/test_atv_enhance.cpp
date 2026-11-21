@@ -84,8 +84,9 @@ static void geometryTest(const char* name, int w, int h, double aspect, int outH
     AtvEnhParams p; p.level = lv; p.outHeight = outH; p.displayAspect = aspect;
     Buf out; int ow = 0, oh = 0;
     for (int i = 0; i < 3; i++) e.process(clean.data(), w, h, p, out, ow, oh);
-    const int wantW = (int)std::lround(outH * aspect / 2.0) * 2;
-    CHECK(oh == outH && ow == wantW, "%s: output %dx%d, wanted %dx%d", name, ow, oh, wantW, outH);
+    const int wantH = outH ? outH : h;
+    const int wantW = outH ? (int)std::lround(outH * aspect / 2.0) * 2 : w;
+    CHECK(oh == wantH && ow == wantW, "%s: output %dx%d, wanted %dx%d", name, ow, oh, wantW, wantH);
     CHECK(out.size() == (size_t)ow * oh * 4, "%s: buffer size", name);
     // the left edge of the white bar (source x = w/4) must land at ow/4 within 1.5 px, and the top-of-pattern row stays in place
     const int row = oh / 8;
