@@ -118,9 +118,7 @@ int main() {
     CHECK(std::count(reported.begin(), reported.end(), "tetra") == 1 && std::count(reported.begin(), reported.end(), "ysf") == 1, "each new result is reported");
     const std::unique_ptr<SpeechCodec> a = pluginVocoder("tetra");
     const std::unique_ptr<SpeechCodec> b = pluginVocoder("tetra");
-    const SpeechCodec* first = a.get();
-    const SpeechCodec* second = b.get();
-    CHECK(first && second && first != second && !a->decode({1, 2}).empty(), "every decoder is a new instance of the plug-in");
+    CHECK(a && b && a != b && !a->decode({1, 2}).empty(), "every decoder is a new instance of the plug-in");
     reported.clear();
     added = registerAcceptedPlugins({folder}, acceptTetra, note, fakeOpen);
     CHECK(added.empty() && reported.empty(), "a second look registers nothing new and reports nothing unchanged");
