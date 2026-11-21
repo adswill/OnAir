@@ -23,6 +23,9 @@ on:
       trials:
         description: 'Trials per point (0 = the tier default)'
         default: '0'
+      det_variants:
+        description: 'ADS-B preamble detector variants "sum,minPulse,data,worthDb;..." (DECT2_SENS_ADSB_DET): the sweep runs once per variant, results in sens-out/variant-N (empty = the normal run)'
+        default: ''
       update_baseline:
         description: 'Write the result into tests/sens/baseline/sens-baseline.json (uploaded as an artifact; commit it by hand)'
         type: boolean
@@ -69,11 +72,23 @@ jobs:
           python3 tools/sens/qa_sens.py --bin build/test_qa_sweep --out sens-out --re "$re" --shard "$shard" --trials "$t" --jobs 3 --budget-min 290 | tee sens-out.txt
       - name: Sweep
         if: ${{ !startsWith(inputs.modes, 'qa:') }}
+        env: { DET_VARIANTS: "${{ inputs.det_variants }}" }
         run: |
           args=(--${{ inputs.tier || 'full' }} --mode '${{ inputs.modes || '.*' }}' --scenario '${{ inputs.scenarios || '.*' }}' --out sens-out)
           trials='${{ inputs.trials || '8' }}'
           if [ "$trials" != '0' ]; then args+=(--trials "$trials"); fi
-          ./build/sens_sweep "${args[@]}" | tee sens-out.txt
+          if [ -n "$DET_VARIANTS" ]; then
+            IFS=';' read -ra vars <<< "$DET_VARIANTS"
+            i=0
+            for v in "${vars[@]}"; do
+              i=$((i+1)); mkdir -p "sens-out-v$i"
+              echo "=== variant $i: DECT2_SENS_ADSB_DET=$v" | tee -a sens-out.txt
+              DECT2_SENS_ADSB_DET="$v" ./build/sens_sweep "${args[@]/sens-out/sens-out-v$i}" | tee -a sens-out.txt
+            done
+            mkdir -p sens-out && cp -r sens-out-v1/. sens-out/ 2>/dev/null || true
+          else
+            ./build/sens_sweep "${args[@]}" | tee sens-out.txt
+          fi
       - name: Compare with the baseline
         if: ${{ !startsWith(inputs.modes, 'qa:') }}
         continue-on-error: true
