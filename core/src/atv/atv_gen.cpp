@@ -377,9 +377,12 @@ struct AtvGenerator::Impl {
         // a live source (camera, file) replaces the whole picture: the test card is drawn only when there is no frame to send
         bool live = false;
         if (cfg.pullVideo) {
+            // a file or camera frame is a whole picture: both fields are cut from the same instant (as a progressive source sent segmented), so weave shows no
+            // combing on motion that was never interlaced; the test card still moves per field (true interlace)
+            const double tFrame = cfg.startSec + (double)frame * fmt.lines * fmt.lineUs * 1e-6;
             const int W = fmt.picW, H = fmt.picH;
             liveY.resize((size_t)W * (size_t)H); liveU = liveY; liveV = liveY;
-            if (cfg.pullVideo(t, W, H, liveY.data(), liveU.data(), liveV.data())) {
+            if (cfg.pullVideo(tFrame, W, H, liveY.data(), liveU.data(), liveV.data())) {
                 const int rows = fmt.fieldRows;
                 for (int k = 0; k < rows; k++) {
                     const int r = std::min(2 * k + fld, H - 1);
@@ -400,7 +403,8 @@ struct AtvGenerator::Impl {
     void applyAspect(int fld, bool live) {
         double src = kAtvAspectValue43;
         if (live && cfg.pullAspect) { const double a = cfg.pullAspect(); if (a > 0.1 && a < 10) src = a; }
-        const int frame = atvTxFrame(cfg.aspect, src);
+        // Auto picks the anamorphic frame only where the WSS (625 lines) tells the receiver; 525, 405 and 819 lines get a 4:3 letterbox, else a wide picture shows squashed
+        const int frame = cfg.aspect == kAtvAspectAuto && fmt.lines != 625 ? kAtvAspect43 : atvTxFrame(cfg.aspect, src);
         aspectWss = fmt.lines == 625 ? atvTxWss(cfg.aspect, frame) : -1;
         const AtvFit fit = atvFitSource(src, frame == kAtvAspect169 ? kAtvAspectValue169 : kAtvAspectValue43);
         if (fit.identity()) return;
@@ -940,10 +944,11 @@ public:
             auto buf = std::make_shared<std::vector<uint8_t>>();
             c.pullVideo = [v, mu, buf](double t, int w, int h, float* y, float* u, float* vv) {
                 std::lock_guard<std::mutex> lk(*mu);
-                if (!v->rgb(t, w, h, *buf)) return false;
+                if (!v->rgb(t, w, h, *buf, true)) return false;   // stretched: applyAspect fits it by pullAspect, so a 16:9 file is not letterboxed into a 4:3 grid and then shown 16:9
                 for (size_t i = 0, n = (size_t)w * (size_t)h; i < n; i++) atvRgbToYuv((*buf)[3 * i] / 255.f, (*buf)[3 * i + 1] / 255.f, (*buf)[3 * i + 2] / 255.f, y[i], u[i], vv[i]);
                 return true;
             };
+            c.pullAspect = [v]() { return v->height() > 0 ? (double)v->width() / (double)v->height() : 0.0; };
         }
         if (auto a = synthMediaAudioFor(s, 120)) c.pullAudio = [a](float* st, int n) { return a->read(st, n); };
     }

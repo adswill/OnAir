@@ -68,4 +68,14 @@ void atvFitPlanes(const float* sy, const float* su, const float* sv, int w, int 
     }
 }
 
+AtvRect atvPictureRect(double aspect, double boxW, double boxH, int mode) {
+    AtvRect r; r.w = boxW; r.h = boxH;
+    if (!(boxW > 0) || !(boxH > 0) || !(aspect > 0.1)) return r;
+    const bool fill = mode == kAtvLetterboxOff || (mode != kAtvLetterboxOn && aspect >= 1.7);
+    if (fill) return r;
+    if (boxW / boxH > aspect) r.w = boxH * aspect; else r.h = boxW / aspect;
+    r.x = (boxW - r.w) * 0.5; r.y = (boxH - r.h) * 0.5;
+    return r;
+}
+
 } // namespace dect2

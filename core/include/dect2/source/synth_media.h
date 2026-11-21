@@ -65,7 +65,7 @@ public:
     int width() const;
     int height() const;
     // The picture at time t (looped), fitted in dw x dh with black bars, no distortion. False when there is no frame.
-    bool rgb(double t, int dw, int dh, std::vector<uint8_t>& out);   // RGB 8 bit packed
+    bool rgb(double t, int dw, int dh, std::vector<uint8_t>& out, bool stretch = false);   // RGB 8 bit packed; stretch: fill dw x dh (the caller fits the aspect itself)
     bool yuv420(double t, int dw, int dh, uint8_t* y, int ys, uint8_t* u, int us, uint8_t* v, int vs);
 private:
     struct Impl;

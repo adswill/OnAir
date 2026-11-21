@@ -43,6 +43,12 @@ int main() {
     CHECK(near(pace::interval(s), 0.25), "hidden without it");
     s.shot = true;
     CHECK(pace::interval(s) == 0, "--shot: unpaced");
+    {   // an analogue TV picture on screen: 60 a second without any input (wbus: Bob drew faster only while the mouse clicked), 30 on the battery saver
+        pace::State t; t.running = true; t.focused = true; t.picture = true;
+        CHECK(near(pace::interval(t), 1.0 / 60), "TV picture: 60 fps without input");
+        t.onBattery = true; CHECK(near(pace::interval(t), 1.0 / 30), "TV picture on battery: 30 fps");
+        t.picture = false; t.onBattery = false; CHECK(near(pace::interval(t), 1.0 / 30), "no picture: 30 fps as before");
+    }
     // never faster than before: every combination
     for (int m = 0; m < (1 << 11); m++) {
         pace::State a;

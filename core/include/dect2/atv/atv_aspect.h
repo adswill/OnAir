@@ -42,4 +42,10 @@ AtvFit atvFitSource(double srcAspect, double frameAspect);
 // rectangle, black outside (Y 0, U and V 0). src and dst are three planes each; dst may not be src.
 void atvFitPlanes(const float* sy, const float* su, const float* sv, int w, int h, const AtvFit& fit, float* dy, float* du, float* dv);
 
+// Viewer: where a picture of the given aspect goes in a window. mode: kAtvLetterboxAuto (a 16:9 picture fills the window, anything narrower keeps its
+// shape with bars), kAtvLetterboxOn (always keeps the shape, bars where the aspects differ), kAtvLetterboxOff (always fills the window).
+constexpr int kAtvLetterboxAuto = 0, kAtvLetterboxOn = 1, kAtvLetterboxOff = 2;
+struct AtvRect { double x = 0, y = 0, w = 0, h = 0; };
+AtvRect atvPictureRect(double aspect, double boxW, double boxH, int mode);
+
 } // namespace dect2

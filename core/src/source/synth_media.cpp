@@ -185,12 +185,12 @@ double SynthMediaVideo::duration() const { return p_->dur; }
 int SynthMediaVideo::width() const { return p_->cx ? p_->cx->width : 0; }
 int SynthMediaVideo::height() const { return p_->cx ? p_->cx->height : 0; }
 
-bool SynthMediaVideo::rgb(double t, int dw, int dh, std::vector<uint8_t>& out) {
+bool SynthMediaVideo::rgb(double t, int dw, int dh, std::vector<uint8_t>& out, bool stretch) {
     Impl& d = *p_;
     if (dw < 2 || dh < 2 || !d.seek(t)) return false;
     out.assign((size_t)dw * dh * 3, 0);
     int ox, oy, w, h;
-    d.fit(dw, dh, ox, oy, w, h);
+    if (stretch) { ox = 0; oy = 0; w = dw; h = dh; } else d.fit(dw, dh, ox, oy, w, h);
     d.sws = sws_getCachedContext(d.sws, d.cur->width, d.cur->height, (AVPixelFormat)d.cur->format, w, h, AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
     if (!d.sws) return false;
     uint8_t* dst[4] = {out.data() + ((size_t)oy * dw + ox) * 3, nullptr, nullptr, nullptr};
