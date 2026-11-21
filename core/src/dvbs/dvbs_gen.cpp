@@ -205,6 +205,11 @@ DvbsSignalConfig dvbsConfigFromSynth(const SynthConfig& sc, double fs) {
     t.rollOff = ro[std::max(0, std::min(5, sc.modeOpt[3]))];
     t.pilots = sc.modeOpt[5] != 0;
     t.vcm = sc.modeOpt[7] == 1 && t.standard == 2;
+    if (t.standard != 1) {
+        t.dummyEvery = std::max(0, std::min(1000, sc.modeOpt[8]));
+        t.npd = sc.modeOpt[9] != 0;
+        t.plScramble = std::max(0, std::min(262141, (int)sc.modeVal[2]));
+    }
     c.phaseNoise = sc.modeOpt[7] == 2 ? 1 : sc.modeOpt[7] == 3 ? 2 : 0;
     c.inverted = sc.modeOpt[6] != 0;
     // symbol rate: what was asked for, or 5 Msym/s, limited by what the sample rate can carry (1.3 samples per symbol and the roll-off)

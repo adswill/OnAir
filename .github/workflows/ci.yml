@@ -11,6 +11,7 @@ on:
   push:
     branches: ['main', '0.2.8', 'integ-*']
     tags: ['v*']
+    paths-ignore: ['**.md', 'docs/**', 'website/**', 'LICENSE*']   # a docs-only push builds nothing (tags are not filtered)
   workflow_dispatch:
     inputs:
       scope:
@@ -140,6 +141,7 @@ jobs:
 
   macos-shards:
     needs: lint
+    if: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
     name: ${{ matrix.name }} ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 240
@@ -214,6 +216,7 @@ jobs:
 
   windows-shards:
     needs: lint
+    if: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
     name: Windows shard ${{ matrix.shard }}/4
     runs-on: windows-2022
     timeout-minutes: 240
@@ -327,8 +330,10 @@ jobs:
     if: ${{ !cancelled() }}   # a shard failing or skipped still fails this; a run replaced by a newer one has nothing to gather
     runs-on: ubuntu-24.04
     steps:
-      - run: |
-          echo '${{ toJSON(needs) }}' | python3 -c "import sys,json; r=json.load(sys.stdin); bad=[k for k,v in r.items() if v['result']!='success']; print('results',{k:v['result'] for k,v in r.items()}); sys.exit(1 if bad else 0)"
+      - env:
+          MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && '1' || '' }}   # shards skipped on purpose there
+        run: |
+          echo '${{ toJSON(needs) }}' | python3 -c "import os,sys,json; ok=('success','skipped') if os.environ.get('MAIN_PUSH') else ('success',); r=json.load(sys.stdin); bad=[k for k,v in r.items() if v['result'] not in ok]; print('results',{k:v['result'] for k,v in r.items()}); sys.exit(1 if bad else 0)"
 
   # required check "Windows x64 (MinGW-w64)": passes when every shard of it passed
   gather-windows:
@@ -337,5 +342,7 @@ jobs:
     if: ${{ !cancelled() }}   # a shard failing or skipped still fails this; a run replaced by a newer one has nothing to gather
     runs-on: ubuntu-24.04
     steps:
-      - run: |
-          echo '${{ toJSON(needs) }}' | python3 -c "import sys,json; r=json.load(sys.stdin); bad=[k for k,v in r.items() if v['result']!='success']; print('results',{k:v['result'] for k,v in r.items()}); sys.exit(1 if bad else 0)"
+      - env:
+          MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && '1' || '' }}   # shards skipped on purpose there
+        run: |
+          echo '${{ toJSON(needs) }}' | python3 -c "import os,sys,json; ok=('success','skipped') if os.environ.get('MAIN_PUSH') else ('success',); r=json.load(sys.stdin); bad=[k for k,v in r.items() if v['result'] not in ok]; print('results',{k:v['result'] for k,v in r.items()}); sys.exit(1 if bad else 0)"

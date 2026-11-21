@@ -105,8 +105,10 @@ jobs:
           set -eu
           ID=$(tools/package/win_prefix_id.sh)
           if ! tools/release/retry.sh -n 3 gh release download ci-windows-prefix --repo "$GITHUB_REPOSITORY" -p "onair-win-prefix-$ID.tar.gz" -D "$RUNNER_TEMP/pfx" --clobber; then
-            echo "::warning::no onair-win-prefix-$ID.tar.gz on the draft release ci-windows-prefix: no Windows files in this run (tools/release/upload_win_prefix.sh, docs/CI-FAST.md)"
+            echo "::error::no onair-win-prefix-$ID.tar.gz on the draft release ci-windows-prefix: run the workflow Windows prefix (win-prefix.yml), or tools/release/upload_win_prefix.sh (docs/CI-FAST.md)"
             echo "have=false" >> "$GITHUB_OUTPUT"
+            # a release tag must not ship without the Windows files; a beta or manual run only warns
+            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then exit 1; fi
             exit 0
           fi
           python3 tools/package/unpack_win_prefix.py "$RUNNER_TEMP/pfx/onair-win-prefix-$ID.tar.gz" "$HOME/onair-win-prefix"
