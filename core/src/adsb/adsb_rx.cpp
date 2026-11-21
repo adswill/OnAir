@@ -239,7 +239,7 @@ void AdsbReceiver::setFrameCallback(std::function<void(const AdsbFrame&)> cb) {
 
 void AdsbReceiver::setReference(double lat, double lon) { std::lock_guard<std::mutex> lk(p_->mu); p_->tracker.setReference(lat, lon); }
 void AdsbReceiver::clearReference() { std::lock_guard<std::mutex> lk(p_->mu); p_->tracker.clearReference(); }
-void AdsbReceiver::setCorrection(int bits) { std::lock_guard<std::mutex> lk(p_->mu); AdsbOptions o = p_->tracker.options(); o.fixBits = bits < 0 ? 0 : bits > 2 ? 2 : bits; p_->tracker.setOptions(o); }
+void AdsbReceiver::setCorrection(int bits) { std::lock_guard<std::mutex> lk(p_->mu); AdsbOptions o = p_->tracker.options(); o.fixBits = bits < 0 ? 0 : bits > 3 ? 3 : bits; p_->tracker.setOptions(o); }
 void AdsbReceiver::setDropSec(double seconds) { std::lock_guard<std::mutex> lk(p_->mu); AdsbOptions o = p_->tracker.options(); o.dropSec = seconds < 0 ? 0 : seconds; p_->tracker.setOptions(o); }
 void AdsbReceiver::setExpiry(double seconds) { std::lock_guard<std::mutex> lk(p_->mu); AdsbOptions o = p_->tracker.options(); o.expirySec = seconds < 5 ? 5 : seconds; p_->tracker.setOptions(o); }
 void AdsbReceiver::clearAircraft() { std::lock_guard<std::mutex> lk(p_->mu); p_->tracker.reset(); p_->seq++; }

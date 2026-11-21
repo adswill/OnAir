@@ -5,6 +5,7 @@
 // up) and the measure of "valid output": the receiver's own count of units whose check passed (CRC, Reed-Solomon, LDPC/BCH, FIB CRC ...).
 // Pattern and receiver set-up are those of tests/engine/test_iq_modes.cpp.
 #pragma once
+#include <cstdlib>
 #include "dect2/engine/engine.h"
 #include "dect2/engine/mode_synth.h"
 #include "dect2/engine/mode_tuning.h"
@@ -438,14 +439,14 @@ inline std::vector<Mode> allModes() {
         Mode m = base("adsb", "ADS-B", "burst", 13, 4e6, 3.0, 2e6, 1090);
         m.echoUs = 0.3; m.snrHi = 30;
         m.gen = [](size_t n) { SynthConfig c; c.modeOpt[0] = 12; return clean(13, c, 4e6, n); };
-        m.make = factory<AdsbReceiver, AdsbTelemetry>([](AdsbReceiver& rx, double r) { rx.configure(r); }, blocks<AdsbTelemetry>);
+        m.make = factory<AdsbReceiver, AdsbTelemetry>([](AdsbReceiver& rx, double r) { rx.configure(r); if (const char* f = std::getenv("DECT2_SENS_ADSB_FIX")) rx.setCorrection(std::atoi(f)); }, blocks<AdsbTelemetry>);
         add(m);
     }
     {   // ADS-B, one aircraft: no level mix, so the SNR is that of the only transmitter (fairness check for the 12 aircraft run)
         Mode m = base("adsb1", "ADS-B (1 aircraft)", "burst", 13, 4e6, 6.0, 2e6, 1090);
         m.echoUs = 0.3; m.snrHi = 30;
         m.gen = [](size_t n) { SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[1] = 1; return clean(13, c, 4e6, n); };
-        m.make = factory<AdsbReceiver, AdsbTelemetry>([](AdsbReceiver& rx, double r) { rx.configure(r); }, blocks<AdsbTelemetry>);
+        m.make = factory<AdsbReceiver, AdsbTelemetry>([](AdsbReceiver& rx, double r) { rx.configure(r); if (const char* f = std::getenv("DECT2_SENS_ADSB_FIX")) rx.setCorrection(std::atoi(f)); }, blocks<AdsbTelemetry>);
         add(m);
     }
     {   // radiosondes: an RS41 on the centre, a DFM-17 and an M10 elsewhere

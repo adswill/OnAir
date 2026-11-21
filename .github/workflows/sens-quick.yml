@@ -23,6 +23,9 @@ on:
       trials:
         description: 'Trials per point (0 = the tier default)'
         default: '0'
+      adsb_fix:
+        description: 'ADS-B error correction for the sweep (empty: the receiver default; 0-3, test only)'
+        default: ''
       update_baseline:
         description: 'Write the result into tests/sens/baseline/sens-baseline.json (uploaded as an artifact; commit it by hand)'
         type: boolean
@@ -69,7 +72,9 @@ jobs:
           python3 tools/sens/qa_sens.py --bin build/test_qa_sweep --out sens-out --re "$re" --shard "$shard" --trials "$t" --jobs 3 --budget-min 290 | tee sens-out.txt
       - name: Sweep
         if: ${{ !startsWith(inputs.modes, 'qa:') }}
+        env: { ADSB_FIX: "${{ inputs.adsb_fix }}" }
         run: |
+          if [ -n "$ADSB_FIX" ]; then export DECT2_SENS_ADSB_FIX="$ADSB_FIX"; fi
           args=(--${{ inputs.tier || 'full' }} --mode '${{ inputs.modes || '.*' }}' --scenario '${{ inputs.scenarios || '.*' }}' --out sens-out)
           trials='${{ inputs.trials || '8' }}'
           if [ "$trials" != '0' ]; then args+=(--trials "$trials"); fi
