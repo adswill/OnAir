@@ -6,6 +6,7 @@
 #pragma once
 #include "dect2/dmr/dmr_tel.h"
 #include <cstddef>
+#include <cstdint>
 
 namespace dect2 {
 
@@ -14,5 +15,9 @@ namespace dect2 {
 // RMC speed (knots) and course (degrees) are copied when present. A checksum is verified when the
 // sentence carries one. Never reads past `size`. The caller sets src/dst/slot/time.
 bool parseDmrNmea(const char* text, size_t size, DmrLocation& out);
+
+// "LOCN" position text inside a data message (#335): hemisphere + ddmm.mmmm + hemisphere + dddmm.mmmm, e.g. "N4523.0419E00909.8834". Scans the bytes
+// for that shape; true for a valid, non-zero position.
+bool parseDmrLocn(const uint8_t* data, size_t size, DmrLocation& out);
 
 } // namespace dect2

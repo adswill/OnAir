@@ -114,4 +114,36 @@ bool parseDmrNmea(const char* text, size_t size, DmrLocation& out) {
     return false;
 }
 
+
+// #335 "LOCN": a position as text inside a data message: the NMEA-style fields "N4523.0419E00909.8834" (hemisphere, ddmm.mmmm, hemisphere,
+// dddmm.mmmm) behind a short binary header and an ASCII radio id / time. Found in the bytes by their shape, not by an offset.
+bool parseDmrLocn(const uint8_t* data, size_t size, DmrLocation& out) {
+    if (!data || size < 21) return false;
+    auto dig = [&](size_t i) { return data[i] >= '0' && data[i] <= '9'; };
+    for (size_t i = 0; i + 21 <= size; i++) {
+        if (data[i] != 'N' && data[i] != 'S') continue;
+        // N ddmm.mmmm(4) E dddmm.mmmm(4): 1 + 4 + 1 + 3or4 + 1 + 5 + 1 + 3or4
+        size_t j = i + 1;
+        if (!(dig(j) && dig(j + 1) && dig(j + 2) && dig(j + 3) && data[j + 4] == '.')) continue;
+        size_t k = j + 5;
+        while (k < size && dig(k) && k < j + 5 + 4) k++;
+        if (k == j + 5 || k + 1 >= size || (data[k] != 'E' && data[k] != 'W')) continue;
+        const std::string lat((const char*)data + j, k - j);
+        const char eh = (char)data[k];
+        size_t a = k + 1;
+        if (!(a + 6 < size && dig(a) && dig(a + 1) && dig(a + 2) && dig(a + 3) && dig(a + 4) && data[a + 5] == '.')) continue;
+        size_t b = a + 6;
+        while (b < size && dig(b) && b < a + 6 + 4) b++;
+        if (b == a + 6) continue;
+        const std::string lon((const char*)data + a, b - a);
+        double la = 0, lo = 0;
+        if (!coord(lat, true, (char)data[i], la) || !coord(lon, false, eh, lo)) continue;
+        if (la == 0.0 && lo == 0.0) continue;
+        out = DmrLocation();
+        out.hasFix = true; out.lat = la; out.lon = lo;
+        return true;
+    }
+    return false;
+}
+
 } // namespace dect2

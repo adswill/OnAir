@@ -2440,3 +2440,9 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21 WP3 decoder fixes (#335, #484, #583; #506, #408/#333 not located)
+- DMR LOCN (#335): position text "N4523.0419E00909.8834" inside a data message is now found by its shape (parseDmrLocn in dmr_nmea.cpp), checked against the DSDPlus log line (45.38403 9.16472). Test in test_dmr_nmea. Still open for #335: a whole-span LRRP on another frequency is not shown (no cause found).
+- ATSC 3.0 (#484): onUdp kept a raw RouteService pointer while a service change on another thread reset route_; route_ is now a shared_ptr. The "stuck when switching services" and channel 21 "waiting for signalling" reports need the reporter's IQ and are not fixed.
+- FM (#583): the channel filter's transition band stayed 80 kHz when the width was narrowed, so a 100 kHz wide filter let a neighbour 100 kHz away through. Below the standard width the transition now shrinks with it (min 25 kHz); the default filter is unchanged.
+- Skipped: #506 (shortwave RTTY/Wefax stay at "starting"; the slot code looks right and no cause is visible without the reporter's setup), #408/#333 (Tetrapol: needs the reporter's recording, which is a user-attachments download).

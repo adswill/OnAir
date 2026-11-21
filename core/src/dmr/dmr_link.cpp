@@ -939,6 +939,7 @@ void Link::finishMessage(Track& t) {
         if (!have) {   // a plain-text NMEA sentence (e.g. $GNRMC) carried in a short-data / UDT message
             nmea = parseDmrNmea(msg.text.data(), msg.text.size(), loc) ||
                    parseDmrNmea((const char*)data.data(), data.size(), loc);
+            if (!nmea) nmea = parseDmrLocn(data.data(), data.size(), loc);   // #335: LOCN text position
             have = nmea;
         }
         if (have) haveLoc = true;

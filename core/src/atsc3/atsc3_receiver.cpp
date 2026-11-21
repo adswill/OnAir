@@ -347,10 +347,10 @@ void Atsc3Receiver::onUdp(const UdpDatagram& d) {
         if (start) startRoute();
         return;
     }
-    RouteService* r = nullptr;
+    std::shared_ptr<RouteService> r;
     {
         std::lock_guard<std::mutex> lk(mu_);
-        r = route_.get();
+        r = route_;
     }
     if (r) r->push(d);
 }
@@ -393,7 +393,7 @@ void Atsc3Receiver::startRoute() {
             DIAG_EVERY(923174, 30.0, "ATSC 3.0 service %d uses MMTP signalling (protocol %d), which this receiver does not support, so it cannot be played.", s.serviceId, (int)s.slsProtocol);
             return;
         }
-        route_.reset(new RouteService(s.slsSrcIp, s.slsDstIp, s.slsDstPort));
+        route_ = std::make_shared<RouteService>(s.slsSrcIp, s.slsDstIp, s.slsDstPort);
         route_->onObject = [this](const RouteComponent& c, const RouteObject& o) { onObject(c, o); };
         routeStarted_ = true;
         return;
