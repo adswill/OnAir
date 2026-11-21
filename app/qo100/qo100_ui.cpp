@@ -311,8 +311,8 @@ void narrowView(App& a, float h) {
         plt::SetupAxisFormat(plt::X1, "%.3f");
         {   // the band plan: one shaded band per segment, named when it is wide enough on screen
             int np = 0; const q::PlanSegment* pl = q::bandPlan(np);
-            static const ImVec4 kCol[q::kPlanUses] = {ImVec4(1.f, 0.82f, 0.35f, 0.22f), ImVec4(0.45f, 0.7f, 1.f, 0.10f), ImVec4(0.7f, 0.5f, 1.f, 0.10f),
-                                                      ImVec4(0.9f, 0.5f, 0.9f, 0.10f), ImVec4(0.4f, 0.8f, 0.5f, 0.06f), ImVec4(0.9f, 0.7f, 0.4f, 0.08f)};
+            auto al = [](ImVec4 c, float a) { c.w = a; return c; };
+            const ImVec4 kCol[q::kPlanUses] = {al(pal::warnAmber(), 0.22f), pal::accent(0.10f), pal::accent(0.18f), al(pal::okGreen(), 0.10f), pal::grey(0.05f), al(pal::warnAmber(), 0.08f)};
             static const char* const kShort[q::kPlanUses] = {"beacon", "CW", "narrow digital", "digital", "SSB", "mixed"};
             const double span = S.viewHi - S.viewLo;
             for (int i = 0; i < np; i++) {
@@ -403,7 +403,7 @@ void wideView(App& a, float h) {
                 const q::DatvQuality dq = q::datvQuality(es, cur, cur && S.rx2.dvbs.tsLock);
                 ImGui::TableNextColumn(); ImGui::Text("%s%.1f dB", cur ? "" : "~", es);
                 ImGui::TableNextColumn();
-                ImGui::TextColored(dq == q::kDatvGood || dq == q::kDatvLocked ? ImVec4(0.4f, 0.9f, 0.5f, 1.f) : dq == q::kDatvNone ? ImVec4(0.6f, 0.6f, 0.6f, 1.f) : pal::warnAmber(),
+                ImGui::TextColored(dq == q::kDatvGood || dq == q::kDatvLocked ? pal::okGreen() : dq == q::kDatvNone ? pal::grey() : pal::warnAmber(),
                                    "%s", q::datvQualityName(dq));
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip("Es/N0 %.1f dB, %+.1f dB over what DVB-S2 QPSK 1/2 needs (about %.0f dB)%s", es, q::datvMarginDb(es), q::kDatvThresholdDb,
                                                               cur ? "" : "\nestimated from the spectrum; decode the carrier for the demodulator's own reading");

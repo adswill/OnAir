@@ -356,13 +356,13 @@ case 54: {
     cardIf(o, "Lo Hz", t.loHz);
     cardIf(o, "Lnb Err Hz", t.lnbErrHz);
     cardIf(o, "Lnb Err Ppm", t.lnbErrPpm);
+    cardIf(o, "Seed Err Hz", t.seedErrHz);
     cardIf(o, "Drift Hz Per Min", t.driftHzPerMin);
     cardIf(o, "Lock Sec", t.lockSec);
     cardIf(o, "Measurements", t.measurements);
     cardIf(o, "Nb F0 Hz", t.nbF0Hz);
     cardIf(o, "Nb Bin Hz", t.nbBinHz);
     cardIf(o, "Nb Floor Db", t.nbFloorDb);
-    cardIf(o, "Nb Peak Db", t.nbPeakDb);
     { Table tb({"Rf Hz", "Width Hz", "Level Db", "Snr Db", "Beacon", "Cls", "Track"}); int n = 0; for (auto it = t.signals.rbegin(); it != t.signals.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.rfHz), cell(e.widthHz), cell(e.levelDb), cell(e.snrDb), cell(e.beacon), cell(e.cls), cell(e.track)}); } if (n) addTable(o, "Signals", tb); }
     { Table tb({"Rf Hz", "If Hz", "Bw3 Hz", "Sym Rate", "Snr Db"}); int n = 0; for (auto it = t.datv.rbegin(); it != t.datv.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.rfHz), cell(e.ifHz), cell(e.bw3Hz), cell(e.symRate), cell(e.snrDb)}); } if (n) addTable(o, "Datv", tb); }
     break;
