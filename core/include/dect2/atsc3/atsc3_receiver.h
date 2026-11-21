@@ -90,7 +90,7 @@ private:
     int selected_ = -1;
     bool autoSelect_ = false;
     bool routeStarted_ = false;
-    std::unique_ptr<RouteService> route_;
+    std::shared_ptr<RouteService> route_;   // shared: onUdp keeps its copy while a service change (another thread) replaces route_
     std::map<std::string, int> remuxIds_;          // component key -> remux component id
     std::map<int, std::vector<uint8_t>> lastInit_;
     struct CtiPlp;

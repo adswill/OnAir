@@ -430,10 +430,13 @@ struct FmReceiver::Impl {
         chanPass = pass;
         chan.assign(chanStages.size(), DecimFir<cf32>());
         double r = inRate;
+        // #583: the transition band was 80 kHz whatever the width, so a narrowed filter (100 kHz wide) still let a neighbour 100 kHz away through.
+        // Below the standard width the transition shrinks with it (at least 25 kHz); the standard and wider filters are unchanged.
+        const double trans = pass >= kChanPass ? kChanStop - kChanPass : std::max(25e3, (kChanStop - kChanPass) * pass / kChanPass);
         for (size_t i = 0; i < chanStages.size(); i++) {
             const double out = r / chanStages[i];
             const bool last = i + 1 == chanStages.size();
-            chan[i].design(designLowpass(pass, last ? pass + (kChanStop - kChanPass) : out - pass, r), chanStages[i]);
+            chan[i].design(designLowpass(pass, last ? pass + trans : out - pass, r), chanStages[i]);
             r = out;
         }
     }

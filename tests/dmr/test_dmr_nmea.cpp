@@ -27,6 +27,16 @@ static bool parse(const std::string& s, DmrLocation& loc) { return parseDmrNmea(
 static bool near(double a, double b, double eps) { return std::fabs(a - b) < eps; }
 
 int main() {
+    // #335 LOCN: the bytes of the dsdplus hex line (Src 10136, 45.38403 9.16472)
+    {
+        const uint8_t d[] = {0x00,0x48,0x01,0x5F,0x5F,0x08,0xC0,0x03,0x00,0x38,0x00,0x00,0x00,0x44,0x0C,0x00,0x27,0x98,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
+                             'A','2','3','1','0','5','1','3','1','1','0','2','6','N','4','5','2','3','.','0','4','1','9','E','0','0','9','0','9','.','8','8','3','4','1','.','5','3','1','9',0x01,0x03};
+        DmrLocation loc;
+        CHECK(parseDmrLocn(d, sizeof d, loc), "locn: not parsed");
+        CHECK(near(loc.lat, 45.38403, 1e-4) && near(loc.lon, 9.16472, 1e-4), "locn: %.5f %.5f", loc.lat, loc.lon);
+        CHECK(!parseDmrLocn(d, 30, loc), "locn: cut data parsed");
+    }
+
     // the real message from the log: a stationary radio, UTC 09:39:19, valid fix (*46)
     {
         const std::string s = "DMR TEXT: \"$GNRMC,093919.000,A,5315.93271,N,08332.15710,E,0.00,93.55,241026,,,A*46\"";
