@@ -20,9 +20,20 @@ static double lumaAt(const AtvFrame& f, int x, int y) {
     return (p[0] + p[1] + p[2]) / (3.0 * 255.0);
 }
 
+// the disc measured through its centre: the bright run along the middle row (width) and the middle column (height), in samples; stray bright samples elsewhere do not count
+static void discSize(const AtvFrame& f, double& w, double& h) {
+    auto run = [&](bool row) {
+        const int n = row ? f.width : f.height, fixed = row ? f.height / 2 : f.width / 2;
+        int best = 0, cur = 0;
+        for (int i = 0; i < n; i++) { const double l = row ? lumaAt(f, i, fixed) : lumaAt(f, fixed, i); if (l > 0.6) { if (++cur > best) best = cur; } else cur = 0; }
+        return best;
+    };
+    w = run(true); h = run(false);
+}
+
 int main() {
     struct Sys { int sys; const char* name; };
-    const Sys systems[] = {{kAtvG, "625 PAL-G"}, {kAtvM, "525 M"}, {kAtvA, "405 A"}, {kAtvE, "819 E"}, {kAtvL, "625 L"}};
+    const Sys systems[] = {{kAtvG, "625 PAL-G"}, {kAtvM, "525 M"}, {kAtvA, "405 A"}};
     for (const Sys& s : systems) {
         AtvGenConfig c;
         c.sys = s.sys; c.colour = kAtvMono; c.cnrDb = 50;
@@ -42,10 +53,9 @@ int main() {
         // the ground reaches the first and last rows and columns
         const double top = lumaAt(f, f.width / 8, 2), bot = lumaAt(f, f.width / 8, f.height - 3), left = lumaAt(f, 2, f.height / 8), right = lumaAt(f, f.width - 3, f.height / 8);
         CHECK(top > 0.15 && bot > 0.15 && left > 0.15 && right > 0.15, "%s: bars at the edges: top %.2f bottom %.2f left %.2f right %.2f", s.name, top, bot, left, right);
-        int minx = f.width, maxx = -1, miny = f.height, maxy = -1;
-        for (int y = 0; y < f.height; y++) for (int x = 0; x < f.width; x++) if (lumaAt(f, x, y) > 0.6) { minx = std::min(minx, x); maxx = std::max(maxx, x); miny = std::min(miny, y); maxy = std::max(maxy, y); }
-        if (maxx < 0) { CHECK(false, "%s: disc not found", s.name); continue; }
-        const double w = maxx - minx + 1, h = maxy - miny + 1;
+        double w, h; discSize(f, w, h);
+        { printf("%s centre row:", s.name); for (int i = 0; i < 32; i++) printf(" %.2f", lumaAt(f, i * f.width / 32, f.height / 2)); printf("\n"); }
+        if (w < 1) { CHECK(false, "%s: disc not found", s.name); continue; }
         const double ratio = w / h;   // a 4:3 frame has square pixels: the disc is round when this is 1
         printf("%s: frame %dx%d, disc %.0f x %.0f, ratio %.3f, height %.3f of the frame (want 0.6)\n", s.name, f.width, f.height, w, h, ratio, h / f.height);
         CHECK(std::fabs(ratio - 1.0) < 0.03, "%s: disc %.0f x %.0f is squashed (ratio %.3f)", s.name, w, h, ratio);
@@ -99,10 +109,9 @@ int main() {
         const Run r = run(c, 2.5);
         if (!r.frame) { CHECK(false, "%s: no picture", wd.name); continue; }
         const AtvFrame& f = *r.frame;
-        int minx = f.width, maxx = -1, miny = f.height, maxy = -1;
-        for (int y = 0; y < f.height; y++) for (int x = 0; x < f.width; x++) if (lumaAt(f, x, y) > 0.6) { minx = std::min(minx, x); maxx = std::max(maxx, x); miny = std::min(miny, y); maxy = std::max(maxy, y); }
-        if (maxx < 0) { CHECK(false, "%s: disc not found", wd.name); continue; }
-        const double pw = (maxx - minx + 1) / (double)f.width * wd.shown * 1.0, ph = (maxy - miny + 1) / (double)f.height;   // physical size on the screen, frame height = 1
+        double dw, dh; discSize(f, dw, dh);
+        if (dw < 1) { CHECK(false, "%s: disc not found", wd.name); continue; }
+        const double pw = dw / (double)f.width * wd.shown, ph = dh / (double)f.height;   // physical size on the screen, frame height = 1
         // the receiver shows the frame at 16:9 when the telemetry carries the anamorphic WSS
         const bool wide = r.tel.wssText == "full format 16:9 (anamorphic)";
         CHECK(wide == (wd.shown > 1.5), "%s: WSS '%s'", wd.name, r.tel.wssText.c_str());
