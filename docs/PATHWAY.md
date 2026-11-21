@@ -2440,3 +2440,6 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21 Analog TV picture squashed (wbus, 4.4.0)
+- Added tests/atv/test_atv_geometry.cpp: a disc of known shape goes generator -> receiver for 625, 525, 405 and 819 lines and the decoded frame must be 4:3 with a round disc and no bars at the edges. Receive path (picW x picH is 4:3 for every standard, rows 2k+field) and synthetic-file path read as correct; see commit for the CI result.
