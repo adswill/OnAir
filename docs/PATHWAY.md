@@ -2443,3 +2443,4 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-21 Analog TV picture squashed (wbus, 4.4.0)
 - Added tests/atv/test_atv_geometry.cpp: a disc of known shape goes generator -> receiver for 625, 525, 405 and 819 lines and the decoded frame must be 4:3 with a round disc and no bars at the edges. Receive path (picW x picH is 4:3 for every standard, rows 2k+field) and synthetic-file path read as correct; see commit for the CI result.
+- Weave combing (wbus): file/camera pictures are now cut at one instant for both fields (progressive segmented), the test card still moves per field. The receiver weave/bob code is unchanged since 3.9; weave combs on true interlace by design. Bob drew faster only while the mouse clicked: the window redrew at 30 fps (60 with input), dropping fields at 50/s; with a TV or FPV picture on screen the pace is now 60 (30 on the battery saver). Letterbox setting and 16:9 fixes as above.

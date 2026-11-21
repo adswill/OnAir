@@ -18,6 +18,7 @@ struct State {
     bool focused = true;
     bool recentInput = false;       // typing, dragging, hovering in the last second
     bool video = false;             // a TV service is playing
+    bool picture = false;           // an analogue TV or FPV picture is on screen: its fields come 50 a second
     bool running = false;           // a receiver runs: spectrum and waterfall move
     bool liveWaterfall = false;     // running and the waterfall is not paused: a shown window keeps 30 fps, focused or not (#246)
     bool fastWaterfall = false;     // the waterfall makes fast rows (the CW preset): a focused window draws 60 a second so the rows scroll in small steps
@@ -28,6 +29,7 @@ struct State {
 inline double shownInterval(const State& s) {
     const bool saver = s.onBattery && s.batterySaver;
     if (s.video) return 1.0 / 60;                               // the picture keeps its frame rate, on battery too
+    if (s.picture) return saver ? 1.0 / 30 : 1.0 / 60;           // a moving picture drawn at 30 dropped fields (bob) until the mouse moved (60 with input)
     if (s.recentInput) return saver ? 1.0 / 30 : 1.0 / 60;     // typing, dragging
     if (s.running && s.focused && s.liveWaterfall && s.fastWaterfall && !saver) return 1.0 / 60;   // (not on battery power-saving)
     if (s.running) return s.focused || (s.liveWaterfall && !saver) ? 1.0 / 30 : saver ? 0.1 : 1.0 / 15;   // spectrum and waterfall (#246)

@@ -51,6 +51,28 @@ int main() {
         CHECK(std::fabs(ratio - 1.0) < 0.03, "%s: disc %.0f x %.0f is squashed (ratio %.3f)", s.name, w, h, ratio);
         CHECK(std::fabs(h / f.height - 0.6) < 0.03, "%s: disc height %.3f of the frame, want 0.6", s.name, h / f.height);
     }
+    // motion from a picture source (file, camera): no combing in weave. A bar moves 40 samples per field time; the two fields of a frame come from one instant, so
+    // the bar edge on even and odd rows of the woven picture must agree to a few samples (it was 40 apart when each field was cut at its own time)
+    for (int sysI = 0; sysI < 2; sysI++) for (int ph = 0; ph < 2; ph++) {
+        AtvGenConfig c;
+        c.sys = sysI ? kAtvM : kAtvG; c.colour = kAtvMono; c.cnrDb = 50; c.startSec = ph * 0.02;
+        c.pullVideo = [](double t, int w, int h, float* y, float* u, float* v) {
+            const int x0 = 60 + (int)std::fmod(t * 2000.0, 300.0);
+            for (int j = 0; j < h; j++) for (int i = 0; i < w; i++) { const size_t o = (size_t)j * w + i; y[o] = i >= x0 && i < x0 + 80 ? 0.9f : 0.2f; u[o] = 0; v[o] = 0; }
+            return true;
+        };
+        const Run r = run(c, 2.5);
+        if (!r.frame) { CHECK(false, "comb: no picture"); continue; }
+        const AtvFrame& f = *r.frame;
+        double sum[2] = {0, 0}; int n[2] = {0, 0};
+        for (int y = f.height / 4; y < f.height * 3 / 4; y++) {
+            int e = -1; for (int x = 0; x < f.width; x++) if (lumaAt(f, x, y) > 0.55) { e = x; break; }
+            if (e >= 0) { sum[y & 1] += e; n[y & 1]++; }
+        }
+        const double d = n[0] && n[1] ? std::fabs(sum[0] / n[0] - sum[1] / n[1]) : 999;
+        printf("comb %s phase %d: even/odd rows differ by %.1f samples\n", sysI ? "525" : "625", ph, d);
+        CHECK(d < 6, "%s phase %d: woven rows offset by %.1f samples (combing)", sysI ? "525" : "625", ph, d);
+    }
     // a wide source (16:9 and 3:2): a disc round on the screen (physical radius 0.3 of the height) must stay round as the receiver shows it
     // (4:3 frame, or the anamorphic 16:9 frame when WSS says so), whichever aspect setting the generator has; the frame has no bars when it is anamorphic
     struct Wide { double src; int aspect; int sys; const char* name; double shown; double want; };

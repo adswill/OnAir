@@ -377,9 +377,12 @@ struct AtvGenerator::Impl {
         // a live source (camera, file) replaces the whole picture: the test card is drawn only when there is no frame to send
         bool live = false;
         if (cfg.pullVideo) {
+            // a file or camera frame is a whole picture: both fields are cut from the same instant (as a progressive source sent segmented), so weave shows no
+            // combing on motion that was never interlaced; the test card still moves per field (true interlace)
+            const double tFrame = cfg.startSec + (double)frame * fmt.lines * fmt.lineUs * 1e-6;
             const int W = fmt.picW, H = fmt.picH;
             liveY.resize((size_t)W * (size_t)H); liveU = liveY; liveV = liveY;
-            if (cfg.pullVideo(t, W, H, liveY.data(), liveU.data(), liveV.data())) {
+            if (cfg.pullVideo(tFrame, W, H, liveY.data(), liveU.data(), liveV.data())) {
                 const int rows = fmt.fieldRows;
                 for (int k = 0; k < rows; k++) {
                     const int r = std::min(2 * k + fld, H - 1);

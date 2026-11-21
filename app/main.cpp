@@ -97,6 +97,7 @@ static PaceInfo paceFrame(GLFWwindow* window, App& app, const DevOpts& o, double
     ps.recentInput = t - lastInputT < 1.0;
     ps.video = app.engine.player().selected() >= 0;
     ps.running = anyRunning();
+    ps.picture = ps.running && (app.rx.standard == 9 || app.rx.standard == 102) && analogHasPicture(app);
     ps.liveWaterfall = ps.running && !app.wf.paused;   // a shown window with a live waterfall keeps 30 frames a second, focused or not (#246)
     ps.fastWaterfall = app.wf.fast();
     ps.batterySaver = app.powerLowMode != 0;                                // View > Power > Low power mode (one setting for both)
