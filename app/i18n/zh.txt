@@ -5327,7 +5327,6 @@ Bandwidth: %s	带宽：%s
 Bandwidth: a number in MHz, or with k for kHz (250k)	带宽：MHz 数值，或带 k 表示 kHz（250k）
 Bangladesh	孟加拉国
 Bars: mean level at each UTC hour (-5 to 25 dB); the outlined hour is now.	柱状图：每个 UTC 小时的平均电平（-5 至 25 dB）；带轮廓的柱子是当前小时。
-Base frequency (MHz)	基准频率（MHz）
 Base stations heard in this 1.25 MHz channel by their pilot, with the system identity and time from their Sync Channel.	在此 1.25 MHz 信道中按导频听到的基站，附系统标识和来自其同步信道的时间。
 Baseline	基线
 Basics	基础
@@ -5557,7 +5556,6 @@ Channel 14	信道 14
 Channel filter	信道滤波器
 Channel list	信道列表
 Channel name	信道名称
-Channel offset	信道偏移
 Channel spacing of the search. Automatic uses the mode's own (12.5 kHz for DMR). The raster passes through the channel you are tuned to.	搜索的信道间隔。自动使用模式自身的间隔（DMR 为 12.5 kHz）。栅格经过你当前调谐的信道。
 Channel width (Hz, 0: automatic, any value)##csm_cw	信道宽度（Hz，0：自动，任意值）##csm_cw
 Channel width (kHz)	信道宽度（kHz）
