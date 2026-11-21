@@ -91,7 +91,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build tools and headers
-        run: tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 pkg-config ccache libhackrf-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
+        run: |
+          tools/release/retry.sh sudo apt-get update -qq
+          tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 pkg-config ccache libhackrf-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
       - uses: ./.github/actions/android-native-deps
         with: { ndk: "${{ env.NDK_VERSION }}", cmake: "${{ env.CMAKE_VERSION }}" }
       - name: Restore ccache
