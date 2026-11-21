@@ -2440,3 +2440,8 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21 WP6 UI fixes (4.5)
+- Motorola Type II Custom band plan now has three ranges (base, mid, high, each with first channel, spacing and start channel) instead of one line, and the band plan choice and all ranges are remembered after a restart (prefs snBand, snBaseMhz ... snHighOffset). The core already had mid/high ranges (CustomPlan), only the UI lacked them.
+- DAB transmitter map (dab_tii_ui.cpp): a click is no longer taken from the map when another window (for example Data feeds) is on top of it. Not reproduced; this is the one raw-rectangle click path found in the DAB screens (possible cause of the Data feeds click-through to DAB tuning).
+- OnAir Web audio reset: no cause found without the report; skipped.

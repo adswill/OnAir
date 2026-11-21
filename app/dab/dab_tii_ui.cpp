@@ -542,7 +542,7 @@ void dabTransmittersTab(App& a) {
         dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
         const ImVec2 me = adsbmap::project(S.refLat, S.refLon);
         const ImVec2 mouse = ImGui::GetIO().MousePos;
-        const bool inMap = ImGui::IsMouseHoveringRect(p0, ImVec2(p0.x + size.x, p0.y + size.y));
+        const bool inMap = ImGui::IsMouseHoveringRect(p0, ImVec2(p0.x + size.x, p0.y + size.y)) && ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);   // not through a window on top of it (#click-through)
         const Row* hit = nullptr;
         float hitD = 12.f * gUi;
         for (const auto& r : rows) {
