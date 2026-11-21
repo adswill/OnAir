@@ -10,7 +10,7 @@ const { Ring } = require(path.join(__dirname, "../../web/onair-app/worklet.js"))
 
 let passed = 0;
 function test(name, fn) { try { fn(); passed++; } catch (e) { console.error("FAIL " + name + "\n  " + (e && e.stack || e)); process.exitCode = 1; } }
-const MHZ = 1000000, KHZ = 1000, EPS = 1 / 1000000000;   // plain integer literals: PMD misreads exponent notation
+const MHZ = 1000000, KHZ = 1000, EPS = 1 / (MHZ * KHZ);   // small integer literals: PMD misreads exponent notation and very large literals
 const near = (a, b, eps, m) => assert.ok(Math.abs(a - b) <= eps, (m || "") + " " + a + " vs " + b);
 
 // ---- frequencies
