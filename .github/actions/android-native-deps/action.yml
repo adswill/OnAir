@@ -1,0 +1,47 @@
+# The tools and sources the Android native build (android/tools/build_native.sh) needs besides the host's compiler headers: Rust with the Android
+# target, the NDK and CMake, and the pinned libusb / libairspy / libairspyhf sources. Used by the link check of android.yml.
+name: Android native build dependencies
+description: Rust target, NDK, CMake and the radio library sources for android/tools/build_native.sh
+inputs:
+  ndk:
+    description: NDK version
+    required: true
+  cmake:
+    description: CMake version
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Rust with the Android target
+      shell: bash
+      run: |
+        echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        export PATH="$HOME/.cargo/bin:$PATH"
+        tools/release/retry.sh rustup toolchain install stable --profile minimal
+        rustup default stable
+        tools/release/retry.sh rustup target add aarch64-linux-android
+    - name: NDK and CMake
+      shell: bash
+      run: |
+        SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+        yes | "$SDKM" --licenses > /dev/null || true
+        tools/release/retry.sh "$SDKM" --install "ndk;${{ inputs.ndk }}" "cmake;${{ inputs.cmake }}" > /dev/null
+        echo "ANDROID_NDK=$ANDROID_HOME/ndk/${{ inputs.ndk }}" >> "$GITHUB_ENV"
+        echo "CMAKE=$ANDROID_HOME/cmake/${{ inputs.cmake }}/bin/cmake" >> "$GITHUB_ENV"
+    - name: Radio library sources (pinned; own empty folders, nothing from them is run)
+      shell: bash
+      run: |
+        set -eu
+        fetch() {   # repo ref folder [depth-1 branch tag or commit]
+          mkdir -p "$3"; git -C "$3" init -q; git -C "$3" remote add origin "https://github.com/$1"
+          tools/release/retry.sh git -C "$3" fetch -q --depth 1 origin "$2"; git -C "$3" checkout -q FETCH_HEAD
+          echo "$1 at $(git -C "$3" rev-parse HEAD)"
+        }
+        fetch libusb/libusb refs/tags/v1.0.27 "$RUNNER_TEMP/libusb-src"
+        fetch airspy/airspyone_host fc61ab6be57ed61f0e2bdd9c6dfae74cacef57d0 "$RUNNER_TEMP/airspy-src"
+        fetch airspy/airspyhf 24fe8ffcb00b14f827268bbad89ae1392de055e5 "$RUNNER_TEMP/airspyhf-src"
+        grep -q airspy_open_fd "$RUNNER_TEMP/airspy-src/libairspy/src/airspy.h"
+        grep -q airspyhf_open_fd "$RUNNER_TEMP/airspyhf-src/libairspyhf/src/airspyhf.h"
+        echo "LIBUSB_SRC=$RUNNER_TEMP/libusb-src" >> "$GITHUB_ENV"
+        echo "AIRSPY_SRC=$RUNNER_TEMP/airspy-src" >> "$GITHUB_ENV"
+        echo "AIRSPYHF_SRC=$RUNNER_TEMP/airspyhf-src" >> "$GITHUB_ENV"
