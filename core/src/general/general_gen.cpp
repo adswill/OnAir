@@ -31,7 +31,7 @@ public:
         sigma_ = (float)std::sqrt(n125 * rate / 12500.0 / 2);
         // Synthetic content: the user's sound replaces the tone of AM, NFM, WFM and DSB (single sideband keeps its tone: it needs an analytic signal)
         if (demod_ == GenNfm || demod_ == GenWfm || demod_ == GenAm || demod_ == GenDsb) {
-            pcm_ = synthMediaAudioFor(s, 120);
+            pcm_ = synthMediaAudioFor(s, kSynthMediaMaxSoundSeconds);
             if (pcm_) pcm_->setPeak(0.9f);
         }
     }

@@ -945,7 +945,7 @@ public:
                 return true;
             };
         }
-        if (auto a = synthMediaAudioFor(s, 120)) c.pullAudio = [a](float* st, int n) { return a->read(st, n); };
+        if (auto a = synthMediaAudioFor(s, kSynthMediaMaxSoundSeconds)) c.pullAudio = [a](float* st, int n) { return a->read(st, n); };
     }
     static bool fromSynth(const SynthConfig& s, double rate, AtvGenConfig& c) {
         static const int kSys[13] = {kAtvG, kAtvB, kAtvI, kAtvDK, kAtvM, kAtvN, kAtvA, kAtvC, kAtvE, kAtvH, kAtvKp, kAtvL, kAtvLp};
