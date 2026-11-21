@@ -284,6 +284,7 @@ int main() {
     lan.origin = "http://127.0.0.1:" + std::to_string(port);
     r = lan.post("frequency", "{\"hz\":101300000}");
     CHECK(r.status == 200, "tune: %d %s", r.status, r.body.c_str());
+    lan.timeoutMs = 20000;   // starting the engine and switching its mode take seconds on a loaded Windows runner (status 0 = no answer in 4 s)
     r = lan.post("start", "{}");
     CHECK(r.status == 200, "start: %d %s", r.status, r.body.c_str());
     for (int i = 0; i < 100; i++) { r = lan.get("status"); if (has(r.body, "\"running\":true")) break; std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
@@ -308,6 +309,7 @@ int main() {
     CHECK(r.status == 200, "mode by id");
     r = lan.post("mode", "{\"family\":99999,\"sub\":\"\"}");
     CHECK(r.status == 404, "an unknown mode");
+    lan.timeoutMs = 4000;
     r = lan.post("tx/start", "{}");
     CHECK(r.status == 501, "the server has no transmitter: %d %s", r.status, r.body.c_str());
     r = lan.post("nothing", "{}");
