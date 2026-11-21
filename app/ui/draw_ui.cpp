@@ -295,6 +295,7 @@ static void floatingWindows(App& a, ImVec2 disp) {
     txTick(a);
     autodetTick(a);
     shareTick(a);
+    midiTick(a);
     remoteApiTick(a);
     mapWindow(a);
     propagationWindow(a);

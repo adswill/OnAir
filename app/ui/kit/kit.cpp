@@ -18,7 +18,7 @@ void syncTokens() {
     const ui2::UiTheme& P = ui2::T;
     Tokens& k = tokens();
     k.bg0 = P.bg; k.bg1 = P.rail; k.bg2 = P.button; k.bg3 = mix(P.button, P.bright, 0.10f);
-    k.border = P.edge; k.text = P.text; k.textDim = P.dim; k.accent = P.accent;
+    k.border = P.edge; k.controlBorder = P.ctlEdge; k.text = P.text; k.textDim = P.dim; k.accent = P.accent;
     k.ok = ImVec4(0.42f, 0.75f, 0.45f, 1); k.warn = ImVec4(0.86f, 0.65f, 0.22f, 1); k.error = ImVec4(0.86f, 0.33f, 0.30f, 1);
     k.selection = mix(P.bg, P.accent, 0.22f); k.hover = mix(P.button, P.bright, 0.10f);
 }
@@ -67,7 +67,7 @@ bool sw(const char* label, bool* on) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const float y0 = p.y + (ImGui::GetFrameHeight() - h) * 0.5f;
     dl->AddRectFilled(ImVec2(p.x, y0), ImVec2(p.x + w, y0 + h), C(*on ? mix(k.bg2, k.accent, 0.6f) : k.bg2));
-    dl->AddRect(ImVec2(p.x, y0), ImVec2(p.x + w, y0 + h), C(k.border));
+    dl->AddRect(ImVec2(p.x, y0), ImVec2(p.x + w, y0 + h), C(k.controlBorder));
     const float kx = *on ? p.x + w - h + 2 : p.x + 2;
     dl->AddRectFilled(ImVec2(kx, y0 + 2), ImVec2(kx + h - 4, y0 + h - 2), C(*on ? k.bg0 : k.textDim));
     ImGui::SameLine(0, px(k.s6));
@@ -94,10 +94,14 @@ bool sliderValue(const char* label, float* v, float lo, float hi, const char* fm
 bool combo(const char* label, int* cur, const char* const* items, int n, float width) {
     if (width > 0) ImGui::SetNextItemWidth(width);
     bool changed = false;
-    if (ImGui::BeginCombo(label, items[std::max(0, std::min(n - 1, *cur))])) {
+    const char* shown = items[std::max(0, std::min(n - 1, *cur))];
+    const float avail = ImGui::CalcItemWidth() - ImGui::GetFrameHeight() - ImGui::GetStyle().FramePadding.x * 2;   // the room left of the arrow
+    const bool clipped = ImGui::CalcTextSize(shown).x > avail;
+    if (ImGui::BeginCombo(label, shown)) {
         for (int i = 0; i < n; i++) if (ImGui::Selectable(items[i], *cur == i)) { *cur = i; changed = true; }
         ImGui::EndCombo();
     }
+    if (clipped && ImGui::IsItemHovered(ImGuiHoveredFlags_ForTooltip)) ImGui::SetTooltip("%s", shown);   // the cut-off choice is what the user needs to read
     return changed;
 }
 
@@ -200,7 +204,7 @@ void meter(float frac, float width, float warnAt, float errorAt) {
     dl->AddRectFilled(p, ImVec2(p.x + width, p.y + h), C(k.bg2));
     const ImVec4& col = frac >= errorAt ? k.error : frac >= warnAt ? k.warn : k.ok;
     dl->AddRectFilled(p, ImVec2(p.x + width * frac, p.y + h), C(col));
-    dl->AddRect(p, ImVec2(p.x + width, p.y + h), C(k.border));
+    dl->AddRect(p, ImVec2(p.x + width, p.y + h), C(k.controlBorder));
 }
 void labelValue(const char* label, const char* fmt, ...) {
     ImGui::TextDisabled("%s", label);
@@ -208,6 +212,43 @@ void labelValue(const char* label, const char* fmt, ...) {
     char b[256];
     va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap);
     ImGui::TextUnformatted(b);
+}
+
+}  // namespace kit
+
+namespace kit {
+
+void statusText(Status st, const char* text) {
+    const Tokens& k = tokens();
+    const ImVec4& col = st == Status::Ok ? k.ok : st == Status::Warn ? k.warn : st == Status::Error ? k.error : k.textDim;
+    const float h = ImGui::GetTextLineHeight();
+    const ImVec2 p = ImGui::GetCursorScreenPos();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const ImVec2 c(p.x + h * 0.5f, p.y + h * 0.5f);
+    if (st == Status::Off) dl->AddCircle(c, h * 0.18f, C(col), 0, 1.5f);
+    else icons::draw(st == Status::Ok ? Ic::Check : st == Status::Warn ? Ic::Warning : Ic::Cross, c, h * 0.75f, C(col), dl);
+    ImGui::Dummy(ImVec2(h, h));
+    ImGui::SameLine(0, px(k.s4));
+    ImGui::PushStyleColor(ImGuiCol_Text, col);
+    ImGui::TextUnformatted(text);
+    ImGui::PopStyleColor();
+}
+
+bool emptyState(const char* message, const char* action) {
+    const Tokens& k = tokens();
+    const ImVec2 avail = ImGui::GetContentRegionAvail();
+    const float wrap = std::min(avail.x - px(k.s16) * 2, px(360));
+    const ImVec2 ts = ImGui::CalcTextSize(message, nullptr, false, std::max(wrap, 40.f));
+    const float total = ts.y + (action ? px(k.s8) + px(k.controlH) : 0.f);
+    ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + std::max(0.f, (avail.x - ts.x) * 0.5f), ImGui::GetCursorPosY() + std::max(px(k.s8), (avail.y - total) * 0.4f)));
+    ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + std::max(wrap, 40.f));
+    ImGui::PushStyleColor(ImGuiCol_Text, k.textDim);
+    ImGui::TextUnformatted(message);
+    ImGui::PopStyleColor();
+    ImGui::PopTextWrapPos();
+    bool clicked = false;
+    if (action) { ImGui::Dummy(ImVec2(0, px(k.s8))); clicked = button(action, true); }
+    return clicked;
 }
 
 }  // namespace kit

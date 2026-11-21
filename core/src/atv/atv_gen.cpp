@@ -166,11 +166,13 @@ struct AtvGenerator::Impl {
         if (c.rate < 1e6 || c.rate > 64e6) return;
         if (!c.setup && fmt.setup > 0) fmt.setup = 0;
         if (!c.groupDelay) fmt.chromaDelayNs = 0;
-        if (fmt.sys == kAtvE) kFi = 2 * kFi0;
+        if (fmt.sys == kAtvE || c.fmVideo) kFi = 2 * kFi0;
+        if (c.fmVideo) { cfg.sound = 3; cfg.pullAudio = nullptr; cfg.sound2 = 0; cfg.fmDevMhz = std::min(14.0, std::max(1.0, cfg.fmDevMhz)); }
         // exact line length in internal samples: 64 us * 12 MHz = 768, 286 / 4.5 MHz * 12 MHz = 2288 / 3; 405 and 819 lines (25 lines a
         // field pair, 50 Hz): kFi / (25 lines) reduced
-        if (fmt.lines == 625) { hNum = 768; hDen = 1; }
-        else if (fmt.lines == 525) { hNum = 2288; hDen = 3; }
+        const int64_t rateMul = std::llround(kFi / kFi0);   // 2 when the internal rate is doubled
+        if (fmt.lines == 625) { hNum = 768 * rateMul; hDen = 1; }
+        else if (fmt.lines == 525) { hNum = 2288 * rateMul; hDen = 3; }
         else {
             int64_t num = (int64_t)std::llround(kFi), den = 25 * (int64_t)fmt.lines;
             int64_t a0 = num, b0 = den;
@@ -655,7 +657,14 @@ struct AtvGenerator::Impl {
         const float vLo = sL * 1.2f, kAmp = m / (1.f - sL), omc = 1.f - comp;
         float* aOut = &a[base];
         const float* lv = lineV.data();
-        if (F.positive) {
+        if (cfg.fmVideo) {
+            // FM-ATV: the video itself goes on, the carrier is frequency modulated in filterAvailable()
+            for (int j = 0; j < count; j++) {
+                float v = lv[j];
+                if (v < 0) v *= omc;
+                aOut[j] = std::min(std::max(v, vLo), 1.3f);
+            }
+        } else if (F.positive) {
             // positive modulation: sync tip at syncPct, blanking at blankPct, peak white at 100 % of the carrier
             const float s0 = (float)(F.syncPct / 100.0), kp = (1.f - s0) / (1.f - sL);
             for (int j = 0; j < count; j++) {
@@ -672,7 +681,7 @@ struct AtvGenerator::Impl {
                 aOut[j] = lvl * (1.f - kAmp * (v - sL));
             }
         }
-        if (hum != 0) {
+        if (hum != 0 && !cfg.fmVideo) {
             // the mains hum: a sine of the line count, by rotation (one sine and cosine a line)
             const double wd = (double)wh / kFi;
             float hs = (float)std::sin(humPh0), hc = (float)std::cos(humPh0);
@@ -692,6 +701,7 @@ struct AtvGenerator::Impl {
         const int64_t last = aEnd - m;                     // exclusive: samples up to last - 1 have all their neighbours
         if (last <= firNext) return;
         const size_t n = (size_t)(last - firNext);
+        if (cfg.fmVideo) { fmModulate(n); return; }
         tR.resize(n); tI.resize(n);
         const float* x = &a[(size_t)(firNext - m - aBase)];
         desamp(x, 1, hR.data(), tR.data(), (int)n, kVsbTaps);        // the correlation of the amplitude with the real and the imaginary taps (Accelerate on the Mac)
@@ -734,6 +744,29 @@ struct AtvGenerator::Impl {
         if (dropA > 8192) { a.erase(a.begin(), a.begin() + dropA); aBase += dropA; }
     }
 
+    // FM-ATV: the composite video (a[]) sets the instantaneous frequency, so the envelope stays constant. Sync tip is the lowest frequency, peak
+    // white the highest; fmDevMhz spans the two. The same bookkeeping as the AM path (firNext, aBase, trimming of a[]).
+    void fmModulate(size_t n) {
+        const double sL = fmt.syncLevel, perUnit = cfg.fmDevMhz * 1e6 / (1.0 - sL), mid = 0.35;   // the centre frequency sits at about black + a little
+        const double w0 = 2 * kPi * cfg.cfoHz / kFi, wd = 2 * kPi * perUnit / kFi;
+        const size_t o = xr.size();
+        xr.resize(o + n); xi.resize(o + n);
+        const float lvl = (float)cfg.level;
+        const float* x = &a[(size_t)(firNext - aBase)];
+        double ph = carPhase;
+        for (size_t j = 0; j < n; j++) {
+            ph += w0 + wd * ((double)x[j] - mid);
+            if (ph > kPi) ph -= 2 * kPi; else if (ph < -kPi) ph += 2 * kPi;
+            xr[o + j] = lvl * (float)std::cos(ph);
+            xi[o + j] = lvl * (float)std::sin(ph);
+        }
+        carPhase = ph;
+        firNext += (int64_t)n;
+        const size_t keepA = (size_t)(kVsbTaps + 8);
+        const int64_t dropA = firNext - aBase - (int64_t)keepA;
+        if (dropA > 8192) { a.erase(a.begin(), a.begin() + dropA); aBase += dropA; }
+    }
+
     void produce() {
         renderLine();
         filterAvailable();
@@ -742,7 +775,7 @@ struct AtvGenerator::Impl {
     // The audio is evaluated every 32 output samples (on the absolute count, so the chunk size of the caller does not matter) and
     // interpolated linearly in between: a tone of 15 kHz at most changes very little in 3 us.
     void sound(cf32* out, size_t n, uint64_t k0) {
-        if (cfg.sound == 3 && !cfg.pullAudio) return;
+        if (cfg.fmVideo || (cfg.sound == 3 && !cfg.pullAudio)) return;
         const double dt = step / kFi;                                  // seconds of signal per output sample
         const double fSnd = atvSoundOffsetHz(fmt) + cfg.cfoHz;
         const double dev = fmt.soundDevKhz * 1e3;
@@ -879,7 +912,7 @@ double AtvGenerator::timeSec() const { return p_->cfg.startSec + p_->pos / p_->k
 bool AtvGenerator::update(const AtvGenConfig& c) {
     Impl& s = *p_;
     if (c.sys != s.cfg.sys || c.colour != s.cfg.colour || c.rate != s.cfg.rate || c.pattern != s.cfg.pattern || c.groupDelay != s.cfg.groupDelay ||
-        c.nyquistTx != s.cfg.nyquistTx || c.setup != s.cfg.setup || c.secamIdent != s.cfg.secamIdent) return false;
+        c.nyquistTx != s.cfg.nyquistTx || c.setup != s.cfg.setup || c.secamIdent != s.cfg.secamIdent || c.fmVideo != s.cfg.fmVideo) return false;
     s.applyRuntime(c, false);
     return true;
 }
@@ -917,8 +950,9 @@ public:
     static bool fromSynth(const SynthConfig& s, double rate, AtvGenConfig& c) {
         static const int kSys[13] = {kAtvG, kAtvB, kAtvI, kAtvDK, kAtvM, kAtvN, kAtvA, kAtvC, kAtvE, kAtvH, kAtvKp, kAtvL, kAtvLp};
         const int so = s.modeOpt[0];
-        if (so < 0 || so > 12) return false;
-        c.sys = kSys[so];
+        c.fmVideo = so == 15;   // FM-ATV: 625-line PAL video, 8 MHz peak-to-peak deviation (AtvGenConfig::fmDevMhz sets another through the extra config)
+        if (so != 15 && (so < 0 || so > 12)) return false;
+        c.sys = so == 15 ? kAtvG : kSys[so];
         const int co = s.modeOpt[1];
         c.colour = co == 0 ? atvDefaultColour(c.sys) : co == 1 ? kAtvPal : co == 2 ? kAtvNtsc : co == 3 ? kAtvSecam : kAtvMono;
         c.rate = rate;

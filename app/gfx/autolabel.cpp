@@ -11,6 +11,7 @@
 #include "plot_util.h"
 #include "dect2/channels/freq_db.h"
 #include "dect2/channels/memory_bank.h"
+#include "dect2/marinevhf/marinevhf_channels.h"
 #include <map>
 
 namespace {
@@ -20,6 +21,7 @@ using autolabel::Label;
 autolabel::Store gStore;
 uint64_t gRev = 0, gStoreRev = 0;
 double gRevT = -1;
+Label gMarine;   // #597: the Marine VHF channel that plays now, marked at its frequency (text empty: none)
 std::map<std::pair<int, long>, Label> gHeard;   // what was heard on a channel in this session: (source, kHz) -> name
 size_t gPerSrc[autolabel::NumSrc] = {};
 bool gHovered = false;
@@ -83,14 +85,26 @@ std::string stripTag(std::string s) { const size_t br = s.rfind(" ["); if (br !=
 
 // The names heard on the channel the receiver is on now (RDS name, DAB ensemble, DVB network): kept for the session, so the next sweep of the band
 // shows them without a scan. Called twice a second.
-void learn(const App& a) {
-    if (!a.engine.running()) return;
+void learn(App& a) {
+    if (!a.engine.running()) { gMarine = Label(); return; }
     const long khz = std::lround(a.freqMhz * 1000.0);
     auto put = [&](int src, const std::string& text, const std::string& detail, const std::string& mode) {
         if (text.empty()) return;
         Label l; l.mhz = (double)khz / 1000.0; l.text = text; l.detail = detail; l.mode = mode; l.src = src; l.prio = 1.f;   // heard just now: over what a scan found
         gHeard[{src, khz}] = l;
     };
+    {   // Marine VHF: the channel that plays (the picked one, the scan's, or the strongest open one) is named on the spectrum at its own frequency
+        namespace mv = dect2::marinevhf;
+        Label m;
+        const auto pc = a.engine.marineVhf().playingChannel();
+        if (pc.first > 0) {
+            if (const mv::Channel* c = mv::findChannel(a.engine.marineVhf().region(), pc.first, pc.second)) {
+                m.mhz = c->duplex() ? c->coastMhz : c->shipMhz; m.text = "Ch " + c->label(); m.detail = c->name; m.bwMhz = 0.025;
+                m.src = autolabel::Band; m.prio = 5.f;   // over the plain channel raster
+            }
+        }
+        gMarine = m;
+    }
     if (a.fmMode) { put(autolabel::Fm, autolabel::trimmed(a.rx.fm.psName), a.rx.fm.radioText, "fm"); return; }
     if (a.rx.standard == 3) { if (a.rx.dab.state == 2 && a.rx.dab.ensemble) put(autolabel::Dab, autolabel::trimmed(a.rx.dab.ensembleLabel), "", "dab"); return; }
     if (!a.ts.services.empty()) {
@@ -111,6 +125,7 @@ uint64_t revision(const App& a) {
     for (const auto& r : a.scanner.results()) { h = mix(h, (uint64_t)std::llround(r.freqMHz * 1000)); h = mix(h, r.networkName); h = mix(h, (uint64_t)r.services.size()); }
     for (const auto& m : memoryBank().all()) { h = mix(h, m.freqHz); h = mix(h, m.name); h = mix(h, (uint64_t)std::llround(m.bandwidthHz)); }
     for (const auto& kv : gHeard) { h = mix(h, (uint64_t)kv.first.second); h = mix(h, kv.second.text); }
+    h = mix(h, (uint64_t)std::llround(gMarine.mhz * 1e6)); h = mix(h, gMarine.text);
     h = mix(h, (uint64_t)dect2::builtinFrequencies().size());
     return h;
 }
@@ -157,6 +172,7 @@ void rebuild(App& a) {
         gStore.add(l);
     }
     for (const auto& kv : gHeard) gStore.add(kv.second);
+    if (!gMarine.text.empty()) gStore.add(gMarine);
     for (const auto& m : memoryBank().all()) {
         if (m.name.empty() || m.freqHz == 0) continue;
         Label l; l.mhz = (double)m.freqHz / 1e6; l.text = m.name; l.detail = m.group; l.mode = m.mode; l.src = Memories; l.bwMhz = m.bandwidthHz > 0 ? m.bandwidthHz / 1e6 : 0;

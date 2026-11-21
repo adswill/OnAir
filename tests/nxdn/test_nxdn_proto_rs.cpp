@@ -3,7 +3,8 @@
 
 // Golden-vector test of the Rust NXDN frame layer (rust/onair_nxdn, dect2::nxdn): scrambler, LICH (all 256 bytes), CRCs, the three coded channels (clean,
 // with bit errors and random soft values), layer 3 build / parse and the names, over ONAIR_DIFF_ITERS (default 200000) seeded inputs per family. Every result
-// goes into a digest (tests/common/golden.h) compared with the one recorded from the C++ layer the Rust code replaced.
+// goes into a digest (tests/common/golden.h) compared with the one recorded from the C++ layer the Rust code replaced, re-recorded when VCALL_ASSGN (type 4) was added
+// to the Rust layer (it was an unknown type in the C++ layer; every other result is unchanged, checked by running the digest without it).
 #include "dect2/nxdn/nxdn_proto.h"
 #include "../common/golden.h"
 #include <cmath>
@@ -130,5 +131,5 @@ int main() {
         A::ambeFrame(bits, fa);
         for (auto& row : fa) for (char c : row) dig.add(c);
     }
-    return golden::check("nxdn_proto_rs", dig, 0x461c5b4739445ed7ull, !it);
+    return golden::check("nxdn_proto_rs", dig, 0x89f032465c60ba6bull, !it);
 }

@@ -16,7 +16,7 @@ namespace ui2 {
 // Palettes. 0: "terminal" (warm greys, amber, lower-case labels, key hints, log line); 1: "instrument" (mid greys, yellow trace, plain labels);
 // 2: "mono" (neutral greys, white trace, no accent at all, plain labels).
 struct UiTheme {
-    ImVec4 bg, rail, edge, text, dim, bright, accent, frame, button, plotBg, series[8];
+    ImVec4 bg, rail, edge, ctlEdge, text, dim, bright, accent, frame, button, plotBg, series[8];   // ctlEdge: control outlines, 3:1 on bg
     ImU32 tone[5];      // what the classic interface's blues become: bright fill, dark fill, mid fill, soft icon, bright icon
     bool flair;         // lower-case labels, key hints and a log line
 };

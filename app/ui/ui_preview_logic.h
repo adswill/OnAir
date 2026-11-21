@@ -23,7 +23,7 @@ struct Look {
     int mode = 0;             // 0 dark, 1 light (App::lightUi), 2 high contrast (App::highContrast)
     int variant = 0;          // App::uiVariant: 0 sidebar ... 7 panel
     bool unified = false;     // App::layoutUnified
-    int typography = 0;       // the "uiTypography" preference: 0 current, 1 clean, 2 compact
+    int typography = 1;       // the "uiTypography" preference: 0 current, 1 clean (default), 2 compact
     float textScale = 1.f;    // App::uiTextScale
     bool touch = false;       // App::touchUi
     float touchScale = 1.35f; // App::touchScale

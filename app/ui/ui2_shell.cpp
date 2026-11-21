@@ -4,6 +4,7 @@
 // The new interface: the shell around the body (menu bar, top bar with the mode combo and summary, bottom bar, the
 // mode list and side bar, the status line and the log console).
 // Split from ui2.cpp; the shared declarations are in ui2_internal.h.
+#include "streamer.h"
 #include "transcribe/transcribe_app.h"
 #include "input_map.h"
 #include "dect2/dsp/baseband_filter.h"
@@ -783,6 +784,8 @@ static void viewMenu(App& a) {
         ImGui::SetNextItemWidth(220 * gUi);
         ImGui::InputTextWithHint("##toolsearch", tr("Search the tools"), q, sizeof q);
         ImGui::Separator();
+        if (ImGui::MenuItem(tr("Shared channel list"), nullptr, false, sharedChannelsAvailable(a))) openSharedChannels(a);   // the crowd-sourced OnAir-channels data
+        ImGui::Separator();
         int n = 0;
         const menugroups::ToolItem* items = menugroups::toolItems(n);
         if (*q) {
@@ -905,6 +908,8 @@ float menuBar(App& a) {
             if (ImGui::MenuItem(tr(running ? "Stop receiver" : "Start receiver"), "Space")) { if (running) a.engine.stop(); else startReceiver(a); }
             ImGui::Separator();
             workspaceMenu(a);
+            ImGui::Separator();
+            if (ImGui::MenuItem(tr("Streamer mode"), nullptr, streamer::on())) plat::prefs().setB("streamerMode", !streamer::on());   // hides the location and addresses (Settings > Streamer)
             ImGui::Separator();
             if (ImGui::MenuItem(tr("Exit program"), "Alt+F4")) { if (gWindow) glfwSetWindowShouldClose(gWindow, GLFW_TRUE); }
             ImGui::EndMenu();

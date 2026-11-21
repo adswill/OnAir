@@ -268,7 +268,7 @@ void bigView(App&) {
     ImGui::SameLine();
     if (ImGui::SmallButton("Copy path")) ImGui::SetClipboardText(U(P(folder()) / P(g.sel + ".png")).c_str());
     ImGui::SameLine();
-    if (ImGui::SmallButton("fit")) { g.zoom = 0; g.pan = ImVec2(0, 0); }
+    if (ImGui::SmallButton(tr("fit"))) { g.zoom = 0; g.pan = ImVec2(0, 0); }
     ImGui::SameLine();
     if (ImGui::SmallButton("1:1")) g.zoom = 1;
     ImGui::PushTextWrapPos(0);

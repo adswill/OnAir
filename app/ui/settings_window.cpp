@@ -24,6 +24,7 @@
 #include "kit/mode_panel.h"
 #include "../codec/speech_codec_ui.h"
 #include "ui2_internal.h"
+#include "streamer.h"
 #include "ui_preview.h"
 #include "dect2/common/u8file.h"
 #include "dect2/engine/updater.h"
@@ -83,7 +84,7 @@ const std::map<std::string, Bind>& binds() {
         NB("uiTheme", a.uiTheme); NB("uiVariant", a.uiVariant); NB("layoutUnified", a.layoutUnified); NB("uiTextScale", a.uiTextScale);
         NB("touchUi", a.touchUi); NB("touchScale", a.touchScale); NB("touchSize", a.touchSize); NB("perfOverlay", a.perfOverlay);
         NB("wfMap3", a.wf.map); NB("wfAutoFloor", a.wf.autoTrack); NB("wfGamma", a.wf.gamma); NB("wfBright", a.wf.brightness); NB("wfSat", a.wf.sat);
-        NB("wfContrast", a.wf.contrast); NB("wfClock", a.wf.clockLabels); NB("wfAvg", a.wf.rowAverage); NB("wfLowPass", a.wfLowPass);
+        NB("wfContrast", a.wf.contrast); NB("wfClock", a.wf.clockLabels); NB("wfAvg", a.wf.rowAverage); NB("audioBoostDb", a.audioBoostDb); NB("wfRowTau", a.wf.rowTau); NB("wfLowPass", a.wfLowPass);
         NB("specAutoDb", a.specAutoDb); NB("specPerHz", a.specPerHz); NB("specDbm", a.specDbm); NB("specFill", a.specFill);
         NB("specGrid", a.specGrid); NB("specPeaks", a.specPeaks); NB("specReadout", a.specReadout); NB("specLine", a.specLine);
         NB("specAvgSec", a.specAvgSec); NB("holdDecay", a.holdDecay);
@@ -111,13 +112,15 @@ const std::map<std::string, Bind>& binds() {
         m["rxAltM"] = Bind{[](App&) -> double { return plat::prefs().getD("rxAltM", 0); },
                            [](App&, double v) { plat::prefs().setD("rxAltM", dect2::station::clampHeightM(v)); }, nullptr, nullptr};
         SW_PT("stationName");
+        SW_PB("midiOn", false); SW_PT("midiPort"); SW_PI("midiChannel", 0); SW_PI("midiCcLna", -1); SW_PI("midiCcVga", -1); SW_PI("midiCcGain", -1);   // #543, app/midi
+        SW_PI("threads", -1);   // #372: read in main.cpp before the first thread pool use, so a restart applies it
         PD("rxThread");   // 4.0: Engine::setRxThreadMode at the next Start (toolbar_source.cpp)
         NB("updCheck", a.updCheck); NB("updBeta", a.updPre); NB("updAuto", a.updAuto); NB("updSrc", a.updSrc);
         NB("updMirrorOn", a.updMirrorOn); SB("updMirror", a.updMirror);
         PS("staleVdl2", -1); PS("staleAcars", -1); PS("staleHfdl", -1); PS("staleAdsb", -1); PS("staleAis", -1); PS("staleUat", -1); PS("staleInmsat", -1); PS("staleCustomMin", 120);
         SB("udpHost", std::string(a.udpHost)); NB("udpPort", a.out.port); NB("udpRtp", a.out.rtp);
         // ---- 4.0
-        SW_PI("startFreqMode", 0); SW_PF("startFreqMhz", 100); SW_PB("autoStartRx", false); SW_PB("doctorAutoOpen", true); SW_PI("sessionRestore", 0); SW_PI("confirmExit", 0);
+        SW_PI("startFreqMode", 0); SW_PF("startFreqMhz", 100); SW_PB("autoStartRx", false); SW_PB("reduceMotion", false); SW_PB("streamerMode", false); SW_PB("streamerHideLocation", true); SW_PB("streamerHideCallsign", false); SW_PB("streamerHideNetwork", true); SW_PB("streamerHidePaths", true); SW_PB("doctorAutoOpen", true); SW_PI("sessionRestore", 0); SW_PI("confirmExit", 0);
         SW_PIA("adsbUnits", 0, adsbui::unitsFromPrefs()); SW_PIA("adsbSpeedUnit", 0, adsbui::unitsFromPrefs());
         NB("specFft", a.specFft);
         m["wfRate"] = Bind{[](App& a) -> double { return a.wf.rowsPerSec; }, [](App& a, double v) { a.wf.setRate((float)v); }, nullptr, nullptr};
@@ -178,7 +181,7 @@ void writeVal(App& a, const Info& i, const Val& v) {
 bool customChanged(const App& a, const Info& i) {
     if (!strcmp(i.key, "themeMode")) return a.lightUi || a.highContrast;
     if (!strcmp(i.key, "uiLang")) return !a.uiLang.empty();
-    if (!strcmp(i.key, "uiTypography")) return plat::prefs().getI("uiTypography", 0) != 0;
+    if (!strcmp(i.key, "uiTypography")) return plat::prefs().getI("uiTypography", 1) != 1;
     if (!strcmp(i.key, "startMode")) return plat::prefs().getI("startFamily", -1) >= 0;
     if (!strcmp(i.key, "audioDevDefault")) return !plat::prefs().getS("audioDevDefault", "").empty();
     if (!strcmp(i.key, "keysEditor")) return !inputmap::settings().isDefault();
@@ -188,7 +191,7 @@ bool customChanged(const App& a, const Info& i) {
 void customReset(App& a, const Info& i) {
     if (!strcmp(i.key, "themeMode")) { a.lightUi = false; a.highContrast = false; savePrefs(a); }
     else if (!strcmp(i.key, "uiLang")) setUiLanguage(a, "");
-    else if (!strcmp(i.key, "uiTypography")) plat::prefs().setI("uiTypography", 0);
+    else if (!strcmp(i.key, "uiTypography")) plat::prefs().setI("uiTypography", 1);
     else if (!strcmp(i.key, "startMode")) { plat::prefs().setI("startFamily", -1); plat::prefs().setS("startSub", ""); }
     else if (!strcmp(i.key, "audioDevDefault")) { plat::prefs().setS("audioDevDefault", ""); audioDefaultDeviceChanged(); }
     else if (!strcmp(i.key, "keysEditor")) { inputmap::settings().reset(); inputmap::save(); }
@@ -531,6 +534,7 @@ void customRow(App& a, const Info& i) {
 // one row's control; true when the value changed
 void control(App& a, const Info& i) {
     const std::string k = i.key;
+    if (streamer::hiddenKey(i.key)) { ImGui::TextDisabled("%s", tr("Hidden in Streamer mode")); return; }   // the value stays stored, it is only not drawn
     Val cur = readVal(a, i);
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (i.kind == Kind::Bool) {

@@ -97,7 +97,9 @@ inline const char* radioBlurb(const std::string& board, const std::string& name)
     static const R k[] = {
         {"rtl_tcp", N_("rtl_tcp: an RTL-SDR shared by another computer over the network.")},
         {"rtltcp", N_("rtl_tcp: an RTL-SDR shared by another computer over the network.")},
+        {"rsa", N_("Tektronix RSA306: a USB real-time spectrum analyser, 9 kHz to 6.2 GHz, with up to 40 MHz of live bandwidth.")},
         {"airspyhf", N_("Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.")},
+        {"g33ddc", N_("WiNRADiO G33DDC: a wideband USB receiver with a digital down-converter. Windows only; needs the G33DDCAPI library from the WiNRADiO application, see the ? in Radio settings.")},
         {"fobos", N_("Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.")},
         {"rfnm", N_("RFNM: a wideband radio board with one or two daughter boards, on USB or the network.")},
         {"nrspst", N_("SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.")},
@@ -122,6 +124,7 @@ inline const char* radioBlurb(const std::string& board, const std::string& name)
         {"spyserver", N_("SpyServer: a radio shared by another computer over the network.")},
         {"spectran", N_("Aaronia Spectran V6: a real-time spectrum analyser radio, up to 6 GHz or more with the wide models, with a very wide view. Receive only.")},
         {"rsa", N_("Tektronix RSA306: a real-time spectrum analyser on USB 3, 9 kHz to 6.2 GHz. Needs Tektronix's RSA API library. Receive only.")},
+        {"g33ddc", N_("WiNRADiO G33DDC: a direct-sampling receiver on USB 3 for long, medium and short wave up to 50 MHz, through the maker's library (Windows only). Receive only.")},
         {"hamlib", N_("A transceiver controlled over CAT, with its sound card for audio.")},
     };
     for (const R& r : k) if (b.find(r.key) != std::string::npos) return r.text;

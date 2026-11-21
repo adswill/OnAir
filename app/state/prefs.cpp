@@ -105,12 +105,14 @@ const std::vector<PrefKey>& keyTable() {
         shared(num("touchSize", AT(a.touchSize), 2, 0, 4, true)),
         num("tetraSlotMode", AT(a.tetraSlotMode), 0, 0, 3, true), num("tetraSlotNum", AT(a.tetraSlotNum), 1, 1, 4, true),
         num("tetraSlotId", AT(a.tetraSlotId), 0, 0, 16777215, true),
-        num("tetraSingle", AT(a.tetraSingle), 0, 0, 1, true),
+        real("audioBoostDb", AT(a.audioBoostDb), 0.0, 24.0),
+        num("tetraSingle", AT(a.tetraSingle), 0, 0, 1, true), num("tetraPlayUnknown", AT(a.tetraPlayUnknown), 0, 0, 1, true),
         num("tetraSearchPct", AT(a.tetraSearchPct), 72, 1, 99, true),
         num("wfMap3", AT(a.wf.map), cmap::NavyHeat, -1, (int)Waterfall::NumMaps - 1, true),   // 3.0: a new key, everyone starts on Navy heat (the old looks set their own maps)
         flagB("wfAutoFloor", AT(a.wf.autoTrack), true),   // new key with the floor-anchored range (3.0): everyone starts on auto
         flagB("specAutoDb", AT(a.specAutoDb), true), flagB("specPerHz", AT(a.specPerHz), true),
         flagB("wfAvg", AT(a.wf.rowAverage), false, false, true), flagB("wfClock", AT(a.wf.clockLabels), false, false, true),
+        real("wfRowTau", AT(a.wf.rowTau), 0.0, 2.0),
         real("wfGamma", AT(a.wf.gamma), 0.4, 2.5),
         real("wfSat", AT(a.wf.sat), 0.0, 2.0),
         real("wfBright", AT(a.wf.brightness), -0.5, 0.5), real("wfContrast", AT(a.wf.contrast), 0.25, 4),

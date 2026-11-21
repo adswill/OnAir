@@ -4,10 +4,10 @@
 cmake_minimum_required(VERSION 3.20)
 set(ONAIR_ROOT ${CMAKE_CURRENT_SOURCE_DIR})   # the repository root (CMAKE_SOURCE_DIR is the bridge's folder when this is built as a subproject, as the Android app does)
 if(APPLE AND NOT DEFINED ANDROID_ABI)
-  project(OnAir VERSION 4.3.0 LANGUAGES C CXX OBJCXX)
+  project(OnAir VERSION 4.4.0 LANGUAGES C CXX OBJCXX)
   set(CMAKE_OBJCXX_STANDARD 20)
 else()
-  project(OnAir VERSION 4.3.0 LANGUAGES C CXX)
+  project(OnAir VERSION 4.4.0 LANGUAGES C CXX)
 endif()
 
 # A compiler cache, when one is installed, makes repeat builds take seconds (-DDECT2_CCACHE=OFF turns it off).
@@ -376,7 +376,7 @@ option(DECT2_WITH_TLS "Serve the remote-control API over HTTPS / wss (links Open
 target_sources(dect2core PRIVATE core/src/net/tls_conn.cpp core/src/net/remote_json.cpp)
 target_sources(dect2core PRIVATE core/src/net/sonde_upload.cpp)   # radiosonde upload to APRS-IS aggregators
 target_sources(dect2core PRIVATE core/src/net/sondehub.cpp)   # radiosonde upload to SondeHub (docs/SONDEHUB-4.0.md)
-target_sources(dect2core PRIVATE core/src/integrations/mqtt.cpp core/src/integrations/integrations.cpp core/src/integrations/msg_archive.cpp)   # Integrations: MQTT client, webhook and JSON-lines sinks (docs/INTEGRATIONS.md)
+target_sources(dect2core PRIVATE core/src/integrations/mqtt.cpp core/src/integrations/integrations.cpp core/src/integrations/msg_archive.cpp core/src/integrations/commands.cpp)   # Integrations: MQTT client, webhook and JSON-lines sinks (docs/INTEGRATIONS.md)
 target_sources(dect2core PRIVATE core/src/net/swarm.cpp core/src/net/swarm_net.cpp core/src/net/swarm_ctl.cpp)   # LAN swarm: announce packets, merged results, range splitting, pairing handshake, memory sync
 if(UNIX AND NOT APPLE AND NOT DECT2_WITH_TLS)
   find_package(OpenSSL QUIET)   # Linux: https for Internet TV (docs/IPTV.md) uses the system's OpenSSL 3 when it is installed
@@ -859,6 +859,7 @@ if(DECT2_BUILD_APP)
   endif()
   # the voice key window and the OS keychain behind it (app/keys, app/platform/keychain_*): one keychain file per system, compiled only there
   list(APPEND APP_SOURCES app/keys/keys_ui.cpp app/keys/keys_logic.cpp)
+  list(APPEND APP_SOURCES app/midi/midi_app.cpp app/midi/midi_in.cpp)   # MIDI knobs for the radio gain (#543); raw ALSA on Linux, WinMM, CoreMIDI
   if(APPLE)
     list(APPEND APP_SOURCES app/platform/keychain_mac.mm)
   elseif(WIN32)
@@ -959,6 +960,8 @@ if(DECT2_BUILD_APP)
   add_test(NAME rec_tags COMMAND test_rec_tags)
   add_executable(test_spec_ghost tests/app/test_spec_ghost.cpp app/state/spec_ghost.cpp)   # spectrum ghost: snapshots, columns, new signals, rolling store (docs/SPECTRUM-GHOST.md)
   add_test(NAME spec_ghost COMMAND test_spec_ghost)
+  add_executable(test_midi tests/app/test_midi.cpp)   # MIDI parser and knob mapping (app/midi/midi_logic.h, #543)
+  add_test(NAME midi COMMAND test_midi)
   add_executable(test_settings tests/app/test_settings.cpp)   # the Settings window's table, search, reset, export / import (app/ui/settings_logic.h)
   add_test(NAME settings COMMAND test_settings)
   add_executable(test_gpu_policy tests/app/test_gpu_policy.cpp)
@@ -1065,6 +1068,11 @@ if(DECT2_BUILD_APP)
     target_compile_options(dect2 PRIVATE -fobjc-arc)
   endif()
   target_link_libraries(dect2 PRIVATE dect2core imgui)
+  if(APPLE)
+    target_link_libraries(dect2 PRIVATE "-framework CoreMIDI")
+  elseif(WIN32)
+    target_link_libraries(dect2 PRIVATE winmm)
+  endif()
   target_sources(dect2 PRIVATE app/panels/wide_all_ui.cpp)   # Everything in view: wide multi-signal decode window
   target_sources(dect2 PRIVATE app/panels/rffp_ui.cpp)   # RF fingerprint window (docs/RF-FINGERPRINT.md)
   target_link_libraries(dect2 PRIVATE dect2core imgui onair_web)

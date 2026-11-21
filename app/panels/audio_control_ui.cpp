@@ -13,6 +13,7 @@
 #include "dect2/audio/audio_control.h"
 #include "dect2/audio/audio_rec.h"
 #include "dect2/audio/audioout.h"
+#include "dect2/audio/audiolevel.h"
 #include "dect2/source/iq_record.h"
 #include "ui/icons.h"
 #include <algorithm>
@@ -234,6 +235,7 @@ void registerPresetProviders() {
 }  // namespace
 
 void audioControlTick(App& a) {
+    dect2::setOutputBoostDb(a.audioBoostDb);
     static const bool registered = (registerPresetProviders(), true);
     (void)registered;
     if (&a != receiverHeard()) return;   // the heard receiver drives the chain

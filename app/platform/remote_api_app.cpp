@@ -14,6 +14,7 @@
 #include "dect2/net/api_policy.h"
 #include "dect2/net/api_servers.h"
 #include "dect2/net/remote_api.h"
+#include "dect2/integrations/commands.h"
 #include "dect2/mcp/mcp.h"
 #include "dect2/codec/codec_paths.h"
 #include "../memory/memory_options.h"
@@ -584,6 +585,8 @@ void remoteApiSavePrefs(const App& a) {
     d.setB("udpOn", s.udpCfg.on); d.setS("udpHost", s.udpCfg.host); d.setI("udpPort", s.udpCfg.port);
     d.setB("mcpOn", s.mcp.on); d.setI("mcpPort", s.mcp.port); d.setI("mcpLan", s.mcp.lan ? 1 : 0); d.setS("mcpToken", s.mcp.token); d.setB("mcpLocalAuth", s.mcp.localAuth);
 }
+
+std::string remoteApiRunCommand(const std::string& name, const std::string& payload) { return dect2::integrations::runCommand(st().host, name, payload); }
 
 void remoteApiTick(App& a) {
     if (a.rxId != 1) return;

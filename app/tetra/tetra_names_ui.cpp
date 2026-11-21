@@ -86,7 +86,7 @@ void speakingLine(App& a) {
     int shown = 0;
     for (int i = 0; i < 4; i++) {
         const dect2::tetra::SlotInfo& k = best->slots[i];
-        if (k.state == dect2::tetra::SlotState::Encrypted || k.state == dect2::tetra::SlotState::Idle) continue;   // an encrypted call carries no ids
+        if (k.state == dect2::tetra::SlotState::Encrypted || k.state == dect2::tetra::SlotState::Unknown || k.state == dect2::tetra::SlotState::Idle) continue;   // an encrypted call carries no ids
         if (k.lastHeardSec < 0 || now - k.lastHeardSec > 8.0 || (!k.issi && !k.talkgroup)) continue;
         if (shown++) { ImGui::SameLine(0, 14 * gUi); }
         std::string s = "";

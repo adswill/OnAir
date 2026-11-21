@@ -50,6 +50,40 @@ static std::string writePpm(const std::string& name, int w, int h) {
     for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) { uint8_t px[3]; quadrant(x, y, w, h, px); f.write((const char*)px, 3); }
     return p;
 }
+
+// a 3 s, 25 fps MPEG-2 video in an MPEG-TS file (the same quadrant picture as the ppm, every frame), made with FFmpeg's own encoder: a real video file for the "Video file" content
+static std::string writeVideoTs(const std::string& name, int w, int h) {
+    const std::string p = g_dir + "/" + name;
+    const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_MPEG2VIDEO);
+    AVFormatContext* oc = nullptr;
+    if (!codec || avformat_alloc_output_context2(&oc, nullptr, "mpegts", p.c_str()) < 0 || !oc) return "";
+    AVStream* st = avformat_new_stream(oc, nullptr);
+    AVCodecContext* cx = avcodec_alloc_context3(codec);
+    cx->width = w; cx->height = h; cx->time_base = AVRational{1, 25}; cx->framerate = AVRational{25, 1};
+    cx->pix_fmt = AV_PIX_FMT_YUV420P; cx->bit_rate = 4000000; cx->gop_size = 12; cx->max_b_frames = 0;
+    if (oc->oformat->flags & AVFMT_GLOBALHEADER) cx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    if (avcodec_open2(cx, codec, nullptr) < 0 || avcodec_parameters_from_context(st->codecpar, cx) < 0 || avio_open(&oc->pb, p.c_str(), AVIO_FLAG_WRITE) < 0) return "";
+    st->time_base = cx->time_base;
+    avformat_write_header(oc, nullptr);
+    std::vector<uint8_t> rgb((size_t)w * h * 3);
+    for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) quadrant(x, y, w, h, &rgb[((size_t)y * w + x) * 3]);
+    SwsContext* sws = sws_getContext(w, h, AV_PIX_FMT_RGB24, w, h, AV_PIX_FMT_YUV420P, SWS_BILINEAR, nullptr, nullptr, nullptr);
+    AVFrame* fr = av_frame_alloc(); fr->format = AV_PIX_FMT_YUV420P; fr->width = w; fr->height = h; av_frame_get_buffer(fr, 0);
+    AVPacket* pk = av_packet_alloc();
+    auto drain = [&]() { while (avcodec_receive_packet(cx, pk) >= 0) { av_packet_rescale_ts(pk, cx->time_base, st->time_base); pk->stream_index = st->index; av_interleaved_write_frame(oc, pk); av_packet_unref(pk); } };
+    for (int i = 0; i < 75; i++) {
+        av_frame_make_writable(fr);
+        const uint8_t* src[1] = {rgb.data()}; int ls[1] = {w * 3};
+        sws_scale(sws, src, ls, 0, h, fr->data, fr->linesize);
+        fr->pts = i;
+        avcodec_send_frame(cx, fr); drain();
+    }
+    avcodec_send_frame(cx, nullptr); drain();
+    av_write_trailer(oc);
+    avio_closep(&oc->pb);
+    av_packet_free(&pk); av_frame_free(&fr); sws_freeContext(sws); avcodec_free_context(&cx); avformat_free_context(oc);
+    return p;
+}
 static void le32(std::ofstream& f, uint32_t v) { f.write((const char*)&v, 4); }
 static void le16(std::ofstream& f, uint16_t v) { f.write((const char*)&v, 2); }
 // a 16 bit PCM wav, 48 kHz: channel 1 a sine at hzL, channel 2 (stereo only) at hzR
@@ -179,8 +213,8 @@ static void testDvbt(const std::string& png, const std::string& wav) {
     }
 }
 
-static void testAtv(const std::string& ppm, const std::string& wav) {
-    SynthConfig sc; sc.mode = 10; sc.snrDb = 45; sc.mediaKind = 1; sc.mediaPath = ppm; sc.mediaAudio = wav;   // PAL B/G, the system 0 of the mode
+static void testAtv(const std::string& ppm, const std::string& wav, int kind = 1) {
+    SynthConfig sc; sc.mode = 10; sc.snrDb = 45; sc.mediaKind = kind; sc.mediaPath = ppm; sc.mediaAudio = wav;   // PAL B/G, the system 0 of the mode
     const double rate = 10e6;
     auto ms = makeModeSynth(10, sc, rate);
     CHECK(ms != nullptr, "ATV: no test signal");
@@ -203,7 +237,7 @@ static void testAtv(const std::string& ppm, const std::string& wav) {
     if (last) {
         // the active picture sits inside the frame: judge the middle (the quadrants of the file, a 4:3 picture)
         const double e = quadrantError(last->rgba.data(), last->width, last->height, 4, 0.1, 0.9, 0.1, 0.9);
-        printf("ATV: the picture's four colours are within %.1f levels of the file's\n", e);
+        printf("ATV (%s): the picture's four colours are within %.1f levels of the file's\n", kind == 2 ? "video file" : "picture file", e);
         CHECK(e < 60, "ATV: the decoded picture is not the file's (colour error %.1f)", e);
     }
     const size_t from = audio.size() / 3;
@@ -282,6 +316,9 @@ int main() {
     testFm(wavStereo);
     testSstv(ppm4x3);
     testAtv(ppm4x3, wavMono);
+    const std::string ts43 = writeVideoTs("quad43.ts", 640, 480);
+    CHECK(!ts43.empty(), "could not write the test video");
+    if (!ts43.empty()) testAtv(ts43, wavMono, 2);   // a video file: its frames are the picture
     testDvbt(ppm16x9, wavMono);
     std::error_code ec; std::filesystem::remove_all(g_dir, ec);
     return testSummary("synth_media");

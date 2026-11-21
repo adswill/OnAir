@@ -9,7 +9,8 @@
 
 namespace dect2::tetra {
 
-enum class SlotState : uint8_t { Idle = 0, Control, Voice, Encrypted };
+// Unknown: traffic whose call set-up was not heard (OnAir tuned in mid-call), so nothing says it is encrypted or clear: muted like Encrypted, but not called encrypted.
+enum class SlotState : uint8_t { Idle = 0, Control, Voice, Encrypted, Unknown };
 
 // What is known of one downlink timeslot. talkgroup (GSSI) / issi are 0 when unknown; they come from the set-up PDU of a call that is not
 // encrypted and are never set for an encrypted call. Local only (call table, slot display, this selector). lastHeardSec < 0: never heard.
@@ -58,8 +59,9 @@ inline int pickSlot(const SlotSelect& s, const SlotInfo (&slots)[4], double nowS
 // Folds one capture's view of a slot into its record: Idle and Control never erase a recent Voice / Encrypted record for holdSec (a talk
 // spurt pause), and lastHeardSec moves only for Voice and Encrypted.
 inline void updateSlot(SlotInfo& k, SlotState seen, double nowSec, double holdSec = 6.0) {
-    if (seen == SlotState::Voice || seen == SlotState::Encrypted) { k.state = seen; k.lastHeardSec = nowSec; return; }
-    if ((k.state == SlotState::Voice || k.state == SlotState::Encrypted) && k.lastHeardSec >= 0 && nowSec - k.lastHeardSec <= holdSec) return;
+    const auto traffic = [](SlotState s) { return s == SlotState::Voice || s == SlotState::Encrypted || s == SlotState::Unknown; };
+    if (traffic(seen)) { k.state = seen; k.lastHeardSec = nowSec; return; }
+    if (traffic(k.state) && k.lastHeardSec >= 0 && nowSec - k.lastHeardSec <= holdSec) return;
     k.state = seen;
 }
 
@@ -69,6 +71,7 @@ inline const char* slotStateText(SlotState s) {
     case SlotState::Control: return "control";
     case SlotState::Voice: return "voice";
     case SlotState::Encrypted: return "encrypted, muted";
+    case SlotState::Unknown: return "encryption state unknown (call set-up not heard), muted";
     }
     return "idle";
 }

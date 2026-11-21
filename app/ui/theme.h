@@ -4,6 +4,7 @@
 // Dark "instrument" theme: flat neutral greys, thin rules, one muted accent.
 #pragma once
 #include "imgui.h"
+#include <cmath>
 #include "../gfx/plot.h"
 
 // One accent colour for data and highlights; red / amber / green appear only where they mean a status.
@@ -27,6 +28,10 @@ inline bool& dev() { static bool v = false; return v; }
 // heading text in panels: blue in the classic interface, soft white in the new one
 inline ImVec4& headingRef() { static ImVec4 v(0, 0, 0, 0); return v; }   // a design's own heading colour (alpha 0 = none)
 inline ImVec4 heading() { if (dev() && headingRef().w > 0) return headingRef(); return dev() ? ImVec4(0.92f, 0.90f, 0.84f, 1) : ImVec4(0.45f, 0.75f, 1, 1); }
+// Reduce motion (Settings > Appearance): pulsing indicators stay steady at their bright value instead of breathing. Set by settingsFrame().
+inline bool& reduceMotion() { static bool v = false; return v; }
+// a breathing value between lo and 1 at hz cycles per second, or a steady 1 with reduced motion
+inline float pulse(double timeSec, float radPerSec, float lo) { return reduceMotion() ? 1.f : lo + (1.f - lo) * (0.5f + 0.5f * (float)std::sin(timeSec * radPerSec)); }
 inline bool& panel() { static bool v = false; return v; }   // the Panel layout: status lamps are round LEDs
 inline int& wfMode() { static int m = 0; return m; }   // waterfall colours: 0 classic blue-teal, 1 plain grey, 2 turbo (the dev palettes), 3 Magma (Studio), 4 Amber (Mono Pro), 5 Paper (Daylight)
 inline float& roundK() { static float v = 0; return v; }   // corner-radius factor of the dev looks (Studio rounded, the others square)
@@ -53,12 +58,12 @@ inline void applyTheme() {
     // raw instrument look: small rounded corners (3 px) on controls, thin 1 px rules, dense spacing, no decoration
     s.WindowRounding = 0; s.FrameRounding = 3; s.TabRounding = 3; s.ChildRounding = 4; s.GrabRounding = 2; s.PopupRounding = 4; s.ScrollbarRounding = 4;
     s.FramePadding = ImVec2(6, 2); s.ItemSpacing = ImVec2(6, 3); s.WindowPadding = ImVec2(8, 6); s.CellPadding = ImVec2(5, 1);
-    s.FrameBorderSize = 1; s.ChildBorderSize = 1; s.PopupBorderSize = 1; s.TabBarBorderSize = 1; s.ScrollbarSize = 9; s.GrabMinSize = 5;
+    s.FrameBorderSize = 1; s.ChildBorderSize = 1; s.PopupBorderSize = 1; s.TabBarBorderSize = 1; s.ScrollbarSize = 9; s.GrabMinSize = 3;
     ImVec4* c = s.Colors;
     c[ImGuiCol_WindowBg]      = ImVec4(0.055f, 0.058f, 0.062f, 1);
     c[ImGuiCol_ChildBg]       = ImVec4(0, 0, 0, 0);
     c[ImGuiCol_PopupBg]       = ImVec4(0.075f, 0.078f, 0.083f, 1);
-    c[ImGuiCol_Border]        = ImVec4(0.20f, 0.21f, 0.22f, 1);
+    c[ImGuiCol_Border]        = ImVec4(0.37f, 0.38f, 0.39f, 1);   // 3:1 on the window colour: control outlines (was 1.6:1)
     c[ImGuiCol_FrameBg]       = ImVec4(0.035f, 0.037f, 0.040f, 1);
     c[ImGuiCol_FrameBgHovered]= ImVec4(0.10f, 0.105f, 0.11f, 1);
     c[ImGuiCol_FrameBgActive] = ImVec4(0.14f, 0.145f, 0.15f, 1);
@@ -71,6 +76,7 @@ inline void applyTheme() {
     c[ImGuiCol_Tab]           = ImVec4(0.055f, 0.058f, 0.062f, 1);
     c[ImGuiCol_TabHovered]    = ImVec4(0.14f, 0.15f, 0.16f, 1);
     c[ImGuiCol_TabSelected]   = ImVec4(0.12f, 0.13f, 0.14f, 1);
+    c[ImGuiCol_NavCursor]     = ImVec4(0.96f, 0.97f, 0.98f, 1);   // keyboard focus ring (2 px, drawn by ImGui)
     c[ImGuiCol_TabDimmed]     = ImVec4(0.055f, 0.058f, 0.062f, 1);
     c[ImGuiCol_TabDimmedSelected] = ImVec4(0.10f, 0.11f, 0.12f, 1);
     c[ImGuiCol_TabSelectedOverline] = ImVec4(0.45f, 0.72f, 0.82f, 1);
@@ -81,7 +87,7 @@ inline void applyTheme() {
     c[ImGuiCol_Separator]     = ImVec4(0.20f, 0.21f, 0.22f, 1);
     c[ImGuiCol_TableRowBgAlt] = ImVec4(1, 1, 1, 0.02f);
     c[ImGuiCol_Text]          = ImVec4(0.82f, 0.84f, 0.85f, 1);
-    c[ImGuiCol_TextDisabled]  = ImVec4(0.45f, 0.47f, 0.49f, 1);
+    c[ImGuiCol_TextDisabled]  = ImVec4(0.52f, 0.54f, 0.56f, 1);   // 5:1 on the window colour (was 4.3:1)
 
     plt::Style& p = plt::GetStyle();   // the plots: dark plate, thin border, faint grid
     p.PlotBg  = ImVec4(0.02f, 0.021f, 0.023f, 1);

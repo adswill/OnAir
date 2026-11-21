@@ -154,7 +154,10 @@ void AudioOut::Impl::render(float* out, uint32_t nFrames) {
             for (int c = 0; c < C; c++) out[(size_t)C * i + (size_t)c] = ring[k + (size_t)c];
         }
         if (C == 2) leveler.process(out, (int)n);   // the leveler is a stereo one; surround sound keeps the broadcaster's own levels
-        for (uint32_t i = 0; i < (uint32_t)C * n; i++) out[i] *= vol;
+        if (C == 2) {   // stereo: volume, then the loudness boost with the soft limiter (surround keeps the broadcaster's levels)
+            const float g = vol * outputBoostGain().load(std::memory_order_relaxed);
+            for (uint32_t i = 0; i < 2 * n; i++) out[i] = vol > 0.f ? softLimit(out[i] * g) : 0.f;
+        } else for (uint32_t i = 0; i < (uint32_t)C * n; i++) out[i] *= vol;
         r.store(rd + n, std::memory_order_release);
         played.fetch_add(n);
         if (n < nFrames) { underruns++; playing = false; leveler.reset(); }

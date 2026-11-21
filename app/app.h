@@ -238,6 +238,8 @@ struct App {
     VideoTex video;
     float volume = 1.f;
     int tetraSearchPct = 72;   // TETRA: the middle part of the capture the carrier search covers, % (72 = the flat part of a radio's filter; a wide capture can search more); saved
+    float audioBoostDb = 9.f;   // Settings > Audio: loudness boost after the volume, 0 .. 24 dB (audiolevel.h); saved
+    int tetraPlayUnknown = 0;   // TETRA: 1 plays calls whose set-up was not heard (state unknown) when nothing in the capture is encrypted; default 0; saved
     int tetraSingle = 0;   // TETRA carrier choice: 0 search the span, 1 single carrier (one 25 kHz channel at the dial frequency); saved
     int tetraSlotMode = 0, tetraSlotNum = 1, tetraSlotId = 0;   // TETRA 'Listen to': 0 auto, 1 slot (tetraSlotNum 1..4), 2 talkgroup, 3 ISSI (tetraSlotId); saved
     bool muted = false, subsOn = true;
@@ -1077,6 +1079,7 @@ std::string autogainResult(const App& a);      // the last one-shot's result tex
 std::string autogainStatusJson(App& a);        // read-only state for the Web server / remote API (dect2::ag::autogainJson)
 void remoteApiLoadPrefs(App& a);    // remote_api_app.cpp: the remote-control API (HTTP + WebSocket), off by default: its settings, started when on
 void remoteApiSavePrefs(const App& a);
+std::string remoteApiRunCommand(const std::string& name, const std::string& payload);   // a command received over MQTT (integrations/commands.h): "" when it ran, else why not; runs on the main thread through the same hand-over as the API
 void remoteApiTick(App& a);          // every frame: runs the commands the API queued for the main thread, publishes the telemetry
 // the places of the Data feeds window (feeds_ui.cpp); feedsOpenTab opens it on one of them (the old spots of the settings link here)
 enum { kFeedsTabUpload = 0, kFeedsTabPrograms, kFeedsTabShare, kFeedsTabStation, kFeedsTabNmea, kFeedsTabCount };
@@ -1084,6 +1087,7 @@ void feedsOpenTab(App& a, int tab);
 void remoteApiSection(App& a);       // the settings panel (in the Data feeds window)
 void mcpDevOpen(App& a);             // dev flag --mcp: Data feeds open on the AI assistant section, switched on (not saved)
 void mcpSection(App& a);             // remote_api_app.cpp: the AI assistant (MCP) panel: switch, token, connection snippets, activity log (docs/MCP.md)
+void midiTick(App& a);               // app/midi/midi_app.cpp: MIDI knobs move the radio gain (Settings > Radio > MIDI controller)
 void shareTick(App& a);             // feeds_ui.cpp: carries out the frequency / gain commands of the clients of "Share my radio" (when allowed)
 void integrationsWindow(App& a);   // app/integrations/integrations_ui.cpp: the Integrations window (View > Integrations); also starts the publisher
 void ssbConvWindow(App& a);   // app/ssbconv/ssbconv_ui.cpp: the Conversations window (View > Conversations); also feeds the finder while it is open and drives auto-listen
@@ -1205,6 +1209,11 @@ void appResultsSave(App& a, bool now = false);
 // The Clear of a mode's decoded lists, at the top of its list (results_ui.cpp): true when pressed
 bool resultsClearButton(const char* id);
 void scanDbTick(App& a);   // scan_db_ui.cpp: asks to share a finished scan
+bool sharedChannelsAvailable(App& a);   // scan_db_ui.cpp: this mode has a shared channel list
+struct SharedMark { double mhz = 0; std::string label; };
+const std::vector<SharedMark>& sharedMarks(App& a);   // scan_db_ui.cpp: shared channels to label on the spectrum (empty when the toggle is off)
+bool shareChannelAt(App& a, double mhz, bool apply);  // scan_db_ui.cpp: the last scan's channel at this frequency; apply opens the share dialog
+void openSharedChannels(App& a);        // scan_db_ui.cpp: Tools > Shared channel list opens it in the Scan tab
 void tuneToChannel(App& a, const SavedChannel& c);
 void followBandwidth(App& a);
 void setDvbBandwidth(App& a, int idx);   // toolbar_source.cpp: the DVB-T2 / DVB-T width kBw[idx] (manual), or idx < 0 for Automatic; a running receiver follows at once

@@ -6,6 +6,7 @@
 // the real look. No ImGui here: tests/app/test_ui_preview.cpp checks it.
 #pragma once
 #include <algorithm>
+#include <cmath>
 
 namespace uipal {
 
@@ -21,7 +22,20 @@ inline C lightSource(int r, int g, int b) {
     return c8(r + 255 - m - lo, g + 255 - m - lo, b + 255 - m - lo);
 }
 
-inline Palette palette(int n) {
+// WCAG 2.x contrast of two sRGB colours, and the smallest lift of a colour toward white that reaches a ratio on a background
+inline float lum(const C& c) {
+    auto l = [](float v) { return v <= 0.04045f ? v / 12.92f : std::pow((v + 0.055f) / 1.055f, 2.4f); };
+    return 0.2126f * l(c.r) + 0.7152f * l(c.g) + 0.0722f * l(c.b);
+}
+inline float ratio(const C& a, const C& b) { const float x = lum(a), y = lum(b); return (std::max(x, y) + 0.05f) / (std::min(x, y) + 0.05f); }
+inline C liftTo(C c, const C& bg, float want) {
+    for (int i = 0; i < 40 && ratio(c, bg) < want; i++) { c.r += (1 - c.r) * 0.04f; c.g += (1 - c.g) * 0.04f; c.b += (1 - c.b) * 0.04f; }
+    return c;
+}
+constexpr float kDimMinRatio = 4.5f;   // dim text (hints, units, disabled rows) on the window colour: WCAG AA for text
+constexpr float kCtlEdgeMinRatio = 3.f;   // the outline of a control (input, combo, button) on the window colour: WCAG 1.4.11
+
+inline Palette rawPalette(int n) {
     Palette p;
     if (n == 1) {
         p.bg = {0.165f, 0.168f, 0.172f}; p.rail = {0.135f, 0.138f, 0.142f}; p.edge = {0.33f, 0.335f, 0.34f};
@@ -39,10 +53,10 @@ inline Palette palette(int n) {
         p.bg = c8(12, 12, 12); p.rail = c8(26, 26, 26); p.edge = c8(51, 51, 51);
         p.text = c8(200, 200, 200); p.dim = c8(120, 120, 120); p.bright = c8(235, 235, 235); p.accent = c8(127, 217, 98);
         p.frame = c8(8, 8, 8); p.button = c8(34, 34, 34); p.plotBg = c8(6, 6, 6);
-    } else if (n == 5) {   // Studio: soft slate-blue, one vivid violet accent
-        p.bg = c8(26, 30, 42); p.rail = c8(33, 38, 54); p.edge = c8(54, 62, 86);
-        p.text = c8(216, 222, 238); p.dim = c8(140, 150, 176); p.bright = c8(246, 248, 255); p.accent = c8(150, 112, 255);
-        p.frame = c8(20, 24, 35); p.button = c8(45, 52, 74); p.plotBg = c8(15, 18, 27);
+    } else if (n == 5) {   // Studio: neutral blue-grey like a bench instrument, one signal-teal accent, 3 px corners
+        p.bg = c8(27, 30, 34); p.rail = c8(33, 37, 42); p.edge = c8(56, 62, 70);
+        p.text = c8(214, 219, 226); p.dim = c8(140, 148, 160); p.bright = c8(245, 247, 250); p.accent = c8(64, 186, 170);
+        p.frame = c8(20, 23, 27); p.button = c8(44, 49, 56); p.plotBg = c8(14, 16, 19);
     } else if (n == 6) {   // Mono Pro: OLED black, amber
         p.bg = c8(3, 3, 3); p.rail = c8(0, 0, 0); p.edge = c8(52, 48, 40);
         p.text = c8(208, 204, 194); p.dim = c8(128, 120, 102); p.bright = c8(255, 240, 210); p.accent = c8(255, 176, 0);
@@ -59,10 +73,22 @@ inline Palette palette(int n) {
     return p;
 }
 
+// the palettes as drawn, with dim text lifted to 4.5:1 on the window colour (Daylight is written in light colours and keeps its own, checked in the Light pass)
+inline Palette palette(int n) {
+    Palette p = rawPalette(n);
+    if (n != 7) p.dim = liftTo(p.dim, p.bg, kDimMinRatio);
+    return p;
+}
+// the outline colour of the controls: the palette's edge colour lifted to 3:1 on the window colour. Separators and panel rules keep the quieter `edge`.
+inline C controlEdge(int n) {
+    const Palette p = palette(n);
+    return n == 7 ? p.edge : liftTo(p.edge, p.bg, kCtlEdgeMinRatio);
+}
+
 // corner radius of the controls (style FrameRounding at scale 1) and the spacing of each palette (ui2_theme.cpp applyUiThemeBase)
 struct Metrics { float frameRounding, padX, padY, spaceX, spaceY; };
 inline Metrics metrics(int n) {
-    if (n == 5) return {7, 9, 4.5f, 9, 6};
+    if (n == 5) return {3, 8, 3.5f, 8, 5};
     if (n == 6) return {0, 4, 1, 5, 2};
     if (n == 7) return {5, 8, 4, 8, 5};
     if (n == 3 || n == 4) return {0, 5, 2, 6, 3};

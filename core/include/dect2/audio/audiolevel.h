@@ -4,6 +4,7 @@
 // Loudness of the sound output: the volume slider's taper (0 = mute, 1 = 0 dB, one step above zero about -50 dB) and a leveller that only
 // turns loud audio down towards a common nominal level (it never boosts, so the noise between transmissions stays quiet), plus a soft limiter.
 #pragma once
+#include <atomic>
 #include <cmath>
 
 namespace dect2 {
@@ -17,6 +18,12 @@ inline float volumeTaper(float pos) {
     if (pos >= 1.f) return 1.f;
     return std::pow(10.f, kVolumeFloorDb * (1.f - pos) / 20.f);
 }
+
+// Make-up gain after the volume (linear; Settings > Audio "Loudness boost"). The leveller brings loud audio down to kNominalRmsDb, so even with the
+// slider at 100 % the sound was quiet (about -23 dBFS RMS): the boost lifts it, and softLimit() below keeps the peaks from clipping.
+constexpr float kDefaultBoostDb = 9.f, kMaxBoostDb = 24.f;
+inline std::atomic<float>& outputBoostGain() { static std::atomic<float> g{std::pow(10.f, kDefaultBoostDb / 20.f)}; return g; }
+inline void setOutputBoostDb(float db) { outputBoostGain() = std::pow(10.f, (db < 0.f ? 0.f : db > kMaxBoostDb ? kMaxBoostDb : db) / 20.f); }
 
 inline float softLimit(float x) {
     const float a = std::fabs(x), k = 0.8f;
