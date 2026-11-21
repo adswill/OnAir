@@ -462,6 +462,17 @@ struct PagerReceiver::Impl {
         return t > 0 ? m + amp * (eh - el) / t : m;
     }
 
+    // How much of its usual strength the carrier has over the symbol window just read, 0 .. 1 (the root of the window energy against a
+    // slowly decaying peak). In a fade the discriminator and the tone energies read noise at full swing; this scales their reliabilities
+    // down so the soft repair (chaseWord) overrules those bits first.
+    double symEnv = 1, eRef = 0;
+    double envelope(int64_t idx, int win) {
+        double e = 0;
+        for (int k = 0; k < win; k++) e += std::norm(zring[(size_t)(idx - win + 1 + k) & kMask]);
+        eRef = std::max(eRef * 0.995, e);
+        return eRef > 0 ? std::min(1.0, std::sqrt(e / eRef)) : 1.0;
+    }
+
     void onSample(cf32 z) {
         blkPow += std::norm(z);
         if (++blkN >= 480) blockPower();
@@ -688,6 +699,7 @@ struct PagerReceiver::Impl {
         parser.reset();
         wi = bi = 0; curWord = 0; inSync = false;
         firstBatch = true; heldValid = 0;
+        eRef = 0; symEnv = 1;
         stage = 0; cnt = 0; acc = 0;
         lockStart = cur;
         if (h < 3) {
@@ -722,6 +734,7 @@ struct PagerReceiver::Impl {
             const bool two = lockH < 3;   // FLEX keeps the discriminator (see docs/SENSITIVITY-4.0-B.md)
             const double x = toneOk && two && !(lockH == 3 && stage == 1) && !(lockH == 3 && stage == 3) ? toneValue(idx, w) : xd;
             xDisc = xd;
+            symEnv = envelope(idx, w);
             const double e = (std::fabs(v(idx + delta, w) - m) - std::fabs(v(idx - delta, w) - m)) / std::max(amp, 0.05);
             const double adj = std::max(-1.0, std::min(1.0, kTimingGain * e * sps * 0.5));
             const double tCur = tNext;
@@ -744,7 +757,7 @@ struct PagerReceiver::Impl {
 
     void pocsagSymbol(double x) {
         curWord = (curWord << 1) | (uint32_t)bitOf(x);
-        wordRel[bi] = (float)(std::fabs(x - m) / std::max(amp, 0.05));
+        wordRel[bi] = (float)(std::fabs(x - m) / std::max(amp, 0.05) * symEnv);
         m += 0.004 * (xDisc - m);
         if (++bi < 32) return;
         bi = 0;
@@ -791,7 +804,7 @@ struct PagerReceiver::Impl {
             break;
         case 2: { // the frame information word: like the data, sent complemented against the sync code and marker (pager_gen.cpp flexFrameTx)
             acc = (acc << 1) | (uint32_t)(1 - bitOf(x));
-            wordRel[cnt] = (float)(std::fabs(x - m) / std::max(amp, 0.05));
+            wordRel[cnt] = (float)(std::fabs(x - m) / std::max(amp, 0.05) * symEnv);
             if (++cnt < 32) break;
             const pager::Fixed c = pager::correctWord(chaseWord(acc, wordRel, kDoubt));
             int cycle, frame;
@@ -827,11 +840,11 @@ struct PagerReceiver::Impl {
             int a1 = 0, b1 = 0;
             float ra = 0, rb = 0;   // their reliabilities: 0 on the decision threshold, 1 on a clean level
             // the data bits are the complement of the sync sense (bitOf); in 4-level frames the inner levels carry a second bit of 1
-            if (fmode->levels == 2) { a1 = 1 - bitOf(x); ra = (float)(std::fabs(x - m) / std::max(amp, 0.05)); }
+            if (fmode->levels == 2) { a1 = 1 - bitOf(x); ra = (float)(std::fabs(x - m) / std::max(amp, 0.05) * symEnv); }
             else {
                 const double y = (x - m) / std::max(amp, 0.05) * pol;
                 if (y < -0.667) { a1 = 0; b1 = 0; } else if (y < 0) { a1 = 0; b1 = 1; } else if (y < 0.667) { a1 = 1; b1 = 1; } else { a1 = 1; b1 = 0; }
-                ra = (float)(std::fabs(y) * 3.0); rb = (float)(std::fabs(std::fabs(y) - 0.667) * 3.0);
+                ra = (float)(std::fabs(y) * 3.0 * symEnv); rb = (float)(std::fabs(std::fabs(y) - 0.667) * 3.0 * symEnv);
             }
             const int spd = fmode->speed;
             auto put = [&](int ph, int at, int bit, float r) { fb[ph][(size_t)at] = (uint8_t)bit; fr[ph][(size_t)at] = r; };
