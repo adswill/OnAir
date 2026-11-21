@@ -156,6 +156,8 @@
     {"rpr/pos", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
     {"rpr/neg", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
     {"rpr/rpos", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
+    {"time/pos", "unrealistic: the station's carrier is on a fixed channel (VLF/LF/HF, 188 Hz wide); +-2 kHz is far more than a 50 ppm crystal gives at 77 kHz to 20 MHz (at most 1 kHz at 20 MHz); the clean and 12 dB files decode"},
+    {"time/neg", "unrealistic: the station's carrier is on a fixed channel (VLF/LF/HF, 188 Hz wide); +-2 kHz is far more than a 50 ppm crystal gives at 77 kHz to 20 MHz (at most 1 kHz at 20 MHz); the clean and 12 dB files decode"},
     {"cp16/tx", "open: the transmitter's CP16 signal is not decoded in the 32 s try (4.5 synth sweep, linux; to investigate)"},
     {"cdma2000/pos", "open: clean decodes, the offset / 12 dB conditions do not (4.5 synth sweep, linux; to investigate)"},
     {"cdma2000/neg", "open: clean decodes, the offset / 12 dB conditions do not (4.5 synth sweep, linux; to investigate)"},
