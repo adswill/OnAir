@@ -78,7 +78,7 @@
     const n = u8.length, hist = new Uint32Array(256);
     if (!n) return { lowDb: floorDb, highDb: floorDb };
     let top = 0;
-    for (let i = 0; i < n; i++) { const v = u8[i]; hist[v]++; if (v > top) top = v; }
+    for (let i = 0; i < n; i++) { const v = u8[i | 0]; hist[v | 0]++; if (v > top) top = v; }   // | 0: integer indices into the typed arrays
     const k = Math.min(n - 1, Math.floor(n * frac));
     let q = 0, seen = hist[0];
     while (seen <= k && q < 255) seen += hist[++q];
@@ -130,11 +130,11 @@
     const k = n / row.rateHz, scale = (viewRateHz * n) / (w * row.rateHz), off = (viewLo - rowLo) * k;
     for (let x = 0; x < w; x++) {
       const a = off + x * scale, b = off + (x + 1) * scale;
-      if (b <= 0 || a >= n) { res[x] = -1; continue; }
+      if (b <= 0 || a >= n) { res[x | 0] = -1; continue; }
       const i0 = Math.max(0, Math.floor(a)), i1 = Math.min(n, Math.max(i0 + 1, Math.floor(b)));
       let v = 0;
-      for (let i = i0; i < i1; i++) if (u8[i] > v) v = u8[i];
-      res[x] = v;
+      for (let i = i0; i < i1; i++) if (u8[i | 0] > v) v = u8[i | 0];
+      res[x | 0] = v;
     }
     return res;
   }

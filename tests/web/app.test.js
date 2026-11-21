@@ -10,6 +10,7 @@ const { Ring } = require(path.join(__dirname, "../../web/onair-app/worklet.js"))
 
 let passed = 0;
 function test(name, fn) { try { fn(); passed++; } catch (e) { console.error("FAIL " + name + "\n  " + (e && e.stack || e)); process.exitCode = 1; } }
+const MHZ = 1000000, KHZ = 1000, EPS = 0.000000001;   // plain literals: PMD misreads exponent notation
 const near = (a, b, eps, m) => assert.ok(Math.abs(a - b) <= eps, (m || "") + " " + a + " vs " + b);
 
 // ---- frequencies
@@ -57,11 +58,11 @@ test("decodeSpectrum reads the server's u8 frame", () => {
 });
 test("decodeSpectrum keeps the 8-bit bins next to the dB values", () => {
   const buf = new ArrayBuffer(21 + 3), d = new DataView(buf);
-  d.setUint8(0, 1); d.setFloat32(5, 1e6, true); d.setFloat32(9, 1e3, true); d.setFloat32(13, -100, true); d.setFloat32(17, -50, true);
+  d.setUint8(0, 1); d.setFloat32(5, MHZ, true); d.setFloat32(9, KHZ, true); d.setFloat32(13, -100, true); d.setFloat32(17, -50, true);
   d.setUint8(21, 0); d.setUint8(22, 128); d.setUint8(23, 255);
   const f = L.decodeSpectrum(buf);
   assert.deepStrictEqual(Array.from(f.u8), [0, 128, 255]);
-  near(f.db[2], -50, 1e-3);
+  near(f.db[2], -50, 0.001);
 });
 
 // ---- levels and colours from the 8-bit bins
@@ -79,10 +80,10 @@ test("binLevels: the 10th percentile and the maximum agree with a sort of the dB
 test("binLevels: flat, single-bin and empty frames", () => {
   const flat = new Uint8Array(50).fill(100);
   const r = L.binLevels(flat, 0.1, -100, 0);
-  near(r.lowDb, -100 + 100 / 255 * 100, 1e-9); near(r.highDb, r.lowDb, 1e-9);
-  near(L.binLevels(Uint8Array.from([255]), 0.1, -90, -30).lowDb, -30, 1e-9);
+  near(r.lowDb, -100 + 100 / 255 * 100, EPS); near(r.highDb, r.lowDb, EPS);
+  near(L.binLevels(Uint8Array.from([255]), 0.1, -90, -30).lowDb, -30, EPS);
   assert.deepStrictEqual(L.binLevels(new Uint8Array(0), 0.1, -90, -30), { lowDb: -90, highDb: -90 });
-  near(L.binLevels(Uint8Array.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 255]), 0.1, -100, 0).lowDb, -100, 1e-9);   // index 1 of 10 is still a 0
+  near(L.binLevels(Uint8Array.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 255]), 0.1, -100, 0).lowDb, -100, EPS);   // index 1 of 10 is still a 0
 });
 test("colourTable: bins map through the frame's own floor and top into the display range", () => {
   const pal = new Uint8ClampedArray(768);
@@ -134,10 +135,10 @@ test("RowRing.grow keeps the stored rows in order and then keeps filling", () =>
   const e = new L.RowRing(2); e.grow(4); e.push({ id: 1 }); assert.strictEqual(e.get(0).id, 1);
 });
 test("rowToPixels: the same span maps bin to pixel, several bins take the maximum", () => {
-  const row = { u8: Uint8Array.from([1, 2, 3, 4, 5, 6, 7, 8]), centreHz: 100e6, rateHz: 8e3, floorDb: -100, topDb: 0 };
-  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6, 8e3, 8)), [1, 2, 3, 4, 5, 6, 7, 8]);
-  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6, 8e3, 4)), [2, 4, 6, 8]);
-  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6, 8e3, 16)).slice(0, 4), [1, 1, 2, 2]);
+  const row = { u8: Uint8Array.from([1, 2, 3, 4, 5, 6, 7, 8]), centreHz: 100 * MHZ, rateHz: 8 * KHZ, floorDb: -100, topDb: 0 };
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ, 8 * KHZ, 8)), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ, 8 * KHZ, 4)), [2, 4, 6, 8]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ, 8 * KHZ, 16)).slice(0, 4), [1, 1, 2, 2]);
 });
 test("rowToPixels: equal spans with as many pixels as bins map bin x to pixel x exactly", () => {
   for (const [n, rate, centre] of [[1337, 2.4e6, 100e6], [1920, 3.2e6, 433.92e6], [1024, 2e6, 98.1e6], [4096, 2.048e6, 1.5e9]]) {
@@ -149,18 +150,18 @@ test("rowToPixels: equal spans with as many pixels as bins map bin x to pixel x 
   }
 });
 test("rowToPixels: a zoomed view picks the bins by frequency, uncovered pixels are -1", () => {
-  const row = { u8: Uint8Array.from([10, 20, 30, 40]), centreHz: 100e6, rateHz: 4e3, floorDb: -100, topDb: 0 };   // 99.998 .. 100.002 MHz
+  const row = { u8: Uint8Array.from([10, 20, 30, 40]), centreHz: 100 * MHZ, rateHz: 4 * KHZ, floorDb: -100, topDb: 0 };   // 99.998 .. 100.002 MHz
   // the upper half of the row's span
-  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6 + 1e3, 2e3, 2)), [30, 40]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ + KHZ, 2 * KHZ, 2)), [30, 40]);
   // a view twice as wide, same centre: the row covers the middle half
-  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6, 8e3, 4)), [-1, 20, 40, -1]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ, 8 * KHZ, 4)), [-1, 20, 40, -1]);
   // retuned past the row: nothing is covered
-  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 120e6, 4e3, 4)), [-1, -1, -1, -1]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 120 * MHZ, 4 * KHZ, 4)), [-1, -1, -1, -1]);
   // a view that overlaps the row's upper edge only
-  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6 + 3e3, 4e3, 4)), [40, -1, -1, -1]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ + 3 * KHZ, 4 * KHZ, 4)), [40, -1, -1, -1]);
   // degenerate input
   assert.deepStrictEqual(Array.from(L.rowToPixels({ u8: new Uint8Array(0), centreHz: 1, rateHz: 1 }, 1, 1, 3)), [-1, -1, -1]);
-  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100e6, 0, 2)), [-1, -1]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ, 0, 2)), [-1, -1]);
 });
 
 test("decodeAudio reads PCM16 with its rate", () => {
@@ -365,29 +366,29 @@ function spectrumFixture(specW, specH, wfW, wfH) {
       getContext() { return ctx; }, getBoundingClientRect() { return { width: cv.cssW, height: cv.cssH }; }, ctx };
     return cv;
   };
-  delete require.cache[require.resolve(path.join(__dirname, "../../web/onair-app/spectrum.js"))];
-  require(path.join(__dirname, "../../web/onair-app/spectrum.js"));
+  delete require.cache[require.resolve("../../web/onair-app/spectrum.js")];
+  require("../../web/onair-app/spectrum.js");
   const spec = mk(specW, specH), wf = mk(wfW, wfH);
   const view = new globalThis.SpectrumView(spec, wf, { style: {} }, () => {});
   const frame = (centreHz, n) => {
     const u8 = new Uint8Array(n || 16).map((_, i) => i * 8);
-    return { centreHz, rateHz: 2e6, floorDb: -100, topDb: -20, u8, db: Float32Array.from(u8, v => -100 + v / 255 * 80) };
+    return { centreHz, rateHz: 2 * MHZ, floorDb: -100, topDb: -20, u8, db: Float32Array.from(u8, v => -100 + v / 255 * 80) };
   };
   const flush = () => { const f = frames.splice(0); f.forEach(fn => fn()); };
   return { view, spec, wf, frame, flush, frames };
 }
 test("SpectrumView: an empty frame is ignored", () => {
   const t = spectrumFixture(100, 50, 100, 40);
-  t.view.push({ centreHz: 1e6, rateHz: 1e6, floorDb: 0, topDb: 1, u8: new Uint8Array(0), db: new Float32Array(0) });
+  t.view.push({ centreHz: MHZ, rateHz: MHZ, floorDb: 0, topDb: 1, u8: new Uint8Array(0), db: new Float32Array(0) });
   assert.strictEqual(t.view.frame, null); assert.strictEqual(t.view.pending, 0); assert.strictEqual(t.frames.length, 0);
-  t.view.push(t.frame(100e6)); t.flush();
-  t.view.push({ centreHz: 5e6, rateHz: 1e6, floorDb: 0, topDb: 1, u8: new Uint8Array(0), db: new Float32Array(0) });
-  assert.strictEqual(t.view.frame.centreHz, 100e6, "the last real frame stays");
+  t.view.push(t.frame(100 * MHZ)); t.flush();
+  t.view.push({ centreHz: 5 * MHZ, rateHz: MHZ, floorDb: 0, topDb: 1, u8: new Uint8Array(0), db: new Float32Array(0) });
+  assert.strictEqual(t.view.frame.centreHz, 100 * MHZ, "the last real frame stays");
   assert.strictEqual(t.frames.length, 0, "no repaint is scheduled");
 });
 test("SpectrumView: the paint is one animation frame; incremental while the span holds, full after a retune", () => {
   const t = spectrumFixture(100, 50, 100, 40), c = t.wf.ctx;
-  t.view.push(t.frame(100e6)); t.view.push(t.frame(100e6));
+  t.view.push(t.frame(100 * MHZ)); t.view.push(t.frame(100 * MHZ));
   assert.strictEqual(c.puts, 0, "push alone paints nothing"); assert.strictEqual(t.frames.length, 1);
   t.flush();
   assert.strictEqual(c.puts, 2, "the first paint draws both stored rows"); assert.strictEqual(c.copies, 0);

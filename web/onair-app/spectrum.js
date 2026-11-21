@@ -242,10 +242,10 @@
       }
       const px = L.rowToPixels(row, v.centreHz, v.rateHz, w, this.pix);
       for (let x = 0, o = 0; x < w; x++, o += 4) {
-        const u = px[x];
-        if (u < 0) { d[o] = 0; d[o + 1] = 0; d[o + 2] = 0; d[o + 3] = 255; continue; }   // not covered by this row: black
+        const u = px[x | 0];
+        if (u < 0) { d[o | 0] = 0; d[o + 1] = 0; d[o + 2] = 0; d[o + 3] = 255; continue; }   // not covered by this row: black
         const t = 4 * u;
-        d[o] = lut[t]; d[o + 1] = lut[t + 1]; d[o + 2] = lut[t + 2]; d[o + 3] = 255;
+        d[o | 0] = lut[t | 0]; d[o + 1] = lut[t + 1]; d[o + 2] = lut[t + 2]; d[o + 3] = 255;
       }
       c.putImageData(this.im, 0, y);
     }
