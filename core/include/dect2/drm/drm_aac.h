@@ -20,6 +20,7 @@ public:
     bool configure(int rateHz, bool stereo, std::string* why = nullptr);
     bool open() const;
     int rateHz() const;
+    void release();                                         // gives the platform decoder back (a stream of another codec is taking it)
     void reset();                                           // lost frames: forget the overlap with the previous frame
     // true (the default): a lost frame fades the last good one out and the first good frame after a loss fades in; false: silence for a lost frame,
     // the next frame as decoded (a concealment after the decoder takes care of the joins)

@@ -325,6 +325,7 @@ struct AudioDecoder::Impl {
         if (pkt) av_packet_free(&pkt);
         fdk.reset();
         if (ext) { ext->close(); ext.reset(); }
+        aac.release();
         open = false; started = false; rsReady = false;
     }
     static UsacLib usacLib() { return UsacLib::shared(); }   // loaded once; again after UsacLib::rescan() (the DRM panel)

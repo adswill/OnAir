@@ -26,6 +26,12 @@ class XheAacTest {
         assertEquals(42, XheSupport.AAC_OBJECT_XHE)
     }
 
+    @Test fun configKindFromItsFirstBits() {
+        assertTrue(XheSupport.isXheConfig(byteArrayOf(0xFA.toByte(), 0x10)))    // 31, then 42 - 32: xHE-AAC
+        assertFalse(XheSupport.isXheConfig(byteArrayOf(0x13, 0x08)))            // AAC-LC (object type 2), as the DRM AAC core builds it
+        assertFalse(XheSupport.isXheConfig(ByteArray(0)))
+    }
+
     @Test fun pcmToShorts() {
         val b = ByteBuffer.allocate(8).order(ByteOrder.nativeOrder())
         b.asShortBuffer().put(shortArrayOf(1, -2, 300, Short.MIN_VALUE)); b.limit(8)
