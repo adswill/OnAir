@@ -10,8 +10,8 @@ namespace dect2 {
 namespace qo100 {
 
 const LoPreset* loPresets(int& count) {
-    static const LoPreset k[] = {{"9750 MHz (standard Ku LNB, IF 739.5 - 750 MHz)", 9750e6}, {"9739 MHz (IF 750.5 - 761 MHz)", 9739e6},
-                                 {"10000 MHz (IF 489.5 - 500 MHz)", 10000e6}, {"10600 MHz (high band, IF 100 - 110.5 MHz, inverted)", 10600e6}};
+    static const LoPreset k[] = {{"9750 MHz: ordinary Ku LNB (Bullseye, Octagon; IF 739.5 - 750 MHz)", 9750e6}, {"9739 MHz: LNB with a 25 MHz TCXO or GPS lock (IF 750.5 - 761 MHz)", 9739e6},
+                                 {"10000 MHz: 10 MHz-locked LNB (IF 489.5 - 500 MHz)", 10000e6}, {"10600 MHz: universal LNB, high band (IF 100 - 110.5 MHz, inverted)", 10600e6}};
     count = (int)(sizeof k / sizeof k[0]);
     return k;
 }
