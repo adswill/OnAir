@@ -940,10 +940,11 @@ public:
             auto buf = std::make_shared<std::vector<uint8_t>>();
             c.pullVideo = [v, mu, buf](double t, int w, int h, float* y, float* u, float* vv) {
                 std::lock_guard<std::mutex> lk(*mu);
-                if (!v->rgb(t, w, h, *buf)) return false;
+                if (!v->rgb(t, w, h, *buf, true)) return false;   // stretched: applyAspect fits it by pullAspect, so a 16:9 file is not letterboxed into a 4:3 grid and then shown 16:9
                 for (size_t i = 0, n = (size_t)w * (size_t)h; i < n; i++) atvRgbToYuv((*buf)[3 * i] / 255.f, (*buf)[3 * i + 1] / 255.f, (*buf)[3 * i + 2] / 255.f, y[i], u[i], vv[i]);
                 return true;
             };
+            c.pullAspect = [v]() { return v->height() > 0 ? (double)v->width() / (double)v->height() : 0.0; };
         }
         if (auto a = synthMediaAudioFor(s, 120)) c.pullAudio = [a](float* st, int n) { return a->read(st, n); };
     }

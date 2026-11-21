@@ -24,6 +24,7 @@ struct State {
     uint64_t frameSeq = 0;
     std::shared_ptr<const AtvFrame> frame;      // the last picture (for the caption)
     int deint = 0;                              // 0 weave, 1 bob
+    int letterbox = 0;                          // 0 automatic (16:9 fills the window, 4:3 keeps bars), 1 on, 2 off (atvPictureRect)
     int aspect[4] = {0, 0, 0, 0};               // picture format per modulation (AM, FM video, NBTV on AM, NBTV on FM): 0 Auto, 1 4:3, 2 16:9 (atv_aspect.h)
     int sysHint = -1, colHint = -1;             // -1 automatic
     bool colourOn = true;
@@ -53,6 +54,7 @@ void loadState() {
     S.deint = (int)plat::prefs().getI("atvDeint", 0) == 1 ? 1 : 0;
     S.snow = plat::prefs().getI("atvSnow", 0) != 0;
     S.denoise = (int)std::clamp(plat::prefs().getI("atvDenoise", -1), -1L, 3L);
+    S.letterbox = (int)std::clamp(plat::prefs().getI("atvLetterbox", 0), 0L, 2L);
     S.aspect[0] = (int)std::clamp(plat::prefs().getI("atvAspect0", 0), 0L, 2L);
     S.aspect[1] = (int)std::clamp(plat::prefs().getI("atvAspect1", 0), 0L, 2L);
     S.aspect[2] = (int)std::clamp(plat::prefs().getI("atvAspect2", 0), 0L, 2L);
@@ -255,9 +257,8 @@ void picture(App& a, ImVec2 box) {
     ImGui::InvisibleButton("##atvpic", box);
     dl->AddRectFilled(p0, ImVec2(p0.x + box.x, p0.y + box.y), IM_COL32(0, 0, 0, 255));
     const float ar = pictureAspect(a);
-    ImVec2 sz = box;
-    if (box.x / box.y > ar) sz.x = box.y * ar; else sz.y = box.x / ar;
-    const ImVec2 q0(p0.x + (box.x - sz.x) * 0.5f, p0.y + (box.y - sz.y) * 0.5f), q1(q0.x + sz.x, q0.y + sz.y);
+    const dect2::AtvRect pr = dect2::atvPictureRect(ar, box.x, box.y, S.letterbox);
+    const ImVec2 q0(p0.x + (float)pr.x, p0.y + (float)pr.y), q1(q0.x + (float)pr.w, q0.y + (float)pr.h);
     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) && S.img && S.frame) { a.videoOnly = true; if (!glfwGetWindowMonitor(gWindow)) toggleFullscreen(); }   // double-click: full screen (#326)
     if (ImGui::IsItemHovered() && S.img && S.frame) ImGui::SetTooltip("%s", tr("Double-click (or press F) for full screen, Esc to leave"));
     if (S.img && S.frame) {
@@ -583,6 +584,15 @@ void decoder(App& a, bool&) {
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("The shape of the picture on screen, saved for this kind of signal (AM or FM video). 16:9 stretches an anamorphic picture, as an Icom IC-905 sends it,\nback to its width. Auto follows the wide screen signalling (line 23, 625 lines) when the transmitter sends it, else 4:3.");
     }
+    {
+        static const char* const kLb[3] = {"Automatic", "On", "Off"};
+        ImGui::TextDisabled("Letterbox"); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(90));
+        if (ImGui::BeginCombo("##atvlb", kLb[std::clamp(S.letterbox, 0, 2)])) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(kLb[i], S.letterbox == i)) { S.letterbox = i; plat::prefs().setI("atvLetterbox", i); savePrefs(a); }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Black bars around the picture in the window. On keeps the picture's shape, with bars where the window is another shape. Off fills the window.\nAutomatic: a 16:9 picture fills the window, a 4:3 picture keeps its shape with bars at the sides.");
+    }
     ImGui::TextDisabled("Sound"); ImGui::SameLine(0, 5 * gUi); ImGui::SetNextItemWidth(fit(130));
     if (ImGui::BeginCombo("##atvsnd", S.soundSys == 0 ? "Automatic" : "FM / AM carrier only")) {
         if (ImGui::Selectable("Automatic", S.soundSys == 0)) S.soundSys = 0;
@@ -706,9 +716,8 @@ bool atvFullPicture(App& a, ImVec2 disp) {
     uploadFrame(a);
     if (!S.img || !S.frame) return false;
     const float ar = pictureAspect(a);
-    ImVec2 sz = disp;
-    if (disp.x / disp.y > ar) sz.x = disp.y * ar; else sz.y = disp.x / ar;
-    const ImVec2 q0((disp.x - sz.x) * 0.5f, (disp.y - sz.y) * 0.5f);
+    const dect2::AtvRect pr = dect2::atvPictureRect(ar, disp.x, disp.y, S.letterbox);
+    const ImVec2 sz((float)pr.w, (float)pr.h), q0((float)pr.x, (float)pr.y);
     ImGui::SetCursorPos(q0);
     ImGui::Image(S.enh.texture(S.img)->texture(), sz);
     return true;
