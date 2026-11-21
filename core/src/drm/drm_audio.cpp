@@ -177,9 +177,7 @@ bool xheSdcFromAsc(const std::vector<uint8_t>& asc, SdcAudio& out) {
     BitIn in(asc.data(), asc.size());
     if (in.get(5) != 31 || in.get(6) != 10) return false;               // audio object type 42
     if (in.get(4) == 15) in.get(24);                                    // the ASC's own sampling rate (the UsacConfig repeats it)
-    const uint32_t chan = in.get(4);
-    if (chan != 1 && chan != 2) return false;
-    const bool stereo = chan == 2;
+    in.get(4);                                                          // channelConfiguration: encoders leave it 0, the UsacConfig says
     const uint32_t ri = in.get(5);
     const int rate = ri == 31 ? (int)in.get(24) : usacRates[ri];
     static const int xheRates[6] = {16000, 19200, 24000, 32000, 38400, 48000};
@@ -188,7 +186,9 @@ bool xheSdcFromAsc(const std::vector<uint8_t>& asc, SdcAudio& out) {
     const int coreIdx = (int)in.get(3);
     if (coreIdx < 1 || coreIdx > 4) return false;
     const int sbrRatioIndex = coreIdx == 2 ? 2 : coreIdx == 3 ? 3 : coreIdx == 4 ? 1 : 0;
-    if (in.get(5) != chan) return false;                                // channelConfigurationIndex
+    const uint32_t chan = in.get(5);                                    // channelConfigurationIndex: 1 mono, 2 stereo
+    if (chan != 1 && chan != 2) return false;
+    const bool stereo = chan == 2;
     const uint32_t numElements = in.escaped(4, 8, 16) + 1;
     if (numElements > 9) return false;
     if (in.get(2) != (stereo ? 1u : 0u)) return false;                  // the one core element: SCE or CPE

@@ -51,6 +51,7 @@ int main() {
     int rate = 0, chans = 0;
     CHECK(readFile(path, asc, units, rate, chans), "the file %s can be read", path);
     if (fails) return testSummary("drm_xhe_e2e");
+    { std::string hex; char t[4]; for (uint8_t b : asc) { snprintf(t, sizeof t, "%02x", b); hex += t; } printf("ASC: %s\n", hex.c_str()); }
     printf("file: %d Hz, %d channels, ASC %zu bytes, %zu access units\n", rate, chans, asc.size(), units.size());
     CHECK(units.size() > 50, "the file holds access units (%zu)", units.size());
     SdcAudio sdc;
