@@ -30,7 +30,7 @@ PAL 768x576 input, one thread, GitHub Linux x86_64 runner (quick.yml, best of 6,
 
 | Level | to 1280x720 | to 1920x1080 |
 |---|---|---|
-| Light | 16.6 ms | 30.1 ms |
-| Full | 48.1 ms | 76.3 ms |
+| Light | 18.1 ms | 33.3 ms |
+| Full | 63.4 ms | 100.1 ms |
 
-Light keeps 25 pictures per second at both sizes on one core. Full at 720p keeps about 20 per second on that runner and 1080p about 13: the worker then shows the newest picture it has finished and skips the ones in between (the decoder is never held up), so "Full, 1080p" is a quality choice for a fast machine or a recording, and Light (or Full at 720p) is the live choice. The UI shows the time of the last picture next to the switch.
+Light keeps 25 pictures per second at both sizes on one core. Full at 720p keeps about 16 per second on that runner and 1080p about 10: the worker then shows the newest picture it has finished and skips the ones in between (the decoder is never held up), so "Full, 1080p" is a quality choice for a fast machine or a recording, and Light (or Full at 720p) is the live choice. The UI shows the time of the last picture next to the switch.
