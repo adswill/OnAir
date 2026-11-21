@@ -73,6 +73,7 @@ static Out runRx(SerialStd std, const std::vector<cf32>& sig, int force = -1) {
     Out o;
     rx.setBitSink([&](uint8_t b) { o.bits.push_back(b); });
     rx.setD5066Sink([&](const D5066& d) { o.d.push_back(d); });
+    rx.setEventSink([&](const SerialEvent& e) { std::printf("  event %.1f s: %s\n", e.timeSec, e.text.c_str()); });
     const size_t step = 1024;
     for (size_t i = 0; i < sig.size(); i += step) rx.push(sig.data() + i, std::min(step, sig.size() - i));
     { std::vector<cf32> z(48000, cf32(0, 0)); rx.push(z.data(), z.size()); }
