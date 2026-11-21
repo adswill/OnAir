@@ -56,3 +56,11 @@ Expected, not proven (needs CI runs once the 3.7 runners are free):
 - the Windows release job: same Homebrew compiler as the prefix on `macos-15` (a newer Homebrew GCC than the prefix was built with would fail `check_win_dlls.sh`; the fix is to rebuild and upload the prefix). The `/tmp` step for the Windows shards: the file-writing tests failed on run 42368655094 because `D:\tmp` only existed when an earlier test happened to create it.
 
 Known and not fixed here: `tsout_net` failed once on Windows (http stream); `mesh_engine` on macOS failed in the check after a retune (`seq 113, 27 frames`), the frame count was not reset after 800 ms, reason unknown; both need a CI run to tell if they repeat.
+
+## CI rules after 4.4 (what runs where)
+
+- Pushes to `main` run Lint and the Linux shards only; docs-only pushes (`*.md`, `docs/`, `website/`) build nothing. macOS and Windows shards run on `integ-*` branches, tags, manual dispatch and the nightly Full CI (`ci.yml`).
+- Lint also configures CMake with the release options (app and tests on), so a duplicate target or bad glob fails in about a minute.
+- `android.yml` job `link` builds the core and the JNI bridge with the NDK on Linux, nightly and by hand (input `link`); `gate_check.py android` only compares names. Linux hosts stage the headers with `android/tools/stage_host_headers.sh` so glibc's headers do not shadow the NDK's.
+- `win-prefix.yml` runs after a push to `main` that changes `cross_deps_windows.sh` or the toolchain file; with no `from` it starts from the newest prefix on the draft release and does nothing when the current id is already there. A `v*` tag fails its Windows job when the prefix is missing.
+- Looked at and left alone: sharing ccache between the release jobs (each compiles different targets with a different compiler, so nothing would hit), and moving the Windows cross build to Linux (docs above: the Linux cross build fails `check_win_dlls.sh`, and the prefix would have to be rebuilt there first).
