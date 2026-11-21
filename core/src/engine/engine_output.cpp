@@ -99,6 +99,12 @@ std::map<int, std::vector<EpgEvent>> Engine::epg() {
     return demux_.epg();
 }
 
+bool Engine::epgIsPsip() {
+    if (mtvActive_.load()) return false;
+    std::lock_guard<std::mutex> lk(tsMu_);
+    return demux_.epgIsPsip();
+}
+
 BbStats Engine::bbStats() {
     if (mtvActive_.load()) { if (auto m = mtvGet()) return m->bbStats(m->selected()); }
     std::lock_guard<std::mutex> lk(tsMu_);

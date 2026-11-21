@@ -3,6 +3,7 @@
 
 #include "dect2/tv/epg.h"
 #include "dect2/tv/dvb_text.h"
+#include "dect2/tv/ts.h"
 #include "dect2/tv/ts_proto.h"
 #include "dect2/tv/tvjson.h"
 #include "dect2/common/u8file.h"
@@ -353,6 +354,21 @@ void EpgDb::ingestSection(const EitSection& s, int64_t now) {
     if (!s.current) return;
     const ServiceKey k{s.onid, s.tsid, s.sid};
     for (const auto& e : s.events) ingest(k, e, now);
+}
+
+size_t EpgDb::ingestDemux(int onid, int tsid, const std::map<int, std::vector<EpgEvent>>& epg, int64_t now) {
+    size_t changed = 0;
+    for (const auto& kv : epg) {
+        const ServiceKey k{onid, tsid, kv.first};
+        for (const EpgEvent& d : kv.second) {
+            EpgItem e;
+            e.eventId = d.eventId; e.start = d.start; e.duration = d.duration; e.running = d.running;
+            e.lang = d.lang; e.title = d.title; e.text = d.text; e.extended = d.extended;
+            if (d.genre >= 0) e.content.push_back((uint8_t)(d.genre << 4));
+            if (ingest(k, e, now)) changed++;
+        }
+    }
+    return changed;
 }
 
 size_t EpgDb::prune(int64_t now) {

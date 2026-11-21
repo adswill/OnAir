@@ -112,6 +112,7 @@ public:
     std::map<int, std::vector<DsmccFile>> carouselFiles(size_t maxBytes) const { return dsmcc_.files(maxBytes); }   // the complete files per PID (copies; for the viewer)
     // Programme guide per service id, sorted by start time (now/next plus the schedule when the broadcaster sends it).
     std::map<int, std::vector<EpgEvent>> epg() const;
+    bool epgIsPsip() const { return psip_.eit > 0; }   // the guide above came from ATSC PSIP (the DVB EIT collector never sees those tables)
     void reset();
     void setTextEncoding(dvbsi::TextEncoding encoding) {
         if (textEncoding_ != encoding) si_.resetTextCountry();

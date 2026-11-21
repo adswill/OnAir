@@ -467,6 +467,7 @@ public:
     void clearServices();   // empties the live service list (the next PAT / SDT fills it again): another transponder was tuned, or the user asked
     BbStats bbStats();
     std::map<int, std::vector<EpgEvent>> epg();
+    bool epgIsPsip();   // the programme guide comes from ATSC PSIP
     // Every burst of transport stream packets is also handed to this function (the network tuner); it runs on the receiver thread, so it must be quick.
     // `secs` is how long the burst represents in the stream, so a client can hand it to a player at that rate instead of in one lump.
     void setPacketTap(std::function<void(const uint8_t*, size_t, const TsSnapshot*, double secs)> f);
