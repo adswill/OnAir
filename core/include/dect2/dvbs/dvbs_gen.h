@@ -24,6 +24,9 @@
 //   modeOpt[5]  pilots (S2): 0 off (default), 1 on
 //   modeOpt[6]  spectral inversion: 0 off (default), 1 on (an LNB with a high-side oscillator turns the spectrum around)
 //   modeOpt[7]  S2: 1 = VCM demo, the MODCOD changes from frame to frame (S2 only) (2: also the LNB phase noise of EN 302 307-1 H.8 "typical", 3: "critical")
+//   modeOpt[8]  S2: a dummy PLFRAME after this many data frames (0 = never)
+//   modeOpt[9]  S2: 1 = delete null packets from the transport stream (NPD, DNP byte)
+//   modeVal[2]  S2: Gold code number n of the physical layer scrambling (0 = default)
 //   modeVal[0]  symbol rate in Hz (0: 5 Msym/s, or less when the sample rate is too low)
 //   modeVal[1]  transmitter clock offset in ppm (the symbol rate is higher by this much)
 //   SynthConfig::snrDb is Es/N0 in dB (symbol energy over noise density); cfoHz is the carrier offset; sroPpm adds to modeVal[1].
