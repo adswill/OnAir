@@ -785,17 +785,17 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 245: return makeSfericsSynth(cfg, sampleRate);   // Sferics (family 243)
     case 792: return ltpos::makeLtposSynth(cfg, sampleRate);   // Lightning position (family 790)
     case 872: return makeFbrSynth(cfg, sampleRate);   // Fleet Broadcast (family 870)
-    case 291: return makeSd3Synth(cfg, sampleRate, 0);
-    case 292: return makeSd3Synth(cfg, sampleRate, 1);
-    case 293: return makeSd3Synth(cfg, sampleRate, 2);
-    case 294: return makeSd3Synth(cfg, sampleRate, 3);
-    case 295: return makeSd3Synth(cfg, sampleRate, 4);
-    case 296: return makeSd3Synth(cfg, sampleRate, 5);
-    case 297: return makeSd3Synth(cfg, sampleRate, 6);
-    case 298: return makeSd3Synth(cfg, sampleRate, 7);
-    case 299: return makeSd3Synth(cfg, sampleRate, 8);
-    case 300: return makeSd3Synth(cfg, sampleRate, 9);
-    case 511: return makeSd3Synth(cfg, sampleRate, 10);   // the active standard of a profile is its family + 1 (sd3_tel.h)
+    case 292: return makeSd3Synth(cfg, sampleRate, 0);
+    case 293: return makeSd3Synth(cfg, sampleRate, 1);
+    case 294: return makeSd3Synth(cfg, sampleRate, 2);
+    case 295: return makeSd3Synth(cfg, sampleRate, 3);
+    case 296: return makeSd3Synth(cfg, sampleRate, 4);
+    case 297: return makeSd3Synth(cfg, sampleRate, 5);
+    case 298: return makeSd3Synth(cfg, sampleRate, 6);
+    case 299: return makeSd3Synth(cfg, sampleRate, 7);
+    case 300: return makeSd3Synth(cfg, sampleRate, 8);
+    case 301: return makeSd3Synth(cfg, sampleRate, 9);
+    case 512: return makeSd3Synth(cfg, sampleRate, 10);
     case 462: return makeHamsciSynth(cfg, sampleRate, 0);
     case 463: return makeHamsciSynth(cfg, sampleRate, 1);
     case 464: return makeHamsciSynth(cfg, sampleRate, 2);
