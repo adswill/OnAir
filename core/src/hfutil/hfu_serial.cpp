@@ -1103,7 +1103,8 @@ struct SerialRx::Impl {
         double best = 0, second = 0;
         for (size_t i = 0; i < hyps.size(); i++) {
             const Hyp& h = hyps[i];
-            if (!h.p->coded || h.cmp < 3000) continue;
+            if (!h.p->coded) continue;
+            if (h.cmp < 3000) return;   // a hypothesis with a long interleaver is still filling: compare only when every one has enough to show
             const double g = h.agree / h.cmp;   // how often the re-encoded decoded bits match the received signs: high only for the right rate and interleaver
             if (g > best) { second = best; best = g; bi = (int)i; } else if (g > second) second = g;
         }
