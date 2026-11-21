@@ -87,6 +87,10 @@ private:
     size_t pos_ = 0;
 };
 
+// The longest sound kept in memory (about 23 MB per minute). The sound of a video file is decoded whole, so a file shorter than this keeps its
+// sound in step with the picture through every loop; a 120 s cap made the sound start over while the picture played on (4.4.0).
+constexpr double kSynthMediaMaxSoundSeconds = 900;
+
 // One shared decoded copy per (file, time, length) for the generators that rebuild themselves on an option change
 std::shared_ptr<SynthMediaAudio> synthMediaAudioFor(const SynthConfig& cfg, double maxSeconds);
 std::shared_ptr<SynthMediaVideo> synthMediaVideoFor(const SynthConfig& cfg);
