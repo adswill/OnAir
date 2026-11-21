@@ -2440,3 +2440,6 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21 ATV video enhancer (owner request)
+- New `dect2::AtvEnhancer` (core/src/atv/atv_enhance.cpp): Light (motion-adaptive temporal noise reduction + scaling) and Full (also comb repair, bilateral denoise, chroma edge fix, Lanczos luma, sharpen with coring and clamp), output as received / 720p / 1080p in the picture's own shape. UI: "Enhance video" switch, size, Advanced sliders in the analog TV tab; runs on a worker thread. Existing still-picture Enhance untouched. Branch integ-45-atvenh; docs/ATV-ENHANCE.md.
