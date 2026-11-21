@@ -150,6 +150,16 @@ The full list: [docs/FEATURES.md](docs/FEATURES.md) and [docs/TOOLS-AND-NOTES.md
 - **[Signal sample library](https://files.on-air.dev)**: IQ and audio recordings of real signals.
 - **Buy me a coffee:** OnAir is free and always will be. If it is useful to you, a tip on **[Ko-fi](https://ko-fi.com/adswill)** helps keep new modes coming. Bug reports and recordings help just as much.
 
+## Star history
+
+<a href="https://star-history.com/#adswill/OnAir&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=adswill/OnAir&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=adswill/OnAir&type=Date" />
+    <img alt="Star history chart for OnAir" src="https://api.star-history.com/svg?repos=adswill/OnAir&type=Date" />
+  </picture>
+</a>
+
 ## License
 
 OnAir is released under the **GNU General Public License v3.0 or later**, see [LICENSE](LICENSE).
