@@ -65,6 +65,7 @@
     {"eczas/pos", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
     {"eczas/neg", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
     {"eczas/snr", "threshold: 12 dB in the sweep's 187 Hz band is 14.7 dB carrier to noise in 100 Hz, under this decoder's 17 dB edge (CRC only: the GUM spec does not give the Reed-Solomon code's field and generator, so no correction)"},
+    {"mscatter/snr", "unrealistic: the echoes are set 16-34 dB over the noise floor of the clean test file; the sweep then adds noise that puts the beacon 12 dB over its own 1.4 kHz, a floor 25 dB higher than the echoes sit over (an echo's power does not follow the receiver noise): measured, the beacon is found and every echo is below the 13 dB threshold"},
     {"hfbeacon/pos", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz; the beacons are searched within 50 Hz of their listed frequency"},
     {"hfbeacon/neg", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz; the beacons are searched within 50 Hz of their listed frequency"},
     {"mt63/pos", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
