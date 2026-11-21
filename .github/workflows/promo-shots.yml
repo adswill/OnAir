@@ -7,6 +7,8 @@ on:
     branches: ["claude/project-thread-z2n5d9"]
     paths: [".github/workflows/promo-shots.yml"]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   shots:
     runs-on: ubuntu-24.04
@@ -90,3 +92,18 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with: { name: "promo-shots-${{ strategy.job-index }}", path: out, retention-days: 14 }
+  collect:
+    needs: shots
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with: { ref: "claude/project-thread-z2n5d9" }
+      - uses: actions/download-artifact@v7
+        with: { pattern: "promo-shots-*", path: dl }
+      - name: Commit the shots to this branch (the artifact host is not reachable from the thread)
+        run: |
+          rm -rf promo-shots && mkdir -p promo-shots/1080 promo-shots/1440
+          cp dl/promo-shots-0/*.png promo-shots/1080/ 2>/dev/null || true
+          cp dl/promo-shots-1/*.png promo-shots/1440/ 2>/dev/null || true
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add promo-shots && git commit -m "Promo shots of 4.4.0" && git push origin HEAD:claude/project-thread-z2n5d9
