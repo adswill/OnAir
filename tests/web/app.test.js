@@ -10,7 +10,7 @@ const { Ring } = require(path.join(__dirname, "../../web/onair-app/worklet.js"))
 
 let passed = 0;
 function test(name, fn) { try { fn(); passed++; } catch (e) { console.error("FAIL " + name + "\n  " + (e && e.stack || e)); process.exitCode = 1; } }
-const MHZ = 1000000, KHZ = 1000, EPS = 0.000000001;   // plain literals: PMD misreads exponent notation
+const MHZ = 1000000, KHZ = 1000, EPS = 1 / 1000000000;   // plain integer literals: PMD misreads exponent notation
 const near = (a, b, eps, m) => assert.ok(Math.abs(a - b) <= eps, (m || "") + " " + a + " vs " + b);
 
 // ---- frequencies
@@ -73,8 +73,8 @@ test("binLevels: the 10th percentile and the maximum agree with a sort of the dB
   for (const frac of [0, 0.1, 0.5, 0.99]) {
     const sorted = Array.from(u8).sort((a, b) => a - b).map(v => floor + v / 255 * (top - floor));
     const r = L.binLevels(u8, frac, floor, top);
-    near(r.lowDb, sorted[Math.floor(n * frac)], 1e-9, "frac " + frac);
-    near(r.highDb, sorted[n - 1], 1e-9, "max");
+    near(r.lowDb, sorted[Math.floor(n * frac)], EPS, "frac " + frac);
+    near(r.highDb, sorted[n - 1], EPS, "max");
   }
 });
 test("binLevels: flat, single-bin and empty frames", () => {
@@ -141,7 +141,7 @@ test("rowToPixels: the same span maps bin to pixel, several bins take the maximu
   assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ, 8 * KHZ, 16)).slice(0, 4), [1, 1, 2, 2]);
 });
 test("rowToPixels: equal spans with as many pixels as bins map bin x to pixel x exactly", () => {
-  for (const [n, rate, centre] of [[1337, 2.4e6, 100e6], [1920, 3.2e6, 433.92e6], [1024, 2e6, 98.1e6], [4096, 2.048e6, 1.5e9]]) {
+  for (const [n, rate, centre] of [[1337, 2400000, 100 * MHZ], [1920, 3200000, 433920000], [1024, 2 * MHZ, 98100000], [4096, 2048000, 1500 * MHZ]]) {
     const u8 = new Uint8Array(n).map((_, i) => (i * 7 + 3) & 255);
     const out = L.rowToPixels({ u8, centreHz: centre, rateHz: rate }, centre, rate, n);
     let bad = 0;
@@ -393,10 +393,10 @@ test("SpectrumView: the paint is one animation frame; incremental while the span
   t.flush();
   assert.strictEqual(c.puts, 2, "the first paint draws both stored rows"); assert.strictEqual(c.copies, 0);
   c.puts = 0;
-  t.view.push(t.frame(100e6)); t.view.push(t.frame(100e6)); t.view.push(t.frame(100e6)); t.flush();
+  t.view.push(t.frame(100 * MHZ)); t.view.push(t.frame(100 * MHZ)); t.view.push(t.frame(100 * MHZ)); t.flush();
   assert.strictEqual(c.copies, 1, "the picture scrolls once"); assert.strictEqual(c.puts, 3, "and every new row is painted");
   c.puts = 0; c.copies = 0;
-  t.view.push(t.frame(101e6)); t.flush();
+  t.view.push(t.frame(101 * MHZ)); t.flush();
   assert.strictEqual(c.copies, 0, "a retune paints again from the history"); assert.strictEqual(c.puts, 6);
   c.puts = 0; t.view.setRange(-90, -30); t.flush();
   assert.strictEqual(c.puts, 6, "a range change too");
@@ -404,7 +404,7 @@ test("SpectrumView: the paint is one animation frame; incremental while the span
 test("SpectrumView: clear forgets the frame, so a resize does not draw the old trace", () => {
   globalThis.devicePixelRatio = 1;
   const t = spectrumFixture(100, 50, 100, 40);
-  t.view.push(t.frame(100e6)); t.flush();
+  t.view.push(t.frame(100 * MHZ)); t.flush();
   t.view.clear();
   assert.strictEqual(t.view.frame, null);
   t.wf.ctx.puts = 0; t.wf.cssW = 120;
@@ -414,8 +414,8 @@ test("SpectrumView: clear forgets the frame, so a resize does not draw the old t
 test("SpectrumView: a resize repaints at once, keeps the history, grows the ring and tracks the pixel ratio", () => {
   globalThis.devicePixelRatio = 2;
   const t = spectrumFixture(100, 50, 100, 40);
-  t.view.push(t.frame(100e6)); t.flush();
-  t.view.push(t.frame(100e6));   // a paint is scheduled but has not run
+  t.view.push(t.frame(100 * MHZ)); t.flush();
+  t.view.push(t.frame(100 * MHZ));   // a paint is scheduled but has not run
   t.spec.cssW = 150; t.spec.cssH = 60; t.wf.cssW = 150; t.wf.cssH = 3000;
   t.wf.ctx.puts = 0;
   t.view.resize();
