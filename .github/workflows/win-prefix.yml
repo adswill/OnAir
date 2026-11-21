@@ -1,0 +1,48 @@
+# Rebuilds the Windows dependency prefix when tools/package/cross_deps_windows.sh or the toolchain file changed (the prefix id of
+# tools/package/win_prefix_id.sh changes, release.yml then warns and ships no Windows files). Run by hand: Actions > Windows prefix > Run workflow.
+# It starts from the newest earlier prefix on the draft release "ci-windows-prefix" (input "from", the id of that file) and runs cross_deps_windows.sh,
+# which skips every dependency that is already in the prefix and rebuilds only what changed (the shared FFmpeg for 4.4). Only for changes of that kind:
+# a dependency whose source archive is not in build-windows-deps/src still needs the maintainer's Mac and tools/release/upload_win_prefix.sh.
+name: Windows prefix
+
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "Id of the earlier prefix to start from (the file onair-win-prefix-<id>.tar.gz on the draft release ci-windows-prefix)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  prefix:
+    name: Windows dependency prefix
+    runs-on: macos-15   # the Homebrew mingw-w64 of release.yml's Windows job
+    timeout-minutes: 120
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install the cross toolchain
+        run: |
+          tools/release/retry.sh brew install cmake ninja pkg-config nasm mingw-w64 xz
+      - name: Unpack the earlier prefix
+        run: |
+          set -eu
+          tools/release/retry.sh -n 3 gh release download ci-windows-prefix --repo "$GITHUB_REPOSITORY" -p "onair-win-prefix-${{ inputs.from }}.tar.gz" -D "$RUNNER_TEMP/pfx"
+          python3 tools/package/unpack_win_prefix.py "$RUNNER_TEMP/pfx/onair-win-prefix-${{ inputs.from }}.tar.gz" "$HOME/onair-win-prefix"
+      - name: FFmpeg source
+        run: |
+          mkdir -p build-windows-deps/src
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o build-windows-deps/src/ffmpeg-8.0.tar.xz https://ffmpeg.org/releases/ffmpeg-8.0.tar.xz
+      - name: Build what changed
+        run: |
+          # cross_deps_windows.sh unpacks the MSYS2 packages into its work folder before it looks at the prefix; the UHD and runtime DLLs are already
+          # in the earlier prefix (redist/), so empty stand-ins let it go on to the step that rebuilds what changed.
+          mkdir -p "$HOME/onair-win-work/msys2/ucrt64/bin"
+          touch "$HOME/onair-win-work/msys2/ucrt64/bin/libuhd.dll" "$HOME/onair-win-work/msys2/ucrt64/bin/libstdc++-6.dll"
+          test -f "$HOME/onair-win-prefix/redist/libuhd.dll"
+          tools/package/cross_deps_windows.sh
+      - name: Upload the new prefix
+        run: tools/release/upload_win_prefix.sh
