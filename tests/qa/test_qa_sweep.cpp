@@ -81,6 +81,18 @@ const char* knownWhy(const std::string& id, const char* cond) {
     return nullptr;
 }
 
+// ------------------------------------------------------------------ modes whose lock alone is not a pass (4.5): they decode frames / text / lines with a check
+// of their own, so the synthetic signal must give a counted decode (blocksOk, characters, saved bytes). Modes that only detect a carrier or measure
+// something (QO-100, SuperSID, Pulsar, TDRS ...) are not listed: for them the lock is the result.
+bool needsDecode(const std::string& id, int stdMode) {
+    static const char* const ids[] = {"wefax", "geoscan", "lucky7", "spino", "erminaz", "stanag4285", "datawell", "time", "mscatter", "hfbeacon", "pskd", nullptr};
+    for (const char* const* p = ids; *p; p++) if (id == *p) return true;
+    static const int stds[] = {732, 748, 743, 642, 605, 606, 607, 608, 842, 845, 848, 851, 854, 857, 349, 662, 663, 900, 901, 702, 872, 882,
+                               622, 623, 624, 625, 626, 627, 628, 802, 803, 804, 0};
+    for (const int* p = stds; *p; p++) if (stdMode == *p) return true;
+    return false;
+}
+
 // ------------------------------------------------------------------ the mode list (as bench_modes)
 struct Entry {
     std::string id, name;
@@ -946,7 +958,9 @@ int main(int argc, char** argv) {
             size_t q = modes.find(',', p);
             if (q == std::string::npos) q = modes.size();
             const std::string id = modes.substr(p, q - p);
-            if (const Entry* e = find(id)) sel.push_back(e); else { fprintf(stderr, "no mode '%s' (--list shows them)\n", id.c_str()); return 2; }
+            const Entry* byStd = nullptr;   // "#732": the first mode with that engine standard (for rows whose id is not known to the caller)
+            if (!id.empty() && id[0] == '#') for (auto& x : all) if (x.stdMode == atoi(id.c_str() + 1)) { byStd = &x; break; }
+            if (const Entry* e = byStd ? byStd : find(id)) sel.push_back(e); else { fprintf(stderr, "no mode '%s' (--list shows them)\n", id.c_str()); return 2; }
             p = q + 1;
         }
     }
@@ -1101,7 +1115,7 @@ int main(int argc, char** argv) {
             else {
                 const std::string j = cr.out.substr(jp);
                 r.tx.good = (uint64_t)jnum(j, "good"); r.tx.res = (uint64_t)jnum(j, "res"); r.tx.locked = jnum(j, "locked") > 0;
-                r.tx.verdict = r.tx.good > 0 || r.tx.res > z + 16 ? "pass" : r.tx.locked ? "lock" : "FAIL";
+                r.tx.verdict = r.tx.good > 0 || r.tx.res > z + 16 ? "pass" : r.tx.locked && !needsDecode(r.id, r.stdMode) ? "lock" : "FAIL";
             }
         }
         unsetenv("QA_PACE");
@@ -1117,9 +1131,9 @@ int main(int argc, char** argv) {
                 if (isNoiseCond(c)) cc.verdict = blocks ? (r.m(c) == 0 ? "pass" : "FALSE") : (cc.locked ? "lock" : "pass");
                 else if (c > 0 && !blocks && !r.c[0].locked) cc.verdict = "-";
                 else if (blocks) cc.verdict = r.m(c) > 0 ? (c > 0 && r.m(c) * 2 < r.m(0) ? "weak" : "pass") : "FAIL";
-                else cc.verdict = cc.locked ? "lock" : "FAIL";
+                else cc.verdict = cc.locked && !needsDecode(r.id, r.stdMode) ? "lock" : "FAIL";   // a mode that must decode fails on a lock alone
             }
-            if (!blocks && !r.c[0].locked) r.c[0].verdict = "FAIL";
+            if (!blocks && (!r.c[0].locked || needsDecode(r.id, r.stdMode))) r.c[0].verdict = "FAIL";
         }
         if (!r.gen) {
             const std::string& v = r.c[4].verdict;
