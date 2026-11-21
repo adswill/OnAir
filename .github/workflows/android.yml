@@ -94,6 +94,10 @@ jobs:
         run: |
           tools/release/retry.sh sudo apt-get update -qq
           tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 pkg-config ccache libhackrf-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev
+      - name: Headers only (the distribution's pkg-config files would put the host's glibc headers before the NDK's)
+        run: |
+          android/tools/stage_host_headers.sh "$RUNNER_TEMP/host-headers"
+          echo "PKG_CONFIG_LIBDIR=$RUNNER_TEMP/host-headers/lib/pkgconfig" >> "$GITHUB_ENV"
       - uses: ./.github/actions/android-native-deps
         with: { ndk: "${{ env.NDK_VERSION }}", cmake: "${{ env.CMAKE_VERSION }}" }
       - name: Restore ccache
