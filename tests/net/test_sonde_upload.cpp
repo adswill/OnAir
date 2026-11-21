@@ -5,6 +5,8 @@
 // the 9 character object name, and the sockets against a MOCK APRS-IS server on localhost (never a real server): login, beacon, objects,
 // two targets at once, the packet counter, the per-sonde rate limit, reconnect, an unverified login, and "nothing while off".
 #include "dect2/net/sonde_upload.h"
+#include "dect2/net/sonde_activity.h"
+#include "dect2/common/timecompat.h"
 #include "../../core/src/net/tcp_client.h"
 #include <chrono>
 #include <cstdio>
@@ -136,7 +138,13 @@ int main() {
     CHECK(acceptWait(l1, 300) == kBadSock, "no connection while disabled");
     CHECK(U.status(0).state == "off", "status off");
 
+    // no radiosonde decoded lately (DAB, TV, ...): enabled targets stay disconnected, so no station shows as active
+    sondeactivity::noteFrameAt(steadyNowSec() - 1000);
     a.enabled = b.enabled = true;
+    U.configure({a, b});
+    CHECK(acceptWait(l1, 700) == kBadSock && acceptWait(l2, 100) == kBadSock, "no connection while no radiosonde is decoded");
+    CHECK(U.status(0).state.compare(0, 4, "idle") == 0, "status idle: %s", U.status(0).state.c_str());
+    sondeactivity::noteFrame();   // a sonde is decoded: the targets connect (the flow below)
     U.configure({a, b});
     CHECK(U.wanted(), "wanted once enabled");
     sock_t c1 = acceptWait(l1, 3000), c2 = acceptWait(l2, 3000);
