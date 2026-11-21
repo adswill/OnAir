@@ -1,0 +1,2 @@
+# Caches that are built once and never freed on purpose (the callers keep references to them).
+leak:dect2::dvbs::s2ScramblingRn
