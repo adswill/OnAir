@@ -93,6 +93,17 @@ public:
     void setHangSec(float s);                            // 0 .. 3 s (default 0.5)
     void setScan(bool on);
     void setScanHold(bool on);                           // scan: stay on the channel it stopped on, also after it closed
+    // 4.5 autonomous scanning: no list needed. Carriers that key up on the raster are opened at once (see airband_auto.h); guard (121.500,
+    // 243.000) is always open and the priority. Default on. Auto channels come after the list's in telemetry().channels.
+    void setAuto(bool on);
+    // Hopping across the whole band when the radio cannot take it at once: only with auto on and an empty list. The receiver asks (telemetry
+    // hopTargetHz / hopSeq); the app tunes. Default on.
+    void setHop(bool on);
+    // Listen to this carrier now without adding it to the list (a seen carrier, a click on the spectrum). Kept until it has been heard.
+    void listenTo(double freqHz, bool is833);
+    std::string learnedState() const;                    // what the scanner learned, one line (airband_store.h); save it with the settings
+    void setLearnedState(const std::string& s);          // load it back
+    void forgetLearned();
     void setTuneErrorHz(double hz);                      // a starting guess of the radio's tuning error (tests); measured from then on
 
     // Sound (volume, mute) as in FmReceiver; the app pushes its shared controls here.

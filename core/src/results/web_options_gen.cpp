@@ -282,13 +282,15 @@ static bool set_26(Engine& e, const std::string& n, double v) {
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     return false;
 }
-static const char kOpt_27[] = R"JSON([{"n":"setSquelchDb","k":"num","l":"Squelch dB","h":"carrier to noise threshold, -5 .. 30 dB (default 6)","u":"dB","t":"s"},{"n":"setHangSec","k":"num","l":"Hang Sec","h":"0 .. 3 s (default 0.5)","u":"s","t":"s"},{"n":"setScan","k":"bool","l":"Scan","t":"s"},{"n":"setScanHold","k":"bool","l":"Scan Hold","h":"scan: stay on the channel it stopped on, also after it closed","t":"s"}])JSON";
+static const char kOpt_27[] = R"JSON([{"n":"setSquelchDb","k":"num","l":"Squelch dB","h":"carrier to noise threshold, -5 .. 30 dB (default 6)","u":"dB","t":"s"},{"n":"setHangSec","k":"num","l":"Hang Sec","h":"0 .. 3 s (default 0.5)","u":"s","t":"s"},{"n":"setScan","k":"bool","l":"Scan","t":"s"},{"n":"setScanHold","k":"bool","l":"Scan Hold","h":"scan: stay on the channel it stopped on, also after it closed","t":"s"},{"n":"setAuto","k":"bool","l":"Auto","t":"a"},{"n":"setHop","k":"bool","l":"Hop","t":"a"}])JSON";
 static bool set_27(Engine& e, const std::string& n, double v) {
     auto& r = e.airband();
     if (n == "setSquelchDb") { call(r, &Rx<decltype(r)>::setSquelchDb, v); return true; }
     if (n == "setHangSec") { call(r, &Rx<decltype(r)>::setHangSec, v); return true; }
     if (n == "setScan") { call(r, &Rx<decltype(r)>::setScan, v); return true; }
     if (n == "setScanHold") { call(r, &Rx<decltype(r)>::setScanHold, v); return true; }
+    if (n == "setAuto") { call(r, &Rx<decltype(r)>::setAuto, v); return true; }
+    if (n == "setHop") { call(r, &Rx<decltype(r)>::setHop, v); return true; }
     return false;
 }
 static const char kOpt_28[] = R"JSON([{"n":"setWholeSpan","k":"bool","l":"Whole Span","h":"Whole span: the worldwide channel set (vdl2WorldChannels) in the capture plus the list; off: the list or the European set","t":"s"},{"n":"setTrackTuning","k":"bool","l":"Track Tuning","h":"follow the tuning error from the decoded bursts (default on)","t":"s"}])JSON";

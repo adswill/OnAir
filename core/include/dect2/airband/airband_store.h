@@ -4,6 +4,7 @@
 // The airband channel list as one line of text for the settings file (#148).
 #pragma once
 #include "dect2/airband/airband_rx.h"
+#include "dect2/airband/airband_auto.h"
 #include <string>
 #include <vector>
 
@@ -14,4 +15,8 @@ std::string airbandEncode(const std::vector<AirbandChannel>& v);
 // Reads that, and the older forms (0x1e / 0x1f separators, and the '|' / ';' form of the macOS preferences). A record that is damaged
 // or off the raster is skipped, the rest is kept.
 std::vector<AirbandChannel> airbandDecode(const std::string& s);
+// What the autonomous scanner learned (frequencies heard, how much, continuous carriers) as one line: "l1:" then freq,score,opens,continuous
+// records split by ';'. Decoding skips damaged and out of band records.
+std::string airbandLearnedEncode(const std::vector<AirbandLearned>& v);
+std::vector<AirbandLearned> airbandLearnedDecode(const std::string& s);
 }

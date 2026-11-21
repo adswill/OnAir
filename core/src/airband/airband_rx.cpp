@@ -10,6 +10,7 @@
 #include "dect2/airband/airband_tel.h"
 #include "dect2/airband/airband_gen.h"
 #include "dect2/airband/airband_seen.h"
+#include "dect2/airband/airband_auto.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/audio/neural_nr.h"
 #include "dect2/dsp/fftutil.h"
@@ -151,6 +152,10 @@ struct Chan {
     uint64_t txCount = 0;
     double lastEndSec = -1;
     int64_t wallStart = 0;
+    // autonomous scanning
+    bool autoAdded = false, pinned = false, cont = false;
+    double madeSec = 0;                   // signal clock when it was added
+    int64_t born = 0;                     // channel sample the channel started at (a channel added while running starts late)
 };
 
 } // namespace
@@ -270,28 +275,114 @@ struct AirbandReceiver::Impl {
 
     void setFine(Chan& c) { c.fStep = -2 * kPi * tuneErr / fi; }
 
+    bool inBandAt(double freqHz) const { return curRate > 0 && std::fabs(freqHz - center) + 12500 + kMaxTuneErr < 0.45 * curRate; }
+
+    // A channel on a timeline that matches the others': audio position and channel sample count continue from where the running ones are
+    void initChan(Chan& c, const AirbandChannel& cfg) {
+        c = Chan();
+        c.cfg = cfg;
+        c.sp = c.cfg.is833 ? &k833 : &k25k;
+        c.posHz = c.cfg.freqHz - center;
+        c.inBand = inBandAt(c.cfg.freqHz);
+        const double w = -2 * kPi * c.posHz / curRate;
+        c.sRe = std::cos(w); c.sIm = std::sin(w);
+        c.taps = c.cfg.is833 ? &taps833 : &taps25;
+        c.hist.assign(2 * c.taps->size(), cf32(0.f, 0.f));
+        c.wbuf.clear(); c.wbuf.reserve(kWide);
+        c.hold.assign(kWide, 0.f);
+        c.ring.assign(kBlock, cf32(0.f, 0.f));
+        c.hp.set(true, 300, 0.7071, fc);
+        c.lp1.set(false, 3000, 0.5412, fc);
+        c.lp2.set(false, 3000, 1.3066, fc);
+        int64_t head = nOut8;
+        for (const auto& o : ch) if (o.inBand) head = std::max(head, o.audBase + (int64_t)o.aud.size());
+        c.audBase = head;
+        c.nCh = c.born = fc > 0 ? (int64_t)std::llround((double)head * fc / kAirbandAudioRate) : 0;
+        c.madeSec = sigSec();
+        setFine(c);
+    }
+
+    size_t userN = 0;                     // the first userN channels are the user's list, the rest were opened by the scanner
     void buildChannels(const std::vector<AirbandChannel>& list) {
         ch.clear();
         ch.resize(list.size());
-        const double half = 0.45 * curRate;
-        for (size_t i = 0; i < list.size(); i++) {
-            Chan& c = ch[i];
-            c.cfg = list[i];
-            c.sp = c.cfg.is833 ? &k833 : &k25k;
-            c.posHz = c.cfg.freqHz - center;
-            c.inBand = curRate > 0 && std::fabs(c.posHz) + 12500 + kMaxTuneErr < half;
-            const double w = -2 * kPi * c.posHz / curRate;
-            c.sRe = std::cos(w); c.sIm = std::sin(w);
-            c.taps = c.cfg.is833 ? &taps833 : &taps25;
-            c.hist.assign(2 * c.taps->size(), cf32(0.f, 0.f));
-            c.wbuf.clear(); c.wbuf.reserve(kWide);
-            c.hold.assign(kWide, 0.f);
-            c.ring.assign(kBlock, cf32(0.f, 0.f));
-            c.hp.set(true, 300, 0.7071, fc);
-            c.lp1.set(false, 3000, 0.5412, fc);
-            c.lp2.set(false, 3000, 1.3066, fc);
-            c.audBase = nOut8;
-            setFine(c);
+        userN = list.size();
+        for (size_t i = 0; i < list.size(); i++) initChan(ch[i], list[i]);
+    }
+
+    // autonomous scanning
+    AirbandAuto autoSel;
+    AirbandHopper hop;
+    bool autoSet = false, hopSet = false, autoOn = false, hopOn = false;
+    std::vector<std::pair<double, bool>> listenReq;   // under mu
+    std::string learnPub;                              // under mu
+    double hopClock = 0, nextLearn = 0;
+    uint32_t hopSeq = 0;
+    double hopTarget = 0;
+    bool learnReq = false; std::string learnIn;       // under mu: a loaded state
+
+    void addAuto(const AirbandChannel& cfg, bool pinned) {
+        ch.emplace_back();
+        initChan(ch.back(), cfg);
+        ch.back().autoAdded = true; ch.back().pinned = pinned;
+        ch.back().cont = autoSel.continuous(cfg.freqHz);
+        say(std::string(pinned ? "Airband listen: listening to " : "Airband auto: opened ") + airbandName(cfg.freqHz, cfg.is833));
+    }
+    void say(const std::string& m) {
+        std::function<void(const std::string&)> cb;
+        { std::lock_guard<std::mutex> lk(mu); cb = log; }
+        if (cb) cb(m);
+    }
+
+    void dropAuto(double f) {
+        for (size_t i = userN; i < ch.size(); i++) {
+            if (std::fabs(ch[i].cfg.freqHz - f) < 600) {
+                if (ch[i].active) return;
+                ch.erase(ch.begin() + (long)i);
+                scanCh = -1;
+                return;
+            }
+        }
+    }
+
+    void autoStep() {
+        const double now = sigSec();
+        autoSel.setEnabled(autoOn);
+        for (auto& c : ch) {
+            c.cont = autoSel.continuous(c.cfg.freqHz);
+            if (c.active && ((double)c.nCh - c.tOpen) / fc > AirbandAuto::kContinuousSec) { autoSel.markContinuous(c.cfg.freqHz); c.cont = true; }
+        }
+        // requests: loaded state, clicks on carriers
+        std::vector<std::pair<double, bool>> lq;
+        {
+            std::lock_guard<std::mutex> lk(mu);
+            if (learnReq) { autoSel.load(learnIn); learnReq = false; hop.seed(autoSel.learned()); }
+            lq.swap(listenReq);
+        }
+        for (const auto& q : lq) {
+            bool found = false;
+            for (auto& c : ch) if (std::fabs(c.cfg.freqHz - q.first) < 600) { found = true; if (c.autoAdded) c.pinned = true; }
+            if (found) continue;
+            if (!inBandAt(q.first)) { say("Airband listen: " + airbandName(q.first, q.second) + " is outside what the radio takes in now"); continue; }
+            AirbandChannel cfg; cfg.freqHz = q.first; cfg.is833 = q.second; cfg.label = "listen";
+            addAuto(cfg, true);
+        }
+        std::vector<AirbandAutoView> views;
+        for (size_t i = userN; i < ch.size(); i++) {
+            const Chan& c = ch[i];
+            AirbandAutoView v;
+            v.freqHz = c.cfg.freqHz; v.is833 = c.cfg.is833; v.active = c.active;
+            v.openSinceSec = c.active ? c.tOpen / fc : -1;
+            v.lastEndSec = c.lastEndSec; v.madeSec = c.madeSec; v.pinned = c.pinned; v.peakExcessDb = c.snrDb;
+            views.push_back(v);
+        }
+        const AirbandAutoStep st = autoSel.step(now, watch.seen(), views, 117.9e6, 400.1e6);
+        for (double f : st.drop) dropAuto(f);
+        for (const auto& a : st.add) {
+            bool dup = false;
+            for (const auto& c : ch) if (std::fabs(c.cfg.freqHz - a.freqHz) < 600) dup = true;
+            if (dup || !inBandAt(a.freqHz)) continue;
+            addAuto(a, false);
         }
     }
 
@@ -335,6 +426,8 @@ struct AirbandReceiver::Impl {
         if (curRate > 0) design();
         watch.configure(curRate, center); nextWatch = 0.5;
         buildChannels(list);
+        hop.plan(airbandUsableSpanHz(curRate));
+        hop.locate(center, hopClock);
         int inb = 0;
         for (const auto& c : ch) inb += c.inBand;
         if (cb && curRate > 0) {
@@ -345,7 +438,7 @@ struct AirbandReceiver::Impl {
     }
 
     void applyFlags(const std::vector<AirbandChannel>& list) {
-        bool same = list.size() == ch.size();
+        bool same = list.size() == userN && ch.size() >= userN;
         for (size_t i = 0; same && i < list.size(); i++) same = list[i].freqHz == ch[i].cfg.freqHz && list[i].is833 == ch[i].cfg.is833;
         if (!same) { buildChannels(list); return; }
         for (size_t i = 0; i < list.size(); i++) ch[i].cfg = list[i];
@@ -436,7 +529,7 @@ struct AirbandReceiver::Impl {
             c.aud.push_back((float)(c.prevAud + (au - c.prevAud) * std::max(0.0, std::min(1.0, fr))));
         }
         c.prevAud = au;
-        if (c.nCh >= kBlock && c.nCh % kHop == 0) block(c, idx);
+        if (c.nCh - c.born >= kBlock && c.nCh % kHop == 0) block(c, idx);
     }
 
     // ------------------------------------------------ squelch, once per hop
@@ -526,6 +619,8 @@ struct AirbandReceiver::Impl {
         c.lastEndSec = c.lastDet / fc;
         act.push_front(e);
         while (act.size() > kAirbandLogMax) act.pop_back();
+        autoSel.noteTransmission(c.cfg.freqHz, e.durSec);
+        hop.noteActivity(c.cfg.freqHz, hopClock);
     }
 
     bool gateAt(const Chan& c, double t) const {
@@ -628,9 +723,11 @@ struct AirbandReceiver::Impl {
             if (prioOpen >= 0 && scanCh != prioOpen) scanCh = prioOpen;
             else if (!keep) {
                 scanCh = -1;
-                for (size_t i = 0; i < ch.size(); i++) {
-                    const Chan& c = ch[i];
-                    if (c.inBand && c.active && !c.cfg.muted && (!anySolo || c.cfg.solo)) { scanCh = (int)i; break; }
+                for (int pass = 0; pass < 2 && scanCh < 0; pass++) {   // a continuous carrier (ATIS) only when nothing else is open
+                    for (size_t i = 0; i < ch.size(); i++) {
+                        const Chan& c = ch[i];
+                        if (c.inBand && c.active && !c.cfg.muted && (!anySolo || c.cfg.solo) && (pass == 1 || !c.cont)) { scanCh = (int)i; break; }
+                    }
                 }
             }
         }
@@ -693,6 +790,7 @@ struct AirbandReceiver::Impl {
             AirbandChannelState s;
             s.freqHz = c.cfg.freqHz; s.is833 = c.cfg.is833; s.name = airbandName(c.cfg.freqHz, c.cfg.is833); s.label = c.cfg.label;
             s.inBand = c.inBand; s.open = c.active; s.heterodyne = c.active && c.het;
+            s.autoAdded = c.autoAdded; s.continuous = c.cont;
             s.muted = c.cfg.muted; s.solo = c.cfg.solo; s.priority = c.cfg.priority;
             s.levelDb = c.powN ? (float)(10 * std::log10(c.powAcc / c.powN + 1e-20)) : -200.f;
             c.powAcc = 0; c.powN = 0;
@@ -715,8 +813,12 @@ struct AirbandReceiver::Impl {
         tel.blocksOk = tx; tel.blocksBad = 0;
         tel.activity.assign(act.begin(), act.end());
         tel.seen = watch.seen();
+        tel.autoMode = autoOn; tel.hopOn = hopOn;
+        tel.hopGroups = (int)hop.groups(); tel.hopGroup = hopOn ? (int)hop.current() : -1;
+        tel.hopTargetHz = hopTarget; tel.hopSeq = hopSeq;
         std::lock_guard<std::mutex> lk(mu);
         pub = tel;
+        if (sigSec() >= nextLearn) { nextLearn = sigSec() + 10; learnPub = autoSel.save(); }
     }
 };
 
@@ -746,6 +848,8 @@ void AirbandReceiver::feed(const cf32* x, size_t n) {
     {
         std::lock_guard<std::mutex> lk(m.mu);
         m.sql = m.sqlSet; m.hang = m.hangSet; m.scan = m.scanSet; m.scanHold = m.holdSet;
+        if (m.autoOn && !m.autoSet) { for (size_t i = m.ch.size(); i-- > m.userN;) if (!m.ch[i].pinned) m.ch.erase(m.ch.begin() + (long)i); m.scanCh = -1; }
+        m.autoOn = m.autoSet; m.hopOn = m.hopSet;
         if (m.tuneGuessReq) { m.tuneGuessReq = false; m.tuneErr = m.tuneGuess; m.tuneKnown = false; for (auto& c : m.ch) m.setFine(c); }
     }
     if (m.chanReq.exchange(false)) { std::vector<AirbandChannel> l; { std::lock_guard<std::mutex> lk(m.mu); l = m.chanSet; } m.applyFlags(l); }
@@ -769,11 +873,19 @@ void AirbandReceiver::feed(const cf32* x, size_t n) {
         m.nIn += (int64_t)k;
         m.output();
         if (m.sigSec() >= m.nextEst) { m.nextEst += 0.5; m.estimateTune(); }
+        m.hopClock += (double)k / m.curRate;
         if (m.sigSec() >= m.nextWatch) {
-            m.nextWatch += 0.5;
+            m.nextWatch += m.autoOn ? 0.25 : 0.5;
             std::vector<double> listed;
             for (const auto& c : m.ch) listed.push_back(c.cfg.freqHz);
             m.watch.update(m.sigSec(), m.tuneErr, m.tuneKnown, listed);
+            m.autoStep();
+        }
+        if (m.autoOn && m.hopOn && m.userN == 0 && m.hop.needed() && m.center > 100e6 && m.center < 160e6) {
+            bool open = false;
+            for (const auto& c : m.ch) open |= c.active;
+            const int g = m.hop.tick(m.hopClock, open, m.center);
+            if (g >= 0) { m.hopTarget = m.hop.centerOf((size_t)g); m.hopSeq++; }
         }
         while ((double)m.nIn >= m.nextReport) { m.nextReport += 0.25 * m.curRate; m.report(); }
     }
@@ -816,6 +928,12 @@ void AirbandReceiver::setSquelchDb(float db) { std::lock_guard<std::mutex> lk(p_
 void AirbandReceiver::setHangSec(float s) { std::lock_guard<std::mutex> lk(p_->mu); p_->hangSet = std::max(0.f, std::min(3.f, s)); }
 void AirbandReceiver::setScan(bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->scanSet = on; }
 void AirbandReceiver::setScanHold(bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->holdSet = on; }
+void AirbandReceiver::setAuto(bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->autoSet = on; }
+void AirbandReceiver::setHop(bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->hopSet = on; }
+void AirbandReceiver::listenTo(double f, bool n833) { std::lock_guard<std::mutex> lk(p_->mu); if (p_->listenReq.size() < 16) p_->listenReq.push_back({f, n833}); }
+std::string AirbandReceiver::learnedState() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->learnPub; }
+void AirbandReceiver::setLearnedState(const std::string& s) { std::lock_guard<std::mutex> lk(p_->mu); p_->learnIn = s; p_->learnReq = true; p_->learnPub = s; }
+void AirbandReceiver::forgetLearned() { std::lock_guard<std::mutex> lk(p_->mu); p_->learnIn = "l1:"; p_->learnReq = true; p_->learnPub = "l1:"; }
 void AirbandReceiver::setTuneErrorHz(double hz) { std::lock_guard<std::mutex> lk(p_->mu); p_->tuneGuess = hz; p_->tuneGuessReq = true; }
 void AirbandReceiver::setVolume(float v) { p_->volume = std::max(0.f, std::min(1.f, v)); }
 void AirbandReceiver::setMuted(bool m) { p_->muted = m; }
