@@ -15,6 +15,7 @@
 // start alternately, set by set, and continue in the next segment when one does not fit.
 #include "dect2/drm/drm_aac.h"
 #include "dect2/drm/drm_fec.h"
+#include "dect2/drm/drm_usac_ext.h"
 #include "drm_aac_internal.h"
 #include "dect2/common/diag.h"
 extern "C" {
@@ -473,25 +474,39 @@ struct AacCoreDecoder::Impl {
     std::vector<float> last;          // the last good frame, for the fade out when the next one is lost
     bool prevOk = false;
     bool fades = true;
+    // No libavcodec AAC decoder in the build (Android): the platform decoder registered for xHE-AAC (drm_usac_ext.h, MediaCodec) decodes the AAC-LC raw
+    // blocks instead (#516, #638). It answers with a delay of a frame or so, so its output goes through a queue that gives exactly one frame per call.
+    std::shared_ptr<UsacExternalDecoder> ext;
+    std::vector<float> fifo;
+    bool extPrimed = false;
 
     ~Impl() { close(); }
     void close() {
+        if (ext) { ext->close(); ext.reset(); }
+        fifo.clear(); extPrimed = false;
         if (ctx) avcodec_free_context(&ctx);
         if (frame) av_frame_free(&frame);
         if (pkt) av_packet_free(&pkt);
     }
     bool open() {
         close();
-        const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_AAC);
-        if (!codec) { DIAG_DEBUG(557861, "This build has no FFmpeg AAC decoder, so the DRM AAC core decoder cannot start."); lastError = "no AAC decoder in this build"; return false; }
-        ctx = avcodec_alloc_context3(codec);
-        ctx->log_level_offset = 24;
         // AudioSpecificConfig: AAC-LC, core rate, mono, 960 samples per frame
         BitOut a;
         a.put(2, 5);
         a.put(rate == 12000 ? 9u : 6u, 4);
         a.put(1, 4);
         a.put(1, 1); a.put(0, 1); a.put(0, 1);
+        const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_AAC);
+        if (!codec) {
+            std::shared_ptr<UsacExternalDecoder> e = usac_ext::shared();
+            std::string why;
+            if (e && e->open(a.b, rate, 1, why)) { ext = e; return true; }
+            DIAG_DEBUG(557861, "This build has no FFmpeg AAC decoder and no platform AAC decoder took the stream, so the DRM AAC core decoder cannot start.");
+            lastError = e ? (why.empty() ? "the phone's AAC decoder would not open" : why) : "no AAC decoder in this build";
+            return false;
+        }
+        ctx = avcodec_alloc_context3(codec);
+        ctx->log_level_offset = 24;
         ctx->extradata = (uint8_t*)av_mallocz(a.b.size() + AV_INPUT_BUFFER_PADDING_SIZE);
         std::memcpy(ctx->extradata, a.b.data(), a.b.size());
         ctx->extradata_size = (int)a.b.size();
@@ -514,13 +529,14 @@ bool AacCoreDecoder::configure(int rateHz, bool stereo, std::string* why) {
     if (!d.open()) { if (why) *why = d.lastError; return false; }
     return true;
 }
-bool AacCoreDecoder::open() const { return p_->ctx != nullptr; }
+bool AacCoreDecoder::open() const { return p_->ctx != nullptr || p_->ext != nullptr; }
 int AacCoreDecoder::rateHz() const { return p_->rate; }
 uint64_t AacCoreDecoder::framesDamaged() const { return p_->damaged; }
 uint64_t AacCoreDecoder::framesUnsupported() const { return p_->unsupported; }
 uint64_t AacCoreDecoder::framesDecoded() const { return p_->decoded; }
 void AacCoreDecoder::setLossFades(bool on) { p_->fades = on; }
-void AacCoreDecoder::reset() { if (p_->ctx) avcodec_flush_buffers(p_->ctx); p_->prevOk = false; }
+void AacCoreDecoder::reset() { if (p_->ctx) avcodec_flush_buffers(p_->ctx); if (p_->ext) { p_->ext->flush(); p_->fifo.clear(); } p_->prevOk = false; }
+void AacCoreDecoder::release() { p_->close(); }
 
 AacFrameStatus AacCoreDecoder::frame(const uint8_t* data, int len, uint8_t crc, std::vector<float>& out) {
     Impl& d = *p_;
@@ -533,9 +549,10 @@ AacFrameStatus AacCoreDecoder::frame(const uint8_t* data, int len, uint8_t crc, 
             for (int i = 0; i < kFrame; i++) out[start + (size_t)i] = d.last[(size_t)i] * (1.f - (float)i / kFrame);
         d.prevOk = false;
         if (d.ctx) avcodec_flush_buffers(d.ctx);
+        if (d.ext) { d.ext->flush(); d.fifo.clear(); }
         return st;
     };
-    if (!d.ctx || len < 4) return lost(AacFrameStatus::kDamaged);
+    if ((!d.ctx && !d.ext) || len < 4) return lost(AacFrameStatus::kDamaged);
     Ics s;
     const Result r = parseSi(data, (size_t)len * 8, d.rate, s);
     if (r == kDamaged) { DIAG_DEBUG_EVERY(118817, 5, "The side information of a DRM AAC frame is damaged, so the frame is replaced by a faded gap."); d.damaged++; return lost(AacFrameStatus::kDamaged); }
@@ -550,6 +567,28 @@ AacFrameStatus AacCoreDecoder::frame(const uint8_t* data, int len, uint8_t crc, 
     for (int i = 0; i < s.L; i++) { const size_t p = s.dataBegin + (size_t)i; d.bits[(size_t)i] = (uint8_t)((data[p >> 3] >> (7 - (p & 7))) & 1); }
     if (!hcrDecode(s, d.rate, d.bits.data())) { DIAG_DEBUG_EVERY(570149, 5, "The Huffman codeword reordering of a DRM AAC frame could not be decoded, so the frame is replaced by a faded gap."); d.damaged++; return lost(AacFrameStatus::kDamaged); }
     const std::vector<uint8_t> raw = writeRaw(s, data, d.rate);
+    if (d.ext) {
+        std::vector<int16_t> pcm; int prate = 0, pch = 0;
+        const UsacExternalDecoder::Result er = d.ext->decode(raw, pcm, prate, pch);
+        if (er == UsacExternalDecoder::Result::kError) { DIAG_DEBUG_EVERY(773541, 5, "The platform AAC decoder refused a DRM AAC frame, so the frame is replaced by a faded gap."); d.damaged++; return lost(AacFrameStatus::kDamaged); }
+        if (er == UsacExternalDecoder::Result::kPcm && pch > 0) {
+            const size_t n = pcm.size() / (size_t)pch;
+            for (size_t i = 0; i < n; i++) d.fifo.push_back(pcm[i * (size_t)pch] / 32768.f);
+            d.extPrimed = true;
+        }
+        if (d.fifo.size() > (size_t)kFrame * 6) d.fifo.erase(d.fifo.begin(), d.fifo.end() - (ptrdiff_t)kFrame * 3);   // never let the delay grow
+        if (d.fifo.size() < (size_t)kFrame) {                 // still priming, or the decoder is a frame late: silence now, the sound follows
+            out.resize(start + (size_t)kFrame, 0.f);
+            d.prevOk = false;
+            return AacFrameStatus::kOk;
+        }
+        out.insert(out.end(), d.fifo.begin(), d.fifo.begin() + kFrame);
+        d.fifo.erase(d.fifo.begin(), d.fifo.begin() + kFrame);
+        d.last.assign(out.begin() + (ptrdiff_t)start, out.end());
+        d.prevOk = true;
+        d.decoded++;
+        return AacFrameStatus::kOk;
+    }
     if (av_new_packet(d.pkt, (int)raw.size()) < 0) return lost(AacFrameStatus::kDamaged);
     std::memcpy(d.pkt->data, raw.data(), raw.size());
     const int sr = avcodec_send_packet(d.ctx, d.pkt);

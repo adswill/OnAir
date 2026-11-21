@@ -2440,3 +2440,7 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21 DRM AAC on Android (#516, #638)
+- Cause: the Android build has no libavcodec (stubs), so the DRM AAC core decoder (core/src/drm/drm_aac.cpp) could not open and every AAC service stayed silent. Now, when no FFmpeg AAC decoder exists, it hands the re-written AAC-LC raw blocks to the platform decoder registered for xHE-AAC (drm_usac_ext.h, Android MediaCodec); a small queue gives one 960-sample frame per call whatever the decoder's delay. XheAacDecoder.kt picks the codec and profile from the config (object type 2 or 42). Desktop with FFmpeg is unchanged. Not run: built and tested by CI only.
+- Not fixed: choppy xHE-AAC at 17.7 MHz (#516, #332). The 4.3 log shows a clean decode (errors 0, no drops, 32 kHz mono) yet broken sound, and the cause is not in the code paths read; it needs the attached 17.7 MHz IQ run on a desktop build.

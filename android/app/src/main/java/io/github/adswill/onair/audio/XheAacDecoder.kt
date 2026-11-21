@@ -24,6 +24,9 @@ object XheSupport {
     /** "" when playing is possible, else the line for the status. [hasUsacCodec]: a decoder with profile 42 is listed. */
     fun reason(sdk: Int, hasUsacCodec: Boolean): String = if (sdk < MIN_SDK || !hasUsacCodec) NO_DECODER else ""
 
+    /** The audio object type an AudioSpecificConfig starts with: 5 bits, 31 = escape to a second field (xHE-AAC writes 31 then 42 - 32). */
+    fun isXheConfig(asc: ByteArray): Boolean = asc.isNotEmpty() && ((asc[0].toInt() and 0xFF) ushr 3) == 31
+
     /** Whether a codec's profile list (profile numbers) contains xHE-AAC. */
     fun listsXhe(profiles: IntArray): Boolean = profiles.any { it == AAC_OBJECT_XHE }
 
@@ -68,10 +71,11 @@ class XheAacDecoder {
     private var pending = ShortArray(0)
     private val stats = XheStats()
 
-    private fun codecName(): String? = try {
+    /** [xhe]: a decoder that lists xHE-AAC; else any AAC decoder (DRM AAC-LC goes through here too: the core has no FFmpeg on the phone, #516 #638). */
+    private fun codecName(xhe: Boolean = true): String? = try {
         MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.firstOrNull { ci ->
             !ci.isEncoder && ci.supportedTypes.any { it.equals(XheSupport.MIME, ignoreCase = true) } &&
-                XheSupport.listsXhe(profilesOf(ci))
+                (!xhe || XheSupport.listsXhe(profilesOf(ci)))
         }?.name
     } catch (e: Throwable) { AppLog.e("xhe", "MediaCodecList failed", e); null }
 
@@ -85,10 +89,12 @@ class XheAacDecoder {
     /** Starts a decoder for the stream: [asc] is the AudioSpecificConfig. "" when it runs, else why not. */
     @Synchronized fun open(asc: ByteArray, rateHz: Int, channelCount: Int): String {
         close()
-        val name = (if (Build.VERSION.SDK_INT >= XheSupport.MIN_SDK) codecName() else null) ?: return XheSupport.NO_DECODER
+        val xhe = XheSupport.isXheConfig(asc)
+        val name = (if (!xhe) codecName(false) else if (Build.VERSION.SDK_INT >= XheSupport.MIN_SDK) codecName(true) else null)
+            ?: return if (xhe) XheSupport.NO_DECODER else "This phone has no AAC decoder; DRM audio of this service cannot play"
         return try {
             val fmt = MediaFormat.createAudioFormat(XheSupport.MIME, rateHz, channelCount)
-            fmt.setInteger(MediaFormat.KEY_AAC_PROFILE, XheSupport.AAC_OBJECT_XHE)
+            fmt.setInteger(MediaFormat.KEY_AAC_PROFILE, if (xhe) XheSupport.AAC_OBJECT_XHE else 2)   // 2 = AAC-LC
             fmt.setByteBuffer("csd-0", ByteBuffer.wrap(asc))
             val c = MediaCodec.createByCodecName(name)
             try {
@@ -97,7 +103,7 @@ class XheAacDecoder {
             } catch (t: Throwable) { try { c.release() } catch (_: Throwable) {}; throw t }
             codec = c; rate = rateHz; channels = channelCount; floatPcm = false; ptsUs = 0
             this.asc = asc.copyOf(); cfgRate = rateHz; cfgChannels = channelCount; pending = ShortArray(0)
-            AppLog.i("xhe", "xHE-AAC decoder $name started: $rateHz Hz, $channelCount channel(s)")
+            AppLog.i("xhe", "${if (xhe) "xHE-AAC" else "AAC"} decoder $name started: $rateHz Hz, $channelCount channel(s)")
             ""
         } catch (t: Throwable) {
             AppLog.e("xhe", "xHE-AAC decoder $name did not start", t)
