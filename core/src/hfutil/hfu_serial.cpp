@@ -1157,11 +1157,18 @@ struct SerialRx::Impl {
                     cfoRad = -cfo;
                     cfoPhase = 0;
                     eqReset();
-                    for (int pass = 0; pass < 6; pass++) {
+                    bool edge = false;
+                    for (int pass = 0; pass < 6 && !edge; pass++) {
                         for (auto& v : hist) v = cf(0, 0);
                         phEq = nu = 0;
-                        for (int k = 0; k < 80; k++) { const size_t c = bestP + (size_t)(2 * k); if (c < (size_t)NF / 2 + 1 || c + (size_t)NF / 2 + 2 >= x.size()) return false; eqStep(c, &known80[(size_t)k], nullptr, true); }
+                        for (int k = 0; k < 80; k++) {
+                            const size_t c = bestP + (size_t)(2 * k);
+                            if (c < (size_t)NF / 2 + 1) { edge = true; break; }   // the first frame of a signal already running starts too close to the buffer's start: take the next one
+                            if (c + (size_t)NF / 2 + 2 >= x.size()) return false;
+                            eqStep(c, &known80[(size_t)k], nullptr, true);
+                        }
                     }
+                    if (edge) { cursor = bestP + 1; continue; }
                     pos = bestP;
                     mode = 3;
                     frameMissed = 0;
