@@ -57,7 +57,7 @@ Expected, not proven (needs CI runs once the 3.7 runners are free):
 
 Known and not fixed here: `tsout_net` failed once on Windows (http stream); `mesh_engine` on macOS failed in the check after a retune (`seq 113, 27 frames`), the frame count was not reset after 800 ms, reason unknown; both need a CI run to tell if they repeat.
 
-## CI rules added for 4.5 (what runs where)
+## CI rules after 4.4 (what runs where)
 
 - Pushes to `main` run Lint and the Linux shards only; docs-only pushes (`*.md`, `docs/`, `website/`) build nothing. macOS and Windows shards run on `integ-*` branches, tags, manual dispatch and the nightly Full CI (`ci.yml`).
 - Lint also configures CMake with the release options (app and tests on), so a duplicate target or bad glob fails in about a minute.
