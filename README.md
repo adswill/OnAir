@@ -90,14 +90,19 @@ Counts are generated from the mode list in the app (`tools/release/gen_changelog
 
 Every receiver is built from published specifications and tested on generated signals and, where recordings exist, on real captures. The full numbered list is [MODES.md](MODES.md); notes per family are in [docs/MODES-DETAIL.md](docs/MODES-DETAIL.md). The KA family are modes designed for OnAir, measured in simulation only.
 
-## What is new in 4.4
+## What is new in 4.5
 
-The full list, with the known limits, is in [docs/CHANGELOG-4.4.md](docs/CHANGELOG-4.4.md) and in the 4.4 release notes on the [releases page](https://github.com/adswill/OnAir/releases/latest). Read the **Known limits** section: nearly everything new was tested on generated signals, not on the air, and the G33DDC and RSA306 receivers were written without the radios.
+The full list, with the known limits, is in [docs/CHANGELOG-4.5.md](docs/CHANGELOG-4.5.md) and in the 4.5 release notes on the [releases page](https://github.com/adswill/OnAir/releases/latest). Read the **Known limits** section: nearly everything new was tested on generated signals, not on the air.
 
-- **New receivers and views**: WiNRADiO G33DDC (Windows), Tektronix RSA306, an Iridium SBD view, NXDN trunk grants, SYNOP weather reports from 50 baud RTTY, an Inmarsat-C EGC map, "Only my region" in the mode picker, voice scout tools.
-- **Transmit**: many more DVB-T, DVB-T2 and DVB-C2 controls, DVB-C2 on the transmit list, FM-ATV (23 cm).
-- **Interface**: higher contrast for dim text and control outlines, 24 px controls, a streamer mode, whole span on by default, a loudness boost with a soft limiter, MIDI gain knobs.
-- **Fixes**: TETRA "encrypted" label, analog TV video files, ATSC 3.0 and GNSS fixes (Felbs), arrow keys, Clear in the whole-span receivers.
+- **Airband**: automatic, with no channel list and no airport import; click a carrier on the spectrum to listen; hopping across the band.
+- **Analog TV**: a video enhancer (Off, Light, Full; 720p or 1080p), 16:9 files without the vertical squeeze, automatic letterbox.
+- **QO-100**: band plan on the spectrum, level against the beacon, plain status, LNB presets and memory, DATV quality.
+- **Tests**: more than 100 modes now play their own signal and are checked on its content.
+- **Fixes**: balloon uploads only while a sonde is decoded, DRM sound and USB radios on Android, the General receiver tuning step, the Type II band plan.
+
+## What was new in 4.4
+
+See [docs/CHANGELOG-4.4.md](docs/CHANGELOG-4.4.md): WiNRADiO G33DDC, Tektronix RSA306, an Iridium SBD view, NXDN trunk grants, SYNOP weather reports, an Inmarsat-C EGC map, many more DVB transmit controls, FM-ATV transmit, higher contrast and 24 px controls, a streamer mode, a loudness boost, MIDI gain knobs, ATSC 3.0 and GNSS fixes (Felbs).
 
 ## What was new in 4.3
 
@@ -137,7 +142,7 @@ The full list: [docs/FEATURES.md](docs/FEATURES.md) and [docs/TOOLS-AND-NOTES.md
 - [Codecs](docs/CODECS.md) (voice and audio codecs you install yourself) and [optional libraries](docs/OPTIONAL-LIBRARIES.md)
 - [Plugins](docs/plugins.md) and the [plugin SDK](docs/PLUGIN-SDK.md)
 - [Updates and Discord status](docs/UPDATES.md)
-- Release history: [4.4](docs/CHANGELOG-4.4.md), [4.3](docs/CHANGELOG-4.3.md), [4.2](docs/CHANGELOG-4.2.md), [4.1](docs/CHANGELOG-4.1.md), [4.0](docs/CHANGELOG-4.0.md) and the [releases page](https://github.com/adswill/OnAir/releases); older notes in [docs/CHANGELOG-0.2.md](docs/CHANGELOG-0.2.md)
+- Release history: [4.5](docs/CHANGELOG-4.5.md), [4.4](docs/CHANGELOG-4.4.md), [4.3](docs/CHANGELOG-4.3.md), [4.2](docs/CHANGELOG-4.2.md), [4.1](docs/CHANGELOG-4.1.md), [4.0](docs/CHANGELOG-4.0.md) and the [releases page](https://github.com/adswill/OnAir/releases); older notes in [docs/CHANGELOG-0.2.md](docs/CHANGELOG-0.2.md)
 - The wiki, a page per mode: [on-air.dev/docs](https://on-air.dev/docs/)
 
 > [!NOTE]

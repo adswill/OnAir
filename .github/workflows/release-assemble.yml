@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version, for example 4.4.0"
+        description: "Version, for example 4.5.0"
         required: true
       windows_run:
         description: "Run id of release.yml with platform windows"
