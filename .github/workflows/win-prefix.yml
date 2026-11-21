@@ -1,16 +1,24 @@
 # Rebuilds the Windows dependency prefix when tools/package/cross_deps_windows.sh or the toolchain file changed (the prefix id of
-# tools/package/win_prefix_id.sh changes, release.yml then warns and ships no Windows files). Run by hand: Actions > Windows prefix > Run workflow.
-# It starts from the newest earlier prefix on the draft release "ci-windows-prefix" (input "from", the id of that file) and runs cross_deps_windows.sh,
+# tools/package/win_prefix_id.sh changes, release.yml then fails its Windows job on a release tag). It runs by itself when a push to main changes those
+# two files, and by hand: Actions > Windows prefix > Run workflow. Nothing happens when the prefix for the current id is already on the release.
+# It starts from the newest earlier prefix on the draft release "ci-windows-prefix" (input "from" = the id of that file, empty = the newest) and runs cross_deps_windows.sh,
 # which skips every dependency that is already in the prefix and rebuilds only what changed (the shared FFmpeg for 4.4). Only for changes of that kind:
 # a dependency whose source archive is not in build-windows-deps/src still needs the maintainer's Mac and tools/release/upload_win_prefix.sh.
 name: Windows prefix
 
 on:
+  push:
+    branches: [main]
+    paths: ['tools/package/cross_deps_windows.sh', 'packaging/windows/mingw-toolchain.cmake']
   workflow_dispatch:
     inputs:
       from:
-        description: "Id of the earlier prefix to start from (the file onair-win-prefix-<id>.tar.gz on the draft release ci-windows-prefix)"
-        required: true
+        description: "Id of the earlier prefix to start from (onair-win-prefix-<id>.tar.gz on the draft release ci-windows-prefix); empty: the newest"
+        required: false
+
+concurrency:
+  group: win-prefix
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -24,19 +32,40 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
+      - name: Which prefix to start from
+        id: from
+        run: |
+          set -eu
+          ID=$(tools/package/win_prefix_id.sh)
+          ASSETS=$(gh release view ci-windows-prefix --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets|sort_by(.createdAt)|reverse|.[].name')
+          if echo "$ASSETS" | grep -qx "onair-win-prefix-$ID.tar.gz"; then
+            echo "The prefix for the current id $ID is already on the release: nothing to do."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          FROM="${{ inputs.from }}"
+          if [ -z "$FROM" ]; then
+            FROM=$(echo "$ASSETS" | sed -n 's/^onair-win-prefix-\(.*\)\.tar\.gz$/\1/p' | head -n 1)
+          fi
+          test -n "$FROM" || { echo "::error::no earlier prefix on the release ci-windows-prefix to start from"; exit 1; }
+          echo "building the prefix $ID from $FROM"
+          echo "from=$FROM" >> "$GITHUB_OUTPUT"
       - name: Install the cross toolchain
+        if: steps.from.outputs.skip != 'true'
         run: |
           tools/release/retry.sh brew install cmake ninja pkg-config nasm mingw-w64 xz
       - name: Unpack the earlier prefix
+        if: steps.from.outputs.skip != 'true'
         run: |
           set -eu
-          tools/release/retry.sh -n 3 gh release download ci-windows-prefix --repo "$GITHUB_REPOSITORY" -p "onair-win-prefix-${{ inputs.from }}.tar.gz" -D "$RUNNER_TEMP/pfx"
-          python3 tools/package/unpack_win_prefix.py "$RUNNER_TEMP/pfx/onair-win-prefix-${{ inputs.from }}.tar.gz" "$HOME/onair-win-prefix"
+          tools/release/retry.sh -n 3 gh release download ci-windows-prefix --repo "$GITHUB_REPOSITORY" -p "onair-win-prefix-${{ steps.from.outputs.from }}.tar.gz" -D "$RUNNER_TEMP/pfx"
+          python3 tools/package/unpack_win_prefix.py "$RUNNER_TEMP/pfx/onair-win-prefix-${{ steps.from.outputs.from }}.tar.gz" "$HOME/onair-win-prefix"
       - name: FFmpeg source
+        if: steps.from.outputs.skip != 'true'
         run: |
           mkdir -p build-windows-deps/src
           curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 -o build-windows-deps/src/ffmpeg-8.0.tar.xz https://ffmpeg.org/releases/ffmpeg-8.0.tar.xz
       - name: Build what changed
+        if: steps.from.outputs.skip != 'true'
         run: |
           # cross_deps_windows.sh unpacks the MSYS2 packages into its work folder before it looks at the prefix; the UHD and runtime DLLs are already
           # in the earlier prefix (redist/), so empty stand-ins let it go on to the step that rebuilds what changed.
@@ -45,4 +74,5 @@ jobs:
           test -f "$HOME/onair-win-prefix/redist/libuhd.dll"
           tools/package/cross_deps_windows.sh
       - name: Upload the new prefix
+        if: steps.from.outputs.skip != 'true'
         run: tools/release/upload_win_prefix.sh
