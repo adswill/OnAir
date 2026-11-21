@@ -24,8 +24,10 @@ bool live(const App& a) { return a.rx.standard == 321; }   // family 320, engine
 
 struct State {
     int band = 0;                        // 0 automatic, then the plans
-    double baseMhz = 0, spacingKhz = 12.5;
-    int baseOffset = 380;
+    // the Custom plan: three ranges like OP25's bp_base / bp_mid / bp_high; a mid or high base of 0 and a spacing of 0 follow the range below
+    double baseMhz = 0, spacingKhz = 12.5, midMhz = 0, midSpacingKhz = 0, highMhz = 0, highSpacingKhz = 0;
+    int baseOffset = 380, midOffset = 760, highOffset = 760;
+    bool loaded = false;
     char groups[160] = "";
     bool follow = true, followPrivate = false, record = false;
     int listen = -1;
@@ -46,16 +48,38 @@ std::vector<int> parseGroups(const char* text) {
     return g;
 }
 
+void loadPrefs() {
+    if (S.loaded) return;
+    S.loaded = true;
+    plat::Prefs& d = plat::prefs();
+    S.band = (int)std::clamp(d.getI("snBand", 0), 0L, 7L);
+    S.baseMhz = d.getD("snBaseMhz", 0); S.spacingKhz = d.getD("snSpacingKhz", 12.5); S.baseOffset = (int)d.getI("snBaseOffset", 380);
+    S.midMhz = d.getD("snMidMhz", 0); S.midSpacingKhz = d.getD("snMidSpacingKhz", 0); S.midOffset = (int)d.getI("snMidOffset", 760);
+    S.highMhz = d.getD("snHighMhz", 0); S.highSpacingKhz = d.getD("snHighSpacingKhz", 0); S.highOffset = (int)d.getI("snHighOffset", 760);
+}
+
+void savePrefs() {
+    plat::Prefs& d = plat::prefs();
+    d.setI("snBand", S.band);
+    d.setD("snBaseMhz", S.baseMhz); d.setD("snSpacingKhz", S.spacingKhz); d.setI("snBaseOffset", S.baseOffset);
+    d.setD("snMidMhz", S.midMhz); d.setD("snMidSpacingKhz", S.midSpacingKhz); d.setI("snMidOffset", S.midOffset);
+    d.setD("snHighMhz", S.highMhz); d.setD("snHighSpacingKhz", S.highSpacingKhz); d.setI("snHighOffset", S.highOffset);
+    d.flush();
+}
+
 std::string mhz(double hz) { if (hz <= 0) return "-"; char b[32]; snprintf(b, sizeof b, "%.4f MHz", hz / 1e6); return b; }
 std::string idOf(int v) { return v < 0 ? std::string("-") : std::to_string(v); }
 
 void tick(App& a) {
+    loadPrefs();
     if (!a.engine.running()) { S.wasRunning = false; return; }
     dect2::SmartnetReceiver& r = a.engine.smartnet();
     if (!S.wasRunning) { S.dirty = true; S.pushedVol = -1; }
     if (S.dirty) {
         sn::CustomPlan c;
         c.baseHz = S.baseMhz * 1e6; c.baseSpacingHz = S.spacingKhz * 1e3; c.baseOffset = S.baseOffset;
+        c.midHz = S.midMhz * 1e6; c.midSpacingHz = S.midSpacingKhz * 1e3; c.midOffset = S.midOffset;
+        c.highHz = S.highMhz * 1e6; c.highSpacingHz = S.highSpacingKhz * 1e3; c.highOffset = S.highOffset;
         r.setBand(kBands[std::clamp(S.band, 0, 7)], c);
         r.setFollow(S.follow); r.setFollowPrivate(S.followPrivate); r.setFollowGroups(parseGroups(S.groups)); r.setListenTg(S.listen);
         r.setRecordDir(S.record ? plat::dataDir() + "/recordings/typeii" : std::string());
@@ -69,14 +93,24 @@ void advanced() {
     if (!ImGui::CollapsingHeader(trw("Advanced"))) return;
     const char* names[] = {tr("Automatic (from the frequency and the control channel)"), "800 MHz domestic", "800 MHz rebanded", "800 MHz domestic splinter", "800 MHz international", "800 MHz international splinter", "900 MHz", tr("Custom (OBT, VHF / UHF)")};
     ImGui::SetNextItemWidth(320 * gUi);
-    if (ImGui::Combo(tr("Band plan"), &S.band, names, IM_ARRAYSIZE(names))) S.dirty = true;
+    if (ImGui::Combo(tr("Band plan"), &S.band, names, IM_ARRAYSIZE(names))) { S.dirty = true; savePrefs(); }
     if (S.band == 7) {
-        ImGui::SetNextItemWidth(120 * gUi);
-        if (ImGui::InputDouble(tr("Base frequency (MHz)"), &S.baseMhz, 0, 0, "%.4f")) S.dirty = true;
-        ImGui::SameLine(); ImGui::SetNextItemWidth(80 * gUi);
-        if (ImGui::InputDouble(tr("Spacing (kHz)"), &S.spacingKhz, 0, 0, "%.3f")) S.dirty = true;
-        ImGui::SameLine(); ImGui::SetNextItemWidth(70 * gUi);
-        if (ImGui::InputInt(tr("Channel offset"), &S.baseOffset, 0, 0)) S.dirty = true;
+        struct Row { const char* label; double* mhz; double* khz; int* off; } rows[3] = {
+            {"Range 1", &S.baseMhz, &S.spacingKhz, &S.baseOffset}, {"Range 2", &S.midMhz, &S.midSpacingKhz, &S.midOffset}, {"Range 3", &S.highMhz, &S.highSpacingKhz, &S.highOffset}};
+        bool ch = false;
+        for (int i = 0; i < 3; i++) {
+            ImGui::PushID(i);
+            ImGui::AlignTextToFramePadding(); ImGui::TextUnformatted(tr(rows[i].label)); ImGui::SameLine();
+            ImGui::SetNextItemWidth(110 * gUi);
+            ch |= ImGui::InputDouble(tr("First channel (MHz)"), rows[i].mhz, 0, 0, "%.4f");
+            ImGui::SameLine(); ImGui::SetNextItemWidth(70 * gUi);
+            ch |= ImGui::InputDouble(tr("Spacing (kHz)"), rows[i].khz, 0, 0, "%.3f");
+            ImGui::SameLine(); ImGui::SetNextItemWidth(60 * gUi);
+            ch |= ImGui::InputInt(tr("From channel"), rows[i].off, 0, 0);
+            ImGui::PopID();
+        }
+        ImGui::TextDisabled("%s", tr("Ranges 2 and 3 are optional: leave the frequency at 0 to follow the range before. Channels below range 1's start are transmit channels."));
+        if (ch) { S.dirty = true; savePrefs(); }
     }
     if (ImGui::Checkbox(tr("Follow calls"), &S.follow)) S.dirty = true;
     ImGui::SameLine();

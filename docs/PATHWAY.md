@@ -2454,3 +2454,7 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 - ATSC 3.0 (#484): onUdp kept a raw RouteService pointer while a service change on another thread reset route_; route_ is now a shared_ptr. The "stuck when switching services" and channel 21 "waiting for signalling" reports need the reporter's IQ and are not fixed.
 - FM (#583): the channel filter's transition band stayed 80 kHz when the width was narrowed, so a 100 kHz wide filter let a neighbour 100 kHz away through. Below the standard width the transition now shrinks with it (min 25 kHz); the default filter is unchanged.
 - Skipped: #506 (shortwave RTTY/Wefax stay at "starting"; the slot code looks right and no cause is visible without the reporter's setup), #408/#333 (Tetrapol: needs the reporter's recording, which is a user-attachments download).
+## 2026-11-21 WP6 UI fixes (4.5)
+- Motorola Type II Custom band plan now has three ranges (base, mid, high, each with first channel, spacing and start channel) instead of one line, and the band plan choice and all ranges are remembered after a restart (prefs snBand, snBaseMhz ... snHighOffset). The core already had mid/high ranges (CustomPlan), only the UI lacked them.
+- DAB transmitter map (dab_tii_ui.cpp): a click is no longer taken from the map when another window (for example Data feeds) is on top of it. Not reproduced; this is the one raw-rectangle click path found in the DAB screens (possible cause of the Data feeds click-through to DAB tuning).
+- OnAir Web audio reset: no cause found without the report; skipped.
