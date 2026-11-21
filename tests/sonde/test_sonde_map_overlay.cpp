@@ -85,6 +85,19 @@ static void testTawhiri() {
     CHECK(!tawhiri::parse("<html>").ok && !tawhiri::parse("{\"prediction\":[]}").ok, "junk and empty predictions are no prediction");
 }
 
+static void testPlausible() {
+    tawhiri::Request rq; rq.lat = 52.0; rq.lon = 9.0; rq.altM = 2500; rq.unixT = 1700000000; rq.descending = true; rq.burstM = 2501;
+    tawhiri::Result ok; ok.ok = true; ok.path = {{52.0, 9.0, 2500, 1700000000}, {52.05, 9.1, 0, 1700000400}}; ok.landing = ok.path.back();
+    std::string why;
+    CHECK(tawhiri::plausible(ok, rq, &why), "a landing 8 km away from 2.5 km height is sane (%s)", why.c_str());
+    tawhiri::Result far = ok; far.landing = {-30.0, 120.0, 0, 1700000400}; far.path.back() = far.landing;
+    CHECK(!tawhiri::plausible(far, rq, &why), "a landing thousands of km away is rejected");
+    tawhiri::Result past = ok; past.landing.unixT = 1699990000;
+    CHECK(!tawhiri::plausible(past, rq, &why), "a landing in the past is rejected");
+    tawhiri::Result bad = ok; bad.ok = false;
+    CHECK(!tawhiri::plausible(bad, rq, &why), "a failed answer is not plausible");
+}
+
 static void testChase() {
     ChaseFix f;
     CHECK(chase::nmeaLine("$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47\r\n", f, 10) && f.valid && std::fabs(f.lat - 48.1173) < 1e-4 && std::fabs(f.lon - 11.5166667) < 1e-6 && f.hasAlt && f.altM == 545.4 && f.sats == 8 && f.steadyT == 10, "GGA with altitude");
@@ -103,6 +116,7 @@ static void testChase() {
 }
 
 int main() {
+    testPlausible();
     testMarks();
     testTawhiri();
     testChase();

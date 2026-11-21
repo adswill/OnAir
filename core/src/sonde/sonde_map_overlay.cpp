@@ -125,6 +125,22 @@ Result parse(const std::string& json) {
     return r;
 }
 
+bool plausible(const Result& res, const Request& rq, std::string* why) {
+    auto no = [&](const char* m) { if (why) *why = m; return false; };
+    if (!res.ok || res.path.size() < 2) return no("empty prediction");
+    const double la = res.landing.lat, lo = res.landing.lon;
+    if (!std::isfinite(la) || !std::isfinite(lo) || std::fabs(la) > 90 || std::fabs(lo) > 180) return no("landing is not a position");
+    const double kx = 111.32e3 * std::cos(rq.lat * 3.14159265358979 / 180.0), ky = 110.57e3;
+    double dlo = lo - rq.lon; while (dlo > 180) dlo -= 360; while (dlo < -180) dlo += 360;
+    const double distM = std::hypot(dlo * kx, (la - rq.lat) * ky);
+    const double heightKm = std::max(0.0, std::max(rq.altM, rq.descending ? 0.0 : rq.burstM)) / 1000.0;
+    const double limitM = 15e3 + (rq.descending ? 8e3 : 20e3) * heightKm;   // a falling sonde drifts at most ~8 km per km of height
+    if (distM > limitM) return no("landing is too far from the sonde");
+    if (res.landing.unixT && rq.unixT && res.landing.unixT < rq.unixT - 120) return no("landing is in the past");
+    if (rq.descending && res.landing.altM > rq.altM + 500) return no("landing is above the sonde");
+    return true;
+}
+
 }  // namespace tawhiri
 
 SondePredictor::~SondePredictor() { if (th_.joinable()) th_.join(); }
@@ -141,7 +157,7 @@ bool SondePredictor::request(const std::string& serial, const tawhiri::Request& 
     if (th_.joinable()) th_.join();
     busy_ = true;
     const std::string u = lastUrl();
-    th_ = namedThread("onair-tawhiri", [this, serial, u, now] {
+    th_ = namedThread("onair-tawhiri", [this, serial, u, now, rq] {
         iptv::HttpOptions o;
         o.userAgent = std::string("OnAir-") + ONAIR_VERSION;
         o.keepErrorBody = true;
@@ -155,7 +171,14 @@ bool SondePredictor::request(const std::string& serial, const tawhiri::Request& 
             res = tawhiri::parse(body);
             if (!res.ok && hr.status != 200 && res.error.find("predictor: ") != 0) res.error = "HTTP " + std::to_string(hr.status) + ": " + res.error;
         }
-        { std::lock_guard<std::mutex> l(mu_); done_[serial] = {res, now}; if (done_.size() > 64) done_.erase(done_.begin()); }
+        if (res.ok) { std::string why; if (!tawhiri::plausible(res, rq, &why)) { res = tawhiri::Result(); res.error = "the prediction was not plausible (" + why + ")"; } }
+        {
+            std::lock_guard<std::mutex> l(mu_);
+            auto old = done_.find(serial);
+            if (!res.ok && old != done_.end() && old->second.r.ok) lastNote_ = res.error;   // a failed or wrong answer never replaces a good one
+            else { done_[serial] = {res, now}; lastNote_.clear(); }
+            if (done_.size() > 64) done_.erase(done_.begin());
+        }
         busy_ = false;
     });
     return true;
@@ -169,6 +192,7 @@ bool SondePredictor::result(const std::string& serial, tawhiri::Result& out, dou
     return true;
 }
 
+std::string SondePredictor::note() const { std::lock_guard<std::mutex> l(mu_); return lastNote_; }
 std::string SondePredictor::lastUrl() const { std::lock_guard<std::mutex> l(mu_); return lastUrl_; }
 
 }  // namespace dect2

@@ -327,6 +327,7 @@ struct SondeHub::Impl {
     std::atomic<bool> quit{false};
     uint64_t gen = 0;                         // grows with every configure: a running upload of an older setting stops retrying
     // the thread's own
+    double lastFrameT = -1e18;   // when the last sonde frame came in: the station record is sent only while Radiosonde mode decodes
     double lastListenerT = -1e18; bool listenerSent = false; std::string lastListenerPos;
 
     bool sendOnce(const std::string& url, const std::string& body, bool gz, const std::string& date, int& code, std::string& answer, std::string& err) {
@@ -439,7 +440,9 @@ struct SondeHub::Impl {
                 if (batch.due(now, up)) { objs = batch.take(now); sondes = sondesInBatch.size(); sondesInBatch.clear(); }
                 const bool mobile = c.mobile && c.sharePos;
                 const std::string pos = sondehub::listenerJson(c, s);
-                if (mobile) listener = s.set && s.live && now - lastListenerT >= t.chaseEveryS;
+                const bool sondeActive = now - lastFrameT <= 120.0;   // never beacon from DAB/TV/other modes (#526)
+                if (!sondeActive) listener = false;
+                else if (mobile) listener = s.set && s.live && now - lastListenerT >= t.chaseEveryS;
                 else listener = !listenerSent || now - lastListenerT >= t.listenerEveryS || (pos != lastListenerPos && now - lastListenerT >= 60);
                 if (listener) { lastListenerT = now; listenerSent = true; lastListenerPos = pos; }
                 if (objs.empty() && !listener)
@@ -486,6 +489,7 @@ void SondeHub::frame(const SondeInfo& s, double wallUtc) {
     Impl& I = *impl_;
     std::lock_guard<std::mutex> lk(I.mu);
     if (!I.cfg.enabled) return;
+    I.lastFrameT = steadyNowSec();
     std::string why;
     sondehub::Ident id;
     const std::string js = sondehub::telemetryJson(I.cfg, I.st, s, wallUtc, &why, &id);

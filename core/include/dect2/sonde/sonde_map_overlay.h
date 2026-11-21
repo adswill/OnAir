@@ -54,6 +54,10 @@ struct Result {
     bool hasBurst = false;
     Point burst, landing;
 };
+// Is the answer sane for that request? A descending sonde cannot land more than about 15 km + 8 km per km of height away, nor before the
+// request time; the landing must be a finite position near the ground-level of the world. Used to keep the earlier prediction when a new one
+// jumps thousands of km (a fresh burst at low altitude made Tawhiri answer with a wrong flight).
+bool plausible(const Result& res, const Request& r, std::string* why = nullptr);
 Result parse(const std::string& json);   // longitudes back to -180 .. 180
 }  // namespace tawhiri
 
@@ -62,13 +66,15 @@ class SondePredictor {
 public:
     ~SondePredictor();
     std::string base = "https://api.v2.sondehub.org";
-    double minGapS = 60;
+    double minGapS = 60;            // the caller shortens it (15 s) for a sonde that is low and falling
     // starts a request unless one is running or this sonde's last one is younger than minGapS; true when started
     bool request(const std::string& serial, const tawhiri::Request& r, double nowSteady);
     bool result(const std::string& serial, tawhiri::Result& out, double& madeSteady) const;   // the last answer for the sonde
     bool busy() const { return busy_.load(); }
     std::string lastUrl() const;
+    std::string note() const;       // why the last answer was not used (the earlier prediction is kept), empty when it was
 private:
+    std::string lastNote_;
     struct Done { tawhiri::Result r; double t = 0; };
     mutable std::mutex mu_;
     std::map<std::string, Done> done_;

@@ -2440,3 +2440,7 @@ Branch feat42-xheaac. The core got a portable hand-off for an outside xHE-AAC de
 
 ## 2026-11-16 ISM waterfall stalls (#542)
 - ISM burst decoding (and the Sigfox receiver on a Sigfox band) ran inside feed(), on the thread that also feeds the waterfall: one call took 100 to 240 ms in the test. Burst analysis and Sigfox input now go to a worker thread; for a radio feed() never waits (a busy worker means a skipped publish or dropped input after a retune), for a file it waits so nothing is lost. New test ism_stall, new IsmReceiver::setRealtime() and flush().
+
+## 2026-11-21 SondeHub beacon and end-of-flight prediction (#526, WP5)
+- The SondeHub station record (listener beacon) is now sent only while sonde frames are arriving (one in the last 2 minutes), so DAB, TV and other modes never beacon. Upload itself stays developer-only (ONAIR_SONDEHUB=1) as decided for #526; telemetry validation is up to SondeHub and the owner.
+- Tawhiri prediction: a new answer is checked (landing near the sonde for its height, not in the past, finite); a failed or implausible answer no longer replaces the earlier good one (the map note says so). A falling sonde below 3000 m asks every 15 s instead of 60 s. Test: sonde_map_overlay (plausible).
