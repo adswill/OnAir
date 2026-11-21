@@ -403,7 +403,8 @@ struct AtvGenerator::Impl {
     void applyAspect(int fld, bool live) {
         double src = kAtvAspectValue43;
         if (live && cfg.pullAspect) { const double a = cfg.pullAspect(); if (a > 0.1 && a < 10) src = a; }
-        const int frame = atvTxFrame(cfg.aspect, src);
+        // Auto picks the anamorphic frame only where the WSS (625 lines) tells the receiver; 525, 405 and 819 lines get a 4:3 letterbox, else a wide picture shows squashed
+        const int frame = cfg.aspect == kAtvAspectAuto && fmt.lines != 625 ? kAtvAspect43 : atvTxFrame(cfg.aspect, src);
         aspectWss = fmt.lines == 625 ? atvTxWss(cfg.aspect, frame) : -1;
         const AtvFit fit = atvFitSource(src, frame == kAtvAspect169 ? kAtvAspectValue169 : kAtvAspectValue43);
         if (fit.identity()) return;
