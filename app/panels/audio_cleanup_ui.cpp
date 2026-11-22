@@ -51,7 +51,7 @@ AudioCleanupSettings loadProfile(int p) {
     s.recCleaned = pr.getB(key(p, "rc").c_str(), d.recCleaned); s.skipSilence = pr.getB(key(p, "ss").c_str(), d.skipSilence);
     s.eq = pr.getB(key(p, "eq").c_str(), d.eq);
     s.eqBass = (float)pr.getD(key(p, "eqb").c_str(), d.eqBass); s.eqTreble = (float)pr.getD(key(p, "eqt").c_str(), d.eqTreble);
-    for (int k = 0; k < dect2::kEqBands; k++) s.eqBand[k] = (float)pr.getD(key(p, ("eqg" + std::to_string(k)).c_str()).c_str(), d.eqBand[k]);
+    for (int k = 0; k < dect2::kToneBands; k++) s.eqBand[k] = (float)pr.getD(key(p, ("eqg" + std::to_string(k)).c_str()).c_str(), d.eqBand[k]);
     return s;
 }
 void saveProfile(int p) {
@@ -68,7 +68,7 @@ void saveProfile(int p) {
     pr.setB(key(p, "ds").c_str(), s.deess); pr.setD(key(p, "dsa").c_str(), s.deessAmount);
     pr.setB(key(p, "rc").c_str(), s.recCleaned); pr.setB(key(p, "ss").c_str(), s.skipSilence);
     pr.setB(key(p, "eq").c_str(), s.eq); pr.setD(key(p, "eqb").c_str(), s.eqBass); pr.setD(key(p, "eqt").c_str(), s.eqTreble);
-    for (int k = 0; k < dect2::kEqBands; k++) pr.setD(key(p, ("eqg" + std::to_string(k)).c_str()).c_str(), s.eqBand[k]);
+    for (int k = 0; k < dect2::kToneBands; k++) pr.setD(key(p, ("eqg" + std::to_string(k)).c_str()).c_str(), s.eqBand[k]);
 }
 
 void load() {
@@ -110,7 +110,7 @@ bool slider(const char* id, float& v, float lo, float hi, const char* fmt, float
     return ImGui::SliderFloat(id, &v, lo, hi, fmt);
 }
 
-// the preset names, spelled out so the translation lint finds them (same order as dect2::EqPreset)
+// the preset names, spelled out so the translation lint finds them (same order as dect2::ToneEqPreset)
 const char* const kEqNames[] = {N_("Flat"), N_("Voice"), N_("Music"), N_("Hearing-friendly"), N_("Bass boost"), N_("Bright")};
 
 // The equaliser block (both views): on, preset, bass and treble; the ten graphic bands only when `bands` (Advanced).
@@ -118,18 +118,18 @@ bool eqControls(AudioCleanupSettings& s, bool bands) {
     bool c = false;
     c |= sw(tr("Equaliser"), s.eq, tr("Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound."));
     if (!s.eq) return c;
-    dect2::EqParams p; p.bass = s.eqBass; p.treble = s.eqTreble; for (int k = 0; k < dect2::kEqBands; k++) p.band[(size_t)k] = s.eqBand[k];
-    const dect2::EqPreset cur = dect2::eqPresetOf(p);
+    dect2::ToneParams p; p.bass = s.eqBass; p.treble = s.eqTreble; for (int k = 0; k < dect2::kToneBands; k++) p.band[(size_t)k] = s.eqBand[k];
+    const dect2::ToneEqPreset cur = dect2::toneEqPresetOf(p);
     ImGui::Indent(18 * gUi);
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("%s", tr("Preset"));
     ImGui::SameLine(0, 6 * gUi);
     ImGui::SetNextItemWidth(170 * gUi);
-    if (ImGui::BeginCombo("##aceqp", cur == dect2::EqPreset::Count ? tr("Custom") : tr(kEqNames[(int)cur]))) {
-        for (int i = 0; i < (int)dect2::EqPreset::Count; i++)
-            if (ImGui::Selectable(tr(kEqNames[i]), cur == (dect2::EqPreset)i)) {
-                const dect2::EqParams q = dect2::eqPresetParams((dect2::EqPreset)i);
-                s.eqBass = q.bass; s.eqTreble = q.treble; for (int k = 0; k < dect2::kEqBands; k++) s.eqBand[k] = q.band[(size_t)k];
+    if (ImGui::BeginCombo("##aceqp", cur == dect2::ToneEqPreset::Count ? tr("Custom") : tr(kEqNames[(int)cur]))) {
+        for (int i = 0; i < (int)dect2::ToneEqPreset::Count; i++)
+            if (ImGui::Selectable(tr(kEqNames[i]), cur == (dect2::ToneEqPreset)i)) {
+                const dect2::ToneParams q = dect2::toneEqPresetParams((dect2::ToneEqPreset)i);
+                s.eqBass = q.bass; s.eqTreble = q.treble; for (int k = 0; k < dect2::kToneBands; k++) s.eqBand[k] = q.band[(size_t)k];
                 c = true;
             }
         ImGui::EndCombo();
@@ -138,8 +138,8 @@ bool eqControls(AudioCleanupSettings& s, bool bands) {
     ImGui::SameLine(0, 6 * gUi);
     c |= slider("##aceqt", s.eqTreble, -12, 12, tr("treble %+.0f dB"), 140);
     if (bands) {
-        static const char* const kHz[dect2::kEqBands] = {"31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"};
-        for (int k = 0; k < dect2::kEqBands; k++) {
+        static const char* const kHz[dect2::kToneBands] = {"31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"};
+        for (int k = 0; k < dect2::kToneBands; k++) {
             if (k) ImGui::SameLine(0, 4 * gUi);
             ImGui::BeginGroup();
             char id[16]; snprintf(id, sizeof id, "##aceqg%d", k);

@@ -8,56 +8,56 @@
 
 namespace dect2 {
 
-const float kEqBandHz[kEqBands] = {31.5f, 63.f, 125.f, 250.f, 500.f, 1000.f, 2000.f, 4000.f, 8000.f, 16000.f};
+const float kToneBandHz[kToneBands] = {31.5f, 63.f, 125.f, 250.f, 500.f, 1000.f, 2000.f, 4000.f, 8000.f, 16000.f};
 
 static constexpr double kPi = 3.14159265358979323846;
 
-bool EqParams::flat() const {
+bool ToneParams::flat() const {
     if (std::fabs(bass) >= 0.05f || std::fabs(treble) >= 0.05f) return false;
     for (float g : band) if (std::fabs(g) >= 0.05f) return false;
     return true;
 }
 
-void EqParams::clamp() {
-    auto c = [](float v) { return std::isfinite(v) ? std::max(-kEqMaxDb, std::min(kEqMaxDb, v)) : 0.f; };
+void ToneParams::clamp() {
+    auto c = [](float v) { return std::isfinite(v) ? std::max(-kToneMaxDb, std::min(kToneMaxDb, v)) : 0.f; };
     bass = c(bass); treble = c(treble);
     for (float& g : band) g = c(g);
 }
 
-const char* eqPresetName(EqPreset p) {
+const char* toneEqPresetName(ToneEqPreset p) {
     switch (p) {
-    case EqPreset::Flat: return "Flat";
-    case EqPreset::Voice: return "Voice";
-    case EqPreset::Music: return "Music";
-    case EqPreset::Hearing: return "Hearing-friendly";
-    case EqPreset::BassBoost: return "Bass boost";
-    case EqPreset::Bright: return "Bright";
+    case ToneEqPreset::Flat: return "Flat";
+    case ToneEqPreset::Voice: return "Voice";
+    case ToneEqPreset::Music: return "Music";
+    case ToneEqPreset::Hearing: return "Hearing-friendly";
+    case ToneEqPreset::BassBoost: return "Bass boost";
+    case ToneEqPreset::Bright: return "Bright";
     default: return "";
     }
 }
 
-EqParams eqPresetParams(EqPreset p) {
-    EqParams e;
+ToneParams toneEqPresetParams(ToneEqPreset p) {
+    ToneParams e;
     auto set = [&](float bass, float treble, std::initializer_list<float> b) { e.bass = bass; e.treble = treble; int i = 0; for (float g : b) e.band[(size_t)i++] = g; };
     switch (p) {
-    case EqPreset::Voice:     set(-3, 0,  {-12, -9, -4, -1, 0, 2, 4, 3, 0, -3}); break;    // no rumble, presence up
-    case EqPreset::Music:     set(3, 3,   {3, 3, 2, 0, -1, -1, 0, 2, 3, 3}); break;        // a gentle smile
-    case EqPreset::Hearing:   set(-2, 4,  {-6, -4, -2, 0, 1, 2, 4, 6, 6, 3}); break;       // lifts the 2 to 8 kHz consonants
-    case EqPreset::BassBoost: set(6, 0,   {5, 5, 4, 2, 0, 0, 0, 0, 0, 0}); break;
-    case EqPreset::Bright:    set(0, 5,   {0, 0, 0, 0, 0, 1, 2, 3, 4, 4}); break;
+    case ToneEqPreset::Voice:     set(-3, 0,  {-12, -9, -4, -1, 0, 2, 4, 3, 0, -3}); break;    // no rumble, presence up
+    case ToneEqPreset::Music:     set(3, 3,   {3, 3, 2, 0, -1, -1, 0, 2, 3, 3}); break;        // a gentle smile
+    case ToneEqPreset::Hearing:   set(-2, 4,  {-6, -4, -2, 0, 1, 2, 4, 6, 6, 3}); break;       // lifts the 2 to 8 kHz consonants
+    case ToneEqPreset::BassBoost: set(6, 0,   {5, 5, 4, 2, 0, 0, 0, 0, 0, 0}); break;
+    case ToneEqPreset::Bright:    set(0, 5,   {0, 0, 0, 0, 0, 1, 2, 3, 4, 4}); break;
     default: break;
     }
     return e;
 }
 
-EqPreset eqPresetOf(const EqParams& p) {
-    for (int i = 0; i < (int)EqPreset::Count; i++) {
-        const EqParams q = eqPresetParams((EqPreset)i);
+ToneEqPreset toneEqPresetOf(const ToneParams& p) {
+    for (int i = 0; i < (int)ToneEqPreset::Count; i++) {
+        const ToneParams q = toneEqPresetParams((ToneEqPreset)i);
         bool same = std::fabs(p.bass - q.bass) <= 0.5f && std::fabs(p.treble - q.treble) <= 0.5f;
-        for (size_t k = 0; k < (size_t)kEqBands && same; k++) same = std::fabs(p.band[k] - q.band[k]) <= 0.5f;
-        if (same) return (EqPreset)i;
+        for (size_t k = 0; k < (size_t)kToneBands && same; k++) same = std::fabs(p.band[k] - q.band[k]) <= 0.5f;
+        if (same) return (ToneEqPreset)i;
     }
-    return EqPreset::Count;
+    return ToneEqPreset::Count;
 }
 
 namespace {
@@ -79,8 +79,8 @@ Coef shelf(bool high, double f, double gDb, double rate) {   // slope S = 1
 }
 }  // namespace
 
-void ToneEq::configure(const EqParams& pIn, float rate) {
-    EqParams p = pIn; p.clamp();
+void ToneEq::configure(const ToneParams& pIn, float rate) {
+    ToneParams p = pIn; p.clamp();
     if (have_ && rate == rate_ && p == cur_) return;
     have_ = true; rate_ = rate; cur_ = p;
     const double r = rate, top = 0.45 * r;
@@ -91,8 +91,8 @@ void ToneEq::configure(const EqParams& pIn, float rate) {
     };
     put(0, std::fabs(p.bass) >= 0.05f && 120.0 < top, shelf(false, 120.0, p.bass, r));
     put(1, std::fabs(p.treble) >= 0.05f && 6000.0 < top, shelf(true, 6000.0, p.treble, r));
-    for (int i = 0; i < kEqBands; i++) {
-        const double f = kEqBandHz[i];
+    for (int i = 0; i < kToneBands; i++) {
+        const double f = kToneBandHz[i];
         put(2 + i, std::fabs(p.band[(size_t)i]) >= 0.05f && f < top, peaking(f, 1.41, p.band[(size_t)i], r));
     }
 }

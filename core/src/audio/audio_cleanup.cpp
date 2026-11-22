@@ -302,7 +302,7 @@ struct Chan {
     // voice EQ
     Biquad hp, pres, warm;
     // equaliser (audio_eq.h)
-    ToneEq tone; Ramp toneW; EqParams toneP;
+    ToneEq tone; Ramp toneW; ToneParams toneP;
     // de-esser
     Svf sib; float sibEnv = 0, fullEnv = 0, dsGain = 1;
     // gate
@@ -399,7 +399,7 @@ struct Chan {
         // 3b. equaliser: bass, treble and the graphic bands (audio_eq.h); fades in and out, nothing runs while it is flat or off
         {
             toneP.bass = s.eqBass; toneP.treble = s.eqTreble;
-            for (int k = 0; k < kEqBands; k++) toneP.band[(size_t)k] = s.eqBand[k];
+            for (int k = 0; k < kToneBands; k++) toneP.band[(size_t)k] = s.eqBand[k];
             toneP.clamp();
             const float tgt = (s.eq && !toneP.flat()) ? 1.f : 0.f;
             if (!toneW.idle(tgt)) {
@@ -535,11 +535,11 @@ void AudioCleanupConfig::set(const AudioCleanupSettings& s) {
     nr = s.nr; autoNotch = s.autoNotch; notch = s.notch; level = s.level; levelHold = s.levelHold; gate = s.gate; voice = s.voice; deess = s.deess;
     recCleaned = s.recCleaned; skipSilence = s.skipSilence;
     {
-        EqParams e; e.bass = s.eqBass; e.treble = s.eqTreble;
-        for (int k = 0; k < kEqBands; k++) e.band[(size_t)k] = s.eqBand[k];
+        ToneParams e; e.bass = s.eqBass; e.treble = s.eqTreble;
+        for (int k = 0; k < kToneBands; k++) e.band[(size_t)k] = s.eqBand[k];
         e.clamp();
         eq = s.eq; eqBass = e.bass; eqTreble = e.treble;
-        for (int k = 0; k < kEqBands; k++) eqBand[k] = e.band[(size_t)k];
+        for (int k = 0; k < kToneBands; k++) eqBand[k] = e.band[(size_t)k];
     }
     master = s.master;
 }
@@ -549,7 +549,7 @@ AudioCleanupSettings AudioCleanupConfig::get() const {
     s.level = level; s.levelTargetDb = levelTargetDb; s.levelAmount = levelAmount; s.levelHold = levelHold; s.gate = gate; s.gateOffsetDb = gateOffsetDb;
     s.voice = voice; s.voiceAmount = voiceAmount; s.deess = deess; s.deessAmount = deessAmount; s.recCleaned = recCleaned; s.skipSilence = skipSilence;
     s.eq = eq; s.eqBass = eqBass; s.eqTreble = eqTreble;
-    for (int k = 0; k < kEqBands; k++) s.eqBand[k] = eqBand[k];
+    for (int k = 0; k < kToneBands; k++) s.eqBand[k] = eqBand[k];
     return s;
 }
 
