@@ -236,8 +236,8 @@ def main():
     if a.scope != "auto":
         scope = a.scope
     # tests changed directly are already covered by their area
-    def is_slow(n): return "slow" in tests[n] or "perf" in tests[n]
-    if scope == "full": sel = set(tests)
+    def is_slow(n): return "slow" in tests[n] or "perf" in tests[n] or "snr" in tests[n]   # snr: on-demand measurement (quick.yml), never a CI tier
+    if scope == "full": sel = {n for n in tests if "snr" not in tests[n]}
     elif scope == "wide": sel = {n for n in tests if not is_slow(n)}
     elif scope == "area":
         sel = {n for n in tests if (test_area.get(n, set()) & areas or n in direct) and not is_slow(n)} | {n for n in SMOKE if n in tests}

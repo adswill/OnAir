@@ -12,7 +12,7 @@
 // near the edge, floor -24 dB) without a failing point. Empty threshold: no decode up to +44 dB (see notes).
 //
 // This file only drives: it runs tools/sens/qa_sens.py (the generator and Engine stages are test_qa_sweep --gen / --run) and
-// tools/sens/snr_threshold_table.py (CSV + table). Not part of the fast CI: label "snr;slow". Run through quick.yml, see scratchpad/SNR-BASELINE-4.6.md.
+// tools/sens/snr_threshold_table.py (CSV + table). Not part of the fast CI: label "snr" only, not "slow" so the nightly -L slow skips it. Run through quick.yml, see scratchpad/SNR-BASELINE-4.6.md.
 //   env: SNR_OUT dir (default snr-out), SNR_RE mode-id regex, SNR_LIMIT first N modes (0 = all), SNR_JOBS (default 3), SNR_CAP seconds per mode (default 240)
 //   usage: test_snr_threshold <path of test_qa_sweep> <tools/sens dir>
 #include <cstdio>
