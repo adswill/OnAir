@@ -110,9 +110,6 @@ bool slider(const char* id, float& v, float lo, float hi, const char* fmt, float
     return ImGui::SliderFloat(id, &v, lo, hi, fmt);
 }
 
-// the preset names, spelled out so the translation lint finds them (same order as dect2::EqPreset)
-const char* const kEqNames[] = {N_("Flat"), N_("Voice"), N_("Music"), N_("Hearing-friendly"), N_("Bass boost"), N_("Bright")};
-
 // The equaliser block (both views): on, preset, bass and treble; the ten graphic bands only when `bands` (Advanced).
 bool eqControls(AudioCleanupSettings& s, bool bands) {
     bool c = false;
@@ -125,9 +122,9 @@ bool eqControls(AudioCleanupSettings& s, bool bands) {
     ImGui::TextDisabled("%s", tr("Preset"));
     ImGui::SameLine(0, 6 * gUi);
     ImGui::SetNextItemWidth(170 * gUi);
-    if (ImGui::BeginCombo("##aceqp", cur == dect2::EqPreset::Count ? tr("Custom") : tr(kEqNames[(int)cur]))) {
+    if (ImGui::BeginCombo("##aceqp", cur == dect2::EqPreset::Count ? tr("Custom") : tr(dect2::eqPresetName(cur)))) {
         for (int i = 0; i < (int)dect2::EqPreset::Count; i++)
-            if (ImGui::Selectable(tr(kEqNames[i]), cur == (dect2::EqPreset)i)) {
+            if (ImGui::Selectable(tr(dect2::eqPresetName((dect2::EqPreset)i)), cur == (dect2::EqPreset)i)) {
                 const dect2::EqParams q = dect2::eqPresetParams((dect2::EqPreset)i);
                 s.eqBass = q.bass; s.eqTreble = q.treble; for (int k = 0; k < dect2::kEqBands; k++) s.eqBand[k] = q.band[(size_t)k];
                 c = true;
