@@ -2522,5 +2522,5 @@ DATV table: Es/N0 (the demodulator's own for the carrier being decoded, else est
 - #10 Export this session: one zip (summary, log CSV/KML/GPX, recordings list, settings without credentials, radio, optional location) from Tools > Backup and restore. Logic in `app/state/session_bundle.cpp`, test `session_bundle`.
 - #20 Share-ready snapshot: captioned PNG (frequency, mode, UTC time, optional place, OnAir version) from the Radio clips window, plus Copy caption. Test `share_snapshot`. The picture itself is not copied to the clipboard (the clipboard here is text only).
 - #13 Sound cues: optional tones for lock, lost lock, signal found, pass ended, all off by default, Settings > Notifications. Tracker and tones in `core/src/audio/sound_cues.cpp`, test `sound_cues`. The lock reading is the receiver's data-valid flag only.
-- #17 Equaliser: bass/treble shelves, 10-band graphic, presets, a stage in the cleanup chain (per kind of mode). Test `audio_eq`.
+- #17 Equaliser: dropped (a 5-band equaliser already exists in the Audio control panel); see scratchpad/EQ-FOLLOWUP-4.6.md.
 - Written without a local build; checked by the gate and CI only. No web schema change (no core option struct touched). i18n: new keys added to all 14 catalogs (machine-written, not reviewed).
