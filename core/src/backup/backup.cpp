@@ -194,7 +194,7 @@ static const char* const kRestoreSafe[] = {
     "wbCmap", "wbDbMax", "wbDbMin", "wbFft", "wbKind", "wbOvl", "wbWin", "wfMax", "wfMin", "wfRate", "wideMaskHi", "wideMaskLo", "wifiBand",
     "wifiDomain", "wifiDwellMs", "wifiHop", "wifiPsc", "workspaces", "wsBand", "wsRegion", "zbDwell", "zbScan", "zwRegion",
     // 4.0 Settings (docs/SETTINGS-4.0.md)
-    "startFreqMode", "startFreqMhz", "startFamily", "startSub", "autoStartRx", "confirmExit", "sessionRestore", "specDefLo", "specDefHi", "dbKeyStep", "aclDefAgc", "aclDefSq", "aclDefSqDb", "audioDevDefault", "recNamePattern", "recSplitMb", "recMinFreeMb", "notifySystem", "notifySound", "notifyBanner", "notifyBannerSec", "notifyQuiet", "notifyQuietFrom", "notifyQuietTo", "settingsProfile",
+    "startFreqMode", "startFreqMhz", "startFamily", "startSub", "autoStartRx", "confirmExit", "sessionRestore", "specDefLo", "specDefHi", "dbKeyStep", "aclDefAgc", "aclDefSq", "aclDefSqDb", "audioDevDefault", "recNamePattern", "recSplitMb", "recMinFreeMb", "notifySystem", "notifySound", "cueLock", "cueLost", "cueFound", "cuePass", "cueVol", "notifyBanner", "notifyBannerSec", "notifyQuiet", "notifyQuietFrom", "notifyQuietTo", "settingsProfile",
 };
 static const char* const kRestoreConfirm[] = {
     "mapTileUrl",   // 4.0: where the map tiles are fetched from (a network address)

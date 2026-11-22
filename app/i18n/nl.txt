@@ -3657,3 +3657,13 @@ A PNG of what the spectrum and waterfall show now, with frequency, mode, time an
 Copy caption	Bijschrift kopiëren
 Copied: paste it with the picture	Gekopieerd: plak het bij de afbeelding
 Nothing to save: no waterfall yet	Niets om op te slaan: nog geen waterval
+Sound cue: locked	Geluidssignaal: vergrendeld
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Een korte stijgende toon als een decoder vergrendelt. Standaard uit. Volgt Dempen en stille uren.
+Sound cue: lost lock	Geluidssignaal: vergrendeling kwijt
+A short falling tone when a decoder that was locked loses lock. Off by default.	Een korte dalende toon als een vergrendelde decoder de vergrendeling verliest. Standaard uit.
+Sound cue: signal found	Geluidssignaal: signaal gevonden
+Two short high beeps when the scanner finds a signal. Off by default.	Twee korte hoge pieptonen als de scanner een signaal vindt. Standaard uit.
+Sound cue: pass ended	Geluidssignaal: overvlucht voorbij
+Three falling tones when a tracked satellite pass ends. Off by default.	Drie dalende tonen als een gevolgde satellietovervlucht eindigt. Standaard uit.
+Sound cue volume (%)	Volume van geluidssignalen (%)
+How loud the cue tones are, as a share of the program volume.	Hoe luid de signalen zijn, als deel van het programmavolume.

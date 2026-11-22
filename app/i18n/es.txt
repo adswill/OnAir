@@ -3657,3 +3657,13 @@ A PNG of what the spectrum and waterfall show now, with frequency, mode, time an
 Copy caption	Copiar pie
 Copied: paste it with the picture	Copiado: pégalo con la imagen
 Nothing to save: no waterfall yet	Nada que guardar: aún no hay cascada
+Sound cue: locked	Aviso sonoro: enganchado
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Un tono breve ascendente cuando un decodificador se engancha. Desactivado por defecto. Respeta Silencio y las horas de calma.
+Sound cue: lost lock	Aviso sonoro: enganche perdido
+A short falling tone when a decoder that was locked loses lock. Off by default.	Un tono breve descendente cuando un decodificador enganchado pierde el enganche. Desactivado por defecto.
+Sound cue: signal found	Aviso sonoro: señal encontrada
+Two short high beeps when the scanner finds a signal. Off by default.	Dos pitidos agudos cortos cuando el escáner encuentra una señal. Desactivado por defecto.
+Sound cue: pass ended	Aviso sonoro: pasada terminada
+Three falling tones when a tracked satellite pass ends. Off by default.	Tres tonos descendentes cuando termina una pasada de satélite seguida. Desactivado por defecto.
+Sound cue volume (%)	Volumen de los avisos (%)
+How loud the cue tones are, as a share of the program volume.	Qué tan fuertes son los avisos, como parte del volumen del programa.

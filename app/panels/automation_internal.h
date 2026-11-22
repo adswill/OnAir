@@ -5,6 +5,7 @@
 #pragma once
 #include "dect2/automation/engine.h"
 #include <string>
+#include <vector>
 
 struct App;
 
@@ -20,6 +21,9 @@ void autoRecordInstall();   // the record rules' IQ clips and non-voice audio (s
 void drawBanner();
 // a watch-list or keyword alert: the banner, a desktop notification and (when asked, and not muted) three short beeps. Interface thread.
 void alertNow(App& a, const std::string& title, const std::string& body, bool sound);
+// A sound cue (core/include/dect2/audio/sound_cues.h): stereo float tone at 48 kHz, scaled by gain (0..1). Silent while muted or in quiet hours
+// (Settings > Notifications). Interface thread.
+void playCue(App& a, const std::vector<float>& tone, float gain);
 std::string webhookStatus();
 
 }  // namespace automationapp

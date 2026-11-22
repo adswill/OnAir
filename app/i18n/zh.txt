@@ -11213,3 +11213,13 @@ A PNG of what the spectrum and waterfall show now, with frequency, mode, time an
 Copy caption	复制说明
 Copied: paste it with the picture	已复制：与图片一起粘贴
 Nothing to save: no waterfall yet	没有可保存的内容：还没有瀑布图
+Sound cue: locked	提示音：已锁定
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	解码器锁定时播放一声短促的升调。默认关闭。遵循静音和安静时段。
+Sound cue: lost lock	提示音：失锁
+A short falling tone when a decoder that was locked loses lock. Off by default.	已锁定的解码器失锁时播放一声短促的降调。默认关闭。
+Sound cue: signal found	提示音：发现信号
+Two short high beeps when the scanner finds a signal. Off by default.	扫描器发现信号时发出两声短促的高音。默认关闭。
+Sound cue: pass ended	提示音：过境结束
+Three falling tones when a tracked satellite pass ends. Off by default.	跟踪的卫星过境结束时播放三声降调。默认关闭。
+Sound cue volume (%)	提示音音量（%）
+How loud the cue tones are, as a share of the program volume.	提示音的响度，占程序音量的比例。

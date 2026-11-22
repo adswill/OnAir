@@ -3640,3 +3640,13 @@ A PNG of what the spectrum and waterfall show now, with frequency, mode, time an
 Copy caption	Copia didascalia
 Copied: paste it with the picture	Copiato: incollalo con l'immagine
 Nothing to save: no waterfall yet	Niente da salvare: ancora nessuna cascata
+Sound cue: locked	Segnale acustico: agganciato
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Un breve tono crescente quando un decodificatore si aggancia. Disattivato di default. Segue Muto e le ore di silenzio.
+Sound cue: lost lock	Segnale acustico: aggancio perso
+A short falling tone when a decoder that was locked loses lock. Off by default.	Un breve tono discendente quando un decodificatore agganciato perde l'aggancio. Disattivato di default.
+Sound cue: signal found	Segnale acustico: segnale trovato
+Two short high beeps when the scanner finds a signal. Off by default.	Due brevi bip acuti quando lo scanner trova un segnale. Disattivato di default.
+Sound cue: pass ended	Segnale acustico: passaggio finito
+Three falling tones when a tracked satellite pass ends. Off by default.	Tre toni discendenti quando finisce un passaggio satellitare seguito. Disattivato di default.
+Sound cue volume (%)	Volume dei segnali acustici (%)
+How loud the cue tones are, as a share of the program volume.	Quanto sono forti i segnali, come quota del volume del programma.

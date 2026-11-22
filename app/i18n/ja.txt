@@ -3652,3 +3652,13 @@ A PNG of what the spectrum and waterfall show now, with frequency, mode, time an
 Copy caption	キャプションをコピー
 Copied: paste it with the picture	コピーしました。画像と一緒に貼り付けてください
 Nothing to save: no waterfall yet	保存するものがありません：ウォーターフォールがまだありません
+Sound cue: locked	効果音：ロック
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	デコーダーがロックしたとき、短い上昇音を鳴らします。初期設定はオフ。ミュートとサイレント時間に従います。
+Sound cue: lost lock	効果音：ロック喪失
+A short falling tone when a decoder that was locked loses lock. Off by default.	ロックしていたデコーダーがロックを失ったとき、短い下降音を鳴らします。初期設定はオフ。
+Sound cue: signal found	効果音：信号検出
+Two short high beeps when the scanner finds a signal. Off by default.	スキャナーが信号を見つけたとき、短い高音を2回鳴らします。初期設定はオフ。
+Sound cue: pass ended	効果音：パス終了
+Three falling tones when a tracked satellite pass ends. Off by default.	追跡中の衛星パスが終わったとき、下降音を3回鳴らします。初期設定はオフ。
+Sound cue volume (%)	効果音の音量（%）
+How loud the cue tones are, as a share of the program volume.	効果音の大きさ（プログラム音量に対する割合）。

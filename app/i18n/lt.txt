@@ -3680,3 +3680,13 @@ A PNG of what the spectrum and waterfall show now, with frequency, mode, time an
 Copy caption	Kopijuoti parašą
 Copied: paste it with the picture	Nukopijuota: įklijuokite su paveikslėliu
 Nothing to save: no waterfall yet	Nėra ką išsaugoti: dar nėra krioklio
+Sound cue: locked	Garso signalas: užsifiksavo
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Trumpas kylantis tonas, kai dekoderis užsifiksuoja. Pagal numatymą išjungta. Atsižvelgia į nutildymą ir tylos valandas.
+Sound cue: lost lock	Garso signalas: prarastas fiksavimas
+A short falling tone when a decoder that was locked loses lock. Off by default.	Trumpas krintantis tonas, kai užsifiksavęs dekoderis praranda fiksavimą. Pagal numatymą išjungta.
+Sound cue: signal found	Garso signalas: rastas signalas
+Two short high beeps when the scanner finds a signal. Off by default.	Du trumpi aukšti pyptelėjimai, kai skeneris randa signalą. Pagal numatymą išjungta.
+Sound cue: pass ended	Garso signalas: praskridimas baigėsi
+Three falling tones when a tracked satellite pass ends. Off by default.	Trys krintantys tonai, kai baigiasi sekamas palydovo praskridimas. Pagal numatymą išjungta.
+Sound cue volume (%)	Garso signalų garsumas (%)
+How loud the cue tones are, as a share of the program volume.	Kaip garsūs signalai, kaip programos garsumo dalis.

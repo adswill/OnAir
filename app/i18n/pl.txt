@@ -3658,3 +3658,13 @@ A PNG of what the spectrum and waterfall show now, with frequency, mode, time an
 Copy caption	Kopiuj podpis
 Copied: paste it with the picture	Skopiowano: wklej razem z obrazem
 Nothing to save: no waterfall yet	Nic do zapisania: brak wodospadu
+Sound cue: locked	Dźwięk: zsynchronizowano
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Krótki rosnący dźwięk, gdy dekoder się zsynchronizuje. Domyślnie wyłączone. Respektuje wyciszenie i godziny ciszy.
+Sound cue: lost lock	Dźwięk: utrata synchronizacji
+A short falling tone when a decoder that was locked loses lock. Off by default.	Krótki opadający dźwięk, gdy zsynchronizowany dekoder traci synchronizację. Domyślnie wyłączone.
+Sound cue: signal found	Dźwięk: znaleziono sygnał
+Two short high beeps when the scanner finds a signal. Off by default.	Dwa krótkie wysokie sygnały, gdy skaner znajdzie sygnał. Domyślnie wyłączone.
+Sound cue: pass ended	Dźwięk: przelot zakończony
+Three falling tones when a tracked satellite pass ends. Off by default.	Trzy opadające dźwięki, gdy kończy się śledzony przelot satelity. Domyślnie wyłączone.
+Sound cue volume (%)	Głośność dźwięków (%)
+How loud the cue tones are, as a share of the program volume.	Jak głośne są dźwięki, jako część głośności programu.

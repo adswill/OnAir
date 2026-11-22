@@ -3634,3 +3634,13 @@ A PNG of what the spectrum and waterfall show now, with frequency, mode, time an
 Copy caption	Copiar legenda
 Copied: paste it with the picture	Copiado: cole junto com a imagem
 Nothing to save: no waterfall yet	Nada para guardar: ainda sem cascata
+Sound cue: locked	Sinal sonoro: bloqueado
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Um tom curto ascendente quando um descodificador bloqueia. Desligado por defeito. Segue Silêncio e horas de silêncio.
+Sound cue: lost lock	Sinal sonoro: bloqueio perdido
+A short falling tone when a decoder that was locked loses lock. Off by default.	Um tom curto descendente quando um descodificador que estava bloqueado perde o bloqueio. Desligado por defeito.
+Sound cue: signal found	Sinal sonoro: sinal encontrado
+Two short high beeps when the scanner finds a signal. Off by default.	Dois bipes agudos curtos quando o scanner encontra um sinal. Desligado por defeito.
+Sound cue: pass ended	Sinal sonoro: passagem terminou
+Three falling tones when a tracked satellite pass ends. Off by default.	Três tons descendentes quando termina uma passagem de satélite seguida. Desligado por defeito.
+Sound cue volume (%)	Volume dos sinais sonoros (%)
+How loud the cue tones are, as a share of the program volume.	Quão altos são os sinais, como parte do volume do programa.

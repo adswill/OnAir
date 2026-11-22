@@ -3642,3 +3642,13 @@ A PNG of what the spectrum and waterfall show now, with frequency, mode, time an
 Copy caption	Копировать подпись
 Copied: paste it with the picture	Скопировано: вставьте вместе с картинкой
 Nothing to save: no waterfall yet	Нечего сохранять: водопада ещё нет
+Sound cue: locked	Звуковой сигнал: захват
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Короткий восходящий тон при захвате сигнала декодером. По умолчанию выключено. Учитывает «Без звука» и тихие часы.
+Sound cue: lost lock	Звуковой сигнал: потеря захвата
+A short falling tone when a decoder that was locked loses lock. Off by default.	Короткий нисходящий тон, когда декодер теряет захват. По умолчанию выключено.
+Sound cue: signal found	Звуковой сигнал: сигнал найден
+Two short high beeps when the scanner finds a signal. Off by default.	Два коротких высоких сигнала, когда сканер находит сигнал. По умолчанию выключено.
+Sound cue: pass ended	Звуковой сигнал: пролёт окончен
+Three falling tones when a tracked satellite pass ends. Off by default.	Три нисходящих тона, когда заканчивается отслеживаемый пролёт спутника. По умолчанию выключено.
+Sound cue volume (%)	Громкость сигналов (%)
+How loud the cue tones are, as a share of the program volume.	Громкость сигналов как доля громкости программы.

@@ -4587,3 +4587,13 @@ A PNG of what the spectrum and waterfall show now, with frequency, mode, time an
 Copy caption	Beschriftung kopieren
 Copied: paste it with the picture	Kopiert: zusammen mit dem Bild einfügen
 Nothing to save: no waterfall yet	Nichts zu speichern: noch kein Wasserfall
+Sound cue: locked	Tonsignal: eingerastet
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Ein kurzer steigender Ton, wenn ein Decoder einrastet. Standardmäßig aus. Folgt Stumm und Ruhezeiten.
+Sound cue: lost lock	Tonsignal: Verbindung verloren
+A short falling tone when a decoder that was locked loses lock. Off by default.	Ein kurzer fallender Ton, wenn ein eingerasteter Decoder das Signal verliert. Standardmäßig aus.
+Sound cue: signal found	Tonsignal: Signal gefunden
+Two short high beeps when the scanner finds a signal. Off by default.	Zwei kurze hohe Pieptöne, wenn der Scanner ein Signal findet. Standardmäßig aus.
+Sound cue: pass ended	Tonsignal: Überflug beendet
+Three falling tones when a tracked satellite pass ends. Off by default.	Drei fallende Töne, wenn ein verfolgter Satellitenüberflug endet. Standardmäßig aus.
+Sound cue volume (%)	Lautstärke der Tonsignale (%)
+How loud the cue tones are, as a share of the program volume.	Wie laut die Signaltöne sind, als Anteil der Programmlautstärke.
