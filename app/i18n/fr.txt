@@ -3649,3 +3649,10 @@ Export this session...	Exporter cette session…
 One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Un zip avec le journal décodé (CSV, KML, GPX), la liste de vos enregistrements, les réglages, la radio et un résumé texte. Pratique pour les forums et les rapports de bogue. Identifiants et dossiers ne sont jamais inclus.
 Recordings list	Liste des enregistrements
 My location	Ma position
+Snapshot of the spectrum and waterfall	Instantané du spectre et de la cascade
+Place (optional, shown in the caption)	Lieu (facultatif, dans la légende)
+Save snapshot...	Enregistrer l'instantané…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	Un PNG de ce que montrent le spectre et la cascade, avec fréquence, mode, heure et version d'OnAir en légende.
+Copy caption	Copier la légende
+Copied: paste it with the picture	Copié : collez-le avec l'image
+Nothing to save: no waterfall yet	Rien à enregistrer : pas encore de cascade

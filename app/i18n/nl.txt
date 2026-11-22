@@ -3650,3 +3650,10 @@ Export this session...	Deze sessie exporteren…
 One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Eén zip met het gedecodeerde logboek (CSV, KML, GPX), een lijst van je opnamen, instellingen, de radio en een tekstsamenvatting. Handig voor forumberichten en bugrapporten. Inloggegevens en mappen zitten er nooit in.
 Recordings list	Opnamelijst
 My location	Mijn locatie
+Snapshot of the spectrum and waterfall	Momentopname van spectrum en waterval
+Place (optional, shown in the caption)	Plaats (optioneel, in het bijschrift)
+Save snapshot...	Momentopname opslaan…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	Een PNG van wat spectrum en waterval nu tonen, met frequentie, modus, tijd en OnAir-versie als bijschrift.
+Copy caption	Bijschrift kopiëren
+Copied: paste it with the picture	Gekopieerd: plak het bij de afbeelding
+Nothing to save: no waterfall yet	Niets om op te slaan: nog geen waterval

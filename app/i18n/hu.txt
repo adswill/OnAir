@@ -3630,3 +3630,10 @@ Export this session...	Munkamenet exportálása…
 One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Egyetlen zip a dekódolt naplóval (CSV, KML, GPX), a felvételek listájával, a beállításokkal, a rádióval és egy szöveges összefoglalóval. Fórumbejegyzésekhez és hibajelentésekhez jó. Hitelesítő adatok és mappák soha nem kerülnek bele.
 Recordings list	Felvételek listája
 My location	Saját helyem
+Snapshot of the spectrum and waterfall	Pillanatkép a spektrumról és a vízesésről
+Place (optional, shown in the caption)	Hely (nem kötelező, a feliratban)
+Save snapshot...	Pillanatkép mentése…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	PNG a spektrum és a vízesés mostani képéről; a feliratban frekvencia, mód, idő és az OnAir verziója.
+Copy caption	Felirat másolása
+Copied: paste it with the picture	Másolva: illessze be a képpel együtt
+Nothing to save: no waterfall yet	Nincs mit menteni: még nincs vízesés

@@ -11206,3 +11206,10 @@ Export this session	导出本次会话
 Export this session...	导出本次会话…
 One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	一个 zip，包含解码日志（CSV、KML、GPX）、录音列表、设置、电台信息和文字摘要。适合发到论坛或提交问题报告。不包含凭据和文件夹路径。
 Recordings list	录音列表
+Snapshot of the spectrum and waterfall	频谱和瀑布图快照
+Place (optional, shown in the caption)	地点（可选，显示在说明中）
+Save snapshot...	保存快照…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	当前频谱和瀑布图的 PNG，说明中含频率、模式、时间和 OnAir 版本。
+Copy caption	复制说明
+Copied: paste it with the picture	已复制：与图片一起粘贴
+Nothing to save: no waterfall yet	没有可保存的内容：还没有瀑布图

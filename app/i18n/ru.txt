@@ -3635,3 +3635,10 @@ Export this session...	Экспорт сеанса…
 One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Один zip с журналом декодирования (CSV, KML, GPX), списком записей, настройками, радио и текстовой сводкой. Удобно для форумов и отчётов об ошибках. Учётные данные и папки не включаются никогда.
 Recordings list	Список записей
 My location	Моё местоположение
+Snapshot of the spectrum and waterfall	Снимок спектра и водопада
+Place (optional, shown in the caption)	Место (необязательно, в подписи)
+Save snapshot...	Сохранить снимок…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	PNG с текущим спектром и водопадом; в подписи частота, режим, время и версия OnAir.
+Copy caption	Копировать подпись
+Copied: paste it with the picture	Скопировано: вставьте вместе с картинкой
+Nothing to save: no waterfall yet	Нечего сохранять: водопада ещё нет

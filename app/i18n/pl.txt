@@ -3651,3 +3651,10 @@ Export this session...	Eksportuj tę sesję…
 One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Jeden zip z zdekodowanym dziennikiem (CSV, KML, GPX), listą nagrań, ustawieniami, radiem i podsumowaniem tekstowym. Przydatny na forach i w zgłoszeniach błędów. Dane logowania i foldery nigdy nie są dołączane.
 Recordings list	Lista nagrań
 My location	Moja lokalizacja
+Snapshot of the spectrum and waterfall	Zrzut widma i wodospadu
+Place (optional, shown in the caption)	Miejsce (opcjonalnie, w podpisie)
+Save snapshot...	Zapisz zrzut…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	PNG z tym, co teraz pokazują widmo i wodospad, z częstotliwością, trybem, czasem i wersją OnAir w podpisie.
+Copy caption	Kopiuj podpis
+Copied: paste it with the picture	Skopiowano: wklej razem z obrazem
+Nothing to save: no waterfall yet	Nic do zapisania: brak wodospadu

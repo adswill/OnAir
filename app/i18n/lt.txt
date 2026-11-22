@@ -3673,3 +3673,10 @@ Export this session...	Eksportuoti šią sesiją…
 One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Vienas zip su iškoduotu žurnalu (CSV, KML, GPX), įrašų sąrašu, nustatymais, radiju ir tekstine santrauka. Tinka forumams ir klaidų pranešimams. Prisijungimo duomenų ir aplankų niekada nėra.
 Recordings list	Įrašų sąrašas
 My location	Mano vieta
+Snapshot of the spectrum and waterfall	Spektro ir krioklio momentinė nuotrauka
+Place (optional, shown in the caption)	Vieta (nebūtina, rodoma parašte)
+Save snapshot...	Išsaugoti nuotrauką…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	PNG su tuo, ką dabar rodo spektras ir krioklys, su dažniu, režimu, laiku ir OnAir versija parašte.
+Copy caption	Kopijuoti parašą
+Copied: paste it with the picture	Nukopijuota: įklijuokite su paveikslėliu
+Nothing to save: no waterfall yet	Nėra ką išsaugoti: dar nėra krioklio

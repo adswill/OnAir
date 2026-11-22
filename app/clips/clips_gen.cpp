@@ -315,8 +315,10 @@ const uint8_t kFont[95][5] = {
 {0x7C,0x14,0x14,0x14,8},{8,0x14,0x14,0x18,0x7C},{0x7C,8,4,4,8},{0x48,0x54,0x54,0x54,0x20},{4,0x3F,0x44,0x40,0x20},{0x3C,0x40,0x40,0x20,0x7C},{0x1C,0x20,0x40,0x20,0x1C},{0x3C,0x40,0x30,0x40,0x3C},
 {0x44,0x28,0x10,0x28,0x44},{0x0C,0x50,0x50,0x50,0x3C},{0x44,0x64,0x54,0x4C,0x44},{0,8,0x36,0x41,0},{0,0,0x7F,0,0},{0,0x41,0x36,8,0},{0x10,8,8,0x10,8}};
 
+}  // namespace
+
 // draws ASCII text (other bytes as '?') at scale s; returns the width in pixels
-int drawText(Image& im, int x, int y, const std::string& t, int s, uint32_t rgb, bool measureOnly = false) {
+int drawText(Image& im, int x, int y, const std::string& t, int s, uint32_t rgb, bool measureOnly) {
     int cx = x;
     for (unsigned char ch : t) {
         const int g = ch >= 32 && ch < 127 ? ch - 32 : '?' - 32;
@@ -336,7 +338,6 @@ int drawText(Image& im, int x, int y, const std::string& t, int s, uint32_t rgb,
     return cx - x;
 }
 std::string asciiOnly(std::string s) { for (size_t p; (p = s.find("\xC2\xB7")) != std::string::npos;) s.replace(p, 2, "|"); std::string o; for (unsigned char c : s) o += c >= 32 && c < 127 ? (char)c : (c >= 0x80 && (c & 0xC0) != 0x80 ? '?' : (c < 0x80 ? ' ' : '\0')); o.erase(std::remove(o.begin(), o.end(), '\0'), o.end()); return o; }
-}  // namespace
 
 Image composite(const Content& c) {
     const int W = 1024, strip = 64;

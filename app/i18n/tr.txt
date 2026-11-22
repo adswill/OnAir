@@ -3680,3 +3680,10 @@ Export this session...	Bu oturumu dışa aktar…
 One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Çözülmüş kayıt (CSV, KML, GPX), kayıt listeniz, ayarlar, telsiz ve metin özeti içeren tek bir zip. Forum gönderileri ve hata raporları için uygundur. Kimlik bilgileri ve klasörler asla eklenmez.
 Recordings list	Kayıt listesi
 My location	Konumum
+Snapshot of the spectrum and waterfall	Spektrum ve şelale anlık görüntüsü
+Place (optional, shown in the caption)	Yer (isteğe bağlı, alt yazıda)
+Save snapshot...	Anlık görüntüyü kaydet…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	Spektrum ve şelalenin şimdiki görüntüsü; alt yazıda frekans, mod, zaman ve OnAir sürümü.
+Copy caption	Alt yazıyı kopyala
+Copied: paste it with the picture	Kopyalandı: resimle birlikte yapıştırın
+Nothing to save: no waterfall yet	Kaydedilecek bir şey yok: henüz şelale yok

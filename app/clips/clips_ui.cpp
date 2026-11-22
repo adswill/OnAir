@@ -14,6 +14,8 @@
 #include <chrono>
 #include <future>
 #include "../ui/input_map.h"
+#include "dect2/common/u8file.h"
+#include <fstream>
 
 using namespace clips;
 
@@ -53,7 +55,7 @@ struct Dlg {
     double selFor = 0;               // `now` when the selection was last set by a preset (the presets follow the time while the dialog is open)
     int preset = 1;                  // 0..3 presets, -1 custom
     bool incImage = true, incAudio = true, incMsgs = true;
-    char title[96] = "", notes[300] = "";
+    char title[96] = "", notes[300] = "", place[64] = "";   // place: optional, shown in a snapshot's caption only
     std::string status;
     std::future<Written> job;
     bool busy = false;
@@ -117,6 +119,37 @@ Content collect(App& a, Range r, double now) {
     if (D.incAudio) dect2::AudioClipRing::instance().snapshot(now - r.t0, now - r.t1, c.audio, c.audioRate);
     if (D.incMsgs) c.table = tableLog().range(r);
     return c;
+}
+
+// The caption of a snapshot of what the waterfall shows now (mode and frequency as the clips use them).
+SnapCaption snapCaptionNow(App& a, double now) {
+    SnapCaption c;
+    std::string l1, l2;
+    if (const ModeUi* mu = modeUi(a.family)) if (mu->summary) mu->summary(a, l1, l2);
+    std::string id = dect2::recordingModeId(a.engine.standardMode());
+    for (auto& ch : id) ch = (char)toupper((unsigned char)ch);
+    c.mode = (!l1.empty() ? l1 : id).substr(0, 40);
+    c.freqHz = a.freqMhz * 1e6; c.epoch = now; c.version = ONAIR_VERSION;
+    c.place = D.place;
+    return c;
+}
+
+// Saves the newest rows of the waterfall (and the spectrum line) as one captioned PNG. Returns the status line.
+std::string saveSnapshot(App& a, double now) {
+    const Waterfall& wf = a.wf;
+    const int n = std::min(wf.filled, 240), cols = wf.cols;
+    if (n <= 0 || wf.lv.size() != (size_t)cols * Waterfall::H) return tr("Nothing to save: no waterfall yet");
+    std::vector<uint8_t> lv((size_t)n * cols);
+    for (int age = 0; age < n; age++) std::copy_n(wf.lv.begin() + (long)(((wf.writeRow + age) % Waterfall::H) * (size_t)cols), cols, lv.begin() + (long)((size_t)age * cols));
+    const SnapCaption cap = snapCaptionNow(a, now);
+    const Image im = shareSnapshot(lv, cols, n, wf.lut, cap, 1280);
+    const std::string path = plat::saveFileDialog(snapshotFileName(cap).c_str());
+    if (path.empty()) return "";
+    const std::vector<uint8_t> png = encodePng(im.rgba.data(), im.w, im.h);
+    std::ofstream o(dect2::u8file(path), std::ios::binary);
+    o.write((const char*)png.data(), (std::streamsize)png.size());
+    o.flush();
+    return o ? std::string(tr("Saved")) + " " + path : std::string(tr("Could not write the file.")) + " " + path;
 }
 
 void memLine(bool disabledNote) {
@@ -199,6 +232,14 @@ void draw(App& a) {
     }
     ImGui::SameLine();
     if (ImGui::Button(tr("Open folder"))) dect2::openUrl(D.lastDir.empty() ? plat::dataDir() + "/clips" : D.lastDir);
+    ImGui::Separator();
+    ImGui::TextUnformatted(tr("Snapshot of the spectrum and waterfall"));
+    ImGui::SetNextItemWidth(w);
+    ImGui::InputTextWithHint("##snapplace", tr("Place (optional, shown in the caption)"), D.place, sizeof D.place);
+    if (ImGui::Button(tr("Save snapshot..."))) { const std::string r = saveSnapshot(a, now); if (!r.empty()) D.status = r; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption."));
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Copy caption"))) { ImGui::SetClipboardText(snapCaption(snapCaptionNow(a, now)).c_str()); D.status = tr("Copied: paste it with the picture"); }
     if (!D.status.empty()) ImGui::TextWrapped("%s", D.status.c_str());
     if (typo::collapsingHeader(tr("Memory kept for clips"))) {
         bool ch = false;

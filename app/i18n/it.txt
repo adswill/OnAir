@@ -3633,3 +3633,10 @@ Export this session...	Esporta questa sessione…
 One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Uno zip con il registro decodificato (CSV, KML, GPX), l'elenco delle registrazioni, le impostazioni, la radio e un riepilogo di testo. Utile per forum e segnalazioni. Credenziali e cartelle non sono mai incluse.
 Recordings list	Elenco registrazioni
 My location	La mia posizione
+Snapshot of the spectrum and waterfall	Istantanea di spettro e cascata
+Place (optional, shown in the caption)	Luogo (facoltativo, nella didascalia)
+Save snapshot...	Salva istantanea…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	Un PNG di ciò che mostrano ora spettro e cascata, con frequenza, modo, ora e versione di OnAir nella didascalia.
+Copy caption	Copia didascalia
+Copied: paste it with the picture	Copiato: incollalo con l'immagine
+Nothing to save: no waterfall yet	Niente da salvare: ancora nessuna cascata
