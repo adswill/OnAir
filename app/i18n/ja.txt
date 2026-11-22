@@ -3640,3 +3640,8 @@ T2-Lite carries at most 4 Mbit/s for a programme (EN 302 755 annex I.10): lower 
 A code rate of T2-Lite only (EN 302 755 annex I, table I.1): set the profile to T2-Lite or Any.	T2-Lite 専用の符号化率です (EN 302 755 附属書 I、表 I.1)。プロファイルを T2-Lite または Any にしてください。
 T2-Lite carries at most	T2-Lite の上限
 The total rate of the transport stream: video, audio, tables and null packets that pad it to a constant rate. Keep it at or below the net bitrate of the DVB link, e.g. DVB-T 8 MHz, 64-QAM, code rate 2/3, guard interval 1/4 carries about 19.9 Mbit/s; QPSK 1/2 about 5 Mbit/s. For DVB-T2-Lite keep it at or below 4 Mbit/s, the most a T2-Lite programme may carry (the transmitter then says the exact rate). Auto uses the estimate on the right plus a small margin.	トランスポートストリームの合計レート: 映像、音声、テーブル、そして一定レートにするための NULL パケット。DVB リンクの正味ビットレート以下にしてください。例えば DVB-T 8 MHz、64-QAM、符号化率 2/3、ガードインターバル 1/4 は約 19.9 Mbit/s、QPSK 1/2 は約 5 Mbit/s を運びます。DVB-T2-Lite では、T2-Lite の番組が運べる最大値である 4 Mbit/s 以下にしてください (正確なレートは送信機が表示します)。Auto は右側の推定値に少し余裕を加えた値を使います。
+Export this session	このセッションを書き出す
+Export this session...	このセッションを書き出す…
+One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	デコードしたログ (CSV, KML, GPX)、録音一覧、設定、無線機、テキスト概要を1つのzipにまとめます。フォーラム投稿や不具合報告に便利です。認証情報とフォルダは含まれません。
+Recordings list	録音一覧
+My location	自分の位置

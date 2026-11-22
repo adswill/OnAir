@@ -11202,3 +11202,7 @@ Teletext subtitles (page 888)	Teletext subtitles (page 888)
 subtitles##subson	subtitles##subson
 Subtitles over the picture (S in the pop-out window)	Subtitles over the picture (S in the pop-out window)
 Subtitle language, or Off (L in the pop-out window)	Subtitle language, or Off (L in the pop-out window)
+Export this session	导出本次会话
+Export this session...	导出本次会话…
+One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	一个 zip，包含解码日志（CSV、KML、GPX）、录音列表、设置、电台信息和文字摘要。适合发到论坛或提交问题报告。不包含凭据和文件夹路径。
+Recordings list	录音列表
