@@ -43,6 +43,8 @@ void starCardLaunch() {
     save();
 }
 
+void starCardDevOpen() { gLoaded = true; gVisible = true; }
+
 void starCard(App& a, ImVec2 disp) {
     if (!gLoaded) load();
     gStar.enabled = plat::prefs().getB(StarKeys::on, true);   // the Settings switch takes effect at once

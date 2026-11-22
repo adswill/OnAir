@@ -1,6 +1,6 @@
 # Screenshots of the interface for a layout review, without a Mac: the app is built once on Linux and run headless (xvfb, Mesa software
-# OpenGL) for every mode group, a sample of modes, the main tabs and the dialogs (tools/ui_shots.sh), at three window sizes and two UI
-# scales. Contact sheets (12 labelled shots each) and stacked header / footer strips come back as the artifact "ui-sheets"; the raw shots
+# OpenGL) for every mode group, a sample of modes, the main tabs and the dialogs (tools/ui_shots.sh), at three window sizes and UI
+# scales (1280x800@1.0, 1600x1000@1.25, 1000x700@1.0 narrow). Contact sheets (12 labelled shots each) and stacked header / footer strips come back as the artifact "ui-sheets"; the raw shots
 # as "ui-shots-<size>-<scale>".
 #   gh workflow run ui-shots.yml -R adswill/OnAir --ref <branch> [-f set=quick]
 # Until this file is on the default branch it cannot be dispatched: push the commit to a branch named ui-shots/<anything> instead (full set),
@@ -52,8 +52,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        size: [1280x720, 1600x900, 1920x1080]
-        scale: ["1.0", "1.5"]
+        include:
+          - { size: 1280x800, scale: "1.0" }
+          - { size: 1600x1000, scale: "1.25" }
+          - { size: 1000x700, scale: "1.0" }
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/linux-deps

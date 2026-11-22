@@ -216,15 +216,20 @@ void modePicker(App& a) {
 
     // ---- header: search, show hidden ----
     ImGui::AlignTextToFramePadding();
-    ImGui::SetNextItemWidth(std::max(160.f * gUi, ImGui::GetContentRegionAvail().x - 150 * gUi));
+    // widths measured, so the row never runs past the dialog in any language: the second checkbox drops to its own line when it does not fit
+    const float cbW1 = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(tr("Show hidden")).x;
+    const float cbW2 = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(tr("Only my region")).x;
+    const float gap = 12 * gUi, availW = ImGui::GetContentRegionAvail().x;
+    ImGui::SetNextItemWidth(std::max(120.f * gUi, availW - cbW1 - gap - ImGui::GetStyle().ItemSpacing.x));
     if (S.focusSearch) { ImGui::SetKeyboardFocusHere(); S.focusSearch = false; }
     ImGui::InputTextWithHint("##mpq", tr("search: FT8, LoRa, APRS, 1090..."), S.q, sizeof S.q, ImGuiInputTextFlags_EscapeClearsAll);
     const bool searchActive = ImGui::IsItemActive();
-    ImGui::SameLine(0, 12 * gUi);
+    ImGui::SameLine(0, gap);
     ImGui::Checkbox(tr("Show hidden"), &S.showHidden);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("List the modes you hid in Modes shown (a search finds them anyway)"));
-    ImGui::SameLine(0, 12 * gUi);
     {
+        const bool fits = ImGui::GetItemRectMax().x + gap + cbW2 <= ImGui::GetWindowPos().x + ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x;
+        if (fits) ImGui::SameLine(0, gap);
         bool only = plat::prefs().getB("modesOnlyMyRegion", false);
         if (ImGui::Checkbox(tr("Only my region"), &only)) plat::prefs().setB("modesOnlyMyRegion", only);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hide the modes that are used only in other countries than the one in the setup (for example DTMB or DVB-T2 when you are in North America). Show hidden lists them again."));
@@ -466,6 +471,8 @@ void modePicker(App& a) {
                         : q.tab == TabRecent ? tr("Modes you pick appear here.")
                         : tr("No mode matches. Clear the search or the filters.");
         ImGui::Spacing(); ImGui::TextDisabled("%s", msg);
+        // the chips narrow the list (every lit chip must match): two of them can leave nothing, so offer a way out
+        if (S.tags && (S.tags & (S.tags - 1)) && ImGui::SmallButton(tr("Clear"))) S.tags = 0;
     }
     if (S.open) S.scroll = ImGui::GetScrollY();
     S.lastSizes = sizes; S.lastFlat = flat;
