@@ -22,7 +22,6 @@
 #include "dect2/cp16/cp16_rx.h"
 #include "dect2/cquam/cquam_rx.h"
 #include "dect2/cw/cw_rx.h"
-#include "dect2/datawell/datawell_rx.h"
 #include "dect2/dmr/dmr_rx.h"
 #include "dect2/dpmr/dpmr_rx.h"
 #include "dect2/drm/drm_rx.h"
@@ -521,12 +520,6 @@ static const char kOpt_71[] = R"JSON([{"n":"setWidthMask","k":"int","l":"Width M
 static bool set_71(Engine& e, const std::string& n, double v) {
     auto& r = e.halow();
     if (n == "setWidthMask") { call(r, &Rx<decltype(r)>::setWidthMask, v); return true; }
-    return false;
-}
-static const char kOpt_75[] = R"JSON([{"n":"setFormat","k":"int","l":"Format","h":"0 automatic from the bandwidth, 1 2FSK, 2 4MFSK","t":"s"}])JSON";
-static bool set_75(Engine& e, const std::string& n, double v) {
-    auto& r = e.datawell();
-    if (n == "setFormat") { call(r, &Rx<decltype(r)>::setFormat, v); return true; }
     return false;
 }
 static const char kOpt_77[] = R"JSON([{"n":"setCountry","k":"int","l":"Country","h":"same::Country: how the state part of a location code is named (the alerts already decoded keep their names)","t":"s"}])JSON";
@@ -1424,7 +1417,6 @@ const OptEntry kOpt[] = {
     {66, kOpt_66, set_66},
     {67, kOpt_67, set_67},
     {71, kOpt_71, set_71},
-    {75, kOpt_75, set_75},
     {77, kOpt_77, set_77},
     {78, kOpt_78, set_78},
     {80, kOpt_80, set_80},
