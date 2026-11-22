@@ -3652,3 +3652,15 @@ Sound cue: pass ended	Звуковой сигнал: пролёт окончен
 Three falling tones when a tracked satellite pass ends. Off by default.	Три нисходящих тона, когда заканчивается отслеживаемый пролёт спутника. По умолчанию выключено.
 Sound cue volume (%)	Громкость сигналов (%)
 How loud the cue tones are, as a share of the program volume.	Громкость сигналов как доля громкости программы.
+Equaliser	Эквалайзер
+equaliser	эквалайзер
+Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound.	Низкие, высокие и 10-полосный графический эквалайзер для звука, который вы слышите, с пресетами. Декодеры всегда получают неизменённый звук.
+Preset	Пресет
+Flat	Ровный
+Voice	Голос
+Music	Музыка
+Hearing-friendly	Для слабого слуха
+Bass boost	Усиление баса
+Bright	Яркий
+bass %+.0f dB	бас %+.0f дБ
+treble %+.0f dB	верха %+.0f дБ

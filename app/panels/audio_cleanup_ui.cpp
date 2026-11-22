@@ -9,6 +9,7 @@
 #include "i18n/i18n.h"
 #include "platform/platform.h"
 #include "dect2/audio/audio_cleanup.h"
+#include "dect2/audio/audio_eq.h"
 #include "ui/icons.h"
 #include <algorithm>
 #include <cstdio>
@@ -48,6 +49,9 @@ AudioCleanupSettings loadProfile(int p) {
     s.voice = pr.getB(key(p, "vo").c_str(), d.voice); s.voiceAmount = (float)pr.getD(key(p, "voa").c_str(), d.voiceAmount);
     s.deess = pr.getB(key(p, "ds").c_str(), d.deess); s.deessAmount = (float)pr.getD(key(p, "dsa").c_str(), d.deessAmount);
     s.recCleaned = pr.getB(key(p, "rc").c_str(), d.recCleaned); s.skipSilence = pr.getB(key(p, "ss").c_str(), d.skipSilence);
+    s.eq = pr.getB(key(p, "eq").c_str(), d.eq);
+    s.eqBass = (float)pr.getD(key(p, "eqb").c_str(), d.eqBass); s.eqTreble = (float)pr.getD(key(p, "eqt").c_str(), d.eqTreble);
+    for (int k = 0; k < dect2::kEqBands; k++) s.eqBand[k] = (float)pr.getD(key(p, ("eqg" + std::to_string(k)).c_str()).c_str(), d.eqBand[k]);
     return s;
 }
 void saveProfile(int p) {
@@ -63,6 +67,8 @@ void saveProfile(int p) {
     pr.setB(key(p, "vo").c_str(), s.voice); pr.setD(key(p, "voa").c_str(), s.voiceAmount);
     pr.setB(key(p, "ds").c_str(), s.deess); pr.setD(key(p, "dsa").c_str(), s.deessAmount);
     pr.setB(key(p, "rc").c_str(), s.recCleaned); pr.setB(key(p, "ss").c_str(), s.skipSilence);
+    pr.setB(key(p, "eq").c_str(), s.eq); pr.setD(key(p, "eqb").c_str(), s.eqBass); pr.setD(key(p, "eqt").c_str(), s.eqTreble);
+    for (int k = 0; k < dect2::kEqBands; k++) pr.setD(key(p, ("eqg" + std::to_string(k)).c_str()).c_str(), s.eqBand[k]);
 }
 
 void load() {
@@ -102,6 +108,46 @@ bool sw(const char* label, bool& v, const char* tip = nullptr) {
 bool slider(const char* id, float& v, float lo, float hi, const char* fmt, float w = 140) {
     ImGui::SetNextItemWidth(w * gUi);
     return ImGui::SliderFloat(id, &v, lo, hi, fmt);
+}
+
+// The equaliser block (both views): on, preset, bass and treble; the ten graphic bands only when `bands` (Advanced).
+bool eqControls(AudioCleanupSettings& s, bool bands) {
+    bool c = false;
+    c |= sw(tr("Equaliser"), s.eq, tr("Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound."));
+    if (!s.eq) return c;
+    dect2::EqParams p; p.bass = s.eqBass; p.treble = s.eqTreble; for (int k = 0; k < dect2::kEqBands; k++) p.band[(size_t)k] = s.eqBand[k];
+    const dect2::EqPreset cur = dect2::eqPresetOf(p);
+    ImGui::Indent(18 * gUi);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("%s", tr("Preset"));
+    ImGui::SameLine(0, 6 * gUi);
+    ImGui::SetNextItemWidth(170 * gUi);
+    if (ImGui::BeginCombo("##aceqp", cur == dect2::EqPreset::Count ? tr("Custom") : tr(dect2::eqPresetName(cur)))) {
+        for (int i = 0; i < (int)dect2::EqPreset::Count; i++)
+            if (ImGui::Selectable(tr(dect2::eqPresetName((dect2::EqPreset)i)), cur == (dect2::EqPreset)i)) {
+                const dect2::EqParams q = dect2::eqPresetParams((dect2::EqPreset)i);
+                s.eqBass = q.bass; s.eqTreble = q.treble; for (int k = 0; k < dect2::kEqBands; k++) s.eqBand[k] = q.band[(size_t)k];
+                c = true;
+            }
+        ImGui::EndCombo();
+    }
+    c |= slider("##aceqb", s.eqBass, -12, 12, tr("bass %+.0f dB"), 140);
+    ImGui::SameLine(0, 6 * gUi);
+    c |= slider("##aceqt", s.eqTreble, -12, 12, tr("treble %+.0f dB"), 140);
+    if (bands) {
+        static const char* const kHz[dect2::kEqBands] = {"31", "63", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"};
+        for (int k = 0; k < dect2::kEqBands; k++) {
+            if (k) ImGui::SameLine(0, 4 * gUi);
+            ImGui::BeginGroup();
+            char id[16]; snprintf(id, sizeof id, "##aceqg%d", k);
+            if (ImGui::VSliderFloat(id, ImVec2(24 * gUi, 90 * gUi), &s.eqBand[k], -12.f, 12.f, "")) c = true;
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s Hz: %+.1f dB", kHz[k], s.eqBand[k]);
+            ImGui::TextDisabled("%s", kHz[k]);
+            ImGui::EndGroup();
+        }
+    }
+    ImGui::Unindent(18 * gUi);
+    return c;
 }
 
 bool gDevOpen = false;
@@ -171,7 +217,7 @@ bool audioCleanupButton(App& a) {
             ImGui::EndDisabled();
             std::string on;
             auto add = [&](bool f, const char* t) { if (f) { if (!on.empty()) on += ", "; on += tr(t); } };
-            add(s.nr, N_("noise reduction")); add(s.autoNotch, N_("auto notch")); add(s.level, N_("leveller")); add(s.gate, N_("silence gate")); add(s.voice, N_("voice emphasis")); add(s.neural, N_("voice noise remover"));
+            add(s.nr, N_("noise reduction")); add(s.autoNotch, N_("auto notch")); add(s.level, N_("leveller")); add(s.gate, N_("silence gate")); add(s.voice, N_("voice emphasis")); add(s.eq, N_("equaliser")); add(s.neural, N_("voice noise remover"));
             ImGui::TextDisabled("%s", on.empty() ? tr("Nothing is on for this kind of mode. See Advanced.") : on.c_str());
             // one click for speech modes (analog and digital voice): the neural noise remover; music and data modes do not get the button
             if (cur == (int)AudioProfile::NFM || cur == (int)AudioProfile::AM || cur == (int)AudioProfile::SSB || cur == (int)AudioProfile::DigitalVoice || cur == (int)AudioProfile::Generic) {
@@ -179,6 +225,9 @@ bool audioCleanupButton(App& a) {
                 c |= sw(tr("Voice noise remover (neural)"), s.neural, tr("Removes steady background noise from speech with a small neural network (RNNoise). For voice only: it treats music and data tones as noise. Adds about 20 ms of delay."));
                 ImGui::EndDisabled();
             }
+            ImGui::BeginDisabled(!s.master);
+            c |= eqControls(s, false);
+            ImGui::EndDisabled();
         } else {
             ImGui::BeginDisabled(!s.master);
             // 1. noise reduction
@@ -235,6 +284,7 @@ bool audioCleanupButton(App& a) {
             if (s.voice) { ImGui::SameLine(0, 10 * gUi); float v = s.voiceAmount * 100.f; if (slider("##acvoa", v, 0, 100, "%.0f %%", 110)) { s.voiceAmount = v / 100.f; c = true; } }
             c |= sw(tr("De-esser"), s.deess, tr("Softens sharp S sounds."));
             if (s.deess) { ImGui::SameLine(0, 10 * gUi); float v = s.deessAmount * 100.f; if (slider("##acdsa", v, 0, 100, "%.0f %%", 110)) { s.deessAmount = v / 100.f; c = true; } }
+            c |= eqControls(s, true);
             ImGui::EndDisabled();
             ImGui::Separator();
             c |= sw(tr("Record the cleaned sound"), s.recCleaned, tr("Record audio saves the sound as you hear it now, cleaned, instead of the raw sound."));

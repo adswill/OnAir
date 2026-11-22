@@ -3647,3 +3647,15 @@ Sound cue: pass ended	Hangjelzés: átvonulás vége
 Three falling tones when a tracked satellite pass ends. Off by default.	Három süllyedő hang, amikor egy követett műholdátvonulás véget ér. Alapból kikapcsolva.
 Sound cue volume (%)	Hangjelzések hangereje (%)
 How loud the cue tones are, as a share of the program volume.	Milyen hangosak a jelzések a program hangerejének arányában.
+Equaliser	Hangszínszabályzó
+equaliser	hangszínszabályzó
+Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound.	Mély, magas és 10 sávos grafikus hangszínszabályzó a hallott hanghoz, előbeállításokkal. A dekóderek mindig az érintetlen hangot kapják.
+Preset	Előbeállítás
+Flat	Lineáris
+Voice	Beszéd
+Music	Zene
+Hearing-friendly	Halláskímélő
+Bass boost	Mélyemelés
+Bright	Fényes
+bass %+.0f dB	mély %+.0f dB
+treble %+.0f dB	magas %+.0f dB

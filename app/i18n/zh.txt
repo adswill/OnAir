@@ -11223,3 +11223,11 @@ Sound cue: pass ended	提示音：过境结束
 Three falling tones when a tracked satellite pass ends. Off by default.	跟踪的卫星过境结束时播放三声降调。默认关闭。
 Sound cue volume (%)	提示音音量（%）
 How loud the cue tones are, as a share of the program volume.	提示音的响度，占程序音量的比例。
+Equaliser	均衡器
+equaliser	均衡器
+Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound.	用于所听声音的低音、高音和10段图示均衡器，带预设。解码器始终收到未处理的声音。
+Hearing-friendly	助听友好
+Bass boost	低音增强
+Bright	明亮
+bass %+.0f dB	低音 %+.0f dB
+treble %+.0f dB	高音 %+.0f dB

@@ -3667,3 +3667,15 @@ Sound cue: pass ended	Geluidssignaal: overvlucht voorbij
 Three falling tones when a tracked satellite pass ends. Off by default.	Drie dalende tonen als een gevolgde satellietovervlucht eindigt. Standaard uit.
 Sound cue volume (%)	Volume van geluidssignalen (%)
 How loud the cue tones are, as a share of the program volume.	Hoe luid de signalen zijn, als deel van het programmavolume.
+Equaliser	Equalizer
+equaliser	equalizer
+Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound.	Bas, hoog en een grafische equalizer met 10 banden voor het geluid dat je hoort, met voorinstellingen. De decoders krijgen altijd het onbewerkte geluid.
+Preset	Voorinstelling
+Flat	Vlak
+Voice	Spraak
+Music	Muziek
+Hearing-friendly	Gehoorvriendelijk
+Bass boost	Bas boost
+Bright	Helder
+bass %+.0f dB	bas %+.0f dB
+treble %+.0f dB	hoog %+.0f dB

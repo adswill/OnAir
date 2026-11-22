@@ -4597,3 +4597,15 @@ Sound cue: pass ended	Tonsignal: Überflug beendet
 Three falling tones when a tracked satellite pass ends. Off by default.	Drei fallende Töne, wenn ein verfolgter Satellitenüberflug endet. Standardmäßig aus.
 Sound cue volume (%)	Lautstärke der Tonsignale (%)
 How loud the cue tones are, as a share of the program volume.	Wie laut die Signaltöne sind, als Anteil der Programmlautstärke.
+Equaliser	Equalizer
+equaliser	Equalizer
+Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound.	Bass, Höhen und ein grafischer 10-Band-Equalizer für den Ton, den Sie hören, mit Voreinstellungen. Die Decoder bekommen immer den unveränderten Ton.
+Preset	Voreinstellung
+Flat	Linear
+Voice	Sprache
+Music	Musik
+Hearing-friendly	Hörgerecht
+Bass boost	Bassverstärkung
+Bright	Hell
+bass %+.0f dB	Bass %+.0f dB
+treble %+.0f dB	Höhen %+.0f dB

@@ -3690,3 +3690,15 @@ Sound cue: pass ended	Garso signalas: praskridimas baigėsi
 Three falling tones when a tracked satellite pass ends. Off by default.	Trys krintantys tonai, kai baigiasi sekamas palydovo praskridimas. Pagal numatymą išjungta.
 Sound cue volume (%)	Garso signalų garsumas (%)
 How loud the cue tones are, as a share of the program volume.	Kaip garsūs signalai, kaip programos garsumo dalis.
+Equaliser	Ekvalaizeris
+equaliser	ekvalaizeris
+Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound.	Žemieji, aukštieji ir 10 juostų grafinis ekvalaizeris girdimam garsui, su išankstiniais nustatymais. Dekoderiai visada gauna nepakeistą garsą.
+Preset	Išankstinis nustatymas
+Flat	Plokščias
+Voice	Balsas
+Music	Muzika
+Hearing-friendly	Pritaikyta klausai
+Bass boost	Bosų stiprinimas
+Bright	Šviesus
+bass %+.0f dB	žemieji %+.0f dB
+treble %+.0f dB	aukštieji %+.0f dB

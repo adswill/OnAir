@@ -4,13 +4,14 @@
 // Audio cleanup for listening: noise reduction, automatic and manual notch, leveller with soft limiter, squelch-aware silence muting,
 // voice emphasis and de-esser. One chain per AudioOut (audioout.cpp), all of them follow one shared AudioCleanupConfig, which the UI sets.
 //
-// Order: notch (auto + manual) -> noise reduction -> voice EQ + de-esser -> silence gate -> leveller + soft limiter.
+// Order: notch (auto + manual) -> noise reduction -> voice EQ + de-esser -> equaliser (bass, treble, graphic) -> silence gate -> leveller + soft limiter.
 // All stages are our own code (clean-room from the published algorithms: minimum statistics noise tracking, decision-directed Wiener
 // gain, see docs/audio-cleanup.md). process() never allocates or locks: everything is sized in prepare() (called when the output starts).
 // Latency: 256 samples (5.3 ms at 48 kHz) while the chain is on, none while it is off; every stage fades in and out, no clicks.
 // Thread safety: the config is atomics (any thread writes, the audio thread reads); process() is called from one thread per chain.
 #pragma once
 #include <atomic>
+#include "dect2/audio/audio_eq.h"
 #include <cstddef>
 #include <memory>
 
@@ -27,6 +28,7 @@ struct AudioCleanupSettings {
     bool gate = false;  float gateOffsetDb = 9.f;                // mute below noise floor + offset
     bool voice = false; float voiceAmount = 0.6f;                // speech EQ
     bool deess = false; float deessAmount = 0.5f;
+    bool eq = false; float eqBass = 0, eqTreble = 0; float eqBand[kEqBands] = {};   // tone controls and graphic equaliser (audio_eq.h), dB
     bool recCleaned = false;       // "Record audio" saves the cleaned sound instead of the raw one
     bool skipSilence = false;      // with recCleaned: nothing is recorded while the gate is closed
 };
@@ -42,6 +44,8 @@ public:
     AudioCleanupSettings get() const;
     // fields read by the audio thread
     std::atomic<bool> master{false}, nr{false}, neural{false}, autoNotch{false}, notch{false}, level{false}, levelHold{true}, gate{false}, voice{false}, deess{false};
+    std::atomic<bool> eq{false};
+    std::atomic<float> eqBass{0.f}, eqTreble{0.f}, eqBand[kEqBands] = {};
     std::atomic<bool> recCleaned{false}, skipSilence{false};
     std::atomic<float> nrStrength{0.5f}, neuralStrength{1.0f}, notchHz{1000.f}, notchWidth{0.5f}, levelTargetDb{-20.f}, levelAmount{0.7f}, gateOffsetDb{9.f},
         voiceAmount{0.6f}, deessAmount{0.5f};

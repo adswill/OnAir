@@ -3644,3 +3644,15 @@ Sound cue: pass ended	Sinal sonoro: passagem terminou
 Three falling tones when a tracked satellite pass ends. Off by default.	Três tons descendentes quando termina uma passagem de satélite seguida. Desligado por defeito.
 Sound cue volume (%)	Volume dos sinais sonoros (%)
 How loud the cue tones are, as a share of the program volume.	Quão altos são os sinais, como parte do volume do programa.
+Equaliser	Equalizador
+equaliser	equalizador
+Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound.	Graves, agudos e um equalizador gráfico de 10 bandas para o som que ouve, com predefinições. Os descodificadores recebem sempre o som original.
+Preset	Predefinição
+Flat	Plano
+Voice	Voz
+Music	Música
+Hearing-friendly	Para audição
+Bass boost	Reforço de graves
+Bright	Brilhante
+bass %+.0f dB	graves %+.0f dB
+treble %+.0f dB	agudos %+.0f dB

@@ -3662,3 +3662,15 @@ Sound cue: pass ended	効果音：パス終了
 Three falling tones when a tracked satellite pass ends. Off by default.	追跡中の衛星パスが終わったとき、下降音を3回鳴らします。初期設定はオフ。
 Sound cue volume (%)	効果音の音量（%）
 How loud the cue tones are, as a share of the program volume.	効果音の大きさ（プログラム音量に対する割合）。
+Equaliser	イコライザー
+equaliser	イコライザー
+Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound.	聞こえる音に対する低音・高音と10バンドのグラフィックイコライザー（プリセット付き）。デコーダーには常に加工していない音が渡されます。
+Preset	プリセット
+Flat	フラット
+Voice	音声
+Music	音楽
+Hearing-friendly	聞き取りやすさ重視
+Bass boost	低音ブースト
+Bright	明るめ
+bass %+.0f dB	低音 %+.0f dB
+treble %+.0f dB	高音 %+.0f dB
