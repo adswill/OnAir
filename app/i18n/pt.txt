@@ -3627,3 +3627,9 @@ T2-Lite carries at most 4 Mbit/s for a programme (EN 302 755 annex I.10): lower 
 A code rate of T2-Lite only (EN 302 755 annex I, table I.1): set the profile to T2-Lite or Any.	Uma taxa de código só do T2-Lite (EN 302 755 anexo I, tabela I.1): defina o perfil como T2-Lite ou Any.
 T2-Lite carries at most	O T2-Lite transporta no máximo
 The total rate of the transport stream: video, audio, tables and null packets that pad it to a constant rate. Keep it at or below the net bitrate of the DVB link, e.g. DVB-T 8 MHz, 64-QAM, code rate 2/3, guard interval 1/4 carries about 19.9 Mbit/s; QPSK 1/2 about 5 Mbit/s. For DVB-T2-Lite keep it at or below 4 Mbit/s, the most a T2-Lite programme may carry (the transmitter then says the exact rate). Auto uses the estimate on the right plus a small margin.	A taxa total do fluxo de transporte: vídeo, áudio, tabelas e pacotes nulos que o preenchem até uma taxa constante. Mantenha-a igual ou abaixo da taxa de bits líquida da ligação DVB, p. ex. DVB-T 8 MHz, 64-QAM, taxa de código 2/3, intervalo de guarda 1/4 transporta cerca de 19,9 Mbit/s; QPSK 1/2 cerca de 5 Mbit/s. Para DVB-T2-Lite mantenha-a em 4 Mbit/s ou menos, o máximo que um programa T2-Lite pode transportar (o transmissor indica então a taxa exata). Auto usa a estimativa à direita mais uma pequena margem.
+Enjoying OnAir? A star on GitHub helps others find it. Thank you!	Gostando do OnAir? Uma estrela no GitHub ajuda outras pessoas a encontrá-lo. Obrigado!
+Star on GitHub	Dar estrela no GitHub
+Maybe later	Talvez depois
+Don't ask again	Não perguntar de novo
+Star reminder	Lembrete da estrela
+Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.	De vez em quando um pequeno cartão pergunta se você quer dar uma estrela ao OnAir no GitHub. Desligado: nunca aparece. Nada é enviado.

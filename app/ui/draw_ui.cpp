@@ -265,6 +265,7 @@ static void floatingWindows(App& a, ImVec2 disp) {
     listenWizard(a, disp);
     wizard(a, disp);
     lessonsUi(a, disp);
+    starCard(a, disp);
     if (gIdentifyDev && a.engine.running() && ImGui::GetFrameCount() > 120) { gIdentifyDev = false; identifyStart(a, radioCenterMhz(a) * 1e6, 0, 0, radioCenterMhz(a) * 1e6); }
     identifyWindow(a);
     generalAutoFrame(a);

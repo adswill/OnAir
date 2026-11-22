@@ -326,3 +326,9 @@ T2-Lite carries at most 4 Mbit/s for a programme (EN 302 755 annex I.10): lower 
 A code rate of T2-Lite only (EN 302 755 annex I, table I.1): set the profile to T2-Lite or Any.
 T2-Lite carries at most
 The total rate of the transport stream: video, audio, tables and null packets that pad it to a constant rate. Keep it at or below the net bitrate of the DVB link, e.g. DVB-T 8 MHz, 64-QAM, code rate 2/3, guard interval 1/4 carries about 19.9 Mbit/s; QPSK 1/2 about 5 Mbit/s. For DVB-T2-Lite keep it at or below 4 Mbit/s, the most a T2-Lite programme may carry (the transmitter then says the exact rate). Auto uses the estimate on the right plus a small margin.
+Enjoying OnAir? A star on GitHub helps others find it. Thank you!
+Star on GitHub
+Maybe later
+Don't ask again
+Star reminder
+Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.

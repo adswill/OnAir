@@ -75,6 +75,7 @@ void startApp(App& app, int argc, char** argv) {
     }
     app.wizOpen = tour::autoStart(argc == 1, plat::prefs().getB(tour::prefKey(), false), setupPending);   // the tour runs on the very first start only
     if (setupPending) { app.wizOpen = false; setupWizardOpen(app); }   // the setup comes first; the tour follows it
+    if (argc == 1) starCardLaunch();   // the "star on GitHub" card counts launches (ui/star_card.cpp)
     if (getenv("DECT2_WIZARD")) app.wizOpen = true;   // test hook: open the tour at start-up (DECT2_WIZSTEP picks the step)
     if (getenv("DECT2_SETUP")) { app.wizOpen = false; setupWizardOpen(app); if (const char* ss = getenv("DECT2_SETUPSTEP")) app.setupStep = atoi(ss);
         if (const char* sl = getenv("DECT2_SETUPLOC")) snprintf(app.setupLoc, sizeof app.setupLoc, "%s", sl);   // test hooks: a position and the ticked interests (bits)

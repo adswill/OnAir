@@ -11202,3 +11202,9 @@ Teletext subtitles (page 888)	Teletext subtitles (page 888)
 subtitles##subson	subtitles##subson
 Subtitles over the picture (S in the pop-out window)	Subtitles over the picture (S in the pop-out window)
 Subtitle language, or Off (L in the pop-out window)	Subtitle language, or Off (L in the pop-out window)
+Enjoying OnAir? A star on GitHub helps others find it. Thank you!	喜欢 OnAir 吗？在 GitHub 上点个星标可以帮助更多人发现它。谢谢！
+Star on GitHub	在 GitHub 上加星标
+Maybe later	以后再说
+Don't ask again	不再询问
+Star reminder	星标提醒
+Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.	偶尔会有一张小卡片询问你是否愿意在 GitHub 上为 OnAir 加星标。关闭：永不显示。不会发送任何内容。

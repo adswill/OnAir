@@ -115,7 +115,7 @@ const std::map<std::string, Bind>& binds() {
         SW_PB("midiOn", false); SW_PT("midiPort"); SW_PI("midiChannel", 0); SW_PI("midiCcLna", -1); SW_PI("midiCcVga", -1); SW_PI("midiCcGain", -1);   // #543, app/midi
         SW_PI("threads", -1);   // #372: read in main.cpp before the first thread pool use, so a restart applies it
         PD("rxThread");   // 4.0: Engine::setRxThreadMode at the next Start (toolbar_source.cpp)
-        NB("updCheck", a.updCheck); NB("updBeta", a.updPre); NB("updAuto", a.updAuto); NB("updSrc", a.updSrc);
+        SW_PB("starPromptOn", true); NB("updCheck", a.updCheck); NB("updBeta", a.updPre); NB("updAuto", a.updAuto); NB("updSrc", a.updSrc);
         NB("updMirrorOn", a.updMirrorOn); SB("updMirror", a.updMirror);
         PS("staleVdl2", -1); PS("staleAcars", -1); PS("staleHfdl", -1); PS("staleAdsb", -1); PS("staleAis", -1); PS("staleUat", -1); PS("staleInmsat", -1); PS("staleCustomMin", 120);
         SB("udpHost", std::string(a.udpHost)); NB("udpPort", a.out.port); NB("udpRtp", a.out.rtp);
