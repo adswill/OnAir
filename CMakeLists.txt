@@ -1453,6 +1453,10 @@ if(DECT2_BUILD_TESTS)
       add_test(NAME qa_sweep_g COMMAND test_qa_sweep --shard 6/8)
       add_test(NAME qa_sweep_a COMMAND test_qa_sweep --shard 7/8)
       add_test(NAME qa_sweep_c COMMAND test_qa_sweep --shard 8/8)
+      add_executable(test_snr_threshold tests/qa/test_snr_threshold.cpp)   # 4.6: AWGN decode threshold per mode (CSV), a driver over test_qa_sweep --gen/--run; quick.yml tests=snr_threshold
+      add_dependencies(test_snr_threshold test_qa_sweep)
+      add_test(NAME snr_threshold COMMAND test_snr_threshold $<TARGET_FILE:test_qa_sweep> ${CMAKE_SOURCE_DIR}/tools/sens)
+      set_tests_properties(snr_threshold PROPERTIES LABELS "snr;slow" TIMEOUT 21600 WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
       add_test(NAME qa_sweep_sel COMMAND test_qa_sweep --sel)   # the modes in the QA_MODES environment variable (quick.yml env=), no others: a way to rerun a few rows
       add_test(NAME qa_switch COMMAND test_qa_sweep --switch)   # mode switching through one Engine (4.0 QA)
       set_tests_properties(qa_sweep_sel qa_switch qa_sweep_d qa_sweep_f qa_sweep_b qa_sweep_i qa_sweep_e qa_sweep_g qa_sweep_a qa_sweep_c PROPERTIES LABELS "qa;slow" TIMEOUT 5400)   # 20-60 min per shard on a CI runner: full scope only

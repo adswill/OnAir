@@ -122,6 +122,10 @@ jobs:
           rc=0; ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout "$TEST_TIMEOUT" $V || rc=$?
           if [ -d build-cmp ]; then echo "===== the same tests from $CMP ====="; ctest --test-dir build-cmp -j 4 -R "$R" --output-on-failure --timeout "$TEST_TIMEOUT" $V || true; fi
           exit $rc
+      - name: Upload SNR threshold CSV
+        if: always() && inputs.os != 'windows'
+        uses: actions/upload-artifact@v7
+        with: { name: "snr-threshold", path: "build/snr-out/*.csv\nbuild/snr-out/*.jsonl", if-no-files-found: ignore }
       - name: Figures printed by passing tests (load tools)
         if: always()
         run: grep -h -B3 -A10 'CPU %' build/Testing/Temporary/LastTest.log 2>/dev/null || true

@@ -49,6 +49,7 @@ class Mode:
         self.name = line[len(t[0]):m.start()].strip()
         self.dir = tempfile.mkdtemp(prefix="qasens_" + re.sub(r"[^a-z0-9]", "_", self.id.lower()) + "_")
         self.log = []
+        self.t_start = time.time()
 
     def env(self, seed):
         e = dict(os.environ)
@@ -124,6 +125,10 @@ def sweep(a, md):
 
     def point(snr):
         if snr in pts: return pts[snr]
+        if a.mode_cap and time.time() - md.t_start > a.mode_cap:   # runtime cap per mode (snr_threshold): out of time counts as a fail
+            out["capped"] = True
+            pts[snr] = {k: [False] for k in scen}; units[snr] = 0
+            return pts[snr]
         r = {k: [] for k in scen}; u = []
         for t in range(a.trials):
             g = md.gen(snr, t + 1, secs)
@@ -210,6 +215,8 @@ def main():
     ap.add_argument("--hi", type=float, default=24.0)
     ap.add_argument("--lo", type=float, default=-24.0)
     ap.add_argument("--false-at", type=float, default=6.0, help="noise-only runs at every point at or below this SNR")
+    ap.add_argument("--limit", type=int, default=0, help="measure only the first N selected modes (0: all)")
+    ap.add_argument("--mode-cap", type=float, default=0, help="seconds after which a mode stops taking new SNR points (0: no cap)")
     ap.add_argument("--max-samples", type=float, default=4e7)
     ap.add_argument("--budget-min", type=float, default=330, help="stop starting modes after this many minutes")
     a = ap.parse_args()
@@ -223,6 +230,7 @@ def main():
     sel = [l for l in lines if rx.search(l.split()[0]) and l.split()[0] not in skip]
     k, n = (int(x) for x in a.shard.split("/"))
     sel = [l for i, l in enumerate(sel) if i % n == k - 1]
+    if a.limit > 0: sel = sel[:a.limit]
     print("%d modes in this shard" % len(sel), flush=True)
     t0 = time.time()
     results, lock = [], threading.Lock()
