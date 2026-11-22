@@ -3697,15 +3697,3 @@ Sound cue: pass ended	Sesli işaret: geçiş bitti
 Three falling tones when a tracked satellite pass ends. Off by default.	İzlenen bir uydu geçişi bittiğinde üç alçalan ses. Varsayılan olarak kapalı.
 Sound cue volume (%)	Sesli işaret ses düzeyi (%)
 How loud the cue tones are, as a share of the program volume.	Sesli işaretlerin ne kadar yüksek olduğu, program ses düzeyinin bir oranı olarak.
-Equaliser	Ekolayzır
-equaliser	ekolayzır
-Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound.	Duyduğunuz ses için bas, tiz ve 10 bantlı grafik ekolayzır, hazır ayarlarla. Çözücüler her zaman değiştirilmemiş sesi alır.
-Preset	Hazır ayar
-Flat	Düz
-Voice	Ses
-Music	Müzik
-Hearing-friendly	İşitme dostu
-Bass boost	Bas artırma
-Bright	Parlak
-bass %+.0f dB	bas %+.0f dB
-treble %+.0f dB	tiz %+.0f dB

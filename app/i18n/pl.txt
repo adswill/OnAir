@@ -3668,15 +3668,3 @@ Sound cue: pass ended	Dźwięk: przelot zakończony
 Three falling tones when a tracked satellite pass ends. Off by default.	Trzy opadające dźwięki, gdy kończy się śledzony przelot satelity. Domyślnie wyłączone.
 Sound cue volume (%)	Głośność dźwięków (%)
 How loud the cue tones are, as a share of the program volume.	Jak głośne są dźwięki, jako część głośności programu.
-Equaliser	Korektor
-equaliser	korektor
-Bass, treble and a 10-band graphic equaliser for the sound you hear, with presets. The decoders always get the untouched sound.	Tony niskie, wysokie i 10-pasmowy korektor graficzny dla dźwięku, który słyszysz, z ustawieniami. Dekodery zawsze dostają dźwięk bez zmian.
-Preset	Ustawienie
-Flat	Płaski
-Voice	Głos
-Music	Muzyka
-Hearing-friendly	Dla słabszego słuchu
-Bass boost	Wzmocnienie basów
-Bright	Jasny
-bass %+.0f dB	bas %+.0f dB
-treble %+.0f dB	wysokie %+.0f dB

@@ -301,8 +301,6 @@ struct Chan {
     Ramp nrW, anW, eqW, dsW, lvW, gtW;
     // voice EQ
     Biquad hp, pres, warm;
-    // equaliser (audio_eq.h)
-    ToneEq tone; Ramp toneW; EqParams toneP;
     // de-esser
     Svf sib; float sibEnv = 0, fullEnv = 0, dsGain = 1;
     // gate
@@ -329,7 +327,7 @@ struct Chan {
         reset();
     }
     void reset() {
-        nr.reset(); an.reset(); manual.reset(); hp.reset(); pres.reset(); warm.reset(); sib.reset(); tone.reset(); toneW = Ramp();
+        nr.reset(); an.reset(); manual.reset(); hp.reset(); pres.reset(); warm.reset(); sib.reset();
         manG = Ramp(); nrW = anW = eqW = dsW = lvW = gtW = Ramp();
         sibEnv = fullEnv = 0; dsGain = 1; gEnvP = 0; gFloorDb = -90; gFloor.reset(); lFloor.reset(); gGain = 0.001f; gHang = 0; gOpen = true; gPrimed = false;
         lP = 0; lGainDb = 0; lGainLin = 1; lPrimed = false;
@@ -395,17 +393,6 @@ struct Chan {
                     out[i] = x - a * (1.f - dsGain) * b;
                 }
             } else { sib.reset(); sibEnv = fullEnv = 0; dsGain = 1; }
-        }
-        // 3b. equaliser: bass, treble and the graphic bands (audio_eq.h); fades in and out, nothing runs while it is flat or off
-        {
-            toneP.bass = s.eqBass; toneP.treble = s.eqTreble;
-            for (int k = 0; k < kEqBands; k++) toneP.band[(size_t)k] = s.eqBand[k];
-            toneP.clamp();
-            const float tgt = (s.eq && !toneP.flat()) ? 1.f : 0.f;
-            if (!toneW.idle(tgt)) {
-                tone.configure(toneP, rate);
-                for (int i = 0; i < n; i++) { const float a = toneW.step(tgt, cEq), x = out[i]; out[i] = x + a * (tone.tick(x) - x); }
-            } else tone.reset();
         }
         // 4. silence gate: mute below the tracked noise floor + offset, with a hang
         {
@@ -534,13 +521,6 @@ void AudioCleanupConfig::set(const AudioCleanupSettings& s) {
     neural = s.neural; neuralStrength = cl(s.neuralStrength, 0, 1);
     nr = s.nr; autoNotch = s.autoNotch; notch = s.notch; level = s.level; levelHold = s.levelHold; gate = s.gate; voice = s.voice; deess = s.deess;
     recCleaned = s.recCleaned; skipSilence = s.skipSilence;
-    {
-        EqParams e; e.bass = s.eqBass; e.treble = s.eqTreble;
-        for (int k = 0; k < kEqBands; k++) e.band[(size_t)k] = s.eqBand[k];
-        e.clamp();
-        eq = s.eq; eqBass = e.bass; eqTreble = e.treble;
-        for (int k = 0; k < kEqBands; k++) eqBand[k] = e.band[(size_t)k];
-    }
     master = s.master;
 }
 AudioCleanupSettings AudioCleanupConfig::get() const {
@@ -548,8 +528,6 @@ AudioCleanupSettings AudioCleanupConfig::get() const {
     s.master = master; s.neural = neural; s.neuralStrength = neuralStrength; s.nr = nr; s.nrStrength = nrStrength; s.autoNotch = autoNotch; s.notch = notch; s.notchHz = notchHz; s.notchWidth = notchWidth;
     s.level = level; s.levelTargetDb = levelTargetDb; s.levelAmount = levelAmount; s.levelHold = levelHold; s.gate = gate; s.gateOffsetDb = gateOffsetDb;
     s.voice = voice; s.voiceAmount = voiceAmount; s.deess = deess; s.deessAmount = deessAmount; s.recCleaned = recCleaned; s.skipSilence = skipSilence;
-    s.eq = eq; s.eqBass = eqBass; s.eqTreble = eqTreble;
-    for (int k = 0; k < kEqBands; k++) s.eqBand[k] = eqBand[k];
     return s;
 }
 
