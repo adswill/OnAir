@@ -2516,3 +2516,11 @@ DATV table: Es/N0 (the demodulator's own for the carrier being decoded, else est
 
 - Causes found with the verbose quick run (Linux): the receivers decode their own signals, the counts or the sweep did not. STANAG 4285 counted `blocks` only for MIL-STD-110 interleaver blocks: it now counts each start-of-message word out of the Viterbi decoder. HF beacons never filled `blocksOk`: it is now the number of beacons identified by their keying (conf 2). PSK demodulator counts sync words and the sweep gave it none: the sweep now enters 1ACFFC1D, the word its test frames carry (a user does the same). Weather fax counts pictures at the stop tone, which a 32 s signal never reaches: the sweep counts picture lines (>= 10). Meteor scatter decoded fine: the sweep stopped at 8 s on a bare lock although the mode needs a decode (`needsDecode` modes now run on to the longer files); its 12 dB row fails because the sweep's added noise lies 25 dB above where the generator sets the echoes (they sit over the clean file's floor): recorded in qa_known.inc as an unrealistic condition, not a decoder fault.
 - Removed the open entries of these five modes from qa_known.inc (the HF offset rows stay as unrealistic). CI of the last commit pending.
+
+## 2026-11-22: 4.6 small features, batch A (lane smallA)
+
+- #10 Export this session: one zip (summary, log CSV/KML/GPX, recordings list, settings without credentials, radio, optional location) from Tools > Backup and restore. Logic in `app/state/session_bundle.cpp`, test `session_bundle`.
+- #20 Share-ready snapshot: captioned PNG (frequency, mode, UTC time, optional place, OnAir version) from the Radio clips window, plus Copy caption. Test `share_snapshot`. The picture itself is not copied to the clipboard (the clipboard here is text only).
+- #13 Sound cues: optional tones for lock, lost lock, signal found, pass ended, all off by default, Settings > Notifications. Tracker and tones in `core/src/audio/sound_cues.cpp`, test `sound_cues`. The lock reading is the receiver's data-valid flag only.
+- #17 Equaliser: bass/treble shelves, 10-band graphic, presets, a stage in the cleanup chain (per kind of mode). Test `audio_eq`.
+- Written without a local build; checked by the gate and CI only. No web schema change (no core option struct touched). i18n: new keys added to all 14 catalogs (machine-written, not reviewed).
