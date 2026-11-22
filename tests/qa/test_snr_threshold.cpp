@@ -13,7 +13,7 @@
 //
 // This file only drives: it runs tools/sens/qa_sens.py (the generator and Engine stages are test_qa_sweep --gen / --run) and
 // tools/sens/snr_threshold_table.py (CSV + table). Not part of the fast CI: label "snr" only, not "slow" so the nightly -L slow skips it. Run through quick.yml, see scratchpad/SNR-BASELINE-4.6.md.
-//   env: SNR_OUT dir (default snr-out), SNR_RE mode-id regex, SNR_LIMIT first N modes (0 = all), SNR_JOBS (default 3), SNR_CAP seconds per mode (default 240)
+//   env: SNR_OUT dir (default snr-out), SNR_RE mode-id regex, SNR_LIMIT first N modes (0 = all), SNR_JOBS (default 3), SNR_CAP seconds per mode (default 240), SNR_NOISE_ONLY=1 (only the noise-only false-decode check: modes counting decodes on noise are flagged FALSE_DECODE and their threshold is not trusted)
 //   usage: test_snr_threshold <path of test_qa_sweep> <tools/sens dir>
 #include <cstdio>
 #include <cstdlib>
@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
     const std::string bin = argv[1], tools = argv[2], out = env("SNR_OUT", "snr-out");
     const std::string cmd = "python3 \"" + tools + "/qa_sens.py\" --bin \"" + bin + "\" --out \"" + out + "\" --re \"" + env("SNR_RE", ".*") +
                             "\" --limit " + env("SNR_LIMIT", "0") + " --jobs " + env("SNR_JOBS", "3") + " --trials 2 --secs 8 --hi 20 --lo -20" +
-                            " --mode-cap " + env("SNR_CAP", "240") + " --budget-min 300";
+                            " --mode-cap " + env("SNR_CAP", "240") + " --budget-min 300" + (getenv("SNR_NOISE_ONLY") ? " --noise-only" : "");
     printf("%s\n", cmd.c_str());
     fflush(stdout);
     if (system(cmd.c_str()) != 0) { fprintf(stderr, "qa_sens.py failed\n"); return 1; }

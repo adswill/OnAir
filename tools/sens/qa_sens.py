@@ -119,6 +119,16 @@ def sweep(a, md):
     out["ref"] = ref
     secs, kind, m0, zr = ref["secs"], ref["kind"], ref["m0"], ref["zero_res"]
     scen = {"awgn": "snr", "cfoclk": "pos", "offcentre": "neg"}
+    if a.noise_only:   # snr_threshold SNR_NOISE_ONLY: no signal, the seeds of the threshold run (1..trials), the units counted are false decodes
+        falses = []
+        for t in range(a.trials):
+            g = md.gen(0, t + 1, secs)
+            x = md.runf(g, secs, "noise", t + 1) if g else None
+            if x is not None: falses.append(metric(kind, x, zr) if kind != "lock" else (1 if x["locked"] else 0))
+        out["false_trials"] = len(falses); out["false_units"] = sum(max(0, f) for f in falses)
+        out["false_rate"] = (sum(1 for f in falses if f > 0) / len(falses)) if falses else None
+        out["thr"] = {"awgn": None, "cfoclk": None, "offcentre": None}
+        return out
     pts = {}       # snr -> {scenario: [pass per trial]}
     falses = []    # units counted on noise alone, per trial
     units = {}     # snr -> mean units in awgn
@@ -215,6 +225,7 @@ def main():
     ap.add_argument("--hi", type=float, default=24.0)
     ap.add_argument("--lo", type=float, default=-24.0)
     ap.add_argument("--false-at", type=float, default=6.0, help="noise-only runs at every point at or below this SNR")
+    ap.add_argument("--noise-only", action="store_true", help="only the noise-only (false decode) check per mode")
     ap.add_argument("--limit", type=int, default=0, help="measure only the first N selected modes (0: all)")
     ap.add_argument("--mode-cap", type=float, default=0, help="seconds after which a mode stops taking new SNR points (0: no cap)")
     ap.add_argument("--max-samples", type=float, default=4e7)
