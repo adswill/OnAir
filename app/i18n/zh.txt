@@ -9607,7 +9607,7 @@ Tracks the next pass of these satellites, starts the receiver by itself at the r
 Traffic announcement (TA)	交通公告（TA）
 Traffic map	交通地图
 Traffic programme (TP)	交通节目（TP）
-Train telemetry, 457.9 MHz	列尾设备遥测，457.9 MHz
+Train telemetry, 457.9 MHz	列车遥测，457.9 MHz
 Transcribe what I am listening to	转录我正在收听的内容
 Transcribing speech ...	正在转录语音……
 Transmission log	发射日志
