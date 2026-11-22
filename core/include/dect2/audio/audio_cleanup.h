@@ -28,7 +28,7 @@ struct AudioCleanupSettings {
     bool gate = false;  float gateOffsetDb = 9.f;                // mute below noise floor + offset
     bool voice = false; float voiceAmount = 0.6f;                // speech EQ
     bool deess = false; float deessAmount = 0.5f;
-    bool eq = false; float eqBass = 0, eqTreble = 0; float eqBand[kToneBands] = {};   // tone controls and graphic equaliser (audio_eq.h), dB
+    bool eq = false; float eqBass = 0, eqTreble = 0; float eqBand[kEqBands] = {};   // tone controls and graphic equaliser (audio_eq.h), dB
     bool recCleaned = false;       // "Record audio" saves the cleaned sound instead of the raw one
     bool skipSilence = false;      // with recCleaned: nothing is recorded while the gate is closed
 };
@@ -45,7 +45,7 @@ public:
     // fields read by the audio thread
     std::atomic<bool> master{false}, nr{false}, neural{false}, autoNotch{false}, notch{false}, level{false}, levelHold{true}, gate{false}, voice{false}, deess{false};
     std::atomic<bool> eq{false};
-    std::atomic<float> eqBass{0.f}, eqTreble{0.f}, eqBand[kToneBands] = {};
+    std::atomic<float> eqBass{0.f}, eqTreble{0.f}, eqBand[kEqBands] = {};
     std::atomic<bool> recCleaned{false}, skipSilence{false};
     std::atomic<float> nrStrength{0.5f}, neuralStrength{1.0f}, notchHz{1000.f}, notchWidth{0.5f}, levelTargetDb{-20.f}, levelAmount{0.7f}, gateOffsetDb{9.f},
         voiceAmount{0.6f}, deessAmount{0.5f};

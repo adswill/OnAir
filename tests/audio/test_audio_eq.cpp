@@ -14,7 +14,7 @@ static int fails = 0;
 using namespace dect2;
 
 // gain in dB of a sine through the equaliser, measured after the start-up
-static double measure(const ToneParams& p, double hz, float rate = 48000) {
+static double measure(const EqParams& p, double hz, float rate = 48000) {
     ToneEq e; e.configure(p, rate);
     const int n = (int)rate;
     double in = 0, out = 0;
@@ -28,7 +28,7 @@ static double measure(const ToneParams& p, double hz, float rate = 48000) {
 int main() {
     // flat_is_transparent
     {
-        ToneParams f; CHECK(f.flat());
+        EqParams f; CHECK(f.flat());
         ToneEq e; e.configure(f, 48000);
         float m = 0; for (int i = 0; i < 4800; i++) { const float x = 0.5f * (float)std::sin(0.05 * i); m = std::max(m, std::fabs(e.tick(x) - x)); }
         CHECK(m < 1e-6f);
@@ -36,51 +36,51 @@ int main() {
     }
     // bass_and_treble
     {
-        ToneParams p; p.bass = 12;
+        EqParams p; p.bass = 12;
         CHECK(std::fabs(measure(p, 40) - 12) < 2.0);       // well under the corner: about the full gain
         CHECK(std::fabs(measure(p, 3000)) < 0.7);
-        p = ToneParams(); p.treble = -12;
+        p = EqParams(); p.treble = -12;
         CHECK(std::fabs(measure(p, 14000) + 12) < 2.0);
         CHECK(std::fabs(measure(p, 500)) < 0.7);
     }
     // graphic_bands
     {
         for (int b = 2; b < 7; b++) {   // 125 Hz .. 2 kHz: the probe at 6 x the band stays under the Nyquist rate
-            ToneParams p; p.band[(size_t)b] = 9;
-            const double hz = kToneBandHz[b];
+            EqParams p; p.band[(size_t)b] = 9;
+            const double hz = kEqBandHz[b];
             CHECK(std::fabs(measure(p, hz) - 9) < 0.7);
             CHECK(std::fabs(measure(p, hz / 8)) < 2.0);
             CHECK(std::fabs(measure(p, hz * 6)) < 2.0);
         }
-        ToneParams c; c.band[5] = -12;
+        EqParams c; c.band[5] = -12;
         CHECK(std::fabs(measure(c, 1000) + 12) < 0.7);
     }
     // gains_are_clamped
     {
-        ToneParams p; p.bass = 40; p.treble = -40; p.band[3] = 99; p.band[4] = NAN;
+        EqParams p; p.bass = 40; p.treble = -40; p.band[3] = 99; p.band[4] = NAN;
         p.clamp();
         CHECK(p.bass == 12 && p.treble == -12 && p.band[3] == 12 && p.band[4] == 0);
     }
     // presets_sane
     {
-        CHECK(toneEqPresetParams(ToneEqPreset::Flat).flat());
-        for (int i = 0; i < (int)ToneEqPreset::Count; i++) {
-            const ToneParams q = toneEqPresetParams((ToneEqPreset)i);
+        CHECK(eqPresetParams(EqPreset::Flat).flat());
+        for (int i = 0; i < (int)EqPreset::Count; i++) {
+            const EqParams q = eqPresetParams((EqPreset)i);
             CHECK(q.bass >= -12 && q.bass <= 12 && q.treble >= -12 && q.treble <= 12);
             for (float g : q.band) CHECK(g >= -12 && g <= 12);
-            CHECK(toneEqPresetOf(q) == (ToneEqPreset)i);
-            CHECK(toneEqPresetName((ToneEqPreset)i)[0] != 0);
+            CHECK(eqPresetOf(q) == (EqPreset)i);
+            CHECK(eqPresetName((EqPreset)i)[0] != 0);
         }
-        CHECK(measure(toneEqPresetParams(ToneEqPreset::Voice), 50) < -6);       // voice: rumble down
-        CHECK(measure(toneEqPresetParams(ToneEqPreset::Voice), 3000) > 2);      // and presence up
-        CHECK(measure(toneEqPresetParams(ToneEqPreset::Hearing), 4000) > 4);
-        ToneParams own; own.band[2] = 7.f;
-        CHECK(toneEqPresetOf(own) == ToneEqPreset::Count);
+        CHECK(measure(eqPresetParams(EqPreset::Voice), 50) < -6);       // voice: rumble down
+        CHECK(measure(eqPresetParams(EqPreset::Voice), 3000) > 2);      // and presence up
+        CHECK(measure(eqPresetParams(EqPreset::Hearing), 4000) > 4);
+        EqParams own; own.band[2] = 7.f;
+        CHECK(eqPresetOf(own) == EqPreset::Count);
     }
     // stable_at_low_rates_and_extremes
     {
         for (float rate : {8000.f, 11025.f, 16000.f, 44100.f, 192000.f}) {
-            ToneParams p; p.bass = 12; p.treble = 12; for (float& g : p.band) g = 12;
+            EqParams p; p.bass = 12; p.treble = 12; for (float& g : p.band) g = 12;
             ToneEq e; e.configure(p, rate);
             bool ok = true; unsigned s = 1;
             for (int i = 0; i < 20000; i++) { s = s * 1664525u + 1013904223u; const float x = ((s >> 8) / 8388608.f - 1.f) * 0.5f; const float y = e.tick(x); if (!std::isfinite(y) || std::fabs(y) > 400.f) ok = false; }
