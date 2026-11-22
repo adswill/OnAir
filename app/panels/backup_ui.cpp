@@ -6,6 +6,9 @@
 #include "../i18n/i18n.h"
 #include "../ui/scale.h"
 #include "dect2/backup/backup.h"
+#include "../state/session_bundle.h"
+#include "../clips/clips.h"
+#include "dect2/source/iq_record.h"
 #include "dect2/common/u8file.h"
 #include <algorithm>
 #include <chrono>
@@ -364,6 +367,46 @@ std::string doRestore(State& s, bool dryRun) {
     return o;
 }
 
+// Tools > Backup and restore > Export this session: one zip for forum posts and logs (docs/SESSION-BUNDLE.md).
+std::string exportSession(App& a, bool withRec, bool withSet, bool withLoc) {
+    sessionbundle::Input in;
+    in.version = ONAIR_VERSION;
+    const double now = (double)std::time(nullptr);
+    in.t1 = now;
+    in.freqHz = a.freqMhz * 1e6;
+    in.sampleRateHz = a.engine.sampleRate();
+    in.device = a.gainDev.substr(0, a.gainDev.find(':'));   // the board name, not its serial number
+    std::string l1, l2;
+    if (const ModeUi* mu = modeUi(a.family)) if (mu->summary) mu->summary(a, l1, l2);
+    in.mode = l1.empty() ? dect2::recordingModeId(a.engine.standardMode()) : l1;
+    in.log = clips::tableLog().range({0, now + 1});
+    if (!in.log.epoch.empty()) in.t0 = in.log.epoch.front();
+    in.withRecordings = withRec; in.withSettings = withSet; in.withLocation = withLoc;
+    if (withRec) {
+        std::error_code ec;
+        for (fs::directory_iterator it(dect2::u8file(recordingsDir()), ec), e; !ec && it != e; it.increment(ec)) {
+            if (!it->is_regular_file(ec)) continue;
+            sessionbundle::Recording r;
+            r.name = it->path().filename().generic_string();
+            r.bytes = (uint64_t)fs::file_size(it->path(), ec);
+            const auto ft = fs::last_write_time(it->path(), ec);
+            if (!ec) r.mtime = (int64_t)std::chrono::duration_cast<std::chrono::seconds>(
+                (ft - fs::file_time_type::clock::now() + std::chrono::system_clock::now()).time_since_epoch()).count();
+            in.recordings.push_back(r);
+        }
+        std::sort(in.recordings.begin(), in.recordings.end(), [](const sessionbundle::Recording& x, const sessionbundle::Recording& y) { return x.name < y.name; });
+    }
+    if (withSet) in.prefs = collectPrefs();
+    if (withLoc && receiverLocationSet()) {
+        in.hasLocation = true;
+        in.lat = plat::prefs().getD("adsbLat", 0); in.lon = plat::prefs().getD("adsbLon", 0);
+        in.grid = plat::prefs().getS("setupLoc", "");
+    }
+    const std::string path = plat::saveFileDialog(sessionbundle::fileName((int64_t)now).c_str());
+    if (path.empty()) return "";
+    return bk::writeFileAtomic(path, sessionbundle::build(in)) ? std::string(tr("Saved")) + " " + path : std::string(tr("Could not write the file.")) + " " + path;
+}
+
 void helpText(const char* t) { if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr(t)); }
 
 } // namespace
@@ -481,6 +524,16 @@ void backupWindow(App& a) {
         if (s.confirmReplace) ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.25f, 1), "%s", tr("Click Restore now again to overwrite. A safety backup is made first."));
         if (!s.dry.empty()) ImGui::TextWrapped("%s", s.dry.c_str());
     }
+    ImGui::Spacing();
+    ImGui::SeparatorText(tr("Export this session"));
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextUnformatted(tr("One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included."));
+    ImGui::PopTextWrapPos();
+    static bool exRec = true, exSet = true, exLoc = false;
+    ImGui::Checkbox(tr("Recordings list"), &exRec);
+    ImGui::Checkbox(tr("Settings"), &exSet);
+    ImGui::Checkbox(tr("My location"), &exLoc);
+    if (ImGui::Button(tr("Export this session..."))) { const std::string r = exportSession(a, exRec, exSet, exLoc); if (!r.empty()) { s.msg = r; s.msgBad = false; } }
     if (!s.msg.empty()) {
         ImGui::Spacing();
         if (s.msgBad) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.45f, 0.40f, 1));

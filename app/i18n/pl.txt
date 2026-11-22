@@ -3652,3 +3652,25 @@ Maybe later	Może później
 Don't ask again	Nie pytaj więcej
 Star reminder	Przypomnienie o gwiazdce
 Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.	Od czasu do czasu mała karta pyta, czy dasz OnAir gwiazdkę na GitHubie. Wyłączone: nigdy się nie pokazuje. Nic nie jest wysyłane.
+Export this session	Eksportuj tę sesję
+Export this session...	Eksportuj tę sesję…
+One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Jeden zip z zdekodowanym dziennikiem (CSV, KML, GPX), listą nagrań, ustawieniami, radiem i podsumowaniem tekstowym. Przydatny na forach i w zgłoszeniach błędów. Dane logowania i foldery nigdy nie są dołączane.
+Recordings list	Lista nagrań
+My location	Moja lokalizacja
+Snapshot of the spectrum and waterfall	Zrzut widma i wodospadu
+Place (optional, shown in the caption)	Miejsce (opcjonalnie, w podpisie)
+Save snapshot...	Zapisz zrzut…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	PNG z tym, co teraz pokazują widmo i wodospad, z częstotliwością, trybem, czasem i wersją OnAir w podpisie.
+Copy caption	Kopiuj podpis
+Copied: paste it with the picture	Skopiowano: wklej razem z obrazem
+Nothing to save: no waterfall yet	Nic do zapisania: brak wodospadu
+Sound cue: locked	Dźwięk: zsynchronizowano
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Krótki rosnący dźwięk, gdy dekoder się zsynchronizuje. Domyślnie wyłączone. Respektuje wyciszenie i godziny ciszy.
+Sound cue: lost lock	Dźwięk: utrata synchronizacji
+A short falling tone when a decoder that was locked loses lock. Off by default.	Krótki opadający dźwięk, gdy zsynchronizowany dekoder traci synchronizację. Domyślnie wyłączone.
+Sound cue: signal found	Dźwięk: znaleziono sygnał
+Two short high beeps when the scanner finds a signal. Off by default.	Dwa krótkie wysokie sygnały, gdy skaner znajdzie sygnał. Domyślnie wyłączone.
+Sound cue: pass ended	Dźwięk: przelot zakończony
+Three falling tones when a tracked satellite pass ends. Off by default.	Trzy opadające dźwięki, gdy kończy się śledzony przelot satelity. Domyślnie wyłączone.
+Sound cue volume (%)	Głośność dźwięków (%)
+How loud the cue tones are, as a share of the program volume.	Jak głośne są dźwięki, jako część głośności programu.

@@ -822,6 +822,8 @@ void passiveRadarWindow(App& a);                    // passive_ui.cpp: the passi
 void dfWindow(App& a);                              // df_ui.cpp: the direction finder window (a.dfOpen), every frame
 bool dfMapLine(const App& a, DfMapLine& out);       // df_ui.cpp: the current bearing as a map line, only when the user chose to share it and it is fresh and confident
 void satnogsWindow(App& a);                        // satnogs_ui.cpp: the SatNOGS DB transmitter browser window (a.satnogsOpen), every frame
+bool passesRunActive();                            // passes_ui.cpp: a tracked satellite pass is under way (the pass-ended sound cue)
+void soundCuesTick(App& a);                        // sound_cues_ui.cpp: once a frame; the optional lock / signal / pass tones (docs/SOUND-CUES.md)
 void passesWindow(App& a);                         // passes_ui.cpp: the satellite pass planner window (a.passesOpen) and its tracking, every frame
 void memoryWindow(App& a);                         // memory_ui.cpp: the Memory window (a.memoryOpen), the Ctrl+M key, the scan of the flagged memories, every frame
 void datasetsWindow(App& a);                        // datasets_ui.cpp: the Datasets window (a.datasetsOpen), every frame

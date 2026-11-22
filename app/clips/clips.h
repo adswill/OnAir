@@ -104,7 +104,17 @@ std::string utcText(double t, bool seconds = false);                // "2026-10-
 std::string buildHtml(const Content& c);                           // one file, no scripts, no external requests
 std::string discordText(const Content& c);                         // ready to paste markdown
 Image composite(const Content& c);                                 // spectrogram + caption strip with the watermark, width 1024
-std::string fileStem(const Meta& m);                               // "onair_adsb_1090MHz_20261017-143200"
+std::string fileStem(const Meta& m);
+// ASCII text in the built-in 5x7 font at scale s (other characters '?'); returns the width in pixels. measureOnly draws nothing.
+int drawText(Image& im, int x, int y, const std::string& t, int s, uint32_t rgb, bool measureOnly = false);
+std::string asciiOnly(std::string s);                               // the text with non-ASCII characters dropped (the font has no more)
+
+// ---- share-ready snapshot (docs/SNAPSHOT.md): spectrum trace over the waterfall, a caption strip, ready to post ----
+struct SnapCaption { std::string mode, place, version; double freqHz = 0, epoch = 0; };   // place: optional, empty = not shown
+std::string snapCaption(const SnapCaption& c);                      // "ADS-B @ 1090 MHz | 2026-11-22 14:03 UTC | Dubai | OnAir 4.6.0"
+// levels: nRows x w bytes (0..255, indexes lut256 as 0xAABBGGRR), row 0 the newest. Row 0 is also drawn as the spectrum trace. Width outW.
+Image shareSnapshot(const std::vector<uint8_t>& levels, int w, int nRows, const uint32_t* lut256, const SnapCaption& cap, int outW = 1280);
+std::string snapshotFileName(const SnapCaption& c);                 // "onair_ads-b_1090MHz_20261122-140300.png"
 
 struct Written { std::string dir, html, zip; std::vector<std::string> files; uint64_t htmlBytes = 0, zipBytes = 0, discordPngBytes = 0; std::string error; };
 // Writes the clip folder `parent/<stem>/` (files per the Want flags) and the zip next to it. Never throws.

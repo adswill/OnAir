@@ -3634,3 +3634,25 @@ Maybe later	Forse più tardi
 Don't ask again	Non chiedere più
 Star reminder	Promemoria stella
 Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.	Ogni tanto una piccola scheda chiede se vuoi dare una stella a OnAir su GitHub. Disattivato: non appare mai. Non viene inviato nulla.
+Export this session	Esporta questa sessione
+Export this session...	Esporta questa sessione…
+One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Uno zip con il registro decodificato (CSV, KML, GPX), l'elenco delle registrazioni, le impostazioni, la radio e un riepilogo di testo. Utile per forum e segnalazioni. Credenziali e cartelle non sono mai incluse.
+Recordings list	Elenco registrazioni
+My location	La mia posizione
+Snapshot of the spectrum and waterfall	Istantanea di spettro e cascata
+Place (optional, shown in the caption)	Luogo (facoltativo, nella didascalia)
+Save snapshot...	Salva istantanea…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	Un PNG di ciò che mostrano ora spettro e cascata, con frequenza, modo, ora e versione di OnAir nella didascalia.
+Copy caption	Copia didascalia
+Copied: paste it with the picture	Copiato: incollalo con l'immagine
+Nothing to save: no waterfall yet	Niente da salvare: ancora nessuna cascata
+Sound cue: locked	Segnale acustico: agganciato
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Un breve tono crescente quando un decodificatore si aggancia. Disattivato di default. Segue Muto e le ore di silenzio.
+Sound cue: lost lock	Segnale acustico: aggancio perso
+A short falling tone when a decoder that was locked loses lock. Off by default.	Un breve tono discendente quando un decodificatore agganciato perde l'aggancio. Disattivato di default.
+Sound cue: signal found	Segnale acustico: segnale trovato
+Two short high beeps when the scanner finds a signal. Off by default.	Due brevi bip acuti quando lo scanner trova un segnale. Disattivato di default.
+Sound cue: pass ended	Segnale acustico: passaggio finito
+Three falling tones when a tracked satellite pass ends. Off by default.	Tre toni discendenti quando finisce un passaggio satellitare seguito. Disattivato di default.
+Sound cue volume (%)	Volume dei segnali acustici (%)
+How loud the cue tones are, as a share of the program volume.	Quanto sono forti i segnali, come quota del volume del programma.

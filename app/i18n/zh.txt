@@ -11208,3 +11208,24 @@ Maybe later	以后再说
 Don't ask again	不再询问
 Star reminder	星标提醒
 Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.	偶尔会有一张小卡片询问你是否愿意在 GitHub 上为 OnAir 加星标。关闭：永不显示。不会发送任何内容。
+Export this session	导出本次会话
+Export this session...	导出本次会话…
+One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	一个 zip，包含解码日志（CSV、KML、GPX）、录音列表、设置、电台信息和文字摘要。适合发到论坛或提交问题报告。不包含凭据和文件夹路径。
+Recordings list	录音列表
+Snapshot of the spectrum and waterfall	频谱和瀑布图快照
+Place (optional, shown in the caption)	地点（可选，显示在说明中）
+Save snapshot...	保存快照…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	当前频谱和瀑布图的 PNG，说明中含频率、模式、时间和 OnAir 版本。
+Copy caption	复制说明
+Copied: paste it with the picture	已复制：与图片一起粘贴
+Nothing to save: no waterfall yet	没有可保存的内容：还没有瀑布图
+Sound cue: locked	提示音：已锁定
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	解码器锁定时播放一声短促的升调。默认关闭。遵循静音和安静时段。
+Sound cue: lost lock	提示音：失锁
+A short falling tone when a decoder that was locked loses lock. Off by default.	已锁定的解码器失锁时播放一声短促的降调。默认关闭。
+Sound cue: signal found	提示音：发现信号
+Two short high beeps when the scanner finds a signal. Off by default.	扫描器发现信号时发出两声短促的高音。默认关闭。
+Sound cue: pass ended	提示音：过境结束
+Three falling tones when a tracked satellite pass ends. Off by default.	跟踪的卫星过境结束时播放三声降调。默认关闭。
+Sound cue volume (%)	提示音音量（%）
+How loud the cue tones are, as a share of the program volume.	提示音的响度，占程序音量的比例。

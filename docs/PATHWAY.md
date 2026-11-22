@@ -2520,3 +2520,11 @@ DATV table: Es/N0 (the demodulator's own for the carrier being decoded, else est
 
 - Rules in core (`star_prompt.h/.cpp`, test `star_prompt`): never on the first launch, shows after the third launch or the first good decode, once per session, never after Star or Don't ask again, "Maybe later" returns at most twice (30, then 60 days), no network and no browser in the logic.
 - App hook `app/ui/star_card.cpp`: prefs `starLaunches`, `starDecoded`, `starChoice`, `starShown`, `starLater`, `starLastDay`; a non-modal corner card after 20 s; the browser opens only on "Star on GitHub". Switch `starPromptOn` in Settings > General next to "Start the receiver when OnAir starts". "Good decode" is approximated by the receiver running two minutes in one go (no common decode signal across modes). Six i18n keys in all 14 catalogs. CI pending.
+
+## 2026-11-22: 4.6 small features, batch A (lane smallA)
+
+- #10 Export this session: one zip (summary, log CSV/KML/GPX, recordings list, settings without credentials, radio, optional location) from Tools > Backup and restore. Logic in `app/state/session_bundle.cpp`, test `session_bundle`.
+- #20 Share-ready snapshot: captioned PNG (frequency, mode, UTC time, optional place, OnAir version) from the Radio clips window, plus Copy caption. Test `share_snapshot`. The picture itself is not copied to the clipboard (the clipboard here is text only).
+- #13 Sound cues: optional tones for lock, lost lock, signal found, pass ended, all off by default, Settings > Notifications. Tracker and tones in `core/src/audio/sound_cues.cpp`, test `sound_cues`. The lock reading is the receiver's data-valid flag only.
+- #17 Equaliser: dropped (a 5-band equaliser already exists in the Audio control panel); see scratchpad/EQ-FOLLOWUP-4.6.md.
+- Written without a local build; checked by the gate and CI only. No web schema change (no core option struct touched). i18n: new keys added to all 14 catalogs (machine-written, not reviewed).

@@ -287,6 +287,15 @@ void alertNow(App& a, const std::string& title, const std::string& body, bool so
     if (sound && soundsOn()) { std::string note; playSound(a, "", note); }
 }
 
+void playCue(App& a, const std::vector<float>& tone, float gain) {
+    if (tone.empty() || !soundsOn() || a.muted || a.volume <= 0.001f) return;
+    if (!gBeep) gBeep = new dect2::AudioOut();
+    if (!gBeep->running() && !gBeep->start(48000)) return;
+    gBeep->setVolume(std::min(1.f, a.volume) * std::min(1.f, std::max(0.f, gain)));
+    gBeep->setMuted(false);
+    gBeep->write(tone.data(), (int)(tone.size() / 2));
+}
+
 ActionSink& sink() {
     static AppSink s;
     return s;

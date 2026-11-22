@@ -3681,3 +3681,25 @@ Maybe later	Belki sonra
 Don't ask again	Bir daha sorma
 Star reminder	Yıldız hatırlatması
 Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.	Ara sıra küçük bir kart, OnAir'e GitHub'da yıldız vermek isteyip istemediğinizi sorar. Kapalı: hiç görünmez. Hiçbir şey gönderilmez.
+Export this session	Bu oturumu dışa aktar
+Export this session...	Bu oturumu dışa aktar…
+One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Çözülmüş kayıt (CSV, KML, GPX), kayıt listeniz, ayarlar, telsiz ve metin özeti içeren tek bir zip. Forum gönderileri ve hata raporları için uygundur. Kimlik bilgileri ve klasörler asla eklenmez.
+Recordings list	Kayıt listesi
+My location	Konumum
+Snapshot of the spectrum and waterfall	Spektrum ve şelale anlık görüntüsü
+Place (optional, shown in the caption)	Yer (isteğe bağlı, alt yazıda)
+Save snapshot...	Anlık görüntüyü kaydet…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	Spektrum ve şelalenin şimdiki görüntüsü; alt yazıda frekans, mod, zaman ve OnAir sürümü.
+Copy caption	Alt yazıyı kopyala
+Copied: paste it with the picture	Kopyalandı: resimle birlikte yapıştırın
+Nothing to save: no waterfall yet	Kaydedilecek bir şey yok: henüz şelale yok
+Sound cue: locked	Sesli işaret: kilitlendi
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Bir çözücü kilitlendiğinde kısa yükselen bir ses. Varsayılan olarak kapalı. Sessiz ve sessiz saatleri izler.
+Sound cue: lost lock	Sesli işaret: kilit kaybı
+A short falling tone when a decoder that was locked loses lock. Off by default.	Kilitli bir çözücü kilidi kaybettiğinde kısa alçalan bir ses. Varsayılan olarak kapalı.
+Sound cue: signal found	Sesli işaret: sinyal bulundu
+Two short high beeps when the scanner finds a signal. Off by default.	Tarayıcı bir sinyal bulduğunda iki kısa tiz bip. Varsayılan olarak kapalı.
+Sound cue: pass ended	Sesli işaret: geçiş bitti
+Three falling tones when a tracked satellite pass ends. Off by default.	İzlenen bir uydu geçişi bittiğinde üç alçalan ses. Varsayılan olarak kapalı.
+Sound cue volume (%)	Sesli işaret ses düzeyi (%)
+How loud the cue tones are, as a share of the program volume.	Sesli işaretlerin ne kadar yüksek olduğu, program ses düzeyinin bir oranı olarak.

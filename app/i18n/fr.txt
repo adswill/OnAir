@@ -3650,3 +3650,25 @@ Maybe later	Plus tard
 Don't ask again	Ne plus demander
 Star reminder	Rappel de l'étoile
 Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.	De temps en temps, une petite carte demande si vous voulez mettre une étoile à OnAir sur GitHub. Désactivé : elle ne s'affiche jamais. Rien n'est envoyé.
+Export this session	Exporter cette session
+Export this session...	Exporter cette session…
+One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Un zip avec le journal décodé (CSV, KML, GPX), la liste de vos enregistrements, les réglages, la radio et un résumé texte. Pratique pour les forums et les rapports de bogue. Identifiants et dossiers ne sont jamais inclus.
+Recordings list	Liste des enregistrements
+My location	Ma position
+Snapshot of the spectrum and waterfall	Instantané du spectre et de la cascade
+Place (optional, shown in the caption)	Lieu (facultatif, dans la légende)
+Save snapshot...	Enregistrer l'instantané…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	Un PNG de ce que montrent le spectre et la cascade, avec fréquence, mode, heure et version d'OnAir en légende.
+Copy caption	Copier la légende
+Copied: paste it with the picture	Copié : collez-le avec l'image
+Nothing to save: no waterfall yet	Rien à enregistrer : pas encore de cascade
+Sound cue: locked	Signal sonore : verrouillé
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Un court son montant quand un décodeur se verrouille. Désactivé par défaut. Suit Muet et les heures calmes.
+Sound cue: lost lock	Signal sonore : verrouillage perdu
+A short falling tone when a decoder that was locked loses lock. Off by default.	Un court son descendant quand un décodeur verrouillé perd le verrouillage. Désactivé par défaut.
+Sound cue: signal found	Signal sonore : signal trouvé
+Two short high beeps when the scanner finds a signal. Off by default.	Deux courts bips aigus quand le scanner trouve un signal. Désactivé par défaut.
+Sound cue: pass ended	Signal sonore : passage terminé
+Three falling tones when a tracked satellite pass ends. Off by default.	Trois sons descendants à la fin d'un passage de satellite suivi. Désactivé par défaut.
+Sound cue volume (%)	Volume des signaux sonores (%)
+How loud the cue tones are, as a share of the program volume.	Le volume des signaux, en part du volume du programme.

@@ -1884,6 +1884,8 @@ void passesMapSatellites(std::vector<MapSatRef>& out) {
     for (const Sat& s : S.sats) if (s.onMap) out.push_back({s.name, s.norad, &s.sgp});
 }
 
+bool passesRunActive() { return S.run.active(); }
+
 void passesWindow(App& a) {
     loadState();
     const bool cardShown = nowSec() - S.cardAt < 3;

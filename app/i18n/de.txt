@@ -4581,3 +4581,25 @@ Maybe later	Vielleicht später
 Don't ask again	Nicht mehr fragen
 Star reminder	Stern-Erinnerung
 Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.	Hin und wieder fragt eine kleine Karte, ob du OnAir auf GitHub einen Stern geben möchtest. Aus: Sie erscheint nie. Es wird nichts gesendet.
+Export this session	Diese Sitzung exportieren
+Export this session...	Diese Sitzung exportieren …
+One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Eine Zip-Datei mit dem dekodierten Protokoll (CSV, KML, GPX), der Liste Ihrer Aufnahmen, den Einstellungen, dem Funkgerät und einer Textzusammenfassung. Gut für Forenbeiträge und Fehlerberichte. Zugangsdaten und Ordner sind nie enthalten.
+Recordings list	Aufnahmeliste
+My location	Mein Standort
+Snapshot of the spectrum and waterfall	Schnappschuss von Spektrum und Wasserfall
+Place (optional, shown in the caption)	Ort (optional, steht in der Beschriftung)
+Save snapshot...	Schnappschuss speichern …
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	Ein PNG von Spektrum und Wasserfall, mit Frequenz, Betriebsart, Zeit und OnAir-Version als Beschriftung.
+Copy caption	Beschriftung kopieren
+Copied: paste it with the picture	Kopiert: zusammen mit dem Bild einfügen
+Nothing to save: no waterfall yet	Nichts zu speichern: noch kein Wasserfall
+Sound cue: locked	Tonsignal: eingerastet
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Ein kurzer steigender Ton, wenn ein Decoder einrastet. Standardmäßig aus. Folgt Stumm und Ruhezeiten.
+Sound cue: lost lock	Tonsignal: Verbindung verloren
+A short falling tone when a decoder that was locked loses lock. Off by default.	Ein kurzer fallender Ton, wenn ein eingerasteter Decoder das Signal verliert. Standardmäßig aus.
+Sound cue: signal found	Tonsignal: Signal gefunden
+Two short high beeps when the scanner finds a signal. Off by default.	Zwei kurze hohe Pieptöne, wenn der Scanner ein Signal findet. Standardmäßig aus.
+Sound cue: pass ended	Tonsignal: Überflug beendet
+Three falling tones when a tracked satellite pass ends. Off by default.	Drei fallende Töne, wenn ein verfolgter Satellitenüberflug endet. Standardmäßig aus.
+Sound cue volume (%)	Lautstärke der Tonsignale (%)
+How loud the cue tones are, as a share of the program volume.	Wie laut die Signaltöne sind, als Anteil der Programmlautstärke.

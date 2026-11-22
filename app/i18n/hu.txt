@@ -3631,3 +3631,25 @@ Maybe later	Talán később
 Don't ask again	Ne kérdezz többet
 Star reminder	Csillag-emlékeztető
 Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.	Időnként egy kis kártya megkérdezi, adnál-e csillagot az OnAirnek a GitHubon. Kikapcsolva: soha nem jelenik meg. Semmi sem kerül elküldésre.
+Export this session	A munkamenet exportálása
+Export this session...	Munkamenet exportálása…
+One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Egyetlen zip a dekódolt naplóval (CSV, KML, GPX), a felvételek listájával, a beállításokkal, a rádióval és egy szöveges összefoglalóval. Fórumbejegyzésekhez és hibajelentésekhez jó. Hitelesítő adatok és mappák soha nem kerülnek bele.
+Recordings list	Felvételek listája
+My location	Saját helyem
+Snapshot of the spectrum and waterfall	Pillanatkép a spektrumról és a vízesésről
+Place (optional, shown in the caption)	Hely (nem kötelező, a feliratban)
+Save snapshot...	Pillanatkép mentése…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	PNG a spektrum és a vízesés mostani képéről; a feliratban frekvencia, mód, idő és az OnAir verziója.
+Copy caption	Felirat másolása
+Copied: paste it with the picture	Másolva: illessze be a képpel együtt
+Nothing to save: no waterfall yet	Nincs mit menteni: még nincs vízesés
+Sound cue: locked	Hangjelzés: rázárt
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Rövid emelkedő hang, amikor a dekóder rázár. Alapból kikapcsolva. Követi a némítást és a csendes órákat.
+Sound cue: lost lock	Hangjelzés: rázárás elveszett
+A short falling tone when a decoder that was locked loses lock. Off by default.	Rövid süllyedő hang, amikor egy rázárt dekóder elveszíti a rázárást. Alapból kikapcsolva.
+Sound cue: signal found	Hangjelzés: jel találva
+Two short high beeps when the scanner finds a signal. Off by default.	Két rövid magas sípszó, amikor a szkenner jelet talál. Alapból kikapcsolva.
+Sound cue: pass ended	Hangjelzés: átvonulás vége
+Three falling tones when a tracked satellite pass ends. Off by default.	Három süllyedő hang, amikor egy követett műholdátvonulás véget ér. Alapból kikapcsolva.
+Sound cue volume (%)	Hangjelzések hangereje (%)
+How loud the cue tones are, as a share of the program volume.	Milyen hangosak a jelzések a program hangerejének arányában.

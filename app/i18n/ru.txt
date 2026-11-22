@@ -3636,3 +3636,25 @@ Maybe later	Может, позже
 Don't ask again	Больше не спрашивать
 Star reminder	Напоминание о звезде
 Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.	Время от времени небольшая карточка спрашивает, не поставите ли вы OnAir звезду на GitHub. Выкл.: никогда не показывается. Ничего не отправляется.
+Export this session	Экспорт этого сеанса
+Export this session...	Экспорт сеанса…
+One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	Один zip с журналом декодирования (CSV, KML, GPX), списком записей, настройками, радио и текстовой сводкой. Удобно для форумов и отчётов об ошибках. Учётные данные и папки не включаются никогда.
+Recordings list	Список записей
+My location	Моё местоположение
+Snapshot of the spectrum and waterfall	Снимок спектра и водопада
+Place (optional, shown in the caption)	Место (необязательно, в подписи)
+Save snapshot...	Сохранить снимок…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	PNG с текущим спектром и водопадом; в подписи частота, режим, время и версия OnAir.
+Copy caption	Копировать подпись
+Copied: paste it with the picture	Скопировано: вставьте вместе с картинкой
+Nothing to save: no waterfall yet	Нечего сохранять: водопада ещё нет
+Sound cue: locked	Звуковой сигнал: захват
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	Короткий восходящий тон при захвате сигнала декодером. По умолчанию выключено. Учитывает «Без звука» и тихие часы.
+Sound cue: lost lock	Звуковой сигнал: потеря захвата
+A short falling tone when a decoder that was locked loses lock. Off by default.	Короткий нисходящий тон, когда декодер теряет захват. По умолчанию выключено.
+Sound cue: signal found	Звуковой сигнал: сигнал найден
+Two short high beeps when the scanner finds a signal. Off by default.	Два коротких высоких сигнала, когда сканер находит сигнал. По умолчанию выключено.
+Sound cue: pass ended	Звуковой сигнал: пролёт окончен
+Three falling tones when a tracked satellite pass ends. Off by default.	Три нисходящих тона, когда заканчивается отслеживаемый пролёт спутника. По умолчанию выключено.
+Sound cue volume (%)	Громкость сигналов (%)
+How loud the cue tones are, as a share of the program volume.	Громкость сигналов как доля громкости программы.

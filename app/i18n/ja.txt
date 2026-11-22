@@ -3646,3 +3646,25 @@ Maybe later	あとで
 Don't ask again	今後は表示しない
 Star reminder	スターのお願い
 Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.	ときどき、GitHubでOnAirにスターを付けるかどうか小さなカードで尋ねます。オフ：表示しません。何も送信されません。
+Export this session	このセッションを書き出す
+Export this session...	このセッションを書き出す…
+One zip with the decoded log (CSV, KML, GPX), a list of your recordings, settings, the radio and a text summary. Good for forum posts and bug reports. Credentials and folders are never included.	デコードしたログ (CSV, KML, GPX)、録音一覧、設定、無線機、テキスト概要を1つのzipにまとめます。フォーラム投稿や不具合報告に便利です。認証情報とフォルダは含まれません。
+Recordings list	録音一覧
+My location	自分の位置
+Snapshot of the spectrum and waterfall	スペクトルとウォーターフォールのスナップショット
+Place (optional, shown in the caption)	場所（任意、キャプションに表示）
+Save snapshot...	スナップショットを保存…
+A PNG of what the spectrum and waterfall show now, with frequency, mode, time and the OnAir version in a caption.	現在のスペクトルとウォーターフォールのPNG。周波数、モード、時刻、OnAirのバージョンをキャプションに入れます。
+Copy caption	キャプションをコピー
+Copied: paste it with the picture	コピーしました。画像と一緒に貼り付けてください
+Nothing to save: no waterfall yet	保存するものがありません：ウォーターフォールがまだありません
+Sound cue: locked	効果音：ロック
+A short rising tone when a decoder locks. Off by default. Follows Mute and quiet hours.	デコーダーがロックしたとき、短い上昇音を鳴らします。初期設定はオフ。ミュートとサイレント時間に従います。
+Sound cue: lost lock	効果音：ロック喪失
+A short falling tone when a decoder that was locked loses lock. Off by default.	ロックしていたデコーダーがロックを失ったとき、短い下降音を鳴らします。初期設定はオフ。
+Sound cue: signal found	効果音：信号検出
+Two short high beeps when the scanner finds a signal. Off by default.	スキャナーが信号を見つけたとき、短い高音を2回鳴らします。初期設定はオフ。
+Sound cue: pass ended	効果音：パス終了
+Three falling tones when a tracked satellite pass ends. Off by default.	追跡中の衛星パスが終わったとき、下降音を3回鳴らします。初期設定はオフ。
+Sound cue volume (%)	効果音の音量（%）
+How loud the cue tones are, as a share of the program volume.	効果音の大きさ（プログラム音量に対する割合）。
