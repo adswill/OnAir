@@ -2483,6 +2483,9 @@ if(DECT2_BUILD_TESTS)
     add_executable(test_synth_media tests/source/test_synth_media.cpp)   # Synthetic content: the picture and sound files carried by the test signals of DVB-T, analog TV, FM and SSTV
     target_link_libraries(test_synth_media PRIVATE dect2core ${CMAKE_DL_LIBS})
     add_test(NAME synth_media COMMAND test_synth_media)
+    add_executable(test_synth_audio_stream tests/source/test_synth_audio_stream.cpp)   # a long sound file is streamed, not cut or held whole: in step after seek, loop, restart, sample rates
+    target_link_libraries(test_synth_audio_stream PRIVATE dect2core ${CMAKE_DL_LIBS})
+    add_test(NAME synth_audio_stream COMMAND test_synth_audio_stream)
     add_executable(test_tx_mux tests/tx/test_tx_mux.cpp)   # TV transmit, multi-programme mux: the programmes and their timing through the real TX and RX chain (#454)
     target_link_libraries(test_tx_mux PRIVATE dect2core ${CMAKE_DL_LIBS})
     add_test(NAME tx_mux COMMAND test_tx_mux)
