@@ -65,4 +65,3 @@ T2-Lite does not allow these parameters (EN 302 755 annex I): no 1K or 32K FFT, 
 The modes that would carry it have no C/N figure in the standards (T2-Lite code rates 1/3 and 2/5: TS 102 831 tables 44 and 45 start at 1/2), so they are not proposed.
 T2-Lite carries at most 4 Mbit/s for a programme (EN 302 755 annex I.10): lower the bitrate, or choose T2-Base.
 A code rate of T2-Lite only (EN 302 755 annex I, table I.1): set the profile to T2-Lite or Any.
-T2-Lite carries at most
