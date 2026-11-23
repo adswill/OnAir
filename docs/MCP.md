@@ -105,7 +105,7 @@ All frequencies are in MHz. Every tool has a typed JSON schema (`tools/list`).
 | `start_recording`, `stop_recording`, `get_recording_status` | IQ or audio recording (app host); file name only |
 | `search_frequencies` | the frequency database by words, mode, region |
 | `get_band_plan` | what the built-in band plans say about a frequency |
-| `get_codec_status` | which user-installed voice codecs exist (installed or not; no path); OnAir ships none, see [CODECS.md](CODECS.md) |
+| `get_codec_status` | which user-installed voice codecs exist: installed, loaded and, when installed but not loaded, why (`status`: `notice_required`, `load_failed`, ...; no path); OnAir ships none, see [CODECS.md](CODECS.md) |
 | `tx_status`, `tx_start`, `tx_stop` | **only with the transmit switch on** |
 
 ### How `auto_decode` decides

@@ -5,6 +5,7 @@
 // the callsigns and data are decoded without it. A fake plug-in file and opener stand in for the real codec (OnAir ships none).
 #include "fusion_test_util.h"
 #include "dect2/codec/speech_codec.h"
+#include "dect2/nxdn/nxdn_ambe.h"
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -37,6 +38,7 @@ int main() {
         Log log;
         FusionReceiver r;
         r.setSilent(true);
+        r.setMbeFallback(false);   // the plug-in, not the user's mbelib
         size_t tapped = 0; int tapRate = 0;
         r.setAudioTap([&](const float* x, size_t n, int sr) { (void)x; tapped += n; tapRate = sr; });
         r.setSpeechCodec(std::make_unique<FakeCodec>(&log));
@@ -61,6 +63,7 @@ int main() {
         p.dt = 2; p.commFrames = 8; p.src = "LY1ABC"; p.dest = "CQCQCQ"; p.slow = "no codec here";
         FusionReceiver r;
         r.setSilent(true);
+        r.setMbeFallback(false);   // the plug-in, not the user's mbelib
         size_t tapped = 0;
         r.setAudioTap([&](const float*, size_t n, int) { tapped += n; });
         run(r, signal({p}, 0, 25));
@@ -69,6 +72,20 @@ int main() {
         CHECK(t.codecText == "codec not installed", "text '%s'", t.codecText.c_str());
         CHECK(t.voiceSubFrames == 40, "voice sub-frames counted: %llu", (unsigned long long)t.voiceSubFrames);
         CHECK(t.src == "LY1ABC" && t.slowText.find("no codec here") != std::string::npos, "data without codec: '%s' '%s'", t.src.c_str(), t.slowText.c_str());
+    }
+
+    // silent (no sound device, as in onair-server) still decodes V/D mode 1 through the user's mbelib when there is no plug-in
+    {
+        GenParams p;
+        p.dt = 0; p.commFrames = 6;
+        FusionReceiver r;
+        r.setSilent(true);
+        size_t tapped = 0;
+        r.setAudioTap([&](const float*, size_t n, int) { tapped += n; });
+        run(r, signal({p}, 0, 25));
+        const FusionTelemetry t = last(r);
+        if (nxdnAmbeAvailable()) CHECK(t.voiceDecoded == 30 && tapped == 30 * 160, "silent: V/D mode 1 through mbelib: %llu frames", (unsigned long long)t.voiceDecoded);
+        else CHECK(t.voiceDecoded == 0 && tapped == 0, "no mbelib, no plug-in: no audio");
     }
 
     // the loader gate: no file -> not installed; file but no notice -> the notice; accepted -> ready, and the receiver then uses it
@@ -91,6 +108,7 @@ int main() {
         p.dt = 0; p.commFrames = 6;
         FusionReceiver r;
         r.setSilent(true);
+        r.setMbeFallback(false);   // the plug-in, not the user's mbelib
         r.setSpeechCodec(std::move(c));
         run(r, signal({p}, 0, 25));
         CHECK(log.frames.size() == 30, "frames through the loaded plug-in: %zu", log.frames.size());

@@ -11,6 +11,7 @@ namespace {
 std::mutex gMu;
 struct Slot { DecoderFactory f; std::string path; };
 std::map<std::string, Slot>& slots() { static std::map<std::string, Slot> m; return m; }
+std::map<std::string, CodecLookup>& lookups() { static std::map<std::string, CodecLookup> m; return m; }
 }
 
 const std::vector<CodecInfo>& codecTable() {
@@ -74,6 +75,44 @@ std::string pluginStatusLine(const std::string& id, const std::string& folder) {
     std::string p;
     if (pluginLoaded(id, &p)) return "Codec plug-in loaded: " + p;
     return "Codec plug-in not found. OnAir looks for " + speechCodecFileName(id) + " in " + folder + " (Windows onair-codec-" + id + ".dll, macOS .dylib, Linux .so).";
+}
+
+void notePluginLookup(const std::string& id, const CodecLookup& r) {
+    std::lock_guard<std::mutex> lk(gMu);
+    lookups()[id] = r;
+}
+
+bool lastPluginLookup(const std::string& id, CodecLookup& out) {
+    std::lock_guard<std::mutex> lk(gMu);
+    const auto it = lookups().find(id);
+    if (it == lookups().end()) return false;
+    out = it->second;
+    return true;
+}
+
+std::vector<std::string> registerAcceptedPlugins(const std::vector<std::string>& folders, const std::function<bool(const std::string&)>& accepted,
+                                                 const PluginLookupLog& onLookup, const CodecOpener& opener) {
+    std::vector<std::string> added;
+    for (const CodecInfo& c : codecTable()) {
+        if (c.kind != CodecKind::Patented || !*c.id || pluginLoaded(c.id)) continue;
+        const std::string id = c.id;
+        std::unique_ptr<SpeechCodec> probe;
+        const CodecLookup r = loadSpeechCodecInDirs(id, folders, accepted && accepted(id), probe, opener);
+        CodecLookup before;
+        const bool seen = lastPluginLookup(id, before);
+        notePluginLookup(id, r);
+        if (onLookup && (!seen || before.status != r.status || before.message != r.message)) onLookup(id, r);
+        if (r.status != CodecStatus::Ready) continue;
+        probe.reset();
+        // every decoder (one per slot / speaker) is a new instance of the plug-in, from the folder it was found in
+        setPluginFactory(id, [id, folder = r.folder, opener]() {
+            std::unique_ptr<SpeechCodec> d;
+            loadSpeechCodec(id, folder, true, d, opener);
+            return d;
+        }, r.path);
+        added.push_back(id);
+    }
+    return added;
 }
 
 } // namespace dect2::codec

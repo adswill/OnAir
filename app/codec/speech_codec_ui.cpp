@@ -147,6 +147,7 @@ dect2::codec::CodecLookup speechCodecPoll(const char* id, std::unique_ptr<dect2:
     lastAt[codec] = now;
     const dect2::codec::CodecLookup r = dect2::codec::loadSpeechCodecInDirs(codec, codecSearchPaths(), accepted, out);
     last[codec] = r;
+    dect2::codec::notePluginLookup(codec, r);   // get_codec_status (MCP) says why an installed plug-in is not in use
     // Log the reason whenever it changes, so a user with no audio can send the line.
     if (lastLogged[codec] != r.message) {
         lastLogged[codec] = r.message;

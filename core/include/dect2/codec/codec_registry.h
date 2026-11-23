@@ -47,4 +47,17 @@ std::unique_ptr<SpeechCodec> pluginVocoder(const std::string& id);
 // The text of the install helper: what is loaded or missing and the exact file name looked for on this OS.
 std::string pluginStatusLine(const std::string& id, const std::string& folder);
 
+// The last lookup of each plug-in (made by the app's voice screens or by registerAcceptedPlugins), so that get_codec_status and the server's
+// browser app can say why an installed plug-in is not in use: the notice is not accepted, or the file would not load.
+void notePluginLookup(const std::string& id, const CodecLookup& r);
+bool lastPluginLookup(const std::string& id, CodecLookup& out);
+
+// For a program with no window (onair-server), which has no notice dialog: every patented codec of codecTable() whose plug-in is in `folders`
+// and whose notice the user accepted (accepted(id), from the settings file or the browser app) is registered with setPluginFactory, as the app
+// does after its dialog. Codecs that are registered already are skipped. Each lookup is noted (notePluginLookup); onLookup is called when a
+// codec's result differs from the one noted before. Returns the ids registered by this call.
+using PluginLookupLog = std::function<void(const std::string& id, const CodecLookup& r)>;
+std::vector<std::string> registerAcceptedPlugins(const std::vector<std::string>& folders, const std::function<bool(const std::string&)>& accepted,
+                                                 const PluginLookupLog& onLookup = {}, const CodecOpener& opener = {});
+
 } // namespace dect2::codec

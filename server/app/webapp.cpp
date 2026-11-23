@@ -344,6 +344,11 @@ bool WebApp::api(const AppRequest& r, AppReply& out) {
             json(out, 200, settingsJson());
             return true;
         }
+        if (p == "codecs") {   // the voice codec plug-ins: what is installed and whose notice the owner still has to accept (docs/CODECS.md)
+            if (!sessions_.maySettings(w)) { err(out, 403, "owner only"); return true; }
+            json(out, 200, host_.codecsJson());
+            return true;
+        }
         if (p == "viewers") {
             if (!sessions_.maySettings(w)) { err(out, 403, "owner only"); return true; }
             json(out, 200, "{\"viewers\":" + std::to_string(viewers_.load()) + ",\"connections\":" + std::to_string(conns_.load()) + ",\"sessions\":" + std::to_string(sessions_.count()) + "}");
@@ -361,6 +366,14 @@ bool WebApp::api(const AppRequest& r, AppReply& out) {
         std::string j = "{\"ok\":true,\"changed\":[";
         for (size_t i = 0; i < changed.size(); i++) { if (i) j += ','; j += jsonStr(changed[i]); }
         json(out, 200, j + "]}");
+        return true;
+    }
+    if (p == "codecs/accept") {   // the owner accepts the speech codec notice for one plug-in, as in the desktop app's dialog
+        if (!sessions_.maySettings(w)) { err(out, 403, "owner only"); return true; }
+        std::string id, e;
+        strArg(body, "id", id);
+        if (!host_.acceptCodecNotice(id, e)) { err(out, 400, e); return true; }
+        json(out, 200, host_.codecsJson());
         return true;
     }
     if (p == "option") {   // a mode option (web_options.h): the owner only, it changes how the receiver decodes for everyone
