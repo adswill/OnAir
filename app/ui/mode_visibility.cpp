@@ -46,12 +46,14 @@ std::vector<std::string> groupModes(int g) {
 
 void modeVisibilityLoad(App& a) {
     modevis::Rules r;
+    a.modeGroupsOpen = modegroups::migrateList(a.modeGroupsOpen);   // 4.5 group names -> the 4.6 groups that took over their modes (mode_groups.h)
     if (modevis::readFile(filePath(), r)) {   // the file is written at every change, so it is the newer of the two
         a.modeHidden = modevis::joinList(r.hiddenModes); a.modeHiddenGroups = modevis::joinList(r.hiddenGroups);
         a.modeFavs = modevis::joinList(r.favs); a.modeFavsOnly = r.favsOnly;
     } else if (!a.modeHidden.empty() || !a.modeHiddenGroups.empty() || !a.modeFavs.empty() || a.modeFavsOnly) {   // from settings.conf only (an older version): make the file
-        r.hiddenModes = modevis::parseList(a.modeHidden); r.hiddenGroups = modevis::parseList(a.modeHiddenGroups);
+        r.hiddenModes = modevis::parseList(a.modeHidden); r.hiddenGroups = modegroups::migrate(modevis::parseList(a.modeHiddenGroups));
         r.favs = modevis::parseList(a.modeFavs); r.favsOnly = a.modeFavsOnly;
+        a.modeHiddenGroups = modevis::joinList(r.hiddenGroups);
         modevis::writeFile(filePath(), r);
     }
 }

@@ -66,7 +66,7 @@ for line in body.splitlines():
 gm = re.search(r'kGroupNames\[kNumGroups\]\s*=\s*\{(.*?)\};', src, re.S)
 groups = re.findall(r'"((?:[^"\\]|\\.)*)"', gm.group(1))
 cm = re.search(r'kGroupCols\[kNumGroups\]\s*=\s*\{(.*?)\};', src, re.S)
-cols = [(int(a) << 16) | (int(b) << 8) | int(c) | 0xFF000000 for a, b, c in re.findall(r'IM_COL32\((\d+),\s*(\d+),\s*(\d+),\s*255\)', cm.group(1))]
+cols = [(int(a) << 16) | (int(b) << 8) | int(c) | 0xFF000000 for a, b, c in re.findall(r'(?:IM_COL32|rgb)\((\d+),\s*(\d+),\s*(\d+)(?:,\s*255)?\)', cm.group(1))]
 assert len(groups) == len(cols), (len(groups), len(cols))
 print(len(modes), 'modes', len(groups), 'groups')
 

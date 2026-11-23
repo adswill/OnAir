@@ -17,7 +17,7 @@ int main() {
     const dect2::ModeTuning mt = dect2::bganTuning();
     CHECK(mt.stdMode == 247 && dect2::modeTuningById("bgan") && dect2::modeTuningById("bgan")->stdMode == 247 && dect2::modeTuning(247), "tuning table");
     const std::string tbl = readFile("app/ui/mode_table.cpp");
-    CHECK(has(tbl, "{245, \"Inmarsat BGAN\", 4,") && has(tbl, "Needs a user test") && has(tbl, "no subscriber identity"), "mode row names the limits");
+    CHECK(has(tbl, "{245, \"Inmarsat BGAN\", 7,") && has(tbl, "Needs a user test") && has(tbl, "no subscriber identity"), "mode row names the limits");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case 245: return &kBganUi;"), "panel hook");
     { const std::string a = readFile("app/app.h"); const size_t q = a.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(a.c_str() + q + 29) >= 246, "kNumFamilies"); }
     { const std::string e = readFile("core/include/dect2/engine/engine.h"); const size_t q = e.find("kPollSeqSlots = "); CHECK(q != std::string::npos && atoi(e.c_str() + q + 16) >= 206, "kPollSeqSlots"); }

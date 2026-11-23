@@ -14,9 +14,9 @@ static Item mk(const char* name, int g, const char* text, bool hidden = false, b
 }
 int main() {
     std::vector<Item> v = {
-        mk("FM", 1, "broadcast radio fm stereo"), mk("ADS-B", 2, "aircraft 1090 mhz"), mk("AIS", 3, "ship transponders 162"),
-        mk("FT8", 10, "weak signal ft8 hf", false, true), mk("APRS", 11, "packet aprs 144", true), mk("DAB", 1, "digital radio", true, false, true),
-        mk("Marine VHF", 3, "voice channel 16"), mk("Plugin X", 14, "plugin"),
+        mk("FM", 1, "broadcast radio fm stereo"), mk("ADS-B", modegroups::AircraftDatalinks, "aircraft 1090 mhz"), mk("AIS", modegroups::Maritime, "ship transponders 162"),
+        mk("FT8", modegroups::AmateurWeak, "weak signal ft8 hf", false, true), mk("APRS", modegroups::AmateurVoicePacket, "packet aprs 144", true), mk("DAB", 1, "digital radio", true, false, true),
+        mk("Marine VHF", modegroups::Maritime, "voice channel 16"), mk("Plugin X", modegroups::Plugins, "plugin"),
     };
     Query q;
     check(filter(v, q).size() == 7, "hidden APRS leaves the list, active DAB stays");
@@ -33,7 +33,7 @@ int main() {
     q = Query(); q.tab = TabFav; check(filter(v, q).size() == 1 && v[filter(v, q)[0]].name == "FT8", "favourites tab");
     q = Query(); q.group = 1; check(filter(v, q).size() == 2, "rail group");
     check(countWithTag(v, Query(), 1) == 1 && countWithTag(v, Query(), 3) == 1, "chip counts");
-    {   Item e = mk("ADS-B", 2, "aircraft"); e.text += " " + squash("ADS-B"); check(textMatches(e.text, "adsb") && textMatches(e.text, "ads-b"), "adsb finds ADS-B"); }
+    {   Item e = mk("ADS-B", modegroups::AircraftDatalinks, "aircraft"); e.text += " " + squash("ADS-B"); check(textMatches(e.text, "adsb") && textMatches(e.text, "ads-b"), "adsb finds ADS-B"); }
     // recent
     std::vector<std::string> r;
     for (int i = 0; i < 15; i++) recentPush(r, "m" + std::to_string(i));
@@ -65,10 +65,11 @@ int main() {
     check(moveFocus(s, 3, 0, Left) == 0 && moveFocus(s, 3, 7, Right) == 7, "left/right clamp");
     check(moveFocus({}, 3, 0, Down) == 0, "empty");
     // tags
-    check(tagsOf(2, "ADS-B") & TAviation, "aviation group tag");
-    check(tagsOf(3, "Marine VHF") & TVoice, "name override");
-    check(tagsOf(14, "x") == TPlugins, "plugin group");
-    for (int g = 0; g < 17; g++) check(g == 13 || g == 16 || tagsOfGroup(g) != 0, "every group but General/Custom has a tag");
+    check(tagsOf(modegroups::AircraftDatalinks, "ADS-B") & TAviation, "aviation group tag");
+    check(tagsOf(modegroups::Maritime, "Marine VHF") & TVoice, "name override");
+    check(tagsOf(modegroups::Plugins, "x") == TPlugins, "plugin group");
+    for (int g = 0; g < modegroups::kCount; g++) check((g >= modegroups::Receivers && g <= modegroups::Interference) || g == modegroups::CustomModes || tagsOfGroup(g) != 0, "every group but the tools and Custom has a tag");
+    check((tagsOfGroup(modegroups::WeatherSatsLow) & TSatellite) && (tagsOfGroup(modegroups::WeatherSatsHigh) & TWeather) && (tagsOfGroup(modegroups::Science) & TWeather), "weather satellites are under both chips");
     printf(fails ? "%d FAILED\n" : "mode picker: all ok\n", fails);
     return fails ? 1 : 0;
 }

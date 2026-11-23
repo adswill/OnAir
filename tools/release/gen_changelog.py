@@ -50,13 +50,17 @@ SKIP_FAMILIES = (999, 19999)
 def count_modes(rows):
     return len([r for r in rows if r[0] not in SKIP_FAMILIES])
 
-README_GROUPS = [   # README row -> mode_table group names
-    ('TV', ['TV']), ('Broadcast radio', ['BROADCAST RADIO']), ('Aviation', ['AVIATION']),
-    ('Maritime', ['MARITIME']), ('Satellite and navigation', ['SATELLITE & NAVIGATION']),
+README_GROUPS = [   # README row -> mode_table group names (the README keeps its 14 topics; 4.6 split the table's 17 groups into 35)
+    ('TV', ['TV']), ('Broadcast radio', ['BROADCAST RADIO']),
+    ('Aviation', ['AIRCRAFT DATALINKS', 'NAVAIDS & RADAR', 'DRONES & LIGHT AVIATION']),
+    ('Maritime', ['MARITIME']),
+    ('Satellite and navigation', ['NAVIGATION', 'MOBILE & DATA SATELLITES', 'CUBESATS & SMALL SATS', 'RESCUE & TRACKING', 'WEATHER SATS - LOW RATE']),
     ('Two-way radio', ['TWO-WAY RADIO']), ('Cellular and rail', ['CELLULAR & RAIL']), ('Pagers', ['PAGERS']),
-    ('IoT and sensors', ['IoT & SENSORS']), ('Weather and science', ['WEATHER & SCIENCE']),
-    ('Amateur', ['AMATEUR - DIGITAL', 'AMATEUR - VOICE & PACKET']), ('HF utility', ['HF UTILITY']),
-    ('Tools', ['GENERAL & TOOLS']), ('KA family (own modes)', ['Kris custom modes'])]
+    ('IoT and sensors', ['SMART DEVICES & RFID', 'MESH & LORA', 'RADIO CONTROL & DRONES', 'WIRELESS NETWORKS', 'VEHICLES & ROADS']),
+    ('Weather and science', ['WEATHER SATS - HIGH RATE', 'WEATHER & SONDES', 'SCIENCE & SENSING']),
+    ('Amateur', ['AMATEUR - WEAK SIGNAL', 'AMATEUR - TEXT MODES', 'AMATEUR - IMAGES & DATA', 'AMATEUR - VOICE & PACKET']),
+    ('HF utility', ['HF DATA', 'HF TELEGRAPH & FSK', 'HF MONITORING']),
+    ('Tools', ['RECEIVERS & ANALYSERS', 'METERS', 'INTERFERENCE HUNTING']), ('KA family (own modes)', ['Kris custom modes'])]
 
 def readme_rows(rows, groups):
     out = {}

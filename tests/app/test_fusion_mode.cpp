@@ -31,7 +31,7 @@ int main() {
     CHECK(dect2::modeTuningById("fusion") != nullptr, "not found by id");
 
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(has(table, "{128, \"Yaesu Fusion\", 11,"), "mode row for family 128 missing (group 11, with D-STAR and M17)");
+    CHECK(has(table, "{128, \"Yaesu Fusion\", 25,"), "mode row for family 128 missing (group 11, with D-STAR and M17)");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case 128: return &kFusionUi;"), "family 128 not mapped to kFusionUi");
     const std::string appH = readFile("app/app.h");
     const size_t at = appH.find("constexpr int kNumFamilies = ");

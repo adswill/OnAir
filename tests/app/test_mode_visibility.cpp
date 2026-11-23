@@ -50,6 +50,17 @@ int main() {
     check(!h.count("MARITIME") && !h.count("SATELLITE & NAVIGATION") && h.count("TV"), "marine");
     h = presetHiddenGroups("Broadcast", gr);
     check(!h.count("TV") && !h.count("BROADCAST RADIO") && h.count("MARITIME"), "broadcast");
+    {   // the 4.6 group names: the presets still keep and hide the right ones
+        const std::vector<std::string> g6 = {"TV", "AIRCRAFT DATALINKS", "NAVAIDS & RADAR", "DRONES & LIGHT AVIATION", "RESCUE & TRACKING", "NAVIGATION", "CUBESATS & SMALL SATS", "WEATHER SATS - LOW RATE", "AMATEUR - WEAK SIGNAL",
+                                             "AMATEUR - TEXT MODES", "HF DATA", "METERS", "RECEIVERS & ANALYSERS", "INTERFERENCE HUNTING", "PLUGINS"};
+        auto a6 = presetHiddenGroups("Aviation", g6);
+        check(!a6.count("AIRCRAFT DATALINKS") && !a6.count("NAVAIDS & RADAR") && !a6.count("DRONES & LIGHT AVIATION") && !a6.count("RECEIVERS & ANALYSERS") && !a6.count("METERS") && a6.count("HF DATA") && a6.count("TV"), "aviation, 4.6 names");
+        auto m6 = presetHiddenGroups("Marine", g6);
+        check(!m6.count("NAVIGATION") && !m6.count("CUBESATS & SMALL SATS") && !m6.count("WEATHER SATS - LOW RATE") && !m6.count("INTERFERENCE HUNTING") && m6.count("TV") && m6.count("AMATEUR - WEAK SIGNAL"), "marine, 4.6 names");
+        auto h6 = presetHiddenGroups("Ham", g6);
+        check(!h6.count("AMATEUR - WEAK SIGNAL") && !h6.count("AMATEUR - TEXT MODES") && !h6.count("METERS") && h6.count("HF DATA") && h6.count("NAVIGATION"), "ham, 4.6 names");
+        Rules old; check(fromText("hiddenModes=\nhiddenGroups=HF UTILITY|TV\nfavs=\nfavsOnly=0\n", old) && old.hiddenGroups.count("HF DATA") && old.hiddenGroups.count("HF MONITORING") && old.hiddenGroups.count("TV") && !old.hiddenGroups.count("HF UTILITY"), "a saved file with 4.5 group names is moved");
+    }
     check(presetHiddenGroups("Everything", gr).empty() && presetHiddenGroups("nope", gr).empty(), "everything");
     Rules p; p.favs.insert("F"); p.favsOnly = true; p.hiddenModes.insert("m");
     applyPreset(p, "Marine", gr);
@@ -57,7 +68,7 @@ int main() {
     check(containsNoCase("Aviation", "avi") && containsNoCase("x", ""), "search");
     {   // the saved copy: text round trip, the file on disk (a fresh "start" reads it back), the replace-refused path, a file that is not ours
         Rules a;
-        a.hiddenModes = {"DVB-T2", "ADS-B", "FM (stereo)"}; a.hiddenGroups = {"AMATEUR - DIGITAL", "PLUGINS"}; a.favs = {"DAB+"}; a.favsOnly = true;
+        a.hiddenModes = {"DVB-T2", "ADS-B", "FM (stereo)"}; a.hiddenGroups = {"AMATEUR - WEAK SIGNAL", "PLUGINS"}; a.favs = {"DAB+"}; a.favsOnly = true;
         Rules b;
         check(fromText(toText(a), b) && b.hiddenModes == a.hiddenModes && b.hiddenGroups == a.hiddenGroups && b.favs == a.favs && b.favsOnly, "text round trip");
         check(fromText(toText(Rules()), b) && isDefault(b), "default round trip");

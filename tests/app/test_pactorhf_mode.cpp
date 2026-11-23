@@ -29,7 +29,7 @@ int main() {
     CHECK(dect2::modeTuningById("pactor3") && dect2::modeTuningById("pactor3")->stdMode == 240 && dect2::modeTuning(240), "PACTOR-III tuning table");
     CHECK(dect2::modeTuningById("pactor4") && dect2::modeTuningById("pactor4")->stdMode == 241 && dect2::modeTuning(241), "PACTOR-IV tuning table");
     const std::string tbl = readFile("app/ui/mode_table.cpp");
-    CHECK(has(tbl, "{237, \"PACTOR-II\", 12,") && has(tbl, "{238, \"PACTOR-III\", 12,") && has(tbl, "{239, \"PACTOR-IV\", 12,"), "mode rows");
+    CHECK(has(tbl, "{237, \"PACTOR-II\", 26,") && has(tbl, "{238, \"PACTOR-III\", 26,") && has(tbl, "{239, \"PACTOR-IV\", 26,"), "mode rows");
     CHECK(has(tbl, "proprietary (SCS) and not published, so no text is produced"), "mode rows name the limit");
     const std::string mu = readFile("app/panels/modeui.cpp");
     CHECK(has(mu, "case 237: return &kPactor2Ui;") && has(mu, "case 238: return &kPactor3Ui;") && has(mu, "case 239: return &kPactor4Ui;"), "panel hooks");

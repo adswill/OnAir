@@ -26,7 +26,7 @@ int main() {
     const dect2::ModeTuning mt = dect2::rprTuning();
     CHECK(mt.stdMode == 901 && dect2::modeTuningById("rpr") && dect2::modeTuningById("rpr")->stdMode == 901 && dect2::modeTuning(901), "tuning table");
     const std::string tbl = readFile("app/ui/mode_table.cpp");
-    CHECK(has(tbl, "{899, \"Robust Packet (RPR, needs a user test)\", 12,"), "mode row");
+    CHECK(has(tbl, "{899, \"Robust Packet (RPR, needs a user test)\", 26,"), "mode row");
     CHECK(has(tbl, "needs a recording") && has(tbl, "not public"), "mode row names the limit");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case 899: return &kRprUi;"), "panel hook");
     { const std::string a = readFile("app/app.h"); const size_t q = a.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(a.c_str() + q + 29) >= 900, "kNumFamilies"); }

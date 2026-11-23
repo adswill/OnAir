@@ -29,7 +29,7 @@ int main() {
     if (reg) CHECK(std::string(reg->name) == "HF waveform ID", "registered name '%s'", reg->name);
 
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(table.find("{145, \"HF waveform ID\", 12,") != std::string::npos, "mode row for family 145 missing");
+    CHECK(table.find("{145, \"HF waveform ID\", 28,") != std::string::npos, "mode row for family 145 missing");
     const std::string appH = readFile("app/app.h");
     { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) >= 146, "kNumFamilies does not cover family 145"); }
     const std::string modeUi = readFile("app/panels/modeui.cpp");

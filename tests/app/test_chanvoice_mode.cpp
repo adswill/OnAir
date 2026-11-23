@@ -35,7 +35,7 @@ int main() {
         CHECK(chv::familyOf((chv::Service)i) == fam, "familyOf %d", i);
     }
     const std::string table = readFile("app/ui/mode_table.cpp");
-    for (const char* n : {"{340, \"CB radio\", 5,", "{341, \"FRS / GMRS\", 5,", "{342, \"PMR446 analog\", 5,", "{343, \"Ham FM repeaters\", 11,", "{344, \"HFGCS / HF voice\", 12,", "{345, \"MDC-1200\", 5,", "{346, \"Wireless mic finder\", 5,", "{347, \"Kenwood FleetSync\", 5,"})
+    for (const char* n : {"{340, \"CB radio\", 14,", "{341, \"FRS / GMRS\", 14,", "{342, \"PMR446 analog\", 14,", "{343, \"Ham FM repeaters\", 25,", "{344, \"HFGCS / HF voice\", 28,", "{345, \"MDC-1200\", 14,", "{346, \"Wireless mic finder\", 14,", "{347, \"Kenwood FleetSync\", 14,"})
         CHECK(table.find(n) != std::string::npos, "mode row missing: %s", n);
     const std::string appH = readFile("app/app.h");
     { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) >= 348, "kNumFamilies does not cover family 347"); }

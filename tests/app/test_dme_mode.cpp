@@ -25,7 +25,7 @@ int main() {
     };
 
     const std::string table = readSource("app/ui/mode_table.cpp");
-    need("app/ui/mode_table.cpp", table, "{121, \"DME\", 2,");
+    need("app/ui/mode_table.cpp", table, "{121, \"DME\", 3,");
 
     const std::string modeui = readSource("app/panels/modeui.cpp");
     need("app/panels/modeui.cpp", modeui, "case 121: return &kDmeUi;");

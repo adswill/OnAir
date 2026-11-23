@@ -31,7 +31,7 @@ int main() {
 
     // the mode row, the family count and the screen mapping in the app source
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(table.find("{120, \"DGPS beacon\", 4,") != std::string::npos, "mode row for family 120 missing");
+    CHECK(table.find("{120, \"DGPS beacon\", 6,") != std::string::npos, "mode row for family 120 missing");
     const std::string appH = readFile("app/app.h");
     { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) >= 121, "kNumFamilies does not cover family 120"); }
     const std::string modeUi = readFile("app/panels/modeui.cpp");

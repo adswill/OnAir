@@ -29,7 +29,7 @@ int main() {
     CHECK(m && m->minSampleRate <= 250000 && m->sampleRate >= 6.5e6, "rates");
 
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(table.find("{155, \"Marine VHF\", 3,") != std::string::npos, "mode row for family 155 missing (Maritime group)");
+    CHECK(table.find("{155, \"Marine VHF\", 5,") != std::string::npos, "mode row for family 155 missing (Maritime group)");
     const std::string appH = readFile("app/app.h");
     { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) >= 156, "kNumFamilies does not cover family 148"); }
     CHECK(appH.find("void marineVhfJump(App& a, int channel") != std::string::npos, "marineVhfJump not declared");

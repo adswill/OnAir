@@ -210,18 +210,37 @@ Video	映像
 #  the mode list: group names
 TV	テレビ
 BROADCAST RADIO	放送ラジオ
-AVIATION	航空
 MARITIME	海上
-SATELLITE & NAVIGATION	衛星・航法
 TWO-WAY RADIO	業務無線
 CELLULAR & RAIL	携帯電話・鉄道
 PAGERS	ポケットベル
-IoT & SENSORS	IoT・センサー
-WEATHER & SCIENCE	気象・科学
-AMATEUR - DIGITAL	アマチュア無線 - デジタル
 AMATEUR - VOICE & PACKET	アマチュア無線 - 音声・パケット
-HF UTILITY	HF 業務通信
 GENERAL & TOOLS	一般・ツール
+AIRCRAFT DATALINKS	航空機データリンク
+NAVAIDS & RADAR	航法援助・レーダー
+DRONES & LIGHT AVIATION	ドローン・軽航空機
+NAVIGATION	航法
+MOBILE & DATA SATELLITES	移動体・データ衛星
+CUBESATS & SMALL SATS	キューブサット・小型衛星
+RESCUE & TRACKING	捜索救難・追跡
+WEATHER SATS - LOW RATE	気象衛星 - 低レート
+WEATHER SATS - HIGH RATE	気象衛星 - 高レート
+WEATHER & SONDES	気象・ゾンデ
+SCIENCE & SENSING	科学・観測
+SMART DEVICES & RFID	スマート機器・RFID
+MESH & LORA	メッシュ・LoRa
+RADIO CONTROL & DRONES	ラジコン・ドローン
+WIRELESS NETWORKS	無線ネットワーク
+VEHICLES & ROADS	車両・道路
+AMATEUR - WEAK SIGNAL	アマチュア無線 - 微弱信号
+AMATEUR - TEXT MODES	アマチュア無線 - テキスト
+AMATEUR - IMAGES & DATA	アマチュア無線 - 画像・データ
+HF DATA	HF データ
+HF TELEGRAPH & FSK	HF 電信・FSK
+HF MONITORING	HF 監視
+RECEIVERS & ANALYSERS	受信機・アナライザー
+METERS	メーター
+INTERFERENCE HUNTING	干渉探索
 #  the mode list: short descriptions (the mode names stay protocol names)
 T2 and T, automatic	T2 と T、自動
 8-VSB, North America	8-VSB、北米

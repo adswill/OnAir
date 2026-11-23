@@ -4,6 +4,7 @@
 // The Mode Browser's pure logic (no ImGui, no mode table): tags, the filter, the grid layout, keyboard moves, the recent list and the
 // "does my radio fit this mode" check. app/ui/mode_picker.cpp draws it; tests/app/test_mode_picker.cpp tests it.
 #pragma once
+#include "mode_groups.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -27,26 +28,26 @@ inline const char* tagName(int i) {
 // "needs" bits: shown as a note on the preview card, never blocking
 enum Need : uint8_t { NDish = 1, NWideRadio = 2, NPlugin = 4, NCodec = 8, NCable = 16, NActiveAnt = 32 };
 
-// kGroupNames order (mode_table.cpp): 0 TV, 1 BROADCAST RADIO, 2 AVIATION, 3 MARITIME, 4 SATELLITE & NAVIGATION, 5 TWO-WAY RADIO,
-// 6 CELLULAR & RAIL, 7 PAGERS, 8 IoT & SENSORS, 9 WEATHER & SCIENCE, 10 AMATEUR - DIGITAL, 11 AMATEUR - VOICE & PACKET, 12 HF UTILITY,
-// 13 GENERAL & TOOLS, 14 PLUGINS, 15 Kris custom modes, 16 CUSTOM MODES
+// the chips a group is under (the group numbers are modegroups::Id in mode_groups.h, the order of kGroupNames in mode_table.cpp). Every built-in
+// group is under at least one chip but the three that hold the general tools and the custom modes, which have their own tabs and the search.
 inline uint32_t tagsOfGroup(int g) {
+    using namespace modegroups;
     switch (g) {
-        case 0: return TTv | TBroadcast;
-        case 1: return TBroadcast;
-        case 2: return TAviation | TData;
-        case 3: return TMarine | TData;
-        case 4: return TSatellite;
-        case 5: return TVoice;
-        case 6: return TData;
-        case 7: return TData;
-        case 8: return TSensors | TData;
-        case 9: return TWeather;
-        case 10: return TAmateur | TData | THf;
-        case 11: return TAmateur | TVoice;
-        case 12: return THf | TData;
-        case 14: return TPlugins;
-        case 15: return TData;
+        case TV: return TTv | TBroadcast;
+        case BroadcastRadio: return TBroadcast;
+        case AircraftDatalinks: case NavaidsRadar: case DronesLightAviation: return TAviation | TData;
+        case Maritime: return TMarine | TData;
+        case Navigation: case MobileDataSats: case CubeSats: case RescueTracking: return TSatellite;
+        case WeatherSatsLow: case WeatherSatsHigh: return TSatellite | TWeather;
+        case WeatherSondes: case Science: return TWeather;
+        case TwoWayRadio: return TVoice;
+        case CellularRail: case Pagers: return TData;
+        case SmartDevices: case MeshLora: case RadioControl: case WirelessNetworks: case VehiclesRoads: return TSensors | TData;
+        case AmateurWeak: case AmateurText: case AmateurImages: return TAmateur | TData | THf;
+        case AmateurVoicePacket: return TAmateur | TVoice;
+        case HfData: case HfTelegraph: case HfMonitoring: return THf | TData;
+        case Plugins: return TPlugins;
+        case KrisCustom: return TData;
         default: return 0;
     }
 }

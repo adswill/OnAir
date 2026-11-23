@@ -15,6 +15,7 @@
 #include "gfx/tune_stat.h"
 #include "gfx/autolabel_logic.h"
 #include "i18n/i18n.h"
+#include "ui/mode_groups.h"
 #include "state/fm_saved.h"
 #include "state/recdir.h"
 
@@ -1245,7 +1246,7 @@ inline bool isCustomFamily(int f) { return f >= kCustomFamilyBase && f < kCustom
 bool addCustomModeRow(int family, const std::string& name, const std::string& blurb, const std::string& sub);   // a row in the CUSTOM MODES group (updates the texts of an existing one)
 struct ModeRange { const ModeDef* b; const ModeDef* e; const ModeDef* begin() const { return b; } const ModeDef* end() const { return e; } };
 inline ModeRange allModes() { return {kModes, kModes + kNumModes}; }   // for (const auto& m : allModes())
-constexpr int kNumGroups = 17;   // the headings of the mode lists (mode_table.cpp); UI only, never saved by number
+constexpr int kNumGroups = 35;   // the headings of the mode lists (mode_table.cpp, ui/mode_groups.h); UI only, never saved by number, saved lists hold names
 extern const char* const kGroupNames[kNumGroups];
 extern const ImU32 kGroupCols[kNumGroups];
 // The screens of a mode added after FM (family 6 and up). Each mode has one in its app/<mode>_ui.cpp and modeui.cpp lists them; the shell calls whichever

@@ -25,7 +25,7 @@ static bool has(const std::string& s, const char* t) { return s.find(t) != std::
 int main() {
     const dect2::ModeTuning mt = dect2::inmsatTuning();
     CHECK(mt.stdMode == 210 && dect2::modeTuningById("inmsat") && dect2::modeTuningById("inmsat")->stdMode == 210 && dect2::modeTuning(210), "tuning table");
-    CHECK(has(readFile("app/ui/mode_table.cpp"), "{208, \"Inmarsat (all carriers)\", 4,"), "mode row");
+    CHECK(has(readFile("app/ui/mode_table.cpp"), "{208, \"Inmarsat (all carriers)\", 7,"), "mode row");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case 208: return &kInmsatUi;"), "panel hook");
     { const std::string a = readFile("app/app.h"); const size_t q = a.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(a.c_str() + q + 29) >= 209, "kNumFamilies"); }
     { const std::string e = readFile("core/include/dect2/engine/engine.h"); const size_t q = e.find("kPollSeqSlots = "); CHECK(q != std::string::npos && atoi(e.c_str() + q + 16) >= 186, "kPollSeqSlots"); }

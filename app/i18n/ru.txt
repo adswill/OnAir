@@ -206,18 +206,37 @@ no picture	нет изображения
 Video	Видео
 TV	ТВ
 BROADCAST RADIO	ВЕЩАТЕЛЬНОЕ РАДИО
-AVIATION	АВИАЦИЯ
 MARITIME	МОРСКАЯ СВЯЗЬ
-SATELLITE & NAVIGATION	СПУТНИКИ И НАВИГАЦИЯ
 TWO-WAY RADIO	ДВУСТОРОННЯЯ РАДИОСВЯЗЬ
 CELLULAR & RAIL	СОТОВАЯ И ЖЕЛЕЗНОДОРОЖНАЯ СВЯЗЬ
 PAGERS	ПЕЙДЖЕРЫ
-IoT & SENSORS	IoT И ДАТЧИКИ
-WEATHER & SCIENCE	ПОГОДА И НАУКА
-AMATEUR - DIGITAL	РАДИОЛЮБИТЕЛЬСКАЯ - ЦИФРОВЫЕ ВИДЫ
 AMATEUR - VOICE & PACKET	РАДИОЛЮБИТЕЛЬСКАЯ - ГОЛОС И ПАКЕТЫ
-HF UTILITY	СЛУЖЕБНАЯ КВ-СВЯЗЬ
 GENERAL & TOOLS	ОБЩЕЕ И ИНСТРУМЕНТЫ
+AIRCRAFT DATALINKS	ДАННЫЕ ВОЗДУШНЫХ СУДОВ
+NAVAIDS & RADAR	РАДИОНАВИГАЦИЯ И РАДАРЫ
+DRONES & LIGHT AVIATION	ДРОНЫ И ЛЁГКАЯ АВИАЦИЯ
+NAVIGATION	НАВИГАЦИЯ
+MOBILE & DATA SATELLITES	МОБИЛЬНЫЕ СПУТНИКИ И ДАННЫЕ
+CUBESATS & SMALL SATS	КУБСАТЫ И МАЛЫЕ СПУТНИКИ
+RESCUE & TRACKING	ПОИСК И СПАСЕНИЕ
+WEATHER SATS - LOW RATE	МЕТЕОСПУТНИКИ - НИЗКАЯ СКОРОСТЬ
+WEATHER SATS - HIGH RATE	МЕТЕОСПУТНИКИ - ВЫСОКАЯ СКОРОСТЬ
+WEATHER & SONDES	ПОГОДА И ЗОНДЫ
+SCIENCE & SENSING	НАУКА И ИЗМЕРЕНИЯ
+SMART DEVICES & RFID	УМНЫЕ УСТРОЙСТВА И RFID
+MESH & LORA	MESH И LORA
+RADIO CONTROL & DRONES	РАДИОУПРАВЛЕНИЕ И ДРОНЫ
+WIRELESS NETWORKS	БЕСПРОВОДНЫЕ СЕТИ
+VEHICLES & ROADS	ТРАНСПОРТ И ДОРОГИ
+AMATEUR - WEAK SIGNAL	РАДИОЛЮБИТЕЛЬСКАЯ - СЛАБЫЕ СИГНАЛЫ
+AMATEUR - TEXT MODES	РАДИОЛЮБИТЕЛЬСКАЯ - ТЕКСТ
+AMATEUR - IMAGES & DATA	РАДИОЛЮБИТЕЛЬСКАЯ - ИЗОБРАЖЕНИЯ И ДАННЫЕ
+HF DATA	ДАННЫЕ КВ
+HF TELEGRAPH & FSK	КВ-ТЕЛЕГРАФ И FSK
+HF MONITORING	КВ-МОНИТОРИНГ
+RECEIVERS & ANALYSERS	ПРИЁМНИКИ И АНАЛИЗАТОРЫ
+METERS	ИЗМЕРИТЕЛИ
+INTERFERENCE HUNTING	ПОИСК ПОМЕХ
 T2 and T, automatic	T2 и T, автоматически
 8-VSB, North America	8-VSB, Северная Америка
 NextGen TV	NextGen TV

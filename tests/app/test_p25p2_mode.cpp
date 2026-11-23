@@ -29,7 +29,7 @@ int main() {
     CHECK(dect2::modeTuning(52) && std::string(dect2::modeTuning(52)->id) == "p25", "Phase 1 tuning disturbed");
 
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(table.find("{180, \"P25 Phase 2\", 5,") != std::string::npos, "mode row for family 180 missing");
+    CHECK(table.find("{180, \"P25 Phase 2\", 14,") != std::string::npos, "mode row for family 180 missing");
     const std::string appH = readFile("app/app.h");
     { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) >= 181, "kNumFamilies does not cover family 180"); }
     const std::string eng = readFile("core/include/dect2/engine/engine.h");

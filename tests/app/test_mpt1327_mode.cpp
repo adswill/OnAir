@@ -17,7 +17,7 @@ static std::string readFile(const std::string& rel) {
 
 int main() {
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(table.find("{127, \"MPT1327 trunking\", 5,") != std::string::npos, "mode row for family 127 missing (group 5, with the other trunking modes)");
+    CHECK(table.find("{127, \"MPT1327 trunking\", 14,") != std::string::npos, "mode row for family 127 missing (group 5, with the other trunking modes)");
     const std::string appH = readFile("app/app.h");
     { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) >= 128, "kNumFamilies does not cover family 127"); }
     const std::string modeUi = readFile("app/panels/modeui.cpp");

@@ -25,7 +25,7 @@ static bool has(const std::string& s, const char* t) { return s.find(t) != std::
 int main() {
     const dect2::ModeTuning mt = dect2::ebicabTuning();
     CHECK(mt.stdMode == 209 && dect2::modeTuningById("ebicab") && dect2::modeTuningById("ebicab")->stdMode == 209 && dect2::modeTuning(209), "tuning table");
-    CHECK(has(readFile("app/ui/mode_table.cpp"), "{207, \"EBICab / Eurobalise (needs a user test)\", 6,"), "mode row");
+    CHECK(has(readFile("app/ui/mode_table.cpp"), "{207, \"EBICab / Eurobalise (needs a user test)\", 15,"), "mode row");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case 207: return &kEbicabUi;"), "panel hook");
     { const std::string a = readFile("app/app.h"); const size_t q = a.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(a.c_str() + q + 29) >= 208, "kNumFamilies"); }
     { const std::string e = readFile("core/include/dect2/engine/engine.h"); const size_t q = e.find("kPollSeqSlots = "); CHECK(q != std::string::npos && atoi(e.c_str() + q + 16) >= 185, "kPollSeqSlots"); }

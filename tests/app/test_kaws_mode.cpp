@@ -28,7 +28,7 @@ int main() {
     };
 
     const std::string table = readSource("app/ui/mode_table.cpp");
-    need("app/ui/mode_table.cpp", table, "{133, \"KAWS\", 15,");
+    need("app/ui/mode_table.cpp", table, "{133, \"KAWS\", 33,");
     absent("app/ui/mode_table.cpp", table, "KAWS (WIP)");
     need("app/ui/mode_table.cpp", table, "simulation-only");   // the honest claim is in the row
     {   // the family numbers of the rows are unique

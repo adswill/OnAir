@@ -37,7 +37,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **STL link (studio-to-transmitter)** - STL link: composite or mono analogue studio-to-transmitter audio (simulated only)
 - **AM modulation monitor** - AM monitor: depth, peaks, hum, bandwidth
 
-## Aviation (30)
+## Aircraft Datalinks (14)
 
 - **ADS-B** - ADS-B aircraft position and identity reports
 - **Mode S uplink** - Mode S uplink: interrogators, rotation periods, aircraft asked for registers, TCAS coordination
@@ -47,28 +47,33 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **VDL4** - VDL Mode 4: synchronization and DLS bursts, CPR positions when decoded in the clear
 - **VDL3** - VDL Mode 3: management, voice and data bursts on a 25 kHz VHF channel, receive only
 - **HFDL** - HFDL: ACARS, squitters and positions of aircraft over oceans and remote areas, on HF
+- **UAT** - UAT 978 MHz: ADS-B, FIS-B weather and TIS-B relay
+- **LDACS (structure)** - LDACS: L-band data link, structure only
+- **AeroMACS (structure)** - AeroMACS: airport data link, structure only
+- **ADS-L** - ADS-L: light aircraft conspicuity on 868 and 869.5 MHz
+- **ASTERIX** - ASTERIX: radar and ADS-B surveillance data from UDP or a file
+- **SSR interrogations (1030 MHz)** - SSR interrogations: which modes the radars around you ask, and how often
+
+## Navaids & Radar (10)
+
 - **Airband** - Airband: tower, ground and ATIS voice on several channels at once
 - **VOR** - VOR: your bearing from a navigation beacon, its Morse identification and voice
 - **ILS** - ILS: left / right of the runway centreline and above / below the glide path
 - **NDB** - NDB: the Morse identification of a long-wave navigation beacon
-- **Drone Remote ID** - Drone Remote ID: drones and their operators, from the identification every drone must broadcast
 - **SELCAL (aircraft tone call)** - SELCAL: which aircraft is being called on the channel
-- **UAT** - UAT 978 MHz: ADS-B, FIS-B weather and TIS-B relay
-- **FANET** - FANET: paragliders and gliders over LoRa
-- **OGN tracker** - OGN tracker: gliders broadcasting on 868 MHz
 - **GBAS VDB** - GBAS VDB: burst structure of satellite landing data
-- **LDACS (structure)** - LDACS: L-band data link, structure only
-- **AeroMACS (structure)** - AeroMACS: airport data link, structure only
 - **Radar pulse analyser** - Radar pulses: PRI, width, stagger, antenna turn
-- **ADS-L** - ADS-L: light aircraft conspicuity on 868 and 869.5 MHz
-- **FLARM** - FLARM aircraft: gliders and light aircraft on 868 MHz
-- **DJI drones** - DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded
 - **DME** - DME: distance measuring equipment beacons, pulse pairs and ident
 - **eLoran / Loran-C** - eLoran / Loran-C: 100 kHz hyperbolic navigation pulses, GRI and station arrival times
-- **ASTERIX** - ASTERIX: radar and ADS-B surveillance data from UDP or a file
-- **ELT 121.5 MHz** - ELT 121.5 MHz: swept-tone detection (simulated only)
 - **ILS marker beacons (75 MHz)** - ILS marker beacons: outer, middle and inner marker tones and keying
-- **SSR interrogations (1030 MHz)** - SSR interrogations: which modes the radars around you ask, and how often
+
+## Drones & Light Aviation (5)
+
+- **Drone Remote ID** - Drone Remote ID: drones and their operators, from the identification every drone must broadcast
+- **FANET** - FANET: paragliders and gliders over LoRa
+- **OGN tracker** - OGN tracker: gliders broadcasting on 868 MHz
+- **FLARM** - FLARM aircraft: gliders and light aircraft on 868 MHz
+- **DJI drones** - DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded
 
 ## Maritime (8)
 
@@ -81,35 +86,39 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
 
-## Satellite & Navigation (57)
+## Navigation (5)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
+- **GNSS interference detector** - GNSS interference: class, level, sweep
+- **NavIC** - NavIC navigation message, L5
+- **SBAS** - SBAS: the correction messages of the geostationary augmentation satellites
+
+## Mobile & Data Satellites (15)
+
 - **Inmarsat-C** - Inmarsat-C: satellite safety and news broadcasts, needs an L-band antenna
 - **Inmarsat Aero** - Inmarsat Aero: aircraft satellite data link, needs an L-band antenna
 - **Iridium** - Iridium satellite downlink bursts, needs an L-band antenna
-- **Meteor-M LRPT** - Meteor-M LRPT: weather satellite pictures as the satellite passes
-- **GOES HRIT** - GOES HRIT: geostationary weather images and EMWIN text (needs a dish and an LNA)
-- **Elektro-L** - Elektro-L: geostationary weather images (HRIT / LRIT) and GGAK (needs a dish and an LNA)
-- **GK-2A LRIT** - GK-2A LRIT: Korean geostationary weather pictures (needs a dish and an LNA, KMA keys for the pictures)
-- **GK-2A HRIT** - GK-2A HRIT: Korean geostationary weather pictures, 3 Msym/s QPSK (needs a dish, an LNA and a fast radio)
-- **FY-4 LRIT** - FY-4 LRIT: geostationary weather pictures from FengYun-4A or 4B (needs a dish and an LNA)
-- **FY-4A HRIT-II/III** - FY-4A HRIT: full-resolution geostationary pictures from FengYun-4A (needs a dish and an LNA)
-- **FY-2 S-VISSR** - FY-2 S-VISSR: full-disk scan-line pictures from FengYun-2 (needs a dish and an LNA)
-- **COSPAS-SARSAT 406 MHz** - COSPAS-SARSAT: 406 MHz distress beacon messages decoded, with the country and position on a map (receive only; test and self-test beacons are marked)
-- **Argos** - Argos: PTT uplink IDs and data at 401.65 MHz, or the 465.9875 MHz satellite downlink with its Doppler (receive only)
-- **NOAA APT** - NOAA APT: 137 MHz analogue weather pictures (retired 2025, recordings)
-- **NOAA DSB** - NOAA DSB: TIP telemetry and HIRS at 137 MHz (retired 2025, recordings)
-- **Elektro-L RDAS** - Elektro-L RDAS: MSU-GS discs at X-band (dish, 40 Msps)
-- **Arktika-M RDAS** - Arktika-M RDAS: MSU-GS discs at X-band (dish, 40 Msps)
-- **Arktika-M GGAK** - Arktika-M GGAK (experimental): space-weather telemetry on 1703 MHz
+- **Orbcomm** - Orbcomm satellite downlinks: satellite IDs, positions, channel assignments, messages
+- **Globalstar** - Globalstar: channel activity and Doppler (content is not decoded)
+- **UHF SATCOM skimmer** - Active channels on UHF military satellites (detection only)
+- **Fleet Broadcast (UHF SATCOM)** - Fleet Broadcast: 16 x 75 Bd UHF SATCOM multiplex, framing and channel activity (receive only, nothing decoded)
+- **Thuraya GMR-1 channels** - Active Thuraya channels, detection only
+- **Starlink detector** - Starlink frame detection, no decoding
+- **OneWeb detector** - OneWeb frame detection, no decoding
+- **Tsikada / Parus** - Russian navigation satellite carriers
+- **Gonets** - Gonets downlink bursts, no decoding
+- **Tiantong signalling** - Tiantong activity, no decoding
+- **Inmarsat (all carriers)** - Inmarsat: all Aero P and Inmarsat-C carriers at once, needs an L-band antenna and a wide radio (needs a user test)
+- **Inmarsat BGAN** - Inmarsat BGAN: forward carriers, bearer types, spot beams and network from the broadcast signalling (needs a user test, signalling only)
+
+## CubeSats & Small Sats (20)
+
 - **Geoscan** - Geoscan cubesats: 9k6 FSK frames on 70 cm
 - **Lucky-7** - Lucky-7 cubesat: 4k8 FSK frames
 - **Spino** - Spino cubesat: 2k4 FSK frames
 - **Erminaz** - Erminaz cubesat: 9k6 FSK CCSDS frames
-- **Orbcomm** - Orbcomm satellite downlinks: satellite IDs, positions, channel assignments, messages
 - **QO-100** - QO-100: the amateur satellite's transponders with exact frequencies from its beacons
-- **GNSS interference detector** - GNSS interference: class, level, sweep
 - **Satellite Doppler curve logger** - Doppler logger: TCA, Doppler span, slope, carrier
 - **CubeSat telemetry** - CubeSat telemetry: frames from amateur satellites, named and dumped
 - **AX100 Mode 5** - AX100 Mode 5 (ASM + Golay): GOMspace satellite frames, CSP packets
@@ -118,28 +127,106 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **NGHam** - NGHam: satellite frames with Reed-Solomon
 - **U482C** - U482C (AFSK 4800): GOMspace satellite frames
 - **BEESAT / Mobitex** - BEESAT (Mobitex): satellite frames from TU Berlin cubesats
-- **Globalstar** - Globalstar: channel activity and Doppler (content is not decoded)
-- **GOES DCS** - GOES DCS: river gauges, weather stations and buoys reporting through the GOES and Meteosat satellites
-- **Meteosat HRDCP** - Meteosat HRDCP: high rate weather and hydrology platforms reporting through Meteosat
 - **Zombie satellites** - Zombie satellite carriers: found and checked against their orbits
 - **What satellite is this?** - Names an unknown satellite carrier from its Doppler curve (mystery satellite hunter)
-- **UHF SATCOM skimmer** - Active channels on UHF military satellites (detection only)
-- **Fleet Broadcast (UHF SATCOM)** - Fleet Broadcast: 16 x 75 Bd UHF SATCOM multiplex, framing and channel activity (receive only, nothing decoded)
-- **Thuraya GMR-1 channels** - Active Thuraya channels, detection only
-- **Starlink detector** - Starlink frame detection, no decoding
-- **OneWeb detector** - OneWeb frame detection, no decoding
 - **TDRS carriers** - TDRS forward link carriers
 - **Tiangong / Shenzhou carriers** - Chinese crewed spacecraft carriers
-- **Tsikada / Parus** - Russian navigation satellite carriers
-- **Gonets** - Gonets downlink bursts, no decoding
-- **Tiantong signalling** - Tiantong activity, no decoding
 - **Space station** - ISS downlinks, automatic per pass
-- **NavIC** - NavIC navigation message, L5
-- **SBAS** - SBAS: the correction messages of the geostationary augmentation satellites
 - **LoRa satellites** - LoRa satellites: LoRa frames with the Doppler shift and its rate followed
 - **PSK demodulator (experimental)** - PSK demodulator: blind symbol rate and order, constellation, bits
-- **Inmarsat (all carriers)** - Inmarsat: all Aero P and Inmarsat-C carriers at once, needs an L-band antenna and a wide radio (needs a user test)
-- **Inmarsat BGAN** - Inmarsat BGAN: forward carriers, bearer types, spot beams and network from the broadcast signalling (needs a user test, signalling only)
+
+## Rescue & Tracking (5)
+
+- **COSPAS-SARSAT 406 MHz** - COSPAS-SARSAT: 406 MHz distress beacon messages decoded, with the country and position on a map (receive only; test and self-test beacons are marked)
+- **Argos** - Argos: PTT uplink IDs and data at 401.65 MHz, or the 465.9875 MHz satellite downlink with its Doppler (receive only)
+- **GOES DCS** - GOES DCS: river gauges, weather stations and buoys reporting through the GOES and Meteosat satellites
+- **Meteosat HRDCP** - Meteosat HRDCP: high rate weather and hydrology platforms reporting through Meteosat
+- **ELT 121.5 MHz** - ELT 121.5 MHz: swept-tone detection (simulated only)
+
+## Weather Sats - Low Rate (13)
+
+- **Meteor-M LRPT** - Meteor-M LRPT: weather satellite pictures as the satellite passes
+- **GOES HRIT** - GOES HRIT: geostationary weather images and EMWIN text (needs a dish and an LNA)
+- **Elektro-L** - Elektro-L: geostationary weather images (HRIT / LRIT) and GGAK (needs a dish and an LNA)
+- **GK-2A LRIT** - GK-2A LRIT: Korean geostationary weather pictures (needs a dish and an LNA, KMA keys for the pictures)
+- **GK-2A HRIT** - GK-2A HRIT: Korean geostationary weather pictures, 3 Msym/s QPSK (needs a dish, an LNA and a fast radio)
+- **FY-4 LRIT** - FY-4 LRIT: geostationary weather pictures from FengYun-4A or 4B (needs a dish and an LNA)
+- **FY-4A HRIT-II/III** - FY-4A HRIT: full-resolution geostationary pictures from FengYun-4A (needs a dish and an LNA)
+- **FY-2 S-VISSR** - FY-2 S-VISSR: full-disk scan-line pictures from FengYun-2 (needs a dish and an LNA)
+- **NOAA APT** - NOAA APT: 137 MHz analogue weather pictures (retired 2025, recordings)
+- **NOAA DSB** - NOAA DSB: TIP telemetry and HIRS at 137 MHz (retired 2025, recordings)
+- **Elektro-L RDAS** - Elektro-L RDAS: MSU-GS discs at X-band (dish, 40 Msps)
+- **Arktika-M RDAS** - Arktika-M RDAS: MSU-GS discs at X-band (dish, 40 Msps)
+- **Arktika-M GGAK** - Arktika-M GGAK (experimental): space-weather telemetry on 1703 MHz
+
+## Weather Sats - High Rate (37)
+
+- **HRPT / AHRPT** - HRPT / AHRPT: MetOp AVHRR pictures at 1.7 GHz (needs a dish and a fast radio)
+- **NOAA HRPT** - NOAA HRPT: AVHRR pictures at 1.7 GHz (retired 2025, recordings)
+- **NOAA GAC** - NOAA GAC: AVHRR tape dump (retired 2025, recordings)
+- **Meteor HRPT** - Meteor HRPT: MSU-MR pictures at 1.7 GHz (needs a dish)
+- **AWS L-band** - AWS: microwave sounder pictures on 1707 MHz (needs a dish)
+- **MSG Raw Data** - MSG Raw Data: SEVIRI discs from Meteosat at 1686.83 MHz (needs a dish)
+- **HimawariCast** - HimawariCast: Himawari full-disc pictures by C-band DVB-S2 (needs a dish)
+- **GeoNetCast** - GeoNetCast: weather product files by C-band DVB-S2 (needs a dish and 52 Msps)
+- **GOES GRB** - GOES GRB: ABI / SUVI / GLM rebroadcast (needs a dish, 12 Msps)
+- **GOES GVAR** - GOES GVAR: imager broadcast (retired, recordings)
+- **GOES CDA** - GOES CDA: telemetry frames at 1693 MHz (needs a dish)
+- **GOES MDL** - GOES MDL: multi-use data link frames (needs a dish)
+- **GK-2A UHRIT** - GK-2A UHRIT: xRIT files at X-band (dish, 28 Msps)
+- **GK-2A CDAS** - GK-2A CDAS: frames (needs a dish, 8 Msps)
+- **S-band CCSDS** - S-band CCSDS: satellite table, frames (needs a tracking dish)
+- **JPSS HRD (NPP, NOAA-20)** - JPSS HRD (NPP, NOAA-20): X-band direct downlink, needs a dish; recordings
+- **JPSS HRD (NOAA-21)** - JPSS HRD (NOAA-21): X-band direct downlink, needs a dish; recordings
+- **EOS DB (Aqua, Aura)** - EOS DB (Aqua, Aura): X-band direct downlink, needs a dish; recordings
+- **EOS DB (Terra)** - EOS DB (Terra): X-band direct downlink, needs a dish; recordings
+- **MetOp X-band dump** - MetOp X-band dump: X-band direct downlink, needs a dish; recordings
+- **MetOp-SG DDB** - MetOp-SG DDB: X-band direct downlink, needs a dish; recordings
+- **Landsat 8/9 X-band** - Landsat 8/9 X-band: X-band direct downlink, needs a dish; recordings
+- **Landsat 8/9 S-band** - Landsat 8/9 S-band: satellite direct downlink, needs a dish; recordings
+- **Proba S-band dump** - Proba S-band dump: satellite direct downlink, needs a dish; recordings
+- **Proba-V X-band dump** - Proba-V X-band dump: X-band direct downlink, needs a dish; recordings
+- **GCOM-W1** - GCOM-W1: X-band direct downlink, needs a dish; recordings
+- **GCOM-C1** - GCOM-C1: X-band direct downlink, needs a dish; recordings
+- **STEREO high rate** - STEREO high rate: satellite direct downlink, needs a dish; recordings
+- **Oceansat-2 DB** - Oceansat-2 DB: X-band direct downlink, needs a dish; recordings
+- **Oceansat-3 L-band** - Oceansat-3 L-band: satellite direct downlink, needs a dish; recordings
+- **Saral L-band** - Saral L-band: satellite direct downlink, needs a dish; recordings
+- **Oceansat-3 X-band dump** - Oceansat-3 X-band dump: X-band direct downlink, needs a dish; recordings
+- **Saral X-band dump** - Saral X-band dump: X-band direct downlink, needs a dish; recordings
+- **Kanopus-V** - Kanopus-V: X-band direct downlink, needs a dish; recordings
+- **DMSP RTD** - DMSP RTD: satellite direct downlink, needs a dish; recordings
+- **FY-3 AHRPT** - FY-3 AHRPT: Fengyun-3 VIRR / MERSI pictures at 1.7 GHz (needs a dish and a fast radio)
+- **FY-3 MPT** - FY-3 MPT: Fengyun-3 MERSI pictures in X-band (needs a dish, a down-converter and a very fast radio)
+
+## Weather & Sondes (6)
+
+- **NOAA Weather Radio SAME** - NOAA Weather Radio SAME: weather and emergency alerts, decoded and explained (receive only)
+- **Radiosonde** - Radiosonde weather balloons: position, altitude and weather data
+- **Horus balloons** - Horus Binary and RTTY high-altitude balloons: position, altitude, temperature, voltage, satellites (receive only)
+- **Time signals** - Time signals: the time stations and your computer clock against them
+- **e-Czas (225 kHz, Poland)** - e-Czas: Polish official time on 225 kHz long wave, decoded; needs a long-wave capable radio or an upconverter
+- **SSDV pictures** - SSDV: balloon and satellite pictures, built up packet by packet
+
+## Science & Sensing (17)
+
+- **Weather radar (detect)** - Weather radar: scan pattern and pulse timing
+- **GRAVES meteor echoes** - GRAVES: meteor echo list
+- **Radio Jove bursts** - Radio Jove: burst list
+- **Beacon propagation monitor** - Beacon monitor: path class, level, Doppler spread
+- **Fading analyser** - Fading: K-factor, fade rate and depth, Doppler spread
+- **Sferics (lightning)** - Sferics: lightning strikes counted from their radio crackle
+- **Lightning position (network)** - Lightning position: strikes located from several stations' arrival times
+- **Schumann resonance monitor** - Schumann resonances: ELF peaks near 7.83 Hz, a spectrogram, the fundamental over time and transient events (needs an ELF sensor input)
+- **Whistler and tweek detector** - Whistlers and tweeks: VLF lightning-launched tones found in a spectrogram, with time and dispersion (needs a VLF audio input)
+- **Radio Jove** - Radio Jove: bursts and the background at 20.1 MHz in a spectrogram, with an event list and CSV (receive only)
+- **e-CALLISTO solar bursts** - e-CALLISTO style solar bursts: spectrogram, burst list with drift rate, CSV (one capture of the radio, no frequency sweep)
+- **SuperSID (VLF)** - SuperSID: VLF station levels and the sudden changes of solar flares, receive only
+- **Riometer** - Riometer: ionospheric absorption from the cosmic noise level, receive only
+- **Pulsar folding** - Pulsar folding: dedisperse and fold a record to find a pulsar, needs a dish or array
+- **Meteor scatter** - Meteor scatter: pings of meteor trails reflecting a distant beacon, counted and logged
+- **Ionospheric sounders** - Ionospheric sounders: chirp ionosondes and the ionogram they give
+- **Radio astronomy** - Radio astronomy: the hydrogen line of the Milky Way
 
 ## Two-way Radio (23)
 
@@ -190,129 +277,76 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Golay paging (GSC)** - GSC pager messages (simulated only)
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (45)
+## Smart Devices & RFID (12)
 
-- **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
-- **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
-- **C-V2X (structure)** - C-V2X: LTE sidelink, structure only
-- **RC model PPM (72 MHz)** - RC model PPM: channel count and stick values
 - **EM4100 LF RFID (125 kHz)** - EM4100 tags: ID and modulation depth
 - **UHF RFID reader (EPC Gen2)** - UHF RFID: reader commands, Tari and tag rate
 - **Qi wireless charging** - Qi: packets from the phone to the charger
 - **OOK / ASK pulse analyser** - OOK analyser: modulation, bits, timings, repeats
 - **ISM sensors** - ISM sensors: weather stations, TPMS, remotes and meters around you (the rtl_433 idea)
 - **Sub-GHz sensors** - Sub-GHz sensors: the rtl_433 decoders with a live sensor list, history, export and an unknown signal analyser (RTL-SDR or HackRF at 250 kHz and up)
-- **LoRaWAN** - LoRaWAN: IoT devices around you, from the headers every gateway receives
-- **Meshtastic** - Meshtastic: LoRa mesh network nodes and messages
-- **MeshCore** - MeshCore: LoRa mesh network nodes and messages
-- **Bluetooth LE** - Bluetooth LE: the advertising packets devices broadcast openly
-- **BLE tracker detector** - BLE tracker detector: item trackers around you, and an alert for one that follows you
-- **Zigbee / 802.15.4** - Zigbee / 802.15.4: networks and devices from the headers every sniffer sees (receive only, no decryption; needs a fast 2.4 GHz radio)
-- **Thread** - Thread: networks and devices from beacons and 802.15.4 headers, 6LoWPAN where sent in the clear (receive only, encrypted traffic is shown as encrypted; needs a fast 2.4 GHz radio)
-- **Wi-Fi HaLow (802.11ah)** - Wi-Fi HaLow / 802.11ah: the long-range sub-GHz networks around you from their beacons (receive only, no decryption)
-- **ESP-NOW** - ESP-NOW: ESP8266 / ESP32 packets on a 2.4 GHz Wi-Fi channel, devices and payloads (receive only; needs 20 MHz of bandwidth)
 - **ANT+ sensors** - ANT+ sensors on 2457 MHz (and other ANT networks on their own channel): heart rate straps and watches, bike speed, cadence and power sensors, footpods, environment sensors, as a watch or bike computer hears them: 1 Mbit/s GFSK frames with the device number, type and the data page, the heart rate with the beat count and R-R interval plotted over time, power, cadence, speed, temperature, manufacturer, serial and battery pages. Receive only: nothing is sent, paired or acknowledged, and only the open broadcasts are shown. Needs a radio that reaches 2.4 GHz at 4 Msps (HackRF, Pluto, LimeSDR, BladeRF, USRP).
 - **DECT cordless phones** - DECT cordless phones and base stations on the ten carriers 1881.792 - 1897.344 MHz (Europe; 1.152 Mbit/s GFSK, 10 ms frames of 24 slots): every base station from the beacon it sends every frame, with its RFPI (the manufacturer code and system number inside it), level and the slots it uses, the system information tails and a burst log with base and handset bursts. Activity and signalling only: calls are encrypted and the voice is not decoded, nothing is transmitted. Needs a radio that reaches 1.9 GHz at 5 Msps or more (HackRF, Pluto, LimeSDR, BladeRF, USRP, SDRplay).
-- **Wi-SUN FAN** - Wi-SUN FAN: smart meter and street light mesh networks, nodes and links (receive only, no decryption)
 - **Wireless M-Bus (meters)** - Wireless M-Bus: the utility meters around you, their IDs and readings (encrypted data stays encrypted)
 - **NFC / RFID 13.56 MHz** - NFC / RFID 13.56 MHz: ISO 14443 A/B and ISO 15693 frames, tag UIDs and NDEF (receive only, nothing cloned)
 - **Z-Wave** - Z-Wave: smart home networks, nodes and commands from the headers (receive only, encrypted payloads stay encrypted)
-- **Bluetooth Classic** - Bluetooth Classic: devices and piconets by LAP, discoverable devices with address and class of device (receive only)
+- **SCADA radio telemetry (Modbus, DNP3)** - SCADA telemetry: Modbus RTU and DNP3 over utility data radios (receive only; check local law; simulated only)
+
+## Mesh & LoRa (14)
+
+- **LoRaWAN** - LoRaWAN: IoT devices around you, from the headers every gateway receives
+- **Meshtastic** - Meshtastic: LoRa mesh network nodes and messages
+- **MeshCore** - MeshCore: LoRa mesh network nodes and messages
+- **Zigbee / 802.15.4** - Zigbee / 802.15.4: networks and devices from the headers every sniffer sees (receive only, no decryption; needs a fast 2.4 GHz radio)
+- **Thread** - Thread: networks and devices from beacons and 802.15.4 headers, 6LoWPAN where sent in the clear (receive only, encrypted traffic is shown as encrypted; needs a fast 2.4 GHz radio)
+- **Wi-Fi HaLow (802.11ah)** - Wi-Fi HaLow / 802.11ah: the long-range sub-GHz networks around you from their beacons (receive only, no decryption)
+- **Wi-SUN FAN** - Wi-SUN FAN: smart meter and street light mesh networks, nodes and links (receive only, no decryption)
 - **LoRa (raw)** - LoRa (raw): point-to-point LoRa frames as hex and text, SF / bandwidth set or searched (receive only, no decryption)
 - **Sigfox** - Sigfox: uplink device IDs, counters and payloads at 868 / 902 MHz (receive only, no keys)
-- **Wi-Fi networks** - Wi-Fi networks: the access points around you, from the beacons they broadcast
 - **LoRaWAN (all channels)** - LoRaWAN (all channels): every channel of a regional plan at once, headers only
 - **Reticulum (RNode)** - Reticulum / RNode: LoRa mesh network monitor. Tune the channel and pick bandwidth and spreading factor under Advanced, or leave the automatic search on
+- **mioty** - mioty: telegram-splitting LPWAN for sensors (868 MHz in Europe). Tune the channel centre (868.18 MHz), 1 Msps or more. Uplink only
+- **DECT NR+** - DECT NR+ (ETSI TS 103 636): the license-exempt 1.9 GHz mesh standard. Tune the channel centre (1881.792 MHz and up in 0.864 MHz steps), 4 Msps. Control field only
+- **Flipper Zero Sub-GHz chat** - Flipper Zero Sub-GHz chat: talk to Flippers on 433.92 MHz, plain or AES-encrypted (receive and send)
+
+## Radio Control & Drones (9)
+
+- **RC model PPM (72 MHz)** - RC model PPM: channel count and stick values
 - **ExpressLRS** - ExpressLRS: open-source RC link. Receive only. Tune the middle of the hop plan (EU868 866.4 MHz) with a wide sample rate
 - **MAVLink (SiK radio)** - MAVLink over SiK telemetry radios (ArduPilot, PX4). Receive only. A wider capture covers more hop channels
-- **SCADA radio telemetry (Modbus, DNP3)** - SCADA telemetry: Modbus RTU and DNP3 over utility data radios (receive only; check local law; simulated only)
 - **FrSky RC (D8 / D16)** - FrSky ACCST D8 / D16: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR
 - **FlySky RC (AFHDS / 2A)** - FlySky AFHDS / AFHDS 2A: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR
 - **Futaba RC (S-FHSS)** - Futaba S-FHSS: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR
 - **Spektrum RC (DSM2 / DSMX)** - Spektrum DSM2 / DSMX: 2.4 GHz RC link monitor, receive only. 8 Msps or more around 2.44 GHz
 - **wfb-ng / OpenHD** - wfb-ng / OpenHD: open digital video links for drones (Wi-Fi radios in monitor mode). Receive only. 20 Msps. Video stays encrypted, structure only
+- **nRF24L01 (needs a user test)** - nRF24L01: Enhanced ShockBurst frames of mice, sensors and remotes on one 2.4 GHz channel (needs a 2.4 GHz SDR)
+
+## Wireless Networks (7)
+
+- **Bluetooth LE** - Bluetooth LE: the advertising packets devices broadcast openly
+- **BLE tracker detector** - BLE tracker detector: item trackers around you, and an alert for one that follows you
+- **ESP-NOW** - ESP-NOW: ESP8266 / ESP32 packets on a 2.4 GHz Wi-Fi channel, devices and payloads (receive only; needs 20 MHz of bandwidth)
+- **Bluetooth Classic** - Bluetooth Classic: devices and piconets by LAP, discoverable devices with address and class of device (receive only)
+- **Wi-Fi networks** - Wi-Fi networks: the access points around you, from the beacons they broadcast
 - **New Packet Radio (NPR-70)** - New Packet Radio (NPR-70): 4GFSK IP modems on 70 cm. Tune the channel centre, 4 Msps. Sync words and network ID only
 - **WINMOR** - WINMOR: Winlink HF sound card modem, retired in 2020. Tune the dial frequency (upper sideband), any sample rate. Pilot detection only
-- **mioty** - mioty: telegram-splitting LPWAN for sensors (868 MHz in Europe). Tune the channel centre (868.18 MHz), 1 Msps or more. Uplink only
-- **DECT NR+** - DECT NR+ (ETSI TS 103 636): the license-exempt 1.9 GHz mesh standard. Tune the channel centre (1881.792 MHz and up in 0.864 MHz steps), 4 Msps. Control field only
-- **nRF24L01 (needs a user test)** - nRF24L01: Enhanced ShockBurst frames of mice, sensors and remotes on one 2.4 GHz channel (needs a 2.4 GHz SDR)
-- **Flipper Zero Sub-GHz chat** - Flipper Zero Sub-GHz chat: talk to Flippers on 433.92 MHz, plain or AES-encrypted (receive and send)
 
-## Weather & Science (56)
+## Vehicles & Roads (3)
 
-- **HRPT / AHRPT** - HRPT / AHRPT: MetOp AVHRR pictures at 1.7 GHz (needs a dish and a fast radio)
-- **NOAA HRPT** - NOAA HRPT: AVHRR pictures at 1.7 GHz (retired 2025, recordings)
-- **NOAA GAC** - NOAA GAC: AVHRR tape dump (retired 2025, recordings)
-- **Meteor HRPT** - Meteor HRPT: MSU-MR pictures at 1.7 GHz (needs a dish)
-- **AWS L-band** - AWS: microwave sounder pictures on 1707 MHz (needs a dish)
-- **MSG Raw Data** - MSG Raw Data: SEVIRI discs from Meteosat at 1686.83 MHz (needs a dish)
-- **HimawariCast** - HimawariCast: Himawari full-disc pictures by C-band DVB-S2 (needs a dish)
-- **GeoNetCast** - GeoNetCast: weather product files by C-band DVB-S2 (needs a dish and 52 Msps)
-- **GOES GRB** - GOES GRB: ABI / SUVI / GLM rebroadcast (needs a dish, 12 Msps)
-- **GOES GVAR** - GOES GVAR: imager broadcast (retired, recordings)
-- **GOES CDA** - GOES CDA: telemetry frames at 1693 MHz (needs a dish)
-- **GOES MDL** - GOES MDL: multi-use data link frames (needs a dish)
-- **GK-2A UHRIT** - GK-2A UHRIT: xRIT files at X-band (dish, 28 Msps)
-- **GK-2A CDAS** - GK-2A CDAS: frames (needs a dish, 8 Msps)
-- **S-band CCSDS** - S-band CCSDS: satellite table, frames (needs a tracking dish)
-- **JPSS HRD (NPP, NOAA-20)** - JPSS HRD (NPP, NOAA-20): X-band direct downlink, needs a dish; recordings
-- **JPSS HRD (NOAA-21)** - JPSS HRD (NOAA-21): X-band direct downlink, needs a dish; recordings
-- **EOS DB (Aqua, Aura)** - EOS DB (Aqua, Aura): X-band direct downlink, needs a dish; recordings
-- **EOS DB (Terra)** - EOS DB (Terra): X-band direct downlink, needs a dish; recordings
-- **MetOp X-band dump** - MetOp X-band dump: X-band direct downlink, needs a dish; recordings
-- **MetOp-SG DDB** - MetOp-SG DDB: X-band direct downlink, needs a dish; recordings
-- **Landsat 8/9 X-band** - Landsat 8/9 X-band: X-band direct downlink, needs a dish; recordings
-- **Landsat 8/9 S-band** - Landsat 8/9 S-band: satellite direct downlink, needs a dish; recordings
-- **Proba S-band dump** - Proba S-band dump: satellite direct downlink, needs a dish; recordings
-- **Proba-V X-band dump** - Proba-V X-band dump: X-band direct downlink, needs a dish; recordings
-- **GCOM-W1** - GCOM-W1: X-band direct downlink, needs a dish; recordings
-- **GCOM-C1** - GCOM-C1: X-band direct downlink, needs a dish; recordings
-- **STEREO high rate** - STEREO high rate: satellite direct downlink, needs a dish; recordings
-- **Oceansat-2 DB** - Oceansat-2 DB: X-band direct downlink, needs a dish; recordings
-- **Oceansat-3 L-band** - Oceansat-3 L-band: satellite direct downlink, needs a dish; recordings
-- **Saral L-band** - Saral L-band: satellite direct downlink, needs a dish; recordings
-- **Oceansat-3 X-band dump** - Oceansat-3 X-band dump: X-band direct downlink, needs a dish; recordings
-- **Saral X-band dump** - Saral X-band dump: X-band direct downlink, needs a dish; recordings
-- **Kanopus-V** - Kanopus-V: X-band direct downlink, needs a dish; recordings
-- **DMSP RTD** - DMSP RTD: satellite direct downlink, needs a dish; recordings
-- **FY-3 AHRPT** - FY-3 AHRPT: Fengyun-3 VIRR / MERSI pictures at 1.7 GHz (needs a dish and a fast radio)
-- **FY-3 MPT** - FY-3 MPT: Fengyun-3 MERSI pictures in X-band (needs a dish, a down-converter and a very fast radio)
-- **Weather radar (detect)** - Weather radar: scan pattern and pulse timing
-- **GRAVES meteor echoes** - GRAVES: meteor echo list
-- **Radio Jove bursts** - Radio Jove: burst list
-- **Beacon propagation monitor** - Beacon monitor: path class, level, Doppler spread
-- **Fading analyser** - Fading: K-factor, fade rate and depth, Doppler spread
-- **Sferics (lightning)** - Sferics: lightning strikes counted from their radio crackle
-- **Lightning position (network)** - Lightning position: strikes located from several stations' arrival times
-- **SuperSID (VLF)** - SuperSID: VLF station levels and the sudden changes of solar flares, receive only
-- **Riometer** - Riometer: ionospheric absorption from the cosmic noise level, receive only
-- **Pulsar folding** - Pulsar folding: dedisperse and fold a record to find a pulsar, needs a dish or array
-- **NOAA Weather Radio SAME** - NOAA Weather Radio SAME: weather and emergency alerts, decoded and explained (receive only)
-- **Radiosonde** - Radiosonde weather balloons: position, altitude and weather data
-- **Horus balloons** - Horus Binary and RTTY high-altitude balloons: position, altitude, temperature, voltage, satellites (receive only)
-- **Time signals** - Time signals: the time stations and your computer clock against them
-- **e-Czas (225 kHz, Poland)** - e-Czas: Polish official time on 225 kHz long wave, decoded; needs a long-wave capable radio or an upconverter
-- **Meteor scatter** - Meteor scatter: pings of meteor trails reflecting a distant beacon, counted and logged
-- **Ionospheric sounders** - Ionospheric sounders: chirp ionosondes and the ionogram they give
-- **Radio astronomy** - Radio astronomy: the hydrogen line of the Milky Way
-- **SSDV pictures** - SSDV: balloon and satellite pictures, built up packet by packet
+- **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
+- **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
+- **C-V2X (structure)** - C-V2X: LTE sidelink, structure only
 
-## Amateur - Digital (43)
+## Amateur - Weak Signal (18)
 
-- **Passband signal classifier** - Passband: what each signal in 48 kHz is
 - **QRSS grabber** - QRSS: very slow Morse read from a spectrogram, receive only
 - **DFCW grabber** - DFCW: slow Morse with a frequency for dots and one for dashes, receive only
 - **FSK441** - FSK441: meteor scatter pings, 441 baud 4-FSK, receive only
 - **JT6M** - JT6M: 6 m meteor and ionospheric scatter, 44-tone FSK, receive only
-- **Schumann resonance monitor** - Schumann resonances: ELF peaks near 7.83 Hz, a spectrogram, the fundamental over time and transient events (needs an ELF sensor input)
-- **Whistler and tweek detector** - Whistlers and tweeks: VLF lightning-launched tones found in a spectrogram, with time and dispersion (needs a VLF audio input)
 - **Moon echo (EME) test** - Moon echo test: delay, Doppler shift, level and spread of your own signal reflected from the Moon (receive only)
-- **Radio Jove** - Radio Jove: bursts and the background at 20.1 MHz in a spectrogram, with an event list and CSV (receive only)
-- **e-CALLISTO solar bursts** - e-CALLISTO style solar bursts: spectrogram, burst list with drift rate, CSV (one capture of the radio, no frequency sweep)
 - **Aurora / Es / TEP beacons** - Beacon events: openings of a VHF beacon logged with time, S/N, Doppler width and a character class (aurora / TEP / sporadic-E like)
 - **ISCAT** - ISCAT: 42-tone scatter mode, A and B found automatically, receive only
 - **PI4** - PI4: microwave beacon mode, 27 s frames with an 8 character message, receive only
-- **Throb** - Throb: two-tone keyboard mode, six variants found automatically, receive only
 - **FT8** - FT8: weak-signal amateur contacts
 - **FT4** - FT4: fast weak-signal amateur contacts
 - **FT2** - FT2: the fastest of the FT modes
@@ -323,6 +357,11 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FST4** - FST4: slow weak-signal contacts and FST4W beacons
 - **MSK144** - MSK144: meteor scatter bursts
 - **JT4** - JT4: EME and weak-signal contacts
+
+## Amateur - Text Modes (19)
+
+- **Passband signal classifier** - Passband: what each signal in 48 kHz is
+- **Throb** - Throb: two-tone keyboard mode, six variants found automatically, receive only
 - **PSK31** - PSK31: keyboard chat, every signal in the passband
 - **MT63** - MT63: robust keyboard chat on 64 carriers
 - **FSQ** - FSQ: directed keyboard chat on 33 tones
@@ -332,8 +371,6 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **JS8Call** - JS8Call: weak-signal messages, heartbeats and relays
 - **RTTY** - RTTY: radio teletype text
 - **CW** - CW: Morse code from every signal in the window, speed and callsigns
-- **SSTV** - SSTV: slow-scan television pictures
-- **HamDRM** - HamDRM: digital SSTV pictures (EasyPal, QSSTV DRM)
 - **Olivia** - Olivia: text that gets through noise
 - **Contestia** - Contestia: Olivia's faster cousin
 - **MFSK** - MFSK: error-corrected keyboard text
@@ -342,6 +379,11 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CP16** - CP16: Chinese characters drawn on the waterfall by 16 carriers (CRAC)
 - **Hellschreiber** - Hell: text drawn as a picture
 - **ROS (HF)** - ROS (HF): detects the ROS weak-signal mode and its sub-mode, marks it on the waterfall; text decoding partial (needs a public spec)
+
+## Amateur - Images & Data (2)
+
+- **SSTV** - SSTV: slow-scan television pictures
+- **HamDRM** - HamDRM: digital SSTV pictures (EasyPal, QSSTV DRM)
 
 ## Amateur - Voice & Packet (9)
 
@@ -355,7 +397,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Ham FM repeaters** - Ham FM repeaters: 2 m and 70 cm outputs with offsets, the tone heard on each, call log and recording (receive only)
 - **HF packet 300 Bd** - HF packet 300 Bd: AX.25 frames, full decode (simulated only)
 
-## HF Utility (42)
+## HF Data (16)
 
 - **PACTOR-II** - PACTOR-II: HF D-PSK carriers, symbols and frame structure (physical layer only; no text)
 - **PACTOR-III** - PACTOR-III: HF multi-carrier D-PSK, carrier set and frame structure (physical layer only; no text)
@@ -365,26 +407,20 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **STANAG 4539** - STANAG 4539: MIL-STD-188-110C high-rate HF data modem, 3200 to 12800 bit/s (simulated signals only)
 - **3G-ALE** - 3G-ALE: third-generation HF link setup, traffic management and HDL / LDL data bursts BW0 to BW4 (simulated signals only)
 - **Link 11 CLEW** - Link 11 CLEW: message detector and frame structure, no data (simulated signals only)
-- **STANAG 4481 FSK** - STANAG 4481 FSK: naval broadcast, single or 16-channel FSK, plain text shown (simulated signals only)
 - **ARQ-E** - ARQ-E: HF duplex ARQ teleprinter (simulated signals only)
 - **ARQ-N** - ARQ-N: HF duplex ARQ teleprinter (simulated signals only)
 - **AUTOSPEC** - AUTOSPEC: HF FEC teleprinter (simulated signals only)
 - **SPREAD** - SPREAD: HF FEC teleprinter with bit spreading (simulated signals only)
 - **G-TOR** - G-TOR: HF ARQ monitor (simulated signals only)
-- **EFR teleswitch** - EFR: DCF49 / DCF39 radio teleswitch telegrams (simulated signals only)
+- **Robust Packet (RPR, needs a user test)** - Robust Packet: HF AX.25 packet, 8 OFDM carriers, speed level and bursts (physical layer only, needs a recording)
+- **HF ALE** - HF ALE: who calls whom, soundings and AMD messages
+- **PACTOR-I (experimental)** - PACTOR-I: HF ARQ and FEC packets of both stations, monitor only (experimental)
+
+## HF Telegraph & FSK (17)
+
+- **STANAG 4481 FSK** - STANAG 4481 FSK: naval broadcast, single or 16-channel FSK, plain text shown (simulated signals only)
 - **Piccolo Mk VI** - Piccolo Mk VI: HF MFSK teleprinter (simulated signals only)
 - **Coquelet-8** - Coquelet-8: HF MFSK teleprinter (simulated signals only)
-- **UVB-76 buzzer monitor** - UVB-76: buzz rate and breaks
-- **VLF MSK transmitter monitor** - VLF MSK: carrier, bit rate, on / off
-- **Robust Packet (RPR, needs a user test)** - Robust Packet: HF AX.25 packet, 8 OFDM carriers, speed level and bursts (physical layer only, needs a recording)
-- **Datawell Buoy HF Link** - Datawell Buoy HF Link: wave heights, periods and spectra from wave buoys on HF (receive only)
-- **CODAR / HF ocean radar** - CODAR / HF ocean radar: the coastal radar chirps on the HF bands (receive only)
-- **Shortwave** - Shortwave listening with one-click decoders: retune and they follow
-- **HF ALE** - HF ALE: who calls whom, soundings and AMD messages
-- **HF waveform ID** - HF waveform ID: what kind of HF data signal this is (an estimate; identification only)
-- **HF beacons** - HF beacons: what is open from here, band by band
-- **PACTOR-I (experimental)** - PACTOR-I: HF ARQ and FEC packets of both stations, monitor only (experimental)
-- **HFGCS / HF voice** - HFGCS / HF voice: USB on the HFGCS and VOLMET frequencies, VOLMET minute schedules, a scan that steps through them (receive only)
 - **CIS-36-50 / 50-50 (BEE)** - CIS-36-50 / CIS-50-50 (BEE): message framing of the Russian Navy FSK system, characters as hex (receive only, simulated only)
 - **CIS-14** - CIS-14: 96 Bd FSK, 14-bit frames shown raw (receive only, simulated only)
 - **CIS-12 (MS5)** - CIS-12 (MS5): 12-carrier PSK modem, pilot and phase steps (physical layer only, simulated only)
@@ -400,18 +436,30 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FSK200/1000 (F06, F06a)** - FSK200/1000 (F06, F06a): blocks, figure groups and files (simulated only)
 - **GW FSK (100 Bd)** - GW FSK: Globe Wireless channel markers, ship packets and positions (simulated only)
 
-## General & Tools (29)
+## HF Monitoring (9)
 
-- **Power-line noise locator** - Noise locator: impulse rate, repetition, level
-- **Spectrum occupancy monitor** - Occupancy: busy channels, duty cycle, transmissions
+- **EFR teleswitch** - EFR: DCF49 / DCF39 radio teleswitch telegrams (simulated signals only)
+- **UVB-76 buzzer monitor** - UVB-76: buzz rate and breaks
+- **VLF MSK transmitter monitor** - VLF MSK: carrier, bit rate, on / off
+- **Datawell Buoy HF Link** - Datawell Buoy HF Link: wave heights, periods and spectra from wave buoys on HF (receive only)
+- **CODAR / HF ocean radar** - CODAR / HF ocean radar: the coastal radar chirps on the HF bands (receive only)
+- **Shortwave** - Shortwave listening with one-click decoders: retune and they follow
+- **HF waveform ID** - HF waveform ID: what kind of HF data signal this is (an estimate; identification only)
+- **HF beacons** - HF beacons: what is open from here, band by band
+- **HFGCS / HF voice** - HFGCS / HF voice: USB on the HFGCS and VOLMET frequencies, VOLMET minute schedules, a scan that steps through them (receive only)
+
+## Receivers & Analysers (4)
+
+- **Signal workbench** - Signal workbench: analyse, demodulate and read any recording
+- **General receiver** - General receiver: NFM, WFM, AM, USB, LSB and CW anywhere
+- **Spectrum explorer** - Spectrum explorer: look, measure and sweep
+- **Spectrum analyser** - Spectrum analyser: fast wide sweeps with markers and band labels
+
+## Meters (17)
+
 - **Modulation quality (MER) meter** - MER meter: modulation, symbol rate, MER, EVM
 - **Carrier frequency accuracy meter** - Frequency meter: offset, ppm, drift, Allan deviation
 - **PTT and duty-cycle logger** - PTT logger: transmissions, lengths, duty cycle
-- **Intermodulation finder** - Intermod finder: products of strong signals and their verdict
-- **Spur and image finder** - Spur finder: DC spike, images, harmonics, fixed spurs
-- **Frequency-hopper analyser** - Hopper analyser: hop rate, channels, spacing, dwell
-- **Persistent carrier (birdie) finder** - Birdie finder: persistent carriers, level, drift
-- **Burst finder** - Burst finder: frequency, length, bandwidth, repetition
 - **SDR input health meter** - Input health: level, clipping, DC, IQ mismatch
 - **Phase noise meter** - Phase noise: L(f), spurs, jitter
 - **SSB transmitter test meter** - SSB test: carrier, opposite sideband, IMD3/5/7
@@ -425,12 +473,18 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Transmitter frequency stability meter** - Tx stability: key-up step, settling, drift, offset
 - **Crest factor (PAPR / CCDF) meter** - PAPR: crest factor and CCDF against Gaussian
 - **Occupied bandwidth meter** - Occupied bandwidth: 99 %, x dB, centre, adjacent power
-- **Spectral kurtosis RFI finder** - Spectral kurtosis: clean share, pulsed and steady regions
 - **SDR stream glitch detector** - Glitches: dropped samples, zero runs, repeats, level steps
-- **Signal workbench** - Signal workbench: analyse, demodulate and read any recording
-- **General receiver** - General receiver: NFM, WFM, AM, USB, LSB and CW anywhere
-- **Spectrum explorer** - Spectrum explorer: look, measure and sweep
-- **Spectrum analyser** - Spectrum analyser: fast wide sweeps with markers and band labels
+
+## Interference Hunting (8)
+
+- **Power-line noise locator** - Noise locator: impulse rate, repetition, level
+- **Spectrum occupancy monitor** - Occupancy: busy channels, duty cycle, transmissions
+- **Intermodulation finder** - Intermod finder: products of strong signals and their verdict
+- **Spur and image finder** - Spur finder: DC spike, images, harmonics, fixed spurs
+- **Frequency-hopper analyser** - Hopper analyser: hop rate, channels, spacing, dwell
+- **Persistent carrier (birdie) finder** - Birdie finder: persistent carriers, level, drift
+- **Burst finder** - Burst finder: frequency, length, bandwidth, repetition
+- **Spectral kurtosis RFI finder** - Spectral kurtosis: clean share, pulsed and steady regions
 
 ## Plugins (1)
 

@@ -31,8 +31,8 @@ int main() {
     CHECK(dect2::modeTuningById("ltr") != nullptr && dect2::modeTuningById("edacs") != nullptr, "ids not registered");
 
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(table.find("{129, \"LTR trunking\", 5,") != std::string::npos, "mode row for family 129 missing");
-    CHECK(table.find("{130, \"EDACS trunking\", 5,") != std::string::npos, "mode row for family 130 missing");
+    CHECK(table.find("{129, \"LTR trunking\", 14,") != std::string::npos, "mode row for family 129 missing");
+    CHECK(table.find("{130, \"EDACS trunking\", 14,") != std::string::npos, "mode row for family 130 missing");
     const std::string appH = readFile("app/app.h");
     { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) >= 131, "kNumFamilies does not cover family 130"); }
     const std::string modeUi = readFile("app/panels/modeui.cpp");

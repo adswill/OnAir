@@ -31,7 +31,7 @@ int main() {
     CHECK(b && std::string(b->id) == "lorasat", "LoRa satellite tuning not registered");
     CHECK(dect2::modeTuningById("lorasat") != nullptr && dect2::modeTuningById("lorawanwide") != nullptr, "ids");
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(has(table, "{200, \"LoRaWAN (all channels)\", 8,") && has(table, "{201, \"LoRa satellites\", 4,"), "mode rows missing");
+    CHECK(has(table, "{200, \"LoRaWAN (all channels)\", 18,") && has(table, "{201, \"LoRa satellites\", 8,"), "mode rows missing");
     const std::string appH = readFile("app/app.h");
     { const size_t q = appH.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(appH.c_str() + q + 29) >= 202, "kNumFamilies does not cover family 201"); }
     const std::string eng = readFile("core/include/dect2/engine/engine.h");

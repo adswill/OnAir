@@ -236,7 +236,7 @@ void stationSurprise(App& a) {
     std::vector<std::string> heard;
     if (dect2::msgdb::global().isOpen()) heard = dect2::msgdb::global().modes();
     for (const auto& m : allModes()) {
-        if (m.group == 13 || m.group == 14 || m.group == 15 || m.group == 16 || (m.needs & modepick::NPlugin) || (m.needs & modepick::NCodec)) continue;
+        if (m.group >= modegroups::Receivers || (m.needs & modepick::NPlugin) || (m.needs & modepick::NCodec)) continue;
         if (m.subId && !strncmp(m.subId, "auto:", 5)) continue;   // the "automatic" rows are not a station of their own
         st::SurpriseMode c;
         c.ready = modeFit(a, m).ok;

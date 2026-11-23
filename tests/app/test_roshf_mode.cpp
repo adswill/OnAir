@@ -30,7 +30,7 @@ int main() {
         for (int i = 0; i < n; i++) if (p[i].mhz == 27.635) cb = true;
         CHECK(cb, "11 m / CB band preset 27.635");
     }
-    CHECK(has(readFile("app/ui/mode_table.cpp"), "{205, \"ROS (HF)\", 10,"), "mode row");
+    CHECK(has(readFile("app/ui/mode_table.cpp"), "{205, \"ROS (HF)\", 23,"), "mode row");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case 205: return &kRoshfUi;"), "panel hook");
     { const std::string a = readFile("app/app.h"); const size_t q = a.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(a.c_str() + q + 29) >= 206, "kNumFamilies"); }
     { const std::string e = readFile("core/include/dect2/engine/engine.h"); const size_t q = e.find("kPollSeqSlots = "); CHECK(q != std::string::npos && atoi(e.c_str() + q + 16) >= 183, "kPollSeqSlots"); }

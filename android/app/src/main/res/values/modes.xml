@@ -4,18 +4,36 @@
     <string-array name="mode_groups">
         <item>TV</item>
         <item>BROADCAST RADIO</item>
-        <item>AVIATION</item>
+        <item>AIRCRAFT DATALINKS</item>
+        <item>NAVAIDS &amp; RADAR</item>
+        <item>DRONES &amp; LIGHT AVIATION</item>
         <item>MARITIME</item>
-        <item>SATELLITE &amp; NAVIGATION</item>
+        <item>NAVIGATION</item>
+        <item>MOBILE &amp; DATA SATELLITES</item>
+        <item>CUBESATS &amp; SMALL SATS</item>
+        <item>RESCUE &amp; TRACKING</item>
+        <item>WEATHER SATS - LOW RATE</item>
+        <item>WEATHER SATS - HIGH RATE</item>
+        <item>WEATHER &amp; SONDES</item>
+        <item>SCIENCE &amp; SENSING</item>
         <item>TWO-WAY RADIO</item>
         <item>CELLULAR &amp; RAIL</item>
         <item>PAGERS</item>
-        <item>IoT &amp; SENSORS</item>
-        <item>WEATHER &amp; SCIENCE</item>
-        <item>AMATEUR - DIGITAL</item>
+        <item>SMART DEVICES &amp; RFID</item>
+        <item>MESH &amp; LORA</item>
+        <item>RADIO CONTROL &amp; DRONES</item>
+        <item>WIRELESS NETWORKS</item>
+        <item>VEHICLES &amp; ROADS</item>
+        <item>AMATEUR - WEAK SIGNAL</item>
+        <item>AMATEUR - TEXT MODES</item>
+        <item>AMATEUR - IMAGES &amp; DATA</item>
         <item>AMATEUR - VOICE &amp; PACKET</item>
-        <item>HF UTILITY</item>
-        <item>GENERAL &amp; TOOLS</item>
+        <item>HF DATA</item>
+        <item>HF TELEGRAPH &amp; FSK</item>
+        <item>HF MONITORING</item>
+        <item>RECEIVERS &amp; ANALYSERS</item>
+        <item>METERS</item>
+        <item>INTERFERENCE HUNTING</item>
         <item>PLUGINS</item>
         <item>Kris custom modes</item>
         <item>CUSTOM MODES</item>

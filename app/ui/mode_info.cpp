@@ -37,7 +37,7 @@ void modeInfoFill() {
         if (inList(m.name, {"GNSS", "Inmarsat-C", "Inmarsat Aero", "Iridium"})) m.needs |= modepick::NActiveAnt;
         if (inList(m.name, {"DVB-C"})) m.needs |= modepick::NCable;
         if (m.minRateMsps >= 8) m.needs |= modepick::NWideRadio;
-        if (m.group == 14) m.needs |= modepick::NPlugin;
+        if (m.group == modegroups::Plugins) m.needs |= modepick::NPlugin;
         for (const char* const* n = kNewModes; *n; n++) if (!strcmp(*n, m.name)) m.isNew = true;
         if (!m.tags) m.tags = 0x80000000u;   // "no tag": still a valid row (the General and custom groups)
     }

@@ -21,7 +21,7 @@ int main() {
     const std::string modeui = readSource("app/panels/modeui.cpp");
     const std::string app = readSource("app/app.h");
     const std::string panel = readSource("app/hfdig/hfdig_sitor_ui.cpp");
-    CHECK(table.find("{119, \"SITOR\", 10,") != std::string::npos, "SITOR row (family 119) missing from the mode table");
+    CHECK(table.find("{119, \"SITOR\", 23,") != std::string::npos, "SITOR row (family 119) missing from the mode table");
     CHECK(table.find("SITOR (WIP") == std::string::npos, "SITOR still marked work in progress");
     CHECK(modeui.find("case 119: return &kSitorUi;") != std::string::npos, "family 119 has no UI in modeui.cpp");
     { const size_t q = app.find("kNumFamilies = "); CHECK(q != std::string::npos && atoi(app.c_str() + q + 15) >= 120, "kNumFamilies does not cover family 119"); }

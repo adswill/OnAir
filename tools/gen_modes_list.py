@@ -44,7 +44,7 @@ def load():
     return groups, rows
 
 
-KEEP = {"TV": "TV", "HF": "HF", "IOT": "IoT", "&": "&", "-": "-"}
+KEEP = {"TV": "TV", "HF": "HF", "IOT": "IoT", "&": "&", "-": "-", "RFID": "RFID", "LORA": "LoRa", "FSK": "FSK", "CUBESATS": "CubeSats"}
 
 
 def nice(title):

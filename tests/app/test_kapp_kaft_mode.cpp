@@ -34,11 +34,11 @@ int main() {
     };
 
     const std::string table = readSource("app/ui/mode_table.cpp");
-    need("app/ui/mode_table.cpp", table, "{124, \"KAPP\", 15,");
-    need("app/ui/mode_table.cpp", table, "{125, \"KAFT\", 15,");
+    need("app/ui/mode_table.cpp", table, "{124, \"KAPP\", 33,");
+    need("app/ui/mode_table.cpp", table, "{125, \"KAFT\", 33,");
     absent("app/ui/mode_table.cpp", table, "KAPP (WIP)");
     absent("app/ui/mode_table.cpp", table, "KAFT (WIP)");
-    need("app/ui/mode_table.cpp", table, "{123, \"KAVB\", 15,");
+    need("app/ui/mode_table.cpp", table, "{123, \"KAVB\", 33,");
 
     // the family numbers of the rows are unique
     {

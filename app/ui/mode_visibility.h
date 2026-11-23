@@ -4,6 +4,7 @@
 // Which modes the mode lists show: the rules are plain strings and sets (no ImGui, no mode table), so they are unit-tested.
 // Modes and groups are named by their text, never by number. Hidden modes stay reachable: by search (tagged "hidden"), --mode, --pick and deep links.
 #pragma once
+#include "mode_groups.h"
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -84,10 +85,11 @@ inline const std::vector<std::string>& presetNames() {
     return n;
 }
 inline std::vector<std::string> presetWords(const std::string& preset) {
-    if (preset == "Ham") return {"amateur", "general", "plugins", "kris"};
-    if (preset == "Broadcast") return {"tv", "broadcast", "general", "plugins"};
-    if (preset == "Aviation") return {"aviation", "general", "plugins"};
-    if (preset == "Marine") return {"maritime", "satellite", "weather", "general", "plugins"};
+    // "general" and the three words after it are the General & tools groups (Receivers, Meters, Interference), kept in every preset
+    if (preset == "Ham") return {"amateur", "general", "receivers", "meters", "interference", "plugins", "kris"};
+    if (preset == "Broadcast") return {"tv", "broadcast", "general", "receivers", "meters", "interference", "plugins"};
+    if (preset == "Aviation") return {"aviation", "aircraft", "navaids", "rescue", "general", "receivers", "meters", "interference", "plugins"};
+    if (preset == "Marine") return {"maritime", "satellite", "sats", "navigation", "rescue", "weather", "general", "receivers", "meters", "interference", "plugins"};
     return {};
 }
 // the preset's hidden groups, among all group names; Everything (or an unknown preset) hides none
@@ -130,7 +132,7 @@ inline bool fromText(const std::string& text, Rules& out) {
         if (eq == std::string::npos) continue;
         const std::string k = line.substr(0, eq), v = line.substr(eq + 1);
         if (k == "hiddenModes") { r.hiddenModes = parseList(v); seen++; }
-        else if (k == "hiddenGroups") { r.hiddenGroups = parseList(v); seen++; }
+        else if (k == "hiddenGroups") { r.hiddenGroups = modegroups::migrate(parseList(v)); seen++; }   // names of 4.5 become the 4.6 names (mode_groups.h)
         else if (k == "favs") { r.favs = parseList(v); seen++; }
         else if (k == "favsOnly") { r.favsOnly = v == "1"; seen++; }
     }

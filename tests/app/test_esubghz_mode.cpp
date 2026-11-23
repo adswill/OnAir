@@ -25,7 +25,7 @@ int main() {
     const dect2::ModeTuning mt = dect2::esubghzTuning();
     CHECK(mt.stdMode == 206 && dect2::modeTuningById("esubghz") && dect2::modeTuningById("esubghz")->stdMode == 206 && dect2::modeTuning(206), "tuning table");
     CHECK(mt.defMhz > 433.919 && mt.defMhz < 433.921 && mt.tuneOffsetHz > 0, "433.92 MHz, off the DC spike");
-    CHECK(has(readFile("app/ui/mode_table.cpp"), "{204, \"Flipper Zero Sub-GHz chat\", 8,"), "mode row");
+    CHECK(has(readFile("app/ui/mode_table.cpp"), "{204, \"Flipper Zero Sub-GHz chat\", 18,"), "mode row");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case 204: return &kEsubghzUi;"), "panel hook");
     { const std::string a = readFile("app/app.h"); const size_t q = a.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(a.c_str() + q + 29) >= 205, "kNumFamilies"); }
     { const std::string e = readFile("core/include/dect2/engine/engine.h"); const size_t q = e.find("kPollSeqSlots = "); CHECK(q != std::string::npos && atoi(e.c_str() + q + 16) >= 166, "kPollSeqSlots"); }

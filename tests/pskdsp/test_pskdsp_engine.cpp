@@ -28,7 +28,7 @@ static bool has(const std::string& s, const char* t) { return s.find(t) != std::
 int main() {
     const ModeTuning mt = pskdTuning();
     CHECK(mt.stdMode == 204 && modeTuningById("pskd") && modeTuningById("pskd")->stdMode == 204 && modeTuning(204), "tuning table");
-    CHECK(has(readFile("app/ui/mode_table.cpp"), "{202, \"PSK demodulator (experimental)\", 4,"), "mode row");
+    CHECK(has(readFile("app/ui/mode_table.cpp"), "{202, \"PSK demodulator (experimental)\", 8,"), "mode row");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case 202: return &kPskdUi;"), "panel hook");
     CHECK(has(readFile("core/src/engine/engine_telemetry.cpp"), "case 203: return pollStd(rxPskd_, 203, t, seqs[163]"), "telemetry case");
     CHECK(has(readFile("docs/psk-demodulator.md"), "experimental"), "help page");

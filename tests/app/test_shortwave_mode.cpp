@@ -28,7 +28,7 @@ int main() {
     CHECK(mt.stdMode == 214 && dect2::modeTuningById("shortwave") && dect2::modeTuningById("shortwave")->stdMode == 214 && dect2::modeTuning(214), "tuning table");
     CHECK(mt.minMhz <= 0.2 && mt.maxMhz >= 30 && mt.minSampleRate <= 250000, "covers the HF bands, works from a narrow HF radio");
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(has(table, "{212, \"Shortwave\", 12,"), "mode row in the HF UTILITY group");
+    CHECK(has(table, "{212, \"Shortwave\", 28,"), "mode row in the HF UTILITY group");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case 212: return &kShortwaveUi;"), "panel hook");
     { const std::string a = readFile("app/app.h"); const size_t q = a.find("constexpr int kNumFamilies = "); CHECK(q != std::string::npos && atoi(a.c_str() + q + 29) >= 213, "kNumFamilies"); CHECK(has(a, "isGeneralFamily"), "General screen shared"); }
     { const std::string e = readFile("core/include/dect2/engine/engine.h"); const size_t q = e.find("kPollSeqSlots = "); CHECK(q != std::string::npos && atoi(e.c_str() + q + 16) >= 189, "kPollSeqSlots"); }

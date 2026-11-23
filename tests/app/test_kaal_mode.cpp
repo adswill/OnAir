@@ -32,10 +32,10 @@ int main() {
     };
 
     const std::string table = readSource("app/ui/mode_table.cpp");
-    need("app/ui/mode_table.cpp", table, "{122, \"KAAL\", 15,");
-    need("app/ui/mode_table.cpp", table, "{123, \"KAVB\", 15,");
-    need("app/ui/mode_table.cpp", table, "{124, \"KAPP\", 15,");
-    need("app/ui/mode_table.cpp", table, "{125, \"KAFT\", 15,");
+    need("app/ui/mode_table.cpp", table, "{122, \"KAAL\", 33,");
+    need("app/ui/mode_table.cpp", table, "{123, \"KAVB\", 33,");
+    need("app/ui/mode_table.cpp", table, "{124, \"KAPP\", 33,");
+    need("app/ui/mode_table.cpp", table, "{125, \"KAFT\", 33,");
     need("app/ui/mode_table.cpp", table, "N_(\"PLUGINS\"), \"Kris custom modes\", N_(\"CUSTOM MODES\")}");   // the Mode Builder's group follows
     need("app/ui/mode_table.cpp", table, "IM_COL32(233, 163, 101, 255),\n    IM_COL32(147, 191, 179, 255)};");
 

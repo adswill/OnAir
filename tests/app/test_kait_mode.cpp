@@ -38,7 +38,7 @@ int main() {
     else if (dect2::txPayloadKind("kait") != dect2::TxPayloadKind::Kait) { std::printf("FAIL: payload kind\n"); fails++; }
 
     const std::string table = readSource("app/ui/mode_table.cpp");
-    need("app/ui/mode_table.cpp", table, "{131, \"KAIT\", 15,");
+    need("app/ui/mode_table.cpp", table, "{131, \"KAIT\", 33,");
     const std::string app = readSource("app/app.h");
     { const size_t q = app.find("constexpr int kNumFamilies = "); if (q == std::string::npos || atoi(app.c_str() + q + 29) < 132) { std::printf("FAIL: kNumFamilies does not cover family 131\n"); fails++; } }
     const std::string modeui = readSource("app/panels/modeui.cpp");

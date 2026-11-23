@@ -29,7 +29,7 @@ int main() {
     if (reg) CHECK(std::string(reg->name) == "eLoran / Loran-C", "registered name '%s'", reg->name);
 
     const std::string table = readFile("app/ui/mode_table.cpp");
-    CHECK(table.find("{126, \"eLoran / Loran-C\", 2,") != std::string::npos, "mode row for family 126 missing");
+    CHECK(table.find("{126, \"eLoran / Loran-C\", 3,") != std::string::npos, "mode row for family 126 missing");
     const std::string appH = readFile("app/app.h");
     CHECK(appH.find("constexpr int kNumFamilies = ") != std::string::npos, "kNumFamilies missing");
     const std::string modeUi = readFile("app/panels/modeui.cpp");

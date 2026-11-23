@@ -14,9 +14,19 @@ using namespace txui;
 
 namespace {
 
-// one icon per heading of the mode list (kGroupNames order: TV, broadcast, aviation, maritime, satellite, two-way, cellular, pagers, IoT, weather, amateur digital, amateur voice, HF, general)
+// one icon per heading of the mode list (the order of kGroupNames, modegroups::Id in ui/mode_groups.h)
 Ic groupIcon(int g) {
-    static const Ic ic[kNumGroups] = {Ic::Tv, Ic::Radio, Ic::Antenna, Ic::Compass, Ic::Globe, Ic::Speaker, Ic::Signal, Ic::Bolt, Ic::Chip, Ic::Gauge, Ic::Wave, Ic::Speaker, Ic::Pulse, Ic::Grid, Ic::Link, Ic::Wave};
+    static const Ic ic[kNumGroups] = {
+        Ic::Tv, Ic::Radio,                                                                                  // TV, broadcast radio
+        Ic::Antenna, Ic::Signal, Ic::Pulse,                                                                 // aircraft datalinks, navaids and radar, drones and light aviation
+        Ic::Compass,                                                                                        // maritime
+        Ic::Globe, Ic::Signal, Ic::Chip, Ic::Bolt, Ic::Gauge, Ic::Gauge, Ic::Gauge, Ic::Wave,              // navigation ... science and sensing
+        Ic::Speaker, Ic::Signal, Ic::Bolt,                                                                  // two-way radio, cellular and rail, pagers
+        Ic::Chip, Ic::Link, Ic::Pulse, Ic::Link, Ic::Antenna,                                               // smart devices, mesh and LoRa, radio control, wireless networks, vehicles
+        Ic::Wave, Ic::Wave, Ic::Grid, Ic::Speaker,                                                          // amateur: weak signal, text, images, voice and packet
+        Ic::Pulse, Ic::Pulse, Ic::Pulse,                                                                    // HF data, telegraph and FSK, monitoring
+        Ic::Grid, Ic::Gauge, Ic::Bolt,                                                                      // receivers, meters, interference hunting
+        Ic::Link, Ic::Wave, Ic::Grid};                                                                      // plug-ins, Kris custom modes, custom modes
     return ic[std::max(0, std::min(kNumGroups - 1, g))];
 }
 
