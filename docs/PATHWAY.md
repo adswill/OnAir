@@ -2543,3 +2543,6 @@ Release ccache hit rate was ~0 (ONAIR_VERSION is a command-line define of every 
 - web schema generator now finds the telemetry member of a `case N: {` block (Datawell), generated files regenerated.
 - airband_auto: the test compared the asked capture with current(), which tick() already moves; it now compares with the capture it left.
 - updater (macOS): hdiutil retried, no abort when the image is missing. audio_engine: wall-clock guard on the signal-time loops. sferics_ltpos, audio_engine labelled timing. tx_quality_b was already timing.
+
+## 2026-11-23 prs lane (4.6)
+Merged PRs 644, 653, 654, 655, 574, 558 into integ-46-prs (author commits kept); zh catalogs resolved, web options regenerated. Review table in scratchpad/PR-REVIEW-4.6.md.

@@ -1,3 +1,92 @@
 # Machine-translated, not yet reviewed by a native speaker. One English key per line; delete a line once the translation was checked.
-Define function on_event(e). e.type
-Hellschreiber is a picture
+Per system, set the parameters you want or leave them on Any. The list beside them shows the modes that carry the bitrate within the bandwidth at the C/N, the best first: the smallest bandwidth, then the most C/N margin. Satellite modes have a free symbol rate: their bandwidth is what the bitrate needs, their capacity what the whole bandwidth would carry. The thresholds are the ideal AWGN values of the standards (no implementation margin, phase noise or multipath): keep a few dB in hand. The DVB-T2 bitrate is the ideal cell capacity (P1/P2 symbols and signalling not deducted), so the real one is a few percent lower. DVB-T2 has a Profile: T2-Lite (EN 302 755 annex I, for simple mobile receivers) carries at most 4 Mbit/s a programme and adds the code rates 1/3 and 2/5, which have no C/N figure in the standards and are therefore never proposed.
+The total rate of the transport stream: video, audio, tables and null packets that pad it to a constant rate. Keep it at or below the net bitrate of the DVB link, e.g. DVB-T 8 MHz, 64-QAM, code rate 2/3, guard interval 1/4 carries about 19.9 Mbit/s; QPSK 1/2 about 5 Mbit/s. For DVB-T2-Lite keep it at or below 4 Mbit/s, the most a T2-Lite programme may carry (the transmitter then says the exact rate). Auto uses the estimate on the right plus a small margin.
+T2-Lite does not allow these parameters (EN 302 755 annex I): no 1K or 32K FFT, no PP8, 16 200-bit FEC frames only, no code rate 4/5 or 5/6, no 256-QAM with 2/3 or 3/4.
+The modes that would carry it have no C/N figure in the standards (T2-Lite code rates 1/3 and 2/5: TS 102 831 tables 44 and 45 start at 1/2), so they are not proposed.
+T2-Lite carries at most 4 Mbit/s for a programme (EN 302 755 annex I.10): lower the bitrate, or choose T2-Base.
+A code rate of T2-Lite only (EN 302 755 annex I, table I.1): set the profile to T2-Lite or Any.
+T2-Lite carries at most
+Enjoying OnAir? A star on GitHub helps others find it. Thank you!
+Star on GitHub
+Maybe later
+Don't ask again
+Star reminder
+Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.
+AIRCRAFT DATALINKS
+NAVAIDS & RADAR
+DRONES & LIGHT AVIATION
+NAVIGATION
+MOBILE & DATA SATELLITES
+CUBESATS & SMALL SATS
+RESCUE & TRACKING
+WEATHER SATS - LOW RATE
+WEATHER SATS - HIGH RATE
+WEATHER & SONDES
+SCIENCE & SENSING
+SMART DEVICES & RFID
+MESH & LORA
+RADIO CONTROL & DRONES
+WIRELESS NETWORKS
+VEHICLES & ROADS
+AMATEUR - WEAK SIGNAL
+AMATEUR - TEXT MODES
+AMATEUR - IMAGES & DATA
+HF DATA
+HF TELEGRAPH & FSK
+HF MONITORING
+RECEIVERS & ANALYSERS
+METERS
+INTERFERENCE HUNTING
+ping
+Ping
+Pings
+Copies the pings as CSV: id, UTC time, duration, peak level, Doppler, drift, type, beacon frequency.
+Appends every ping to meteor_scatter.csv in the data folder, also when nobody watches the screen.
+How far above its long-term level a spectrum bin must rise to count as an echo. Lower finds weaker pings and more false ones.
+start the receiver to see the pings
+no ping yet: on GRAVES a quiet hour brings a few, a shower peak hundreds
+pings per hour (UTC), the last 24 hours
+pings per day (UTC), the last 30 days; showers marked at their peak
+pings
+Hear this receiver
+Close receiver
+Level squelch: dBFS. Speech to noise: dB.
+A .sigmf-meta file with the frequency, rate and mode next to each recording.
+Saves the sound you hear, in any mode, to a file (before the volume slider, so the level does not depend on it)
+Mono saves some bitrate; stereo needs more.
+No DAB ensembles found. Check the antenna and press Scan on the Scan tab.
+No ensemble in the capture yet (needs at least 3 MHz of Band III).
+Open http://this-computer:port/stream.ts in VLC, OBS (media source) or ffplay. Without a key, anyone who can reach the port can watch while it is on.
+Payload (hex)
+Periods are from memory and drift with the Earth's motion; the search covers 0.02 % around the period. Check the ATNF pulsar catalogue before a long run.
+Plays the first of the chosen channels that opens, stays on it until it has been quiet for the hang time, then goes on.
+Reception doctor
+Preamble chirps
+Restore the default spectrum and waterfall levels and the usual half-and-half split (does not change panel layout)
+Scatter, 144.140 MHz
+Saved to the memory table (group Fast scan).
+S4 comes from the receiver's 1 Hz C/N0: only slow, strong scintillation shows. Multipath is judged at the end of each pass.
+Send one weather station's values to Weather Underground and CWOP every few minutes. Off until you switch it on; your station id, key and callsign. Windy and AWEKAS are not supported.
+Short hands-on lessons on the real controls. Each one lights up the part to use and notices when you have done it. Skip any you know already.
+Start the receiver first: the doctor looks at the live signal.
+Starts the receiver by itself at the rise, follows the Doppler and puts the receiver back at the set. Cancel it in View > Passes.
+The sample rate actually handed over by the radio, over the last seconds. A warning appears below 97% of the set rate.
+Their report of you minus your SNR of them: above 0 they hear you better than you hear them
+The top shows the spectrum, and the waterfall scrolls its history below. Click a signal to tune to it.
+Type it by hand if the list does not show your port. host:port is for a rigctld (model 2) on this or another computer.
+Tracks the next pass of these satellites, starts the receiver by itself at the rise, follows the Doppler and stops at the set.
+The shape of the picture on screen. 16:9 stretches an anamorphic 16:9 picture back to its width. Auto follows the wide screen signalling when the video carries it, else 4:3.
+Utility telemetry
+Wide spans (over 150 MHz) get wider bins and a short dwell that suit the radio; narrow bands keep the values under Advanced.
+With a capture of several MHz: reads every Band III ensemble in it at once, no scanning. Click a channel to listen.
+Your radios and antennas, entered once: modes pick the right ones and the mode list shows what can be received
+does not look like a reference of this program
+dial
+echo found, equaliser on
+ensemble dots
+ensemble members
+from the dial
+the dial is on no Sigfox zone (listening anyway)
+soft values of the slicer
+pick
+One capture of %.1f Msps or more holds AIS 1, AIS 2 and the long-range channels 75 and 76 (message 27)

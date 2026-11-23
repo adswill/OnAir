@@ -38,6 +38,7 @@
 #include "dect2/flarm/flarm_rx.h"
 #include "dect2/fpv/fpv_live.h"
 #include "dect2/fsq/fsq_rx.h"
+#include "dect2/fusion/fusion_rx.h"
 #include "dect2/fygeo/fygeo_rx.h"
 #include "dect2/general/general_rx.h"
 #include "dect2/globalstar/globalstar_rx.h"
@@ -647,6 +648,12 @@ static bool set_128(Engine& e, const std::string& n, double v) {
     if (n == "setFollow") { call(r, &Rx<decltype(r)>::setFollow, v); return true; }
     if (n == "setVoiceSlots") { call(r, &Rx<decltype(r)>::setVoiceSlots, v); return true; }
     if (n == "setListenTg") { call(r, &Rx<decltype(r)>::setListenTg, v); return true; }
+    return false;
+}
+static const char kOpt_129[] = R"JSON([{"n":"setMbeFallback","k":"bool","l":"Mbe Fallback","h":"V/D mode 1 through the user's mbelib when the 'ysf' plug-in is not there (default on)","t":"s"}])JSON";
+static bool set_129(Engine& e, const std::string& n, double v) {
+    auto& r = e.fusion();
+    if (n == "setMbeFallback") { call(r, &Rx<decltype(r)>::setMbeFallback, v); return true; }
     return false;
 }
 static const char kOpt_131[] = R"JSON([{"n":"setInverted","k":"bool","l":"Inverted","h":"no effect: the polarity is found from the sync word and the check bits (kept for the callers)","t":"s"},{"n":"setFollow","k":"bool","l":"Follow","h":"listen to the voice channel of an announced call","t":"s"},{"n":"setFollowActivity","k":"bool","l":"Follow Activity","h":"... also to a carrier on a channel of the table that no message announced","t":"s"},{"n":"setVoiceSlots","k":"int","l":"Voice Slots","h":"calls decoded at once, 1 .. 16 (default 4)","t":"s"}])JSON";
@@ -1442,6 +1449,7 @@ const OptEntry kOpt[] = {
     {114, kOpt_114, set_114},
     {117, kOpt_117, set_117},
     {128, kOpt_128, set_128},
+    {129, kOpt_129, set_129},
     {131, kOpt_131, set_131},
     {141, kOpt_141, set_141},
     {142, kOpt_142, set_142},
