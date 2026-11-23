@@ -338,13 +338,29 @@ cmake --build build-android
 on Windows; on Windows run it in a shell that has CMake and Ninja, and add `-G Ninja`.) Then:
 
 1. Copy `build-android/libonair_dra.so` to the phone (USB cable, cloud drive, e-mail to yourself: anywhere the file picker can reach).
-2. In OnAir, pick the CDR mode, open the **Sound** tab and tap **Import add-on (.so)**; choose the file.
+2. In OnAir open **Settings > Codecs** (the CDR **Sound** tab has an **Open Codecs** button) and tap **Import .so or .zip**; choose the file and confirm.
 3. The line turns green (*DRA+ decoder loaded*) and the first audio service plays; tap **Listen** on another service to change it.
+
+(Since 4.6 the import is in **Settings > Codecs**, with a check and the SHA-256; see [Codecs on Android](#codecs-on-android). The CDR tab's button opens that screen.)
 
 The file is copied into the app's own folder (`files/codecs/libonair_dra.so`; Android does not run code from shared storage) and stays there
 across updates. **Remove add-on** deletes it (it stays loaded until the app is closed). A file built for another processor (x86, 32-bit ARM)
 or a library without the five DRA functions is refused with the reason on the same tab. The CI builds the add-on with the NDK as a check that
 these steps work; it is never packaged. The add-on was not run on a phone when this was written (no phone and no CDR signal were available).
+
+## Codecs on Android
+
+OnAir for Android ships no patented codec and downloads none. Libraries you build or get yourself are imported in the app: **Settings > Codecs**.
+
+- The screen lists every optional codec and add-on (DRA+ for CDR, mbelib for DMR/P25/NXDN/dPMR/D-STAR voice, FAAD2, LAME, fdk-aac, FFmpeg for AC-4 and AVS+, the voice plug-ins ...) with what needs it, whether a library is installed, and its file and ABI. Radio drivers are not on it (the phone's USB path has its own).
+- **Import .so or .zip** opens the file picker. A zip may hold several libraries; other files in it are ignored. Each file is checked: its name must be one the list shows ("Accepted names", the same names the desktop looks for, ending in `.so` or `.so.<number>`), and it must be a 64-bit **arm64-v8a** ELF shared library. A file for x86, 32-bit ARM, or with another name is refused with the reason.
+- Before anything is copied, OnAir shows the file's **SHA-256** and a warning: the library runs inside OnAir with the same access as the app, so import only files you built yourself or trust; patent and licence rules are yours to follow.
+- On yes, the file is copied into the app's private folder (`files/codecs`, read-only; Android does not run code from shared storage) and the core looks again. DRA+ is picked up at once; a library another part already tried to load may need OnAir to be closed and opened again. **Remove** deletes the file (a loaded library stays loaded until the app is closed).
+- Where to get each one: the section of this page for that codec (and its source line on the screen). Build with the Android NDK for `arm64-v8a`, as in [DRA+ on Android](#dra-on-android). OnAir links to no ready-made binaries.
+- Modes that need a missing codec say so: "Install the X codec in Settings > Codecs", with a button that opens the screen (the CDR Sound tab so far).
+- Video and sound that the phone itself can decode (H.264, HEVC, AAC, AC-3, E-AC-3 through MediaCodec) need nothing from this screen.
+
+The check is `core/src/codec/codec_import.cpp` (test `codec_import`); the screen is `android/.../ui/settings/CodecsScreen.kt`.
 
 ## AVS+, AVS2, AVS3 and DRA (DTMB television in China)
 

@@ -205,7 +205,12 @@ class ReceiverViewModel(app: Application) : AndroidViewModel(app) {
     fun setSound(volume: Float, muted: Boolean) = repo.setSound(volume, muted)
     val codecs get() = repo.codecs
     fun importCodec(uri: Uri) = repo.importCodec(uri)
-    fun removeCodec() = repo.removeCodec()
+    val codecList get() = repo.codecList
+    val codecImport get() = repo.codecImport
+    fun refreshCodecList() = repo.refreshCodecList()
+    fun confirmCodecImport() = repo.confirmCodecImport()
+    fun cancelCodecImport() = repo.cancelCodecImport()
+    fun removeCodecFile(file: String) = repo.removeCodecFile(file)
     fun cdrListen(serviceId: Int) = repo.cdrListen(serviceId)
     fun setGeneral(demod: Demod, squelch: Boolean, squelchAuto: Boolean, squelchDb: Float) = repo.setGeneral(demod, squelch, squelchAuto, squelchDb)
 

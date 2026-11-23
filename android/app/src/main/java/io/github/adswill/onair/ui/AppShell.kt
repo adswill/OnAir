@@ -125,7 +125,7 @@ fun OnAirApp(vm: ReceiverViewModel, pickFile: () -> Unit, pendingLink: String? =
 
     BoxWithConstraints(Modifier.fillMaxSize().background(p.window)) {
         val layout = AppLayout.of(maxWidth, maxHeight)
-        CompositionLocalProvider(LocalAppLayout provides layout) {
+        CompositionLocalProvider(LocalAppLayout provides layout, io.github.adswill.onair.ui.nav.LocalOpenCodecs provides { nav.navigate(Dest.CODECS) }) {
             when {
                 !uiLoaded -> Box(Modifier.fillMaxSize())       // a few ms while the preferences are read: no flash of the wrong screen
                 !ui.onboardingDone -> Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
@@ -212,11 +212,12 @@ private fun Destination(vm: ReceiverViewModel, nav: Navigator, pickFile: () -> U
             Dest.MODES -> ModePickerScreen(vm, onPicked = { nav.navigate(Dest.RECEIVER) }, modifier = Modifier.fillMaxSize())
             Dest.RADIO -> RadioScreen(vm, pickFile, Modifier.fillMaxSize())
             Dest.SETTINGS -> SettingsScreen(
-                vm, onOpenLog = { nav.navigate(Dest.LOG) }, onOpenAbout = { nav.navigate(Dest.ABOUT) },
+                vm, onOpenLog = { nav.navigate(Dest.LOG) }, onOpenAbout = { nav.navigate(Dest.ABOUT) }, onOpenCodecs = { nav.navigate(Dest.CODECS) },
                 onRunSetup = { vm.restartOnboarding() }, modifier = Modifier.fillMaxSize(),
             )
             Dest.LOG -> Secondary(stringResource(R.string.log_title), nav) { LogScreen(vm, it) }
             Dest.ABOUT -> Secondary(stringResource(R.string.about_title), nav) { AboutScreen(vm, it) }
+            Dest.CODECS -> Secondary(stringResource(R.string.codecs_title), nav) { io.github.adswill.onair.ui.settings.CodecsScreen(vm, it) }
         }
     }
 }

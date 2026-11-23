@@ -66,11 +66,11 @@ class SettingItem(val group: Int, val title: String, val keywords: String, val c
  * Radio screen, next to the source they belong to.
  */
 @Composable
-fun SettingsScreen(vm: ReceiverViewModel, onOpenLog: () -> Unit, onOpenAbout: () -> Unit, onRunSetup: () -> Unit, modifier: Modifier = Modifier) {
+fun SettingsScreen(vm: ReceiverViewModel, onOpenLog: () -> Unit, onOpenAbout: () -> Unit, onRunSetup: () -> Unit, modifier: Modifier = Modifier, onOpenCodecs: () -> Unit = {}) {
     val s by vm.settings.collectAsStateWithLifecycle()
     val ui by vm.ui.collectAsStateWithLifecycle()
     val actions = remember(vm) { vmSettingsActions(vm) }
-    SettingsContent(s, ui, actions, onOpenLog, onOpenAbout, onRunSetup, modifier)
+    SettingsContent(s, ui, actions, onOpenLog, onOpenAbout, onRunSetup, modifier, onOpenCodecs)
 }
 
 /** What the settings screen changes; the view model in the app, a no-op in previews. */
@@ -104,7 +104,7 @@ private fun vmSettingsActions(vm: ReceiverViewModel) = object : SettingsActions 
 @Composable
 fun SettingsContent(
     s: Settings, ui: UiPrefs, vm: SettingsActions, onOpenLog: () -> Unit, onOpenAbout: () -> Unit, onRunSetup: () -> Unit,
-    modifier: Modifier = Modifier,
+    modifier: Modifier = Modifier, onOpenCodecs: () -> Unit = {},
 ) {
     val p = LocalPalette.current
     var query by rememberSaveable { mutableStateOf("") }
@@ -177,6 +177,7 @@ fun SettingsContent(
         SettingItem(5, stringResource(R.string.map_tiles), "map tiles online openstreetmap privacy") {
             Dropdown(consent, s.mapConsent.coerceIn(0, 2), { vm.setMapConsent(it) }, label = stringResource(R.string.map_tiles))
         },
+        SettingItem(2, stringResource(R.string.codecs_title), "codecs codec import so library mbe dra faad lame ffmpeg ac-3 avs add-on voice") { LinkRow(OnAirIcons.Glyph, stringResource(R.string.codecs_title), onOpenCodecs) },
         SettingItem(6, stringResource(R.string.run_setup), "setup wizard first run lessons help") { LinkRow(OnAirIcons.Glyph, stringResource(R.string.run_setup), onRunSetup) },
         SettingItem(6, stringResource(R.string.update_title), "update upgrade version apk download install mirror github china check") { UpdateSettings(s) },
         SettingItem(6, stringResource(R.string.verbose_log), "verbose logging debug usb diagnostics advanced") {

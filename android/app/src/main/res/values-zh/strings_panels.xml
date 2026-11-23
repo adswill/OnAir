@@ -19,12 +19,6 @@
     <string name="cdr_dra_waiting">所选服务尚未提供任何声音。</string>
     <string name="cdr_dra_missing">无声音：CDR 使用 DRA+ 编码声音，而 OnAir 不包含 DRA+ 解码器（其专利和许可状况不明）。服务、信号信息和数据不受影响。</string>
     <string name="cdr_dra_unusable">无声音：无法使用 DRA+ 附加组件：%1$s</string>
-    <string name="cdr_dra_steps">要获得声音，请在装有 Android NDK 的电脑上构建 Android 版 DRA+ 附加组件（OnAir 源码，tools/addons/dra；步骤见 docs/CODECS.md 的“DRA+ on Android”），将 libonair_dra.so 复制到手机，然后点击下方的导入。</string>
-    <string name="cdr_dra_import">导入附加组件（.so）</string>
-    <string name="cdr_dra_replace">替换附加组件</string>
-    <string name="cdr_dra_remove">移除附加组件</string>
-    <string name="cdr_dra_note">文件会被复制到 OnAir 自己的文件夹。移除的附加组件在应用关闭前仍保持加载。</string>
-    <string name="cdr_import_failed">无法导入附加组件：%1$s</string>
     <string name="cdr_services">服务</string>
     <string name="cdr_no_services">暂无服务：多路复用解码后才会出现。</string>
     <string name="cdr_auto">自动（第一个音频服务）</string>
@@ -48,4 +42,24 @@
     <string name="tv_fullscreen_on">正在全屏显示。按返回键回到此处。</string>
     <string name="atv_waiting">正在等待图像。请在模拟频道上启动接收机；行同步和场同步锁定后会出现图像。</string>
     <string name="atv_honesty">这是 OnAir 自己的模拟接收机生成的图像，与桌面版相同；声音同样来自接收机。不涉及编解码器。宽带模拟频道对手机负担很重：预计会发热，较慢的手机可能跟不上。</string>
+    <string name="codecs_title">编解码器</string>
+    <string name="codecs_intro">OnAir 不包含任何受专利保护的编解码器，也不会下载任何内容。请自行构建或获取库文件，复制到手机后在此导入。文件存放在 OnAir 自己的文件夹中。</string>
+    <string name="codecs_installed">已安装</string>
+    <string name="codecs_not_installed">未安装</string>
+    <string name="codecs_needed_for">用于：%1$s</string>
+    <string name="codecs_file_abi">文件：%1$s（%2$s）</string>
+    <string name="codecs_names">接受的文件名：%1$s</string>
+    <string name="codecs_where">获取方式：见 docs/CODECS.md。来源：%1$s</string>
+    <string name="codecs_import">导入 .so 或 .zip</string>
+    <string name="codecs_remove">移除</string>
+    <string name="codecs_warning">此库在 OnAir 内运行，权限与应用相同。只导入你自己构建或信任的文件。专利和许可规则由你自己负责。</string>
+    <string name="codecs_confirm_title">导入此库？</string>
+    <string name="codecs_confirm_yes">导入</string>
+    <string name="codecs_cancel">取消</string>
+    <string name="codecs_sha">SHA-256：%1$s</string>
+    <string name="codecs_refused">未导入：%1$s</string>
+    <string name="codecs_done">已导入：%1$s。已加载的库要在关闭并重新打开 OnAir 后才会更新。</string>
+    <string name="codecs_removed_note">移除已加载的库要在关闭并重新打开 OnAir 后生效。</string>
+    <string name="codecs_need">请在“设置 > 编解码器”中安装 %1$s 编解码器</string>
+    <string name="codecs_open">打开编解码器</string>
 </resources>
