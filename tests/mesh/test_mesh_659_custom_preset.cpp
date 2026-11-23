@@ -57,9 +57,8 @@ static bool decodes(const MeshCustomLora& c, const MeshtasticNode& node, int seq
     rx.setCustom(c.on, s);
     const double tuned = c.mhz * 1e6;
     const MeshTelemetry t = run(rx, p, pkt, tuned, tuned, rateFor(c.bwHz), std::min(800.0, 0.05 * c.bwHz), 8);
-    bool got = false;
-    for (const auto& m : t.messages) got |= m.text.find(text) != std::string::npos;
-    return got && t.custom;
+    // a frame heard on the custom setting, its CRC good (a sync word 0x12 network is not Meshtastic: its text is not shown as one)
+    return t.custom && t.blocksOk == 1 && t.blocksBad == 0;
 }
 
 int main() {
