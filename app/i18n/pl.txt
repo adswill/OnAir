@@ -3693,3 +3693,6 @@ Sound cue: pass ended	Dźwięk: przelot zakończony
 Three falling tones when a tracked satellite pass ends. Off by default.	Trzy opadające dźwięki, gdy kończy się śledzony przelot satelity. Domyślnie wyłączone.
 Sound cue volume (%)	Głośność dźwięków (%)
 How loud the cue tones are, as a share of the program volume.	Jak głośne są dźwięki, jako część głośności programu.
+Pop out	Oddziel
+DAB picture	Obraz DAB
+Double-click: the picture in a window of its own	Dwuklik: obraz w osobnym oknie

@@ -3715,3 +3715,6 @@ Sound cue: pass ended	Garso signalas: praskridimas baigėsi
 Three falling tones when a tracked satellite pass ends. Off by default.	Trys krintantys tonai, kai baigiasi sekamas palydovo praskridimas. Pagal numatymą išjungta.
 Sound cue volume (%)	Garso signalų garsumas (%)
 How loud the cue tones are, as a share of the program volume.	Kaip garsūs signalai, kaip programos garsumo dalis.
+Pop out	Atsieti
+DAB picture	DAB paveikslas
+Double-click: the picture in a window of its own	Dukart spustelėkite: paveikslas atskirame lange

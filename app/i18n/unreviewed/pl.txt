@@ -593,3 +593,6 @@ HF MONITORING
 RECEIVERS & ANALYSERS
 METERS
 INTERFERENCE HUNTING
+Pop out
+DAB picture
+Double-click: the picture in a window of its own

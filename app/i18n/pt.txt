@@ -3674,3 +3674,6 @@ Sound cue: pass ended	Sinal sonoro: passagem terminou
 Three falling tones when a tracked satellite pass ends. Off by default.	Três tons descendentes quando termina uma passagem de satélite acompanhada. Desligado por padrão.
 Sound cue volume (%)	Volume dos sinais sonoros (%)
 How loud the cue tones are, as a share of the program volume.	Quão altos são os sinais, como parte do volume do programa.
+Pop out	Destacar
+DAB picture	Imagem DAB
+Double-click: the picture in a window of its own	Clique duplo: a imagem numa janela própria

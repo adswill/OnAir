@@ -3687,3 +3687,6 @@ Sound cue: pass ended	効果音：パス終了
 Three falling tones when a tracked satellite pass ends. Off by default.	追跡中の衛星パスが終わったとき、下降音を3回鳴らします。初期設定はオフ。
 Sound cue volume (%)	効果音の音量（%）
 How loud the cue tones are, as a share of the program volume.	効果音の大きさ（プログラム音量に対する割合）。
+Pop out	別ウィンドウ
+DAB picture	DAB画像
+Double-click: the picture in a window of its own	ダブルクリック：画像を別ウィンドウで表示
