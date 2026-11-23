@@ -845,6 +845,11 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             break;
         }
         if (id == "nfc") break;   // the reader frames are fixed
+        if (id == "general")   // issue #660: the modulation is a row of its own (it was only in the test scene settings, and an NFM default)
+            v.push_back(META(A(SET(pick("general.mod", "Modulation", "How the signal is modulated. The first choice follows the receiver's demodulator (AM broadcast sends AM, the General receiver the one set there); the others fix it.", 0,
+                                        {"Same as the receiver", "NFM", "WFM", "AM", "USB", "LSB", "CW", "DSB", "RAW", "CW-L"}),
+                                    [](TxRequest& r, double x) { r.opt["general.mod"] = x; if (x >= 1) r.synth.modeOpt[0] = (int)x - 1; }), TxPGroup::Modulation),
+                             "sets the generator's modulation (synth.modeOpt[0]); tests/tx/test_tx_660_analog_modes.cpp checks every choice"));
         v.push_back(A(custom("scene.options", "Test scene", "This generator sends its built-in test scene; its settings are shared with the receiver's test signal (noise and offsets do not apply here)."), TxPGroup::Modulation));
         analogSwitch(v, c);
         break;

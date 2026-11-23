@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
+#include "dect2/map/scroll_zoom.h"
 #include "dect2/common/thread_name.h"
 #include "adsb_map.h"
 #include "app.h"
@@ -557,7 +558,9 @@ bool draw(View& v, ImVec2 size) {
         const ImVec2 m = ImGui::GetIO().MousePos;
         const double mx = mercX(v.lon, v.zoom) + (m.x - (p0.x + size.x * 0.5f)), my = mercY(v.lat, v.zoom) + (m.y - (p0.y + size.y * 0.5f));
         const double pl = lonOf(mx, v.zoom), pa = latOf(my, v.zoom);
-        v.zoom = std::max(kMinZoom, std::min(kMaxZoom, v.zoom + (ImGui::GetIO().MouseWheel > 0 ? 1 : -1)));
+        static dect2::ScrollZoom gScrollZoom;   // a trackpad or Magic Mouse sends many small deltas and momentum: they add up to levels (#652)
+        const int steps = gScrollZoom.feed(ImGui::GetIO().MouseWheel, ImGui::GetTime());
+        v.zoom = std::max(kMinZoom, std::min(kMaxZoom, v.zoom + steps));
         // keep the point under the pointer: the centre sits the pointer's offset from the centre away from it
         v.lon = lonOf(mercX(pl, v.zoom) - (m.x - (p0.x + size.x * 0.5f)), v.zoom);
         v.lat = latOf(mercY(pa, v.zoom) - (m.y - (p0.y + size.y * 0.5f)), v.zoom);
