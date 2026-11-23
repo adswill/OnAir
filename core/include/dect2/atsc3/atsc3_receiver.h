@@ -14,6 +14,7 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <vector>
 
 namespace dect2 {
@@ -26,6 +27,9 @@ struct ReceiverStats {
     long udp = 0, llsTables = 0, routeObjects = 0, objectsDelivered = 0;
     long llsSigned = 0;                    // LLS datagrams that were a SignedMultiTable (A/331 6.7)
     long slsObjects = 0, slsTables = 0;    // objects completed on the SLS channel (TSI 0), and the S-TSID / MPD / USBD documents read from them
+    // PLPs backed off because they decoded nothing for several frames (decodePlan): times one was backed off, PLP frames in which only its probe
+    // blocks were tried and none decoded, and the FEC blocks not tried in those frames
+    long plpBackoffs = 0, plpProbeFrames = 0, blocksSkipped = 0;
 };
 
 struct FrameInfo {
@@ -47,6 +51,16 @@ public:
     bool commitFrame(const FrameResult& fr, const Bootstrap& bs);
     // Samples were lost between the frame committed last and the next one: the time interleavers and the packet reassembly start again.
     void lostSamples();
+    // The plan for decoding frame number `frameIndex` (frames are numbered from 0 in the order they are committed; pushFrame and commitFrame count
+    // them, failed frames included). A PLP that has decoded none of its FEC blocks in kDeadFrames frames in a row (kDeadFramesProtected for one
+    // that carried the low level signaling or the selected service) is backed off: only kProbeBlocks (kProbeBlocksProtected) of its blocks are
+    // tried in each frame until one of them decodes, and the PLP is then decoded in full again. The plan comes from the frames committed up to
+    // number frameIndex - kPlanLag, not from the latest, so that it does not depend on how far the decoding threads have got (Atsc3Sync keeps no
+    // more than kPlanLag frames in flight); the decoded result is the same for any number of threads.
+    DecodePlan decodePlan(long frameIndex) const;
+    long framesCommitted() const { std::lock_guard<std::mutex> lk(mu_); return st_.frames; }
+    static constexpr int kPlanLag = 8, kDeadFrames = 4, kDeadFramesProtected = 8, kProbeBlocks = 4, kProbeBlocksProtected = 8;
+
     // Entry below the physical layer: the baseband packets of a PLP (header included), in order. A gap resets the packet reassembly.
     void pushBbPackets(int plpId, const std::vector<std::vector<uint8_t>>& packets, bool gapBefore = false);
     // Entry below the link layer: an IP packet.
@@ -76,8 +90,9 @@ private:
     std::deque<uint8_t> tsDirect_;
     bool sawTs_ = false, stopped_ = false;
     int tsSeen_ = 0;                                          // ALP transport stream packets in a row, no IP packet between (sawTs_ needs several)
-    void onAlp(const AlpPacket& a);
-    void onUdp(const UdpDatagram& d);
+    void onAlp(const AlpPacket& a, int plpId);
+    void pushIpFrom(const uint8_t* packet, size_t size, int plpId);
+    void onUdp(const UdpDatagram& d, int plpId);
     void startRoute();
     void onObject(uint64_t gen, const RouteComponent& c, const RouteObject& o);
 
@@ -95,7 +110,7 @@ private:
     std::map<std::string, int> remuxIds_;          // component key -> remux component id
     std::map<int, std::vector<uint8_t>> lastInit_;
     struct CtiPlp;
-    PlpResult runCti(const PlpResult& in);          // de-interleaves a CTI PLP's cells in frame order and decodes the FEC blocks that are complete
+    PlpResult runCti(const PlpResult& in, int probe);   // de-interleaves a CTI PLP's cells in frame order and decodes the FEC blocks that are complete
     std::map<int, std::unique_ptr<CtiPlp>> cti_;   // by PLP id
     struct Straddle { std::vector<cf32> tail; std::vector<float> tailW; };
     PlpResult joinStraddle(const PlpResult& in);    // the block made of the tail of the last frame and the head of this one goes in front of the whole blocks
@@ -103,6 +118,12 @@ private:
     Atsc3Remux remux_;
     ReceiverStats st_;
     FrameInfo info_;
+    // the PLP backoff (decodePlan)
+    struct PlpHealth { int deadFrames = 0; bool backedOff = false; long since = 0; };
+    std::map<int, PlpHealth> health_;              // by PLP id
+    std::set<int> llsPlps_, servicePlps_;          // PLPs that carried the low level signaling, and datagrams of the selected service
+    std::deque<std::pair<long, DecodePlan>> plans_;   // the plan after each of the last frames committed, by the number of frames committed
+    void updateHealth(const std::vector<const PlpResult*>& plps);   // after each frame, under mu_
 };
 
 } // namespace atsc3

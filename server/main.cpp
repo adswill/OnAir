@@ -4,7 +4,10 @@
 // onair-server: OnAir without a window. The radio is attached to this computer (a Raspberry Pi, a Linux box, a Windows PC with no screen); it is
 // controlled from a web browser (the page this program serves) or by any program that speaks the remote-control API (docs/headless-server.md).
 // No cloud and no relay: the browser connects straight to this program. Access from other computers needs a token; TLS is optional.
+#include "dect2/codec/codec_registry.h"
+#include "dect2/codec/speech_codec.h"
 #include "dect2/common/platform.h"
+#include "dect2/common/thread_name.h"
 #include "dect2/engine/crash_report.h"
 #include "dect2/integrations/commands.h"
 #include "dect2/integrations/integrations.h"
@@ -17,8 +20,10 @@
 #include "web/web_config.h"
 #include "web/web_decoders.h"
 #include "web/web_json.h"
+#include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <csignal>
 #include <cstdio>
 #include <cstdlib>
@@ -27,8 +32,10 @@
 #include <fstream>
 #include <sstream>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 #include <streambuf>
 #include <ostream>
 #include <iostream>
@@ -61,12 +68,40 @@ private:
     uint64_t seq_ = 0;
 };
 
+// --accept-codec-notice ID[,ID...] or all: the patented codec ids it names, empty with why set when one is unknown
+static std::vector<std::string> codecIdsFromArg(const std::string& arg, std::string& why) {
+    std::vector<std::string> ids;
+    if (arg == "all") {
+        for (const dect2::codec::CodecInfo& c : dect2::codec::codecTable())
+            if (c.kind == dect2::codec::CodecKind::Patented && *c.id) ids.emplace_back(c.id);
+        return ids;
+    }
+    size_t from = 0;
+    while (from <= arg.size()) {
+        const size_t comma = std::min(arg.find(',', from), arg.size());
+        const std::string id = arg.substr(from, comma - from);
+        const dect2::codec::CodecInfo* c = dect2::codec::findCodec(id);
+        if (!c || c->kind != dect2::codec::CodecKind::Patented) {
+            why = "unknown codec \"" + id + "\"; the codec ids are";
+            for (const dect2::codec::CodecInfo& k : dect2::codec::codecTable())
+                if (k.kind == dect2::codec::CodecKind::Patented && *k.id) why += std::string(" ") + k.id;
+            why += ", or all";
+            return {};
+        }
+        ids.push_back(id);
+        from = comma + 1;
+    }
+    return ids;
+}
+
 static void usage() {
     printf("onair-server %s: OnAir with no window, controlled from a web browser or the remote-control API\n\n"
            "  onair-server [--config FILE] [options]\n\n"
            "  --config FILE      settings file (default %s)\n"
            "  --port N           web / API port (default 8765)\n"
            "  --app-password PW  set the password of the browser app (OnAir Web 3.9; stored hashed), then continue\n"
+           "  --accept-codec-notice ID[,ID...]|all   accept the speech codec notice (printed) for these codec plug-ins, e.g. tetra,ysf; stored as\n"
+           "                     codec_notice_<id>=1, then continue (docs/CODECS.md; OnAir includes no codec)\n"
            "  --lan              accept other computers (needs a token; made and printed when there is none)\n"
            "  --token TEXT       use this access token (16 characters or more) for this run\n"
            "  --new-token        make a new token, save it in the settings file and print it\n"
@@ -145,6 +180,7 @@ int main(int argc, char** argv) {
     int mcpPort = (int)cfg.num("mcp_port", 8766);
     std::string mcpToken = cfg.get("mcp_token");
     bool appPassword = false;   // --app-password: the settings file gets the hash
+    bool codecNotice = false;   // --accept-codec-notice: the settings file gets the codec_notice_<id> keys
     for (int i = 1; i < argc; i++) {
         const std::string a = argv[i];
         auto next = [&]() { return i + 1 < argc ? std::string(argv[++i]) : std::string(); };
@@ -156,6 +192,17 @@ int main(int argc, char** argv) {
             if (!onair_app::Sessions::passwordAcceptable(pw, why)) { fprintf(stderr, "--app-password: %s\n", why.c_str()); return 2; }
             cfg.set("app_password_hash", onair_web::hashPassword(pw));
             appPassword = true;
+        }
+        else if (a == "--accept-codec-notice") {
+            std::string why;
+            const std::vector<std::string> ids = codecIdsFromArg(next(), why);
+            if (ids.empty()) { fprintf(stderr, "--accept-codec-notice: %s\n", why.c_str()); return 2; }
+            if (!codecNotice) fprintf(stderr, "%s\n\n", dect2::codec::speechCodecNotice().c_str());
+            for (const std::string& id : ids) {
+                cfg.set("codec_notice_" + id, "1");
+                fprintf(stderr, "onair-server: speech codec notice accepted for %s\n", id.c_str());
+            }
+            codecNotice = true;
         }
         else if (a == "--lan") api.lan = true;
         else if (a == "--token") api.token = next();
@@ -184,7 +231,7 @@ int main(int argc, char** argv) {
     if (api.port < 1 || api.port > 65535) { fprintf(stderr, "the port must be 1 to 65535\n"); return 2; }
     if (api.tlsCert.empty() != api.tlsKey.empty()) { fprintf(stderr, "TLS needs both tls_cert and tls_key\n"); return 2; }
 
-    bool saveCfg = !haveFile || appPassword;   // a first run leaves a file to edit; --app-password stores the hash
+    bool saveCfg = !haveFile || appPassword || codecNotice;   // a first run leaves a file to edit; --app-password stores the hash; so does --accept-codec-notice
     if (newToken || (api.lan && api.token.size() < 16)) {
         api.token = dect2::remoteApiNewToken();
         cfg.set("token", api.token);
@@ -265,7 +312,18 @@ int main(int argc, char** argv) {
         fprintf(stderr, "onair-server: MCP on stdio (transmit tools %s)\n", mcpTx ? "ON" : "off");
         FileBuf fb(proto);
         std::ostream os(&fb);
+        // the codec plug-ins as in the other modes (an accepted one copied in while it runs is found within 10 s); runStdio owns this thread
+        std::mutex tickMu;
+        std::condition_variable tickCv;
+        bool stdinDone = false;
+        std::thread codecTicker = dect2::namedThread("onair-codectick", [&] {
+            std::unique_lock<std::mutex> lk(tickMu);
+            while (!tickCv.wait_for(lk, std::chrono::seconds(1), [&stdinDone] { return stdinDone; })) host.codecTick(false);
+        });
         dect2::mcp::runStdio(mcp, std::cin, os);
+        { std::lock_guard<std::mutex> lk(tickMu); stdinDone = true; }
+        tickCv.notify_one();
+        codecTicker.join();
         host.shutdown();
         return 0;
     }

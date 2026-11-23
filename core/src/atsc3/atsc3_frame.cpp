@@ -3,12 +3,16 @@
 
 #include "dect2/common/diag.h"
 #include "dect2/common/stage_prof.h"
+#include "dect2/common/thread_name.h"
 #include "dect2/atsc3/atsc3_frame.h"
 #include "dect2/atsc3/atsc3_ti.h"
 #include "dect2/atsc3/atsc3_bb.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <cstdlib>
+#include <numeric>
+#include <thread>
 
 namespace dect2 {
 namespace atsc3 {
@@ -183,31 +187,66 @@ static bool subframeParams(const L1Basic& l1, const L1Detail& d, int i, Subframe
     return s.fftSize != 0 && s.guard != 0;
 }
 
-// Decodes FEC blocks of one PLP (cells of each block in `blocks`) in batches with the 8-bit decoder, into baseband packets.
-static void decodeBlocks(const Bicm& bicm, const std::vector<std::vector<cf32>>& blocks, float noise, PlpResult& pr, const std::vector<std::vector<float>>* weights = nullptr) {
-    const size_t bs = 16;
-    for (size_t from = 0; from < blocks.size(); from += bs) {
-        const size_t to = std::min(blocks.size(), from + bs);
-        std::vector<const cf32*> in;
-        std::vector<const float*> win;
-        for (size_t i = from; i < to; i++) { in.push_back(blocks[i].data()); if (weights && i < weights->size()) win.push_back((*weights)[i].data()); }
-        std::vector<std::vector<uint8_t>> pl;
-        std::vector<char> good;
-        bicm.decodeBatch(in, noise, pl, good, win.size() == in.size() ? &win : nullptr);
-        for (size_t i = 0; i < to - from; i++) {
-            pr.blocks++;
-            pr.ok.push_back(good[i] != 0);
-            if (good[i]) {
-                bbScramble(pl[i]);
-                pr.packets.push_back(bitsToBytes(pl[i]));
-                pr.blocksOk++;
+void decodeFecBlocks(const Bicm& bicm, const std::vector<std::vector<cf32>>& blocks, float noise, const std::vector<std::vector<float>>* weights,
+                     int probe, int threads, PlpResult& pr) {
+    const size_t n = blocks.size();
+    const bool haveW = weights && weights->size() == n;
+    std::vector<std::vector<uint8_t>> bits(n);
+    std::vector<char> ok(n, 0);
+    // the blocks are independent: they go to the decoder in batches (one block per vector lane), the batches on a few threads
+    auto decode = [&](const std::vector<size_t>& idx) {
+        const size_t bs = 16, nBatches = (idx.size() + bs - 1) / bs;
+        auto work = [&](std::atomic<size_t>& next) {
+            for (size_t k; (k = next++) < nBatches;) {
+                const size_t from = k * bs, to = std::min(idx.size(), from + bs);
+                std::vector<const cf32*> in;
+                std::vector<const float*> win;
+                for (size_t i = from; i < to; i++) { in.push_back(blocks[idx[i]].data()); if (haveW) win.push_back((*weights)[idx[i]].data()); }
+                std::vector<std::vector<uint8_t>> pl;
+                std::vector<char> good;
+                bicm.decodeBatch(in, noise, pl, good, haveW ? &win : nullptr);
+                for (size_t i = from; i < to; i++) { ok[idx[i]] = good[i - from]; bits[idx[i]].swap(pl[i - from]); }
             }
+        };
+        std::atomic<size_t> next{0};
+        const size_t nt = std::min<size_t>(nBatches, (size_t)std::max(1, threads));
+        std::vector<std::thread> th;
+        for (size_t t = 1; t < nt; t++) th.emplace_back(dect2::namedThread("onair-a3w", work, std::ref(next)));
+        work(next);
+        for (auto& t : th) t.join();
+    };
+    bool full = true;
+    if (probe > 0 && n > (size_t)probe) {
+        // a PLP that has decoded nothing for a while: a few blocks spread over the frame first. A word that cannot decode costs the decoder all its
+        // iterations, so a PLP far below its threshold (or one the antenna does not reach) would cost the receiver the time of every one of its
+        // blocks in every frame. If one of them decodes, the PLP is decoded in full, in the same batches as without the plan (the probe blocks a
+        // second time), so that the result is the same as without it.
+        std::vector<size_t> idx;
+        for (size_t i = 0; i < (size_t)probe; i++) idx.push_back((2 * i + 1) * n / (2 * (size_t)probe));
+        decode(idx);
+        full = false;
+        for (size_t i : idx) full = full || ok[i];
+        if (!full) pr.skipped += (int)(n - idx.size());
+    }
+    if (full) {
+        std::vector<size_t> all(n);
+        std::iota(all.begin(), all.end(), (size_t)0);
+        decode(all);
+    }
+    for (size_t k = 0; k < n; k++) {
+        pr.blocks++;
+        pr.ok.push_back(ok[k] != 0);
+        if (ok[k]) {
+            bbScramble(bits[k]);
+            pr.packets.push_back(bitsToBytes(bits[k]));
+            pr.blocksOk++;
         }
     }
 }
 
-FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
+FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs, const DecodePlan* plan) {
     FrameResult r;
+    if (plan) r.plan = *plan;
     { DECT2_STAGE("a3.preamble"); r.preamble = decodePreamble(x, n, bs); }
     DECT2_STAGE("a3.cells");
     if (!r.preamble.basicOk || !r.preamble.detailOk || r.preamble.detail.subframes.empty()) {
@@ -294,7 +333,7 @@ FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
                     nsum += ns;
                 }
                 const float nz = (float)std::max(nsum / std::max<double>(1.0, (double)blocks.size() * cb), 0.002);
-                if (!blocks.empty()) decodeBlocks(bicm, blocks, nz, pr, haveW ? &wblocks : nullptr);
+                if (!blocks.empty()) decodeFecBlocks(bicm, blocks, nz, haveW ? &wblocks : nullptr, r.plan.probeBlocks(pl.id), 1, pr);
                 if (first > 0 || first + whole * cb < a.size) {   // blocks across the frame boundaries
                     pr.straddle = true;
                     pr.noise = nz;
@@ -332,7 +371,7 @@ FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
                             if (haveW && dw.size() == de.size()) { wblocks.emplace_back((size_t)cb); for (int i = 0; i < cb; i++) wblocks.back()[(size_t)i] = dw[(size_t)f * cb + i].real(); }
                         }
                     }
-                    if (!blocks.empty()) decodeBlocks(bicm, blocks, (float)std::max(nsum / ((double)nFecIf * cb), 0.002), pr, haveW && wblocks.size() == blocks.size() ? &wblocks : nullptr);
+                    if (!blocks.empty()) decodeFecBlocks(bicm, blocks, (float)std::max(nsum / ((double)nFecIf * cb), 0.002), haveW && wblocks.size() == blocks.size() ? &wblocks : nullptr, r.plan.probeBlocks(pl.id), 1, pr);
                 }
             }
             r.plps.push_back(std::move(pr));
