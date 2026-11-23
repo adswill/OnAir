@@ -1,0 +1,378 @@
+mode,name,kind,threshold_dB,false_decode,notes
+drm,DRM,blocks,16,,
+dmr,DMR,blocks,6,,
+adsb,ADS-B,blocks,14,,
+fm,FM,blocks,18,,
+marine,Marine,,,,no valid output on the clean test signal (8 and 32 s)
+ais,AIS,blocks,8,,
+sonde,Radiosonde,blocks,22,,
+acars,ACARS,blocks,-6,,
+gnss,GNSS,blocks,16,,runtime cap hit
+aero,Inmarsat Aero,blocks,-8,,runtime cap hit
+inmc,Inmarsat-C,blocks,0,,runtime cap hit
+iridium,Iridium,blocks,-4,,runtime cap hit
+mesh,Mesh (LoRa),blocks,-16,,runtime cap hit
+noaaapt,NOAA APT,blocks,-20,FALSE_DECODE,"FALSE_DECODE: 193 units in 14 noise-only trials, threshold not trusted"
+noaadsb,NOAA DSB,blocks,6,FALSE_DECODE,"FALSE_DECODE: 77 units in 6 noise-only trials, threshold not trusted"
+noaahrpt,NOAA HRPT,blocks,8,,runtime cap hit
+noaagac,NOAA GAC,blocks,8,FALSE_DECODE,"runtime cap hit; FALSE_DECODE: 192 units in 2 noise-only trials, threshold not trusted"
+arktikaggak,Arktika-M GGAK,blocks,8,,
+meteorhrpt,Meteor HRPT,blocks,8,FALSE_DECODE,"runtime cap hit; FALSE_DECODE: 119 units in 2 noise-only trials, threshold not trusted"
+elektrordas,Elektro-L RDAS,blocks,20,,runtime cap hit
+arktikardas,Arktika-M RDAS,blocks,20,,runtime cap hit
+msgraw,MSG Raw Data,blocks,16,,runtime cap hit
+rclink,RC and mesh links,,,,no test signal or generator failed
+awsl,AWS L-band,blocks,8,,runtime cap hit
+himawaricast,HimawariCast,blocks,8,,runtime cap hit
+hdr,HD Radio,blocks,22,,
+cdr,CDR,blocks,6,,
+geonetcast,GeoNetCast,blocks,12,,runtime cap hit
+pager,Pagers,blocks,2,,
+packet,APRS / Packet,blocks,10,,
+hfdig,HF digital,blocks,-8,,
+ism,ISM sensors,blocks,10,,
+airband,Airband,blocks,-4,,runtime cap hit
+vdl2,VDL Mode 2,blocks,4,,runtime cap hit
+vorils,VOR / ILS,blocks,4,,
+cw,CW,blocks,4,,
+m17,M17,blocks,4,,
+dstar,D-STAR,blocks,8,,
+gsmr,GSM-R,,,,no valid output on the clean test signal (8 and 32 s)
+nxdn,NXDN,blocks,8,,
+dpmr,dPMR,blocks,8,,
+hfdl,HFDL,blocks,-8,,runtime cap hit
+psk,PSK31,blocks,-20,,
+js8,JS8Call,blocks,,,no 90 % point up to 44 dB
+specan,Spectrum analyser,blocks,4,FALSE_DECODE,"runtime cap hit; FALSE_DECODE: 78124 units in 2 noise-only trials, threshold not trusted"
+specx,Spectrum explorer,lock,-4,,runtime cap hit; lock only
+orbcomm,Orbcomm,blocks,0,,
+tetra,TETRA,blocks,22,,
+ale,HF ALE,blocks,-6,,
+uplink,Mode S uplink,blocks,8,,runtime cap hit
+mac,MAC,blocks,8,,runtime cap hit
+astro,Radio astronomy,lock,-20,FALSE_DECODE,"lock only; FALSE_DECODE: 14 units in 14 noise-only trials, threshold not trusted"
+p25,P25,blocks,8,,
+general,General receiver,blocks,8,,
+ble,Bluetooth LE,blocks,4,,
+iono,Ionospheric sounders,lock,0,,runtime cap hit; lock only
+qo100,QO-100,lock,0,,runtime cap hit; lock only
+time,Time signals,lock,0,,lock only
+meteor,Meteor-M LRPT,blocks,2,,
+cubesat,CubeSat telemetry,blocks,10,,
+rid,Drone Remote ID,blocks,4,,runtime cap hit
+espnow,ESP-NOW,blocks,4,,runtime cap hit
+vdes,VDES,blocks,-6,,
+goes,GOES HRIT,blocks,0,,runtime cap hit
+globalstar,Globalstar,blocks,-4,,runtime cap hit
+hrpt,HRPT / AHRPT,blocks,4,,runtime cap hit
+flarm,FLARM,blocks,2,,
+nbiot,NB-IoT cells,,,,no valid output on the clean test signal (8 and 32 s)
+hfbeacon,HF beacons,,,,no valid output on the clean test signal (8 and 32 s)
+zigbee,Zigbee / 802.15.4,blocks,12,,runtime cap hit
+wb,Signal workbench,,,,no test signal or generator failed
+thread,Thread,blocks,12,,runtime cap hit
+datawell,Datawell Buoy HF Link,blocks,-4,,
+multitone,Multitone Paging,blocks,24,,
+same,NOAA Weather Radio SAME,blocks,6,,
+codar,CODAR / HF ocean radar,blocks,-6,,
+halow,Wi-Fi HaLow (802.11ah),blocks,16,,runtime cap hit
+tetrapol,TETRAPOL,blocks,10,,
+loraraw,LoRa (raw),blocks,-12,,runtime cap hit
+ant,ANT+ sensors,blocks,16,,runtime cap hit
+dect,DECT cordless phones,blocks,8,,runtime cap hit
+gk2alrit,GK-2A LRIT,blocks,-2,,
+elektro,Elektro-L,blocks,0,,runtime cap hit
+ndb,NDB,blocks,6,,
+lbj,LBJ,blocks,4,,
+klw,KLW,blocks,8,,
+dgps,DGPS beacon,,,,no test signal or generator failed
+tdcs,TDCS,blocks,8,,
+gk2ahrit,GK-2A HRIT,blocks,8,,runtime cap hit
+horus,Horus balloons,blocks,-4,,
+vdl4,VDL Mode 4,blocks,14,,
+eczas,"e-Czas (225 kHz, Poland)",blocks,16,,
+uat,UAT (978 MHz),blocks,8,,
+wisun,Wi-SUN FAN,blocks,4,,runtime cap hit
+tones,"Tone decoders (CTCSS, DCS, DTMF, selcall)",blocks,10,,
+wmbus,Wireless M-Bus (meters),blocks,2,,
+sarsat,COSPAS-SARSAT 406 MHz,blocks,-4,,
+mt63,MT63,blocks,-20,,
+fsq,FSQ,blocks,-20,,
+ifkp,IFKP,blocks,-20,,
+kaal,KAAL,blocks,14,,runtime cap hit
+kavb,KAVB,blocks,16,,runtime cap hit
+kapp,KAPP,blocks,4,,runtime cap hit
+zwave,Z-Wave,blocks,-6,,
+dme,DME,,,,no test signal or generator failed
+kaft,KAFT,blocks,4,,runtime cap hit
+eloran,eLoran / Loran-C,,,,no test signal or generator failed
+mpt1327,MPT1327 trunking,,,,no test signal or generator failed
+fusion,Yaesu Fusion,,,,no test signal or generator failed
+cquam,AM stereo (C-QUAM),blocks,10,,
+mscatter,Meteor scatter,lock,-14,,lock only
+sitor,SITOR,blocks,-4,,
+ardop,ARDOP,blocks,-20,,
+goesdcs,GOES DCS,blocks,-20,,
+hrdcp,Meteosat HRDCP,blocks,4,,
+modeac,Mode A/C,blocks,18,,
+kaws,KAWS,,,,no valid output on the clean test signal (8 and 32 s)
+milhf,HF waveform ID,,,,no test signal or generator failed
+bletracker,BLE tracker detector,blocks,6,,
+asterix,ASTERIX,,,,no valid output on the clean test signal (8 and 32 s)
+ltr,LTR trunking,,,,no test signal or generator failed
+edacs,EDACS trunking,,,,no test signal or generator failed
+satbeacon,TV sat beacon decoder,blocks,-6,,
+kait,KAIT,blocks,16,,runtime cap hit
+sbas,SBAS,blocks,12,,runtime cap hit
+lorasat,LoRa satellites,blocks,-20,,
+lorawanwide,LoRaWAN (all channels),blocks,4,,runtime cap hit
+esubghz,Flipper Zero Sub-GHz chat,blocks,12,,
+pactor,PACTOR-I,blocks,-18,,
+ssdv,SSDV pictures,blocks,12,,
+roshf,ROS (HF),blocks,4,,runtime cap hit
+atis,ATIS (inland waterways),blocks,12,,
+ebicab,EBICab / Eurobalise,blocks,10,,
+inmsat,Inmarsat (all carriers),blocks,4,,runtime cap hit
+pactor2,PACTOR-II,,,,no valid output on the clean test signal (8 and 32 s)
+pactor3,PACTOR-III,,,,no valid output on the clean test signal (8 and 32 s)
+nrf24,nRF24L01,blocks,10,,
+rpr,Robust Packet (RPR),blocks,6,,
+pactor4,PACTOR-IV,lock,-2,,lock only
+p25p2,P25 Phase 2,,,,no test signal or generator failed
+marinevhf,Marine VHF,,,,no test signal or generator failed
+fy3ahrpt,FY-3 AHRPT,blocks,20,,runtime cap hit
+fy3mpt,FY-3 MPT,blocks,20,,runtime cap hit
+selcal,SELCAL (aircraft tone call),blocks,12,,
+argos,Argos,blocks,-4,,
+sigfox,Sigfox,blocks,-2,,
+pskd,PSK demodulator,blocks,4,,
+nfc,NFC / RFID 13.56 MHz,blocks,18,FALSE_DECODE,"FALSE_DECODE: 798 units in 2 noise-only trials, threshold not trusted"
+shortwave,Shortwave,lock,-8,FALSE_DECODE,"runtime cap hit; lock only; FALSE_DECODE: 8 units in 8 noise-only trials, threshold not trusted"
+fy4lrit,FY-4 LRIT,blocks,0,,
+sensors,Sub-GHz sensors,blocks,10,,
+fy4ahrit,FY-4A HRIT-II/III,blocks,6,,
+ltpos,Lightning position (network),lock,4,,lock only
+fy2svissr,FY-2 S-VISSR,blocks,0,,runtime cap hit
+smartnet,Motorola Type II trunking,,,,no test signal or generator failed
+tetradmo,TETRA DMO,,,,no test signal or generator failed
+opensky,OpenSky identifier,,,,no test signal or generator failed
+sferics,Sferics (lightning),blocks,-6,,
+cb,CB radio,blocks,16,,
+bgan,Inmarsat BGAN,blocks,8,,runtime cap hit
+pmr446,PMR446 analog,blocks,24,,
+frs,FRS / GMRS,blocks,24,,
+btc,Bluetooth Classic,blocks,0,,runtime cap hit
+adsl,ADS-L,blocks,-4,,runtime cap hit
+hfvoice,HFGCS / HF voice,blocks,12,,
+hamfm,Ham FM repeaters,blocks,22,,
+fanet,FANET,,,,no test signal or generator failed
+ogn,OGN tracker,,,,no test signal or generator failed
+gbas,GBAS VDB,,,,no test signal or generator failed
+ldacs,LDACS,,,,no test signal or generator failed
+aeromacs,AeroMACS,,,,no test signal or generator failed
+eot,End of train,,,,no test signal or generator failed
+dsrc,DSRC toll,,,,no test signal or generator failed
+its,802.11p V2X,,,,no test signal or generator failed
+cv2x,C-V2X,,,,no test signal or generator failed
+ermes,ERMES,,,,no test signal or generator failed
+mradar,Marine radar,,,,no test signal or generator failed
+wradar,Weather radar,,,,no test signal or generator failed
+rcppm,RC model PPM (72 MHz),,,,no test signal or generator failed
+uvb76,UVB-76 buzzer monitor,,,,no test signal or generator failed
+graves,GRAVES meteor echoes,,,,no test signal or generator failed
+jove,Radio Jove bursts,,,,no test signal or generator failed
+beacon,Beacon propagation monitor,,,,no test signal or generator failed
+em4100,EM4100 LF RFID (125 kHz),,,,no test signal or generator failed
+uhfrfid,UHF RFID reader (EPC Gen2),,,,no test signal or generator failed
+qi,Qi wireless charging,,,,no test signal or generator failed
+fmmon,FM modulation monitor,,,,no test signal or generator failed
+ammon,AM modulation monitor,,,,no test signal or generator failed
+plnoise,Power-line noise locator,,,,no test signal or generator failed
+radar,Radar pulse analyser,,,,no test signal or generator failed
+gnssjam,GNSS interference detector,,,,no test signal or generator failed
+passband,Passband signal classifier,,,,no test signal or generator failed
+vlfmsk,VLF MSK transmitter monitor,,,,no test signal or generator failed
+occupancy,Spectrum occupancy monitor,,,,no test signal or generator failed
+evm,Modulation quality (MER) meter,,,,no test signal or generator failed
+freqacc,Carrier frequency accuracy meter,,,,no test signal or generator failed
+pttlog,PTT and duty-cycle logger,,,,no test signal or generator failed
+intermod,Intermodulation finder,,,,no test signal or generator failed
+spur,Spur and image finder,,,,no test signal or generator failed
+dopplerlog,Satellite Doppler curve logger,,,,no test signal or generator failed
+hop,Frequency-hopper analyser,,,,no test signal or generator failed
+birdie,Persistent carrier (birdie) finder,,,,no test signal or generator failed
+burst,Burst finder,,,,no test signal or generator failed
+fading,Fading analyser,,,,no test signal or generator failed
+inputhealth,SDR input health meter,,,,no test signal or generator failed
+phasenoise,Phase noise meter,,,,no test signal or generator failed
+ssbtest,SSB transmitter test meter,,,,no test signal or generator failed
+sinad,FM SINAD meter,,,,no test signal or generator failed
+fskan,FSK parameter analyser,,,,no test signal or generator failed
+yfactor,Noise figure (Y-factor) meter,,,,no test signal or generator failed
+cwkeying,CW keying quality meter,,,,no test signal or generator failed
+noisefloor,Noise floor logger,,,,no test signal or generator failed
+nfmdev,Narrowband FM deviation and CTCSS meter,,,,no test signal or generator failed
+afsk,AFSK (TNC) tone tuner,,,,no test signal or generator failed
+ookpulse,OOK / ASK pulse analyser,,,,no test signal or generator failed
+txstability,Transmitter frequency stability meter,,,,no test signal or generator failed
+occbw,Occupied bandwidth meter,,,,no test signal or generator failed
+papr,Crest factor (PAPR / CCDF) meter,,,,no test signal or generator failed
+speckurt,Spectral kurtosis RFI finder,,,,no test signal or generator failed
+glitch,SDR stream glitch detector,,,,no test signal or generator failed
+marker,ILS marker beacons (75 MHz),,,,no test signal or generator failed
+fskmodem,"FSK modems (Bell 103, V.21, V.23, Bell 202)",,,,no test signal or generator failed
+ssrint,SSR interrogations (1030 MHz),,,,no test signal or generator failed
+dcr,DCR (Japan digital convenience radio),,,,no test signal or generator failed
+xpa,XPA (10 / 20 Bd),,,,no test signal or generator failed
+xpa2,XPA2,,,,no test signal or generator failed
+crowd36,CROWD36,,,,no test signal or generator failed
+f01,FSK200/500 (F01),,,,no test signal or generator failed
+f06,"FSK200/1000 (F06, F06a)",,,,no test signal or generator failed
+gwfsk,GW FSK (100 Bd),,,,no test signal or generator failed
+gsc,Golay paging (GSC),,,,no test signal or generator failed
+stl,STL link (studio-to-transmitter),,,,no test signal or generator failed
+scada,"SCADA radio telemetry (Modbus, DNP3)",,,,no test signal or generator failed
+mdc1200,MDC-1200,blocks,22,,
+fleetsync,Kenwood FleetSync,,,,no valid output on the clean test signal (8 and 32 s)
+goescda,GOES CDA,blocks,4,,
+wmic,Wireless mic finder,lock,4,,runtime cap hit; lock only
+goesgrb,GOES GRB,blocks,12,,runtime cap hit
+goesgvar,GOES GVAR,blocks,12,,runtime cap hit
+goesmdl,GOES MDL,blocks,4,FALSE_DECODE,"runtime cap hit; FALSE_DECODE: 440 units in 4 noise-only trials, threshold not trusted"
+geoscan,Geoscan,blocks,14,,
+lucky7,Lucky-7,blocks,16,,
+spino,Spino,blocks,12,,
+gk2auhrit,GK-2A UHRIT,blocks,18,,runtime cap hit
+erminaz,Erminaz,blocks,12,,
+gk2acdas,GK-2A CDAS,blocks,16,,runtime cap hit
+sband,S-band CCSDS,blocks,12,,runtime cap hit
+milstd110,MIL-STD-188-110 serial,blocks,2,,
+stanag4285,STANAG 4285,blocks,6,,
+autospec,AUTOSPEC,,,,no valid output on the clean test signal (8 and 32 s)
+spreadhf,SPREAD,,,,no valid output on the clean test signal (8 and 32 s)
+gtor,G-TOR,blocks,14,,
+arqe,ARQ-E,blocks,0,,runtime cap hit
+efr,EFR teleswitch,blocks,2,,
+arqn,ARQ-N,blocks,0,,runtime cap hit
+qrss,QRSS grabber,,,,no valid output on the clean test signal (8 and 32 s)
+dfcw,DFCW grabber,,,,no valid output on the clean test signal (8 and 32 s)
+fsk441,FSK441,blocks,-20,,
+iscat,ISCAT,blocks,-10,,
+piccolo,Piccolo Mk VI,blocks,-10,,
+coquelet,Coquelet-8,blocks,16,,runtime cap hit
+supersid,SuperSID (VLF),lock,-20,FALSE_DECODE,"lock only; FALSE_DECODE: 14 units in 14 noise-only trials, threshold not trusted"
+riometer,Riometer,,,,no valid output on the clean test signal (8 and 32 s)
+pulsar,Pulsar folding,,,,no valid output on the clean test signal (8 and 32 s)
+schumann,Schumann resonances,lock,-20,FALSE_DECODE,"lock only; FALSE_DECODE: 14 units in 14 noise-only trials, threshold not trusted"
+throb,Throb,blocks,-8,,runtime cap hit
+pi4,PI4,blocks,-16,,runtime cap hit
+jt6m,JT6M,blocks,-20,,
+whistler,Whistlers and tweeks,blocks,-4,,
+emeecho,Moon echo (EME),lock,-20,FALSE_DECODE,"lock only; FALSE_DECODE: 14 units in 14 noise-only trials, threshold not trusted"
+beaconevents,Aurora / Es / TEP beacons,lock,-20,FALSE_DECODE,"lock only; FALSE_DECODE: 14 units in 14 noise-only trials, threshold not trusted"
+radiojove,Radio Jove,lock,0,FALSE_DECODE,"runtime cap hit; lock only; FALSE_DECODE: 4 units in 4 noise-only trials, threshold not trusted"
+callisto,e-CALLISTO bursts,lock,0,FALSE_DECODE,"runtime cap hit; lock only; FALSE_DECODE: 4 units in 4 noise-only trials, threshold not trusted"
+xb_npp,"JPSS HRD (NPP, NOAA-20)",blocks,16,,runtime cap hit
+xb_jpss2,JPSS HRD (NOAA-21),blocks,16,,runtime cap hit
+xb_aqua,"EOS DB (Aqua, Aura)",blocks,12,,runtime cap hit
+xb_terra,EOS DB (Terra),blocks,12,,runtime cap hit
+xb_metopd,MetOp X-band dump,blocks,16,,runtime cap hit
+xb_metopsg,MetOp-SG DDB,blocks,16,,runtime cap hit
+xb_landsats,Landsat 8/9 S-band,blocks,8,,runtime cap hit
+xb_landsatx,Landsat 8/9 X-band,blocks,16,,runtime cap hit
+xb_probas,Proba S-band dump,blocks,4,,runtime cap hit
+xb_probav,Proba-V X-band dump,blocks,16,,runtime cap hit
+xb_gcomw,GCOM-W1,blocks,12,,runtime cap hit
+xb_gcomc,GCOM-C1,blocks,12,,runtime cap hit
+xb_stereo,STEREO high rate,blocks,0,,runtime cap hit
+xb_oceansat3,Oceansat-3 L-band,blocks,8,,runtime cap hit
+xb_saral,Saral L-band,blocks,12,,runtime cap hit
+xb_oceansat2,Oceansat-2 DB,blocks,12,,runtime cap hit
+xb_oceansat3x,Oceansat-3 X-band dump,blocks,12,,runtime cap hit
+xlinknb,"Extra links, narrow",,,,no test signal or generator failed
+xb_dmsp,DMSP RTD,blocks,-8,,runtime cap hit
+xb_saralx,Saral X-band dump,blocks,16,,runtime cap hit
+cdma2000,CDMA2000 cells,,,,no valid output on the clean test signal (8 and 32 s)
+xb_kanopus,Kanopus-V,blocks,16,,runtime cap hit
+isdbtsb,ISDB-TSB,blocks,18,,
+vdl3,VDL Mode 3,blocks,14,,
+ax100m5,AX100 Mode 5 (ASM + Golay),blocks,8,,
+ax100m6,AX100 Mode 6 (Reed-Solomon),blocks,14,,
+usp,USP (Sputnix),blocks,8,,
+cp16,CP16,blocks,-12,,
+u482c,U482C (GomX-1),blocks,14,,
+fbr,Fleet Broadcast (UHF SATCOM),blocks,2,,
+ngham,NGHam,blocks,10,,
+beesat,BEESAT / Mobitex,blocks,10,,
+zombie,Zombie satellites,lock,-20,,lock only
+whatsat,What satellite is this?,lock,-20,,lock only
+uhfsatcom,UHF SATCOM skimmer,blocks,0,,runtime cap hit
+gmr1,Thuraya GMR-1 channels,blocks,0,,runtime cap hit
+oneweb,OneWeb detector,blocks,0,,runtime cap hit
+css,Tiangong / Shenzhou carriers,lock,-20,,lock only
+tdrs,TDRS carriers,lock,-8,,lock only
+starlink,Starlink detector,blocks,16,,runtime cap hit
+gonets,Gonets,blocks,20,,
+tsikada,Tsikada / Parus,lock,-20,,lock only
+navic,NavIC,,,,no valid output on the clean test signal (8 and 32 s)
+issdown,Space station,lock,-20,,lock only
+tiantong,Tiantong signalling,blocks,0,,runtime cap hit
+cisbee,CIS-36-50 (BEE),blocks,-4,,runtime cap hit
+cis14,CIS-14,blocks,0,,runtime cap hit
+cis12,CIS-12,blocks,6,,
+cis36,CIS-36,lock,-4,,runtime cap hit; lock only
+cis3000,CIS-3000,lock,12,,lock only
+cishdr,CIS OFDM HDR,lock,4,,lock only
+cis128,CIS-128,lock,6,,lock only
+hfpacket300,HF packet 300 Bd,blocks,8,,
+voiceinv,Voice inversion scrambler,blocks,10,,
+elt121,ELT 121.5 MHz,blocks,6,,
+stanag4539,STANAG 4539 / 110C high rate,blocks,0,,
+link11,Link 11 CLEW,blocks,6,,
+ale3g,3G-ALE,blocks,-10,,
+stanag4481,STANAG 4481 FSK,blocks,-4,,
+sstv,SSTV,blocks,4,,
+ft8,FT8,,,,no valid output on the clean test signal (8 and 32 s)
+ft4,FT4,,,,no valid output on the clean test signal (8 and 32 s)
+freedv,FreeDV,blocks,8,,
+rtty,RTTY,blocks,-8,,
+wspr,WSPR,,,,no valid output on the clean test signal (8 and 32 s)
+hamdrm,HamDRM,saved,14,,
+ft2,FT2,blocks,0,,runtime cap hit
+meshtastic,Meshtastic,blocks,-20,,
+meshcore,MeshCore,blocks,-12,,
+reticulum,Reticulum,,,,no test signal or generator failed
+elrs,ExpressLRS,,,,no test signal or generator failed
+mavlink,MAVLink (SiK),,,,no test signal or generator failed
+frsky,FrSky,,,,no test signal or generator failed
+flysky,FlySky,,,,no test signal or generator failed
+sfhss,Futaba S-FHSS,,,,no test signal or generator failed
+spektrum,Spektrum DSM,,,,no test signal or generator failed
+wfbng,wfb-ng / OpenHD,,,,no test signal or generator failed
+npr,New Packet Radio,,,,no test signal or generator failed
+winmor,WINMOR,,,,no test signal or generator failed
+mioty,mioty,,,,no test signal or generator failed
+dectnrp,DECT NR+,,,,no test signal or generator failed
+loraaprs,LoRa APRS,blocks,-20,,
+flex,FLEX,blocks,2,,
+pocsag,POCSAG,blocks,0,,
+meshcom,MeshCom,blocks,-20,,
+navtex,NAVTEX,,,,no valid output on the clean test signal (8 and 32 s)
+lorawan,LoRaWAN,blocks,0,,runtime cap hit
+ils,ILS,blocks,16,,
+jt65,JT65,,,,no valid output on the clean test signal (8 and 32 s)
+dsc,DSC,blocks,-2,,
+vor,VOR,blocks,4,,
+jt9,JT9,,,,no valid output on the clean test signal (8 and 32 s)
+q65,Q65,,,,no valid output on the clean test signal (8 and 32 s)
+fst4,FST4,,,,no valid output on the clean test signal (8 and 32 s)
+msk144,MSK144,,,,no valid output on the clean test signal (8 and 32 s)
+jt4,JT4,,,,no valid output on the clean test signal (8 and 32 s)
+wefax,Weather fax,lock,4,,runtime cap hit; lock only
+mfsk,MFSK,blocks,14,,
+contestia,Contestia,blocks,-10,,
+olivia,Olivia,blocks,-12,,
+thor,THOR,blocks,-8,,
+dominoex,DominoEX,blocks,-8,,
+hell,Hellschreiber,blocks,-4,,
+am,AM broadcast,blocks,8,,
