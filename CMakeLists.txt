@@ -2767,6 +2767,10 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_atsc3_receiver PRIVATE dect2core)
   add_test(NAME atsc3_receiver COMMAND test_atsc3_receiver ${ONAIR_ROOT}/tests/data/route_video.mp4 ${ONAIR_ROOT}/tests/data/route_audio.mp4)
 
+  add_executable(test_atsc3_service_switch tests/atsc3/test_atsc3_service_switch.cpp)
+  target_link_libraries(test_atsc3_service_switch PRIVATE dect2core)
+  add_test(NAME atsc3_service_switch COMMAND test_atsc3_service_switch ${ONAIR_ROOT}/tests/data/route_video.mp4 ${ONAIR_ROOT}/tests/data/route_audio.mp4)
+
   add_executable(test_atsc3_sync tests/atsc3/test_atsc3_sync.cpp)
   target_link_libraries(test_atsc3_sync PRIVATE dect2core)
   add_test(NAME atsc3_sync COMMAND test_atsc3_sync)

@@ -150,4 +150,18 @@ inline std::string busyHint(const std::string& what) {
     return {};
 }
 
+// Whether OnAir loads a SoapySDR module file found in a system folder (macOS: Homebrew, /usr/local). Modules are loaded here one by one so a bad one can be
+// left out: SoapySDRPlay's module calls the SDRplay API through a function pointer that is null when that library is not loadable, which crashed the whole
+// program while listing radios (issue #646). OnAir opens SDRplay radios with its own driver, so that module is not needed. `reason` says why not.
+inline bool moduleAllowed(const std::string& path, std::string* reason = nullptr) {
+    std::string base = path;
+    const size_t cut = base.find_last_of("/\\");
+    if (cut != std::string::npos) base = base.substr(cut + 1);
+    for (auto& c : base) c = (char)tolower((unsigned char)c);
+    if (base.empty()) { if (reason) *reason = "no file name"; return false; }
+    if (base.find("sdrplaysupport") != std::string::npos) { if (reason) *reason = "SDRplay radios are opened by OnAir's own driver (this module crashes when the SDRplay API is missing)"; return false; }
+    if (base.find(".dSYM") != std::string::npos || base.find(".dsym") != std::string::npos) { if (reason) *reason = "debug symbols"; return false; }
+    return true;
+}
+
 }}  // namespace dect2::soapylogic

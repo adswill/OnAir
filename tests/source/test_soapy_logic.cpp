@@ -42,6 +42,12 @@ int main() {
     CHECK(streamStatus(0, 0, 0).empty());
     CHECK(streamStatus(1, 2, 3) == "1 overflow (host too slow), 2 underflows, 3 reconnects");
     CHECK(!busyHint("usb_claim_interface error -6").empty() && busyHint("timeout").empty());
+    // #646: the SoapySDRPlay module is never loaded (null function pointer into the SDRplay API); other modules are
+    { std::string why;
+      CHECK(!moduleAllowed("/usr/local/lib/SoapySDR/modules0.8/libsdrPlaySupport.so", &why) && !why.empty());
+      CHECK(!moduleAllowed("/opt/homebrew/lib/SoapySDR/modules0.8/libsdrplaysupport.dylib"));
+      CHECK(moduleAllowed("/usr/local/lib/SoapySDR/modules0.8/libremoteSupport.so"));
+      CHECK(moduleAllowed("libuhdSupport.so") && !moduleAllowed("")); }
     printf(fails ? "FAILED\n" : "soapy_logic OK\n");
     return fails ? 1 : 0;
 }

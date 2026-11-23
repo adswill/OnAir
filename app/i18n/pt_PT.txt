@@ -3672,3 +3672,4 @@ How loud the cue tones are, as a share of the program volume.	Quão altos são o
 Pop out	Destacar
 DAB picture	Imagem DAB
 Double-click: the picture in a window of its own	Duplo clique: a imagem numa janela própria
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto abre cada portadora que transmite. Com Listen ouve uma portadora vista. Guia: docs/AIRBAND-AUTO.md

@@ -3695,3 +3695,4 @@ How loud the cue tones are, as a share of the program volume.	Hoe luid de signal
 Pop out	Loskoppelen
 DAB picture	DAB-beeld
 Double-click: the picture in a window of its own	Dubbelklik: het beeld in een eigen venster
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto opent elke drager die zendt. Met Listen hoort u een geziene drager. Handleiding: docs/AIRBAND-AUTO.md

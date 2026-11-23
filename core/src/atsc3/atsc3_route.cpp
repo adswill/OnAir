@@ -398,22 +398,29 @@ void RouteService::handleSls(const RouteObject& o) {
 }
 
 bool RouteService::push(const UdpDatagram& d) {
-    bool sls = d.dstIp == slsDst_ && d.dstPort == slsPort_;
-    bool known = false;
-    for (auto& c : components_) if (c.dstIp == d.dstIp && c.dstPort == d.dstPort) known = true;
-    if (!sls && !known) return false;
-    LctPacket p;
-    if (!parseRoutePacket(d.payload.data(), d.payload.size(), p)) return true;
-    auto& r = rx_[std::make_tuple(d.dstIp, d.dstPort, p.tsi)];
-    if (!r) r.reset(new RouteReceiver());
-    std::vector<RouteObject> done;
-    r->push(p, done);
-    for (auto& o : done) {
-        if (sls && o.tsi == 0) { handleSls(o); continue; }
-        for (auto& c : components_) {
-            if (c.dstIp == d.dstIp && c.dstPort == d.dstPort && c.tsi == o.tsi) { if (onObject) onObject(c, o); break; }
+    const bool sls = d.dstIp == slsDst_ && d.dstPort == slsPort_;
+    // The objects are collected under the lock and delivered after it is released: onObject goes into the receiver, which takes its own lock
+    std::vector<std::pair<RouteComponent, RouteObject>> deliver;
+    {
+        std::lock_guard<std::mutex> lk(mu_);
+        bool known = false;
+        for (auto& c : components_) if (c.dstIp == d.dstIp && c.dstPort == d.dstPort) known = true;
+        if (!sls && !known) return false;
+        LctPacket p;
+        if (!parseRoutePacket(d.payload.data(), d.payload.size(), p)) return true;
+        auto& r = rx_[std::make_tuple(d.dstIp, d.dstPort, p.tsi)];
+        if (!r) r.reset(new RouteReceiver());
+        std::vector<RouteObject> done;
+        r->push(p, done);
+        for (auto& o : done) {
+            if (sls && o.tsi == 0) { handleSls(o); continue; }
+            for (auto& c : components_) {
+                if (c.dstIp == d.dstIp && c.dstPort == d.dstPort && c.tsi == o.tsi) { deliver.emplace_back(c, std::move(o)); break; }
+            }
         }
     }
+    std::function<void(const RouteComponent&, const RouteObject&)> cb = onObject;
+    if (cb) for (auto& x : deliver) cb(x.first, x.second);
     return true;
 }
 

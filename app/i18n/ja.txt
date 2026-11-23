@@ -3690,3 +3690,4 @@ How loud the cue tones are, as a share of the program volume.	効果音の大き
 Pop out	別ウィンドウ
 DAB picture	DAB画像
 Double-click: the picture in a window of its own	ダブルクリック：画像を別ウィンドウで表示
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto は送信中の搬送波を自動で開きます。Listen で検出した搬送波を聞けます。ガイド: docs/AIRBAND-AUTO.md

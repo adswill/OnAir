@@ -394,16 +394,18 @@ void Atsc3Receiver::startRoute() {
             return;
         }
         route_ = std::make_shared<RouteService>(s.slsSrcIp, s.slsDstIp, s.slsDstPort);
-        route_->onObject = [this](const RouteComponent& c, const RouteObject& o) { onObject(c, o); };
+        const uint64_t gen = ++routeGen_;
+        route_->onObject = [this, gen](const RouteComponent& c, const RouteObject& o) { onObject(gen, c, o); };
         routeStarted_ = true;
         return;
     }
 }
 
-void Atsc3Receiver::onObject(const RouteComponent& c, const RouteObject& o) {
+void Atsc3Receiver::onObject(uint64_t gen, const RouteComponent& c, const RouteObject& o) {
     int id;
     {
         std::lock_guard<std::mutex> lk(mu_);
+        if (gen != routeGen_ || !route_) return;   // an object of the service that was just left: its component numbers would mix into the new service
         st_.routeObjects++;
         char key[64];
         snprintf(key, sizeof key, "%08x:%d:%u", c.dstIp, c.dstPort, c.tsi);

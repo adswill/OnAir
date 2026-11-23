@@ -3725,3 +3725,4 @@ How loud the cue tones are, as a share of the program volume.	Sesli işaretlerin
 Pop out	Ayır
 DAB picture	DAB resmi
 Double-click: the picture in a window of its own	Çift tıklama: resim kendi penceresinde
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto, yayın yapan her taşıyıcıyı açar. Listen ile görülen bir taşıyıcıyı dinleyebilirsiniz. Kılavuz: docs/AIRBAND-AUTO.md

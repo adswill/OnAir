@@ -3696,3 +3696,4 @@ How loud the cue tones are, as a share of the program volume.	Jak głośne są d
 Pop out	Oddziel
 DAB picture	Obraz DAB
 Double-click: the picture in a window of its own	Dwuklik: obraz w osobnym oknie
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto otwiera każdą nadającą nośną. Przyciskiem Listen posłuchasz zauważonej nośnej. Przewodnik: docs/AIRBAND-AUTO.md

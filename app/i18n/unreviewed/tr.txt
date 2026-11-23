@@ -3808,3 +3808,4 @@ Now and then a small card asks if you would star OnAir on GitHub. Off: it never 
 Pop out
 DAB picture
 Double-click: the picture in a window of its own
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md

@@ -3718,3 +3718,4 @@ How loud the cue tones are, as a share of the program volume.	Kaip garsūs signa
 Pop out	Atsieti
 DAB picture	DAB paveikslas
 Double-click: the picture in a window of its own	Dukart spustelėkite: paveikslas atskirame lange
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto atidaro kiekvieną siunčiančią nešlį. Mygtuku Listen išgirsite pamatytą nešlį. Vadovas: docs/AIRBAND-AUTO.md

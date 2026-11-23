@@ -3678,3 +3678,4 @@ How loud the cue tones are, as a share of the program volume.	Quanto sono forti 
 Pop out	Stacca
 DAB picture	Immagine DAB
 Double-click: the picture in a window of its own	Doppio clic: l'immagine in una finestra propria
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto apre ogni portante che trasmette. Con Listen ascolti una portante vista. Guida: docs/AIRBAND-AUTO.md

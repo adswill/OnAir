@@ -280,6 +280,7 @@ void channelView(App& a) {
         if (open) ImGui::TextColored(pal::okGreen(), tr("On air: %s"), names.c_str());
         else if (inBand) ImGui::TextDisabled("%s", tr("No signal: every channel is quiet."));
     }
+    if (S.autoOn) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md")); ImGui::PopTextWrapPos(); }   // #668
     if (live(a) && tel.autoMode) {   // what the scanner opened by itself
         std::string on, idle;
         for (size_t i = S.chans.size(); i < tel.channels.size(); i++) {

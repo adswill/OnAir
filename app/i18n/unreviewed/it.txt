@@ -574,3 +574,4 @@ INTERFERENCE HUNTING
 Pop out
 DAB picture
 Double-click: the picture in a window of its own
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md

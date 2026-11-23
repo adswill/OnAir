@@ -4625,3 +4625,4 @@ How loud the cue tones are, as a share of the program volume.	Wie laut die Signa
 Pop out	Auslagern
 DAB picture	DAB-Bild
 Double-click: the picture in a window of its own	Doppelklick: das Bild in einem eigenen Fenster
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto öffnet jeden Träger, der sendet. Mit Listen hören Sie einen gesehenen Träger. Anleitung: docs/AIRBAND-AUTO.md

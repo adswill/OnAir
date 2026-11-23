@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <memory>
 #include <string>
 #include <tuple>
@@ -111,10 +112,11 @@ public:
     // Feeds a UDP datagram of any session; returns true if it belonged to this service.
     bool push(const UdpDatagram& d);
 
-    bool ready() const { return haveStsid_; }
-    const std::vector<RouteComponent>& components() const { return components_; }
-    const std::string& mpd() const { return mpd_; }
-    const std::string& usbd() const { return usbd_; }
+    // Thread safe: push() runs on the receive thread while the user interface asks for these (a service switch, issue #650), so they are copies
+    bool ready() const { std::lock_guard<std::mutex> lk(mu_); return haveStsid_; }
+    std::vector<RouteComponent> components() const { std::lock_guard<std::mutex> lk(mu_); return components_; }
+    std::string mpd() const { std::lock_guard<std::mutex> lk(mu_); return mpd_; }
+    std::string usbd() const { std::lock_guard<std::mutex> lk(mu_); return usbd_; }
     long slsObjects() const { return slsObjects_; }   // objects completed on TSI 0 of the SLS session
     long slsTables() const { return slsTables_; }     // S-TSID, MPD and USBD documents read from them
 
@@ -122,7 +124,8 @@ public:
     std::function<void(const RouteComponent&, const RouteObject&)> onObject;
 
 private:
-    void handleSls(const RouteObject& o);
+    void handleSls(const RouteObject& o);   // called with mu_ held
+    mutable std::mutex mu_;                 // guards everything below except the counters; never held while onObject runs
     uint32_t slsSrc_, slsDst_;
     int slsPort_;
     bool haveStsid_ = false;

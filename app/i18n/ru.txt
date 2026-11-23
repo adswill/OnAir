@@ -3680,3 +3680,4 @@ How loud the cue tones are, as a share of the program volume.	Громкость
 Pop out	Отдельно
 DAB picture	Картинка DAB
 Double-click: the picture in a window of its own	Двойной щелчок: картинка в отдельном окне
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto открывает каждую несущую, которая передаёт. Кнопкой Listen можно послушать найденную несущую. Руководство: docs/AIRBAND-AUTO.md
