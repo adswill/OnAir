@@ -188,7 +188,7 @@ protected:
             const double nco[16] = {hf.ncoHz};
             addNote(err, "LimeSDR: " + mhz(f) + " MHz is below the radio's tuner; the LO is at " + mhz(hf.loHz) + " MHz and the NCO shifts the signal down (HF mode, not tested on a real radio yet)");
             if (lime().set_nco_frequency(dev_, false, 0, nco, 0.0) != 0 || lime().set_nco_index(dev_, false, 0, 0, false) != 0)
-                DIAG(481220, "The LimeSDR NCO refused a shift of %.0f Hz (LimeSuite: %s), so the HF frequency is off.", hf.ncoHz, lime().text().c_str());
+                DIAG(463988, "The LimeSDR NCO refused a shift of %.0f Hz (LimeSuite: %s), so the HF frequency is off.", hf.ncoHz, lime().text().c_str());
             ncoOn_ = true;
         } else if (ncoOn_ && canNco) {   // back above the tuner's range: the NCO off again
             const double zero[16] = {0};
