@@ -57,6 +57,13 @@ int main(int argc, char** argv) {
         CHECK(limeAutoAntenna(u, 522e6, m) == 2 && limeAutoAntenna(u, 1499e6, m) == 2 && limeAutoAntenna(u, 1500e6, m) == 1, "LimeSDR-USB input by frequency");
         CHECK(!limeHasExtRef(a) && !limeHasExtRef(b) && limeHasExtRef(u), "reference clock option: Mini none, LimeSDR-USB yes");
         CHECK(limeAutoAntenna(a, 100e6, {"NONE"}) == -1, "no usable input");
+        const LimeNcoPlan h = limeHfPlan(7.1e6, 10e6, 8e6);
+        CHECK(h.nco && h.loHz == 10e6 && h.ncoHz == 2.9e6, "HF plan 7.1 MHz: lo %.0f nco %.0f", h.loHz, h.ncoHz);
+        const LimeNcoPlan h2 = limeHfPlan(1e6, 10e6, 8e6);
+        CHECK(h2.nco && h2.loHz == 10e6 && h2.ncoHz == 9e6, "HF plan 1 MHz: lo %.0f nco %.0f", h2.loHz, h2.ncoHz);
+        CHECK(!limeHfPlan(14e6, 10e6, 8e6).nco && limeHfPlan(14e6, 10e6, 8e6).loHz == 14e6, "above the tuner: untouched");
+        CHECK(!limeHfPlan(1e6, 10e6, 2e6).nco, "rate too low for the shift: plain tune");
+        CHECK(!limeHfPlan(1e6, 0, 8e6).nco, "range unknown: plain tune");
         CHECK(limeGainDb(-5) == 0 && limeGainDb(30.4) == 30 && limeGainDb(30.6) == 31 && limeGainDb(200) == 73, "gain mapping");
         CHECK(has(limeOpenHint(a, false), "LimeUtil --update") && !has(limeOpenHint(a, false), "FTDI") && has(limeOpenHint(a, true), "FTDI") && !has(limeOpenHint(u, true), "FTDI"), "open hint");
         const auto r = limeMiniRates();
@@ -154,6 +161,23 @@ int main(int argc, char** argv) {
         auto b = makeSource(v[0]);
         CHECK(!b->start(t, ring, e) && has(e, "cannot open the radio") && has(e, "LimeUtil --update"), "open failure: %s", e.c_str());
         unsetenv("FAKE_LIME_OPEN_FAIL");
+    }
+    // HF: below the tuner the LO goes up and the NCO shifts; above it nothing changes
+    setenv("FAKE_LIME_MODEL", "mini", 1);
+    v = limes();
+    if (!v.empty()) {
+        IqRing ring(1 << 22);
+        auto src = makeSource(v[0]);
+        TuneSettings t;
+        t.centerHz = 100e6; t.sampleRate = 8e6; t.gainDb = 30;
+        std::string e;
+        CHECK(src->start(t, ring, e) && st("lime.freq") == 100e6 && st("lime.ncoCalls") <= 0, "100 MHz: LO %.0f, no NCO", st("lime.freq"));
+        t.centerHz = 7.1e6;
+        e.clear();
+        CHECK(src->retune(t, e) && st("lime.freq") == 10e6 && st("lime.nco") == 2.9e6 && st("lime.ncoDown") == 0 && has(e, "not tested"), "7.1 MHz: LO %.0f NCO %.0f (%s)", st("lime.freq"), st("lime.nco"), e.c_str());
+        t.centerHz = 100e6;
+        CHECK(src->retune(t, e) && st("lime.freq") == 100e6 && st("lime.nco") == 0, "back to 100 MHz: LO %.0f NCO %.0f", st("lime.freq"), st("lime.nco"));
+        src->stop();
     }
     printf("%d failure(s)\n", failures);
     return failures ? 1 : 0;

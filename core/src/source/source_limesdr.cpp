@@ -49,6 +49,8 @@ struct LimeApi {
     int (DECT2_CALL* get_lo_range)(lms_device_t*, bool, range_t*) = nullptr;      // optional
     int (DECT2_CALL* get_sample_rate)(lms_device_t*, bool, size_t, double*, double*) = nullptr;   // optional
     int (DECT2_CALL* set_clock_freq)(lms_device_t*, size_t, double) = nullptr;     // optional: LMS_SetClockFreq (the external reference)
+    int (DECT2_CALL* set_nco_frequency)(lms_device_t*, bool, size_t, const double*, double) = nullptr;   // optional: LMS_SetNCOFrequency (HF)
+    int (DECT2_CALL* set_nco_index)(lms_device_t*, bool, size_t, int, bool) = nullptr;                    // optional: LMS_SetNCOIndex
     bool ok = false;
     DynLib lib;
     static std::vector<std::string> names() { return libNames("LimeSuite", {".23.11-1", ".22.09-1", ".20.10-1", ".20.01-1", ".19.04-1", ".18.06-1", ""}, {"libLimeSuite.dll", "LimeSuite.dll"}); }
@@ -61,7 +63,7 @@ struct LimeApi {
              lib.get(set_gain_db, "LMS_SetGaindB") && lib.get(calibrate, "LMS_Calibrate") && lib.get(setup_stream, "LMS_SetupStream") &&
              lib.get(destroy_stream, "LMS_DestroyStream") && lib.get(start_stream, "LMS_StartStream") && lib.get(stop_stream, "LMS_StopStream") &&
              lib.get(recv_stream, "LMS_RecvStream");
-        if (ok) { lib.opt(get_clock_freq, "LMS_GetClockFreq"); lib.opt(last_error, "LMS_GetLastErrorMessage"); lib.opt(get_lo_range, "LMS_GetLOFrequencyRange"); lib.opt(get_sample_rate, "LMS_GetSampleRate"); lib.opt(set_clock_freq, "LMS_SetClockFreq"); }
+        if (ok) { lib.opt(get_clock_freq, "LMS_GetClockFreq"); lib.opt(last_error, "LMS_GetLastErrorMessage"); lib.opt(get_lo_range, "LMS_GetLOFrequencyRange"); lib.opt(get_sample_rate, "LMS_GetSampleRate"); lib.opt(set_clock_freq, "LMS_SetClockFreq"); lib.opt(set_nco_frequency, "LMS_SetNCOFrequency"); lib.opt(set_nco_index, "LMS_SetNCOIndex"); }
     }
     std::string text() const {   // LimeSuite's own words for the last failure
         const char* t = last_error ? last_error() : nullptr;
@@ -179,7 +181,22 @@ protected:
         const std::string range = hi_ > 0 ? " (range " + mhz(lo_) + "-" + mhz(hi_) + " MHz)" : std::string();
         addNote(err, freqSpecNote("LimeSDR", f, lo_, hi_));   // outside what it is specified for: asked all the same
         // LimeSuite has no frequency correction in Hz (only the VCTCXO trim DAC): a correction the user set is taken out of the frequency
-        if (lime().set_lo_frequency(dev_, false, 0, ppmCorrectedHz(f, radioPpm(s))) != 0) { DIAG_ERROR(220194, "The LimeSDR refused a centre frequency of %.0f Hz (LimeSuite: %s), so the tune fails.", f, lime().text().c_str()); err = "LimeSDR: the library refused " + mhz(f) + " MHz" + range + ": " + lime().text(); openFailure_ = OpenFailure::Final; return false; }
+        // below the LO's range (HF on a Mini): LO high, the NCO brings the wanted frequency to baseband. Untested on a real radio.
+        const bool canNco = lime().set_nco_frequency && lime().set_nco_index;
+        const LimeNcoPlan hf = canNco ? limeHfPlan(f, lo_, rate_) : LimeNcoPlan{};
+        if (hf.nco) {
+            const double nco[16] = {hf.ncoHz};
+            addNote(err, "LimeSDR: " + mhz(f) + " MHz is below the radio's tuner; the LO is at " + mhz(hf.loHz) + " MHz and the NCO shifts the signal down (HF mode, not tested on a real radio yet)");
+            if (lime().set_nco_frequency(dev_, false, 0, nco, 0.0) != 0 || lime().set_nco_index(dev_, false, 0, 0, false) != 0)
+                DIAG(481220, "The LimeSDR NCO refused a shift of %.0f Hz (LimeSuite: %s), so the HF frequency is off.", hf.ncoHz, lime().text().c_str());
+            ncoOn_ = true;
+        } else if (ncoOn_ && canNco) {   // back above the tuner's range: the NCO off again
+            const double zero[16] = {0};
+            lime().set_nco_frequency(dev_, false, 0, zero, 0.0);
+            lime().set_nco_index(dev_, false, 0, 0, false);
+            ncoOn_ = false;
+        }
+        if (lime().set_lo_frequency(dev_, false, 0, ppmCorrectedHz(hf.nco ? hf.loHz : f, radioPpm(s))) != 0) { DIAG_ERROR(220194, "The LimeSDR refused a centre frequency of %.0f Hz (LimeSuite: %s), so the tune fails.", f, lime().text().c_str()); err = "LimeSDR: the library refused " + mhz(f) + " MHz" + range + ": " + lime().text(); openFailure_ = OpenFailure::Final; return false; }
         selectAntenna(f);
         lime().set_lpf_bw(dev_, false, 0, std::max(1.5e6, s.basebandFilterHz > 0 ? s.basebandFilterHz : rate_ * 0.95));
         lime().set_gain_db(dev_, false, 0, limeGainDb(s.gainDb));
@@ -261,6 +278,7 @@ private:
     LimeApi::stream_t stream_{};
     bool streaming_ = false;
     double lo_ = 0, hi_ = 0;   // LO range the library reports (0 = not known)
+    bool ncoOn_ = false;       // the NCO is shifting an HF tune
     double calLo_ = 0;         // LO frequency of the last calibration
 };
 
