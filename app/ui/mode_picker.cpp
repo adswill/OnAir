@@ -219,17 +219,17 @@ void modePicker(App& a) {
     // widths measured, so the row never runs past the dialog in any language: the second checkbox drops to its own line when it does not fit
     const float cbW1 = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(tr("Show hidden")).x;
     const float cbW2 = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(tr("Only my region")).x;
-    const float gap = 12 * gUi, availW = ImGui::GetContentRegionAvail().x;
-    ImGui::SetNextItemWidth(std::max(120.f * gUi, availW - cbW1 - gap - ImGui::GetStyle().ItemSpacing.x));
+    const float hgap = 12 * gUi, hAvail = ImGui::GetContentRegionAvail().x;
+    ImGui::SetNextItemWidth(std::max(120.f * gUi, hAvail - cbW1 - hgap - ImGui::GetStyle().ItemSpacing.x));
     if (S.focusSearch) { ImGui::SetKeyboardFocusHere(); S.focusSearch = false; }
     ImGui::InputTextWithHint("##mpq", tr("search: FT8, LoRa, APRS, 1090..."), S.q, sizeof S.q, ImGuiInputTextFlags_EscapeClearsAll);
     const bool searchActive = ImGui::IsItemActive();
-    ImGui::SameLine(0, gap);
+    ImGui::SameLine(0, hgap);
     ImGui::Checkbox(tr("Show hidden"), &S.showHidden);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("List the modes you hid in Modes shown (a search finds them anyway)"));
     {
-        const bool fits = ImGui::GetItemRectMax().x + gap + cbW2 <= ImGui::GetWindowPos().x + ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x;
-        if (fits) ImGui::SameLine(0, gap);
+        const bool fits = ImGui::GetItemRectMax().x + hgap + cbW2 <= ImGui::GetWindowPos().x + ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x;
+        if (fits) ImGui::SameLine(0, hgap);
         bool only = plat::prefs().getB("modesOnlyMyRegion", false);
         if (ImGui::Checkbox(tr("Only my region"), &only)) plat::prefs().setB("modesOnlyMyRegion", only);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hide the modes that are used only in other countries than the one in the setup (for example DTMB or DVB-T2 when you are in North America). Show hidden lists them again."));
