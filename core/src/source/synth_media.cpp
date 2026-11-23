@@ -259,15 +259,189 @@ bool decodeSound(const std::string& path, double maxSec, std::vector<float>& pcm
 }
 } // namespace
 
+// A long file: opened and decoded a packet at a time. `win` holds the decoded frames from absolute frame `base` (a frame = one stereo pair at
+// 48 kHz, counted from the start of the file); what the reader has passed is dropped, so the memory is a few packets whatever the length.
+struct SynthMediaAudio::Stream {
+    AVFormatContext* ic = nullptr;
+    AVCodecContext* cx = nullptr;
+    SwrContext* swr = nullptr;
+    AVFrame* fr = nullptr;
+    AVPacket* pk = nullptr;
+    AVStream* st = nullptr;
+    AVChannelLayout out{};
+    int si = -1;
+    int64_t t0 = 0;
+    std::string path;
+    std::vector<float> win, tmp;
+    int64_t base = 0, seekIdx = 0, pos = 0, total = 0;   // total: frames of one pass, 0 until the end has been reached
+    bool eof = false, needBase = false;
+    double dur = 0;
+    float gain = 1.f;
+
+    ~Stream() {
+        av_frame_free(&fr); av_packet_free(&pk); swr_free(&swr); avcodec_free_context(&cx); avformat_close_input(&ic);
+        av_channel_layout_uninit(&out);
+    }
+    bool open(const std::string& file, std::string& err) {
+        path = file;
+        if (avformat_open_input(&ic, path.c_str(), nullptr, nullptr) < 0) { ic = nullptr; err = "FFmpeg cannot open " + baseName(path); return false; }
+        if (avformat_find_stream_info(ic, nullptr) < 0) { err = "FFmpeg cannot read the streams of " + baseName(path); return false; }
+        si = av_find_best_stream(ic, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
+        if (si < 0) { err = baseName(path) + " has no sound"; return false; }
+        st = ic->streams[si];
+        const AVCodec* codec = avcodec_find_decoder(st->codecpar->codec_id);
+        cx = codec ? avcodec_alloc_context3(codec) : nullptr;
+        if (!cx || avcodec_parameters_to_context(cx, st->codecpar) < 0 || avcodec_open2(cx, codec, nullptr) < 0) { err = "FFmpeg has no decoder for the sound of " + baseName(path); return false; }
+        av_channel_layout_default(&out, 2);
+        if (!initSwr()) { err = "FFmpeg cannot resample the sound of " + baseName(path); return false; }
+        fr = av_frame_alloc(); pk = av_packet_alloc();
+        t0 = st->start_time != AV_NOPTS_VALUE ? st->start_time : 0;
+        if (ic->duration > 0) dur = (double)ic->duration / AV_TIME_BASE;
+        else if (st->duration > 0 && st->time_base.den > 0) dur = (double)st->duration * av_q2d(st->time_base);
+        return true;
+    }
+    bool initSwr() {
+        swr_free(&swr);
+        AVChannelLayout in = cx->ch_layout;
+        if (in.nb_channels <= 0) av_channel_layout_default(&in, 2);
+        return swr_alloc_set_opts2(&swr, &out, AV_SAMPLE_FMT_FLT, 48000, &in, cx->sample_fmt, cx->sample_rate, 0, nullptr) >= 0 && swr && swr_init(swr) >= 0;
+    }
+    int64_t end() const { return base + (int64_t)(win.size() / 2); }
+    void append(const uint8_t** inb, int n) {
+        const int oc = swr_get_out_samples(swr, n) + 64;
+        tmp.assign((size_t)oc * 2, 0.f);
+        uint8_t* o[1] = {(uint8_t*)tmp.data()};
+        const int got = swr_convert(swr, o, oc, inb, n);
+        if (got > 0) win.insert(win.end(), tmp.begin(), tmp.begin() + (size_t)got * 2);
+    }
+    void takeFrame() {
+        if (needBase && win.empty()) {   // the first frame after a seek says where in the file the window starts
+            if (seekIdx == 0 || fr->best_effort_timestamp == AV_NOPTS_VALUE) base = seekIdx;
+            else base = std::max<int64_t>(0, std::llround((double)(fr->best_effort_timestamp - t0) * av_q2d(st->time_base) * 48000.0));
+            needBase = false;
+        }
+        append((const uint8_t**)fr->extended_data, fr->nb_samples);
+        av_frame_unref(fr);
+    }
+    // Decodes up to the next packet of sound into the window; false once the end of the file has been reached and nothing more came.
+    bool fill() {
+        if (eof) return false;
+        const size_t before = win.size();
+        while (av_read_frame(ic, pk) >= 0) {
+            if (pk->stream_index == si && avcodec_send_packet(cx, pk) >= 0)
+                while (avcodec_receive_frame(cx, fr) >= 0) takeFrame();
+            av_packet_unref(pk);
+            if (win.size() > before) return true;
+        }
+        avcodec_send_packet(cx, nullptr);
+        while (avcodec_receive_frame(cx, fr) >= 0) takeFrame();
+        append(nullptr, 0);
+        eof = true;
+        if (total <= 0) total = end();
+        return win.size() > before;
+    }
+    bool seekTo(int64_t idx) {
+        const int64_t ts = t0 + (int64_t)((double)idx / 48000.0 / av_q2d(st->time_base));
+        if (av_seek_frame(ic, si, ts, AVSEEK_FLAG_BACKWARD) < 0) {
+            if (idx != 0 || av_seek_frame(ic, -1, 0, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_BYTE) < 0) return false;
+        }
+        avcodec_flush_buffers(cx);
+        initSwr();
+        win.clear();
+        eof = false; needBase = true; seekIdx = idx; base = idx;
+        return true;
+    }
+    // Makes the window hold frames a .. a + count - 1 as far as the file has them, and frees what comes before a - 1. False when a is not there.
+    bool ensure(int64_t a, int64_t count) {
+        if (a < 0) a = 0;
+        if (a < base || (!eof && a > end() + 96000)) { if (!seekTo(a)) return false; }   // backwards, or a jump of more than 2 s ahead
+        else if (eof && a >= end()) return false;
+        auto trim = [&]() {
+            const int64_t keep = a - 1;
+            if (keep <= base) return;
+            const int64_t drop = std::min<int64_t>(keep - base, (int64_t)(win.size() / 2));
+            win.erase(win.begin(), win.begin() + (std::ptrdiff_t)(drop * 2));
+            base += drop;
+            if (win.capacity() > win.size() * 4 + 65536) win.shrink_to_fit();
+        };
+        while (end() < a + count && fill()) trim();   // (after a seek the container may start well before a: what is before is dropped as it comes)
+        trim();
+        return a >= base && a < end();
+    }
+    int64_t length() const { return total > 0 ? total : (int64_t)std::llround(dur * 48000.0); }
+};
+
+SynthMediaAudio::SynthMediaAudio() = default;
+SynthMediaAudio::~SynthMediaAudio() = default;
+
+bool SynthMediaAudio::ok() const { return !pcm_.empty() || s_ != nullptr; }
+bool SynthMediaAudio::streaming() const { return s_ != nullptr; }
+double SynthMediaAudio::seconds() const { return s_ ? (double)s_->length() / 48000.0 : (double)pcm_.size() / 2.0 / 48000.0; }
+size_t SynthMediaAudio::bufferedBytes() const { return s_ ? s_->win.capacity() * sizeof(float) : pcm_.capacity() * sizeof(float); }
+
 bool SynthMediaAudio::load(const SynthMedia& m, double maxSeconds, std::string& err) {
-    pcm_.clear(); pos_ = 0;
+    pcm_.clear(); pos_ = 0; s_.reset();
     const std::string& p = !m.audio.empty() ? m.audio : (m.kind == 2 ? m.path : std::string());
     if (p.empty()) { err = "no sound file"; return false; }
     if (!decodeSound(p, std::max(1.0, maxSeconds), pcm_, err)) { pcm_.clear(); return false; }
     return true;
 }
 
+bool SynthMediaAudio::loadStreaming(const SynthMedia& m, double memorySeconds, std::string& err) {
+    pcm_.clear(); pos_ = 0; s_.reset();
+    const std::string& p = !m.audio.empty() ? m.audio : (m.kind == 2 ? m.path : std::string());
+    if (p.empty()) { err = "no sound file"; return false; }
+    memorySeconds = std::max(1.0, memorySeconds);
+    auto st = std::make_unique<Stream>();
+    if (!st->open(p, err)) return false;
+    const bool longFile = st->dur > memorySeconds;
+    if (!longFile) {   // short (or it does not say): decoded whole as before; one that then proves to be longer than the limit is streamed instead
+        if (!decodeSound(p, memorySeconds, pcm_, err)) { pcm_.clear(); return false; }
+        if (pcm_.size() < (size_t)(memorySeconds * 48000.0) * 2) return true;
+        pcm_.clear(); pcm_.shrink_to_fit();
+    }
+    if (!st->seekTo(0)) { err = baseName(p) + " cannot be rewound"; return false; }
+    if (!st->ensure(0, 4096)) { err = baseName(p) + " has no usable sound"; return false; }
+    s_ = std::move(st);
+    return true;
+}
+
+void SynthMediaAudio::seek(double seconds) {
+    if (s_) {
+        int64_t i = (int64_t)std::llround(std::max(0.0, seconds) * 48000.0);
+        const int64_t n = s_->length();
+        if (n > 0) i %= n;
+        s_->pos = i;
+    } else if (!pcm_.empty()) {
+        const size_t n = pcm_.size() / 2;
+        pos_ = ((size_t)std::llround(std::max(0.0, seconds) * 48000.0) % n) * 2;
+    }
+}
+
 int SynthMediaAudio::read(float* st, int frames) {
+    if (s_) {
+        Stream& s = *s_;
+        int done = 0, empty = 0;
+        while (done < frames) {
+            if (s.total > 0 && s.pos >= s.total) s.pos = 0;
+            s.ensure(s.pos, std::min(frames - done, 4096));
+            if (s.pos < s.base) s.pos = s.base;
+            const int64_t avail = s.end() - s.pos;
+            if (avail <= 0) {   // the end of the file (or a failed seek): around again
+                if (s.eof && s.total <= 0) s.total = s.end();
+                if (++empty > 2) break;
+                s.pos = 0;
+                continue;
+            }
+            empty = 0;
+            const int n = (int)std::min<int64_t>(avail, frames - done);
+            const float* src = s.win.data() + (size_t)(s.pos - s.base) * 2;
+            for (int i = 0; i < n * 2; i++) st[2 * (size_t)done + (size_t)i] = std::max(-1.f, std::min(1.f, src[i] * s.gain));
+            s.pos += n; done += n;
+        }
+        if (done < frames) std::fill(st + (size_t)done * 2, st + (size_t)frames * 2, 0.f);
+        return frames;
+    }
     if (pcm_.empty()) { std::fill(st, st + (size_t)frames * 2, 0.f); return frames; }
     for (int i = 0; i < frames; i++) {
         st[2 * i] = pcm_[pos_]; st[2 * i + 1] = pcm_[pos_ + 1];
@@ -277,6 +451,25 @@ int SynthMediaAudio::read(float* st, int frames) {
 }
 
 float SynthMediaAudio::mono(double t) const {
+    if (s_) {
+        Stream& s = *s_;
+        double x = t * 48000.0;
+        if (s.total > 0) x = std::fmod(x, (double)s.total);
+        else if (s.dur > 0 && x >= s.dur * 48000.0 + 96000.0) x = std::fmod(x, std::max(1.0, s.dur * 48000.0));
+        if (x < 0) x += (double)std::max<int64_t>(1, s.length());
+        int64_t i = (int64_t)x;
+        if (!(i >= s.base && i + 1 < s.end())) {
+            if (!s.ensure(i, 2)) {
+                if (s.total > 0) { x = std::fmod(x, (double)s.total); i = (int64_t)x; s.ensure(i, 2); }   // the end was found to be before x
+                if (!(i >= s.base && i < s.end())) return 0.f;
+            }
+        }
+        const size_t k = (size_t)(i - s.base);
+        const size_t kn = (i + 1 < s.end()) ? k + 1 : k;
+        const float f = (float)(x - (double)i);
+        const float a = 0.5f * (s.win[2 * k] + s.win[2 * k + 1]), b = 0.5f * (s.win[2 * kn] + s.win[2 * kn + 1]);
+        return std::max(-1.f, std::min(1.f, (a + (b - a) * f) * s.gain));
+    }
     if (pcm_.empty()) return 0.f;
     const size_t n = pcm_.size() / 2;
     double x = std::fmod(t * 48000.0, (double)n);
@@ -289,6 +482,20 @@ float SynthMediaAudio::mono(double t) const {
 
 void SynthMediaAudio::setPeak(float peak) {
     float mx = 0.f;
+    if (s_) {   // the first 15 minutes are measured on a second reader (the playing one is not moved)
+        std::string err;
+        Stream scan;
+        if (!scan.open(s_->path, err)) return;
+        const int64_t limit = 900LL * 48000;
+        while (scan.end() < limit && scan.fill()) {
+            for (float v : scan.win) mx = std::max(mx, std::fabs(v));
+            scan.base += (int64_t)(scan.win.size() / 2);
+            scan.win.clear();
+        }
+        for (float v : scan.win) mx = std::max(mx, std::fabs(v));
+        if (mx > 1e-6f) s_->gain = peak / mx;
+        return;
+    }
     for (float v : pcm_) mx = std::max(mx, std::fabs(v));
     if (mx > 1e-6f) for (float& v : pcm_) v *= peak / mx;
 }
@@ -299,7 +506,7 @@ std::shared_ptr<SynthMediaAudio> synthMediaAudioFor(const SynthConfig& cfg, doub
     if (m.audio.empty() && !(m.kind == 2 && !m.path.empty())) return nullptr;
     auto a = std::make_shared<SynthMediaAudio>();
     std::string err;
-    if (!a->load(m, maxSeconds, err)) {
+    if (!a->loadStreaming(m, maxSeconds, err)) {
         synthMediaSetStatus("Could not use the sound: " + err + ". The built-in sound is used.");
         DIAG(773241, "The synthetic content sound could not be loaded (%s), so the built-in sound is used.", err.c_str());
         return nullptr;

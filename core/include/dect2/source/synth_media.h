@@ -73,22 +73,36 @@ private:
 };
 
 // The sound of a file (or of a video), 48 kHz stereo, looped.
+// A file up to the memory limit is decoded whole; a longer one is decoded a packet at a time while it plays (a small window of samples is kept,
+// what was played is freed), so a 3 hour video has sound and the memory stays flat.
 class SynthMediaAudio {
 public:
+    SynthMediaAudio();
+    ~SynthMediaAudio();
+    SynthMediaAudio(const SynthMediaAudio&) = delete;
+    SynthMediaAudio& operator=(const SynthMediaAudio&) = delete;
     // The chosen sound: media.audio, else the video's own sound. At most maxSeconds are kept. False with err when there is none.
     bool load(const SynthMedia& m, double maxSeconds, std::string& err);
-    bool ok() const { return !pcm_.empty(); }
-    double seconds() const { return (double)pcm_.size() / 2.0 / 48000.0; }
+    // As load(), but with no limit on the length: up to memorySeconds is decoded whole, a longer file (or one that does not say how long it is
+    // and does not end within memorySeconds) is streamed from the file.
+    bool loadStreaming(const SynthMedia& m, double memorySeconds, std::string& err);
+    bool ok() const;
+    bool streaming() const;                  // decoded while it plays, not held whole
+    double seconds() const;                  // one pass (a streamed file: from the container until the end has been reached once)
     int read(float* stereo, int frames);     // interleaved L R; wraps around at the end; returns frames
     float mono(double t) const;              // (L + R) / 2 at time t, looped, interpolated
-    void setPeak(float peak);                // scale so the loudest sample is peak (default: as decoded)
+    void seek(double seconds);               // where read() goes on from (looped into the file)
+    void setPeak(float peak);                // scale so the loudest sample is peak (default: as decoded); a streamed file looks at its first 15 minutes
+    size_t bufferedBytes() const;            // the memory the sound holds now
 private:
+    struct Stream;
+    std::unique_ptr<Stream> s_;
     std::vector<float> pcm_;
     size_t pos_ = 0;
 };
 
-// The longest sound kept in memory (about 23 MB per minute). The sound of a video file is decoded whole, so a file shorter than this keeps its
-// sound in step with the picture through every loop; a 120 s cap made the sound start over while the picture played on (4.4.0).
+// The in-memory limit of the sound of a video file (about 23 MB per minute): a file shorter than this keeps its sound whole; a longer one is
+// streamed (it used to be cut at this length, 120 s before 4.4.1, which made the sound start over while the picture played on).
 constexpr double kSynthMediaMaxSoundSeconds = 900;
 
 // One shared decoded copy per (file, time, length) for the generators that rebuild themselves on an option change
