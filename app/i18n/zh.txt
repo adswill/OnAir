@@ -5469,7 +5469,7 @@ CRC bad	CRC 错误
 CRC failed	CRC 失败
 CRC failed (kept for memory ARQ)	CRC 失败（为记忆 ARQ 保留）
 CRC good	CRC 正确
-CRF	恒定质量因子（CRF）
+CRF	恒定质量（CRF）
 CRF needs x264 or x265	CRF 需要 x264 或 x265
 CUSTOM MODES	自定义模式
 CW / fast	CW / 快速
@@ -9785,7 +9785,7 @@ Usual	常用
 Utility telemetry	工业与公用事业遥测
 VARA FM	VARA FM
 VARA HF	VARA HF
-VBR / CRF	可变码率（VBR）/ 恒定质量因子（CRF）
+VBR / CRF	可变码率（VBR）/ 恒定质量（CRF）
 VC	VC
 VDL Mode 2	VDL 模式 2
 VHF (137-146 MHz)	VHF（137-146 MHz）
