@@ -571,3 +571,4 @@ HF MONITORING
 RECEIVERS & ANALYSERS
 METERS
 INTERFERENCE HUNTING
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md

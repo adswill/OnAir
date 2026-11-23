@@ -3691,3 +3691,4 @@ Sound cue: pass ended	Signal sonore : passage terminé
 Three falling tones when a tracked satellite pass ends. Off by default.	Trois sons descendants à la fin d'un passage de satellite suivi. Désactivé par défaut.
 Sound cue volume (%)	Volume des signaux sonores (%)
 How loud the cue tones are, as a share of the program volume.	Le volume des signaux, en part du volume du programme.
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto ouvre chaque porteuse qui émet. Avec Listen, écoutez une porteuse vue. Guide : docs/AIRBAND-AUTO.md

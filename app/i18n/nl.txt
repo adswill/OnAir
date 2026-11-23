@@ -3692,3 +3692,4 @@ Sound cue: pass ended	Geluidssignaal: overvlucht voorbij
 Three falling tones when a tracked satellite pass ends. Off by default.	Drie dalende tonen als een gevolgde satellietovervlucht eindigt. Standaard uit.
 Sound cue volume (%)	Volume van geluidssignalen (%)
 How loud the cue tones are, as a share of the program volume.	Hoe luid de signalen zijn, als deel van het programmavolume.
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto opent elke drager die zendt. Met Listen hoort u een geziene drager. Handleiding: docs/AIRBAND-AUTO.md

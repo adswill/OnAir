@@ -3693,3 +3693,4 @@ Sound cue: pass ended	Dźwięk: przelot zakończony
 Three falling tones when a tracked satellite pass ends. Off by default.	Trzy opadające dźwięki, gdy kończy się śledzony przelot satelity. Domyślnie wyłączone.
 Sound cue volume (%)	Głośność dźwięków (%)
 How loud the cue tones are, as a share of the program volume.	Jak głośne są dźwięki, jako część głośności programu.
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto otwiera każdą nadającą nośną. Przyciskiem Listen posłuchasz zauważonej nośnej. Przewodnik: docs/AIRBAND-AUTO.md

@@ -3677,3 +3677,4 @@ Sound cue: pass ended	Звуковой сигнал: пролёт окончен
 Three falling tones when a tracked satellite pass ends. Off by default.	Три нисходящих тона, когда заканчивается отслеживаемый пролёт спутника. По умолчанию выключено.
 Sound cue volume (%)	Громкость сигналов (%)
 How loud the cue tones are, as a share of the program volume.	Громкость сигналов как доля громкости программы.
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto открывает каждую несущую, которая передаёт. Кнопкой Listen можно послушать найденную несущую. Руководство: docs/AIRBAND-AUTO.md

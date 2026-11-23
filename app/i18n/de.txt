@@ -4622,3 +4622,4 @@ Sound cue: pass ended	Tonsignal: Überflug beendet
 Three falling tones when a tracked satellite pass ends. Off by default.	Drei fallende Töne, wenn ein verfolgter Satellitenüberflug endet. Standardmäßig aus.
 Sound cue volume (%)	Lautstärke der Tonsignale (%)
 How loud the cue tones are, as a share of the program volume.	Wie laut die Signaltöne sind, als Anteil der Programmlautstärke.
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto öffnet jeden Träger, der sendet. Mit Listen hören Sie einen gesehenen Träger. Anleitung: docs/AIRBAND-AUTO.md

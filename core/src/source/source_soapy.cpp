@@ -15,6 +15,7 @@
 #include <SoapySDR/Device.hpp>
 #include <SoapySDR/Errors.h>
 #include <SoapySDR/Formats.h>
+#include <SoapySDR/Modules.hpp>
 #include <SoapySDR/Registry.hpp>
 #include <set>
 #include <SoapySDR/Types.h>
@@ -86,6 +87,25 @@ void soapyLocateModules() {
                     const char* old = getenv("SOAPY_SDR_PLUGIN_PATH");
                     const std::string v = old && *old ? mods + ":" + old : mods;
                     setenv("SOAPY_SDR_PLUGIN_PATH", v.c_str(), 1);
+                }
+                // The modules of the system folders (Homebrew, /usr/local) are loaded here one by one, not by SoapySDR itself, so a module that is known to crash
+                // (SoapySDRPlay with no SDRplay API: a null function pointer, #646) is left out and every load result is checked. SoapySDR's own search of its root
+                // folder is pointed at a folder with no modules, so nothing is loaded twice. Skipped when the user chose a SoapySDR root on purpose.
+                if (!getenv("SOAPY_SDR_ROOT") && !getenv("ONAIR_SOAPY_AUTOLOAD")) {
+                    setenv("SOAPY_SDR_ROOT", (dir + "/../Frameworks/SoapySDR").c_str(), 1);
+                    std::vector<std::string> files;
+                    for (const char* root : {"/opt/homebrew/lib/SoapySDR", "/usr/local/lib/SoapySDR"})
+                        for (const char* sub : {"modules0.8", "modules0.9", "modules0.10"}) {
+                            try { for (const auto& f : SoapySDR::listModules(std::string(root) + "/" + sub)) files.push_back(f); } catch (...) {}
+                        }
+                    for (const auto& f : files) {
+                        std::string why;
+                        if (!soapylogic::moduleAllowed(f, &why)) { fprintf(stderr, "SoapySDR: module %s not loaded: %s\n", f.c_str(), why.c_str()); continue; }
+                        try {
+                            const std::string e = SoapySDR::loadModule(f);
+                            if (!e.empty()) fprintf(stderr, "SoapySDR: module %s failed to load: %s\n", f.c_str(), e.c_str());
+                        } catch (const std::exception& ex) { fprintf(stderr, "SoapySDR: module %s failed to load: %s\n", f.c_str(), ex.what()); } catch (...) {}
+                    }
                 }
             }
         }

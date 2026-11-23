@@ -3672,3 +3672,4 @@ Sound cue: pass ended	Hangjelzés: átvonulás vége
 Three falling tones when a tracked satellite pass ends. Off by default.	Három süllyedő hang, amikor egy követett műholdátvonulás véget ér. Alapból kikapcsolva.
 Sound cue volume (%)	Hangjelzések hangereje (%)
 How loud the cue tones are, as a share of the program volume.	Milyen hangosak a jelzések a program hangerejének arányában.
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Az Auto megnyit minden adó vivőt. A Listen gombbal meghallgathat egy látott vivőt. Útmutató: docs/AIRBAND-AUTO.md

@@ -3687,3 +3687,4 @@ Sound cue: pass ended	効果音：パス終了
 Three falling tones when a tracked satellite pass ends. Off by default.	追跡中の衛星パスが終わったとき、下降音を3回鳴らします。初期設定はオフ。
 Sound cue volume (%)	効果音の音量（%）
 How loud the cue tones are, as a share of the program volume.	効果音の大きさ（プログラム音量に対する割合）。
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto は送信中の搬送波を自動で開きます。Listen で検出した搬送波を聞けます。ガイド: docs/AIRBAND-AUTO.md

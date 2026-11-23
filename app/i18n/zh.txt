@@ -11248,3 +11248,4 @@ Sound cue: pass ended	提示音：过境结束
 Three falling tones when a tracked satellite pass ends. Off by default.	跟踪的卫星过境结束时播放三声降调。默认关闭。
 Sound cue volume (%)	提示音音量（%）
 How loud the cue tones are, as a share of the program volume.	提示音的响度，占程序音量的比例。
+Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto 会自动打开每个正在发射的载波。用 Listen 可以收听看到的载波。指南：docs/AIRBAND-AUTO.md

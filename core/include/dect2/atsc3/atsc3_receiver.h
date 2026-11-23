@@ -56,7 +56,7 @@ public:
     std::vector<SltService> services() const;                 // from the low level signaling received so far
     bool selectService(int serviceId);                        // false until the service is known; may be called before, it is remembered
     bool selectServiceIfNone(int serviceId);                  // as selectService, but nothing happens when one is already selected (checked under the lock)
-    int selectedService() const { return selected_; }
+    int selectedService() const { std::lock_guard<std::mutex> lk(mu_); return selected_; }
     // When no service has been chosen, take the first visible linear video service (ROUTE) as soon as the service list arrives.
     void setAutoSelect(bool on) { autoSelect_ = on; }
     bool serviceReady() const;                                // the service's signaling (S-TSID) has arrived
@@ -79,7 +79,7 @@ private:
     void onAlp(const AlpPacket& a);
     void onUdp(const UdpDatagram& d);
     void startRoute();
-    void onObject(const RouteComponent& c, const RouteObject& o);
+    void onObject(uint64_t gen, const RouteComponent& c, const RouteObject& o);
 
     mutable std::mutex mu_;
     std::map<int, AlpReassembler> reasm_;
@@ -90,6 +90,7 @@ private:
     int selected_ = -1;
     bool autoSelect_ = false;
     bool routeStarted_ = false;
+    uint64_t routeGen_ = 0;                        // counts the routes made: objects of a route that a service change replaced are dropped (#650)
     std::shared_ptr<RouteService> route_;   // shared: onUdp keeps its copy while a service change (another thread) replaces route_
     std::map<std::string, int> remuxIds_;          // component key -> remux component id
     std::map<int, std::vector<uint8_t>> lastInit_;

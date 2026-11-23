@@ -2543,3 +2543,8 @@ Release ccache hit rate was ~0 (ONAIR_VERSION is a command-line define of every 
 - web schema generator now finds the telemetry member of a `case N: {` block (Datawell), generated files regenerated.
 - airband_auto: the test compared the asked capture with current(), which tick() already moves; it now compares with the capture it left.
 - updater (macOS): hdiutil retried, no abort when the image is missing. audio_engine: wall-clock guard on the signal-time loops. sferics_ltpos, audio_engine labelled timing. tx_quality_b was already timing.
+
+## 2026-11-23 integ-46-bugsB: #650, #646, #668
+- #650 ATSC 3.0 crash on a service switch: RouteService was read by the user interface (components, mpd, ready) while the receive thread changed it in push(), with no lock (vector and string copied during a reallocation). RouteService now has its own mutex, its getters return copies, and push() delivers objects after releasing it. Objects of a route that a switch replaced are dropped (generation counter), so they no longer mix their component numbers into the new service. selectedService() takes the lock. Test `atsc3_service_switch` (4 s of switching and reading against a two-service synthetic broadcast).
+- #646 Intel Mac crash: libsdrPlaySupport (SoapySDRPlay, installed by the user in Homebrew's folder) calls a null function pointer when the SDRplay API cannot be loaded. macOS now loads the system SoapySDR modules itself, one by one, checking every result and skipping that module (OnAir has its own SDRplay driver); SoapySDR's own root search is pointed at the bundle. `soapylogic::moduleAllowed` tested in `soapy_logic`.
+- #668 docs/AIRBAND-AUTO.md (how Auto works, settings, Listen, guard channels, tips) and a one-line hint in the Airband panel (all catalogs).
