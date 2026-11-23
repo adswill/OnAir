@@ -120,7 +120,11 @@ static void countsListed() {
 }
 
 int main(int argc, char** argv) {
+    #ifdef MODE_GROUPS_CASE
+    const std::string w = MODE_GROUPS_CASE;   // one program per case (CMakeLists.txt)
+#else
     const std::string w = argc > 1 ? argv[1] : "all";
+#endif
     if (w == "all" || w == "groups_cover_every_mode_once") coverEveryModeOnce();
     if (w == "all" || w == "old_group_names_migrate") oldNamesMigrate();
     if (w == "all" || w == "group_counts_listed") countsListed();

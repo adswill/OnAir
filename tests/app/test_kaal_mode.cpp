@@ -37,11 +37,11 @@ int main() {
     need("app/ui/mode_table.cpp", table, "{124, \"KAPP\", 33,");
     need("app/ui/mode_table.cpp", table, "{125, \"KAFT\", 33,");
     need("app/ui/mode_table.cpp", table, "N_(\"PLUGINS\"), \"Kris custom modes\", N_(\"CUSTOM MODES\")}");   // the Mode Builder's group follows
-    need("app/ui/mode_table.cpp", table, "IM_COL32(233, 163, 101, 255),\n    IM_COL32(147, 191, 179, 255)};");
+    need("app/ui/mode_table.cpp", table, "rgb(233, 163, 101), rgb(147, 191, 179)};");
 
     const std::string app = readSource("app/app.h");
     need("app/app.h", app, "constexpr int kNumFamilies = ");
-    need("app/app.h", app, "constexpr int kNumGroups = 17;");
+    need("app/app.h", app, "constexpr int kNumGroups = 35;");
     absent("app/app.h", app, "kaalOpen");
 
     const std::string modeui = readSource("app/panels/modeui.cpp");
