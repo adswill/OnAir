@@ -220,7 +220,9 @@ void modePicker(App& a) {
     const float cbW1 = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(tr("Show hidden")).x;
     const float cbW2 = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize(tr("Only my region")).x;
     const float hgap = 12 * gUi, hAvail = ImGui::GetContentRegionAvail().x;
-    ImGui::SetNextItemWidth(std::max(120.f * gUi, hAvail - cbW1 - hgap - ImGui::GetStyle().ItemSpacing.x));
+    const float sp = ImGui::GetStyle().ItemSpacing.x;
+    const bool oneRow = hAvail - cbW1 - cbW2 - 2 * hgap - 2 * sp >= 220 * gUi;   // both boxes beside a search field of a usable width, else the second one wraps
+    ImGui::SetNextItemWidth(std::max(120.f * gUi, hAvail - cbW1 - hgap - sp - (oneRow ? cbW2 + hgap + sp : 0.f)));
     if (S.focusSearch) { ImGui::SetKeyboardFocusHere(); S.focusSearch = false; }
     ImGui::InputTextWithHint("##mpq", tr("search: FT8, LoRa, APRS, 1090..."), S.q, sizeof S.q, ImGuiInputTextFlags_EscapeClearsAll);
     const bool searchActive = ImGui::IsItemActive();

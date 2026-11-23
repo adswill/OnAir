@@ -2520,3 +2520,6 @@ DATV table: Es/N0 (the demodulator's own for the carrier being decoded, else est
 
 - Rules in core (`star_prompt.h/.cpp`, test `star_prompt`): never on the first launch, shows after the third launch or the first good decode, once per session, never after Star or Don't ask again, "Maybe later" returns at most twice (30, then 60 days), no network and no browser in the logic.
 - App hook `app/ui/star_card.cpp`: prefs `starLaunches`, `starDecoded`, `starChoice`, `starShown`, `starLater`, `starLastDay`; a non-modal corner card after 20 s; the browser opens only on "Star on GitHub". Switch `starPromptOn` in Settings > General next to "Start the receiver when OnAir starts". "Good decode" is approximated by the receiver running two minutes in one go (no common decode signal across modes). Six i18n keys in all 14 catalogs. CI pending.
+
+## 2026-11-23 UI audit 4.6
+Choose a mode: filter row measured and wrapped (both checkboxes on one row when the search keeps 220 px), Clear button in the empty state when two chips are lit; dev flags --picker --star --open NAME; tools/ui_shots.sh now ~130 shots at 3 sizes; scratchpad/UI-AUDIT-4.6.md.
