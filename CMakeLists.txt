@@ -3692,3 +3692,8 @@ if(ONAIR_DEBUG_SYMBOLS)
     COMMENT "Debug symbols: symbols_v${ONAIR_VERSION}.zip"
     VERBATIM)
 endif()
+
+# KAVL, the narrow-band video mode, developed as a separate program until it joins OnAir (kavl/CMakeLists.txt, scratchpad/KAVL-SPEC-v0.1.md)
+if(DECT2_BUILD_TESTS AND EXISTS ${ONAIR_ROOT}/kavl/CMakeLists.txt)
+  add_subdirectory(kavl)
+endif()
