@@ -476,7 +476,8 @@ void PacketReceiver::setMyCall(const std::string& call) {
     p_->msgs.setMyCall(call);
     p_->republish();
 }
-void PacketReceiver::setTableScale(int scale) { p_->capScale = std::max(1, std::min(20, scale)); }
+void PacketReceiver::setTableScale(int scale) { p_->capScale = std::max(1, std::min(200, scale)); }   // (#455: up to 200 times)
+int PacketReceiver::tableScale() const { return p_->capScale.load(); }
 void PacketReceiver::setNarrowChannel(bool on) {
     std::lock_guard<std::mutex> lk(p_->procMu);
     if (p_->narrow == on) return;

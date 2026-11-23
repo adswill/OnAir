@@ -10,6 +10,7 @@
 #include "state/results_export.h"
 #include "dect2/dab/dab_announce.h"
 #include "dect2/dab/dab_fig.h"
+#include "dect2/dab/slide_fit.h"
 #include "dect2/dab/dab_watch.h"
 #include <ctime>
 #include <filesystem>
@@ -458,6 +459,37 @@ static void dabSlideUpdate(App& a) {
     gDabEnh.feed(reinterpret_cast<const uint32_t*>(s.rgba.data()), s.w, s.h, true);
     gDabSlide.w = s.w; gDabSlide.h = s.h; gDabSlide.name = s.name;
 }
+// #656: the picture in a window of its own, any size; double-click fills the main window, Esc or another double-click goes back
+static bool gDabSlidePop = false, gDabSlideFull = false;
+void dabSlideWindow(App& a) {
+    if (!gDabSlidePop) { gDabSlideFull = false; return; }
+    dabSlideUpdate(a);
+    ImGuiWindowFlags fl = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+    if (gDabSlideFull) {
+        const ImGuiViewport* vp = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(vp->Pos); ImGui::SetNextWindowSize(vp->Size);
+        fl |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
+    } else {
+        firstWindowSize(560 * gUi, 440 * gUi);
+        ImGui::SetNextWindowPos(ImVec2(180, 140), ImGuiCond_FirstUseEver);
+    }
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::ColorConvertU32ToFloat4(0xFF000000u));
+    if (ImGui::Begin(trw("DAB picture"), &gDabSlidePop, fl)) {
+        if (gDabSlide.img) {
+            const ImVec2 av = ImGui::GetContentRegionAvail();
+            const float sc = dect2::dabSlideScale(gDabSlide.w, gDabSlide.h, av.x, av.y, 8.f);
+            if (sc > 0.f) {
+                const ImVec2 sz((float)gDabSlide.w * sc, (float)gDabSlide.h * sc);
+                ImGui::SetCursorPos(ImVec2(ImGui::GetCursorPosX() + std::max(0.f, (av.x - sz.x) * 0.5f), ImGui::GetCursorPosY() + std::max(0.f, (av.y - sz.y) * 0.5f)));
+                ImGui::Image(gDabEnh.texture(gDabSlide.img)->texture(), sz);
+            }
+        } else ImGui::TextDisabled("%s", tr("no picture received yet (not every station sends one)"));
+        if (ImGui::IsWindowHovered() && ImGui::IsMouseDoubleClicked(0)) gDabSlideFull = !gDabSlideFull;
+        if (gDabSlideFull && ImGui::IsKeyPressed(ImGuiKey_Escape)) gDabSlideFull = false;
+    }
+    ImGui::End();
+    ImGui::PopStyleColor();
+}
 // The latest slide show picture of the playing service with the name it came with (and the label), in a box at most `maxH` high
 static std::string dlPlusShort(const DabService& sv);
 void dabSlidePanel(App& a, const DabEnsemble& ens, float maxH) {
@@ -475,8 +507,11 @@ void dabSlidePanel(App& a, const DabEnsemble& ens, float maxH) {
     const float bw = ImGui::GetContentRegionAvail().x;
     const float sc = std::max(0.1f, std::min(std::min(bw / (float)gDabSlide.w, maxH / (float)gDabSlide.h), 6.f));
     ImGui::Image(gDabEnh.texture(gDabSlide.img)->texture(), ImVec2((float)gDabSlide.w * sc, (float)gDabSlide.h * sc));
+    if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) gDabSlidePop = true;   // #656: double-click opens the picture window
     ImGui::SameLine(0, 10 * gUi);
     ImGui::BeginGroup();
+    if (ImGui::SmallButton(tr("Pop out"))) gDabSlidePop = true;
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Pop out into a window of its own"));
     gDabEnh.controls("dabenh");
     ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + std::max(120.f * gUi, bw - (float)gDabSlide.w * sc - 14 * gUi));
     if (!gDabSlide.name.empty()) ImGui::TextUnformatted(gDabSlide.name.c_str());
@@ -718,6 +753,7 @@ void dabStations(App& a) {
                 const ImVec2 sz((float)gDabSlide.w * sc, (float)gDabSlide.h * sc);
                 ImGui::SetCursorPosX(std::max(0.f, (bw - sz.x) * 0.5f));
                 ImGui::Image(gDabEnh.texture(gDabSlide.img)->texture(), sz);
+                if (ImGui::IsItemHovered()) { ImGui::SetTooltip("%s", tr("Double-click: the picture in a window of its own")); if (ImGui::IsMouseDoubleClicked(0)) gDabSlidePop = true; }
             }
             drawTags(bw);
             if (!dls.empty() && tags.empty()) { ImGui::SetCursorPosX(8); ImGui::PushTextWrapPos(bw - 8); ImGui::TextDisabled("%s", dls.c_str()); ImGui::PopTextWrapPos(); }

@@ -2543,3 +2543,6 @@ Release ccache hit rate was ~0 (ONAIR_VERSION is a command-line define of every 
 - web schema generator now finds the telemetry member of a `case N: {` block (Datawell), generated files regenerated.
 - airband_auto: the test compared the asked capture with current(), which tick() already moves; it now compares with the capture it left.
 - updater (macOS): hdiutil retried, no abort when the image is missing. audio_engine: wall-clock guard on the signal-time loops. sferics_ltpos, audio_engine labelled timing. tx_quality_b was already timing.
+
+## 2026-11-23: lane featA1 (4.6): DAB picture window, table sizes x100/x200, manual RTL-SDR V4 option
+- #656: DAB slide show picture in a resizable pop-out window, double-click full window (core/include/dect2/dab/slide_fit.h, app/dab/dab_ui.cpp dabSlideWindow). #455: setTableScale up to 200 for Mesh and Packet, new tableScale() getters, combo gets x100/x200. #663/#337: V4/V4L detection already existed; added "Treat as RTL-SDR Blog V4 / V4L" radio option for generic-named dongles. Tests dab_slidefit_656, mesh_table_size_455 (tests/mesh), rtl_v4_manual. Details docs/FEATURES-4.6-A1.md.

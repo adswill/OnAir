@@ -400,5 +400,6 @@ void drawUI(App& a, ImVec2 disp, bool draw) {
     crashNotePopup(disp);
     codecNotePopup(disp);
     hiddenPopOut(a);
+    if (a.dabMode) dabSlideWindow(a);
     dockFrameEnd(a);
 }

@@ -11248,3 +11248,5 @@ Sound cue: pass ended	提示音：过境结束
 Three falling tones when a tracked satellite pass ends. Off by default.	跟踪的卫星过境结束时播放三声降调。默认关闭。
 Sound cue volume (%)	提示音音量（%）
 How loud the cue tones are, as a share of the program volume.	提示音的响度，占程序音量的比例。
+DAB picture	DAB 图片
+Double-click: the picture in a window of its own	双击：在独立窗口中显示图片

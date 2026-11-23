@@ -202,6 +202,11 @@ std::vector<RadioSetting> rtlSettings(int tuner, RtlModel m) {
             v.push_back(r);
         }
     }
+    // #663 / #337: the V4 / V4L upconverter is switched by the Blog library from the frequency (below 28.8 MHz); a dongle whose USB strings do not say
+    // "Blog V4" / "Blog V4L" is a generic one to OnAir and would get the Q-branch direct sampling, which a V4 does not have. This tells it.
+    if (m == kGeneric)
+        v.push_back(boolSetting("v4", "Treat as RTL-SDR Blog V4 / V4L", "For a V4 or V4 Lite that shows up under another name: HF (below 24 MHz) goes through the Blog library's built-in upconverter, no direct sampling, "
+                                "tuning from 0.5 MHz. Needs the RTL-SDR Blog librtlsdr (bundled). Takes effect on the next start."));
     if (m != kBlogV4 && m != kBlogV3)
         v.push_back(boolSetting("dxp", "Treat as DXpatrol SDR", "For a DXpatrol that shows up under a generic name: use its HF input (direct sampling, Q branch) below 28 MHz and the 100 kHz lower limit.\n(Tick it on the radio list entry of the DXpatrol; takes effect on the next start.)", m == kDxPatrol));
     return v;
@@ -260,6 +265,7 @@ protected:
         tuner_ = rtl().get_tuner_type ? rtl().get_tuner_type(dev_) : kTunerUnknown;
         refineRtlModel(dev_, index, tuner_, model_);
         if (model_ == kGeneric && radioFlag(s, "dxp")) model_ = kDxPatrol;   // the user said so
+        if (model_ == kGeneric && radioFlag(s, "v4")) model_ = kBlogV4;      // #663 / #337: a V4 / V4L under another name (clone, rebranded, USB strings rewritten): HF through the library's upconverter
         v4_ = model_ == kBlogV4;
         fprintf(stderr, "RTL-SDR: %s librtlsdr, model %s, tuner %d, Blog HF upconverter in driver: %s\n",
                 rtl().lib.path.c_str(), v4_ ? "V4" : model_ == kBlogV3 ? "V3" : model_ == kDxPatrol ? "DXpatrol" : "generic", tuner_,

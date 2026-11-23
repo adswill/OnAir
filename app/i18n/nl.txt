@@ -3692,3 +3692,6 @@ Sound cue: pass ended	Geluidssignaal: overvlucht voorbij
 Three falling tones when a tracked satellite pass ends. Off by default.	Drie dalende tonen als een gevolgde satellietovervlucht eindigt. Standaard uit.
 Sound cue volume (%)	Volume van geluidssignalen (%)
 How loud the cue tones are, as a share of the program volume.	Hoe luid de signalen zijn, als deel van het programmavolume.
+Pop out	Loskoppelen
+DAB picture	DAB-beeld
+Double-click: the picture in a window of its own	Dubbelklik: het beeld in een eigen venster

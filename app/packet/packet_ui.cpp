@@ -47,7 +47,7 @@ void loadState() {
     S.loaded = true;
     S.map.zoom = (int)plat::prefs().getI("packetZoom", 9);
     S.listen = plat::prefs().getB("packetListen", false);
-    S.tableScale = (int)plat::prefs().getI("packetTableScale", 1); if (S.tableScale != 5 && S.tableScale != 20) S.tableScale = 1;
+    S.tableScale = (int)plat::prefs().getI("packetTableScale", 1); if (S.tableScale != 5 && S.tableScale != 20 && S.tableScale != 100 && S.tableScale != 200) S.tableScale = 1;
     S.fixBits = std::max(0, std::min(2, (int)plat::prefs().getI("packetFixBits", 0)));
     S.emphasis = std::max(0, std::min(2, (int)plat::prefs().getI("packetEmphasis", 0)));
     S.audioIn = plat::prefs().getB("packetAudioIn", false);
@@ -434,12 +434,13 @@ void controls(App& a) {
     }
     flowNext(10 * gUi);
     {
-        static const char* kSz[] = {"standard", "5 times", "20 times"};
-        const int cur = S.tableScale == 20 ? 2 : S.tableScale == 5 ? 1 : 0;
+        static const char* kSz[] = {"standard", "5 times", "20 times", "100 times", "200 times"};
+        static const int kScale[] = {1, 5, 20, 100, 200};   // (#455)
+        int cur = 0; for (int i = 0; i < 5; i++) if (S.tableScale == kScale[i]) cur = i;
         ImGui::TextDisabled("%s", tr("Lists")); ImGui::SameLine(0, 5 * gUi);
         ImGui::SetNextItemWidth(95 * gUi);
         if (ImGui::BeginCombo("##pktsz", kSz[cur])) {
-            for (int i = 0; i < 3; i++) if (ImGui::Selectable(kSz[i], cur == i)) { S.tableScale = i == 2 ? 20 : i == 1 ? 5 : 1; plat::prefs().setI("packetTableScale", S.tableScale); }
+            for (int i = 0; i < 5; i++) if (ImGui::Selectable(kSz[i], cur == i)) { S.tableScale = kScale[i]; plat::prefs().setI("packetTableScale", S.tableScale); }
             ImGui::EndCombo();
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("How many frames (200) and stations (300) are kept before the oldest leave. Larger lists suit a full day of monitoring; they use more memory."));

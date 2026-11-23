@@ -3672,3 +3672,6 @@ Sound cue: pass ended	Hangjelzés: átvonulás vége
 Three falling tones when a tracked satellite pass ends. Off by default.	Három süllyedő hang, amikor egy követett műholdátvonulás véget ér. Alapból kikapcsolva.
 Sound cue volume (%)	Hangjelzések hangereje (%)
 How loud the cue tones are, as a share of the program volume.	Milyen hangosak a jelzések a program hangerejének arányában.
+Pop out	Kiemelés
+DAB picture	DAB-kép
+Double-click: the picture in a window of its own	Dupla kattintás: a kép külön ablakban

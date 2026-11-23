@@ -3722,3 +3722,6 @@ Sound cue: pass ended	Sesli işaret: geçiş bitti
 Three falling tones when a tracked satellite pass ends. Off by default.	İzlenen bir uydu geçişi bittiğinde üç alçalan ses. Varsayılan olarak kapalı.
 Sound cue volume (%)	Sesli işaret ses düzeyi (%)
 How loud the cue tones are, as a share of the program volume.	Sesli işaretlerin ne kadar yüksek olduğu, program ses düzeyinin bir oranı olarak.
+Pop out	Ayır
+DAB picture	DAB resmi
+Double-click: the picture in a window of its own	Çift tıklama: resim kendi penceresinde
