@@ -19,12 +19,6 @@
     <string name="cdr_dra_waiting">The selected service has not given any sound yet.</string>
     <string name="cdr_dra_missing">No sound: CDR codes its sound with DRA+, and OnAir does not include a DRA+ decoder (its patent and licence status is unclear). The services, signal information and data work without it.</string>
     <string name="cdr_dra_unusable">No sound: the DRA+ add-on cannot be used: %1$s</string>
-    <string name="cdr_dra_steps">To get sound, build the DRA+ add-on for Android on a computer with the Android NDK (OnAir source, tools/addons/dra; the steps are in docs/CODECS.md, "DRA+ on Android"), copy libonair_dra.so to the phone and tap Import below.</string>
-    <string name="cdr_dra_import">Import add-on (.so)</string>
-    <string name="cdr_dra_replace">Replace add-on</string>
-    <string name="cdr_dra_remove">Remove add-on</string>
-    <string name="cdr_dra_note">The file is copied into OnAir\'s own folder. A removed add-on stays loaded until the app is closed.</string>
-    <string name="cdr_import_failed">The add-on could not be imported: %1$s</string>
     <string name="cdr_services">Services</string>
     <string name="cdr_no_services">No services yet: they appear once the multiplex is decoded.</string>
     <string name="cdr_auto">Automatic (first audio service)</string>
@@ -48,4 +42,24 @@
     <string name="tv_fullscreen_on">Showing full screen. Back returns here.</string>
     <string name="atv_waiting">Waiting for a picture. Start the receiver on an analogue channel; the picture appears once line and field sync lock.</string>
     <string name="atv_honesty">This is the picture OnAir\'s own analogue receiver makes, the same as on the desktop; the sound comes from the receiver too. No codec is involved. A wide analogue channel is heavy for a phone: expect it to get warm and, on slower phones, not keep up.</string>
+    <string name="codecs_title">Codecs</string>
+    <string name="codecs_intro">OnAir includes no patented codecs and downloads nothing. Build or get a library yourself, copy it to the phone and import it here. It is stored in OnAir\'s own folder.</string>
+    <string name="codecs_installed">Installed</string>
+    <string name="codecs_not_installed">Not installed</string>
+    <string name="codecs_needed_for">Needed for: %1$s</string>
+    <string name="codecs_file_abi">File: %1$s (%2$s)</string>
+    <string name="codecs_names">Accepted names: %1$s</string>
+    <string name="codecs_where">Where to get it: see docs/CODECS.md. Source: %1$s</string>
+    <string name="codecs_import">Import .so or .zip</string>
+    <string name="codecs_remove">Remove</string>
+    <string name="codecs_warning">This library runs inside OnAir with the same access as the app. Import only files you built yourself or trust. Patent and licence rules are your responsibility.</string>
+    <string name="codecs_confirm_title">Import this library?</string>
+    <string name="codecs_confirm_yes">Import</string>
+    <string name="codecs_cancel">Cancel</string>
+    <string name="codecs_sha">SHA-256: %1$s</string>
+    <string name="codecs_refused">Not imported: %1$s</string>
+    <string name="codecs_done">Imported: %1$s. A library that was already loaded stays until you close and reopen OnAir.</string>
+    <string name="codecs_removed_note">Removing a library that is loaded takes effect when you close and reopen OnAir.</string>
+    <string name="codecs_need">Install the %1$s codec in Settings > Codecs</string>
+    <string name="codecs_open">Open Codecs</string>
 </resources>

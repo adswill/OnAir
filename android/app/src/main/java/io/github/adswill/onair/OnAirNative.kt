@@ -50,5 +50,7 @@ object OnAirNative {
     external fun nativeRecStop()
     external fun nativeCdrListen(serviceId: Int)
     external fun nativeCodecs(dir: String): String
+    external fun nativeCodecList(dir: String): String
+    external fun nativeCodecCheck(name: String, path: String): String
     external fun nativeVersion(): String
 }

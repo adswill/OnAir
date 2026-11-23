@@ -28,6 +28,9 @@
 #include "dect2/cdr/cdr_rx.h"
 #include "dect2/cdr/cdr_dra.h"
 #include "dect2/codec/codec_paths.h"
+#include "dect2/codec/codec_import.h"
+#include <cstdio>
+#include <filesystem>
 #include "jni_radio.h"
 
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "OnAir", __VA_ARGS__)
@@ -436,6 +439,44 @@ FN(jstring, nativeCodecs)(JNIEnv* e, jobject, jstring dir) {
     std::string path, problem;
     dect2::cdr::draAvailable(&path, &problem);
     return mk(e, std::string(ok ? "1" : "0") + "\t" + path + "\t" + problem);
+}
+
+// Settings > Codecs. The list of importable codecs with what is installed in the app's codecs folder `dir`:
+// one line per codec "id\tname\tusedFor\tfiles\tsource\tinstalledFile\tabi" (installedFile and abi empty when none).
+FN(jstring, nativeCodecList)(JNIEnv* e, jobject, jstring dir) {
+    const std::string d = jstr(e, dir);
+    std::vector<std::string> names;
+    try {
+        std::error_code ec;
+        for (std::filesystem::directory_iterator it(d, ec), end; !ec && it != end; it.increment(ec)) {
+            std::error_code e2;
+            if (it->is_regular_file(e2)) names.push_back(it->path().filename().string());
+        }
+    } catch (const std::exception&) {}
+    std::string out;
+    for (const auto& c : dect2::codec::importableCodecs()) {
+        std::string file, abi;
+        for (const auto& n : names) {
+            if (dect2::codec::checkCodecName(n).id == c.id) { file = n; break; }
+        }
+        if (!file.empty()) {
+            unsigned char h[64] = {};
+            size_t got = 0;
+            if (FILE* f = std::fopen((d + "/" + file).c_str(), "rb")) { got = std::fread(h, 1, sizeof h, f); std::fclose(f); }
+            abi = dect2::codec::elfCheck(h, got).abi;
+        }
+        out += c.id + "\t" + c.name + "\t" + c.usedFor + "\t" + c.files + "\t" + c.source + "\t" + file + "\t" + abi + "\n";
+    }
+    return mk(e, out);
+}
+// Is this file (picked by the user, copied to a temporary place) allowed into the codecs folder? "ok\tid\tname\tusedFor\tabi\tproblem".
+FN(jstring, nativeCodecCheck)(JNIEnv* e, jobject, jstring name, jstring path) {
+    const std::string n = jstr(e, name), p = jstr(e, path);
+    unsigned char h[64] = {};
+    size_t got = 0;
+    if (FILE* f = std::fopen(p.c_str(), "rb")) { got = std::fread(h, 1, sizeof h, f); std::fclose(f); }
+    const auto r = dect2::codec::checkCodecImport(n, h, got);
+    return mk(e, std::string(r.ok ? "1" : "0") + "\t" + r.id + "\t" + r.name + "\t" + r.usedFor + "\t" + r.abi + "\t" + r.problem);
 }
 
 FN(jstring, nativeVersion)(JNIEnv* e, jobject) { return mk(e, ONAIR_VERSION); }

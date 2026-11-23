@@ -2543,3 +2543,8 @@ Release ccache hit rate was ~0 (ONAIR_VERSION is a command-line define of every 
 - web schema generator now finds the telemetry member of a `case N: {` block (Datawell), generated files regenerated.
 - airband_auto: the test compared the asked capture with current(), which tick() already moves; it now compares with the capture it left.
 - updater (macOS): hdiutil retried, no abort when the image is missing. audio_engine: wall-clock guard on the signal-time loops. sferics_ltpos, audio_engine labelled timing. tx_quality_b was already timing.
+
+## 2026-11-23: Codecs on Android, lane androidcodecs (4.6)
+- Settings > Codecs (Android): lists every optional codec/add-on (needed for, installed, file + ABI, accepted names, pointer to docs/CODECS.md), Import (.so or .zip), Remove. Files are checked by the core first (`core/src/codec/codec_import.cpp`: name allowlist from optional_libs.cpp codec entries, arm64-v8a ELF shared library), then the SHA-256 and a trust warning are shown; only on yes the file goes to `files/codecs` (read-only). No download, no bundled codec, no network.
+- JNI `nativeCodecList` / `nativeCodecCheck`; Kotlin `data/CodecImport.kt`, `ui/settings/CodecsScreen.kt`, `Dest.CODECS`; CDR Sound tab now says "Install the DRA+ codec in Settings > Codecs" with a button (the old in-panel import is gone). Android strings in values and values-zh (the Android app has these two catalogs only; no desktop key added).
+- Test `codec_import` (tests/codec/test_codec_import.cpp). Written without a local build; checked by CI only. Left: the same hint on other modes' panels that have no codec state yet (DAB+, voice), and a phone test.

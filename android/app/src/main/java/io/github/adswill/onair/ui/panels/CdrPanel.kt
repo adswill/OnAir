@@ -3,8 +3,6 @@
 
 package io.github.adswill.onair.ui.panels
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -36,7 +34,7 @@ import io.github.adswill.onair.ui.ReceiverViewModel
 /**
  * CDR (China Digital Radio, #463): the services of the multiplex, which one plays, and the DRA+ add-on. OnAir ships no DRA+ decoder
  * (docs/CODECS.md): without the add-on the sound is silent, and this panel says so and how to install it instead of leaving the phone quiet.
- * The add-on is a .so the user builds for arm64 and imports here; it is copied into the app's own codecs folder (shared storage cannot hold
+ * The add-on is a .so the user builds for arm64 and imports in Settings > Codecs; it is copied into the app's own codecs folder (shared storage cannot hold
  * code that runs) and the core looks for it again at once.
  */
 object CdrPanel : ModePanel {
@@ -52,7 +50,7 @@ object CdrPanel : ModePanel {
         val p = LocalPalette.current
         val t by vm.telemetry.collectAsStateWithLifecycle()
         val codec by vm.codecs.collectAsStateWithLifecycle()
-        val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) vm.importCodec(uri) }
+        val openCodecs = io.github.adswill.onair.ui.nav.LocalOpenCodecs.current
         val cdr = t?.cdr
         // the telemetry says what the receiver sees; the import result can be newer (the receiver reports again within a second)
         val found = codec.found || cdr?.draFound == true
@@ -71,15 +69,10 @@ object CdrPanel : ModePanel {
                         color = p.warn, fontFamily = Mono, fontSize = 14.sp,
                     )
                     Spacer(Modifier.height(6.dp))
-                    Label(stringResource(R.string.cdr_dra_steps), size = 12, color = p.text)
+                    Label(stringResource(R.string.codecs_need, "DRA+"), size = 12, color = p.text)
+                    Spacer(Modifier.height(8.dp))
+                    PanelButton(stringResource(R.string.codecs_open)) { openCodecs() }
                 }
-                Spacer(Modifier.height(8.dp))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PanelButton(stringResource(if (found) R.string.cdr_dra_replace else R.string.cdr_dra_import)) { pick.launch(arrayOf("*/*")) }
-                    if (found) PanelButton(stringResource(R.string.cdr_dra_remove)) { vm.removeCodec() }
-                }
-                Spacer(Modifier.height(4.dp))
-                Label(stringResource(R.string.cdr_dra_note), size = 11)
             }
             Spacer(Modifier.height(10.dp))
             SectionLabel(stringResource(R.string.cdr_services))

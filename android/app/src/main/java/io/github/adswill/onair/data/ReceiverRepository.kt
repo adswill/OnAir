@@ -225,6 +225,7 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
             val (table, version) = engine.call("init") { core -> check(core.init(dir)) { "nativeInit returned false" }; core.modeTable() to core.version() }
             engine.ready = true
             refreshCodecs()
+            refreshCodecList()
             _state.update { it.copy(initialised = true, modeTable = table, coreVersion = version) }
             AppLog.i("engine", "core $version, ${table.byStd.size} modes, ${table.bySub.size} protocols")
         } catch (e: Throwable) {
@@ -485,28 +486,64 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
         }
     }
 
-    /** Copies a codec add-on the user picked (a .so built for arm64) into [codecDir] under the name the core looks for, then looks again. */
+    private val _codecList = MutableStateFlow<List<CodecEntry>>(emptyList())
+    /** Every importable codec with the file installed in [codecDir] (Settings > Codecs). */
+    val codecList: StateFlow<List<CodecEntry>> = _codecList.asStateFlow()
+    private val _codecImport = MutableStateFlow(CodecImportState.none)
+    /** Files the user picked: waiting for a yes, or refused with the reason. */
+    val codecImport: StateFlow<CodecImportState> = _codecImport.asStateFlow()
+
+    /** Looks at the codecs folder again (the list on the Codecs screen, and the DRA+ state). */
+    fun refreshCodecList() {
+        scope.launch(Dispatchers.IO) {
+            try { _codecList.value = CodecEntry.parseList(OnAirNative.nativeCodecList(codecDir().apply { mkdirs() }.absolutePath)) }
+            catch (e: Throwable) { AppLog.w("app", "codec list failed", e) }
+        }
+    }
+
+    /** Step 1: the picked .so or .zip is copied to the cache and checked; nothing goes into the codecs folder yet. */
     fun importCodec(uri: Uri) {
-        scope.launch {
+        scope.launch(Dispatchers.IO) {
             try {
-                val cr = ctx.contentResolver
-                val name = cr.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: ""
-                if (name.isNotEmpty() && !name.endsWith(".so")) AppLog.w("app", "codec file $name does not end in .so; trying it anyway")
-                val dest = File(codecDir().apply { mkdirs() }, DRA_FILE)
-                val tmp = File(dest.parentFile, "$DRA_FILE.part")
-                cr.openInputStream(uri)?.use { input -> tmp.outputStream().use { input.copyTo(it) } } ?: error("the file could not be opened")
-                if (!tmp.renameTo(dest)) { tmp.copyTo(dest, overwrite = true); tmp.delete() }
-                AppLog.i("app", "codec add-on imported as ${dest.absolutePath} (${dest.length()} bytes)")
-                refreshCodecs()
+                val st = CodecImport.stage(ctx, uri)
+                _codecImport.value = st
+                AppLog.i("app", "codec import: ${st.pending.size} ok, ${st.refused.size} refused")
             } catch (e: Exception) {
                 AppLog.e("app", "codec import failed", e)
-                _state.update { it.copy(error = ctx.getString(R.string.cdr_import_failed, e.message ?: e.javaClass.simpleName)) }
+                _codecImport.value = CodecImportState(refused = listOf("" to (e.message ?: e.javaClass.simpleName)))
             }
         }
     }
 
-    /** Removes the imported DRA+ add-on. The library stays loaded until the app restarts (Android cannot unload it safely). */
-    fun removeCodec() { File(codecDir(), DRA_FILE).delete(); refreshCodecs() }
+    /** Step 2: the user saw the SHA-256 and the warning and said yes. */
+    fun confirmCodecImport() {
+        val pending = _codecImport.value.pending
+        scope.launch(Dispatchers.IO) {
+            try {
+                val done = CodecImport.install(ctx, pending)
+                AppLog.i("app", "codec libraries installed: ${done.joinToString()}")
+                _codecImport.value = CodecImportState(message = done.joinToString())
+                refreshCodecs()
+                refreshCodecList()
+            } catch (e: Exception) {
+                AppLog.e("app", "codec install failed", e)
+                _codecImport.value = CodecImportState(refused = listOf("" to (e.message ?: e.javaClass.simpleName)))
+            }
+        }
+    }
+
+    fun cancelCodecImport() { _codecImport.value = CodecImportState.none; scope.launch(Dispatchers.IO) { CodecImport.discard(ctx) } }
+
+    /** Removes the installed library file of a codec. A library already loaded stays loaded until the app is closed (Android cannot unload it safely). */
+    fun removeCodecFile(file: String) {
+        scope.launch(Dispatchers.IO) {
+            val f = File(codecDir(), CodecImport.baseName(file))
+            f.setWritable(true); f.delete()
+            AppLog.i("app", "codec library removed: ${f.name}")
+            refreshCodecs()
+            refreshCodecList()
+        }
+    }
 
     /** CDR: the service whose sound plays; -1 the first audio service. */
     fun cdrListen(serviceId: Int) { if (engine.ready) engine.post("cdrListen") { it.cdrListen(serviceId) } }
@@ -534,5 +571,4 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
         }
     }
 
-    private companion object { const val DRA_FILE = "libonair_dra.so" }
 }

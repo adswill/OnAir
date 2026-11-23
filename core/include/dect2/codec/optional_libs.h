@@ -28,4 +28,7 @@ bool optionalNameMatches(const std::string& pattern, const std::string& name);
 // The list for this OS, with the found state (looks at the OnAir codecs folders, the program's folder and the usual system folders).
 std::vector<OptionalLib> optionalLibraries();
 
+// The codec and plug-in entries (no radio drivers) with the Linux/Android file names, not looked up on disk (found stays false).
+std::vector<OptionalLib> optionalCodecDefs();
+
 } // namespace dect2::codec

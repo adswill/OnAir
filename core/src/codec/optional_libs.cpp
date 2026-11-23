@@ -169,6 +169,20 @@ bool optionalNameMatches(const std::string& pattern, const std::string& name) {
     return pi == p.size();
 }
 
+std::vector<OptionalLib> optionalCodecDefs() {
+    std::vector<OptionalLib> out;
+    for (const Def& d : kDefs) {
+        if (std::string(d.group) == G2) continue;
+        OptionalLib o;
+        o.id = d.id; o.name = d.name; o.group = d.group; o.usedFor = d.usedFor; o.source = d.source;
+        const std::vector<std::string> pats = splitBar(d.patLinux);
+        if (pats.empty()) continue;
+        for (size_t i = 0; i < pats.size(); ++i) { if (i) o.files += ", "; o.files += pats[i]; }
+        out.push_back(std::move(o));
+    }
+    return out;
+}
+
 std::vector<OptionalLib> optionalLibraries() {
     std::vector<OptionalLib> out;
     const std::vector<std::string> dirs = searchDirs();

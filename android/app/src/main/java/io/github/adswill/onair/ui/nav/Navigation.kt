@@ -4,10 +4,14 @@
 package io.github.adswill.onair.ui.nav
 
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.setValue
+
+/** Opens Settings > Codecs from anywhere (the mode panels that need a codec the user has not installed). */
+val LocalOpenCodecs = staticCompositionLocalOf<() -> Unit> { {} }
 
 /**
  * The app's destinations. Top-level ones are in the bottom bar / rail; the others are pushed on top of the current one.
@@ -21,6 +25,7 @@ enum class Dest(val route: String, val topLevel: Boolean) {
     SETTINGS("settings", true),
     LOG("log", false),
     ABOUT("about", false),
+    CODECS("codecs", false),
     ONBOARDING("onboarding", false);
 
     companion object {
