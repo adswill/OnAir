@@ -751,7 +751,8 @@ void MeshReceiver::setLogCallback(std::function<void(const std::string&)> cb) { 
 void MeshReceiver::setFrameCallback(std::function<void(int, const std::vector<uint8_t>&, float, double)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->frameCb = std::move(cb); }
 void MeshReceiver::setTunedHz(double hz) { std::lock_guard<std::mutex> lk(p_->mu); p_->tunedHz = hz; p_->dirty = true; }
 void MeshReceiver::setRegion(int r) { std::lock_guard<std::mutex> lk(p_->mu); p_->region = r >= 1 && r <= 3 ? r : 0; p_->dirty = true; }
-void MeshReceiver::setTableScale(int scale) { p_->capScale = std::max(1, std::min(20, scale)); }
+void MeshReceiver::setTableScale(int scale) { p_->capScale = std::max(1, std::min(200, scale)); }   // (#455: up to 200 times)
+int MeshReceiver::tableScale() const { return p_->capScale.load(); }
 void MeshReceiver::setProtocols(int mask) { std::lock_guard<std::mutex> lk(p_->mu); p_->protocols = mask & 31; p_->dirty = true; }
 void MeshReceiver::setPresetSearch(bool all) { std::lock_guard<std::mutex> lk(p_->mu); p_->presetSearch = all; p_->dirty = true; }
 void MeshReceiver::setMeshtasticPlan(const std::string& region, const std::string& preset) {
