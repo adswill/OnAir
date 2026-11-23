@@ -7946,7 +7946,7 @@ A code rate of T2-Lite only (EN 302 755 annex I, table I.1): set the profile to 
 T2-Lite carries at most	T2-Lite 最多承载
 Per track. 64 to 96 kbit/s is fine for speech in mono, 128 to 192 kbit/s for music in stereo (MPEG-1 Layer II needs the higher end).	按音轨。单声道语音 64 至 96 kbit/s 即可，立体声音乐 128 至 192 kbit/s（MPEG-1 Layer II 需要接近上限）。
 Performance overlay	性能叠加显示
-Periods are from memory and drift with the Earth's motion; the search covers 0.02 % around the period. Check the ATNF pulsar catalogue before a long run.	周期值来自已有记录，并会随地球运动而漂移；搜索范围覆盖该周期上下 0.02 %。长时间运行前请核对 ATNF 脉冲星目录。
+Periods are from memory and drift with the Earth's motion; the search covers 0.02 % around the period. Check the ATNF pulsar catalogue before a long run.	周期值来自已有记录，并会随地球运动而漂移；搜索范围为该周期上下 0.02 % around（±）。长时间运行前请核对 ATNF 脉冲星目录。
 Permissions	权限
 Peru	秘鲁
 Phase track	相位跟踪
@@ -9401,7 +9401,7 @@ The reference data OnAir uses. Your own file layered over a dataset wins over th
 The round button at the top left starts and stops the receiver. Nothing is received while it is stopped.	左上角的圆形按钮启动和停止接收机。停止时收不到任何内容。
 The same key on every station: packets are signed with it and anything else is dropped. Nothing is sent anywhere but to the server you name.	每个台站使用同一密钥：数据包用它签名，其他一律丢弃。除你指定的服务器外不发送任何内容。
 The same position as in every other mode (ADS-B antenna position, Passes, Map). It is marked on the map below.	与其他所有模式相同的位置（ADS-B 天线位置、过境、地图）。它已标在下方地图上。
-The sample rate actually handed over by the radio, over the last seconds. A warning appears below 97% of the set rate.	电台最近几秒实际交付的采样率。低于设定采样率的 97% 时会显示警告。
+The sample rate actually handed over by the radio, over the last seconds. A warning appears below 97% of the set rate.	电台最近几秒实际交付的采样率。低于 97% of 设定采样率时会显示警告。
 The sample rate sets how wide the spectrum is. A wider view shows more signals at once.	采样率决定频谱有多宽。越宽一次显示的信号越多。
 The satellite or link. Picking one tunes to its frequency and sets its modulation and frame format.	卫星或链路。选择一个会调谐到其频率并设置调制和帧格式。
 The satellite retransmits the uplink carriers around 1679.85 MHz: one dish hears a hemisphere of platforms. Tested on simulated signals only.	卫星在 1679.85 MHz 附近转发上行载波：一口天线锅可听到半球内的所有平台。仅在模拟信号上测试。
