@@ -14,8 +14,9 @@ DEFS="-DNDEBUG $BENCH_CXXFLAGS"
 [ -n "$DECT2_PORTABLE" ] && DEFS="$DEFS -DDECT2_PORTABLE" && OUT="$OUT-portable"
 mkdir -p "$OUT"
 cd "$ROOT"
+GPUFFT=core/src/dsp/gpu_fft_stub.cpp   # the CPU transforms are what is timed, so the Metal FFT is left out everywhere
 LIBS="-lpthread"
 [ "$(uname)" = Darwin ] && LIBS="$LIBS -framework Accelerate"
 nice -n 19 c++ -std=c++20 -O3 $DEFS -Icore/include -Icore/src -w -o "$OUT/bench_core" tools/bench/bench_core.cpp core/src/dsp/dsp_compat.cpp \
-  core/src/dsp/spectrum.cpp core/src/dsp/zoom_spectrum.cpp core/src/dsp/resampler.cpp core/src/dsp/exact_resampler.cpp core/src/common/threadpool.cpp $LIBS
+  core/src/dsp/spectrum.cpp core/src/dsp/zoom_spectrum.cpp core/src/dsp/resampler.cpp core/src/dsp/exact_resampler.cpp core/src/common/threadpool.cpp core/src/common/diag.cpp $GPUFFT $LIBS
 [ -n "$NORUN" ] || nice -n 19 "$OUT/bench_core" "$@"
