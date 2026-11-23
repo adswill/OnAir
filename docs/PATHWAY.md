@@ -2528,3 +2528,8 @@ DATV table: Es/N0 (the demodulator's own for the carrier being decoded, else est
 - #13 Sound cues: optional tones for lock, lost lock, signal found, pass ended, all off by default, Settings > Notifications. Tracker and tones in `core/src/audio/sound_cues.cpp`, test `sound_cues`. The lock reading is the receiver's data-valid flag only.
 - #17 Equaliser: dropped (a 5-band equaliser already exists in the Audio control panel); see scratchpad/EQ-FOLLOWUP-4.6.md.
 - Written without a local build; checked by the gate and CI only. No web schema change (no core option struct touched). i18n: new keys added to all 14 catalogs (machine-written, not reviewed).
+
+## 2026-11-23 integ-46-fixbase: full CI failures
+- web schema generator now finds the telemetry member of a `case N: {` block (Datawell), generated files regenerated.
+- airband_auto: the test compared the asked capture with current(), which tick() already moves; it now compares with the capture it left.
+- updater (macOS): hdiutil retried, no abort when the image is missing. audio_engine: wall-clock guard on the signal-time loops. sferics_ltpos, audio_engine labelled timing. tx_quality_b was already timing.

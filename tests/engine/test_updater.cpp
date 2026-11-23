@@ -293,7 +293,14 @@ int main() {
         put(newApp + "/Contents/Info.plist", "<plist>new</plist>");
         const std::string dmg = (base / "OnAir-9.9.9-macos-arm64.dmg").string();
         const std::string dmg2 = (base / "OnAir-9.9.9-macos-x86_64.dmg").string();
-        CHECK(system(("hdiutil create -quiet -volname OnAir -srcfolder " + (base / "dmgroot").string() + " -ov " + dmg).c_str()) == 0, "made the disk image");
+        // hdiutil on a busy CI runner fails now and then ("Resource busy"): try again a few times before calling it a failure
+        bool madeDmg = false;
+        for (int i = 0; i < 6 && !madeDmg; i++) {
+            if (i) std::this_thread::sleep_for(std::chrono::seconds(2));
+            madeDmg = system(("hdiutil create -quiet -volname OnAir -srcfolder " + (base / "dmgroot").string() + " -ov " + dmg).c_str()) == 0 && fs::exists(dmg);
+        }
+        CHECK(madeDmg, "made the disk image");
+        if (!madeDmg) return 1;
         fs::copy_file(dmg, dmg2, fs::copy_options::overwrite_existing);
         const std::string sum2 = sha256File(dmg);
         auto asset = [&](const std::string& f) { return "{\"name\":\"" + fs::path(f).filename().string() + "\",\"size\":" + std::to_string(fs::file_size(f)) + ",\"browser_download_url\":\"file://" + f + "\",\"digest\":\"sha256:" + sum2 + "\"}"; };

@@ -317,6 +317,7 @@ def standard_map(rx_members):
                 for mm in re.finditer(r"#define\s+(DECT2_\w+_CASES)\s+((?:case\s+\d+:\s*)+)", read(os.path.join(d, fn))):
                     macros[mm.group(1)] = re.findall(r"case (\d+):", mm.group(2))
     consts = mode_families.constants()
+    pending = []   # cases of a "case N: {" line: the pollStd call that names the member is on a later line of the block
     for line in body.split("\n"):
         cases = []
         for tok in re.findall(r"case\s+(" + mode_families.TOKEN + r")\s*:", line):   # a number or a named constant (railway::kKlwActiveStandard)
@@ -329,7 +330,16 @@ def standard_map(rx_members):
         if mc and mc.group(1) in macros:
             cases += macros[mc.group(1)]
         if not cases:
+            if pending:
+                m = re.search(r"pollStd\(.*&RxTelemetry::(\w+)\)", line)
+                if m:
+                    for c in pending:
+                        out[int(c)] = m.group(1)
+                    pending = []
+                elif line.strip().startswith("}"):
+                    pending = []
             continue
+        pending = cases if line.rstrip().split("//")[0].rstrip().endswith("{") and "&RxTelemetry::" not in line else []
         m = re.search(r"&RxTelemetry::(\w+)\)", line)
         if m:
             for c in cases:
