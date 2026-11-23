@@ -19,3 +19,4 @@
 973362 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
 991877 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
 219666 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
+481220 retired: committed with an invalid number on this branch, replaced before release
