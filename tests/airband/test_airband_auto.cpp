@@ -105,10 +105,11 @@ static void hopper() {
     visits[0] = 1;
     int hops = 0;
     for (double t = 0; t < 900; t += 0.1) {
-        const int g = h.tick(t, false, h.centerOf(h.current()));
+        const size_t before = h.current();   // tick() already makes the asked capture the current one, so compare with the one it left
+        const int g = h.tick(t, false, h.centerOf(before));
         if (g >= 0) {
             hops++;
-            CHECK((size_t)g != h.current() || h.groups() < 2, "moves to another capture");
+            CHECK((size_t)g != before || h.groups() < 2, "moves to another capture");
             h.locate(h.centerOf((size_t)g), t);
             visits[(size_t)g]++;
             maxGap[(size_t)g] = std::max(maxGap[(size_t)g], t - last[(size_t)g]);

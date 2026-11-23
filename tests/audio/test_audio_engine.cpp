@@ -139,7 +139,8 @@ static Result run(const Case& c, double secs) {
     int frames = 0;
     SpectrumFrame sf;
     uint64_t sseq = 0;
-    while (signalSecs(e) - s0 < secs) {
+    const auto wallLimit = std::chrono::steady_clock::now() + std::chrono::duration<double>(secs * 5 + 60);   // a stalled engine (starved runner) must fail, not hang to the ctest timeout
+    while (signalSecs(e) - s0 < secs && std::chrono::steady_clock::now() < wallLimit) {
         if (e.latestSpectrum(sf, sseq) && signalSecs(e) - s0 > 20) {
             sseq = sf.seq;
             if (avg.size() != sf.dbfs.size()) avg.assign(sf.dbfs.size(), 0.0);
@@ -334,7 +335,8 @@ static bool viaCard(const char* name, const std::string& wav, int rate, int stdM
     uint64_t seq = 0;
     bool ok = false;
     const double s0 = signalSecs(e);
-    while (signalSecs(e) - s0 < secs && !ok) {
+    const auto wallLimit = std::chrono::steady_clock::now() + std::chrono::duration<double>(secs * 5 + 60);   // wall-clock guard: a stalled engine must fail, not hang to the ctest timeout
+    while (signalSecs(e) - s0 < secs && !ok && std::chrono::steady_clock::now() < wallLimit) {
         if (e.latestRx(rx, seq)) { seq = rx.seq; ok = until(e, rx); }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
