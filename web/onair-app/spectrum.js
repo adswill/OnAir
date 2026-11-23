@@ -17,8 +17,17 @@
       this.minDb = -110; this.maxDb = -20; this.auto = true;
       this.pal = SpectrumView.palette();
       this.rows = 0;
+      this.ring = new L.RowRing(SpectrumView.HISTORY);   // every received row, newest first (see paintWaterfall)
+      this.dpr = 1;
+      this.pending = 0; this.raf = 0;   // rows stored since the last paint; the scheduled animation frame
+      this.view = null; this.full = true; this.pix = null;   // the span the waterfall was last drawn for, and whether it must be drawn again
       this.zoom = 1; this.zoomHz = 0; this.capCentre = 0; this.capRate = 0; this.onZoom = null;
       const wrap = specCanvas.parentElement;
+      this.onResize = null;
+      if (typeof ResizeObserver === "function") {   // the canvases follow their CSS box times the device pixel ratio (no blur)
+        const ro = new ResizeObserver(() => this.resize());
+        ro.observe(specCanvas); ro.observe(wfCanvas);
+      }
       let dragging = false, moved = false, lastSend = 0, id = null;
       const hzAt = (ev) => {
         const b = wrap.getBoundingClientRect();
@@ -65,6 +74,30 @@
         this.onTune(this.tuneHz + (ev.deltaY < 0 ? step : -step), false);
       }, { passive: false });
     }
+    // Setting a canvas's size clears it, so the stored rows are painted again afterwards. A box of size 0 (a hidden tab) is left alone.
+    resize() {
+      const k = Math.max(1, root.devicePixelRatio || 1);
+      let changed = false;
+      for (const cv of [this.spec, this.wf]) {
+        const b = cv.getBoundingClientRect();
+        const w = Math.round(b.width * k), h = Math.round(b.height * k);
+        if (w < 1 || h < 1) continue;
+        if (cv === this.spec && this.dpr !== k) { this.dpr = k; changed = true; }   // the ratio only counts with the size it was measured for
+        if (cv.width !== w) { cv.width = w; changed = true; }
+        if (cv.height !== h) { cv.height = h; changed = true; }
+      }
+      if (!changed) return;
+      this.im = null;
+      this.ring.grow(Math.min(SpectrumView.HISTORY_MAX, this.wf.height));   // every pixel row of the waterfall can be drawn again
+      // a size change cleared the canvases: paint now, not at the next animation frame, or they flicker
+      this.full = true;
+      if (this.raf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.raf);
+      this.raf = 0;
+      this.render();
+      if (this.onResize) this.onResize(this.wf.width);
+    }
+    static get HISTORY() { return 2048; }
+    static get HISTORY_MAX() { return 4096; }
     static palette() {
       const p = new Uint8ClampedArray(256 * 3);
       for (let i = 0; i < 256; i++) {
@@ -94,9 +127,26 @@
       if (z === this.zoom && Math.abs(centreHz - this.zoomHz) < 1) return;
       this.zoom = z; this.zoomHz = centreHz;
       this.peak = null;
-      this.wc.fillStyle = "#000"; this.wc.fillRect(0, 0, this.wf.width, this.wf.height);   // rows of another span would not line up
+      this.invalidate();   // the next paint maps every stored row into the new span by frequency
       if (this.onZoom) this.onZoom(z, centreHz);
     }
+    // a new display range or palette, or a canvas of another size: draw the stored rows again
+    invalidate() { this.full = true; this.schedule(); }
+    // painting happens once per animation frame; it adds every row stored since the last one
+    schedule() {
+      if (this.raf || typeof requestAnimationFrame !== "function") return;
+      this.raf = requestAnimationFrame(() => { this.raf = 0; this.render(); });
+    }
+    render() {
+      const fresh = this.pending;
+      this.pending = 0;
+      if (!this.frame) return;
+      this.drawSpec(this.frame);
+      this.paintWaterfall(fresh);
+      this.drawLine();
+    }
+    setRange(minDb, maxDb) { this.auto = false; this.minDb = minDb; this.maxDb = maxDb; this.invalidate(); }
+    setPalette(pal) { this.pal = pal; this.invalidate(); }
     drawLine() {
       const hz = isFinite(this.dragHz) ? this.dragHz : this.tuneHz;
       if (!this.frame || !isFinite(hz)) { this.line.style.display = "none"; return; }
@@ -106,26 +156,32 @@
       this.line.style.borderColor = isFinite(this.dragHz) ? "#ffd166" : "";
     }
     push(frame) {
-      this.frame = frame;
       const db = frame.db, n = db.length;
-      if (!n) return;
+      if (!n) return;   // an empty frame changes nothing
+      this.frame = frame;
+      this.ring.push({ u8: frame.u8, centreHz: frame.centreHz, rateHz: frame.rateHz, floorDb: frame.floorDb, topDb: frame.topDb });
       if (this.zoom > 1 && !isFinite(this.dragHz)) {   // the tuned frequency left the part shown: follow it
         const f = L.zoomFollow(frame.centreHz, frame.rateHz, this.tuneHz);
         if (f !== null) this.setZoom(this.zoom, L.zoomCentre(this.capCentre || frame.centreHz, this.capRate || frame.rateHz * this.zoom, this.zoom, f));
       }
       // automatic range: the noise floor (10th percentile) a little under, the peak a little over, moving slowly
       if (this.auto) {
-        const s = Array.from(db).sort((a, b) => a - b);
-        const lo = s[Math.floor(n * 0.1)] - 5, hi = s[n - 1] + 5;
+        const lv = L.binLevels(frame.u8, 0.1, frame.floorDb, frame.topDb);
+        const lo = lv.lowDb - 5, hi = lv.highDb + 5;
         this.minDb += (lo - this.minDb) * 0.1; this.maxDb += (Math.max(hi, lo + 30) - this.maxDb) * 0.1;
       }
-      this.drawSpec(frame);
-      this.drawWaterfall(frame);
-      this.drawLine();
-      this.rows++;
+      if (this.peakHold) this.updatePeak(db);
+      this.pending++; this.rows++;
+      this.schedule();   // the paint itself waits for the next animation frame
+    }
+    updatePeak(db) {
+      const n = db.length;
+      if (!this.peak || this.peak.length !== n) this.peak = Float32Array.from(db);
+      else for (let i = 0; i < n; i++) this.peak[i] = Math.max(db[i], this.peak[i] - 0.3);
     }
     drawSpec(f) {
-      const c = this.sc, w = this.spec.width, h = this.spec.height, db = f.db, n = db.length;
+      const c = this.sc, k = this.dpr, w = this.spec.width / k, h = this.spec.height / k, db = f.db, n = db.length;
+      c.setTransform(k, 0, 0, k, 0, 0);   // drawn in CSS pixels
       c.fillStyle = "#000"; c.fillRect(0, 0, w, h);
       const y = (v) => h - (v - this.minDb) / (this.maxDb - this.minDb) * (h - 14) - 2;
       // grid
@@ -142,9 +198,7 @@
       for (let i = 0; i < n; i++) { const px = i * w / (n - 1), py = y(db[i]); if (i) c.lineTo(px, py); else c.moveTo(px, py); }
       c.stroke();
       // peak hold
-      if (this.peakHold) {
-        if (!this.peak || this.peak.length !== n) this.peak = Float32Array.from(db);
-        else for (let i = 0; i < n; i++) this.peak[i] = Math.max(db[i], this.peak[i] - 0.3);
+      if (this.peakHold && this.peak && this.peak.length === n) {
         c.strokeStyle = "rgba(255,209,102,.6)"; c.beginPath();
         for (let i = 0; i < n; i++) { const px = i * w / (n - 1), py = y(this.peak[i]); if (i) c.lineTo(px, py); else c.moveTo(px, py); }
         c.stroke();
@@ -157,21 +211,45 @@
       const m = (f.centreHz / 1e6).toFixed(3); c.fillText(m, w / 2 - c.measureText(m).width / 2, h - 3);
       c.fillText(Math.round(this.maxDb) + " dB", 3, 11); c.fillText(Math.round(this.minDb) + " dB", 3, h - 16);
     }
-    drawWaterfall(f) {
-      const c = this.wc, w = this.wf.width, h = this.wf.height, db = f.db, n = db.length;
-      c.drawImage(this.wf, 0, 0, w, h - 1, 0, 1, w, h - 1);
-      const im = c.createImageData(w, 1), d = im.data, p = this.pal;
-      const span = this.maxDb - this.minDb;
-      for (let x = 0; x < w; x++) {
-        const i0 = Math.floor(x * n / w), i1 = Math.max(i0 + 1, Math.floor((x + 1) * n / w));
-        let v = -1e9;
-        for (let i = i0; i < i1 && i < n; i++) if (db[i] > v) v = db[i];
-        const u = Math.max(0, Math.min(255, Math.round((v - this.minDb) / span * 255)));
-        d[4 * x] = p[3 * u]; d[4 * x + 1] = p[3 * u + 1]; d[4 * x + 2] = p[3 * u + 2]; d[4 * x + 3] = 255;
+    // Rows are drawn newest first (row of age a at y = a). Normally the picture scrolls down by `fresh` rows and the new ones are painted on top;
+    // after a zoom, a retune, a range or palette change or a resize every stored row is painted again, each mapped by frequency into the span
+    // of the newest frame (a row that does not reach a pixel stays black).
+    paintWaterfall(fresh) {
+      const c = this.wc, w = this.wf.width, h = this.wf.height, f = this.frame;
+      if (!f || !w || !h) return;
+      const v = this.view;
+      const same = v && Math.abs(v.centreHz - f.centreHz) < 1 && Math.abs(v.rateHz - f.rateHz) < 1;
+      this.view = { centreHz: f.centreHz, rateHz: f.rateHz };
+      if (this.full || !same || fresh >= h) {
+        this.full = false;
+        c.fillStyle = "#000"; c.fillRect(0, 0, w, h);
+        const k = Math.min(this.ring.count, h);
+        for (let a = 0; a < k; a++) this.paintRow(this.ring.get(a), a);
+        return;
       }
-      c.putImageData(im, 0, 0);
+      const k = Math.min(fresh, this.ring.count);
+      if (k < 1) return;
+      c.drawImage(this.wf, 0, 0, w, h - k, 0, k, w, h - k);
+      for (let a = 0; a < k; a++) this.paintRow(this.ring.get(a), a);
     }
-    clear() { this.sc.fillStyle = "#000"; this.sc.fillRect(0, 0, this.spec.width, this.spec.height); this.wc.fillStyle = "#000"; this.wc.fillRect(0, 0, this.wf.width, this.wf.height); this.peak = null; }
+    paintRow(row, y) {
+      const c = this.wc, w = this.wf.width, v = this.view;
+      if (!this.im || this.im.width !== w) { this.im = c.createImageData(w, 1); this.pix = new Int16Array(w); }   // one row, reused
+      const d = this.im.data, lut = this.lut || (this.lut = new Uint8ClampedArray(1024)), k = this.lutKey || (this.lutKey = [NaN, NaN, NaN, NaN]);
+      if (k[0] !== row.floorDb || k[1] !== row.topDb || k[2] !== this.minDb || k[3] !== this.maxDb || this.lutPal !== this.pal) {
+        L.colourTable(this.pal, row.floorDb, row.topDb, this.minDb, this.maxDb, lut);
+        k[0] = row.floorDb; k[1] = row.topDb; k[2] = this.minDb; k[3] = this.maxDb; this.lutPal = this.pal;
+      }
+      const px = L.rowToPixels(row, v.centreHz, v.rateHz, w, this.pix);
+      for (let x = 0, o = 0; x < w; x++, o += 4) {
+        const u = px[x | 0];
+        if (u < 0) { d[o | 0] = 0; d[o + 1] = 0; d[o + 2] = 0; d[o + 3] = 255; continue; }   // not covered by this row: black
+        const t = 4 * u;
+        d[o | 0] = lut[t | 0]; d[o + 1] = lut[t + 1]; d[o + 2] = lut[t + 2]; d[o + 3] = 255;
+      }
+      c.putImageData(this.im, 0, y);
+    }
+    clear() { if (this.raf && typeof cancelAnimationFrame === "function") cancelAnimationFrame(this.raf); this.raf = 0; this.sc.fillStyle = "#000"; this.sc.fillRect(0, 0, this.spec.width, this.spec.height); this.wc.fillStyle = "#000"; this.wc.fillRect(0, 0, this.wf.width, this.wf.height); this.peak = null; this.ring.clear(); this.pending = 0; this.full = true; this.frame = null; }
   }
   root.SpectrumView = SpectrumView;
 })(typeof globalThis !== "undefined" ? globalThis : this);

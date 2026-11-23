@@ -10,6 +10,7 @@ const { Ring } = require(path.join(__dirname, "../../web/onair-app/worklet.js"))
 
 let passed = 0;
 function test(name, fn) { try { fn(); passed++; } catch (e) { console.error("FAIL " + name + "\n  " + (e && e.stack || e)); process.exitCode = 1; } }
+const MHZ = 1000000, KHZ = 1000, EPS = 1 / (MHZ * KHZ);   // small integer literals: PMD misreads exponent notation and very large literals
 const near = (a, b, eps, m) => assert.ok(Math.abs(a - b) <= eps, (m || "") + " " + a + " vs " + b);
 
 // ---- frequencies
@@ -55,6 +56,114 @@ test("decodeSpectrum reads the server's u8 frame", () => {
   assert.strictEqual(L.decodeSpectrum(new ArrayBuffer(3)), null);
   d.setUint8(0, 9); assert.strictEqual(L.decodeSpectrum(buf), null);
 });
+test("decodeSpectrum keeps the 8-bit bins next to the dB values", () => {
+  const buf = new ArrayBuffer(21 + 3), d = new DataView(buf);
+  d.setUint8(0, 1); d.setFloat32(5, MHZ, true); d.setFloat32(9, KHZ, true); d.setFloat32(13, -100, true); d.setFloat32(17, -50, true);
+  d.setUint8(21, 0); d.setUint8(22, 128); d.setUint8(23, 255);
+  const f = L.decodeSpectrum(buf);
+  assert.deepStrictEqual(Array.from(f.u8), [0, 128, 255]);
+  near(f.db[2], -50, 0.001);
+});
+
+// ---- levels and colours from the 8-bit bins
+test("binLevels: the 10th percentile and the maximum agree with a sort of the dB values", () => {
+  const floor = -120, top = -20, n = 200, u8 = new Uint8Array(n);
+  let seed = 7;
+  for (let i = 0; i < n; i++) { seed = (seed * 1103515245 + 12345) & 0x7fffffff; u8[i] = seed % 256; }
+  for (const frac of [0, 0.1, 0.5, 0.99]) {
+    const sorted = Array.from(u8).sort((a, b) => a - b).map(v => floor + v / 255 * (top - floor));
+    const r = L.binLevels(u8, frac, floor, top);
+    near(r.lowDb, sorted[Math.floor(n * frac)], EPS, "frac " + frac);
+    near(r.highDb, sorted[n - 1], EPS, "max");
+  }
+});
+test("binLevels: flat, single-bin and empty frames", () => {
+  const flat = new Uint8Array(50).fill(100);
+  const r = L.binLevels(flat, 0.1, -100, 0);
+  near(r.lowDb, -100 + 100 / 255 * 100, EPS); near(r.highDb, r.lowDb, EPS);
+  near(L.binLevels(Uint8Array.from([255]), 0.1, -90, -30).lowDb, -30, EPS);
+  assert.deepStrictEqual(L.binLevels(new Uint8Array(0), 0.1, -90, -30), { lowDb: -90, highDb: -90 });
+  near(L.binLevels(Uint8Array.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 255]), 0.1, -100, 0).lowDb, -100, EPS);   // index 1 of 10 is still a 0
+});
+test("colourTable: bins map through the frame's own floor and top into the display range", () => {
+  const pal = new Uint8ClampedArray(768);
+  for (let i = 0; i < 256; i++) { pal[3 * i] = i; pal[3 * i + 1] = 255 - i; pal[3 * i + 2] = 7; }
+  // the frame spans exactly the display range: bin value = palette index
+  const t = L.colourTable(pal, -100, 0, -100, 0);
+  assert.strictEqual(t.length, 1024);
+  assert.deepStrictEqual([t[0], t[1], t[2], t[3]], [0, 255, 7, 255]);
+  assert.deepStrictEqual([t[4 * 255], t[4 * 255 + 1], t[4 * 255 + 3]], [255, 0, 255]);
+  assert.strictEqual(t[4 * 128], 128);
+  // a frame with another top: bin 255 is -50 dB, halfway up the range
+  const h = L.colourTable(pal, -100, -50, -100, 0);
+  assert.strictEqual(h[4 * 255], Math.round(0.5 * 255));
+  // values outside the range clamp; the out buffer is reused
+  const o = new Uint8ClampedArray(1024), r = L.colourTable(pal, -100, 100, -100, 0, o);
+  assert.strictEqual(r, o); assert.strictEqual(o[4 * 255], 255); assert.strictEqual(o[4 * 255 + 1], 0);
+  // an empty range does not divide by zero
+  assert.strictEqual(L.colourTable(pal, -50, -50, -50, -50)[4], 0);
+});
+
+test("autoBins: one bin per canvas pixel inside the server's 64..4096", () => {
+  assert.strictEqual(L.autoBins(1500), 1500);
+  assert.strictEqual(L.autoBins(1500.4), 1500);
+  assert.strictEqual(L.autoBins(10), 64);
+  assert.strictEqual(L.autoBins(9000), 4096);
+  assert.strictEqual(L.autoBins(0), 1024); assert.strictEqual(L.autoBins(NaN), 1024); assert.strictEqual(L.autoBins(undefined), 1024);
+});
+
+// ---- the waterfall's row history
+test("RowRing keeps the newest rows first and forgets the oldest", () => {
+  const r = new L.RowRing(3);
+  assert.strictEqual(r.get(0), null);
+  for (let i = 1; i <= 5; i++) r.push({ id: i });
+  assert.strictEqual(r.count, 3);
+  assert.deepStrictEqual([r.get(0).id, r.get(1).id, r.get(2).id], [5, 4, 3]);
+  assert.strictEqual(r.get(3), null); assert.strictEqual(r.get(-1), null);
+  r.clear(); assert.strictEqual(r.count, 0); assert.strictEqual(r.get(0), null);
+});
+test("RowRing.grow keeps the stored rows in order and then keeps filling", () => {
+  const r = new L.RowRing(3);
+  for (let i = 1; i <= 5; i++) r.push({ id: i });   // holds 3, 4, 5
+  r.grow(2); assert.strictEqual(r.cap, 3);
+  r.grow(6);
+  assert.strictEqual(r.cap, 6); assert.strictEqual(r.count, 3);
+  assert.deepStrictEqual([r.get(0).id, r.get(1).id, r.get(2).id, r.get(3)], [5, 4, 3, null]);
+  for (let i = 6; i <= 9; i++) r.push({ id: i });
+  assert.strictEqual(r.count, 6);
+  assert.deepStrictEqual([0, 1, 2, 3, 4, 5].map(a => r.get(a).id), [9, 8, 7, 6, 5, 4]);
+  const e = new L.RowRing(2); e.grow(4); e.push({ id: 1 }); assert.strictEqual(e.get(0).id, 1);
+});
+test("rowToPixels: the same span maps bin to pixel, several bins take the maximum", () => {
+  const row = { u8: Uint8Array.from([1, 2, 3, 4, 5, 6, 7, 8]), centreHz: 100 * MHZ, rateHz: 8 * KHZ, floorDb: -100, topDb: 0 };
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ, 8 * KHZ, 8)), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ, 8 * KHZ, 4)), [2, 4, 6, 8]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ, 8 * KHZ, 16)).slice(0, 4), [1, 1, 2, 2]);
+});
+test("rowToPixels: equal spans with as many pixels as bins map bin x to pixel x exactly", () => {
+  for (const [n, rate, centre] of [[1337, 2400000, 100 * MHZ], [1920, 3200000, 433920000], [1024, 2 * MHZ, 98100000], [4096, 2048000, 1500 * MHZ]]) {
+    const u8 = new Uint8Array(n).map((_, i) => (i * 7 + 3) & 255);
+    const out = L.rowToPixels({ u8, centreHz: centre, rateHz: rate }, centre, rate, n);
+    let bad = 0;
+    for (let x = 0; x < n; x++) if (out[x] !== u8[x]) bad++;
+    assert.strictEqual(bad, 0, n + " bins: " + bad + " wrong pixels");
+  }
+});
+test("rowToPixels: a zoomed view picks the bins by frequency, uncovered pixels are -1", () => {
+  const row = { u8: Uint8Array.from([10, 20, 30, 40]), centreHz: 100 * MHZ, rateHz: 4 * KHZ, floorDb: -100, topDb: 0 };   // 99.998 .. 100.002 MHz
+  // the upper half of the row's span
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ + KHZ, 2 * KHZ, 2)), [30, 40]);
+  // a view twice as wide, same centre: the row covers the middle half
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ, 8 * KHZ, 4)), [-1, 20, 40, -1]);
+  // retuned past the row: nothing is covered
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 120 * MHZ, 4 * KHZ, 4)), [-1, -1, -1, -1]);
+  // a view that overlaps the row's upper edge only
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ + 3 * KHZ, 4 * KHZ, 4)), [40, -1, -1, -1]);
+  // degenerate input
+  assert.deepStrictEqual(Array.from(L.rowToPixels({ u8: new Uint8Array(0), centreHz: 1, rateHz: 1 }, 1, 1, 3)), [-1, -1, -1]);
+  assert.deepStrictEqual(Array.from(L.rowToPixels(row, 100 * MHZ, 0, 2)), [-1, -1]);
+});
+
 test("decodeAudio reads PCM16 with its rate", () => {
   const buf = new ArrayBuffer(5 + 4), d = new DataView(buf);
   d.setUint8(0, 2); d.setUint32(1, 16000, true); d.setInt16(5, 16384, true); d.setInt16(7, -32768, true);
@@ -241,6 +350,83 @@ test("mode options: Simple / Advanced, values, kinds", () => {
   assert.strictEqual(L.maskToggle(1, 2, true), 3);
   assert.strictEqual(L.maskToggle(3, 1, false), 2);
   assert.strictEqual(L.maskToggle(0, 2, false), 0);
+});
+
+// ---- SpectrumView with fake canvases (no browser)
+function spectrumFixture(specW, specH, wfW, wfH) {
+  const frames = [];
+  globalThis.OnAirLib = L;
+  globalThis.requestAnimationFrame = (f) => { frames.push(f); return frames.length; };
+  globalThis.cancelAnimationFrame = () => { frames.length = 0; };
+  const mk = (w, h) => {
+    const ctx = { puts: 0, copies: 0, fills: 0, fillRect() { this.fills++; }, drawImage() { this.copies++; }, putImageData() { this.puts++; },
+      createImageData(iw, ih) { return { width: iw, height: ih, data: new Uint8ClampedArray(iw * ih * 4) }; },
+      beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, fill() {}, stroke() {}, fillText() {}, measureText() { return { width: 5 }; }, setTransform() {} };
+    const cv = { width: w, height: h, cssW: w, cssH: h, parentElement: { addEventListener() {}, getBoundingClientRect() { return { left: 0, width: cv.cssW, height: cv.cssH }; } },
+      getContext() { return ctx; }, getBoundingClientRect() { return { width: cv.cssW, height: cv.cssH }; }, ctx };
+    return cv;
+  };
+  delete require.cache[require.resolve("../../web/onair-app/spectrum.js")];
+  require("../../web/onair-app/spectrum.js");
+  const spec = mk(specW, specH), wf = mk(wfW, wfH);
+  const view = new globalThis.SpectrumView(spec, wf, { style: {} }, () => {});
+  const frame = (centreHz, n) => {
+    const u8 = new Uint8Array(n || 16).map((_, i) => i * 8);
+    return { centreHz, rateHz: 2 * MHZ, floorDb: -100, topDb: -20, u8, db: Float32Array.from(u8, v => -100 + v / 255 * 80) };
+  };
+  const flush = () => { const f = frames.splice(0); f.forEach(fn => fn()); };
+  return { view, spec, wf, frame, flush, frames };
+}
+test("SpectrumView: an empty frame is ignored", () => {
+  const t = spectrumFixture(100, 50, 100, 40);
+  t.view.push({ centreHz: MHZ, rateHz: MHZ, floorDb: 0, topDb: 1, u8: new Uint8Array(0), db: new Float32Array(0) });
+  assert.strictEqual(t.view.frame, null); assert.strictEqual(t.view.pending, 0); assert.strictEqual(t.frames.length, 0);
+  t.view.push(t.frame(100 * MHZ)); t.flush();
+  t.view.push({ centreHz: 5 * MHZ, rateHz: MHZ, floorDb: 0, topDb: 1, u8: new Uint8Array(0), db: new Float32Array(0) });
+  assert.strictEqual(t.view.frame.centreHz, 100 * MHZ, "the last real frame stays");
+  assert.strictEqual(t.frames.length, 0, "no repaint is scheduled");
+});
+test("SpectrumView: the paint is one animation frame; incremental while the span holds, full after a retune", () => {
+  const t = spectrumFixture(100, 50, 100, 40), c = t.wf.ctx;
+  t.view.push(t.frame(100 * MHZ)); t.view.push(t.frame(100 * MHZ));
+  assert.strictEqual(c.puts, 0, "push alone paints nothing"); assert.strictEqual(t.frames.length, 1);
+  t.flush();
+  assert.strictEqual(c.puts, 2, "the first paint draws both stored rows"); assert.strictEqual(c.copies, 0);
+  c.puts = 0;
+  t.view.push(t.frame(100 * MHZ)); t.view.push(t.frame(100 * MHZ)); t.view.push(t.frame(100 * MHZ)); t.flush();
+  assert.strictEqual(c.copies, 1, "the picture scrolls once"); assert.strictEqual(c.puts, 3, "and every new row is painted");
+  c.puts = 0; c.copies = 0;
+  t.view.push(t.frame(101 * MHZ)); t.flush();
+  assert.strictEqual(c.copies, 0, "a retune paints again from the history"); assert.strictEqual(c.puts, 6);
+  c.puts = 0; t.view.setRange(-90, -30); t.flush();
+  assert.strictEqual(c.puts, 6, "a range change too");
+});
+test("SpectrumView: clear forgets the frame, so a resize does not draw the old trace", () => {
+  globalThis.devicePixelRatio = 1;
+  const t = spectrumFixture(100, 50, 100, 40);
+  t.view.push(t.frame(100 * MHZ)); t.flush();
+  t.view.clear();
+  assert.strictEqual(t.view.frame, null);
+  t.wf.ctx.puts = 0; t.wf.cssW = 120;
+  t.view.resize();
+  assert.strictEqual(t.wf.ctx.puts, 0); assert.strictEqual(t.frames.length, 0);
+});
+test("SpectrumView: a resize repaints at once, keeps the history, grows the ring and tracks the pixel ratio", () => {
+  globalThis.devicePixelRatio = 2;
+  const t = spectrumFixture(100, 50, 100, 40);
+  t.view.push(t.frame(100 * MHZ)); t.flush();
+  t.view.push(t.frame(100 * MHZ));   // a paint is scheduled but has not run
+  t.spec.cssW = 150; t.spec.cssH = 60; t.wf.cssW = 150; t.wf.cssH = 3000;
+  t.wf.ctx.puts = 0;
+  t.view.resize();
+  assert.strictEqual(t.wf.width, 300); assert.strictEqual(t.wf.height, 6000); assert.strictEqual(t.view.dpr, 2);
+  assert.strictEqual(t.wf.ctx.puts, 2, "painted synchronously from the stored rows"); assert.strictEqual(t.frames.length, 0, "no pending frame left");
+  assert.strictEqual(t.view.ring.cap, 4096, "capped"); assert.strictEqual(t.view.ring.count, 2);
+  // a hidden canvas (size 0) changes neither size nor ratio
+  globalThis.devicePixelRatio = 3; t.spec.cssW = 0; t.wf.cssW = 0;
+  t.view.resize();
+  assert.strictEqual(t.view.dpr, 2); assert.strictEqual(t.wf.width, 300);
+  delete globalThis.devicePixelRatio;
 });
 
 console.log("app.test.js: " + passed + " passed" + (process.exitCode ? ", some FAILED" : ""));
