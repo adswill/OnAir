@@ -2543,3 +2543,9 @@ Release ccache hit rate was ~0 (ONAIR_VERSION is a command-line define of every 
 - web schema generator now finds the telemetry member of a `case N: {` block (Datawell), generated files regenerated.
 - airband_auto: the test compared the asked capture with current(), which tick() already moves; it now compares with the capture it left.
 - updater (macOS): hdiutil retried, no abort when the image is missing. audio_engine: wall-clock guard on the signal-time loops. sferics_ltpos, audio_engine labelled timing. tx_quality_b was already timing.
+
+## 2026-11-23 integ-46-bugsA: issues #660, #659, #652 (lane bugsA)
+- #660 TX analog modes came out NFM: the AM broadcast entry's test signal was NFM (SubMode "am" synth[0] was 0), and the General receiver had no visible Modulation choice, so its default stayed NFM. Now a `general.mod` row ("Same as the receiver" follows the demodulator, or NFM/WFM/AM/USB/LSB/CW/DSB/RAW/CW-L), analog voice sends DSB and CW/RAW too. Test `tx_660_analog_modes` (every modulation, tone and voice, 2 / 2.4 / 4 Msps, C-QUAM). Not done: hiding the FM rows (pre-emphasis, CTCSS) for the other modulations.
+- #659 Mesh: "Custom" in the MeshCore preset list only cleared the preset, it never turned the custom LoRa setting on, so the bandwidth fields never showed. `meshChooseCustomPreset` (core/include/dect2/mesh/mesh_custom.h) now opens it on its own frequency. Test `mesh_659_custom_preset` (62.5 kHz SFNarrow, every bandwidth, every built-in MeshCore preset).
+- #652 Map scroll zoom: one level per scroll event made a trackpad swipe jump to the limits. `ScrollZoom` (core/include/dect2/map/scroll_zoom.h) clamps, accumulates, rate-limits and drops momentum leftovers; wheel notches stay one level. Used by the shared map (adsb_map.cpp). Test `map_scroll_zoom_652`.
+- Written without a local build; checked by the gate and CI only.

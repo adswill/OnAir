@@ -79,12 +79,12 @@ void applyRegion(App& a, int region) {
 // ---------------------------------------------------------------- custom LoRa setting, Meshtastic region
 
 // the standard LoRa bandwidths (SX126x), then the 2.4 GHz ones (SX128x, Meshtastic LORA_24)
-const double kBws[] = {7812.5, 10416.667, 15625, 20833.333, 31250, 41666.667, 62500, 125000, 250000, 500000, 812500, 1625000};
+const double* const kBws = dect2::meshCustomBandwidthsHz().data();   // 12 entries: the names below follow them
 
 const char* kBwNames[] = {"7.8 kHz", "10.4 kHz", "15.6 kHz", "20.8 kHz", "31.25 kHz", "41.7 kHz", "62.5 kHz", "125 kHz", "250 kHz", "500 kHz",
                           "812.5 kHz (2.4 GHz)", "1625 kHz (2.4 GHz)"};
 
-constexpr int kNumBws = (int)(sizeof(kBws) / sizeof(kBws[0]));
+const int kNumBws = (int)dect2::meshCustomBandwidthsHz().size();
 
 State::Custom& customOf(const App& a) {
     const int m = subMask(a);
@@ -153,7 +153,14 @@ static void meshCorePresets(App& a) {
     ImGui::TextDisabled("MeshCore radio preset");
     ImGui::SetNextItemWidth(340 * gUi);
     if (ImGui::BeginCombo("##mcpre", cur ? cur->title.c_str() : "Custom")) {
-        if (ImGui::Selectable("Custom", !cur)) { S.mcPreset.clear(); plat::prefs().setS("meshCorePreset", ""); }
+        if (ImGui::Selectable("Custom", !cur)) {   // Custom opens the custom LoRa setting (its bandwidth, spreading factor ... fields), on its own frequency (#659)
+            S.mcPreset.clear(); plat::prefs().setS("meshCorePreset", "");
+            double mhz = a.freqMhz;
+            const bool restart = dect2::meshChooseCustomPreset(customOf(a), mhz);
+            a.freqMhz = mhz;
+            saveCustom(a);
+            if (restart && a.engine.running()) startReceiver(a);
+        }
         for (const auto& reg : dect2::meshCoreRegions(S.mcList)) {
             ImGui::TextDisabled("%s", reg.c_str());
             for (const auto& p : S.mcList) {

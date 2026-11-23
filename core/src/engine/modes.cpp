@@ -630,7 +630,7 @@ static const SubMode kSubModes[] = {
     {"dominoex",   "DominoEX",   27, 32, 4, 14.0715, {30, 0, 0}},
     {"hell",       "Hellschreiber", 27, 32, 5, 14.0630, {31, 0, 0}},
     // AM broadcast (MW / SW): the general receiver (57) opened in AM with the MW and SW presets; the plain General receiver stays its own entry
-    {"am",         "AM broadcast", 57, 0, 0, 0.999, {0, 0, 0}},
+    {"am",         "AM broadcast", 57, 0, 0, 0.999, {2, 0, 0}},   // synth[0] = GenAm: its test signal and transmitter are AM (issue #660: it was 0, NFM)
 };
 const SubMode* subModes(int& count) { count = (int)(sizeof kSubModes / sizeof *kSubModes); return kSubModes; }
 const SubMode* subModeById(const std::string& id) {

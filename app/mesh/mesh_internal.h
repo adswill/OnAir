@@ -10,6 +10,7 @@
 #include "dect2/packet/packet_aprs.h"
 #include "dect2/mesh/mesh_proto.h"
 #include "dect2/mesh/mesh_presets.h"
+#include "dect2/mesh/mesh_custom.h"
 #include "state/results_export.h"
 #include "dect2/mesh/mesh_report.h"
 #include <atomic>
@@ -39,7 +40,7 @@ struct State {
     int pushedRegion = -1, pushedProtocols = -1, pushedPresets = -1;
     // Meshtastic region / modem preset ("" = from the band plan) and the custom LoRa setting of each entry (prefs "meshCustom<mask>")
     std::string mtRegion, mtPreset = "LongFast", pushedMt = "-", pushedCustom = "-";
-    struct Custom { bool on = false; double mhz = 869.525, bwHz = 125000; int sf = 9, cr = 5, sync = 0x2B, preamble = 16; };
+    using Custom = dect2::MeshCustomLora;
     std::map<int, Custom> custom;                // by entry (subMask)
     int customEntry = -1;                        // the entry whose custom frequency was last applied
     double pushedTuned = 0;

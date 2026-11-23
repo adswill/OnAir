@@ -15,6 +15,7 @@
 #include "dect2/common/diag.h"
 #include "dect2/hfdig/hfdig_sstv.h"
 #include "dect2/tv/videogen.h"
+#include "dect2/general/general_rx.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -294,6 +295,8 @@ TxRequest makeReq(const TxUi& s, const TxModeSpec& mode, bool carrier) {
         r.mux.push_back(std::move(p));
     }
     paramsApply(s, r);
+    // the General receiver and AM broadcast (issue #660): "Same as the receiver" sends the modulation the receiver's demodulator is set to
+    if (std::string(mode.id) == "general" && r.o("general.mod", 0) < 0.5) r.synth.modeOpt[0] = std::max(0, std::min(dect2::GenDemodCount - 1, generalApiDemod()));
     controlApply(s, r);   // the radio's filter, gain stages and calibration (tx_control_ui.cpp)
     return r;
 }

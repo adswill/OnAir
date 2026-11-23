@@ -299,6 +299,8 @@ std::unique_ptr<ModeSynth> makeTxVoiceSynth(const TxModeSpec& m, const TxRequest
             case GenUsb: k = 3; break;
             case GenLsb: k = 4; break;
             case GenWfm: if (rr.deviationHz <= 0) rr.deviationHz = 75000; break;
+            case GenDsb: k = 2; rr.opt["am.type"] = 1; break;                                  // both sidebands, no carrier
+            case GenCw: case GenCwl: case GenRaw: k = 2; rr.opt["am.depthPct"] = 0; break;   // an unmodulated carrier (the audio is not sent)
             default: break;
         }
         return std::make_unique<AnalogVoice>(rate, dialOff, k, rr);
