@@ -35,7 +35,7 @@ struct Atsc3Receiver::CtiPlp {
     std::vector<float> bufW;   // their weights (with deintW)
 };
 
-PlpResult Atsc3Receiver::runCti(const PlpResult& in) {
+PlpResult Atsc3Receiver::runCti(const PlpResult& in, int probe) {
     DECT2_STAGE("a3.ti");
     PlpResult out;
     out.id = in.id;
@@ -111,36 +111,8 @@ PlpResult Atsc3Receiver::runCti(const PlpResult& in) {
         if (c->deintW) c->bufW.erase(c->bufW.begin(), c->bufW.begin() + (long)std::min(drop, c->bufW.size()));
         c->outPos += (long)drop;
     }
-    // the blocks are independent: they go to the decoder in batches (one block per vector lane), the batches on a few threads
-    const size_t n = blocks.size();
-    std::vector<std::vector<uint8_t>> bits(n);
-    std::vector<char> ok(n, 0);
-    const Bicm& bicm = *c->bicm;
-    const float in_noise = in.noise;
-    const size_t bs = (size_t)Ldpc::kBatch, nBatches = (n + bs - 1) / bs;
-    auto work = [&](std::atomic<size_t>& next) {
-        for (size_t k; (k = next++) < nBatches;) {
-            const size_t from = k * bs, to = std::min(n, from + bs);
-            std::vector<const cf32*> in;
-            std::vector<const float*> win;
-            for (size_t i = from; i < to; i++) { in.push_back(blocks[i].data()); if (!wblocks.empty()) win.push_back(wblocks[i].data()); }
-            std::vector<std::vector<uint8_t>> pl;
-            std::vector<char> good;
-            bicm.decodeBatch(in, in_noise, pl, good, wblocks.empty() ? nullptr : &win);
-            for (size_t i = from; i < to; i++) { ok[i] = good[i - from]; bits[i].swap(pl[i - from]); }
-        }
-    };
-    std::atomic<size_t> next{0};
-    const size_t nt = std::min<size_t>(nBatches, (size_t)std::max(1, std::min(8, (int)std::thread::hardware_concurrency())));
-    std::vector<std::thread> th;
-    for (size_t t = 1; t < nt; t++) th.emplace_back(dect2::namedThread("onair-a3w", work, std::ref(next)));
-    work(next);
-    for (auto& t : th) t.join();
-    for (size_t k = 0; k < n; k++) {
-        out.ok.push_back(ok[k] != 0);
-        out.blocks++;
-        if (ok[k]) { bbScramble(bits[k]); out.packets.push_back(bitsToBytes(bits[k])); out.blocksOk++; }
-    }
+    // the blocks are independent: they go to the decoder in batches, the batches on a few threads
+    decodeFecBlocks(*c->bicm, blocks, in.noise, wblocks.empty() ? nullptr : &wblocks, probe, std::max(1, std::min(8, (int)std::thread::hardware_concurrency())), out);
     return out;
 }
 
@@ -154,7 +126,11 @@ PlpResult Atsc3Receiver::joinStraddle(const PlpResult& in) {
     if (cb > 0 && !in.head.empty()) {
         // the first block of the frame: the end of the one the frame before left open
         PlpResult first;
-        if (!st.tail.empty() && st.tail.size() + in.head.size() == (size_t)cb) {
+        if (in.skipped > 0) {   // the PLP is backed off and none of its probe blocks in this frame decoded: this one is not tried either
+            first.blocks = 1;
+            first.ok.push_back(false);
+            out.skipped++;
+        } else if (!st.tail.empty() && st.tail.size() + in.head.size() == (size_t)cb) {
             std::vector<cf32> cells(st.tail);
             cells.insert(cells.end(), in.head.begin(), in.head.end());
             std::vector<const cf32*> ptr{cells.data()};
@@ -182,7 +158,47 @@ PlpResult Atsc3Receiver::joinStraddle(const PlpResult& in) {
 }
 
 bool Atsc3Receiver::pushFrame(const cf32* x, size_t n, const Bootstrap& bs) {
-    return commitFrame(decodeFrame(x, n, bs), bs);
+    const DecodePlan plan = decodePlan(framesCommitted());
+    return commitFrame(decodeFrame(x, n, bs, &plan), bs);
+}
+
+DecodePlan Atsc3Receiver::decodePlan(long frameIndex) const {
+    std::lock_guard<std::mutex> lk(mu_);
+    const long c = frameIndex - kPlanLag;   // the plan after this many frames were committed
+    if (c <= 0 || plans_.empty()) return DecodePlan();
+    for (auto it = plans_.rbegin(); it != plans_.rend(); ++it)
+        if (it->first == c) return it->second;
+    // not kept (frames committed out of turn, or more than kPlanLag frames in flight): the nearest one
+    DIAG_DEBUG_EVERY(248686, 10.0, "The ATSC 3.0 decode plan for frame %ld is not known (plans kept for frames %ld to %ld), so the nearest one is used.", frameIndex, plans_.front().first + kPlanLag, plans_.back().first + kPlanLag);
+    return c < plans_.front().first ? plans_.front().second : plans_.back().second;
+}
+
+void Atsc3Receiver::updateHealth(const std::vector<const PlpResult*>& plps) {
+    for (const PlpResult* p : plps) {
+        if (p->blocks <= 0) continue;   // no complete block in this frame (a time interleaver that is still filling, or a PLP not decoded): no news
+        PlpHealth& h = health_[p->id];
+        if (p->skipped > 0) { st_.plpProbeFrames++; st_.blocksSkipped += p->skipped; }
+        if (p->blocksOk > 0) {
+            if (h.backedOff)
+                DIAG_DEBUG_EVERY(693135, 10.0, "ATSC 3.0 PLP %d decodes again after %ld frames in which only a few of its FEC blocks were tried, so it is decoded in full.", p->id, st_.frames - h.since);
+            h = PlpHealth();
+            continue;
+        }
+        h.deadFrames++;
+        const bool prot = llsPlps_.count(p->id) || servicePlps_.count(p->id);
+        if (!h.backedOff && h.deadFrames >= (prot ? kDeadFramesProtected : kDeadFrames)) {
+            h.backedOff = true;
+            h.since = st_.frames;
+            st_.plpBackoffs++;
+            DIAG_EVERY(406502, 30.0, "ATSC 3.0 PLP %d decoded none of its FEC blocks in %d frames in a row, so only %d of its blocks per frame are tried until one of them decodes.", p->id, h.deadFrames,
+                       prot ? kProbeBlocksProtected : kProbeBlocks);
+        }
+    }
+    DecodePlan plan;
+    for (auto& [id, h] : health_)
+        if (h.backedOff) plan.probe.push_back({id, llsPlps_.count(id) || servicePlps_.count(id) ? kProbeBlocksProtected : kProbeBlocks});
+    plans_.emplace_back(st_.frames, plan);
+    while (plans_.size() > 4 * (size_t)kPlanLag) plans_.pop_front();
 }
 
 void Atsc3Receiver::lostSamples() {
@@ -200,6 +216,7 @@ bool Atsc3Receiver::commitFrame(const FrameResult& fr, const Bootstrap& bs) {
             st_.framesFailed++;
             cti_.clear();
             straddle_.clear();
+            updateHealth({});
             DIAG_DEBUG_EVERY(209186, 5.0, "An ATSC 3.0 frame could not be decoded (%llu failed of %llu so far), so its data is dropped and the time interleavers restart.", (unsigned long long)st_.framesFailed, (unsigned long long)st_.frames);
             return false;
         }
@@ -220,10 +237,14 @@ bool Atsc3Receiver::commitFrame(const FrameResult& fr, const Bootstrap& bs) {
         info_ = fi;
     }
     std::vector<PlpResult> ctiOut;
-    for (auto& p : fr.plps) if (p.cti) ctiOut.push_back(runCti(p)); else if (p.straddle) ctiOut.push_back(joinStraddle(p));
+    for (auto& p : fr.plps) if (p.cti) ctiOut.push_back(runCti(p, fr.plan.probeBlocks(p.id))); else if (p.straddle) ctiOut.push_back(joinStraddle(p));
     size_t ci = 0;
     std::vector<const PlpResult*> todo;
     for (auto& p : fr.plps) todo.push_back(p.cti || p.straddle ? &ctiOut[ci++] : &p);
+    {
+        std::lock_guard<std::mutex> lk(mu_);
+        updateHealth(todo);
+    }
     for (const PlpResult* pp : todo) {
         const PlpResult& p = *pp;
         // blocks that failed leave a gap: the packet reassembly restarts after it
@@ -260,14 +281,14 @@ void Atsc3Receiver::pushBbPackets(int plpId, const std::vector<std::vector<uint8
             r.push(pk.data() + h.headerBytes, (int)pk.size() - h.headerBytes, h.pointer, out);
         }
     }
-    for (auto& a : out) onAlp(a);
+    for (auto& a : out) onAlp(a, plpId);
 }
 
 namespace {
 constexpr int kTsPacketsToSwitch = 16;   // ALP packets of transport stream in a row (up to 16 TS packets each) before the reader takes that stream
 }
 
-void Atsc3Receiver::onAlp(const AlpPacket& a) {
+void Atsc3Receiver::onAlp(const AlpPacket& a, int plpId) {
     {
         std::lock_guard<std::mutex> lk(mu_);
         st_.alpPackets++;
@@ -282,7 +303,7 @@ void Atsc3Receiver::onAlp(const AlpPacket& a) {
             std::lock_guard<std::mutex> lk(tsMu_);
             if (!sawTs_ && tsSeen_ > 0) { tsSeen_ = 0; tsDirect_.clear(); }
         }
-        pushIp(a.data.data(), a.data.size());
+        pushIpFrom(a.data.data(), a.data.size(), plpId);
     } else if (a.type == AlpTs) {
         std::lock_guard<std::mutex> lk(tsMu_);
         // The reader switches to this stream for good, so one packet is not enough: a damaged baseband packet can look like one. It takes
@@ -311,7 +332,9 @@ int Atsc3Receiver::readTsTimed(uint8_t* buf, int size, int timeoutMs) {
     return remux_.readTimed(buf, size, timeoutMs);
 }
 
-void Atsc3Receiver::pushIp(const uint8_t* p, size_t n) {
+void Atsc3Receiver::pushIp(const uint8_t* p, size_t n) { pushIpFrom(p, n, -1); }
+
+void Atsc3Receiver::pushIpFrom(const uint8_t* p, size_t n, int plpId) {
     UdpDatagram d;
     bool got;
     {
@@ -319,16 +342,17 @@ void Atsc3Receiver::pushIp(const uint8_t* p, size_t n) {
         got = ip_.push(p, n, d);
         if (got) st_.udp++;
     }
-    if (got) onUdp(d);
+    if (got) onUdp(d, plpId);
 }
 
-void Atsc3Receiver::onUdp(const UdpDatagram& d) {
+void Atsc3Receiver::onUdp(const UdpDatagram& d, int plpId) {
     if (d.dstIp == kLlsAddress && d.dstPort == kLlsPort) {
         // a station that signs its signalling (A/360) sends its tables inside a SignedMultiTable: every table in it counts
         const auto tables = parseLlsAll(d.payload.data(), d.payload.size());
         bool start = false;
         {
             std::lock_guard<std::mutex> lk(mu_);
+            if (plpId >= 0) llsPlps_.insert(plpId);   // never backed off while it decodes at all
             if (d.payload.size() >= 4 && d.payload[0] == 0xFE) st_.llsSigned++;
             for (const auto& t : tables) {
                 st_.llsTables++;
@@ -352,7 +376,10 @@ void Atsc3Receiver::onUdp(const UdpDatagram& d) {
         std::lock_guard<std::mutex> lk(mu_);
         r = route_;
     }
-    if (r) r->push(d);
+    if (r && r->push(d) && plpId >= 0) {   // the selected service's signaling or media: never backed off while it decodes at all
+        std::lock_guard<std::mutex> lk(mu_);
+        servicePlps_.insert(plpId);
+    }
 }
 
 bool Atsc3Receiver::selectService(int id) {
@@ -361,6 +388,7 @@ bool Atsc3Receiver::selectService(int id) {
         selected_ = id;
         routeStarted_ = false;
         route_.reset();
+        servicePlps_.clear();
         remuxIds_.clear();
         lastInit_.clear();
     }
@@ -376,6 +404,7 @@ bool Atsc3Receiver::selectServiceIfNone(int id) {
         selected_ = id;
         routeStarted_ = false;
         route_.reset();
+        servicePlps_.clear();
         remuxIds_.clear();
         lastInit_.clear();
     }
