@@ -2543,3 +2543,9 @@ Release ccache hit rate was ~0 (ONAIR_VERSION is a command-line define of every 
 - web schema generator now finds the telemetry member of a `case N: {` block (Datawell), generated files regenerated.
 - airband_auto: the test compared the asked capture with current(), which tick() already moves; it now compares with the capture it left.
 - updater (macOS): hdiutil retried, no abort when the image is missing. audio_engine: wall-clock guard on the signal-time loops. sferics_ltpos, audio_engine labelled timing. tx_quality_b was already timing.
+
+## 2026-11-23 QO-100 beacon correction and spectrum detail (lane qo100fix)
+- User report (4.5, Windows): the beacon lock showed "locked" but the correction jumped around and the 750 notch left the yellow line. Cause: every fine estimate (~0.6 s) was applied raw; a carrier within +-1 kHz of a beacon, or one beacon fading, moved the whole spectrum and every decoder frequency.
+- New `qo100::BeaconTracker` (qo100_dsp): alpha-beta filter on level and drift, a gate from the recent scatter (8 - 40 Hz), a new level only after 3 (two beacons agreeing) or 5 epochs, a step after 4 / 10, slew-limited output (100 Hz/s), drift carried on for 30 s without beacons; fine channels stay on the last place for ~25 s of dropout; the beacon peak is searched within +-400 Hz once locked.
+- Narrowband spectrum detail setting (`setNbDetail`, 1 / 2 / 4 x FFT size; the app defaults to 2, prefs qo100Detail, core default 1). The waterfall keeps full-resolution rows (360 rows, 36 s) and redraws for the view, so zooming shows real bins instead of a fixed 1024-column picture.
+- Tests: qo100_beacon_tracks_drift (drift, jitter, a sweeping carrier, a 250 Hz step: under 5 Hz, no jump over 3 Hz), qo100_beacon_no_jumps_on_dropout (5 s without beacons), qo100_narrowband_resolution. Synth: `makeQo100SynthEx` with jitter, step, dropout, sweeping carrier. i18n added to all catalogs.

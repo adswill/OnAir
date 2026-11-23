@@ -3672,3 +3672,7 @@ Sound cue: pass ended	Hangjelzés: átvonulás vége
 Three falling tones when a tracked satellite pass ends. Off by default.	Három süllyedő hang, amikor egy követett műholdátvonulás véget ér. Alapból kikapcsolva.
 Sound cue volume (%)	Hangjelzések hangereje (%)
 How loud the cue tones are, as a share of the program volume.	Milyen hangosak a jelzések a program hangerejének arányában.
+Spectrum detail: normal	Spektrumrészlet: normál
+Spectrum detail: fine	Spektrumrészlet: finom
+Spectrum detail: finest	Spektrumrészlet: legfinomabb
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Mennyire finoman bontja a keskenysávú spektrumot és a vízesést: a finom a normál bináris szélességének felét, a legfinomabb a negyedét használja, így a CW és digitális vivők jobban kiütköznek, a közeli állomások szétválnak. Kicsit több CPU kell, és a rögzítés újraindul, ha átállítod.

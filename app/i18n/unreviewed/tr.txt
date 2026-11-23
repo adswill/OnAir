@@ -3805,3 +3805,7 @@ Maybe later
 Don't ask again
 Star reminder
 Now and then a small card asks if you would star OnAir on GitHub. Off: it never shows. Nothing is sent anywhere.
+Spectrum detail: normal
+Spectrum detail: fine
+Spectrum detail: finest
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.

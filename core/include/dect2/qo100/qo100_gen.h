@@ -21,8 +21,15 @@ constexpr double kQo100TestCarrierHz = 10489.650e6;    // true RF
 constexpr double kQo100SsbDialsHz[4] = {10489.540e6, 10489.600e6, 10489.820e6, 10489.905e6};
 constexpr double kQo100Datv2Hz = 10494.750e6, kQo100Datv2Sym = 333e3;
 
-double qo100SynthErrHz(const SynthConfig& cfg, double tSec);   // the LNB error the test signal has at that time
+// Harder LNBs for the tests (makeQo100SynthEx): jitterHz wobble on the error (two slow sines), a step of stepHz at stepAtSec, both beacons off for
+// dropSec from dropAtSec, a strong interfering carrier sweeping through the lower beacon (sweepHzPerSec from sweepStartHz below it, 0: none).
+struct Qo100SynthOpts {
+    double jitterHz = 0, stepHz = 0, stepAtSec = 0, dropAtSec = 0, dropSec = 0, sweepHzPerSec = 0, sweepStartHz = -1500;
+};
+double qo100SynthErrHz(const SynthConfig& cfg, double tSec);
+double qo100SynthErrHz(const SynthConfig& cfg, const Qo100SynthOpts& o, double tSec);   // the LNB error the test signal has at that time
 double qo100SynthCentreHz(const SynthConfig& cfg, double sampleRate);   // the radio centre it assumes (RF)
 std::unique_ptr<ModeSynth> makeQo100Synth(const SynthConfig& cfg, double sampleRate);
+std::unique_ptr<ModeSynth> makeQo100SynthEx(const SynthConfig& cfg, const Qo100SynthOpts& opts, double sampleRate);
 
 } // namespace dect2

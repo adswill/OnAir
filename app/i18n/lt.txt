@@ -3715,3 +3715,7 @@ Sound cue: pass ended	Garso signalas: praskridimas baigėsi
 Three falling tones when a tracked satellite pass ends. Off by default.	Trys krintantys tonai, kai baigiasi sekamas palydovo praskridimas. Pagal numatymą išjungta.
 Sound cue volume (%)	Garso signalų garsumas (%)
 How loud the cue tones are, as a share of the program volume.	Kaip garsūs signalai, kaip programos garsumo dalis.
+Spectrum detail: normal	Spektro detalumas: įprastas
+Spectrum detail: fine	Spektro detalumas: smulkus
+Spectrum detail: finest	Spektro detalumas: smulkiausias
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Kaip smulkiai skiriamas siaurajuostis spektras ir krioklys: smulkus turi pusę įprasto bino pločio, smulkiausias ketvirtadalį, todėl CW ir skaitmeninės nešlės geriau išsiskiria, o artimos stotys atsiskiria. Reikia kiek daugiau CPU, o pakeitus užraktas paleidžiamas iš naujo.

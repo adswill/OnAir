@@ -3669,3 +3669,7 @@ Sound cue: pass ended	Sinal sonoro: passagem terminou
 Three falling tones when a tracked satellite pass ends. Off by default.	Três tons descendentes quando termina uma passagem de satélite seguida. Desligado por defeito.
 Sound cue volume (%)	Volume dos sinais sonoros (%)
 How loud the cue tones are, as a share of the program volume.	Quão altos são os sinais, como parte do volume do programa.
+Spectrum detail: normal	Detalhe do espectro: normal
+Spectrum detail: fine	Detalhe do espectro: fino
+Spectrum detail: finest	Detalhe do espectro: muito fino
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Com que finura o espetro de banda estreita e a cascata são resolvidos: fino tem metade da largura de bin do normal, muito fino um quarto, assim as portadoras CW e digitais destacam-se e as estações próximas separam-se. Usa um pouco mais de CPU e o bloqueio reinicia quando se altera.

@@ -84,6 +84,40 @@ Peak strongest(const std::vector<double>& pow, double rate, double maxHz);
 struct BeaconFit { bool ok = false; double shiftHz = 0; double lowDb = -200, highDb = -200, floorDb = -200; };
 BeaconFit findBeacons(const std::vector<double>& pow, double f0Hz, double binHz, double maxShiftHz, double minDb = 12);
 
+// The beacon tracker: turns the raw fine estimates of the LNB error (one per CW beacon, about every 0.6 s, each good for a few
+// Hz but sometimes wrong: a carrier crossing the beacon, keying, a dropout) into one steady correction. An alpha-beta filter follows
+// the level and the drift; a measurement outside a gate (set by the recent scatter) is ignored; a new level is taken only when
+// both beacons agree on it several epochs in a row (one beacon: more epochs), so a crossing carrier cannot drag it. The output is
+// slew-rate limited, so the displayed spectrum and every decoder frequency move smoothly, and it coasts on the drift when the
+// beacons fade out. Locked after kConfirm agreeing epochs; lost only after a long silence (hysteresis).
+struct BeaconMeas { bool ok = false; double errHz = 0; double snrDb = 0; };
+class BeaconTracker {
+public:
+    static constexpr double kSlewHzPerSec = 100;     // the largest speed the output moves at
+    static constexpr double kGateMinHz = 8, kGateMaxHz = 40;
+    void reset();
+    // one epoch at time t (s): the measurements of the lower and the upper beacon. Returns true when an estimate was taken from them.
+    bool update(double t, const BeaconMeas m[2]);
+    void miss(double t) { (void)t; ++missRun_; }     // an epoch with no usable beacon
+    bool locked() const { return locked_; }
+    int missRun() const { return missRun_; }
+    double estimate() const { return est_; }         // the filtered level at the last accepted epoch
+    double rateHzPerSec() const { return rate_; }
+    // the smooth correction at time t (advances the slew limiter; call with non-decreasing t)
+    double value(double t);
+    double gateHz() const;
+private:
+    bool accept(double t, double z);
+    bool locked_ = false, init_ = false;
+    double est_ = 0, rate_ = 0, tEst_ = 0;
+    double out_ = 0, tOut_ = 0;
+    int missRun_ = 0;
+    // candidates for a new level (no estimate yet, or a step)
+    int candN_ = 0; bool candTwo_ = true; double candSum_ = 0, candLo_ = 0, candHi_ = 0;
+    std::vector<double> inno_;   // recent innovations of accepted epochs
+    int nAcc_ = 0;
+};
+
 // Least-squares slope of (t, v), Hz per minute when v is Hz and t seconds. false with fewer than 3 points or no time spread.
 bool slopePerMin(const std::vector<double>& t, const std::vector<double>& v, double& perMin);
 

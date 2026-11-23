@@ -3693,3 +3693,7 @@ Sound cue: pass ended	Dźwięk: przelot zakończony
 Three falling tones when a tracked satellite pass ends. Off by default.	Trzy opadające dźwięki, gdy kończy się śledzony przelot satelity. Domyślnie wyłączone.
 Sound cue volume (%)	Głośność dźwięków (%)
 How loud the cue tones are, as a share of the program volume.	Jak głośne są dźwięki, jako część głośności programu.
+Spectrum detail: normal	Szczegółowość widma: normalna
+Spectrum detail: fine	Szczegółowość widma: drobna
+Spectrum detail: finest	Szczegółowość widma: najdrobniejsza
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Jak drobno rozdzielane jest widmo wąskopasmowe i wodospad: drobna ma połowę szerokości binu normalnej, najdrobniejsza jedną czwartą, więc nośne CW i cyfrowe lepiej się wyróżniają, a bliskie stacje się rozdzielają. Zużywa trochę więcej CPU, a zmiana restartuje synchronizację.

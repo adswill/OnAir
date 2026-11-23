@@ -4622,3 +4622,7 @@ Sound cue: pass ended	Tonsignal: Überflug beendet
 Three falling tones when a tracked satellite pass ends. Off by default.	Drei fallende Töne, wenn ein verfolgter Satellitenüberflug endet. Standardmäßig aus.
 Sound cue volume (%)	Lautstärke der Tonsignale (%)
 How loud the cue tones are, as a share of the program volume.	Wie laut die Signaltöne sind, als Anteil der Programmlautstärke.
+Spectrum detail: normal	Spektrumdetail: normal
+Spectrum detail: fine	Spektrumdetail: fein
+Spectrum detail: finest	Spektrumdetail: feinst
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Wie fein das Schmalband-Spektrum und der Wasserfall aufgelöst werden: fein hat die halbe Binbreite von normal, feinst ein Viertel, sodass CW- und Digitalträger deutlicher hervortreten und dicht beieinander liegende Stationen getrennt werden. Kostet etwas mehr CPU; beim Ändern startet die Verriegelung neu.

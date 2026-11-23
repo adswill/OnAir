@@ -29,6 +29,7 @@ namespace {
 
 constexpr double kFineSnrDb = 15;     // a CW beacon counts when its fine peak stands this far over the median bin
 constexpr int kFineN = 4096;
+constexpr int kDropMax = 40;         // fine estimates in a row without a beacon before the fine channels are dropped and the beacons searched again (about 25 s)
 constexpr int kMissMax = 6;           // fine estimates in a row without a beacon before the lock is given up (about 2.5 s)
 
 struct Spec {                         // Hann-windowed power spectrum of blocks of N, accumulated (fft order shifted: bin N/2 = 0 Hz)
@@ -151,6 +152,8 @@ struct Qo100Receiver::Impl {
     Peak lastPk[2];
     bool epochReady[2] = {false, false};
     int miss = 0;
+    BeaconTracker tr;
+    std::atomic<int> detailReq{1};      // narrowband spectrum detail: 1 normal, 2 fine, 4 finest (FFT size x detail); the app asks for 2
     // the lock
     int state = 0;
     bool corrValid = false;
@@ -215,12 +218,12 @@ struct Qo100Receiver::Impl {
         nbDec.reset();
         nbRate = nbDec.outRate();
         nbUse = std::min(nbDec.factor() > 1 ? std::min(1.0e6, 0.4 * rate) : 0.45 * nbRate, 0.48 * rate - std::fabs(nbOff));
-        nbSpec.setup(pow2AtLeast(nbRate / 100, 4096, 65536));
+        { const int dm = std::clamp(detailReq.load(), 1, 4); nbSpec.setup(pow2AtLeast(nbRate / 100 * dm, 4096 * dm, 65536 * dm)); }
         nbAcc.clear(); nbAvg.clear(); srAcc.clear(); nbAccN = srN = 0;
         for (int i = 0; i < 2; i++) { fineDec[i].configure(nbRate, 1200, 3500); fineDec[i].reset(); fineBuf[i].clear(); fineHop[i] = 0; epochReady[i] = false; }
         fineRate = fineDec[0].outRate();
         fineSpec.setup(kFineN);
-        fineOn = false; miss = 0;
+        fineOn = false; miss = 0; tr.reset();
         state = nbOk ? 1 : 0;
         corrValid = false; lnbErr = 0; meas = 0; histT.clear(); histErr.clear(); lockStart = 0;
         wbN = pow2AtLeast(rate / 1500, 1024, 16384);
@@ -252,33 +255,32 @@ struct Qo100Receiver::Impl {
 
     void epoch() {
         epochReady[0] = epochReady[1] = false;
-        bool good[2]; double err[2];
+        BeaconMeas bm[2];
         for (int i = 0; i < 2; i++) {
-            good[i] = lastPk[i].ok && lastPk[i].snrDb >= kFineSnrDb;
-            const double app = kNbCentreHz + fineNco[i].hz() + lastPk[i].hz;
-            err[i] = (i ? kHighBeaconHz : kLowBeaconHz) - app;
+            bm[i].ok = lastPk[i].ok && lastPk[i].snrDb >= kFineSnrDb;
+            bm[i].snrDb = lastPk[i].snrDb;
+            bm[i].errHz = (i ? kHighBeaconHz : kLowBeaconHz) - (kNbCentreHz + fineNco[i].hz() + lastPk[i].hz);
         }
-        bool have = false; double e = 0;
-        if (good[0] && good[1]) {
-            if (std::fabs(err[0] - err[1]) < 150) { e = 0.5 * (err[0] + err[1]); have = true; }
-            else { const int k = lastPk[0].snrDb >= lastPk[1].snrDb ? 0 : 1; e = err[k]; have = true; }
-        } else if (good[0] || good[1]) { e = good[0] ? err[0] : err[1]; have = true; }
-        if (have && corrValid && state == 2 && std::fabs(e - lnbErr) > 2000) have = false;   // a jump: something else than the beacon
-        if (have) {
+        const double now = tSec();
+        const bool took = tr.update(now, bm);
+        if (took && tr.locked()) {
             if (state != 2) {
-                lockStart = tSec();
-                char b[128]; snprintf(b, sizeof b, "QO-100: beacons locked, LNB error %+.3f kHz (%+.3f ppm)", e / 1e3, e / lo * 1e6); log(b);
+                if (!corrValid) lockStart = now;
+                char b[128]; snprintf(b, sizeof b, "QO-100: beacons locked, LNB error %+.3f kHz (%+.3f ppm)", tr.estimate() / 1e3, tr.estimate() / lo * 1e6); log(b);
             }
-            state = 2; corrValid = true; lnbErr = e; meas++; miss = 0;
-            histT.push_back((float)tSec()); histErr.push_back((float)e);
+            state = 2; corrValid = true; meas++; miss = 0;
+            lnbErr = tr.value(now);
+            histT.push_back((float)now); histErr.push_back((float)lnbErr);
             if (histT.size() > 1500) { histT.erase(histT.begin(), histT.begin() + 300); histErr.erase(histErr.begin(), histErr.begin() + 300); }
             // keep each beacon near the middle of its fine channel
             bool move = false;
-            for (int i = 0; i < 2; i++) if (good[i] && std::fabs(lastPk[i].hz) > 300) move = true;
-            if (move) startFine(-e);
-        } else if (++miss >= kMissMax) {
-            if (state == 2) { state = 3; log("QO-100: beacons lost, keeping the last correction"); }
-            fineOn = false; srAcc.clear(); srN = 0;
+            for (int i = 0; i < 2; i++) if (bm[i].ok && std::fabs(lastPk[i].hz) > 300) move = true;
+            if (move) startFine(-tr.estimate());
+        } else {
+            ++miss;
+            if (miss >= kMissMax && state == 2) { state = 3; log("QO-100: beacons lost, keeping the last correction"); }
+            // a lock that was once made keeps its fine channels on the last place for a long while: the beacons come back there
+            if (miss >= (tr.locked() ? kDropMax : kMissMax)) { fineOn = false; srAcc.clear(); srN = 0; }
         }
     }
 
@@ -294,7 +296,7 @@ struct Qo100Receiver::Impl {
             std::fill(finePw.begin(), finePw.end(), 0.0);   // blocks of kFineN, half overlapped
             fineSpec.power(b.data(), finePw);
             b.erase(b.begin(), b.begin() + kFineN / 2);
-            lastPk[i] = strongest(finePw, fineRate, 1000);
+            lastPk[i] = strongest(finePw, fineRate, state == 2 ? 400 : 1000);   // locked: the beacon is near the middle, a carrier further off is not it
             epochReady[i] = true;
             if (epochReady[0] && epochReady[1]) epoch();
             if (!fineOn || gen != fineGen) return;   // lost, or both channels moved: the rest of this block belongs to the old setting
@@ -314,6 +316,7 @@ struct Qo100Receiver::Impl {
     }
 
     void nbFeed(const cf32* x, size_t n) {
+        if (corrValid && tr.locked()) lnbErr = tr.value(tSec());   // the smooth correction moves on every block (drift carried on, no jumps)
         for (size_t k = 0; k < n; k++) {
             nbSpec.buf.push_back(x[k]);
             if ((int)nbSpec.buf.size() == nbSpec.N) {
@@ -643,6 +646,7 @@ void Qo100Receiver::setLogCallback(std::function<void(const std::string&)> cb) {
 void Qo100Receiver::setLo(double hz) { if (hz > 0 && hz != p_->loReq.load()) { p_->loReq = hz; p_->resetReq = true; } }
 void Qo100Receiver::setSearchHz(double hz) { p_->searchReq = std::clamp(hz, 5e3, 2e6); }
 void Qo100Receiver::setDialHz(double hz) { p_->dialReq = hz; }
+void Qo100Receiver::setNbDetail(int d) { d = d >= 4 ? 4 : d >= 2 ? 2 : 1; if (d != p_->detailReq.load()) { p_->detailReq = d; p_->resetReq = true; } }
 void Qo100Receiver::setAutoCorrection(bool on) { p_->autoCorr = on; }
 void Qo100Receiver::setSeedErrorHz(double hz) { p_->seedErr = std::isfinite(hz) ? std::clamp(hz, -2e6, 2e6) : 0.0; }
 void Qo100Receiver::setListen(bool on) { p_->listen.on = on; }

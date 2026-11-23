@@ -580,3 +580,7 @@ HF MONITORING
 RECEIVERS & ANALYSERS
 METERS
 INTERFERENCE HUNTING
+Spectrum detail: normal
+Spectrum detail: fine
+Spectrum detail: finest
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.
