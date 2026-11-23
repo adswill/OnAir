@@ -51,6 +51,7 @@ int main(int argc, char** argv) {
         CHECK(ok && st("rtl.ds") == 2, "generic at 7.1 MHz: Q branch (%.0f) %s", st("rtl.ds"), e.c_str());
         if (ok) s->stop();
     }
+    set("rtl.ds", 0);   // (the fake keeps the last value; a source that never asks for direct sampling leaves it as it is)
     {   // with it: no direct sampling, the library gets the real frequency (it upconverts itself)
         auto s = makeSource(g);
         TuneSettings t; t.centerHz = 7.1e6; t.sampleRate = 2.4e6; t.gainDb = 30; t.bandwidthMhz = 0.2; t.radio["v4"] = "1";
