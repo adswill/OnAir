@@ -37,35 +37,77 @@ namespace {
 
 namespace q = dect2::qo100;
 
+// The narrowband waterfall. Every row is kept at the full resolution of the spectrum (one byte a bin, with the frequency of its first bin,
+// so rows made while the correction moved still line up) and the picture is drawn for what the view shows: zoomed in, every bin is a
+// column or more; zoomed out, a column shows the strongest bin under it.
 struct WfImage {
     gfx::Image* img = nullptr;
-    int W = 1024, H = 220;
-    std::vector<uint32_t> px;
+    static constexpr int W = 2048, H = 360;   // texture: columns across the view, rows of history (10 a second: 36 s)
+    struct Row { double f0 = 0, bin = 1; std::vector<uint8_t> v; };
+    std::vector<Row> rows;                    // ring, newest at head
+    int head = 0, count = 0;
+    std::vector<uint32_t> px, lut;
     bool dirty = false;
-    void push(const std::vector<float>& db, float lo, float hi) {
-        if (px.empty()) px.assign((size_t)W * H, 0xFF000000u);
-        std::copy_backward(px.begin(), px.end() - W, px.end());
-        const size_t n = db.size();
-        for (int x = 0; x < W && n; x++) {
-            size_t a = (size_t)x * n / W, b = std::max(a + 1, (size_t)(x + 1) * n / W);
-            float m = -200;
-            for (size_t k = a; k < b && k < n; k++) m = std::max(m, db[k]);
-            px[(size_t)x] = Waterfall::jet(std::clamp((m - lo) / std::max(1.f, hi - lo), 0.f, 1.f));
+    double vLo = 0, vHi = 0;
+    uint64_t pushes = 0, drawn = ~0ull;
+    void push(const std::vector<float>& db, double f0, double bin, float lo, float hi) {
+        if (rows.empty()) rows.resize((size_t)H);
+        head = (head + H - 1) % H; if (count < H) count++;
+        Row& r = rows[(size_t)head];
+        r.f0 = f0; r.bin = bin; r.v.resize(db.size());
+        const float sc = 255.f / std::max(1.f, hi - lo);
+        for (size_t k = 0; k < db.size(); k++) r.v[k] = (uint8_t)std::clamp((db[k] - lo) * sc, 0.f, 255.f);
+        pushes++;
+    }
+    void renderRow(int y, double viewLo, double dx) {
+        const Row& r = rows[(size_t)((head + y) % H)];
+        const long n = (long)r.v.size();
+        uint32_t* o = &px[(size_t)y * W];
+        for (int x = 0; x < W; x++) {
+            const double f = viewLo + x * dx;
+            long a = (long)std::floor((f - r.f0) / r.bin + 0.5), b = (long)std::floor((f + dx - r.f0) / r.bin + 0.5);
+            if (b <= a) b = a + 1;
+            if (b <= 0 || a >= n) { o[x] = 0xFF000000u; continue; }
+            a = std::max(0L, a); b = std::min(n, b);
+            uint8_t m = 0;
+            for (long k = a; k < b; k++) m = std::max(m, r.v[(size_t)k]);
+            o[x] = lut[m];
+        }
+    }
+    void render(double viewLo, double viewHi) {
+        if (count == 0 || viewHi <= viewLo) return;
+        if (pushes == drawn && viewLo == vLo && viewHi == vHi) return;
+        const bool same = viewLo == vLo && viewHi == vHi && !px.empty() && lutMap == Waterfall::curMap() && lutSat == Waterfall::sat;
+        const uint64_t k = pushes - drawn;   // new rows since the last picture
+        drawn = pushes; vLo = viewLo; vHi = viewHi;
+        if (lut.empty() || lutMap != Waterfall::curMap() || lutSat != Waterfall::sat) {
+            lut.resize(256); lutMap = Waterfall::curMap(); lutSat = Waterfall::sat;
+            for (int i = 0; i < 256; i++) lut[(size_t)i] = Waterfall::jet((float)i / 255.f);
+        }
+        const double dx = (viewHi - viewLo) / W;
+        if (same && k > 0 && k < (uint64_t)H) {   // only new rows: move the picture down and draw them at the top
+            std::copy_backward(px.begin(), px.end() - (long)(k * W), px.end());
+            for (int y = 0; y < (int)k && y < count; y++) renderRow(y, viewLo, dx);
+        } else {
+            px.assign((size_t)W * H, 0xFF000000u);
+            for (int y = 0; y < count; y++) renderRow(y, viewLo, dx);
         }
         dirty = true;
     }
-    void draw(ImDrawList* dl, ImVec2 p0, ImVec2 p1, float u0, float u1) {
+    void draw(ImDrawList* dl, ImVec2 p0, ImVec2 p1) {
         if (!gGfx) return;
         if (!img) img = gGfx->createImage(W, H, 0xFF000000u);
-        if (img && dirty) { img->update(0, 0, W, H, px.data()); dirty = false; }
-        if (img) dl->AddImage(img->texture(), p0, p1, ImVec2(u0, 0), ImVec2(u1, 1));
+        if (img && dirty && !px.empty()) { img->update(0, 0, W, H, px.data()); dirty = false; }
+        if (img) dl->AddImage(img->texture(), p0, p1, ImVec2(0, 0), ImVec2(1, 1));
     }
+    int lutMap = -1; float lutSat = -1;
 };
 
 struct State {
     bool loaded = false;
     int loPreset = 0;               // loPresets index, or the count = custom
     double customLoMhz = 9750;
+    int detail = 2;                 // narrowband spectrum detail 1 normal, 2 fine, 4 finest (prefs qo100Detail)
     bool autoCorr = true;           // correct the frequencies by the LNB error measured on the beacons
     double lnbPpm = 0;              // LNB error from the beacon calibration (WIP), applied to the LO (prefs qo100LnbPpm)
     double calBeaconMhz = 10489.750, calIfMhz = 0;   // LNB calibration inputs: the known beacon and its measured IF peak
@@ -126,6 +168,7 @@ void load() {
     S.customLoMhz = p.getD("qo100LoCustom", 9750);
     S.dialHz = p.getD("qo100Dial", 10489.600e6);
     S.autoCorr = p.getB("qo100AutoCorr", true);
+    S.detail = (int)p.getI("qo100Detail", 2) >= 4 ? 4 : (int)p.getI("qo100Detail", 2) >= 2 ? 2 : 1;
     S.lnbPpm = p.getD("qo100LnbPpm", 0);
     S.calBeaconMhz = p.getD("qo100CalBeaconMhz", 10489.750);
     S.listen = p.getB("qo100Listen", false);
@@ -140,7 +183,7 @@ void load() {
 void save() {
     auto& p = plat::prefs();
     p.setI("qo100LoPreset", S.loPreset); p.setD("qo100LoCustom", S.customLoMhz); p.setD("qo100Dial", S.dialHz); p.setI("qo100View", S.view);
-    p.setB("qo100AutoCorr", S.autoCorr);
+    p.setB("qo100AutoCorr", S.autoCorr); p.setI("qo100Detail", S.detail);
     p.setD("qo100LnbPpm", S.lnbPpm); p.setD("qo100CalBeaconMhz", S.calBeaconMhz);
     p.setI("qo100AutoMask", (long)S.autoMask); p.setI("qo100Slots", S.maxSlots); p.setD("qo100Cpu", S.cpuLimit);
     p.setI("qo100AutoListen", S.autoListen); p.setB("qo100Squelch", S.squelch);
@@ -227,6 +270,17 @@ void strip(App& a) {
     flowNext(10 * gUi);
     if (ImGui::Checkbox("Auto frequency correction", &S.autoCorr)) save();
     tip("On: the LNB's frequency error is measured on the CW beacons and every frequency shown is corrected by it.\nOff: no correction (for a GPS-locked LNB). The beacons are still measured and the error is shown.");
+    flowNext(10 * gUi);
+    {
+        const char* names[3] = {tr("Spectrum detail: normal"), tr("Spectrum detail: fine"), tr("Spectrum detail: finest")};
+        const int cur = S.detail >= 4 ? 2 : S.detail >= 2 ? 1 : 0;
+        ImGui::SetNextItemWidth(190 * gUi);
+        if (ImGui::BeginCombo("##qodetail", names[cur])) {
+            for (int i = 0; i < 3; i++) if (ImGui::Selectable(names[i], i == cur)) { S.detail = i == 2 ? 4 : i == 1 ? 2 : 1; save(); }
+            ImGui::EndCombo();
+        }
+        tip(tr("How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it."));
+    }
     flowBreak();
     lnbCalSection(a);
     flowNext(10 * gUi);
@@ -348,8 +402,8 @@ void narrowView(App& a, float h) {
     dl->AddRectFilled(p0, ImVec2(p0.x + w, p0.y + wh), IM_COL32(8, 9, 10, 255));
     const float x0 = l > 0 ? l : p0.x, x1 = r > l ? r : p0.x + w;
     if (S.sliceHi > S.sliceLo) {
-        const double sp = S.sliceHi - S.sliceLo;
-        S.wf.draw(dl, ImVec2(x0, p0.y), ImVec2(x1, p0.y + wh), (float)((S.viewLo - S.sliceLo) / sp), (float)((S.viewHi - S.sliceLo) / sp));
+        S.wf.render(S.viewLo, S.viewHi);
+        S.wf.draw(dl, ImVec2(x0, p0.y), ImVec2(x1, p0.y + wh));
     }
     const float dxp = (float)(x0 + (S.dialHz - S.viewLo) / (S.viewHi - S.viewLo) * (x1 - x0));
     if (dxp >= x0 && dxp <= x1) dl->AddLine(ImVec2(dxp, p0.y), ImVec2(dxp, p0.y + wh), IM_COL32(100, 240, 130, 150));
@@ -762,6 +816,7 @@ void tick(App& a) {
     auto& r = a.engine.qo100();
     r.setLo(loHz());
     r.setAutoCorrection(S.autoCorr);
+    r.setNbDetail(S.detail);
     {   // the LNB error remembered for this LNB starts the session already corrected; a lock refreshes it (at most every 30 s, when it moved 0.05 ppm)
         double mem = 0;
         r.setSeedErrorHz(S.lnbMem.recall(nominalLoHz(), mem) ? (mem - S.lnbPpm) * 1e-6 * loHz() : 0.0);
@@ -832,7 +887,7 @@ void tick(App& a) {
         S.peakHold = std::max(t.nbPeakDb, S.peakHold - 0.05f);
         const float lo = std::floor((t.nbFloorDb - 8) / 10) * 10, hi = std::max(lo + 50, std::ceil((S.peakHold + 5) / 10) * 10);
         if (S.lo == S.hi || std::fabs(lo - S.lo) >= 10 || hi > S.hi || S.hi - hi >= 20) { S.lo = lo; S.hi = hi; }
-        S.wf.push(t.nb, t.nbFloorDb - 3, t.nbFloorDb + 35);
+        S.wf.push(t.nb, t.nbF0Hz, t.nbBinHz, t.nbFloorDb - 3, t.nbFloorDb + 35);
         S.sliceLo = t.nbF0Hz; S.sliceHi = t.nbF0Hz + t.nb.size() * t.nbBinHz;
     }
     if (!t.wb.empty()) {

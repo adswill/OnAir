@@ -3681,3 +3681,7 @@ Pop out	Отдельно
 DAB picture	Картинка DAB
 Double-click: the picture in a window of its own	Двойной щелчок: картинка в отдельном окне
 Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto открывает каждую несущую, которая передаёт. Кнопкой Listen можно послушать найденную несущую. Руководство: docs/AIRBAND-AUTO.md
+Spectrum detail: normal	Детализация спектра: обычная
+Spectrum detail: fine	Детализация спектра: мелкая
+Spectrum detail: finest	Детализация спектра: самая мелкая
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Насколько мелко разрешаются узкополосный спектр и водопад: мелкая даёт половину ширины бина обычной, самая мелкая четверть, поэтому CW и цифровые несущие заметнее, а близкие станции разделяются. Немного больше нагрузка на процессор; при смене захват перезапускается.

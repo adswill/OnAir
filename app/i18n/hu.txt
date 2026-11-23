@@ -3676,3 +3676,7 @@ Pop out	Kiemelés
 DAB picture	DAB-kép
 Double-click: the picture in a window of its own	Dupla kattintás: a kép külön ablakban
 Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Az Auto megnyit minden adó vivőt. A Listen gombbal meghallgathat egy látott vivőt. Útmutató: docs/AIRBAND-AUTO.md
+Spectrum detail: normal	Spektrumrészlet: normál
+Spectrum detail: fine	Spektrumrészlet: finom
+Spectrum detail: finest	Spektrumrészlet: legfinomabb
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Mennyire finoman bontja a keskenysávú spektrumot és a vízesést: a finom a normál bináris szélességének felét, a legfinomabb a negyedét használja, így a CW és digitális vivők jobban kiütköznek, a közeli állomások szétválnak. Kicsit több CPU kell, és a rögzítés újraindul, ha átállítod.

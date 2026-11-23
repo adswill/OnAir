@@ -146,6 +146,72 @@ BeaconFit findBeacons(const std::vector<double>& pow, double f0Hz, double binHz,
     return r;
 }
 
+void BeaconTracker::reset() { *this = BeaconTracker(); }
+
+double BeaconTracker::gateHz() const {
+    if (inno_.size() < 6) return 15;
+    std::vector<double> a(inno_.size());
+    for (size_t i = 0; i < a.size(); i++) a[i] = std::fabs(inno_[i]);
+    std::nth_element(a.begin(), a.begin() + (long)(a.size() / 2), a.end());
+    return std::clamp(5 * 1.4826 * a[a.size() / 2], kGateMinHz, kGateMaxHz);
+}
+
+bool BeaconTracker::accept(double t, double z) {
+    if (!init_) { est_ = z; rate_ = 0; tEst_ = t; out_ = z; tOut_ = t; init_ = true; locked_ = true; missRun_ = 0; inno_.clear(); nAcc_ = 1; return true; }
+    const double dt = std::clamp(t - tEst_, 0.05, 5.0);
+    const double p = est_ + rate_ * dt, r = z - p;
+    const double a = nAcc_ < 4 ? 0.6 : 0.3, b = nAcc_ < 4 ? 0.15 : 0.04;
+    est_ = p + a * r;
+    rate_ = std::clamp(rate_ + b / dt * r, -20.0, 20.0);
+    tEst_ = t;
+    inno_.push_back(r);
+    if (inno_.size() > 16) inno_.erase(inno_.begin());
+    nAcc_++; missRun_ = 0; locked_ = true;
+    return true;
+}
+
+bool BeaconTracker::update(double t, const BeaconMeas m[2]) {
+    const bool g0 = m[0].ok, g1 = m[1].ok;
+    if (!g0 && !g1) { miss(t); return false; }
+    if (init_) {
+        const double p = est_ + rate_ * std::clamp(t - tEst_, 0.0, 30.0), gate = gateHz();
+        const bool in0 = m[0].ok && std::fabs(m[0].errHz - p) <= gate, in1 = m[1].ok && std::fabs(m[1].errHz - p) <= gate;
+        if (in0 || in1) {
+            double z = in0 ? m[0].errHz : m[1].errHz;
+            if (in0 && in1) z = std::fabs(m[0].errHz - m[1].errHz) <= 6 ? 0.5 * (m[0].errHz + m[1].errHz) : std::fabs(m[0].errHz - p) <= std::fabs(m[1].errHz - p) ? m[0].errHz : m[1].errHz;   // two that disagree: the one nearer the prediction (the other has a carrier on it)
+            candN_ = 0;
+            return accept(t, z);
+        }
+    }
+    // no estimate yet, or both beacons are off the prediction: a candidate for a new level, taken when they keep agreeing
+    const bool two = g0 && g1 && std::fabs(m[0].errHz - m[1].errHz) < 12;
+    if (g0 && g1 && !two) { candN_ = 0; miss(t); return false; }      // the beacons disagree: something else than the beacons
+    const double z = two ? 0.5 * (m[0].errHz + m[1].errHz) : g0 ? m[0].errHz : m[1].errHz;
+    if (candN_ > 0 && std::fabs(z - candSum_ / candN_) < 15) { candN_++; candSum_ += z; candTwo_ = candTwo_ && two; }
+    else { candN_ = 1; candSum_ = z; candTwo_ = two; }
+    const int need = init_ ? (candTwo_ ? 4 : 10) : (candTwo_ ? 3 : 5);
+    if (candN_ >= need) {
+        const double v = candSum_ / candN_;
+        candN_ = 0;
+        if (init_) { est_ = v; tEst_ = t; inno_.clear(); nAcc_ = 4; missRun_ = 0; locked_ = true; return true; }   // a step: keep the drift, restart the gate
+        accept(t, v);
+        return true;
+    }
+    miss(t);
+    return false;
+}
+
+double BeaconTracker::value(double t) {
+    if (!init_) return 0;
+    const double coast = std::clamp(t - tEst_, 0.0, 30.0);   // the drift is carried on for up to 30 s without a measurement
+    const double target = est_ + rate_ * coast;
+    const double dt = std::max(0.0, t - tOut_);
+    tOut_ = std::max(tOut_, t);
+    const double lim = kSlewHzPerSec * dt;
+    out_ += std::clamp(target - out_, -lim, lim);
+    return out_;
+}
+
 bool slopePerMin(const std::vector<double>& t, const std::vector<double>& v, double& perMin) {
     const size_t n = std::min(t.size(), v.size());
     if (n < 3) return false;

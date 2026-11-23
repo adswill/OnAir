@@ -3678,3 +3678,7 @@ Pop out	Destacar
 DAB picture	Imagem DAB
 Double-click: the picture in a window of its own	Clique duplo: a imagem numa janela própria
 Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto abre cada portadora que transmite. Com Listen ouve uma portadora vista. Guia: docs/AIRBAND-AUTO.md
+Spectrum detail: normal	Detalhe do espectro: normal
+Spectrum detail: fine	Detalhe do espectro: fino
+Spectrum detail: finest	Detalhe do espectro: muito fino
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Com que finura o espectro de banda estreita e a cascata são resolvidos: fino tem metade da largura de bin do normal, muito fino um quarto, assim as portadoras CW e digitais se destacam e estações próximas se separam. Usa um pouco mais de CPU e o travamento reinicia quando você muda.

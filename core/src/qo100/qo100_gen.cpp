@@ -17,6 +17,13 @@ double qo100SynthErrHz(const SynthConfig& c, double t) {
     return kQo100SynthErrHz + c.modeVal[0] + drift * t / 60.0;
 }
 
+double qo100SynthErrHz(const SynthConfig& c, const Qo100SynthOpts& o, double t) {
+    double e = qo100SynthErrHz(c, t);
+    e += o.jitterHz * (std::sin(2 * M_PI * 0.7 * t) + 0.6 * std::sin(2 * M_PI * 0.23 * t + 1.0));
+    if (o.stepHz != 0 && t >= o.stepAtSec) e += o.stepHz;
+    return e;
+}
+
 double qo100SynthCentreHz(const SynthConfig& c, double fs) {
     return c.modeVal[2] > 0 ? c.modeVal[2] * 1e6 : fs >= 9e6 ? kWholeCentreHz : kNarrowCentreHz;
 }
@@ -25,7 +32,7 @@ namespace {
 
 class Qo100Synth : public ModeSynth {
 public:
-    Qo100Synth(const SynthConfig& c, double fs) : c_(c), fs_(fs), fft_(kL) {
+    Qo100Synth(const SynthConfig& c, const Qo100SynthOpts& o, double fs) : c_(c), o_(o), fs_(fs), fft_(kL) {
         rc_ = qo100SynthCentreHz(c, fs);
         inv_ = invertedLo(c.modeVal[3] > 0 ? c.modeVal[3] * 1e6 : 9750e6);
         quiet_ = c.modeOpt[0] == 1;
@@ -49,6 +56,7 @@ public:
             }
             // the carriers: CW beacons, PSK beacon, test carrier, then 4 SSB stations of 3 tones
             add(kLowBeaconHz, 0.006f, 0); add(kHighBeaconHz, 0.006f, 0); add(kPskBeaconHz, 0.005f, 1); add(kQo100TestCarrierHz, 0.004f, 0);
+            if (o_.sweepHzPerSec != 0) { sweepIdx_ = (int)rr_.size(); add(kLowBeaconHz + o_.sweepStartHz, 0.02f, 0); }
             static const double kAud[3] = {450, 1100, 2100};
             for (int s = 0; s < 4; s++) for (int j = 0; j < 3; j++) add(kQo100SsbDialsHz[s] + kAud[j] + 37 * s, 0.0022f, 2 + s);
         }
@@ -68,7 +76,7 @@ public:
                     const uint64_t sym = (uint64_t)ph;
                     if (sym != pskSym_) { pskSym_ = sym; pskPrev_ = pskCur_; lfsr_ = lfsr_ * 6364136223846793005ull + 1442695040888963407ull; pskCur_ = (lfsr_ >> 63) ? 1.f : -1.f; }
                     const double u = ph - (double)sym;
-                    am_[(size_t)pskIdx_] = pskAmp_ * (u < 0.25 ? pskPrev_ + (pskCur_ - pskPrev_) * (float)(u * 4) : pskCur_);
+                    am_[(size_t)pskIdx_] = pskGain_ * pskAmp_ * (u < 0.25 ? pskPrev_ + (pskCur_ - pskPrev_) * (float)(u * 4) : pskCur_);
                 }
                 for (size_t k = 0; k < nt; k++) {
                     accR += am_[k] * rr_[k]; accI += am_[k] * ri_[k];
@@ -94,12 +102,16 @@ private:
     }
     // every kSub samples: the oscillator's error now, the steps of the carriers, the SSB envelopes, renormalised rotators
     void subBlock() {
-        const double t = ((double)n_ + kSub / 2) / fs_, e = qo100SynthErrHz(c_, t);
+        const double t = ((double)n_ + kSub / 2) / fs_, e = qo100SynthErrHz(c_, o_, t);
+        const bool drop = o_.dropSec > 0 && t >= o_.dropAtSec && t < o_.dropAtSec + o_.dropSec;
+        pskGain_ = drop ? 0.f : 1.f;
+        if (sweepIdx_ >= 0) rf_[(size_t)sweepIdx_] = kLowBeaconHz + o_.sweepStartHz + o_.sweepHzPerSec * t;
         for (size_t k = 0; k < rr_.size(); k++) {
             const double w = 2 * M_PI * (rf_[k] - e - rc_) / fs_;
             sr_[k] = (float)std::cos(w); si_[k] = (float)std::sin(w);
             const float m = std::sqrt(rr_[k] * rr_[k] + ri_[k] * ri_[k]);
             if (m > 0) { rr_[k] /= m; ri_[k] /= m; }
+            if (k < 2) am_[k] = drop ? 0.f : base_[k];   // the two CW beacons
             if (kind_[k] >= 2) {   // a syllable rhythm, each station its own
                 const int s = kind_[k] - 2;
                 const double v = std::sin(2 * M_PI * (2.3 + 0.4 * s) * t + 1.7 * s + 0.9 * (double)(k % 3));
@@ -125,6 +137,9 @@ private:
         pos_ = 0;
     }
     SynthConfig c_;
+    Qo100SynthOpts o_;
+    int sweepIdx_ = -1;
+    float pskGain_ = 1.f;
     double fs_, rc_ = 0, sigma_ = 0.05;
     bool inv_ = false, quiet_ = false;
     Fft fft_;
@@ -143,9 +158,11 @@ private:
 
 } // namespace
 
-std::unique_ptr<ModeSynth> makeQo100Synth(const SynthConfig& cfg, double sampleRate) {
+std::unique_ptr<ModeSynth> makeQo100SynthEx(const SynthConfig& cfg, const Qo100SynthOpts& o, double sampleRate) {
     if (sampleRate <= 0) return nullptr;
-    return std::make_unique<Qo100Synth>(cfg, sampleRate);
+    return std::make_unique<Qo100Synth>(cfg, o, sampleRate);
 }
+
+std::unique_ptr<ModeSynth> makeQo100Synth(const SynthConfig& cfg, double sampleRate) { return makeQo100SynthEx(cfg, Qo100SynthOpts(), sampleRate); }
 
 } // namespace dect2

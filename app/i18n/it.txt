@@ -3679,3 +3679,7 @@ Pop out	Stacca
 DAB picture	Immagine DAB
 Double-click: the picture in a window of its own	Doppio clic: l'immagine in una finestra propria
 Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto apre ogni portante che trasmette. Con Listen ascolti una portante vista. Guida: docs/AIRBAND-AUTO.md
+Spectrum detail: normal	Dettaglio spettro: normale
+Spectrum detail: fine	Dettaglio spettro: fine
+Spectrum detail: finest	Dettaglio spettro: finissimo
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Quanto finemente sono risolti lo spettro a banda stretta e la cascata: fine ha metà della larghezza di bin di normale, finissimo un quarto, così le portanti CW e digitali risaltano e le stazioni vicine si separano. Usa un po' più di CPU e l'aggancio riparte quando lo cambi.

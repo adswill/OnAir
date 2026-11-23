@@ -3719,3 +3719,7 @@ Pop out	Atsieti
 DAB picture	DAB paveikslas
 Double-click: the picture in a window of its own	Dukart spustelėkite: paveikslas atskirame lange
 Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto atidaro kiekvieną siunčiančią nešlį. Mygtuku Listen išgirsite pamatytą nešlį. Vadovas: docs/AIRBAND-AUTO.md
+Spectrum detail: normal	Spektro detalumas: įprastas
+Spectrum detail: fine	Spektro detalumas: smulkus
+Spectrum detail: finest	Spektro detalumas: smulkiausias
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Kaip smulkiai skiriamas siaurajuostis spektras ir krioklys: smulkus turi pusę įprasto bino pločio, smulkiausias ketvirtadalį, todėl CW ir skaitmeninės nešlės geriau išsiskiria, o artimos stotys atsiskiria. Reikia kiek daugiau CPU, o pakeitus užraktas paleidžiamas iš naujo.

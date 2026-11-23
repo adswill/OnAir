@@ -588,3 +588,7 @@ Pop out
 DAB picture
 Double-click: the picture in a window of its own
 Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md
+Spectrum detail: normal
+Spectrum detail: fine
+Spectrum detail: finest
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.

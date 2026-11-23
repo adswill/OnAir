@@ -4626,3 +4626,7 @@ Pop out	Auslagern
 DAB picture	DAB-Bild
 Double-click: the picture in a window of its own	Doppelklick: das Bild in einem eigenen Fenster
 Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto öffnet jeden Träger, der sendet. Mit Listen hören Sie einen gesehenen Träger. Anleitung: docs/AIRBAND-AUTO.md
+Spectrum detail: normal	Spektrumdetail: normal
+Spectrum detail: fine	Spektrumdetail: fein
+Spectrum detail: finest	Spektrumdetail: feinst
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Wie fein das Schmalband-Spektrum und der Wasserfall aufgelöst werden: fein hat die halbe Binbreite von normal, feinst ein Viertel, sodass CW- und Digitalträger deutlicher hervortreten und dicht beieinander liegende Stationen getrennt werden. Kostet etwas mehr CPU; beim Ändern startet die Verriegelung neu.

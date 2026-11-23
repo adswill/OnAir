@@ -3726,3 +3726,7 @@ Pop out	Ayır
 DAB picture	DAB resmi
 Double-click: the picture in a window of its own	Çift tıklama: resim kendi penceresinde
 Auto opens every carrier that transmits. Use Listen to hear a carrier you see. Guide: docs/AIRBAND-AUTO.md	Auto, yayın yapan her taşıyıcıyı açar. Listen ile görülen bir taşıyıcıyı dinleyebilirsiniz. Kılavuz: docs/AIRBAND-AUTO.md
+Spectrum detail: normal	Spektrum ayrıntısı: normal
+Spectrum detail: fine	Spektrum ayrıntısı: ince
+Spectrum detail: finest	Spektrum ayrıntısı: en ince
+How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Dar bant spektrumu ve şelalenin ne kadar ince çözüldüğü: ince, normalin bin genişliğinin yarısını, en ince dörtte birini kullanır; böylece CW ve sayısal taşıyıcılar belirginleşir, yakın istasyonlar ayrılır. Biraz daha fazla CPU kullanır ve değiştirince kilitlenme yeniden başlar.
