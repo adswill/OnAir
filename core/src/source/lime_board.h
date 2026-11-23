@@ -6,6 +6,7 @@
 #pragma once
 #include <cctype>
 #include <cstring>
+#include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
@@ -79,6 +80,22 @@ inline int limeAutoAntenna(const LimeBoard& b, double hz, const std::vector<std:
 // Overall RX gain the UI hands over (0-73 dB) as LMS_SetGaindB wants it. LimeSuite splits it over LNA (0-30 dB), TIA (0-12 dB) and PGA
 // (-12 to 19 dB) itself, so one slider covers all three stages.
 inline unsigned limeGainDb(double db) { return (unsigned)(db < 0 ? 0 : db > 73 ? 73 : (int)(db + 0.5)); }
+
+// HF on a radio whose LO stops short of it (the Mini's LMS7002M tunes from about 10 MHz): the LO goes up to the lowest frequency it
+// reaches (at least a quarter of the sample rate above the wanted one, so the LO leak sits outside the signal) and the chip's NCO shifts
+// the wanted frequency down to baseband, so the app sees the frequency it asked for. The NCO works ahead of the decimation: it can move by
+// about twice the sample rate. nco = false: not needed (the LO reaches it) or not possible (rate too low), then the LO is asked for f as before.
+struct LimeNcoPlan { bool nco = false; double loHz = 0, ncoHz = 0; };
+inline LimeNcoPlan limeHfPlan(double f, double minLoHz, double rate) {
+    LimeNcoPlan p;
+    p.loHz = f;
+    if (minLoHz <= 0 || f >= minLoHz || rate <= 0) return p;
+    double lo = std::max(minLoHz, f + 0.25 * rate);
+    lo = std::min(lo, f + 1.9 * rate);
+    if (lo < minLoHz) return p;
+    p.nco = true; p.loHz = lo; p.ncoHz = lo - f;
+    return p;
+}
 
 // Said when the radio is found but will not open or initialise: the gateware / firmware in the board has to match the library
 // (LimeUtil --update loads the images that came with that library); on Windows the Mini needs FTDI's driver, not WinUSB (Zadig).

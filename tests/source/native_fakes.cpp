@@ -190,6 +190,8 @@ EXPORT int LMS_EnableChannel(void*, bool tx, size_t ch, bool e) { rec("lime.chan
 EXPORT int LMS_SetSampleRate(void*, double r, size_t) { rec("lime.rate", r); return 0; }
 EXPORT int LMS_GetSampleRateRange(void*, bool, lms_range_t* r) { r->min = 100e3; r->max = 61.44e6; r->step = 0; return 0; }
 EXPORT int LMS_SetLOFrequency(void*, bool, size_t, double f) { rec("lime.freq", f); return 0; }
+EXPORT int LMS_SetNCOFrequency(void*, bool, size_t, const double* f, double) { rec("lime.nco", f[0]); rec("lime.ncoCalls", std::max(0.0, fake_state("lime.ncoCalls")) + 1); return 0; }
+EXPORT int LMS_SetNCOIndex(void*, bool, size_t, int, bool down) { rec("lime.ncoDown", down ? 1 : 0); return 0; }
 EXPORT int LMS_GetAntennaList(void*, bool, size_t, char (*l)[16]) {
     const char* m = getenv("FAKE_LIME_MODEL");
     const bool mini = m && strstr(m, "mini");
