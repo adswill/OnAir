@@ -64,6 +64,8 @@ int main() {
     Atsc3Receiver rx;
     diag::setTestSink(sink);
     prof::stageProfEnable(true);
+    uint64_t preSum = 0, backSum = 0;
+    int preN = 0, backN = 0;
     for (int f = 0; f < (int)pattern.size(); f++) {
         const bool good = pattern[(size_t)f] == 'G';
         std::vector<cf32> r(tx.size() + 200, cf32(0, 0));
@@ -94,14 +96,21 @@ int main() {
             snprintf(m.data(), m.size(), "frame %d: fragile PLP backed off, at most %d demapper runs (%llu)", f, 2 * (nRobust + probe), (unsigned long long)demaps);
             CHECK(demaps <= (uint64_t)(2 * (nRobust + probe)), m.data());
         }
-        // not yet backed off (and never after a short fade): every word of the fragile PLP is tried
+        // not yet backed off (and never after a short fade): the fragile PLP still costs the decoder more than a backed-off one would. How much more
+        // depends on the Type B guard of Bicm::decodeBatch (a hopeless batch is dropped after a few failed words, so a dead PLP no longer costs all
+        // its words in every frame, only about a third), so the test does not count words: it asks for more demapper runs than the robust PLP plus
+        // the probe blocks, which is what a backed-off frame costs, and compares the averages below.
         if (!good && f < firstProbed) {
-            snprintf(m.data(), m.size(), "frame %d: fragile PLP not backed off yet, all its words tried (%llu demapper runs)", f, (unsigned long long)demaps);
-            CHECK(demaps >= (uint64_t)(nRobust + nFragile), m.data());
+            snprintf(m.data(), m.size(), "frame %d: fragile PLP not backed off yet, still costs more than a backed-off frame (%llu demapper runs)", f, (unsigned long long)demaps);
+            CHECK(demaps > (uint64_t)(nRobust + probe), m.data());
+            preSum += demaps; preN++;
         }
+        if (!good && f >= firstProbed) { backSum += demaps; backN++; }
     }
     prof::stageProfEnable(false);
     diag::setTestSink(nullptr);
+    // the saving: a dead PLP costs clearly less once it is backed off (the guard alone, which the first frames show, is not the backoff)
+    CHECK(preN > 0 && backN > 0 && backSum * (uint64_t)preN * 4 < preSum * (uint64_t)backN * 3, "a backed-off frame costs clearly fewer demapper runs (under 3/4) than one before the backoff");
     CHECK(backoffLines.load() == 1, "one log line when the fragile PLP is backed off");
     printf("atsc3 plp backoff: %s\n", fails ? "FAILED" : "ok");
     return fails ? 1 : 0;
