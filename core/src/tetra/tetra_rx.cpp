@@ -4,6 +4,7 @@
 // TETRA network information receiver (tetra_rx.h): blocks of input, 25 kHz carriers found in the spectrum, slot synchronised on the
 // training sequences, the broadcast channels decoded.
 #include "dect2/common/thread_name.h"
+#include "dect2/common/threadpool.h"
 #include "dect2/wirecap/wire.h"
 #include "dect2/tetra/tetra_rx.h"
 #include "dect2/tetra/tetra_sds.h"
@@ -554,37 +555,61 @@ CarrierDecode decodeCarrier(const cf32* x, size_t n, int kMcc, int kMnc, int kCc
     // multiframe (frame 18 carries no speech) and the traffic burst of the frame (index into traffic, -1 none)
     struct SlotFrame { long speech; int burst; };
     std::vector<SlotFrame> frames[5];
+    // The physical layer of each pi/4-DQPSK slot (the coherent detector, the access assignment and the turbo passes against the slot's own
+    // signalling blocks) reads only the slot and the cell's scrambling code, and was most of the decoder's time on a capture with several
+    // carriers (the TETRA thread fell behind real time and dropped samples between captures). It runs on the shared pool, one slot per job into
+    // its own entry; the loop below takes the entries in slot order, so the output is the same for any thread count.
+    struct SlotPhy { std::vector<float> llr; int usage1 = -1, usage2 = -1; bool second = false; };
+    std::vector<SlotPhy> phy(slots.size());
+    ThreadPool::shared().parallelFor(slots.size(), [&](size_t i) {
+        const Slot& sl = slots[i];
+        if (sl.f.mid < 0.5f || sl.f.total < 1.0f || isP8(sl.f.type)) return;
+        int tn, fn, mn;
+        frameOf(i, tn, fn, mn);
+        SlotPhy& p = phy[i];
+        p.llr.resize((size_t)kSlotBits);
+        std::vector<float> apri;   // this job's own a-priori (softBits shares one vector)
+        trainingApri(sl.f.type, kZ0, (int)sl.z.size(), apri);
+        coherentLlr(sl.z, kZ0, p.llr.data(), apri.data());
+        auto aach = [&](int& usage) {
+            float bb[30];
+            if (sl.f.type == Burst::Sync) std::copy(p.llr.begin() + kSbBb, p.llr.begin() + kSbBb + 30, bb);
+            else { std::copy(p.llr.begin() + kNbBb1, p.llr.begin() + kNbBb1 + 14, bb); std::copy(p.llr.begin() + kNbBb2, p.llr.begin() + kNbBb2 + 16, bb + 14); }
+            uint16_t aa = 0;
+            if (!decodeAach(bb, scr, aa)) return false;
+            usage = aachDlUsage(aa, fn == 18);
+            return true;
+        };
+        aach(p.usage1);
+        std::vector<BlockRef> br;   // the signalling blocks of the slot, decoded together with the demodulator (never traffic)
+        if (sl.f.type == Burst::Sync) br.push_back({kSbBkn2, 216, 0, 0, &kSchHd, scr});
+        else if (sl.f.type == Burst::NormalHalf) { br.push_back({kNbBkn1, 216, 0, 0, &kSchHd, scr}); br.push_back({kNbBkn2, 216, 0, 0, &kSchHd, scr}); }
+        else if (p.usage1 >= 0 && p.usage1 < 4) br.push_back({kNbBkn1, 216, kNbBkn2, 216, &kSchF, scr});
+        refineSlot(sl.z, kZ0, sl.f.type, br, p.llr.data());
+        if (p.usage1 < 0 && !br.empty()) p.second = aach(p.usage2);   // the access assignment again, from the refined bits
+    });
     for (size_t i = 0; i < slots.size(); i++) {
         const Slot& sl = slots[i];
         int tn, fn, mn;
         frameOf(i, tn, fn, mn);
         if (tn >= 1 && fn <= 17) frames[tn].push_back({(long)(mn - 1) * 17 + fn - 1, -1});
         if (sl.f.mid < 0.5f || sl.f.total < 1.0f) continue;
-        float bb[30];
         std::vector<float> p8a, p8b;
-        if (isP8(sl.f.type)) { p8a.resize(324); p8b.resize(324); softBitsP8(sl, p8a.data(), bb, p8b.data()); out.p8Slots++; }
-        else {
-            softBits(sl, llr.data());
-            if (sl.f.type == Burst::Sync) std::copy(llr.begin() + kSbBb, llr.begin() + kSbBb + 30, bb);
-            else { std::copy(llr.begin() + kNbBb1, llr.begin() + kNbBb1 + 14, bb); std::copy(llr.begin() + kNbBb2, llr.begin() + kNbBb2 + 16, bb + 14); }
-        }
-        uint16_t aa = 0;
         int usage = -1;
-        if (decodeAach(bb, scr, aa)) {
-            usage = aachDlUsage(aa, fn == 18);
-            if (tn >= 1 && usage >= 0) out.tsUsage[tn - 1] = usage;
-        }
-        if (!isP8(sl.f.type)) {   // the signalling blocks of the slot, decoded together with the demodulator (never traffic)
-            std::vector<BlockRef> br;
-            if (sl.f.type == Burst::Sync) br.push_back({kSbBkn2, 216, 0, 0, &kSchHd, scr});
-            else if (sl.f.type == Burst::NormalHalf) { br.push_back({kNbBkn1, 216, 0, 0, &kSchHd, scr}); br.push_back({kNbBkn2, 216, 0, 0, &kSchHd, scr}); }
-            else if (usage >= 0 && usage < 4) br.push_back({kNbBkn1, 216, kNbBkn2, 216, &kSchF, scr});
-            refineSlot(sl.z, kZ0, sl.f.type, br, llr.data());
-            if (usage < 0 && !br.empty()) {   // the access assignment again, from the refined bits
-                if (sl.f.type == Burst::Sync) std::copy(llr.begin() + kSbBb, llr.begin() + kSbBb + 30, bb);
-                else { std::copy(llr.begin() + kNbBb1, llr.begin() + kNbBb1 + 14, bb); std::copy(llr.begin() + kNbBb2, llr.begin() + kNbBb2 + 16, bb + 14); }
-                if (decodeAach(bb, scr, aa)) { usage = aachDlUsage(aa, fn == 18); if (tn >= 1 && usage >= 0) out.tsUsage[tn - 1] = usage; }
+        if (isP8(sl.f.type)) {
+            float bb[30];
+            p8a.resize(324); p8b.resize(324); softBitsP8(sl, p8a.data(), bb, p8b.data()); out.p8Slots++;
+            uint16_t aa = 0;
+            if (decodeAach(bb, scr, aa)) {
+                usage = aachDlUsage(aa, fn == 18);
+                if (tn >= 1 && usage >= 0) out.tsUsage[tn - 1] = usage;
             }
+        } else {   // the slot's physical layer from the pool, its access assignment written as the serial loop wrote it
+            SlotPhy& p = phy[i];
+            llr.swap(p.llr);
+            usage = p.usage1;
+            if (tn >= 1 && usage >= 0) out.tsUsage[tn - 1] = usage;
+            if (p.second) { usage = p.usage2; if (tn >= 1 && usage >= 0) out.tsUsage[tn - 1] = usage; }
         }
         static thread_local FragReassembler localFrag;
         auto block = [&](const float* l, const ChanSpec& c) {
@@ -805,11 +830,12 @@ std::vector<std::vector<cf32>> tetra::channelizeMany(const cf32* x, size_t n, do
     for (auto& b : bufs) { b.clear(0); ptrs.push_back(&b); }
     constexpr size_t kChunk = size_t(1) << 20;   // the channeliser keeps only what the next segment needs: the capture is never copied whole
     for (size_t i = 0; i < n; i += kChunk) fd.process(x + i, std::min(kChunk, n - i), ptrs);
-    for (size_t k = 0; k < offsets.size(); k++) {
+    // each carrier's resampling reads only its own buffer and writes only its own slot: on the shared pool, the same output for any thread count
+    ThreadPool::shared().parallelFor(offsets.size(), [&](size_t k) {
         const size_t m = (size_t)(bufs[k].end() - bufs[k].begin());
-        if (m < 64) continue;
+        if (m < 64) return;
         out[k] = channelize(bufs[k].at(bufs[k].begin()), m, fd.outRate(k), 0.0);   // already centred: only the resampling to 4 samples per symbol is left
-    }
+    });
     return out;
 }
 
@@ -929,6 +955,15 @@ struct TetraReceiver::Impl {
         std::vector<std::vector<cf32>> pre;
         const bool shared = !single.load() && fs >= kSharedFromHz && car.size() >= kSharedMinCarriers;
         if (shared) { std::vector<double> offs; for (const auto& c : car) offs.push_back(c.off); pre = tetra::channelizeMany(x.data(), x.size(), fs, offs); }
+        // A narrow capture with several carriers: each carrier's mixer, filter and resampler over the whole capture was half of this thread's
+        // time, one carrier after the other, and the decoder fell behind real time (samples dropped between captures, voice cut every few
+        // seconds). channelize() reads only the capture and writes only its own slot, so the carriers run on the shared pool: the same samples
+        // for any thread count (DECT2_THREADS=0 runs them here in order).
+        const bool perCarrier = !shared && car.size() > 1;
+        if (perCarrier) {
+            pre.assign(car.size(), {});
+            ThreadPool::shared().parallelFor(car.size(), [&](size_t i) { pre[i] = tetra::channelize(x.data(), x.size(), fs, car[i].off); });
+        }
         const int tnWant = wantTn.load();
         const double carWant = wantCarrierHz.load();
         bool gaveVoice = false;
@@ -955,7 +990,8 @@ struct TetraReceiver::Impl {
                     break;
                 }
             }
-            const std::vector<cf32> s = shared && ci < pre.size() && !pre[ci].empty() ? std::move(pre[ci]) : tetra::channelize(x.data(), x.size(), fs, c.off);
+            const std::vector<cf32> s = perCarrier ? std::move(pre[ci])   // channelize()'s own result for this carrier, empty included
+                                        : shared && ci < pre.size() && !pre[ci].empty() ? std::move(pre[ci]) : tetra::channelize(x.data(), x.size(), fs, c.off);
             if (callTrackers.size() > 64) { callTrackers.clear(); timelines.clear(); }
             const long key = callKey(center, c.off);
             int voiceTn = 0;

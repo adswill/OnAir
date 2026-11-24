@@ -133,7 +133,12 @@ int main() {
     {
         const Result r = run(2e6, 6, 30);
         const int ok = checkAll(r.t, 2e6, 6, "2 Msps");
-        printf("   2.0 Msps: %d of 6 carriers decoded\n", ok);
+        // the carriers are cut out on the shared pool: the digest must not depend on DECT2_THREADS (compare a run with DECT2_THREADS=0)
+        uint64_t dig = 1469598103934665603ull;
+        for (const auto& c : r.t.cells) for (uint64_t v : {(uint64_t)std::llround(c.freqHz), (uint64_t)c.colourCode, (uint64_t)c.blocksOk, (uint64_t)c.blocksBad})
+            dig = (dig ^ v) * 1099511628211ull;
+        printf("   2.0 Msps: %d of 6 carriers decoded, decode %.2f s for a %.1f s capture, digest %016llx\n", ok, r.decodeSec,
+               TetraReceiver::kCaptureSec, (unsigned long long)dig);
     }
     // noise only at 10 Msps: no cell, no crash
     {
