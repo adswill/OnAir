@@ -90,15 +90,19 @@ Counts are generated from the mode list in the app (`tools/release/gen_changelog
 
 Every receiver is built from published specifications and tested on generated signals and, where recordings exist, on real captures. The full numbered list is [MODES.md](MODES.md); notes per family are in [docs/MODES-DETAIL.md](docs/MODES-DETAIL.md). The KA family are modes designed for OnAir, measured in simulation only.
 
-## What is new in 4.5
+## What is new in 4.6
 
-The full list, with the known limits, is in [docs/CHANGELOG-4.5.md](docs/CHANGELOG-4.5.md) and in the 4.5 release notes on the [releases page](https://github.com/adswill/OnAir/releases/latest). Read the **Known limits** section: nearly everything new was tested on generated signals, not on the air.
+The full list, with the known limits, is in [docs/CHANGELOG-4.6.md](docs/CHANGELOG-4.6.md) and in the 4.6 release notes on the [releases page](https://github.com/adswill/OnAir/releases/latest). Read the **Known limits** section: nearly everything new was tested on generated signals, not on the air.
 
-- **Airband**: automatic, with no channel list and no airport import; click a carrier on the spectrum to listen; hopping across the band.
-- **Analog TV**: a video enhancer (Off, Light, Full; 720p or 1080p), 16:9 files without the vertical squeeze, automatic letterbox.
-- **QO-100**: band plan on the spectrum, level against the beacon, plain status, LNB presets and memory, DATV quality.
-- **Tests**: more than 100 modes now play their own signal and are checked on its content.
-- **Fixes**: balloon uploads only while a sonde is decoded, DRM sound and USB radios on Android, the General receiver tuning step, the Type II band plan.
+- **Finding modes**: the mode list is split into 35 groups.
+- **Sharing**: export a whole session as one zip; a captioned spectrum and waterfall snapshot ready to post.
+- **Listening**: optional sound cues for lock, lost lock, signal found and pass ended; a bigger DAB picture window.
+- **Voice codecs you install yourself**: on Android (Settings > Codecs) and in the headless server (TETRA, TETRA DMO, Yaesu System Fusion).
+- **Fixes**: analog transmit modulations, the Mesh Custom preset, map zoom with a Magic Mouse, ATSC 3.0 service switching, a macOS crash with the SoapySDRPlay module, a steadier QO-100 beacon lock.
+
+## What was new in 4.5
+
+See [docs/CHANGELOG-4.5.md](docs/CHANGELOG-4.5.md): an airband scanner with no channel list, an analog TV video enhancer and letterbox, QO-100 band plan and beacon level, DATV quality, sonde uploads only while a sonde is decoded, DRM sound on Android.
 
 ## What was new in 4.4
 
@@ -142,7 +146,7 @@ The full list: [docs/FEATURES.md](docs/FEATURES.md) and [docs/TOOLS-AND-NOTES.md
 - [Codecs](docs/CODECS.md) (voice and audio codecs you install yourself) and [optional libraries](docs/OPTIONAL-LIBRARIES.md)
 - [Plugins](docs/plugins.md) and the [plugin SDK](docs/PLUGIN-SDK.md)
 - [Updates and Discord status](docs/UPDATES.md)
-- Release history: [4.5](docs/CHANGELOG-4.5.md), [4.4](docs/CHANGELOG-4.4.md), [4.3](docs/CHANGELOG-4.3.md), [4.2](docs/CHANGELOG-4.2.md), [4.1](docs/CHANGELOG-4.1.md), [4.0](docs/CHANGELOG-4.0.md) and the [releases page](https://github.com/adswill/OnAir/releases); older notes in [docs/CHANGELOG-0.2.md](docs/CHANGELOG-0.2.md)
+- Release history: [4.6](docs/CHANGELOG-4.6.md), [4.5](docs/CHANGELOG-4.5.md), [4.4](docs/CHANGELOG-4.4.md), [4.3](docs/CHANGELOG-4.3.md), [4.2](docs/CHANGELOG-4.2.md), [4.1](docs/CHANGELOG-4.1.md), [4.0](docs/CHANGELOG-4.0.md) and the [releases page](https://github.com/adswill/OnAir/releases); older notes in [docs/CHANGELOG-0.2.md](docs/CHANGELOG-0.2.md)
 - The wiki, a page per mode: [on-air.dev/docs](https://on-air.dev/docs/)
 
 > [!NOTE]
