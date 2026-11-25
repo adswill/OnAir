@@ -130,7 +130,7 @@ void lmtAndStsid() {
     // two PLPs: PLP 0 with one flow (with a SID), PLP 5 with two flows (the second compressed, with a context id)
     const std::vector<uint8_t> lmt = {
         (uint8_t)((1 << 2) | 3),
-        (uint8_t)(0 << 2 | 3), 1,
+        3, 1,  // PLP 0 (PLP_ID 0 << 2, reserved bits 11), one flow
         239, 255, 5, 1, 239, 255, 5, 1, 0x0F, 0xA0, 0x0B, 0xB8, 0x80, 7,
         (uint8_t)(5 << 2 | 3), 2,
         10, 1, 1, 9, 239, 255, 9, 9, 0x0F, 0xA0, 0x13, 0x88, 0x00,
