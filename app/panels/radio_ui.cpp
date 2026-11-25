@@ -69,6 +69,24 @@ bool settingRow(const RadioSetting& r, std::string& v, bool vertical) {
         }
         break;
     }
+    case RadioSetting::Text: {
+        // typed text is taken when the field is left (not at every key), as the numbers are; a password is shown as dots
+        static std::map<std::string, std::string> editing;
+        auto it = editing.find(r.key);
+        const std::string shown = it != editing.end() ? it->second : cur;
+        std::vector<char> buf(512, 0);
+        snprintf(buf.data(), buf.size(), "%s", shown.c_str());
+        ImGui::TextDisabled("%s", r.label.c_str());
+        if (ImGui::IsItemHovered() && !r.help.empty()) ImGui::SetTooltip("%s", r.help.c_str());
+        ImGui::SetNextItemWidth(w);
+        if (ImGui::InputText("##v", buf.data(), buf.size(), r.secret ? ImGuiInputTextFlags_Password : 0)) editing[r.key] = buf.data();
+        it = editing.find(r.key);
+        if (it != editing.end() && !ImGui::IsItemActive()) {
+            if (it->second != cur) { v = it->second; changed = true; }
+            editing.erase(it);
+        }
+        break;
+    }
     }
     if (r.type == RadioSetting::Bool && ImGui::IsItemHovered() && !r.help.empty()) ImGui::SetTooltip("%s", r.help.c_str());
     ImGui::PopID();

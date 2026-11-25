@@ -126,7 +126,8 @@ int main(int argc, char** argv) {
         CHECK(ds && ds->type == RadioSetting::Choice && ds->def == "0" && ds->values.size() == 3 && ds->names.size() == 3 && ds->names[2] == "Q-ADC", "direct_samp setting: %s", ds ? ds->def.c_str() : "missing");
         CHECK(tm && tm->type == RadioSetting::Bool && tm->def == "0", "testmode setting: default %s (the radio's value, not the info's)", tm ? tm->def.c_str() : "missing");
         CHECK(!find("soapy.biastee") && d.hasBiasTee, "the bias-tee is a radio setting (%d) or not offered (%d)", find("soapy.biastee") != nullptr, d.hasBiasTee);
-        CHECK(!find("soapy.label"), "a free-text setting is offered");
+        const RadioSetting* lb = find("soapy.label");
+        CHECK(lb && lb->type == RadioSetting::Text && lb->restart, "a free-text setting is not offered as a text field");
         IqRing ring(1 << 20);
         TuneSettings t2 = t;
         auto src = makeSource(d);

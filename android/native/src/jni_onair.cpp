@@ -146,6 +146,7 @@ std::string deviceJson(const DeviceInfo& d) {
                     ",\"minRate\":" + n(d.minRateHz) + ",\"biasTee\":" + (d.hasBiasTee ? "true" : "false") + ",\"settings\":[";
     bool first = true;
     for (const RadioSetting& r : d.settings) {
+        if (r.type == RadioSetting::Text) continue;   // free text (a host, a password): the Android settings list has no text field yet
         if (!first) s += ','; first = false;
         const char* type = r.type == RadioSetting::Bool ? "bool" : r.type == RadioSetting::Choice ? "choice" : "number";
         s += "{\"key\":" + q(r.key) + ",\"label\":" + q(r.label) + ",\"help\":" + q(r.help) + ",\"type\":\"" + type + "\",\"def\":" + q(r.def) +
