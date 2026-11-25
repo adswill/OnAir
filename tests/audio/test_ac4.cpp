@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 // AC-4 support of the ATSC 3.0 receiver (core/src/audio/ac4_dec.cpp, ac4_xcode.cpp, the AC-4 branch of atsc3_remux.cpp).
-//   test_ac4 [dir-with-a-stock-libavcodec-and-libavutil]
+//   test_ac4 [dir-with-a-stock-libavcodec-and-libavutil] [dir-with-the-libac4dec-stand-in]
 // There is no real AC-4 stream and no AC-4 decoder in this repository, so what is checked is everything around the decoder:
 //   - the signalling: codecs strings, MPD, the 'ac-4' sample entry and its 'dac4' box in an initialization segment
 //   - the loader: a folder without libraries, with broken files, with a FFmpeg that has no "ac4" decoder: all fail with a message
@@ -356,6 +356,82 @@ int main(int argc, char** argv) {
             CHECK(st.seen && !st.dropped && st.hasDecoder && st.decoded > 0 && st.channels == 2 && st.sampleRate == 48000, "the status counts the decoded frames");
         }
     }
+
+    // ---- libac4dec through its run-time entry points, with a stand-in (tests/audio/ac4dec_stub.c: no decoding, a 1 kHz tone) ----
+    const std::string stubDir = argc > 2 ? argv[2] : "";
+    if (stubDir.empty() || !fs::is_directory(stubDir)) printf("SKIP: no libac4dec stand-in folder given\n");
+    else {
+        ac4SetDecoderName("ac4");
+        ac4SetLibraryDir(stubDir);
+        Ac4LibInfo li = ac4Library(true);
+        printf("  libac4dec stand-in: %s, backend %s, version %s\n", li.path.c_str(), li.backend.c_str(), li.version.c_str());
+        CHECK(li.found && li.hasDecoder && li.backend == "libac4dec" && li.version == "stub", "libac4dec is found and named");
+        {
+            Ac4Decoder dec;
+            dec.setOutputChannels(6);
+            CHECK(dec.open() && dec.isOpen(), "it opens with the options OnAir gives (the stand-in refuses unknown ones)");
+            CHECK(dec.delayFrames() == 8 && dec.latencySamples() == 577, "the short live delay, and the QMF latency");
+            int ch = 0, rate = 0, first = -1;
+            std::vector<float> pcm;
+            const uint8_t au[16] = {0xAC};
+            for (int k = 0; k < 20; k++) {
+                const int n = dec.decode(au, sizeof au, pcm, ch, rate);
+                if (n > 0 && first < 0) first = k;
+            }
+            CHECK(first == 8 && ch == 6 && rate == 48000 && pcm.size() == (size_t)12 * 1536 * 6, "output after 8 units, 5.1 as asked, 48 kHz");
+            CHECK(pcm.size() >= 6 && pcm[1] == 0.f && pcm[(size_t)1536 * 6 + 1] > 0.0009f, "the frames come out in order");
+            dec.flush();
+            pcm.clear();
+            CHECK(dec.isOpen() && dec.decode(au, sizeof au, pcm, ch, rate) == 0, "flush starts a new stream (the delay fills again)");
+        }
+        // the time line, exactly: units 32 ms (2880 ticks) apart from 900000; the first AC-3 frame holds the first unit's samples, which are
+        // 577 samples (1082 ticks at 48 kHz) late against that unit
+        {
+            Ac4ToAc3 x;
+            CHECK(x.open(2), "Ac4ToAc3 opens on libac4dec");
+            std::vector<Ac4TsPacket> out;
+            const uint8_t au[16] = {0xAC};
+            for (int k = 0; k < 30; k++) x.push(au, sizeof au, 900000 + (int64_t)k * 2880, out);
+            printf("  libac4dec time line: %zu AC-3 frames, first pts %lld, second %lld\n", out.size(), out.empty() ? -1LL : (long long)out[0].pts90,
+                   out.size() > 1 ? (long long)out[1].pts90 : -1LL);
+            CHECK(out.size() >= 20 && out[0].pts90 == 900000 - 1082 && out[1].pts90 - out[0].pts90 == 2880, "the first frame is timed at the first unit, less the latency");
+        }
+        // the remux: the stand-in's tone instead of the AC-4, re-encoded as AC-3; its time line must account for the delay and latency
+        ac4StatusReset();
+        Atsc3Remux rx;
+        auto ts = runRemux({{ainit, aseg}}, rx);
+        CHECK(rx.error().empty() && rx.streamCount() == 1 && rx.droppedCodecs().empty(), "libac4dec: one stream, nothing dropped");
+        MemIn mi{ts.data(), ts.size()};
+        unsigned char* iobuf = (unsigned char*)av_malloc(1 << 16);
+        AVIOContext* io = avio_alloc_context(iobuf, 1 << 16, 0, &mi, memRead, nullptr, nullptr);
+        AVFormatContext* ic = avformat_alloc_context();
+        ic->pb = io;
+        const bool opened = avformat_open_input(&ic, "", av_find_input_format("mpegts"), nullptr) >= 0 && avformat_find_stream_info(ic, nullptr) >= 0;
+        CHECK(opened, "libac4dec: the transport stream reads back");
+        int aud = -1;
+        for (unsigned i = 0; opened && i < ic->nb_streams; i++) if (ic->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) aud = (int)i;
+        CHECK(aud >= 0 && ic->streams[aud]->codecpar->codec_id == AV_CODEC_ID_AC3 && ic->streams[aud]->codecpar->ch_layout.nb_channels == 2, "libac4dec: AC-3 stereo (the sample entry says 2 channels)");
+        long frames = 0;
+        int64_t firstPts = -1, lastPts = -1;
+        AVPacket* pk = av_packet_alloc();
+        while (aud >= 0 && av_read_frame(ic, pk) >= 0) {
+            if (pk->stream_index == aud) { frames++; if (firstPts < 0) firstPts = pk->pts; lastPts = pk->pts; }
+            av_packet_unref(pk);
+        }
+        av_packet_free(&pk);
+        if (opened) avformat_close_input(&ic);
+        else avformat_free_context(ic);
+        if (io) { av_freep(&io->buffer); avio_context_free(&io); }
+        // the stand-in holds back 8 units: about 8 fewer AC-3 frames come out, and the first is timed at the FIRST unit, 577 samples early
+        const long n = (long)ac3frames.size();
+        printf("  libac4dec remux: %ld AC-3 frames out of %ld units, first pts %lld, last %lld (90 kHz)\n", frames, n, (long long)firstPts, (long long)lastPts);
+        CHECK(frames >= n - 8 - 3 && frames <= n - 8 + 1, "libac4dec: the delay holds back about 8 frames");
+        const double spanMs = (double)(lastPts - firstPts) / 90.0;
+        CHECK(spanMs > 0.9 * (double)(n - 8 - 2) * 32.0 && spanMs < 1.1 * (double)(n - 8) * 32.0, "libac4dec: the time line runs at real time");
+        Ac4Status st = ac4Status();
+        CHECK(st.decoded > 0 && st.failed == 0 && st.channels == 2, "libac4dec: the status counts decoded frames, none failed during the delay");
+    }
+
     ac4SetDecoderName("ac4");
     ac4SetLibraryDir("");
     printf(fails ? "%d failure(s)\n" : "all checks passed\n", fails);

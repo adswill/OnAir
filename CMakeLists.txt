@@ -2757,7 +2757,15 @@ if(DECT2_BUILD_TESTS)
 
   add_executable(test_ac4 tests/audio/test_ac4.cpp)
   target_link_libraries(test_ac4 PRIVATE dect2core)
-  add_test(NAME ac4 COMMAND test_ac4 "${FFMPEG_LIBDIR}" WORKING_DIRECTORY ${ONAIR_ROOT})
+  # a stand-in for libac4dec's run-time entry points (decodes nothing), in a folder of its own, for the loader and time line tests
+  add_library(ac4dec_stub MODULE tests/audio/ac4dec_stub.c)
+  set_target_properties(ac4dec_stub PROPERTIES OUTPUT_NAME ac4dec LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/ac4dec_stub
+                        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/ac4dec_stub C_VISIBILITY_PRESET hidden)
+  if(NOT WIN32)
+    target_link_libraries(ac4dec_stub PRIVATE m)
+  endif()
+  add_dependencies(test_ac4 ac4dec_stub)
+  add_test(NAME ac4 COMMAND test_ac4 "${FFMPEG_LIBDIR}" "${CMAKE_BINARY_DIR}/ac4dec_stub" WORKING_DIRECTORY ${ONAIR_ROOT})
 
   add_executable(test_dolby_audio tests/audio/test_dolby_audio.cpp)   # Atmos detection (E-AC-3 JOC, AC-4), output layout, IEC 61937 passthrough framing
   target_link_libraries(test_dolby_audio PRIVATE dect2core)

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-// Dolby AC-4 audio (ATSC 3.0 in the US and South Korea, some DVB) through an OPTIONAL FFmpeg that has an "ac4" decoder.
+// Dolby AC-4 audio (ATSC 3.0 in the US and South Korea, some DVB) through an OPTIONAL user-installed decoder: libac4dec, or an FFmpeg
+// that has an "ac4" decoder.
 // The FFmpeg inside OnAir has no AC-4 decoder (nobody has merged one: only third-party patches exist, see docs/CODECS.md), and OnAir ships
 // no patented codec. So, as with mbelib and codec2: the user may put libavcodec + libavutil, built from a FFmpeg that includes an AC-4
 // decoder, into the OnAir codecs folder. This file loads them at run time (dlopen / LoadLibrary); without them everything else works and
@@ -11,8 +12,13 @@
 // (AVPacket data/size, AVFrame data/extended_data/nb_samples/format); the rest goes through AVOptions. That is what lets a FFmpeg of a
 // different major version than the one OnAir was built with be used (a 6.1 build with the patch, for example).
 //
-// Search: DECT2_AC4_DIR (a folder; development and tests), then the OnAir codecs folders. In each folder the newest libavcodec[.N].dylib /
-// libavcodec.so[.N] / avcodec-N.dll is tried, with the libavutil of the same folder loaded first.
+// libac4dec (an AC-4 decoder library in C, published separately, see docs/CODECS.md) is used through its run-time entry points only
+// (ac4dec_version, ac4dec_open_options, ac4dec_decode_interleaved, ac4dec_flush_interleaved, ac4dec_delay, ac4dec_close): text settings
+// in, interleaved floats out, no structure shared, so its versions need not match OnAir's. It decodes with a delay of a few frames.
+//
+// Search: DECT2_AC4_DIR (a folder; development and tests), then the OnAir codecs folders. libac4dec is looked for first in every folder
+// (libac4dec[.N].so / .dylib / ac4dec.dll), then FFmpeg: in each folder the newest libavcodec[.N].dylib / libavcodec.so[.N] /
+// avcodec-N.dll is tried, with the libavutil of the same folder loaded first. DECT2_AC4_BACKEND=ffmpeg (or libac4dec) uses only that one.
 #pragma once
 #include <cstdint>
 #include <memory>
@@ -55,6 +61,8 @@ bool findAc4InInit(const uint8_t* init, size_t size, Ac4Dsi* dsi = nullptr, int*
 struct Ac4LibInfo {
     bool found = false;        // a libavcodec and a libavutil were loaded
     bool hasDecoder = false;   // and it has an AC-4 decoder
+    std::string backend;       // "libac4dec" or "FFmpeg" (what decodes; empty when nothing does)
+    std::string version;       // libac4dec's version string (empty for FFmpeg: see avcodecVersion)
     std::string path, utilPath;
     int avcodecVersion = 0;    // libavcodec_version(): major << 16 | minor << 8 | micro
     std::string message;       // what is wrong, in plain words; empty when all is well
@@ -64,7 +72,8 @@ Ac4LibInfo ac4Library(bool rescan = false);
 inline bool ac4Available() { return ac4Library().hasDecoder; }
 // For tests: look only in this folder (and not in the codecs folders); empty = back to the normal search. Forces a new search.
 void ac4SetLibraryDir(const std::string& dir);
-// For tests: the name of the decoder looked up in the library ("ac4" by default). A test can borrow another decoder (ac3) of a stock FFmpeg.
+// For tests: the name of the decoder looked up in the library ("ac4" by default). A test can borrow another decoder (ac3) of a stock FFmpeg;
+// libac4dec is then not looked for.
 void ac4SetDecoderName(const std::string& name);
 // Folders and file names searched (for the help card)
 std::vector<std::string> ac4SearchFolders();
@@ -76,6 +85,9 @@ public:
     ~Ac4Decoder();
     Ac4Decoder(const Ac4Decoder&) = delete;
     Ac4Decoder& operator=(const Ac4Decoder&) = delete;
+    // Before open(): the channels wanted, 2 or 6 (libac4dec mixes to that layout itself, with the stream's own downmix coefficients);
+    // 0 = the stream's own channels. FFmpeg ignores it.
+    void setOutputChannels(int channels);
     // false: no library or no decoder (error() says why)
     bool open();
     bool isOpen() const;
@@ -83,6 +95,10 @@ public:
     // wanted more data (or waits for an I-frame), or -1 on error. channels/sampleRate describe the output.
     int decode(const uint8_t* data, size_t size, std::vector<float>& pcm, int& channels, int& sampleRate);
     void flush();
+    // The output of decode() belongs to the access unit fed delayFrames() calls earlier (libac4dec; 0 for FFmpeg), and its samples are
+    // latencySamples() late against that unit's time (the QMF bank)
+    int delayFrames() const;
+    int latencySamples() const;
     std::string error() const;
 private:
     struct Impl;
