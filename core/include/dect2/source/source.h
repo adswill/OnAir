@@ -259,6 +259,9 @@ bool soapySupported();
 // A SoapySDR radio that is not enumerated (a SoapyRemote server the user added) is listed with its ranges unknown (gain 0..0) until it is
 // opened; after a start this fills them from what the radio reported (rate, gain, frequency, settings). True when something changed (#228).
 bool soapyLearnRanges(DeviceInfo& d);
+// Open a SoapySDR radio that is not running, briefly, to learn its ranges and driver settings (getSettingInfo) before the user starts it, so
+// the Radio settings show the driver's own settings (a host, a port, ...) before Play. Nothing is streamed. False when it cannot be opened.
+bool probeSoapyRanges(const DeviceInfo& d);
 // Radios driven by their own libraries when those are installed: RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR, USRP, SDRplay (experimental).
 std::vector<DeviceInfo> listNativeDevices(std::string& err);
 std::unique_ptr<IqSource> makeNativeSource(const DeviceInfo& d);
