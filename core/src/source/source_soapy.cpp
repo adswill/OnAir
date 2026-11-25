@@ -394,7 +394,15 @@ public:
             }
             if (!antenna_.empty()) dev_->setAntenna(SOAPY_SDR_RX, 0, antenna_);   // the default entry leaves the driver's choice alone
             if (!apply(s, err, false)) { close(); return false; }
-            stream_ = dev_->setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32, {0});
+            // A driver that offers a float wire format gets it: a 16-bit wire clips at the calibrated reference level (magnitude 1),
+            // 17 dB below the ADC rail, and with the preamp on the strong OFDM peaks were cut there (about 1 % of the samples)
+            SoapySDR::Kwargs sargs;
+            try {
+                for (const auto& ai : dev_->getStreamArgsInfo(SOAPY_SDR_RX, 0))
+                    if (ai.key == "WIRE" && std::find(ai.options.begin(), ai.options.end(), std::string(SOAPY_SDR_CF32)) != ai.options.end())
+                        sargs["WIRE"] = SOAPY_SDR_CF32;
+            } catch (...) {}
+            stream_ = dev_->setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32, {0}, sargs);
             if (!stream_) { DIAG_ERROR(606855, "SoapySDR could not set up the receive stream, so the radio is closed again."); err = "setupStream failed"; close(); return false; }
             armHardwareTime();
             if (dev_->activateStream(stream_) != 0) { DIAG_ERROR(693579, "SoapySDR could not start the receive stream, so the radio is closed again."); err = "activateStream failed"; close(); return false; }
