@@ -907,10 +907,11 @@ struct MmtpService::Impl {
 
     bool retireOldestAnywhere() {
         Lane* bl = nullptr;
-        OpenMap::iterator bi;
+        OpenMap::iterator bi{};
+        long biBorn = 0;
         for (auto& kv : lanes)
             for (auto it = kv.second.open.begin(); it != kv.second.open.end(); ++it)
-                if (!bl || it->second.born < bi->second.born) { bl = &kv.second; bi = it; }
+                if (!bl || it->second.born < biBorn) { bl = &kv.second; bi = it; biBorn = it->second.born; }
         if (!bl) return false;
         retire(*bl, bi);   // repaired only if it is the oldest of its asset
         return true;

@@ -14,6 +14,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -60,7 +61,7 @@ struct Mpu { Bytes meta, moof; std::vector<Bytes> samples; };
 static Bytes hintTrak(uint32_t id, uint32_t timescale) {
     Bytes tkhd(84, 0); dect2::endian::storeBe32(&tkhd[12], id);
     Bytes mdhd(24, 0); dect2::endian::storeBe32(&mdhd[12], timescale);
-    Bytes hdlr(25, 0); memcpy(&hdlr[8], "hint", 4);
+    Bytes hdlr(25, 0); static const char kHint[] = "hint"; std::copy(kHint, kHint + 4, hdlr.begin() + 8);
     return box("trak", [&] { Bytes t = box("tkhd", tkhd); add(t, box("mdia", [&] { Bytes m = box("mdhd", mdhd); add(m, box("hdlr", hdlr)); return m; }())); return t; }());
 }
 
@@ -901,9 +902,10 @@ int main(int argc, char** argv) {
         Atsc3Receiver rx;
         rx.setAutoSelect(true);
         std::vector<uint8_t> ts;
-        std::thread reader([&] { uint8_t buf[8192]; for (;;) { int k = rx.readTs(buf, sizeof buf); if (k <= 0) break; ts.insert(ts.end(), buf, buf + k); } });
+        std::atomic<size_t> tsBytes{0};   // ts itself is read only after the reader has joined
+        std::thread reader([&] { uint8_t buf[8192]; for (;;) { int k = rx.readTs(buf, sizeof buf); if (k <= 0) break; ts.insert(ts.end(), buf, buf + k); tsBytes.store(ts.size()); } });
         for (auto& p : ip) rx.pushIp(p.data(), p.size());
-        for (int i = 0; i < 60; i++) { std::this_thread::sleep_for(std::chrono::milliseconds(50)); size_t s0 = ts.size(); std::this_thread::sleep_for(std::chrono::milliseconds(50)); if (s0 == ts.size() && s0 > 0) break; }
+        for (int i = 0; i < 60; i++) { std::this_thread::sleep_for(std::chrono::milliseconds(50)); const size_t s0 = tsBytes.load(); std::this_thread::sleep_for(std::chrono::milliseconds(50)); if (s0 == tsBytes.load() && s0 > 0) break; }
         rx.stop();
         reader.join();
         const auto st = rx.stats();
@@ -917,6 +919,6 @@ int main(int argc, char** argv) {
         printf("  receiver: %zu bytes of transport stream, %ld video and %ld audio frames\n", ts.size(), vc, ac);
         CHECK(vc >= 70 && ac >= 130, "nearly all frames came through");
     }
-    printf(fails ? "atsc3 mmtp: FAILED\n" : "atsc3 mmtp: ok\n");
+    std::fputs(fails ? "atsc3 mmtp: FAILED\n" : "atsc3 mmtp: ok\n", stdout);
     return fails ? 1 : 0;
 }

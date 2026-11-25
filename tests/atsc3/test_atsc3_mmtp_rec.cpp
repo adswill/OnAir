@@ -96,6 +96,6 @@ int main() {
         CHECK(l.segs * 10 >= whole * 9, "at least 90% of the MPUs");
     }
     CHECK(av >= 2, "a video and an audio asset");
-    printf(fails ? "atsc3 mmtp recording: FAILED\n" : "atsc3 mmtp recording: ok\n");
+    std::fputs(fails ? "atsc3 mmtp recording: FAILED\n" : "atsc3 mmtp recording: ok\n", stdout);
     return fails ? 1 : 0;
 }
