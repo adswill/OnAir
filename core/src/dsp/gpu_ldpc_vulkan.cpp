@@ -10,6 +10,7 @@
 // Environment: DECT2_NOGPU or DECT2_VULKAN=0 force the CPU decoder; DECT2_VULKAN=1 also accepts a CPU implementation of Vulkan (lavapipe,
 // SwiftShader: slower than the CPU decoder, skipped otherwise; for tests); DECT2_GPU_ADAPTER=<index> picks a device by its Vulkan index.
 #include "dect2/dsp/gpu_ldpc.h"
+#include "dect2/dsp/minsum_corr.h"
 #include "dect2/common/diag.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/t2/t2fec.h"
@@ -79,7 +80,7 @@ struct T2Push { int32_t k, n, q, G, maxIter; float alpha; uint32_t msgPer, postP
 struct QcPush { int32_t z, rows, cols, punct, sent, info, maxIter, gu0, gd0, gu1, gd1; float alpha, clip; uint32_t msgPer; };
 
 // The DTMB arithmetic on the CPU, operation for operation as in ldpc_qc.comp (and dtmb_ldpc.cpp): the reference of the self-test.
-void qcReference(const QcLdpc& c, const float* llr, int maxIter, float alpha, std::vector<uint8_t>& info, bool& ok, int& iters) {
+void qcReference(const QcLdpc& c, const float* llr, int maxIter, float alpha, bool boxCorr, std::vector<uint8_t>& info, bool& ok, int& iters) {
     const int z = c.z;
     std::vector<float> lv((size_t)c.blockCols * z), msg(c.col.size() * (size_t)z, 0.f);
     for (int v = 0; v < c.blockCols * z; v++) lv[(size_t)v] = v < c.punctured ? 0.f : std::max(-c.clip, std::min(c.clip, llr[v - c.punctured]));
@@ -108,12 +109,13 @@ void qcReference(const QcLdpc& c, const float* llr, int maxIter, float alpha, st
                     if (e == e0) min1 = a; else { min2 = std::min(min2, std::max(a, min1)); min1 = std::min(min1, a); }
                     uint32_t u; std::memcpy(&u, &q, 4); sg ^= u & 0x80000000u;
                 }
+                const float c1 = boxCorr ? boxMin1(min1, min2) : min1;   // as the kernel: the two-minimum correction
                 for (int e = e0; e < e1; e++) {
                     int sh = m + c.shift[(size_t)e]; if (sh >= z) sh -= z;
                     const size_t vi = (size_t)(c.col[(size_t)e] * z + sh);
                     const float q = lv[vi] - msg[(size_t)e * z + m];
                     const float a = std::fabs(q);
-                    const float mg = (a == min1 ? min2 : min1) * alpha;
+                    const float mg = (a == min1 ? min2 : c1) * alpha;
                     uint32_t um, uq; std::memcpy(&um, &mg, 4); std::memcpy(&uq, &q, 4);
                     um |= sg ^ (uq & 0x80000000u);
                     float v; std::memcpy(&v, &um, 4);
@@ -577,10 +579,12 @@ bool GpuLdpc::selfTest() {
         }
         std::vector<uint8_t> hard((size_t)nb * n), ok((size_t)nb);
         std::vector<int> it((size_t)nb);
-        if (!decode(c, llr.data(), nb, 50, hard.data(), ok.data(), it.data())) return false;
-        for (int b = 0; b < nb; b++) {
-            if (!ok[(size_t)b]) return false;
-            for (int i = 0; i < n; i++) if (hard[(size_t)b * n + i] != cw[(size_t)b][(size_t)i]) return false;
+        for (int bc = 0; bc < 2; bc++) {   // plain normalised min-sum, then with the two-minimum correction
+            if (!decode(c, llr.data(), nb, 50, hard.data(), ok.data(), it.data(), 0.78f, bc == 1)) return false;
+            for (int b = 0; b < nb; b++) {
+                if (!ok[(size_t)b]) return false;
+                for (int i = 0; i < n; i++) if (hard[(size_t)b * n + i] != cw[(size_t)b][(size_t)i]) return false;
+            }
         }
     }
     {   // a small random quasi-cyclic code (z = 127 as DTMB) against the CPU arithmetic, to the bit; a failure here only moves DTMB to the CPU
@@ -602,11 +606,14 @@ bool GpuLdpc::selfTest() {
         for (auto& x : llr) x = 2.f * (1.f + 0.9f * nd(rng));
         std::vector<uint8_t> info((size_t)nb * q.infoBits()), ok((size_t)nb);
         std::vector<int> it((size_t)nb);
-        bool good = decodeQc(q, llr.data(), nb, 12, info.data(), ok.data(), it.data(), 0.6f);
-        for (int b = 0; good && b < nb; b++) {
-            std::vector<uint8_t> ri; bool rok; int rit;
-            qcReference(q, &llr[(size_t)b * sent], 12, 0.6f, ri, rok, rit);
-            good = rok == (bool)ok[(size_t)b] && rit == it[(size_t)b] && std::memcmp(ri.data(), &info[(size_t)b * q.infoBits()], ri.size()) == 0;
+        bool good = true;
+        for (int bc = 0; bc < 2 && good; bc++) {   // plain normalised min-sum, then with the two-minimum correction
+            good = decodeQc(q, llr.data(), nb, 12, info.data(), ok.data(), it.data(), 0.6f, bc == 1);
+            for (int b = 0; good && b < nb; b++) {
+                std::vector<uint8_t> ri; bool rok; int rit;
+                qcReference(q, &llr[(size_t)b * sent], 12, 0.6f, bc == 1, ri, rok, rit);
+                good = rok == (bool)ok[(size_t)b] && rit == it[(size_t)b] && std::memcmp(ri.data(), &info[(size_t)b * q.infoBits()], ri.size()) == 0;
+            }
         }
         if (!good) { d.qcReady = false; fprintf(stderr, "GpuLdpc: DTMB kernel self-test failed on \"%s\": DTMB decodes on the CPU\n", d.name.c_str()); DIAG(973839, "The Vulkan DTMB LDPC self-test gave a wrong result on \"%s\", so DTMB LDPC decodes on the CPU.", d.name.c_str()); }
     }
@@ -619,7 +626,7 @@ bool GpuLdpc::available() const { return p_->ready; }
 const char* GpuLdpc::unavailableReason() const { return p_->ready ? "" : p_->reason.c_str(); }
 const char* GpuLdpc::deviceName() const { return p_->name.c_str(); }
 
-bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter, uint8_t* hard, uint8_t* ok, int* iters, float alpha, bool /*boxCorr: plain min-sum here*/) {
+bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter, uint8_t* hard, uint8_t* ok, int* iters, float alpha, bool boxCorr) {
     if (!available() || code.q() * 360 != code.n() - code.k()) return false;
     std::lock_guard<std::mutex> lk(p_->mu);
     Impl& d = *p_;
@@ -645,7 +652,7 @@ bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter
         }
         s.used = ++d.tick;
         std::memcpy(s.llr.map, llr + (size_t)b0 * n, (size_t)cnt * n * 4);
-        const T2Push P = {code.k(), n, code.q(), code.groups(), maxIter, alpha, s.msgPer, s.postPer};
+        const T2Push P = {code.k(), n, code.q(), code.groups(), maxIter, boxCorr ? -alpha : alpha, s.msgPer, s.postPer};   // negative: the two-minimum correction
         if (!d.begin()) return false;
         d.CmdBindPipeline(d.cmd, PIPELINE_BIND_POINT_COMPUTE, d.t2Pipe);
         d.CmdBindDescriptorSets(d.cmd, PIPELINE_BIND_POINT_COMPUTE, d.t2Layout, 0, 1, &s.set, 0, nullptr);
@@ -664,8 +671,8 @@ bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter
 
 bool GpuLdpc::qcAvailable() const { return p_->qcReady; }
 
-bool GpuLdpc::boxCorrKernels() const { return false; }   // the GLSL kernels run plain normalised min-sum (no shader compiler to rebuild the SPIR-V yet)
-bool GpuLdpc::decodeQc(const QcLdpc& code, const float* llr, int nb, int maxIter, uint8_t* info, uint8_t* ok, int* iters, float alpha, bool /*boxCorr: plain min-sum here*/) {
+bool GpuLdpc::boxCorrKernels() const { return true; }
+bool GpuLdpc::decodeQc(const QcLdpc& code, const float* llr, int nb, int maxIter, uint8_t* info, uint8_t* ok, int* iters, float alpha, bool boxCorr) {
     if (!qcAvailable() || nb <= 0) return qcAvailable() && nb == 0;
     const int z = code.z, rows = code.blockRows, cols = code.blockCols;
     if (z <= 0 || z > 1024 || rows <= 0 || cols <= rows || (int)code.rowStart.size() != rows + 1 || code.col.size() != code.shift.size() || (int)code.col.size() != code.rowStart.back()) return false;
@@ -714,7 +721,7 @@ bool GpuLdpc::decodeQc(const QcLdpc& code, const float* llr, int nb, int maxIter
         }
         s.used = ++d.tick;
         std::memcpy(s.llr.map, llr + (size_t)b0 * sent, (size_t)cnt * sent * 4);
-        const QcPush P = {z, rows, cols, code.punctured, sent, infoN, maxIter, code.giveUpIter[0], code.giveUpDiv[0], code.giveUpIter[1], code.giveUpDiv[1], alpha, code.clip, s.msgPer};
+        const QcPush P = {z, rows, cols, code.punctured, sent, infoN, maxIter, code.giveUpIter[0], code.giveUpDiv[0], code.giveUpIter[1], code.giveUpDiv[1], boxCorr ? -alpha : alpha, code.clip, s.msgPer};
         if (!d.begin()) return false;
         d.CmdBindPipeline(d.cmd, PIPELINE_BIND_POINT_COMPUTE, pipe);
         d.CmdBindDescriptorSets(d.cmd, PIPELINE_BIND_POINT_COMPUTE, d.qcLayout, 0, 1, &s.set, 0, nullptr);

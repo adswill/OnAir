@@ -60,7 +60,7 @@ analysed by a TS demultiplexer (services found, scrambling noted). Audio and vid
 
 The DVB-S2/S2X LDPC decoder is layered min-sum with the two-minimum box-plus correction (`LdpcCode::decodeFast(..., boxCorr)`): every edge except the one holding the smallest input gets the box-plus of the two smallest inputs instead of the smallest alone. That brings min-sum closer to belief propagation and cuts the iterations. The normalisation factor (`s2LdpcAlpha(mod, rate, short)`) is measured per MODCOD, all 55 S2X ones included. Before, it was set per code rate, and that cost 0.1 to 0.5 dB.
 
-The 8-bit decoder takes the same factor. 32APSK and up stay on the float decoder: the 8-bit range clips their weak bits. Metal and Direct3D 11 run the same rule. The Vulkan kernel still runs plain min-sum, and the CPU retry of the frames it fails gives the same answer. VL-SNR uses the corrected decoder too: BPSK 1/5 SF2 now decodes 0.3 dB below table 20.
+The 8-bit decoder takes the same factor. 32APSK and up stay on the float decoder: the 8-bit range clips their weak bits. Metal, Direct3D 11 and Vulkan run the same rule. VL-SNR uses the corrected decoder too: BPSK 1/5 SF2 now decodes 0.3 dB below table 20.
 
 Measured through the whole receiver at 1 Msym/s, 2 Msps, 8-bit samples, 5 s per point. The threshold is the lowest Es/N0 from which every higher point has FER ≤ 15%, given relative to table 13:
 

@@ -73,7 +73,9 @@ column is one thread, the way that decoder runs inside its mode today.
 ### ATSC 3.0 LDPC (Type B codes, rates 6/15 to 13/15) on the GPU
 
 `Bicm::decodeBatch` sends a batch of words to `GpuLdpc::decode` (the `atsc3::qcCode` graph, normalised min-sum with the two-minimum correction), and
-every word the GPU does not converge on goes through the CPU decoder, so the output is never worse than the CPU path. Type A codes (rates 2/15 to
+the words the GPU does not converge on are lost: every backend's kernel (Metal, Direct3D 11, Vulkan) runs the arithmetic of the CPU decoder, so a CPU
+retry decodes nothing more (on a weak 256QAM 11/15 capture: the same 6169 failed words of 24984 with and without it, at twice the CPU time). A batch
+the GPU does not run goes to the CPU decoder. Type A codes (rates 2/15 to
 5/15) have no `LdpcCode` graph and stay on the CPU. Convergence matched the CPU on every code tested (the table counts words that decode to the sent word).
 
 | code | CPU ms/word | GPU 1 word | GPU 4 words | GPU 16 words |

@@ -24,8 +24,7 @@ public:
 #endif
     // Decodes `nb` blocks of n LLRs each (llr > 0 means bit 0). hard receives nb*n bits (one per byte),
     // ok[b] = all parity checks satisfied, iters[b] = iterations used. Blocks the caller until the GPU is done. `boxCorr`: the two-minimum
-    // correction of LdpcCode::decodeFast (Metal and Direct3D 11; the Vulkan kernel runs plain normalised min-sum, and the CPU retry of the frames
-    // it fails gives the same answer).
+    // correction of LdpcCode::decodeFast (Metal, Direct3D 11 and Vulkan).
     bool decode(const LdpcCode& code, const float* llr, int nb, int maxIter, uint8_t* hard, uint8_t* ok, int* iters, float alpha = 0.78f, bool boxCorr = false);
 
     // The same for a table-driven quasi-cyclic code (layered normalised min-sum, the schedule and arithmetic of the DTMB CPU decoder, one thread group per
@@ -33,7 +32,7 @@ public:
     // Returns false when the backend has no such kernel (Direct3D 11 for now) or the call failed: the caller decodes on the CPU.
     bool qcAvailable() const;   // decodeQc has a kernel on this backend and device (Metal, Vulkan)
     bool decodeQc(const QcLdpc& code, const float* llr, int nb, int maxIter, uint8_t* info, uint8_t* ok, int* iters, float alpha, bool boxCorr = false);
-    // the kernels of this backend apply `boxCorr` (Metal, Direct3D 11); where they do not (Vulkan), the caller decodes the words they fail on the CPU
+    // the kernels of this backend apply `boxCorr` (Metal, Direct3D 11, Vulkan)
     bool boxCorrKernels() const;
 
 private:
