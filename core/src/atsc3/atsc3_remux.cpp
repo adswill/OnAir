@@ -68,7 +68,8 @@ bool is(const Box& b, const char* t) { return !memcmp(b.type.data(), t, 4); }
 // transport stream carries it (ISO 639 language descriptor) and the player can name its sound tracks. "und" (not given) is not copied.
 static void copyLanguage(const AVStream* in, AVStream* os) {
     const AVDictionaryEntry* l = av_dict_get(in->metadata, "language", nullptr, 0);
-    if (l && l->value && strlen(l->value) == 3 && strcmp(l->value, "und") != 0) av_dict_set(&os->metadata, "language", l->value, 0);
+    const char* v = l ? l->value : nullptr;
+    if (v && v[0] && v[1] && v[2] && !v[3] && strcmp(v, "und") != 0) av_dict_set(&os->metadata, "language", v, 0);   // three letters
 }
 
 static std::map<uint32_t, uint32_t> trexSizes(const std::vector<uint8_t>& init) {
