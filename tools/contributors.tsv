@@ -135,3 +135,4 @@ peterdewitte	https://github.com/peterdewitte	pull request	LoRa APRS transmit wit
 bellx2	https://github.com/bellx2	pull request	RTL-SDR on macOS: reading and converting on separate threads	area:Radios	#447
 DME-3	https://github.com/DME-3	pull request	Mode Builder: binary FSK acquisition stays centred for near-zero lead-ins	Mode Builder	#461, #460
 BI8SYN	https://github.com/BI8SYN	pull request	Chinese UI fonts cut to a small size and made consistent on all desktop platforms	area:Languages	#437
+Maciej Malinowski (webglobepl)	https://github.com/webglobepl	pull request	Separate frequency step arrows from digit editing	area:Interface	#706
