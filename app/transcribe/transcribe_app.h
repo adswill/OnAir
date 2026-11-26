@@ -45,6 +45,9 @@ bool captionsIsTv(int standard);             // the captions go over the picture
 void captionsWindow(App& a);                 // the caption window of the receiver being heard (not for TV modes); call once per frame
 // Over the TV picture, drawn by the subtitle overlay. broadcastPresent: the programme has DVB / teletext subtitles.
 void captionsOverlay(App& a, ImDrawList* dl, ImVec2 p0, ImVec2 size, bool broadcastPresent);
+// Text in the caption look (the size and background chosen for generated captions), at the bottom of the picture: the station's closed
+// captions (subs_ui.cpp). Lines separated by '\n'.
+void captionText(ImDrawList* dl, ImVec2 p0, ImVec2 size, const std::string& text);
 bool captionsShowBroadcast();                // false when the user chose generated captions only
 void captionsControls(App& a);              // the small row in the TV panel: on for this mode, broadcast / generated / both
 void captionsSettings(App& a);               // the section in the Transcripts window

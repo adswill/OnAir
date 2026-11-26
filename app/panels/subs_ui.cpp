@@ -42,27 +42,6 @@ std::string subtitleMenuLabel(const TsSubEntry& e) {
     return s;
 }
 
-// Closed captions: white text on black boxes, centred, near the bottom of the picture (the usual caption look). One box per line.
-void drawCaptionLines(ImDrawList* dl, ImFont* f, ImVec2 p0, ImVec2 size, const std::string& text) {
-    std::vector<std::string> lines;
-    for (size_t a = 0; a <= text.size();) {
-        size_t b = text.find('\n', a);
-        if (b == std::string::npos) b = text.size();
-        if (b > a) lines.push_back(text.substr(a, b - a));
-        a = b + 1;
-    }
-    if (lines.empty()) return;
-    const float fs = std::max(12.f, size.y / 18.f), pad = fs * 0.25f, lh = fs * 1.15f;
-    float y = p0.y + size.y * 0.92f - lh * (float)lines.size();
-    for (const std::string& l : lines) {
-        const ImVec2 ts = f->CalcTextSizeA(fs, size.x * 0.9f, 0.f, l.c_str());
-        const float x = p0.x + (size.x - ts.x) * 0.5f;
-        dl->AddRectFilled(ImVec2(x - pad, y), ImVec2(x + ts.x + pad, y + lh), IM_COL32(0, 0, 0, 215));
-        dl->AddText(f, fs, ImVec2(x, y + (lh - fs) * 0.5f), IM_COL32(255, 255, 255, 255), l.c_str());
-        y += lh;
-    }
-}
-
 void overlayThunk(void* ctx, ImDrawList* dl, ImVec2 p0, ImVec2 size) {
     App& a = *(App*)ctx;
     // generated captions (auto subtitles, core/src/transcribe/captions.h): never in place of the station's own ones unless the user chose so
@@ -72,7 +51,7 @@ void overlayThunk(void* ctx, ImDrawList* dl, ImVec2 p0, ImVec2 size) {
     const SubOpt& o = a.subOpts[a.subIdx];
     if (o.cc) {
         const std::string t = a.engine.player().captionAt(a.video.pts);
-        if (!t.empty()) drawCaptionLines(dl, a.mono ? a.mono : ImGui::GetFont(), p0, size, t);
+        if (!t.empty()) tx::captionText(dl, p0, size, t);   // in the look chosen for captions (size, background)
         return;
     }
     if (!o.ttx) {
