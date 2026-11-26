@@ -99,6 +99,7 @@ extern int gWinX, gWinY, gWinW, gWinH;
 // One subtitle service of the playing programme: a DVB subtitling stream (EN 300 743) or a teletext subtitle page (EN 300 706)
 struct SubOpt {
     bool ttx = false;
+    bool cc = false;                  // CEA-608 / 708 closed captions carried in the video (ATSC 1.0 and 3.0, US cable): drawn as text
     int pid = 0, comp = 0, anc = 0;   // DVB: composition / ancillary page id; teletext: comp = page number
     std::string lang, key, label;
     bool fallback = false;            // teletext without a subtitling entry: page 888, else 777

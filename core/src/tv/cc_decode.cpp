@@ -17,24 +17,72 @@ uint32_t special608(uint8_t c) {
 bool parityOk(uint8_t b) { int n = 0; for (int i = 0; i < 8; i++) n += (b >> i) & 1; return n & 1; }
 }
 
-void CaptionDecoder::emit(const std::string& text, double start, double end) {
+void CaptionDecoder::emit(const std::string& text, double start, double end, bool is708) {
     if (text.empty()) return;
     std::string t = text;
     while (!t.empty() && (t.back() == ' ' || t.back() == '\n')) t.pop_back();
     size_t h = 0; while (h < t.size() && t[h] == ' ') h++;
     if (h) t.erase(0, h);
     if (t.empty()) return;
-    SubCue c; c.start = start; c.end = end; c.text = t; cues_.push_back(std::move(c));
+    SubCue c; c.start = start; c.end = end; c.text = t;
+    if (is708) shown708_.push_back(c);
+    else { shown608_.push_back(c); rolled608_.push_back(rollEnd_ ? 1 : 0); }
+    cues_.push_back(std::move(c));
 }
 void CaptionDecoder::flushRow(double t) {
     if (!cur_.empty() && rowStart_ >= 0) emit(cur_, rowStart_, t);
     cur_.clear(); rowStart_ = -1;
 }
+std::string CaptionDecoder::at(double t) const {
+    // one format only: CEA-608 (CC1) when the stream has sent any, as most receivers do; CEA-708 service 1 otherwise. Stations that send
+    // both carry the same words in each, and mixing them would make the text jump between the two.
+    const bool use608 = !shown608_.empty() || !disp_.empty() || !cur_.empty();
+    if (!use608) {
+        for (size_t i = shown708_.size(); i-- > 0;) {
+            const SubCue& c = shown708_[i];
+            if (c.end < t - 30) break;
+            if (c.start <= t && t < c.end) return c.text;
+        }
+        return line708Start_ >= 0 && line708Start_ <= t ? line708_ : std::string();
+    }
+    const std::vector<SubCue>& cues = shown608_;
+    // a roll-up row closed by a carriage return moves up and stays on screen until the row below it is closed in turn (under 10 s)
+    auto rolledUp = [&](size_t k) { return rolled608_[k] && cues[k].end <= t && t - cues[k].end < 10; };
+    // the row above row k when they belong together: rolled up, ended less than 2 s before row k began
+    auto above = [&](size_t k) -> const SubCue* {
+        if (k == 0 || !rolled608_[k - 1]) return nullptr;
+        const SubCue& p = cues[k - 1];
+        return p.end <= cues[k].start && cues[k].start - p.end < 2 ? &p : nullptr;
+    };
+    if (dispStart_ >= 0 && dispStart_ <= t && !disp_.empty()) {   // a pop-on page on screen and not yet replaced or erased
+        bool newer = false;
+        for (size_t i = cues.size(); i-- > 0 && !newer;) { if (cues[i].start < dispStart_) break; newer = cues[i].start <= t; }
+        if (!newer) return disp_;
+    }
+    size_t j = cues.size();
+    for (size_t i = cues.size(); i-- > 0;) {
+        if (cues[i].end < t - 30) break;
+        if (cues[i].start <= t) { j = i; break; }
+    }
+    const bool building = rowStart_ >= 0 && rowStart_ <= t && !cur_.empty();
+    if (building && (j == cues.size() || cues[j].end <= rowStart_)) {   // the row being typed, under the one that rolled up
+        if (j < cues.size() && rolledUp(j) && rowStart_ - cues[j].end < 2) return cues[j].text + "\n" + cur_;
+        return cur_;
+    }
+    if (j == cues.size()) return std::string();
+    const SubCue& c = cues[j];
+    if (t < c.end || rolledUp(j)) {
+        const SubCue* p = above(j);
+        return p ? p->text + "\n" + c.text : c.text;
+    }
+    return std::string();
+}
+
 void CaptionDecoder::finish() {
     const double t = dispStart_ >= 0 ? dispStart_ + 3 : 0;
     if (dispStart_ >= 0 && !disp_.empty()) { emit(disp_, dispStart_, t); disp_.clear(); dispStart_ = -1; }
     if (!cur_.empty()) flushRow(rowStart_ + 3);
-    if (!line708_.empty()) { emit(line708_, line708Start_, line708Start_ + 3); line708_.clear(); }
+    if (!line708_.empty()) { emit(line708_, line708Start_, line708Start_ + 3, true); line708_.clear(); }
 }
 
 void CaptionDecoder::pair608(uint8_t b1, uint8_t b2, double t) {
@@ -55,10 +103,10 @@ void CaptionDecoder::pair608(uint8_t b1, uint8_t b2, double t) {
     if (c1 == 0x14) {
         switch (b2) {
         case 0x20: mode_ = Pop; break;
-        case 0x25: case 0x26: case 0x27: flushRow(t); mode_ = Roll; break;
+        case 0x25: case 0x26: case 0x27: rollEnd_ = mode_ == Roll; flushRow(t); rollEnd_ = false; mode_ = Roll; break;   // in roll-up already: the row rolls up
         case 0x29: flushRow(t); mode_ = Paint; break;
         case 0x2C: if (dispStart_ >= 0) { emit(disp_, dispStart_, t); disp_.clear(); dispStart_ = -1; } flushRow(t); break;    // erase displayed
-        case 0x2D: if (mode_ != Pop) flushRow(t); break;                                                                   // carriage return
+        case 0x2D: if (mode_ != Pop) { rollEnd_ = true; flushRow(t); rollEnd_ = false; } break;                           // carriage return: the row rolls up
         case 0x2E: nd_.clear(); break;                                                                                     // erase non-displayed
         case 0x2F:                                                                                                         // end of caption
             if (dispStart_ >= 0) emit(disp_, dispStart_, t);
@@ -94,14 +142,14 @@ void CaptionDecoder::packet708(const std::vector<uint8_t>& p, double t) {
             if (c == 0x10) { if (q < end) { const uint8_t e = p[q++]; if (e >= 0x20 && e < 0x80 && e != 0x7F) utf8(line708_.empty() ? (line708Start_ = t, line708_) : line708_, 0x20); } }   // extended set: a space marks the unknown glyph
             else if (c == 0x18) q += 2;
             else if (c <= 0x1F) {
-                if (c == 0x0D || c == 0x03 || c == 0x0C || c == 0x0E) { if (!line708_.empty()) { emit(line708_, line708Start_, t); line708_.clear(); } }
+                if (c == 0x0D || c == 0x03 || c == 0x0C || c == 0x0E) { if (!line708_.empty()) { emit(line708_, line708Start_, t, true); line708_.clear(); } }
                 else if (c == 0x08) { while (!line708_.empty() && (((uint8_t)line708_.back() & 0xC0) == 0x80)) line708_.pop_back(); if (!line708_.empty()) line708_.pop_back(); }
                 else if (c >= 0x11 && c <= 0x17) q += 1;
                 else if (c >= 0x19) q += 2;
             } else if (c >= 0x80 && c <= 0x9F) {
                 static const int args[32] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 2, 3, 2, 0, 0, 0, 0, 4, 6, 6, 6, 6, 6, 6, 6, 6};
                 q += (size_t)args[c - 0x80];
-                if (c == 0x89 || c >= 0x98) { if (!line708_.empty()) { emit(line708_, line708Start_, t); line708_.clear(); } }
+                if (c == 0x89 || c >= 0x98) { if (!line708_.empty()) { emit(line708_, line708Start_, t, true); line708_.clear(); } }
             } else if (c >= 0x20 && c <= 0x7F) { std::string s; utf8(s, c == 0x7F ? 0x266A : c); text708(s, t); }
             else if (c >= 0xA0) { std::string s; utf8(s, c); text708(s, t); }
         }

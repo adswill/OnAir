@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 // Subtitles over the TV picture: DVB subtitles (EN 300 743, core/src/tv/dvbsub.cpp) as a bitmap texture, teletext subtitle pages (EN 300 706)
-// as boxed text, the on/off and language choice, and the character-cell drawing of a teletext page that the Teletext tab shares.
+// as boxed text, closed captions carried in the video (CEA-608 / 708, core/src/tv/cc_decode.cpp) as boxed lines, the on/off and language
+// choice, and the character-cell drawing of a teletext page that the Teletext tab shares.
 #include "../app.h"
 #include "../transcribe/transcribe_app.h"
 #include "dect2/tv/epg.h"
@@ -41,6 +42,27 @@ std::string subtitleMenuLabel(const TsSubEntry& e) {
     return s;
 }
 
+// Closed captions: white text on black boxes, centred, near the bottom of the picture (the usual caption look). One box per line.
+void drawCaptionLines(ImDrawList* dl, ImFont* f, ImVec2 p0, ImVec2 size, const std::string& text) {
+    std::vector<std::string> lines;
+    for (size_t a = 0; a <= text.size();) {
+        size_t b = text.find('\n', a);
+        if (b == std::string::npos) b = text.size();
+        if (b > a) lines.push_back(text.substr(a, b - a));
+        a = b + 1;
+    }
+    if (lines.empty()) return;
+    const float fs = std::max(12.f, size.y / 18.f), pad = fs * 0.25f, lh = fs * 1.15f;
+    float y = p0.y + size.y * 0.92f - lh * (float)lines.size();
+    for (const std::string& l : lines) {
+        const ImVec2 ts = f->CalcTextSizeA(fs, size.x * 0.9f, 0.f, l.c_str());
+        const float x = p0.x + (size.x - ts.x) * 0.5f;
+        dl->AddRectFilled(ImVec2(x - pad, y), ImVec2(x + ts.x + pad, y + lh), IM_COL32(0, 0, 0, 215));
+        dl->AddText(f, fs, ImVec2(x, y + (lh - fs) * 0.5f), IM_COL32(255, 255, 255, 255), l.c_str());
+        y += lh;
+    }
+}
+
 void overlayThunk(void* ctx, ImDrawList* dl, ImVec2 p0, ImVec2 size) {
     App& a = *(App*)ctx;
     // generated captions (auto subtitles, core/src/transcribe/captions.h): never in place of the station's own ones unless the user chose so
@@ -48,6 +70,11 @@ void overlayThunk(void* ctx, ImDrawList* dl, ImVec2 p0, ImVec2 size) {
     if (!tx::captionsShowBroadcast()) return;
     if (a.subIdx < 0 || !a.subsOn || a.subIdx >= (int)a.subOpts.size()) return;
     const SubOpt& o = a.subOpts[a.subIdx];
+    if (o.cc) {
+        const std::string t = a.engine.player().captionAt(a.video.pts);
+        if (!t.empty()) drawCaptionLines(dl, a.mono ? a.mono : ImGui::GetFont(), p0, size, t);
+        return;
+    }
     if (!o.ttx) {
         if (a.video.subShow && a.video.sub) dl->AddImage(a.video.sub->texture(), p0, ImVec2(p0.x + size.x, p0.y + size.y));
         return;
@@ -129,6 +156,12 @@ void subsUpdate(App& a) {
         }
         for (const auto& st : sv.streams) if (st.kind == "teletext" && st.subs.empty() && firstTtxPid < 0) firstTtxPid = st.pid;
     }
+    // closed captions in the video (CEA-608 / 708): offered once the playing picture has carried caption data
+    if (sid >= 0 && pl.hasCaptions()) {
+        SubOpt o; o.cc = true; o.key = "cc::1:0";
+        o.label = tr("Closed captions (CC)");
+        a.subOpts.push_back(o);
+    }
     // ---- the chosen one: the saved key, else the same kind and language, else the first
     int idx = -1;
     for (int i = 0; i < (int)a.subOpts.size() && idx < 0; i++) if (a.subOpts[i].key == a.subsPick) idx = i;
@@ -149,7 +182,7 @@ void subsUpdate(App& a) {
     if (idx >= 0 && a.subOpts[idx].ttx) ttxPid = a.subOpts[idx].pid;
     a.engine.teletext().setPid(ttxPid);
     DvbSubDecoder& dv = a.engine.dvbSubtitles();
-    if (idx >= 0 && !a.subOpts[idx].ttx && a.subsOn) {
+    if (idx >= 0 && !a.subOpts[idx].ttx && !a.subOpts[idx].cc && a.subsOn) {
         const SubOpt& o = a.subOpts[idx];
         dv.setStream(o.pid, o.comp, o.anc);
         auto d = dv.displayAt(a.video.pts);
