@@ -387,7 +387,12 @@ void Bicm::decodeBatch(const std::vector<const cf32*>& cells, float noiseVar, st
             }
             std::vector<int> it((size_t)nb);
             gHard.resize((size_t)nb * (size_t)cfg_.nInner); gOk.resize((size_t)nb);
-            if (!all.empty() && GpuLdpc::instance().decode(*qc, all.data(), nb, 50, gHard.data(), gOk.data(), it.data(), qcAlpha(cfg_.nInner, cfg_.rate15), true)) gpupol::reportGpu(gpupol::Atsc3, true);
+            // A word that cannot decode (a weak signal, a damaged frame) holds its whole batch for all 50 iterations, and one GPU serves every
+            // PLP and frame: on a weak 256QAM 11/15 PLP those words were 70 % of the GPU's work and kept the receiver behind real time. Such a
+            // word is abandoned after iteration 8 with more than half of its checks failing, or after 20 with more than a quarter (a 40 s
+            // capture: 4 more failed words of 18800 that decoded, peak load 1.58 -> 0.51 of real time).
+            static const int kGiveUp[4] = {8, 2, 20, 4};
+            if (!all.empty() && GpuLdpc::instance().decode(*qc, all.data(), nb, 50, gHard.data(), gOk.data(), it.data(), qcAlpha(cfg_.nInner, cfg_.rate15), true, kGiveUp)) gpupol::reportGpu(gpupol::Atsc3, true);
             else {
                 gOk.clear();
                 gpupol::reportGpu(gpupol::Atsc3, false);

@@ -24,8 +24,11 @@ public:
 #endif
     // Decodes `nb` blocks of n LLRs each (llr > 0 means bit 0). hard receives nb*n bits (one per byte),
     // ok[b] = all parity checks satisfied, iters[b] = iterations used. Blocks the caller until the GPU is done. `boxCorr`: the two-minimum
-    // correction of LdpcCode::decodeFast (Metal, Direct3D 11 and Vulkan).
-    bool decode(const LdpcCode& code, const float* llr, int nb, int maxIter, uint8_t* hard, uint8_t* ok, int* iters, float alpha = 0.78f, bool boxCorr = false);
+    // correction of LdpcCode::decodeFast (Metal, Direct3D 11 and Vulkan). `giveUp` {iteration, divisor, iteration, divisor}: after such an
+    // iteration a word with more than (n - k) / divisor unsatisfied checks is abandoned (as QcLdpc::giveUpIter; Vulkan only for now, the
+    // Metal and Direct3D 11 kernels run every word to maxIter). nullptr: never.
+    bool decode(const LdpcCode& code, const float* llr, int nb, int maxIter, uint8_t* hard, uint8_t* ok, int* iters, float alpha = 0.78f, bool boxCorr = false,
+                const int* giveUp = nullptr);
 
     // The same for a table-driven quasi-cyclic code (layered normalised min-sum, the schedule and arithmetic of the DTMB CPU decoder, one thread group per
     // word). llr: nb * sentBits() values (> 0 means bit 0). info: nb * infoBits() bits (one per byte). ok[b]: all checks satisfied; iters[b]: iterations.

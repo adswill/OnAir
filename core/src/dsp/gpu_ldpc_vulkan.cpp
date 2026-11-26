@@ -76,7 +76,7 @@ void* loaderSym(void* lib, const char* name) {
 }
 
 // the push constants of the two kernels (std430 layout of the GLSL blocks)
-struct T2Push { int32_t k, n, q, G, maxIter; float alpha; uint32_t msgPer, postPer; };
+struct T2Push { int32_t k, n, q, G, maxIter; float alpha; uint32_t msgPer, postPer; int32_t gu0, gd0, gu1, gd1; };
 struct QcPush { int32_t z, rows, cols, punct, sent, info, maxIter, gu0, gd0, gu1, gd1; float alpha, clip; uint32_t msgPer; };
 
 // The DTMB arithmetic on the CPU, operation for operation as in ldpc_qc.comp (and dtmb_ldpc.cpp): the reference of the self-test.
@@ -626,7 +626,8 @@ bool GpuLdpc::available() const { return p_->ready; }
 const char* GpuLdpc::unavailableReason() const { return p_->ready ? "" : p_->reason.c_str(); }
 const char* GpuLdpc::deviceName() const { return p_->name.c_str(); }
 
-bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter, uint8_t* hard, uint8_t* ok, int* iters, float alpha, bool boxCorr) {
+bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter, uint8_t* hard, uint8_t* ok, int* iters, float alpha, bool boxCorr,
+                     const int* giveUp) {
     if (!available() || code.q() * 360 != code.n() - code.k()) return false;
     std::lock_guard<std::mutex> lk(p_->mu);
     Impl& d = *p_;
@@ -652,7 +653,8 @@ bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter
         }
         s.used = ++d.tick;
         std::memcpy(s.llr.map, llr + (size_t)b0 * n, (size_t)cnt * n * 4);
-        const T2Push P = {code.k(), n, code.q(), code.groups(), maxIter, boxCorr ? -alpha : alpha, s.msgPer, s.postPer};   // negative: the two-minimum correction
+        const int gu[4] = {giveUp ? giveUp[0] : 0, giveUp ? giveUp[1] : 1, giveUp ? giveUp[2] : 0, giveUp ? giveUp[3] : 1};
+        const T2Push P = {code.k(), n, code.q(), code.groups(), maxIter, boxCorr ? -alpha : alpha, s.msgPer, s.postPer, gu[0], gu[1], gu[2], gu[3]};   // negative: the two-minimum correction
         if (!d.begin()) return false;
         d.CmdBindPipeline(d.cmd, PIPELINE_BIND_POINT_COMPUTE, d.t2Pipe);
         d.CmdBindDescriptorSets(d.cmd, PIPELINE_BIND_POINT_COMPUTE, d.t2Layout, 0, 1, &s.set, 0, nullptr);

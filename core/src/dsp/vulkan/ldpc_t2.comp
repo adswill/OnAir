@@ -12,7 +12,7 @@ layout(local_size_x = 360, local_size_y = 1, local_size_z = 1) in;
 
 const int Z = 360;
 
-layout(push_constant) uniform P { int k, n, q, G, maxIter; float alpha; uint msgPer, postPer; } p;
+layout(push_constant) uniform P { int k, n, q, G, maxIter; float alpha; uint msgPer, postPer; int gu0, gd0, gu1, gd1; } p;
 
 layout(std430, binding = 0) readonly buffer B0 { int lStart[]; };
 layout(std430, binding = 1) readonly buffer B1 { int cGrp[]; };
@@ -104,16 +104,22 @@ void main() {
         it++;
         if (m == 0) bad = 0;
         syncShared();
+        int nbad = 0;   // this invocation's unsatisfied checks (check m of every layer)
         for (int r = 0; r < q; r++) {
             const int c0 = lStart[r], nc0 = lStart[r + 1] - c0, nc = nc0 + 2;
             int par = 0;
             for (int j = 0; j < nc; j++) par ^= post[pB + uint(vidx(j, nc0, c0, r, m))] < 0.0 ? 1 : 0;
-            if (par != 0) { atomicOr(bad, 1); break; }
+            nbad += par;
         }
+        if (nbad != 0) atomicAdd(bad, nbad);
         syncShared();
-        ok = bad == 0;
+        const int w = bad;
+        ok = w == 0;
         syncShared();   // everyone has read `bad` before the next round may reset it
         if (ok) break;
+        // a word still far from a code word after a few iterations does not converge: it is abandoned (the same rule as the QC kernel)
+        const int gu = it == p.gu0 ? p.gd0 : it == p.gu1 ? p.gd1 : 0;
+        if (gu > 0 && w > q * Z / gu) break;
     }
     const uint hB = blk * uint(p.n);
     for (int i = m; i < G * Z; i += Z) hard[hB + uint(i)] = post[pB + uint(i)] < 0.0 ? 1u : 0u;
