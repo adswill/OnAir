@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+// Copyright (C) 2026 Maciej Malinowski (webglobepl)
 
 // The new interface: the shell around the body (menu bar, top bar with the mode combo and summary, bottom bar, the
 // mode list and side bar, the status line and the log console).
@@ -1083,15 +1084,17 @@ static void quickStrip(App& a, float x0, float x1, float y, float h) {
 void topBar(App& a, ImVec2 disp) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, kRail);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8 * gUi, 4 * gUi));
-    ImGui::BeginChild("##top", ImVec2(0, 50 * gUi), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::BeginChild("##top", ImVec2(0, 82 * gUi), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     ImGui::PopStyleVar();
     a.tgMin[TgToolbar] = ImGui::GetWindowPos(); a.tgMax[TgToolbar] = ImVec2(a.tgMin[TgToolbar].x + ImGui::GetWindowSize().x, a.tgMin[TgToolbar].y + ImGui::GetWindowSize().y);
     {
         const bool running = a.engine.running();
-        const ImVec2 o = ImGui::GetCursorScreenPos();
+        const ImVec2 start = ImGui::GetCursorScreenPos();
+        const ImVec2 o(start.x, start.y + 16 * gUi);
+        ImGui::SetCursorScreenPos(o);
         if (runButton(running, 40 * gUi) || (!running && a.wizStart)) { if (running) a.engine.stop(); else startReceiver(a); a.wizStart = false; }
         const float W = ImGui::GetContentRegionAvail().x;
-        ImGui::SetCursorScreenPos(ImVec2(o.x + 58 * gUi, o.y));
+        ImGui::SetCursorScreenPos(ImVec2(o.x + 58 * gUi, o.y - 16 * gUi));
         float digitsEnd = freqDigits(a);
         if (isGeneralFamily(a.family)) {   // 4.0: the General receiver's demodulator and filter as a button by the frequency (a click: the choices)
             ImGui::SetCursorScreenPos(ImVec2(digitsEnd + 12 * gUi, o.y + 8 * gUi));

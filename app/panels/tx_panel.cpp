@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+// Copyright (C) 2026 Maciej Malinowski (webglobepl)
 
 // The transmit panel, in the receiver's own style: a top bar with the run button and the big frequency digits (the same widget as the receiver's), then three
 // panes: the signal list, the Basic block (state, radio, level, what to send, with Advanced folded below it) and the preview. A narrow window (or the pop-out
@@ -297,10 +298,12 @@ void txTopBar(App& a, ImVec2 disp) {
     const bool running = s.session.running();
     ImGui::PushStyleColor(ImGuiCol_ChildBg, kRail);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8 * gUi, 4 * gUi));
-    ImGui::BeginChild("##txtop", ImVec2(0, 50 * gUi), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+    ImGui::BeginChild("##txtop", ImVec2(0, 82 * gUi), ImGuiChildFlags_AlwaysUseWindowPadding, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
     ImGui::PopStyleVar();
     {
-        const ImVec2 o = ImGui::GetCursorScreenPos();
+        const ImVec2 start = ImGui::GetCursorScreenPos();
+        const ImVec2 o(start.x, start.y + 16 * gUi);
+        ImGui::SetCursorScreenPos(o);
         const float W = ImGui::GetContentRegionAvail().x;
         const bool can = canStart(a, s, c.radio, c.conflict, c.mode);
         ImGui::BeginDisabled(!can && !running && !s.pendingStart);
@@ -310,7 +313,7 @@ void txTopBar(App& a, ImVec2 disp) {
             else s.pendingStart = true;
         }
         ImGui::EndDisabled();
-        ImGui::SetCursorScreenPos(ImVec2(o.x + 58 * gUi, o.y));
+        ImGui::SetCursorScreenPos(ImVec2(o.x + 58 * gUi, o.y - 16 * gUi));
         const float digitsEnd = freqDigitsFor(a, s.freqMhz, [&s](double v) { s.freqMhz = v; s.linkRx = false; });
 
         // linked or independent, and the band presets

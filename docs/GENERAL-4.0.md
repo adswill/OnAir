@@ -52,8 +52,8 @@ Code: `app/general/general_screen.cpp` (the screen), `app/general/general_ui.cpp
 - **General bar**: the step arrows and the step size, **Snap**, **Centre**, and a compact channel level meter with the SNR and the
   squelch state.
 - **Top bar**: the demodulator and its filter as a button right of the frequency digits (for example `NFM 12.5 k`). A click opens the
-  demodulator grid and the filter presets. The frequency digits are the shared SDR++ style readout: scroll a digit, click its upper or
-  lower half, type a number over it, or double click to type the whole frequency.
+  demodulator grid and the filter presets. The frequency digits are the shared SDR++ style readout: scroll a digit, use its separate up/down
+  buttons, type a number over it, or click the digit to type the whole frequency. Hover a digit to show its arrow buttons. Moving to either button keeps them visible.
 
 Settings: the layout is saved in the preference `gen40Layout`, for example `v=1;w=300;o=1;f=0.420;d=0;dh=240;s=f`. Unknown keys are skipped,
 so later versions can add keys. Display > **4.0 General layout** turns the screen off and goes back to the 3.9 layout, which keeps

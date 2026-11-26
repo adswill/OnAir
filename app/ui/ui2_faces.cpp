@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+// Copyright (C) 2026 Maciej Malinowski (webglobepl)
 
 // The new interface: the Faceplate, Cinema, Meters, Dock and Panel layouts of the body (the "Scope: Cinema" and
 // "Faceplate" variants are instruments in a chassis; Dock and Panel are the two-column ones).
@@ -26,7 +27,7 @@ void bodyFace(App& a, float bodyH, ImVec2 disp) {
     const float leftW = std::floor(W * 0.66f), rightW = W - leftW - gap;
     ImGui::BeginGroup();
     {   // the display: run, frequency, what is being received
-        const float dispH = 142 * gUi;
+        const float dispH = 174 * gUi;
         beginModule("##f_disp", N_("DISPLAY"), ImVec2(leftW, dispH));
         tgRect(a, TgToolbar);
         const ImVec2 o = ImGui::GetCursorScreenPos();
@@ -35,7 +36,7 @@ void bodyFace(App& a, float bodyH, ImVec2 disp) {
         ImGui::SetCursorScreenPos(ImVec2(o.x + 72 * gUi, o.y - 2 * gUi));
         const float end = freqDigits(a, 52.f);
         (void)end;
-        summary(a, o.x + 74 * gUi, o.y + 66 * gUi, 1.5f, ImGui::GetContentRegionAvail().x - 74 * gUi);
+        summary(a, o.x + 74 * gUi, o.y + 98 * gUi, 1.5f, ImGui::GetContentRegionAvail().x - 74 * gUi);
         const float mw = 250 * gUi;
         levelMeter(a, o.x + ImGui::GetContentRegionAvail().x - mw, o.y, mw);
         ImGui::SetCursorScreenPos(ImVec2(o.x + ImGui::GetContentRegionAvail().x - mw, o.y + 44 * gUi));
@@ -43,7 +44,7 @@ void bodyFace(App& a, float bodyH, ImVec2 disp) {
         endModule();
     }
     {
-        beginModule("##f_scope", N_("SPECTRUM"), ImVec2(leftW, topH - 142 * gUi - 3 * gUi));
+        beginModule("##f_scope", N_("SPECTRUM"), ImVec2(leftW, topH - 174 * gUi - 3 * gUi));
         tgRect(a, TgMain);
         mainTabs(a);
         endModule();
@@ -316,7 +317,7 @@ void bodyPanel(App& a, float bodyH, ImVec2 disp) {
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float rightW = 236 * gUi, leftW = W - rightW - gap;
     const bool synth = sourceOptionsOpen(a);
-    const float sdrH = (synth ? 196 : 148) * gUi + (modeUi(a.family) && modeUi(a.family)->tuner ? 70 * gUi : 0), ledH = 80 * gUi, anaH = (a.atsc3Mode ? 0 : 224) * gUi;
+    const float sdrH = (synth ? 228 : 180) * gUi + (modeUi(a.family) && modeUi(a.family)->tuner ? 70 * gUi : 0), ledH = 80 * gUi, anaH = (a.atsc3Mode ? 0 : 224) * gUi;
     const float wfH = H - sdrH - ledH - anaH - (anaH > 0 ? 3 : 2) * vgap;
     ImGui::BeginGroup();
     {   // SDR settings: run, frequency, what is received, level and volume; then the source, tuner and gain controls
@@ -332,7 +333,8 @@ void bodyPanel(App& a, float bodyH, ImVec2 disp) {
         levelMeter(a, o.x + ImGui::GetContentRegionAvail().x - vw - mw - 20 * gUi, o.y, mw);
         ImGui::SetCursorScreenPos(ImVec2(o.x + ImGui::GetContentRegionAvail().x - vw + 4 * gUi, o.y + 8 * gUi));
         volumeControl(a, vw);
-        ImGui::SetCursorScreenPos(ImVec2(o.x, o.y + 52 * gUi));
+        ImGui::NewLine();   // reset SameLine state before the source/tuner row below the readout
+        ImGui::SetCursorScreenPos(ImVec2(o.x, o.y + 84 * gUi));
         toolbarParts(a, TbSource | TbTuner | TbGain | TbDecoder, false);
         if (a.devices[a.devIdx].isRadio()) { ImGui::SameLine(0, 14 * gUi); radioSettingsUi(a, false); }
         if (synth) sourceOptions(a);
