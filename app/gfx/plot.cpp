@@ -50,6 +50,7 @@ struct State {
     double tgt[2][2] = {{0, 1}, {0, 1}}, last[2][2] = {{0, 1}, {0, 1}};   // an eased wheel zoom: where the limits are heading, and where this plot left them
     bool hasTgt[2] = {false, false};
     int panBtn = -1;      // drag to tune (SetNextDragTune): the button whose drag pans this plot, -1 none
+    bool bandPress = false;   // the current left press started on the tuning band
     bool panX = false;    // that pan began on the frequency scale: x only
 };
 std::unordered_map<ImGuiID, State> gStates;
@@ -79,6 +80,9 @@ struct Ctx {
     bool noYTicks = false;   // too narrow for the y tick labels: left out
     Look look;               // SetNextPlotLook (off: the usual look)
     double zoomMarker = std::numeric_limits<double>::quiet_NaN(); float zoomMarkerPx = 0;   // the tuner marker the wheel zoom keeps still when the pointer is near it
+    double dragCentre = 0, dragHalfWidth = 0;
+    float dragRadius = 0;
+    bool dragBandHovered = false;
     int wheelAxes = -1;      // SetNextWheelAxes (-1: the usual rule)
     bool lookStrip = false;  // the x labels are on the look's strip
     bool dragTune = false;   // SetNextDragTune: a left drag on the body is the caller's (it tunes); the scale, right and middle pan
@@ -277,6 +281,15 @@ void finishSetup() {
     C.hovered = hov; C.held = held;
     const bool movable[2] = {!(C.ax[0].haveLimits && C.ax[0].cond == Cond_Always), !(C.ax[1].haveLimits && C.ax[1].cond == Cond_Always)};
     ImGuiIO& io = ImGui::GetIO();
+    if (hov && C.dragRadius > 0) {
+        const float centre = px(C.dragCentre);
+        const float radius = std::max(C.dragRadius, px(C.dragCentre + C.dragHalfWidth) - centre);
+        const float scaleHeight = C.dragTune && !C.lookStrip ? C.scalePx : 0.f;
+        C.dragBandHovered = std::fabs(io.MousePos.x - centre) <= radius &&
+                            io.MousePos.y < C.plot.Max.y - scaleHeight;
+    }
+    if (ImGui::IsMouseClicked(0)) C.st->bandPress = C.dragBandHovered;
+    else if (!ImGui::IsMouseDown(0)) C.st->bandPress = false;
     if (!(C.flags & (Flags_Equal | Flags_NoPan)) && (movable[0] || movable[1])) {
         const bool smooth = (C.flags & Flags_SmoothZoom) != 0;
         for (int a = 0; a < 2; a++)   // somebody else moved the limits (a drag, a plot sharing the axis, a reset): the eased zoom gives way
@@ -301,7 +314,7 @@ void finishSetup() {
             if (touch::on() && C.st->panBtn == 0 && !C.st->panX && touch::longPressHeld()) C.st->panBtn = -1;   // a long press: the finger tunes now
             if (onScale && C.st->panBtn < 0 && !ImGui::IsMouseDown(0)) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
         }
-        const bool panning = C.dragTune ? C.st->panBtn >= 0 : held;
+        const bool panning = C.dragTune ? C.st->panBtn >= 0 : held && !C.st->bandPress;
         if (panning && !(C.flags & Flags_NoDrag) && (io.MouseDelta.x != 0 || io.MouseDelta.y != 0)) {
             if (C.dragTune) ImGui::SetMouseCursor(C.st->panX ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeAll);
             if (movable[0] && C.ax[0].scale == Scale_Linear) { const double d = -io.MouseDelta.x / C.plot.GetWidth() * (C.hi[0] - C.lo[0]); C.st->lim[0][0] += d; C.st->lim[0][1] += d; intendedLo = C.st->lim[0][0]; draggedX = true; }
@@ -723,6 +736,13 @@ bool IsPlotHovered() { return C.active && C.hovered; }
 double PanOverflowX() { return gPanOverflowX; }
 bool IsPlotHeld() { return C.active && C.held; }
 bool IsPlotPanning() { return C.active && (C.dragTune ? C.st->panBtn >= 0 : C.held && ImGui::IsMouseDragging(0, 4)); }
+void SetupDragBand(double centre, double halfWidth, float minRadiusPx) {
+    if (!C.active || C.setupDone) return;
+    C.dragCentre = centre;
+    C.dragHalfWidth = halfWidth;
+    C.dragRadius = minRadiusPx;
+}
+bool IsDragBandHovered() { return C.active && C.dragBandHovered; }
 bool PressOnScale() { return C.active && C.dragTune && C.st->panBtn == 0 && C.st->panX; }
 ImVec2 GetPlotPos() { if (C.active) finishSetup(); return C.plot.Min; }
 ImVec2 GetPlotSize() { if (C.active) finishSetup(); return C.plot.GetSize(); }
