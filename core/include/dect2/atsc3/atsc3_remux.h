@@ -25,6 +25,11 @@ public:
     // The same with a time limit: returns 0 when nothing came within timeoutMs, and -1 when the stream has ended.
     int readTimed(uint8_t* buf, int size, int timeoutMs);
     void stop();
+    // Another service: every component so far leaves the output (its demuxer ends, what it had queued is dropped), and the output starts
+    // again (new PSI tables, the timestamps go on) with the components declared and pushed from now on, once a picture and a sound track
+    // are there (as at the start). Component ids may be used again. Without this, a new service's init segment under an id of the old
+    // one would be read with the old track's settings (its picture size and parameter sets), and the picture would break.
+    void newService();
 
     std::string error() const;
     int streamCount() const;           // streams in the output, 0 until the header is written
