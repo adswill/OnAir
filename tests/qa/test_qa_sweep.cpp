@@ -982,6 +982,8 @@ int main(int argc, char** argv) {
     int unexpected = 0;
     for (auto* e : sel) {
         Row r; r.id = e->id; r.name = e->name; r.stdMode = e->stdMode; r.rate = e->rate;
+        const auto modeT0 = Clock::now();
+        int tries = 0;   // signal lengths tried (QA_TIMING_LOG)
         fprintf(stderr, "[%s] ", e->id.c_str()); fflush(stderr);
         // the signal length: --seconds, longer (x4, then 120 s) when the clean run decoded nothing, within --max-samples per file
         // (32 s holds two 15 s FT8 slots and a NAVTEX message; the long run reaches the 2 min WSPR slot). The engine reads the file as fast as
@@ -996,6 +998,7 @@ int main(int argc, char** argv) {
         for (size_t li = 0; li < lens.size(); li++) {
             const double want = lens[li];
             if (done) break;
+            tries++;
             const bool paced = li + 1 == lens.size();
             if (paced) setenv("QA_PACE", "1", 1);
             r.paced = paced;
@@ -1168,6 +1171,13 @@ int main(int argc, char** argv) {
         unexpected += (int)r.unexpected.size();
         fprintf(stderr, "%s %s %s %s %s rate %s %s %s tx %s cpu %.4f %s%s\n", r.c[0].verdict.c_str(), r.c[1].verdict.c_str(), r.c[2].verdict.c_str(), r.c[3].verdict.c_str(), r.c[4].verdict.c_str(), r.c[5].verdict.c_str(), r.c[6].verdict.c_str(), r.c[7].verdict.c_str(), r.tx.verdict.c_str(), r.cost,
                 r.note.c_str(), r.unexpected.empty() ? "" : "  <-- UNEXPECTED");
+        if (const char* tl = getenv("QA_TIMING_LOG")) {   // CI: wall seconds per mode, to find where a shard's time goes (docs/CI-SPEED-4.7.md)
+            if (FILE* f = fopen(tl, "a")) {
+                fprintf(f, "%s\t%.1f\t%d\t%.1f\t%d\t%s\n", r.id.c_str(), std::chrono::duration<double>(Clock::now() - modeT0).count(), tries, r.secs,
+                        r.paced ? 1 : 0, r.c[0].verdict.c_str());
+                fclose(f);
+            }
+        }
         rows.push_back(r);
     }
     std::error_code ec;

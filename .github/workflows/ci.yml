@@ -51,6 +51,7 @@ env:
   # every test's wall and CPU seconds (tools/ci_testtime.py, the ctest launcher on Linux and macOS): uploaded with the shard's logs, read by
   # tools/ci_times.py to refresh tools/ci_times.tsv and to find the tests that wait instead of compute
   ONAIR_TESTTIME_LOG: ${{ github.workspace }}/testtime.log
+  QA_TIMING_LOG: ${{ github.workspace }}/qatime.log   # test_qa_sweep: wall seconds and tries per mode
   HOMEBREW_NO_AUTO_UPDATE: "1"
   HOMEBREW_NO_INSTALL_CLEANUP: "1"
 
@@ -147,7 +148,7 @@ jobs:
         run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true
       - uses: actions/upload-artifact@v7
         if: always()
-        with: { name: "cpucal-${{ matrix.name }}-${{ matrix.shard }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log\nsel/summary.txt\ntesttime.log", if-no-files-found: ignore }
+        with: { name: "cpucal-${{ matrix.name }}-${{ matrix.shard }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log\nsel/summary.txt\ntesttime.log\nqatime.log", if-no-files-found: ignore }
 
 
   macos-shards:
@@ -218,7 +219,7 @@ jobs:
         run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true
       - uses: actions/upload-artifact@v7
         if: always()
-        with: { name: "cpucal-${{ matrix.name }}-${{ matrix.shard }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log\nsel/summary.txt\ntesttime.log", if-no-files-found: ignore }
+        with: { name: "cpucal-${{ matrix.name }}-${{ matrix.shard }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log\nsel/summary.txt\ntesttime.log\nqatime.log", if-no-files-found: ignore }
 
 
   windows-shards:
