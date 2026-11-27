@@ -2,589 +2,590 @@
 # Made by tools/ci_times.py from the logs of ci.yml runs (now: 46003088536, full scope; Windows column older); a test missing here counts 5 s. Refresh after big test changes.
 # slow tier (linux column only): run 45804890762 (Linux arm64 runner, the nightly); qa_sweep_NN and fuzz_engine_modes_N split from the totals of the old 8 shards / one test
 test	linux	macos	windows
-ac4	10.2	24.7	13.4
-acars_basic	0.4	0.4	0.6
+ac4	10.3	24.7	13.4
+acars_basic	0.3	0.4	0.6
 acars_engine	21.9		
-acars_fans	2.1		2.3
+acars_fans	2.0		2.3
 acars_impair	42.9		
-acars_log	0.1	0.1	0.0
-acars_map	4.1	3.5	3.5
+acars_log	0.0	0.1	0.0
+acars_map	2.7	3.5	3.5
 acars_metar	0.0	0.1	0.0
-acars_persist_engine	17.1	18.1	16.4
+acars_persist_engine	16.1	18.1	16.4
 acars_proto	0.1	0.2	0.0
-acars_proto_rs	1.9	3.9	2.1
-acars_rates	17.0	20.2	18.3
+acars_proto_rs	1.7	3.9	2.1
+acars_rates	18.2	20.2	18.3
 acars_reasm	0.0	0.1	0.0
-acars_results	1.3	1.6	1.6
-acars_rx	10.2	14.6	8.5
+acars_results	1.4	1.6	1.6
+acars_rx	7.5	14.6	8.5
 acars_slow_rate20	10.5		
-acars_snr	31.3	29.8	51.5
-acars_text	0.1	0.3	0.2
+acars_snr	18.3	29.8	51.5
+acars_text	0.2	0.3	0.2
 adc_bits	0.0	0.1	0.0
 adsb_airportboard	0.0	0.1	0.0
-adsb_atmos	0.1		
-adsb_autogain	54.2	6.5	74.1
-adsb_deeprepair	4.4	4.7	2.0
-adsb_display	0.1	0.1	0.0
+adsb_atmos	0.2		
+adsb_autogain	47.9	6.5	74.1
+adsb_deeprepair	3.6	4.7	2.0
+adsb_display	0.0	0.1	0.0
 adsb_engine	12.8		
-adsb_ext	1.1	1.5	3.3
+adsb_ext	1.2	1.5	3.3
 adsb_filter	0.0	0.1	0.0
-adsb_gen	3.0	3.4	3.9
+adsb_gen	2.9	3.4	3.9
 adsb_horizon	0.1	0.1	0.1
-adsb_impair	29.2	15.8	11.2
+adsb_impair	25.3	15.8	11.2
 adsb_jam	0.0	0.1	0.0
-adsb_loud	8.7	5.4	8.0
-adsb_manoeuvre	0.1	0.1	0.0
-adsb_msg	0.3	0.2	0.3
-adsb_overhead	0.1		
-adsb_overlap	6.7	3.3	3.5
+adsb_loud	9.1	5.4	8.0
+adsb_manoeuvre	0.0	0.1	0.0
+adsb_msg	0.2	0.2	0.3
+adsb_overhead	0.0		
+adsb_overlap	3.8	3.3	3.5
 adsb_planealert	0.0	0.1	0.1
-adsb_proto_rs	2.7	3.2	2.6
+adsb_proto_rs	1.6	3.2	2.6
 adsb_records	0.0	0.1	0.0
-adsb_results	1.6	1.2	1.6
-adsb_rx	39.7	39.0	58.1
+adsb_results	1.9	1.2	1.6
+adsb_rx	52.7	39.0	58.1
 adsb_seenstore	0.0		
-adsb_track	0.1	0.2	0.1
-adsb_trust	0.1	0.1	0.0
+adsb_track	0.2	0.2	0.1
+adsb_trust	0.0	0.1	0.0
 adsb_units	0.0	0.1	0.0
 adsl_proto	0.3	0.3	0.2
-adsl_rx	50.5	55.5	34.1
-adsl_tone	4.5	6.5	4.5
+adsl_rx	60.6	55.5	34.1
+adsl_tone	5.3	6.5	4.5
 aero_acars_real	0.0	0.1	0.0
-aero_acq	2.4	1.2	2.8
+aero_acq	1.7	1.2	2.8
 aero_adsc	0.0	0.1	0.0
 aero_adsc_contract	0.0	0.1	0.0
 aero_basic	0.2	0.4	0.2
-aero_cchan	31.8	23.5	46.5
-aero_cchan_real	0.3	0.5	0.2
+aero_cchan	31.9	23.5	46.5
+aero_cchan_real	0.4	0.5	0.2
 aero_cpdlc	0.0	0.1	0.0
-aero_crowded	233.0	181.6	232.5
-aero_demod	0.1	0.2	0.2
-aero_engine	25.9	26.2	25.9
-aero_impair	17.0	11.9	15.6
-aero_map	3.8	2.4	3.2
+aero_crowded	257.5	181.6	232.5
+aero_demod	0.2	0.2	0.2
+aero_engine	25.3	26.2	25.9
+aero_impair	16.4	11.9	15.6
+aero_map	2.2	2.4	3.2
 aero_phy	0.1	0.1	0.0
-aero_rates	17.0	12.2	15.2
-aero_rx	2.8	2.4	2.5
+aero_rates	14.8	12.2	15.2
+aero_rx	2.2	2.4	2.5
 aero_su_layers	0.1	0.1	0.0
-aero_sweep	3.6	2.8	3.2
-agc	9.6	3.6	16.0
-agc_burst	1.5	0.9	1.5
-airband_auto	12.2	12.7	23.3
-airband_clips	1.7	1.2	2.8
-airband_engine	10.6	11.4	11.1
-airband_multi	120.5	85.4	168.2
+aero_sweep	2.5	2.8	3.2
+agc	10.9	3.6	16.0
+agc_burst	0.9	0.9	1.5
+airband_auto	14.3	12.7	23.3
+airband_clips	1.6	1.2	2.8
+airband_engine	11.1	11.4	11.1
+airband_multi	111.7	85.4	168.2
 airband_rx	98.2		
 airband_store	0.0	0.1	0.0
-airband_uhf	40.6		
-airports	0.2	0.2	0.3
+airband_uhf	30.6		
+airports	0.1	0.2	0.3
 ais_alerts	0.1	0.1	0.1
-ais_anomaly	0.8	1.1	0.8
+ais_anomaly	0.6	1.1	0.8
 ais_apps	0.6	1.2	0.9
-ais_arrivals	0.1	0.1	0.0
-ais_basic	0.9	1.8	1.0
+ais_arrivals	0.0	0.1	0.0
+ais_basic	0.8	1.8	1.0
 ais_behave	0.0	0.1	0.0
-ais_caps	4.3	1.6	2.6
-ais_collision	3.6	1.9	4.1
+ais_caps	3.5	1.6	2.6
+ais_collision	3.4	1.9	4.1
 ais_ducting	0.2	0.2	0.2
 ais_engine	6.6	7.7	8.6
-ais_fleet	5.0	4.1	7.3
-ais_impair	45.2	22.2	26.5
-ais_longrange	0.6	0.5	0.4
+ais_fleet	3.4	4.1	7.3
+ais_impair	35.4	22.2	26.5
+ais_longrange	0.5	0.5	0.4
 ais_mid	0.0	0.1	0.0
-ais_noise	22.3	23.0	22.4
-ais_phy	1.0	2.1	1.2
+ais_noise	20.4	23.0	22.4
+ais_phy	1.4	2.1	1.2
 ais_proto	0.0	0.1	0.0
-ais_proto_rs	2.6	3.6	2.7
+ais_proto_rs	2.5	3.6	2.7
 ais_results	0.7	0.6	0.6
-ais_satellite	1.4	1.1	1.4
-ais_sweep	24.2	12.9	15.6
+ais_satellite	1.2	1.1	1.4
+ais_sweep	18.9	12.9	15.6
 ais_vectors	1.0	0.9	0.8
-ais_views	23.9		
-ais_wire	0.7	1.0	1.9
+ais_views	14.3		
+ais_wire	1.1	1.0	1.9
 ale_engine	12.5	13.2	13.0
 ale_lqa	0.1	0.1	0.1
 ale_proto	0.0	0.1	0.0
-ale_rx	4.5	5.0	9.9
-ale_wide	6.2	6.6	7.4
-am_census	95.0	25.9	35.6
-am_clear	13.6	15.7	7.0
+ale_rx	4.2	5.0	9.9
+ale_wide	6.0	6.6	7.4
+am_census	37.1	25.9	35.6
+am_clear	9.3	15.7	7.0
 am_d40	0.1	0.1	0.1
-am_diversity	3.0	2.6	1.6
-ant_engine	8.9	9.7	9.3
+am_diversity	2.1	2.6	1.6
+ant_engine	8.8	9.7	9.3
 ant_proto	0.0	0.1	0.0
-ant_rx	12.8	10.5	16.3
+ant_rx	10.2	10.5	16.3
 antd_mom	0.2	0.3	0.2
 antd_tools	0.5	0.6	0.7
 antenna_ports	0.0	0.1	0.0
 api_policy	1.5	2.2	1.5
 aprs_gate	1.4	1.6	1.6
-ardop_engine	36.6	37.5	37.7
+ardop_engine	36.5	37.5	37.7
 ardop_proto	0.0	0.1	0.0
-ardop_rx	4.2	4.3	16.9
+ardop_rx	4.7	4.3	16.9
 argos_proto	0.0	0.1	0.0
-argos_rx	4.3	3.1	6.8
-argos_sens40	14.2	6.3	17.8
+argos_rx	3.6	3.1	6.8
+argos_sens40	10.4	6.3	17.8
 argos_sigfox_mode	0.1	0.3	0.1
-arib_text	0.0	0.1	0.0
+arib_text	0.1	0.1	0.0
 aspect	0.1	0.1	0.1
 asterix_engine	1.3	1.7	1.3
 asterix_mode	0.1	0.2	0.1
-asterix_proto	0.1	0.1	0.0
-astro_dsp	11.9	7.2	9.6
-astro_engine	4.2	4.5	4.3
+asterix_proto	0.0	0.1	0.0
+astro_dsp	9.6	7.2	9.6
+astro_engine	4.0	4.5	4.3
 astro_hline	0.1	0.1	0.1
-atis_engine	14.4	15.4	14.7
-atis_mode	0.1	0.5	0.1
+atis_engine	14.5	15.4	14.7
+atis_mode	0.0	0.5	0.1
 atis_proto	0.0	0.1	0.0
-atis_rx	38.0	19.6	64.4
+atis_rx	27.0	19.6	64.4
 atsc3_alp	0.0	0.1	0.0
 atsc3_bb	0.0	0.1	0.0
-atsc3_bicm	1.4	0.2	1.2
+atsc3_bicm	0.6	0.2	1.2
 atsc3_bootstrap	0.1	0.2	0.1
-atsc3_cticsi	8.0		
+atsc3_cticsi	5.0		
 atsc3_datapath	0.2	0.1	0.1
-atsc3_engine	3.3	5.2	3.9
+atsc3_engine	3.0	5.2	3.9
 atsc3_frame	0.3	0.4	0.3
-atsc3_l1	0.6	0.2	1.2
+atsc3_l1	0.5	0.2	1.2
 atsc3_l1detail	0.1	0.1	0.1
-atsc3_ldm	1.7	1.5	2.5
-atsc3_ldpc	0.8	0.6	1.0
+atsc3_ldm	1.3	1.5	2.5
+atsc3_ldpc	0.7	0.6	1.0
 atsc3_lls	0.0	0.1	0.0
 atsc3_ofdm	0.1	0.2	0.1
-atsc3_plp_backoff	5.4	4.2	3.9
+atsc3_plp_backoff	2.3	4.2	3.9
 atsc3_preamble	0.1	0.2	0.1
 atsc3_realworld	107.3		
 atsc3_receiver	0.8	1.4	1.1
-atsc3_remux	5.2	14.1	5.5
-atsc3_route	0.5	0.1	0.0
-atsc3_rxqueue	14.4	14.8	
-atsc3_service_switch	19.9		42.7
+atsc3_remux	5.1	14.1	5.5
+atsc3_route	0.2	0.1	0.0
+atsc3_rxqueue	14.3	14.8	
+atsc3_service_switch	18.7		42.7
 atsc3_signaling	0.0	0.1	0.0
-atsc3_stream	1.5	1.9	4.0
-atsc3_subframe	0.2	0.2	0.1
-atsc3_sync	0.8	0.4	1.3
+atsc3_stream	1.6	1.9	4.0
+atsc3_subframe	0.1	0.2	0.1
+atsc3_sync	0.5	0.4	1.3
 atsc3_synth_basic	11.8	9.2	17.3
 atsc3_synth_options	44.0		
-atsc3_synth_rx	59.8	27.2	42.9
+atsc3_synth_rx	23.2	27.2	42.9
 atsc3_ti	0.1	0.1	0.0
 atsc_channels	214.9		
 atsc_channels_dyn	279.8		
 atsc_channels_echo	190.7		
 atsc_channels_paced	21.8		
 atsc_channels_rates	398.0		
-atsc_cpu	22.4	17.6	24.0
+atsc_cpu	14.2	17.6	24.0
 atsc_fec	0.3	0.6	0.3
-atsc_mh	0.3	0.4	0.3
+atsc_mh	0.5	0.4	0.3
 atsc_realworld	95.6		
 atsc_rx	39.9		
-atv_aspect	54.5	35.5	66.2
+atv_aspect	52.7	35.5	66.2
 atv_blend	0.1	0.1	0.1
-atv_btsc	41.1	16.3	43.9
+atv_btsc	35.3	16.3	43.9
 atv_engine	72.1		
-atv_enhance	5.8	3.9	
-atv_faults	56.8	29.1	93.0
+atv_enhance	7.8	3.9	
+atv_faults	46.3	29.1	93.0
 atv_fm	0.2		
-atv_gap	12.3		15.0
-atv_gen	3.1	4.1	4.8
-atv_geometry	74.5	34.6	113.5
-atv_ghost	19.8	7.8	25.2
+atv_gap	11.2		15.0
+atv_gen	4.8	4.1	4.8
+atv_geometry	77.4	34.6	113.5
+atv_ghost	16.9	7.8	25.2
 atv_impair	281.4		
 atv_interf	315.5		
-atv_radio_sweep	57.6	36.5	65.1
+atv_radio_sweep	53.9	36.5	65.1
 atv_rx	116.8		
 atv_secam	114.8		
-atv_snow	50.8	38.1	84.7
+atv_snow	79.9	38.1	84.7
 atv_sound	158.9		
-atv_sound2	105.1	27.8	63.9
+atv_sound2	65.5	27.8	63.9
 atv_std	0.0	0.1	0.0
 atv_switch	13.2	13.8	13.2
 atv_systems	134.3		
-atv_vbi	33.8	9.8	55.2
-atv_views	163.7	79.3	148.3
-atv_weak	95.2	25.1	33.9
+atv_vbi	36.8	9.8	55.2
+atv_views	134.6	79.3	148.3
+atv_weak	37.1	25.1	33.9
 audio	1.9	3.4	2.3
-audio_cleanup	2.7	1.9	2.4
+audio_cleanup	2.4	1.9	2.4
 audio_control	0.1	0.1	0.1
-audio_engine	70.1	73.0	78.2
-audio_file_long	0.3	0.8	0.5
-audio_if	33.8	34.8	34.8
-audio_levels	10.4	5.4	14.3
-audio_monitor	1.5	3.4	1.4
+audio_engine	69.6	73.0	78.2
+audio_file_long	0.4	0.8	0.5
+audio_if	34.5	34.8	34.8
+audio_levels	14.3	5.4	14.3
+audio_monitor	1.1	3.4	1.4
 audio_rec	2.1	13.1	2.9
 audio_source	0.4	0.8	0.6
 autodet_tv	246.0		
-autodet_tv_quick	48.0	29.4	40.8
-autodet_voice	29.4	12.2	18.0
-autogain	37.4	20.0	37.5
-autogain_collapse	183.0	117.4	
-autogain_matrix	54.8	45.3	64.8
-autogain_models	12.8	10.2	13.1
-autogain_smart	5.7	5.3	8.1
-autogain_v2	5.9	3.3	6.0
+autodet_tv_quick	29.6	29.4	40.8
+autodet_voice	19.4	12.2	18.0
+autogain	24.8	20.0	37.5
+autogain_collapse	123.8	117.4	
+autogain_matrix	48.9	45.3	64.8
+autogain_models	14.8	10.2	13.1
+autogain_smart	6.0	5.3	8.1
+autogain_v2	4.6	3.3	6.0
 autolabel_logic	0.0	0.1	0.0
-automation	0.3	0.3	0.3
-autoparam_dtmb	66.4	30.2	42.6
-autoparam_ftx	157.6	150.6	91.1
-autoparam_kbd	32.2	31.6	22.0
-autoparam_psk	33.7	103.5	45.8
-autoparam_rtty	9.0	15.1	9.6
-avroad_air	6.6	2.8	4.2
-avroad_detect	14.4	20.4	24.5
-avroad_eot	1.1	0.5	0.9
-avroad_ermes	0.9	0.5	0.6
-avroad_road	23.1	16.8	19.7
+automation	0.2	0.3	0.3
+autoparam_dtmb	86.5	30.2	42.6
+autoparam_ftx	120.6	150.6	91.1
+autoparam_kbd	31.3	31.6	22.0
+autoparam_psk	30.2	103.5	45.8
+autoparam_rtty	9.1	15.1	9.6
+avroad_air	4.0	2.8	4.2
+avroad_detect	18.3	20.4	24.5
+avroad_eot	0.8	0.5	0.9
+avroad_ermes	0.7	0.5	0.6
+avroad_road	22.5	16.8	19.7
 avsplus	0.1	0.1	0.0
-backup	1.0	1.4	0.8
+backup	1.1	1.4	0.8
 badges_client	0.0		0.3
-bandplan	0.6	0.7	0.8
-bandwidth	1.4	0.7	1.4
-bar_flow	0.1	0.1	0.0
-bench_modes_smoke	3.5	2.8	
-bgan_demod	2.7	3.3	3.0
-bgan_manager	17.5	22.0	23.2
+bandplan	0.7	0.7	0.8
+bandwidth	1.1	0.7	1.4
+bar_flow	0.0	0.1	0.0
+bench_modes_smoke	2.4	2.8	
+bgan_demod	3.2	3.3	3.0
+bgan_manager	25.9	22.0	23.2
 bgan_mode	0.1	0.2	0.1
 bgan_phy	0.8	1.3	0.9
-ble_engine	5.5	6.5	6.7
+ble_engine	5.6	6.5	6.7
 ble_proto	0.0	0.1	0.0
-ble_rx	0.9	0.6	0.7
+ble_rx	0.8	0.6	0.7
 ble_sensors	0.0	0.1	0.0
 bletrk_book	0.0	0.1	0.0
-bletrk_engine	0.5	1.3	0.9
+bletrk_engine	0.6	1.3	0.9
 bletrk_live	0.8	1.1	0.9
 bletrk_proto	0.0	0.1	0.0
-bluefile	0.1	0.2	0.1
+bluefile	0.0	0.2	0.1
 btc_proto	0.2	0.3	0.1
 btc_rx	50.0		
 bugreport_name	0.0	0.1	0.0
 ca_state	0.0	0.1	0.0
 canvas	0.0	0.1	0.0
-cc_decode	0.1	0.1	0.0
+cc_decode	0.0	0.1	0.0
 ccsds_rice	0.1	0.2	0.1
 ccsds_tm	0.0	0.1	0.0
-cdma_phy	7.5	4.7	
+cdma_phy	8.0	4.7	
 cdr_audio	0.0	0.1	0.0
 cdr_dra_addon	0.0	0.1	0.0
-cdr_engine	1.9	2.4	1.8
-cdr_loop	6.0	4.8	5.8
-cdr_loudfm	22.8	62.9	17.7
-cdr_realworld	21.4	13.5	20.2
-cdr_recover	28.1	25.3	23.2
-cdr_tables	0.4	0.3	0.4
-cdr_voice	0.3	0.2	0.2
+cdr_engine	1.8	2.4	1.8
+cdr_loop	5.1	4.8	5.8
+cdr_loudfm	23.0	62.9	17.7
+cdr_realworld	20.4	13.5	20.2
+cdr_recover	19.0	25.3	23.2
+cdr_tables	0.3	0.3	0.4
+cdr_voice	0.2	0.2	0.2
 cell_bands	0.0	0.1	0.0
-cell_engine	5.0	5.9	6.6
+cell_engine	7.9	5.9	6.6
 cell_filter	0.0	0.1	0.0
-cell_ltem	2.9		2.3
+cell_ltem	3.1		2.3
 cell_ocid	3.4	3.9	3.8
-cell_phy	0.1	0.1	0.1
-cell_pws	6.6	5.4	8.5
-cell_rx	23.9	14.6	21.3
-cell_scan	18.8	7.1	13.2
-cell_snr	1.9	2.4	3.7
-cell_weak	2.2	3.7	2.4
+cell_phy	0.0	0.1	0.1
+cell_pws	5.5	5.4	8.5
+cell_rx	21.0	14.6	21.3
+cell_scan	14.7	7.1	13.2
+cell_snr	1.8	2.4	3.7
+cell_weak	2.9	3.7	2.4
 channel	13.7		
 channel_db	0.1	0.1	0.1
 channelizer_mix	0.2	0.2	0.1
 chanvoice_fsync	0.4	0.4	0.3
-chanvoice_mdc	5.7	4.4	27.1
+chanvoice_mdc	4.7	4.4	27.1
 chanvoice_mode	0.1	0.3	0.2
 chanvoice_plan	0.0	0.1	0.0
-chanvoice_rx	82.9	35.5	45.8
-chanvoice_subtone	31.4	21.3	75.3
-chosen_rate_reaches_radio	32.4	40.3	27.1
-cic3	0.0	0.1	0.0
-cishf_dsp	10.3	10.3	12.4
+chanvoice_rx	55.6	35.5	45.8
+chanvoice_subtone	24.3	21.3	75.3
+chosen_rate_reaches_radio	27.9	40.3	27.1
+cic3	0.1	0.1	0.0
+cishf_dsp	9.9	10.3	12.4
 cjk_order	0.0	0.0	
-cleanup_neural	1.5	1.4	1.0
+cleanup_neural	1.1	1.4	1.0
 click_tune	0.0	0.1	
 clips	0.1	0.1	0.1
 codar_engine	10.0	10.2	10.3
 codar_proto	0.0	0.1	0.0
-codar_rx	34.8	34.5	35.7
+codar_rx	45.7	34.5	35.7
 codec_arch	0.0	0.1	0.0
 codec_guard	1.7	2.0	1.7
 codec_import	0.0		0.0
 codec_paths	0.0	0.1	0.0
 common_bits	0.1	0.1	0.1
 common_crc	0.2	0.2	0.2
-common_endian	0.1	0.1	0.0
-common_ring_rs	7.4	12.2	5.4
+common_endian	0.0	0.1	0.0
+common_ring_rs	6.0	12.2	5.4
 common_ring_wait	0.1	0.4	0.1
 common_stablehash	0.0	0.1	0.0
-common_str	1.5	1.0	0.8
+common_str	0.9	1.0	0.8
 common_threads	0.5	2.1	2.0
-common_threads_single	3.8	21.9	4.3
+common_threads_single	3.9	21.9	4.3
 common_window	0.1	0.1	0.0
-conceal	3.8	1.8	12.0
+conceal	2.7	1.8	12.0
 contact_graph	0.0	0.1	0.0
 converter	0.0	0.1	0.0
-cp16_all	20.2	18.3	33.3
-cquam_engine	14.6	15.0	14.8
-cquam_rx	3.7	2.1	2.8
-cquam_sweep	44.2	20.4	57.8
-crash_report	0.2	0.1	0.0
+cp16_all	16.6	18.3	33.3
+cquam_engine	14.5	15.0	14.8
+cquam_rx	3.4	2.1	2.8
+cquam_sweep	34.2	20.4	57.8
+crash_report	0.1	0.1	0.0
 credits	0.0	0.1	0.0
 cubesat_ao40	0.1	0.1	0.1
-cubesat_chain	6.1	4.4	4.6
-cubesat_db	0.3	0.3	0.2
-cubesat_engine	6.9	7.7	7.0
-cubesat_grsat	3.5	5.3	
+cubesat_chain	4.9	4.4	4.6
+cubesat_db	0.2	0.3	0.2
+cubesat_engine	6.6	7.7	7.0
+cubesat_grsat	3.7	5.3	
 cubesat_more	0.7		0.5
-cubesat_narrow	63.3	41.1	71.9
+cubesat_narrow	75.5	41.1	71.9
 cubesat_proto	0.0	0.1	0.0
-cubesat_rx	17.4	9.7	4.0
-cubesat_sens	17.8	42.4	23.7
+cubesat_rx	17.7	9.7	4.0
+cubesat_sens	21.5	42.4	23.7
 cubesat_sids	0.0	0.1	0.0
-cubesat_smart	10.8	17.4	7.4
+cubesat_smart	10.4	17.4	7.4
 cubesat_telem	0.0	0.1	0.0
-cubesat_views	30.8	25.5	
+cubesat_views	25.5	25.5	
+custom_bandwidth_all	544.2		
 custom_bandwidth_all_1	121.8	96.0	139.8
 custom_bandwidth_all_2	121.8	96.0	139.8
 custom_bandwidth_all_3	121.8	96.0	139.8
 custom_bandwidth_all_4	121.8	96.0	139.8
-custom_capture	23.8	29.2	32.6
-cw_engine	14.7	15.0	14.9
-cw_fistrx	19.9		43.6
+custom_capture	23.3	29.2	32.6
+cw_engine	14.6	15.0	14.9
+cw_fistrx	12.4		43.6
 cw_morse	0.2	0.4	0.2
-cw_rx	7.5	6.6	12.4
+cw_rx	3.6	6.6	12.4
 cw_wide	88.8		
 dab_audit	112.8		
-dab_census	53.9	30.6	51.6
+dab_census	51.3	30.6	51.6
 dab_d40	0.0	0.1	0.0
-dab_dmb	14.2	18.4	19.1
-dab_fig	9.7	10.6	11.8
-dab_gen	38.6	27.3	40.9
+dab_dmb	19.0	18.4	19.1
+dab_fig	10.7	10.6	11.8
+dab_gen	33.2	27.3	40.9
 dab_journaline	0.1	0.2	0.2
-dab_pad	3.5	2.8	2.5
-dab_pktfec	0.1	0.1	0.0
-dab_played	0.1	0.1	0.0
-dab_playout	4.0	3.4	3.2
-dab_proto_rs	5.3	8.2	7.0
-dab_realworld	58.0	34.8	52.3
+dab_pad	2.8	2.8	2.5
+dab_pktfec	0.0	0.1	0.0
+dab_played	0.0	0.1	0.0
+dab_playout	2.8	3.4	3.2
+dab_proto_rs	4.3	8.2	7.0
+dab_realworld	55.8	34.8	52.3
 dab_rx	106.6		
-dab_search	8.6	6.4	10.7
+dab_search	7.8	6.4	10.7
 dab_sens	390.7		
 dab_sfn	0.0	0.1	0.0
 dab_slidefit_656	0.0		
 dab_spi	0.5	0.6	0.9
-dab_tii	13.4	8.8	18.6
+dab_tii	13.2	8.8	18.6
 dab_txlist	0.0	0.1	0.0
 dab_uep	45.0		
-dab_watch	0.1	0.1	0.0
+dab_watch	0.0	0.1	0.0
 datasets	0.1	0.2	0.1
 datawell_engine	41.9		
-datawell_frames	0.1	0.1	0.0
+datawell_frames	0.0	0.1	0.0
 datawell_hxv	0.0	0.1	0.0
-datawell_rx	17.2	19.2	11.4
+datawell_rx	14.2	19.2	11.4
 debug_dump	0.1	0.2	0.2
 debug_report_parts	0.0	0.1	0.0
 decode_help	0.0	0.1	0.0
-decode_shift	1.3	2.6	1.8
-dect_engine	17.6	17.5	16.9
+decode_shift	1.4	2.6	1.8
+dect_engine	17.0	17.5	16.9
 dect_proto	0.0	0.1	0.0
-dect_rx	9.5	9.2	6.9
-delivery_check	0.1	0.1	0.0
+dect_rx	10.2	9.2	6.9
+delivery_check	0.0	0.1	0.0
 device_pick	0.0	0.2	0.0
-df	1.1	1.5	1.5
+df	1.3	1.5	1.5
 df_beam	0.1	0.1	0.1
 df_group	0.2	0.2	0.1
 df_position	0.1	0.2	0.1
-df_rfcam	0.1	0.1	0.0
+df_rfcam	0.0	0.1	0.0
 df_rtl_group	0.1	0.1	0.1
 dgps_mode	0.1	0.3	0.1
-dgps_rx	2.4	3.4	2.8
-diag	0.1		
-direction	0.1	0.1	0.0
+dgps_rx	2.3	3.4	2.8
+diag	0.0		
+direction	0.0	0.1	0.0
 discord_rpc	1.1	1.7	0.0
 display_adjust	0.0	0.1	0.0
-display_emission	5.1	10.3	4.5
-diversity	9.3	7.8	9.7
-diversity_source	6.7	10.0	6.8
-dji_engine	10.0	10.3	11.3
+display_emission	3.8	10.3	4.5
+diversity	13.0	7.8	9.7
+diversity_source	6.6	10.0	6.8
+dji_engine	9.7	10.3	11.3
 dji_proto	0.1	0.1	0.1
-dji_resampler	0.1	0.1	0.0
-dji_rx	19.9	13.4	15.7
-dme	16.2	23.5	16.3
+dji_resampler	0.0	0.1	0.0
+dji_rx	20.7	13.4	15.7
+dme	18.9	23.5	16.3
 dme_mode	0.0	0.1	0.0
-dme_tacan	7.2	7.7	7.3
-dme_tacan_impair	38.5	18.8	30.6
-dmr_air	7.2	6.5	24.5
-dmr_burst	0.8	1.0	0.6
+dme_tacan	6.1	7.7	7.3
+dme_tacan_impair	30.2	18.8	30.6
+dmr_air	5.3	6.5	24.5
+dmr_burst	0.5	1.0	0.6
 dmr_call_filter	0.0	0.1	0.0
 dmr_engine	23.1		
-dmr_equalizer	17.9	9.5	29.9
+dmr_equalizer	12.4	9.5	29.9
 dmr_fec	0.1	0.1	0.0
 dmr_field	15.9	12.2	68.6
-dmr_handset	12.1	10.6	21.0
-dmr_impair	50.5	27.6	56.0
+dmr_handset	10.9	10.6	21.0
+dmr_impair	33.5	27.6	56.0
 dmr_listen	0.5	0.7	0.5
-dmr_lrrp	0.1	0.1	0.0
-dmr_lrrp_air	6.0	3.3	7.1
-dmr_monitor	3.3	1.8	3.6
-dmr_nmea	0.1	0.1	0.0
-dmr_plugin	1.5	0.8	0.6
-dmr_proto_rs	6.5	7.5	7.6
-dmr_radio	18.3	10.1	40.6
-dmr_resync	7.4	7.6	14.3
-dmr_rx	22.2	12.7	49.3
-dmr_short	19.1	14.4	23.4
-dmr_slot_sync	3.1		
+dmr_lrrp	0.0	0.1	0.0
+dmr_lrrp_air	4.2	3.3	7.1
+dmr_monitor	2.8	1.8	3.6
+dmr_nmea	0.0	0.1	0.0
+dmr_plugin	1.0	0.8	0.6
+dmr_proto_rs	5.3	7.5	7.6
+dmr_radio	17.8	10.1	40.6
+dmr_resync	8.3	7.6	14.3
+dmr_rx	19.4	12.7	49.3
+dmr_short	15.9	14.4	23.4
+dmr_slot_sync	3.0		
 dmr_tx	4.5	2.3	10.0
 dmr_vendor	0.1	0.3	0.1
-dmr_voice	0.3	0.5	0.3
-dmr_wide	30.2	17.9	23.1
-dmr_wide_threads	4.4	4.0	3.4
-dmr_xpt	1.8	0.8	1.2
+dmr_voice	0.4	0.5	0.3
+dmr_wide	21.2	17.9	23.1
+dmr_wide_threads	3.3	4.0	3.4
+dmr_xpt	0.9	0.8	1.2
 dock_tree	0.0	0.1	0.0
 dolby_audio	0.1	0.1	0.1
-doppler_fit	0.1	0.2	0.0
+doppler_fit	0.0	0.2	0.0
 dpmr_engine	12.6	13.4	25.4
 dpmr_plugin	0.2	0.2	0.2
 dpmr_proto	0.0	0.1	0.0
-dpmr_rx	4.5	4.9	5.3
-dpmr_sens	4.5	5.6	8.2
+dpmr_rx	5.5	4.9	5.3
+dpmr_sens	4.1	5.6	8.2
 drag_tune	0.0	0.0	0.0
 drag_tune_app		59.8	
-drm_afs	1.6	1.7	1.6
-drm_chain	3.1	1.6	2.6
+drm_afs	1.8	1.7	1.6
+drm_chain	2.4	1.6	2.6
 drm_data	1.4	1.4	1.7
 drm_engine	22.7		
 drm_filter	0.0	0.1	0.0
-drm_find	10.2	9.5	10.4
-drm_gencombo	7.6	6.9	10.6
+drm_find	10.1	9.5	10.4
+drm_gencombo	9.1	6.9	10.6
 drm_impair	52.0		
 drm_known	0.1	0.2	0.1
-drm_modee	10.2	9.4	8.7
-drm_mot	0.1	0.1	0.0
+drm_modee	12.5	9.4	8.7
+drm_mot	0.0	0.1	0.0
 drm_mrr	67.1		
-drm_playout	8.2	8.0	6.3
-drm_proto_rs	20.8	38.7	17.8
-drm_realworld	64.4	12.1	24.0
+drm_playout	10.3	8.0	6.3
+drm_proto_rs	22.2	38.7	17.8
+drm_realworld	33.3	12.1	24.0
 drm_rx	31.4		
 drm_schedule	0.0	0.1	0.0
 drm_sdc_extra	0.0	0.1	0.0
-drm_sdccomb	15.0	17.6	27.7
+drm_sdccomb	18.6	17.6	27.7
 drm_smooth	83.3		
-drm_xhe_ext	0.0		
+drm_xhe_ext	0.1		
 drm_xhe_lib	0.1	0.1	0.0
 drm_xhe_tx	0.5	0.4	0.6
 dsp	0.1	0.1	0.0
-dstar_engine	13.1	13.8	14.0
-dstar_plugin	0.7	1.5	0.8
+dstar_engine	12.4	13.8	14.0
+dstar_plugin	0.6	1.5	0.8
 dstar_proto	0.0	0.1	0.0
-dstar_proto_rs	3.9	4.3	2.9
-dstar_rx	28.7	9.7	16.0
-dstar_sens	6.5	7.8	6.4
-dtmb_bw6	51.7	28.1	34.4
-dtmb_c1	45.9	19.4	41.4
-dtmb_c1echo	12.4	10.0	15.4
-dtmb_chain	6.5	8.1	7.2
-dtmb_counters	17.8	11.1	13.8
-dtmb_defs	0.1	0.1	0.0
-dtmb_demod	1.6	1.8	1.2
+dstar_proto_rs	3.2	4.3	2.9
+dstar_rx	20.3	9.7	16.0
+dstar_sens	6.8	7.8	6.4
+dtmb_bw6	45.0	28.1	34.4
+dtmb_c1	51.4	19.4	41.4
+dtmb_c1echo	16.0	10.0	15.4
+dtmb_chain	4.8	8.1	7.2
+dtmb_counters	13.8	11.1	13.8
+dtmb_defs	0.0	0.1	0.0
+dtmb_demod	1.4	1.8	1.2
 dtmb_engine	14.6	16.4	14.8
 dtmb_faults	190.3		
-dtmb_fec	10.3	1.7	1.8
-dtmb_fft	0.7	0.7	0.5
-dtmb_front	1.8	2.1	1.8
-dtmb_gpu	0.1	4.5	0.1
+dtmb_fec	2.7	1.7	1.8
+dtmb_fft	0.6	0.7	0.5
+dtmb_front	1.3	2.1	1.8
+dtmb_gpu	0.0	4.5	0.1
 dtmb_impair	70.6		
-dtmb_longrun	55.2	44.3	31.1
-dtmb_onair	2.4	2.4	2.6
+dtmb_longrun	42.1	44.3	31.1
+dtmb_onair	2.2	2.4	2.6
 dtmb_real	126.4		
-dtmb_rx	66.6	30.7	84.8
-dtmb_snr	66.1	23.4	37.1
-dtmb_sync	2.5	2.5	3.0
-dtmb_threads	6.5	2.3	4.5
-dtmb_timing	69.5	33.3	34.1
-dual_engine	15.5	15.0	20.6
+dtmb_rx	56.2	30.7	84.8
+dtmb_snr	53.9	23.4	37.1
+dtmb_sync	2.7	2.5	3.0
+dtmb_threads	5.0	2.3	4.5
+dtmb_timing	46.3	33.3	34.1
+dual_engine	13.8	15.0	20.6
 dvb_modes	0.1	0.1	0.0
-dvbc2	23.8	16.9	17.6
-dvbc_docsis	0.1	0.1	0.0
-dvbc_engine	38.0	29.0	16.3
-dvbc_j83b	18.3	19.5	19.0
-dvbc_j83b_rf	13.3	11.3	17.6
-dvbc_rx	69.0	51.5	55.2
-dvbh	14.7		
+dvbc2	20.2	16.9	17.6
+dvbc_docsis	0.0	0.1	0.0
+dvbc_engine	15.6	29.0	16.3
+dvbc_j83b	13.7	19.5	19.0
+dvbc_j83b_rf	17.6	11.3	17.6
+dvbc_rx	50.5	51.5	55.2
+dvbh	9.8		
 dvbs_autoservice	0.0	0.1	0.0
-dvbs_cid	48.1	14.6	31.5
-dvbs_dsmcc	0.1	0.1	0.1
+dvbs_cid	42.9	14.6	31.5
+dvbs_dsmcc	0.0	0.1	0.1
 dvbs_engine	24.1	26.8	25.0
-dvbs_fastpath	46.2	14.8	56.2
+dvbs_fastpath	39.0	14.8	56.2
 dvbs_gpu	0.1	30.9	0.1
-dvbs_gse	5.6	6.6	6.8
-dvbs_impair	86.1	26.9	72.9
-dvbs_ip	0.1	0.1	0.0
-dvbs_narrow	21.2	11.6	20.0
+dvbs_gse	4.5	6.6	6.8
+dvbs_impair	53.2	26.9	72.9
+dvbs_ip	0.0	0.1	0.0
+dvbs_narrow	10.8	11.6	20.0
 dvbs_orbit	0.0	0.1	0.0
 dvbs_rcs	0.0	0.1	0.0
-dvbs_rx	54.7	38.2	44.3
+dvbs_rx	37.4	38.2	44.3
 dvbs_rx2	40.1		
 dvbs_rx3	89.2		
-dvbs_s1	0.3	0.2	0.2
-dvbs_s2fec	1.0	0.9	1.5
-dvbs_s2x	47.0	39.4	39.8
-dvbs_sf	6.5	8.2	11.6
+dvbs_s1	0.2	0.2	0.2
+dvbs_s2fec	1.1	0.9	1.5
+dvbs_s2x	35.0	39.4	39.8
+dvbs_sf	7.9	8.2	11.6
 dvbs_si	0.0	0.1	0.0
-dvbs_streams	5.3	4.2	9.1
-dvbs_timer_bound	0.7	0.7	0.5
+dvbs_streams	4.7	4.2	9.1
+dvbs_timer_bound	0.4	0.7	0.5
 dvbs_tsdata	0.0	0.1	0.0
-dvbs_vlsnr	41.7	39.0	52.0
-dvbsh_chain	31.7	14.7	30.6
-dvbsh_engine	16.3		
-dvbsh_fec	0.9	0.5	0.6
-dvbsh_tdm	31.2	24.9	34.3
-dvbsi_proto_rs	50.5	56.5	30.2
+dvbs_vlsnr	43.4	39.0	52.0
+dvbsh_chain	30.8	14.7	30.6
+dvbsh_engine	14.3		
+dvbsh_fec	0.7	0.5	0.6
+dvbsh_tdm	35.7	24.9	34.3
+dvbsi_proto_rs	49.9	56.5	30.2
 dvbsub	0.0	0.1	0.0
-dvbt	0.9	1.1	0.6
+dvbt	0.8	1.1	0.6
 dvbt_cfo	1.9	1.5	2.2
-dvbt_lock	3.5	3.2	4.7
+dvbt_lock	3.7	3.2	4.7
 dvbt_quantise	0.0	0.1	0.0
-dvbt_real	20.7	12.9	20.0
+dvbt_real	21.3	12.9	20.0
 dvbt_rx	70.3		
 dvbt_usb_drops	50.2		
 dxpatrol	0.1	0.4	
 ease	0.0	0.2	0.0
 ease_helpers	0.0	0.1	0.0
-ebicab_engine	12.7	13.2	12.5
+ebicab_engine	12.5	13.2	12.5
 ebicab_mode	0.1	0.2	0.1
 ebicab_packets	0.0	0.2	0.0
 ebicab_proto	0.2	0.5	0.1
-ebicab_rx	5.6	15.2	6.5
+ebicab_rx	7.7	15.2	6.5
 echolink_conf	2.5	6.2	4.9
-echolink_core	1.6		
-eczas_engine	57.4	57.6	67.7
-eczas_live	33.4	12.7	20.6
+echolink_core	1.1		
+eczas_engine	63.6	57.6	67.7
+eczas_live	23.0	12.7	20.6
 eczas_proto	0.0	0.1	0.0
 eczas_wav	0.0	0.1	0.0
-edacs_follow	5.8	4.2	5.9
+edacs_follow	5.7	4.2	5.9
 edacs_msg	0.0	0.1	0.0
-edacs_provoice	1.2	1.0	0.9
-edacs_rx	4.4	4.7	4.4
-edacs_sens40	12.7	14.1	10.2
-eloran_detect	9.3	9.4	15.3
+edacs_provoice	1.1	1.0	0.9
+edacs_rx	3.6	4.7	4.4
+edacs_sens40	11.2	14.1	10.2
+eloran_detect	13.3	9.4	15.3
 eloran_mode	0.1	0.2	0.1
-eloran_sweep	21.5	11.2	19.3
+eloran_sweep	19.0	11.2	19.3
 es_save	0.0	0.1	0.0
 esp32_loopback	0.1	0.2	0.2
-espnow_engine	3.0	2.9	6.0
+espnow_engine	2.2	2.9	6.0
 espnow_proto	0.0	0.1	0.0
-espnow_rx	13.9		
-esubghz_engine	10.3	10.9	10.6
+espnow_rx	13.2		
+esubghz_engine	10.1	10.9	10.6
 esubghz_mode	0.1	0.3	0.2
 esubghz_proto	0.0	0.1	0.0
-esubghz_rx	15.4	6.5	23.1
+esubghz_rx	16.0	6.5	23.1
 exact_resampler	0.2	0.1	0.2
 exporters	0.0	0.1	0.0
 family_mask	0.0	0.1	0.0
-fastscan	13.4	7.4	13.7
-fbr_rx	7.6	9.8	5.7
+fastscan	11.4	7.4	13.7
+fbr_rx	6.1	9.8	5.7
 feat40b	0.0	0.1	0.0
-feat40c	0.0	0.0	0.0
+feat40c	0.1	0.0	0.0
 feat40c_tones	0.0		
 fec	0.2	0.3	0.2
-fec_proto_rs	75.4	98.7	72.4
+fec_proto_rs	69.6	98.7	72.4
 feed_targets	2.4	3.5	2.4
 feeds	0.3	0.8	0.3
 fft_bits	0.2	0.2	0.2
@@ -592,58 +593,58 @@ file_fd	0.7	1.0	0.0
 file_vfo	0.0	0.1	0.0
 files_proto_rs	4.8	6.5	7.7
 fixit	0.0	0.1	0.0
-flarm_chase	2.1	1.3	4.8
-flarm_engine	9.5	10.9	9.8
-flarm_impair	14.4	17.9	13.3
+flarm_chase	1.9	1.3	4.8
+flarm_engine	9.4	10.9	9.8
+flarm_impair	14.0	17.9	13.3
 flarm_outland	0.0		0.0
 flarm_proto	0.0	0.1	0.0
-flarm_rx	4.6	2.2	2.5
+flarm_rx	2.8	2.2	2.5
 flarm_thermals	0.0	0.1	
 fm_af	0.0	0.1	0.0
-fm_audio_opts	9.6	4.6	9.5
-fm_census	15.8	10.5	27.7
+fm_audio_opts	4.7	4.6	9.5
+fm_census	16.3	10.5	27.7
 fm_click	262.2		
-fm_click_quick	15.1	7.9	16.0
+fm_click_quick	13.3	7.9	16.0
 fm_d40	0.0	0.1	0.0
-fm_dx	0.0	0.1	0.0
+fm_dx	0.1	0.1	0.0
 fm_dxtools	0.0	0.0	0.1
 fm_impair	176.8		
 fm_neighbour	318.1		
-fm_neighbour_quick	17.1	18.0	20.7
-fm_rbds	18.0	6.0	16.5
-fm_rds	64.7	26.9	39.1
-fm_rx	21.0	13.6	18.0
+fm_neighbour_quick	16.0	18.0	20.7
+fm_rbds	15.4	6.0	16.5
+fm_rds	35.7	26.9	39.1
+fm_rx	19.2	13.6	18.0
 fm_saved	0.0	0.1	0.0
-fm_subcarrier	16.2	9.7	18.2
-fm_tmc	11.6	7.5	11.1
-fm_tone	0.0	0.1	0.0
-fm_vote	1.5	1.3	1.1
+fm_subcarrier	15.9	9.7	18.2
+fm_tmc	11.2	7.5	11.1
+fm_tone	0.1	0.1	0.0
+fm_vote	1.1	1.3	1.1
 fpv_chan	0.0	0.1	0.0
-fpv_engine	1.4	1.5	1.9
-fpv_live	78.1	30.7	66.4
+fpv_engine	1.3	1.5	1.9
+fpv_live	62.5	30.7	66.4
 frame_pace	0.0	0.1	0.0
 freq_db	0.1	0.2	0.1
 freq_model	0.0	0.1	0.0
 freq_remember	0.0	0.1	0.0
-fsq_codec	0.1	0.1	0.0
-fsq_engine	45.8	47.3	46.1
-fsq_rx	33.2	23.4	86.6
+fsq_codec	0.0	0.1	0.0
+fsq_engine	45.6	47.3	46.1
+fsq_rx	15.0	23.4	86.6
 fusion_codec	0.8	0.5	0.5
 fusion_gps	0.0	0.1	0.0
 fusion_interop	0.0	0.1	0.0
 fusion_mode	0.1	0.2	0.1
 fusion_proto	0.1	0.1	0.1
-fusion_rx	3.0	3.7	2.3
-fusion_sweep	38.2	11.1	22.6
+fusion_rx	3.1	3.7	2.3
+fusion_sweep	17.4	11.1	22.6
 fuzz_acars_proto	0.2	0.3	0.3
-fuzz_adsb_proto	0.7	1.6	1.0
-fuzz_ais_proto	4.3	5.2	3.0
+fuzz_adsb_proto	0.8	1.6	1.0
+fuzz_ais_proto	3.4	5.2	3.0
 fuzz_ant_proto	0.9	1.0	1.9
-fuzz_dab_proto	0.6	1.1	1.2
-fuzz_dmr_proto	2.8	2.4	1.9
-fuzz_drm_proto	0.2	0.5	0.5
+fuzz_dab_proto	0.7	1.1	1.2
+fuzz_dmr_proto	2.2	2.4	1.9
+fuzz_drm_proto	0.3	0.5	0.5
 fuzz_dstar_proto	0.9	1.4	0.9
-fuzz_dvbsi_proto	18.1	5.5	9.3
+fuzz_dvbsi_proto	12.1	5.5	9.3
 fuzz_engine_modes_1	562.7		
 fuzz_engine_modes_2	788.6		
 fuzz_engine_modes_3	759.9		
@@ -652,53 +653,53 @@ fuzz_engine_modes_5	598.4
 fuzz_engine_modes_6	613.6		
 fuzz_engine_modes_7	537.6		
 fuzz_engine_modes_8	504.6		
-fuzz_fec_proto	4.8	7.4	5.8
-fuzz_files_proto	1.6	0.8	1.4
+fuzz_fec_proto	4.1	7.4	5.8
+fuzz_files_proto	1.7	0.8	1.4
 fuzz_hfdl_proto	5.6	4.2	5.2
-fuzz_mesh_proto	0.8	1.5	1.1
+fuzz_mesh_proto	0.9	1.5	1.1
 fuzz_net_proto	1.1	1.3	1.1
-fuzz_nxdn_proto	1.6	1.4	1.2
-fuzz_p25_proto	8.8	5.0	9.9
-fuzz_packet_proto	3.2	6.2	4.2
-fuzz_pager_proto	66.2	19.6	38.3
+fuzz_nxdn_proto	1.3	1.4	1.2
+fuzz_p25_proto	9.2	5.0	9.9
+fuzz_packet_proto	3.5	6.2	4.2
+fuzz_pager_proto	44.1	19.6	38.3
 fuzz_parsers	0.8		0.7
-fuzz_rx	5.3	6.1	5.6
-fuzz_same_proto	0.3	0.3	0.3
+fuzz_rx	4.3	6.1	5.6
+fuzz_same_proto	0.2	0.3	0.3
 fuzz_tetra_proto	0.1	0.2	0.1
 fuzz_ts_proto	0.3	0.8	0.4
 fuzz_uat_proto	0.2	0.3	0.2
-fuzz_vdl2_proto	1.6	1.7	1.9
+fuzz_vdl2_proto	1.4	1.7	1.9
 fuzz_wisun_proto	5.3	4.9	4.3
 fy3_mode	0.1	0.3	0.1
-fy3_proto	0.3	0.6	0.4
-fy3_rx	155.7	40.5	63.6
-fygeo_impair	47.9	39.1	36.8
+fy3_proto	0.4	0.6	0.4
+fy3_rx	66.5	40.5	63.6
+fygeo_impair	36.4	39.1	36.8
 fygeo_import	0.4	0.7	0.3
 fygeo_mode	0.1	0.3	0.1
 fygeo_proto	0.1	0.1	0.0
-fygeo_rx	21.0	20.1	24.4
+fygeo_rx	21.4	20.1	24.4
 gain	41.0		
 gain_opt	0.1	0.1	0.1
 gain_opt_engine	31.5		
-genauto	0.7	1.2	1.0
+genauto	1.1	1.2	1.0
 genauto_click	0.0	0.1	
-genauto_modes	4.6	3.1	6.9
-general_am	79.3	19.1	80.5
-general_engine	3.6	4.1	3.5
-general_layout	0.0	0.1	0.0
-general_rx	48.7	20.2	26.5
-gk2a_engine	26.6	26.0	28.8
+genauto_modes	5.0	3.1	6.9
+general_am	58.3	19.1	80.5
+general_engine	3.5	4.1	3.5
+general_layout	0.1	0.1	0.0
+general_rx	28.9	20.2	26.5
+gk2a_engine	25.1	26.0	28.8
 gk2a_j2k	0.3	0.3	0.4
 gk2a_mode	0.1	0.2	0.1
 gk2a_proto	5.2	5.4	5.1
-gk2a_rx	69.6	39.9	68.0
+gk2a_rx	57.5	39.9	68.0
 gl_level	0.0	0.1	0.0
-globalstar_engine	6.7	7.1	6.7
-globalstar_rx	5.7	6.0	3.6
+globalstar_engine	6.9	7.1	6.7
+globalstar_rx	4.3	6.0	3.6
 gnss_beidou	1203.6		
 gnss_cfo	166.2		
-gnss_chunks	32.2	28.9	41.9
-gnss_dcjam	40.0	16.4	41.4
+gnss_chunks	28.5	28.9	41.9
+gnss_dcjam	39.4	16.4	41.4
 gnss_engine	38.7		
 gnss_galileo	963.5		
 gnss_galrlm	0.0	0.1	0.0
@@ -708,372 +709,372 @@ gnss_glonass_b	1147.8
 gnss_interf	76.6		
 gnss_loops	63.2		
 gnss_msg	0.1	0.2	0.1
-gnss_nav	1.7	2.1	1.3
+gnss_nav	2.5	2.1	1.3
 gnss_qzss_sbas	599.8		
 gnss_rate20	57.4		
 gnss_rates	58.9		
 gnss_rinex	0.0	0.1	0.0
-gnss_rx	54.3	17.3	41.2
+gnss_rx	25.2	17.3	41.2
 gnss_slow_osc	292.8		
 gnss_slow_radio8	160.2		
 gnss_slow_weak	126.6		
 gnss_smooth	514.8		
 gnss_solve	0.4	0.7	0.5
 gnss_sweep	58.1		
-gnss_views	193.5	81.2	194.7
-goes_bursts	0.8		0.9
-goes_cadu	1.8	1.6	1.5
+gnss_views	167.7	81.2	194.7
+goes_bursts	0.7		0.9
+goes_cadu	1.4	1.6	1.5
 goes_emwin	0.0	0.1	0.0
-goes_engine	0.8	1.1	1.1
+goes_engine	0.6	1.1	1.1
 goes_loop	0.1	0.2	
-goes_lrit_links	7.4	8.8	5.4
-goes_proto	0.1	0.1	0.0
-goes_rx	5.7	3.9	4.2
-goes_sweep	44.3	35.9	30.2
-goesdcs_engine	7.6	8.7	8.1
-goesdcs_hrdcp	3.4	1.9	11.4
+goes_lrit_links	7.3	8.8	5.4
+goes_proto	0.0	0.1	0.0
+goes_rx	4.7	3.9	4.2
+goes_sweep	34.9	35.9	30.2
+goesdcs_engine	7.7	8.7	8.1
+goesdcs_hrdcp	4.4	1.9	11.4
 goesdcs_proto	0.0	0.1	0.0
-goesdcs_regional	4.0		15.8
-goesdcs_rx	3.8	4.0	32.7
+goesdcs_regional	3.1		15.8
+goesdcs_rx	5.7	4.0	32.7
 gpu_atsc3	0.0	7.1	0.0
 gpu_fft	0.0	2.2	0.0
 gpu_ldpc_exact	0.0	2.4	0.0
 gpu_policy	0.0	0.2	0.0
 group_counts_listed	0.0	0.1	
 groups_cover_every_mode_once	0.0	0.1	0.0
-gsmr_bands	16.1	8.6	16.4
+gsmr_bands	12.2	8.6	16.4
 gsmr_engine	4.9	4.8	10.1
 gsmr_phy	0.1	0.1	0.1
 gsmr_rx	48.0		
-gui_rules	4.1	9.0	3.9
-halow_engine	13.3	13.1	12.6
+gui_rules	2.2	9.0	3.9
+halow_engine	12.6	13.1	12.6
 halow_frames	0.0	0.1	0.0
-halow_modes	144.1	102.8	69.0
-halow_phy	0.1	0.1	0.0
+halow_modes	77.2	102.8	69.0
+halow_phy	0.0	0.1	0.0
 halow_proto	0.0	0.1	0.0
-halow_rx	67.2	44.6	41.5
-halow_sweep_narrow	13.6	14.0	12.7
-halow_sweep_wide	30.1	52.4	29.9
-ham_aprs	9.9	6.0	4.9
+halow_rx	57.1	44.6	41.5
+halow_sweep_narrow	9.1	14.0	12.7
+halow_sweep_wide	35.5	52.4	29.9
+ham_aprs	7.2	6.0	4.9
 ham_awards	0.0	0.2	0.0
 ham_bandopen	0.0		0.0
 ham_callbook	0.0	0.1	
-ham_core	0.1	0.1	0.0
+ham_core	0.0	0.1	0.0
 ham_cty	0.1	0.1	0.0
 ham_events	0.0	0.1	0.0
 ham_ftxcontest	0.0	0.1	0.4
-ham_insight	0.0		0.0
-ham_js8	12.2	11.2	15.7
-ham_kbd	18.9	19.7	26.8
-ham_keyer	0.1	0.1	0.0
+ham_insight	0.1		0.0
+ham_js8	13.5	11.2	15.7
+ham_kbd	19.8	19.7	26.8
+ham_keyer	0.0	0.1	0.0
 ham_logbook	0.0	0.1	0.0
 ham_logtools	0.0	0.1	
 ham_mapfeed	0.0	0.1	0.0
-ham_modes	83.4	94.2	70.7
+ham_modes	71.4	94.2	70.7
 ham_needed	0.0	0.1	0.0
-ham_net	0.1	0.1	0.1
+ham_net	0.0	0.1	0.1
 ham_ops	0.0	0.1	0.0
-ham_safety	7.0	10.4	8.5
-ham_sdr	6.0	7.9	4.6
+ham_safety	6.1	10.4	8.5
+ham_sdr	6.4	7.9	4.6
 ham_seq	0.0		0.0
-ham_snr	57.7	47.6	44.7
+ham_snr	50.8	47.6	44.7
 ham_spots	0.0	0.1	
-ham_sstv	23.6	9.7	16.2
+ham_sstv	25.7	9.7	16.2
 ham_station	0.0	0.2	0.0
 ham_tx	0.6	1.4	0.7
 ham_upload	0.1	0.3	0.2
 ham_voice	0.0	0.1	0.0
 hamlib_dial	0.0	0.1	0.0
 hamlib_rig	0.1	0.2	0.1
-hamsci_engine	67.4	68.5	67.8
-hamsci_evt	17.3	7.6	11.7
-hamsci_evt_rx	6.1		5.7
-hamsci_fsk441	1.2	1.7	1.4
-hamsci_iscat	32.0	21.4	55.7
-hamsci_jt6m	29.9	43.2	
+hamsci_engine	67.0	68.5	67.8
+hamsci_evt	13.7	7.6	11.7
+hamsci_evt_rx	6.5		5.7
+hamsci_fsk441	1.5	1.7	1.4
+hamsci_iscat	33.5	21.4	55.7
+hamsci_jt6m	36.4	43.2	
 hamsci_mode	0.1	0.4	0.1
-hamsci_pi4	47.6	24.0	70.2
-hamsci_pulsar	26.9	14.9	21.4
-hamsci_qrss	34.2	20.5	107.4
-hamsci_riometer	1.0	1.0	1.5
-hamsci_rx	78.5	45.9	89.5
+hamsci_pi4	37.0	24.0	70.2
+hamsci_pulsar	23.1	14.9	21.4
+hamsci_qrss	24.4	20.5	107.4
+hamsci_riometer	1.2	1.0	1.5
+hamsci_rx	58.9	45.9	89.5
 hamsci_sid	2.3	2.2	2.4
-hamsci_throb	15.3	19.8	22.1
+hamsci_throb	12.5	19.8	22.1
 hardware_logic	0.0	0.1	0.0
 hdr_am	79.2		
 hdr_engine	29.2		
 hdr_fec	0.1	0.1	0.1
 hdr_hdc	0.7	0.8	0.7
-hdr_hdc_rx	8.0	5.1	5.6
-hdr_maps	0.1	0.1	0.0
+hdr_hdc_rx	4.1	5.1	5.6
+hdr_maps	0.0	0.1	0.0
 hdr_realworld	76.8		
-hdr_rx	7.5	6.8	5.8
-hdr_wide	12.1	11.5	8.3
+hdr_rx	7.6	6.8	5.8
+hdr_wide	12.3	11.5	8.3
 heard	0.0	0.1	0.0
 hf_e40	0.0	0.0	0.0
-hfbeacon_dsp	11.8	15.3	12.5
-hfbeacon_engine	16.7	17.4	16.5
+hfbeacon_dsp	14.0	15.3	12.5
+hfbeacon_engine	16.5	17.4	16.5
 hfbeacon_list	0.0	0.1	0.0
 hfbeacon_prop	0.0	0.1	0.0
 hfdig_balloon	0.0	0.1	0.0
-hfdig_clockcomp	54.3	34.5	44.6
-hfdig_codec2bundle	0.1	0.1	0.0
+hfdig_clockcomp	43.2	34.5	44.6
+hfdig_codec2bundle	0.0	0.1	0.0
 hfdig_codecnames	0.0	0.1	0.0
-hfdig_demod	8.2	15.8	27.8
-hfdig_freedv	6.4	7.0	8.2
+hfdig_demod	11.8	15.8	27.8
+hfdig_freedv	5.6	7.0	8.2
 hfdig_fst4	54.6		
-hfdig_ft4	60.8	82.9	57.5
+hfdig_ft4	55.7	82.9	57.5
 hfdig_ft8	1500.0		
-hfdig_ftx_init	0.1		0.0
-hfdig_ftx_tables	0.1	0.1	0.0
-hfdig_ftxmulti	8.3	6.8	6.5
-hfdig_ftxsens	65.4	28.1	40.9
-hfdig_ftxsmart	90.7	86.3	154.7
-hfdig_hamdrm	0.9	0.8	1.2
+hfdig_ftx_init	0.0		0.0
+hfdig_ftx_tables	0.0	0.1	0.0
+hfdig_ftxmulti	6.1	6.8	6.5
+hfdig_ftxsens	24.6	28.1	40.9
+hfdig_ftxsmart	82.3	86.3	154.7
+hfdig_hamdrm	0.7	0.8	1.2
 hfdig_hop	0.0	0.1	
 hfdig_jt4	136.8		
 hfdig_jt65	194.8		
 hfdig_jt9	33.2		
-hfdig_kbd	46.2	24.8	60.0
-hfdig_kbdsens39	4.3	3.2	2.3
-hfdig_mbbench	1.4	0.9	1.8
-hfdig_mfsk	8.3	6.7	4.8
-hfdig_msk144	41.5	21.6	26.2
-hfdig_multiband	0.1	0.1	0.0
+hfdig_kbd	39.6	24.8	60.0
+hfdig_kbdsens39	3.7	3.2	2.3
+hfdig_mbbench	1.1	0.9	1.8
+hfdig_mfsk	6.2	6.7	4.8
+hfdig_msk144	34.6	21.6	26.2
+hfdig_multiband	0.0	0.1	0.0
 hfdig_multiband_dsp	82.1		
-hfdig_overdue	0.1	0.1	0.0
+hfdig_overdue	0.0	0.1	0.0
 hfdig_q65	107.7		
-hfdig_rsid	0.6	0.5	0.4
-hfdig_rtty	15.0	14.3	17.8
-hfdig_rttyauto	4.3	3.3	3.5
-hfdig_sens39d	1.4		1.4
-hfdig_sens40b	59.2	62.5	
+hfdig_rsid	0.5	0.5	0.4
+hfdig_rtty	14.4	14.3	17.8
+hfdig_rttyauto	2.9	3.3	3.5
+hfdig_sens39d	1.1		1.4
+hfdig_sens40b	42.9	62.5	
 hfdig_sideband	0.0	0.1	0.0
 hfdig_sitor	0.0	0.1	0.0
 hfdig_skeleton	2.5	3.1	4.7
-hfdig_sstv	9.2	10.1	16.2
-hfdig_sstv_sens40	3.8	4.8	5.2
+hfdig_sstv	9.0	10.1	16.2
+hfdig_sstv_sens40	5.0	4.8	5.2
 hfdig_wide	54.0		
 hfdig_wspr	56.8		
 hfdig_wspr_engine	38.2		
-hfdl_busy	0.1		0.2
-hfdl_chan	168.4	161.0	127.2
+hfdl_busy	0.2		0.2
+hfdl_chan	98.1	161.0	127.2
 hfdl_engine	41.1		
-hfdl_fans	4.1	3.0	
-hfdl_filter	2.6	1.6	1.8
-hfdl_hop	0.1	0.1	0.0
-hfdl_learn	0.5	0.7	1.1
+hfdl_fans	3.0	3.0	
+hfdl_filter	1.9	1.6	1.8
+hfdl_hop	0.0	0.1	0.0
+hfdl_learn	0.6	0.7	1.1
 hfdl_live	0.0	0.1	0.1
 hfdl_offset	5.6	5.8	5.4
 hfdl_prop	0.0	0.1	0.0
-hfdl_proto	0.1	0.1	0.0
-hfdl_proto_rs	7.1	6.8	7.2
-hfdl_real	0.1	0.1	0.0
-hfdl_rx	48.8	25.5	19.2
+hfdl_proto	0.0	0.1	0.0
+hfdl_proto_rs	4.3	6.8	7.2
+hfdl_real	0.0	0.1	0.0
+hfdl_rx	41.0	25.5	19.2
 hfdl_speed	49.7		
 hfdl_table	0.0		0.0
-hfdl_threads	4.9	4.8	2.6
-hfdl_weak	2.0	1.4	2.2
-hfdl_why	0.6	0.4	0.7
-hfutil_4481	3.6	3.0	
-hfutil_ale3g	4.9	6.0	4.9
-hfutil_ale3gbw	7.0	6.6	8.1
-hfutil_engine	54.0	27.2	228.6
-hfutil_fsk	12.7	5.7	11.4
-hfutil_hdr	4.6		4.5
-hfutil_hdreq	5.6	4.3	
-hfutil_link11	0.7	0.9	0.6
+hfdl_threads	3.7	4.8	2.6
+hfdl_weak	1.4	1.4	2.2
+hfdl_why	0.5	0.4	0.7
+hfutil_4481	2.7	3.0	
+hfutil_ale3g	4.6	6.0	4.9
+hfutil_ale3gbw	7.3	6.6	8.1
+hfutil_engine	38.2	27.2	228.6
+hfutil_fsk	13.1	5.7	11.4
+hfutil_hdr	5.1		4.5
+hfutil_hdreq	6.2	4.3	
+hfutil_link11	0.6	0.9	0.6
 hfutil_mode	0.1	0.3	0.1
-hfutil_sens39	3.4	1.2	2.5
-hfutil_serial	5.0	2.7	4.3
-hls	0.7	1.0	1.5
+hfutil_sens39	2.3	1.2	2.5
+hfutil_serial	4.4	2.7	4.3
+hls	0.8	1.0	1.5
 horus_engine	0.2	1.3	0.9
-horus_loopback	11.1	8.8	7.1
+horus_loopback	7.1	8.8	7.1
 horus_proto	0.0	0.1	0.0
-horus_wide	4.4	4.5	5.7
-hrpt_engine	1.0	2.0	4.8
+horus_wide	5.1	4.5	5.7
+hrpt_engine	0.9	2.0	4.8
 hrpt_proto	0.1	0.1	0.0
-hrpt_rx	25.3	12.2	13.4
+hrpt_rx	16.8	12.2	13.4
 hrpt_viterbi	0.1	0.1	0.1
 hw_guard	0.0	0.2	0.0
 hytera	0.0	0.1	0.0
-i18n	0.5	1.9	0.8
+i18n	0.4	1.9	0.8
 icom_r8600	0.1	0.2	0.1
-idgaps	16.9	10.0	23.5
+idgaps	12.1	10.0	23.5
 ifkp_codec	0.1	0.2	0.1
-ifkp_engine	45.8	46.0	46.5
-ifkp_rx	25.1	18.6	99.2
-ils_rx	28.9	21.6	33.4
-image_enhance	5.2	4.1	5.5
-imgproc	1.9	2.1	1.4
+ifkp_engine	45.5	46.0	46.5
+ifkp_rx	24.2	18.6	99.2
+ils_rx	28.7	21.6	33.4
+image_enhance	7.1	4.1	5.5
+imgproc	1.4	2.1	1.4
 inmc_basic	0.5	0.5	0.5
 inmc_code	1.4	0.6	1.6
 inmc_egc	0.0	0.1	0.0
-inmc_engine	3.5	4.2	8.9
-inmc_impair	33.3	27.6	148.0
-inmc_multi	43.1	18.9	238.5
+inmc_engine	3.6	4.2	8.9
+inmc_impair	47.0	27.6	148.0
+inmc_multi	27.2	18.9	238.5
 inmc_pkt	0.0	0.1	0.0
-inmc_rx	20.3	9.9	113.6
+inmc_rx	21.5	9.9	113.6
 inmc_slow_rates	82.8		
 inmc_slow_sweep	56.8		
-inmsat_churn	82.3		120.5
-inmsat_cvoice	68.8	33.7	68.2
-inmsat_detect	65.0	62.9	63.5
+inmsat_churn	88.8		120.5
+inmsat_cvoice	59.8	33.7	68.2
+inmsat_detect	66.9	62.9	63.5
 inmsat_detect_probe	0.0	0.1	0.0
-inmsat_engine	50.4	51.6	50.5
+inmsat_engine	50.5	51.6	50.5
 inmsat_live	0.0	0.1	0.0
-inmsat_manager	169.7	97.3	128.5
+inmsat_manager	151.7	97.3	128.5
 inmsat_mode	0.1	0.3	0.1
 inmsat_planes	0.1	0.2	0.1
-inmsat_rates	257.0	201.8	218.3
+inmsat_rates	156.4	201.8	218.3
 inmsat_satid	0.0	0.1	0.0
-inmsat_voice	0.1	0.1	0.0
+inmsat_voice	0.0	0.1	0.0
 input_map	0.0	0.1	0.0
 integrations	1.0	1.8	1.4
 iono_dechirp	0.0	0.1	0.0
-iono_dsp	4.1	3.8	3.8
+iono_dsp	4.0	3.8	3.8
 iono_engine	5.0	6.6	5.0
 iono_obs	0.0	0.1	0.0
-iono_scale	2.6	4.0	3.6
-iptv	12.6	15.3	18.1
+iono_scale	2.7	4.0	3.6
+iptv	12.3	15.3	18.1
 iq_correct	0.3	0.4	0.2
 iq_modes	384.1		
-iq_record	11.2	11.9	10.9
+iq_record	11.5	11.9	10.9
 iridium_acars	0.0	0.1	0.0
 iridium_app	40.4		
 iridium_basic	0.3	0.5	0.4
-iridium_bits	4.4	2.5	7.7
+iridium_bits	4.2	2.5	7.7
 iridium_doppler	0.1	0.1	0.1
 iridium_engine	16.1	17.3	16.1
 iridium_frame_kat	0.0	0.1	0.0
-iridium_frame_roundtrip	0.7	1.1	2.1
-iridium_impair	9.7	7.7	20.1
-iridium_phy	1.0	1.3	1.0
+iridium_frame_roundtrip	0.8	1.1	2.1
+iridium_impair	10.6	7.7	20.1
+iridium_phy	0.8	1.3	1.0
 iridium_rx	5.5	4.3	8.6
 iridium_sbd	0.0	0.1	0.0
-iridium_sens	54.6	27.7	36.4
+iridium_sens	36.0	27.7	36.4
 iridium_synth	5.6	3.7	7.5
 iridium_voice	0.0	0.1	0.0
-iridium_voicechain	8.3	3.1	12.0
+iridium_voicechain	5.9	3.1	12.0
 iridium_vslot	0.0	0.1	0.0
-isdbs	38.7	29.6	62.2
+isdbs	20.9	29.6	62.2
 isdbs_mode	0.0	0.1	0.0
-isdbt_basic	0.1	0.1	0.0
-isdbt_bw	37.9	31.4	28.4
-isdbt_chain	7.4	7.1	12.0
-isdbt_engine	8.9	5.7	9.1
+isdbt_basic	0.0	0.1	0.0
+isdbt_bw	42.8	31.4	28.4
+isdbt_chain	10.1	7.1	12.0
+isdbt_engine	8.0	5.7	9.1
 isdbt_impair	99.0		
-isdbt_rx	13.4	11.0	13.1
-isdbtsb	70.4	35.4	39.3
-ism_39	19.1	18.1	24.2
-ism_engine	9.8	10.7	12.9
-ism_iot	2.2	2.1	2.7
+isdbt_rx	12.0	11.0	13.1
+isdbtsb	44.0	35.4	39.3
+ism_39	18.5	18.1	24.2
+ism_engine	9.6	10.7	12.9
+ism_iot	1.6	2.1	2.7
 ism_iot_rx	8.0		
-ism_more	0.1	0.1	0.0
-ism_proto	15.1	18.1	22.3
+ism_more	0.0	0.1	0.0
+ism_proto	13.5	18.1	22.3
 ism_rx	77.2		
-ism_sigfox	7.3	5.8	6.4
-ism_stall	5.9	19.4	4.9
+ism_sigfox	8.2	5.8	6.4
+ism_stall	7.6	19.4	4.9
 js8_engine	27.1		
 js8_proto	0.0	0.1	0.0
-js8_rx	7.0	8.7	16.1
+js8_rx	7.7	8.7	16.1
 kaal_chain	634.8		
 kaal_chain_engine	0.1	0.2	0.1
-kaal_codec3	0.3	0.5	0.2
-kaal_engine	6.5	2.6	4.0
-kaal_file	40.0	39.3	42.5
+kaal_codec3	0.2	0.5	0.2
+kaal_engine	5.2	2.6	4.0
+kaal_file	38.5	39.3	42.5
 kaal_golden	0.1	0.1	0.0
-kaal_live_fuzz	92.6	40.8	55.5
-kaal_lock_time	20.2	20.4	21.4
-kaal_mode	0.1	0.1	0.0
-kaal_phy	0.1	0.1	0.0
+kaal_live_fuzz	77.5	40.8	55.5
+kaal_lock_time	22.4	20.4	21.4
+kaal_mode	0.0	0.1	0.0
+kaal_phy	0.0	0.1	0.0
 kaal_robust	0.1	0.1	0.0
 kaal_roundtrip	0.1	0.1	0.0
-kaal_rx_loopback	11.9	6.0	8.0
-kaal_sweepid	39.7	25.7	26.9
+kaal_rx_loopback	13.3	6.0	8.0
+kaal_sweepid	36.0	25.7	26.9
 kaal_synth	34.8	36.0	35.5
 kaal_tx_beacon	3.0	1.6	2.3
-kaal_tx_golden	0.2	0.3	0.1
-kaal_tx_mix	1.6	1.3	2.0
+kaal_tx_golden	0.1	0.3	0.1
+kaal_tx_mix	1.9	1.3	2.0
 kaal_tx_resample	3.2		
-kaal_tx_v3	7.1	10.8	6.8
-kaal_v4	0.4	0.5	0.4
+kaal_tx_v3	5.4	10.8	6.8
+kaal_v4	0.5	0.5	0.4
 kaal_v4_impair	48.8		
 kaal_v4_live	0.1	0.2	0.1
-kaal_v4_voice	4.7	3.7	4.5
-kaalvoice_dtx	1.7	1.5	1.4
-kaalvoice_enhance	4.1	6.2	5.1
-kaalvoice_golden	0.4	0.5	0.3
-kaalvoice_robust	2.3	3.4	2.5
-kaalvoice_roundtrip	1.1	1.4	0.9
-kaft_engine	35.4	32.0	44.4
-kaft_live_fuzz	17.8	58.4	141.8
-kaft_phy	9.8	8.6	11.7
+kaal_v4_voice	6.6	3.7	4.5
+kaalvoice_dtx	1.2	1.5	1.4
+kaalvoice_enhance	4.8	6.2	5.1
+kaalvoice_golden	0.3	0.5	0.3
+kaalvoice_robust	1.9	3.4	2.5
+kaalvoice_roundtrip	1.0	1.4	0.9
+kaft_engine	33.7	32.0	44.4
+kaft_live_fuzz	16.3	58.4	141.8
+kaft_phy	7.6	8.6	11.7
 kaft_session	0.2	0.3	0.2
-kaft_synth	6.8	7.1	7.6
-kait_codec	3.4	3.8	2.3
-kait_iqfile	4.8	4.1	18.9
-kait_live	15.3	5.6	29.2
-kait_live_fuzz	13.2	11.6	72.7
+kaft_synth	6.4	7.1	7.6
+kait_codec	4.2	3.8	2.3
+kait_iqfile	5.6	4.1	18.9
+kait_live	13.9	5.6	29.2
+kait_live_fuzz	13.3	11.6	72.7
 kait_mode	0.1	0.3	0.1
-kait_phy	25.4	22.2	28.6
-kait_synth	57.9	54.5	139.6
+kait_phy	42.8	22.2	28.6
+kait_synth	53.8	54.5	139.6
 kait_txgen	7.6	4.7	22.4
 kapp_arq	0.1	0.1	0.1
-kapp_engine	28.3	15.6	60.1
+kapp_engine	22.5	15.6	60.1
 kapp_kaft_mode	0.0	0.1	0.0
-kapp_live_fuzz	19.4	21.6	51.0
-kapp_phy	6.5	5.8	10.8
-kapp_synth	11.3	12.1	16.9
-kavb_av	1.0	0.9	1.3
-kavb_engine	51.9	50.1	95.8
-kavb_iqfile	0.8	0.5	0.5
-kavb_live_fuzz	52.5	28.4	88.6
-kavb_mode	0.1	0.1	0.0
-kavb_phy	2.1	2.8	2.5
-kavb_synth	3.7	3.6	4.5
+kapp_live_fuzz	20.2	21.6	51.0
+kapp_phy	6.6	5.8	10.8
+kapp_synth	11.2	12.1	16.9
+kavb_av	1.1	0.9	1.3
+kavb_engine	51.7	50.1	95.8
+kavb_iqfile	0.6	0.5	0.5
+kavb_live_fuzz	39.6	28.4	88.6
+kavb_mode	0.0	0.1	0.0
+kavb_phy	2.4	2.8	2.5
+kavb_synth	3.1	3.6	4.5
 kavb_thresholds	0.0	0.1	0.0
-kaws_engine	33.0	22.3	102.0
+kaws_engine	22.4	22.3	102.0
 kaws_frame	0.0	0.1	0.0
-kaws_live_fuzz	13.1	6.0	22.2
+kaws_live_fuzz	17.4	6.0	22.2
 kaws_mode	0.0	0.1	0.0
-kaws_phy	1.9	3.3	2.2
+kaws_phy	2.3	3.3	2.2
 kaws_session	0.0	0.1	0.0
-kaws_synth	82.0	124.6	149.6
+kaws_synth	92.5	124.6	149.6
 kinematics	0.0	0.1	0.0
 kit_export	0.0	0.1	0.0
 kris_common	0.1	0.1	0.0
-kris_ldpc	0.1	0.1	0.0
+kris_ldpc	0.0	0.1	0.0
 kris_thresholds	0.0	0.1	0.0
 l1	0.1	0.2	0.1
 latest_slot	0.2	0.2	0.2
 layout	0.0	0.1	0.0
 lbj_fields	0.1	0.2	0.1
-lbj_impair	12.0	8.0	20.8
-lbj_proto	0.1	0.1	0.0
+lbj_impair	20.7	8.0	20.8
+lbj_proto	0.0	0.1	0.0
 lbj_real	0.0	0.1	0.0
-lbj_rx	2.8	1.8	3.7
-learn_logic	0.2	0.4	0.2
+lbj_rx	2.6	1.8	3.7
+learn_logic	0.1	0.4	0.2
 limesdr_mini	1.6	1.9	
 lora_modes	0.1	0.3	0.1
 loraraw_engine	12.9	13.3	13.2
-loraraw_lab	6.2	3.8	3.6
+loraraw_lab	4.6	3.8	3.6
 loraraw_proto	0.1	0.1	0.1
-loraraw_rx	5.2	5.0	3.8
-loraraw_survey	44.3	41.4	42.4
-lorasat_rx	7.7	9.6	11.1
+loraraw_rx	5.0	5.0	3.8
+loraraw_survey	25.4	41.4	42.4
+lorasat_rx	9.4	9.6	11.1
 lorawan_crypto	0.1	0.2	0.1
-lorawan_fsk	12.6	10.4	15.5
-lorawan_health	0.0	0.1	0.0
-lorawan_rx	18.2	6.9	10.4
+lorawan_fsk	15.1	10.4	15.5
+lorawan_health	0.1	0.1	0.0
+lorawan_rx	14.5	6.9	10.4
 ltr_edacs_mode	0.1	0.1	0.1
-ltr_rx	36.0	20.5	20.2
-m17_engine	12.5	12.9	12.6
-m17_proto	0.1	0.1	0.0
-m17_rx	29.1	36.0	24.6
-mac_engine	11.7	11.1	13.1
+ltr_rx	24.4	20.5	20.2
+m17_engine	12.7	12.9	12.6
+m17_proto	0.0	0.1	0.0
+m17_rx	33.9	36.0	24.6
+mac_engine	10.8	11.1	13.1
 mac_proto	0.0	0.1	0.0
-mac_rx	34.4	14.7	27.6
+mac_rx	19.1	14.7	27.6
 macos_plist	0.0	0.1	0.0
 maidenhead	0.0	0.1	0.0
 map_ask	0.0	0.1	0.0
@@ -1082,35 +1083,35 @@ map_guard	0.0	0.1	0.0
 map_name	0.0	0.1	0.0
 map_scroll_zoom_652	0.0	0.1	0.1
 maplayers	0.0	0.1	0.0
-marine_basic	0.4	0.6	0.6
+marine_basic	0.3	0.6	0.6
 marine_ccir476	0.1	0.1	0.0
-marine_dsc_audio	7.3	2.5	4.0
+marine_dsc_audio	3.6	2.5	4.0
 marine_dsc_audit	0.1	0.2	0.1
-marine_dsc_bands	0.9	1.1	2.3
-marine_dsc_bitsweep	0.4	0.3	0.4
+marine_dsc_bands	0.7	1.1	2.3
+marine_dsc_bitsweep	0.3	0.3	0.4
 marine_dsc_calls	0.1	0.1	0.2
 marine_dsc_kat	0.0	0.1	0.0
-marine_dsc_sweep	31.3	26.1	285.0
+marine_dsc_sweep	29.7	26.1	285.0
 marine_engine	5.2	6.5	12.9
-marine_engine_fax	5.8	6.6	33.6
-marine_fax_decode	8.8	15.1	9.9
-marine_fax_hfstation	16.9	12.4	20.2
+marine_engine_fax	7.0	6.6	33.6
+marine_fax_decode	14.3	15.1	9.9
+marine_fax_hfstation	12.6	12.4	20.2
 marine_fax_known	0.2	0.2	0.2
-marine_fax_noise	23.9	34.5	20.3
-marine_fax_sens39	3.2		
-marine_fax_sens40	30.8	40.4	21.8
-marine_fax_slant	35.7	35.6	18.9
-marine_fax_thread	9.7	12.6	19.5
-marine_fax_tones	22.0	27.0	14.7
+marine_fax_noise	18.0	34.5	20.3
+marine_fax_sens39	3.6		
+marine_fax_sens40	34.3	40.4	21.8
+marine_fax_slant	26.6	35.6	18.9
+marine_fax_thread	16.3	12.6	19.5
+marine_fax_tones	20.2	27.0	14.7
 marine_fax_weak	2.0	2.5	1.8
 marine_field_hub	0.0	0.1	0.0
 marine_incident	0.1	0.1	0.0
 marine_navtex_force	0.0		0.0
 marine_rf_dsc	39.7		
 marine_rf_fax	49.7		
-marine_rf_navtex	54.5	40.8	154.4
-marine_save	1.3	1.1	1.6
-marine_sens39	9.4	4.8	
+marine_rf_navtex	29.1	40.8	154.4
+marine_save	0.8	1.1	1.6
+marine_sens39	10.2	4.8	
 marine_shipdb_import	0.0	0.1	0.0
 marine_slow_dsc_snr	101.3		
 marine_slow_fax_slant	28.0		
@@ -1121,277 +1122,277 @@ marine_wefax_rotate	0.0	0.1	0.0
 marine_wefax_stations	0.0	0.1	0.0
 marinevhf_channels	0.0	0.1	0.0
 marinevhf_mode	0.1	0.3	0.1
-marinevhf_rx	3.2	3.9	3.4
+marinevhf_rx	2.9	3.9	3.4
 marinevhf_scan	0.0	0.1	0.0
-mb_signal	1.1	1.2	1.3
+mb_signal	1.0	1.2	1.3
 mbe_abi_classic	0.0	0.1	0.0
 mbe_abi_neo	0.0	0.1	0.0
-mbtiles	0.4	1.2	0.1
-mcp	11.0	11.5	11.2
-mcp_stdio	8.0	8.4	7.1
+mbtiles	0.2	1.2	0.1
+mcp	12.9	11.5	11.2
+mcp_stdio	7.4	8.4	7.1
 memory_bank	0.1	0.1	0.1
 memory_formats	0.1	0.2	0.1
 memory_recall_app		3.9	
 menu_groups	0.0		0.0
-mesh_659_custom_preset	7.3	2.2	
+mesh_659_custom_preset	2.5	2.2	
 mesh_bank_eof	0.1	0.1	0.0
 mesh_basic	0.5	0.6	0.5
 mesh_census	0.0	0.1	0.0
 mesh_channelurl	0.0		0.0
 mesh_coverage	0.0	0.1	
 mesh_crypto_kat	0.1	0.1	0.0
-mesh_custom	1.6	1.6	1.5
-mesh_engine	30.9	31.0	32.6
-mesh_impair	15.9	20.3	12.6
-mesh_loraaprs	41.1	23.5	49.1
-mesh_lorawan	9.6	8.2	9.6
-mesh_lorawanfwd	2.2	2.4	2.1
-mesh_meshcore_node	27.3	19.1	31.0
-mesh_phy	7.0	4.5	7.2
-mesh_presets	1.0	1.0	1.0
+mesh_custom	1.8	1.6	1.5
+mesh_engine	30.5	31.0	32.6
+mesh_impair	17.5	20.3	12.6
+mesh_loraaprs	26.5	23.5	49.1
+mesh_lorawan	9.4	8.2	9.6
+mesh_lorawanfwd	2.1	2.4	2.1
+mesh_meshcore_node	24.6	19.1	31.0
+mesh_phy	6.2	4.5	7.2
+mesh_presets	1.2	1.0	1.0
 mesh_presets_meshcore	0.0	0.1	0.0
 mesh_proto_meshcore	0.2	0.3	0.4
-mesh_proto_meshtastic	4.4	3.1	5.2
+mesh_proto_meshtastic	3.5	3.1	5.2
 mesh_proto_pb	0.0	0.1	0.0
-mesh_proto_rs	101.1	206.9	57.6
-mesh_proto_settings	0.1	0.1	0.0
-mesh_rates	14.5	9.2	36.2
-mesh_rtlrate	2.5	1.6	1.9
-mesh_rx	7.9	4.3	13.3
-mesh_sweep	29.4	14.7	19.2
+mesh_proto_rs	84.4	206.9	57.6
+mesh_proto_settings	0.0	0.1	0.0
+mesh_rates	11.5	9.2	36.2
+mesh_rtlrate	1.6	1.6	1.9
+mesh_rx	8.2	4.3	13.3
+mesh_sweep	17.2	14.7	19.2
 mesh_table_size_455	0.0	0.1	0.0
-mesh_topology	0.9	0.5	0.6
+mesh_topology	0.5	0.5	0.6
 mesh_tx	0.0	0.1	0.0
 mesh_watch	0.0		0.1
 meteor_comp	0.0	0.2	
-meteor_engine	8.7	9.6	8.8
+meteor_engine	8.6	9.6	8.8
 meteor_imagedone	0.0	0.1	0.0
 meteor_passreport	0.0	0.1	0.1
-meteor_proto	0.1	0.1	0.0
+meteor_proto	0.0	0.1	0.0
 meteor_rx	120.6		
 meter_logic	0.0	0.1	0.0
 mheg	0.0	0.1	0.0
 mheg_engine	0.0	0.1	0.0
 midi	0.0		0.0
-milhf_ident	6.9	6.2	13.3
+milhf_ident	7.3	6.2	13.3
 milhf_mode	0.1	0.2	0.2
-mirics	0.1	0.1	
+mirics	0.0	0.1	
 mode_actions	0.0	0.1	0.0
 mode_numbers	0.1	0.5	0.2
 mode_panel_logic	0.0	0.1	0.0
 mode_picker	0.0	0.1	0.0
 mode_rate_sweep	1522.8		
 mode_visibility	0.0	0.2	0.0
-modeac_dsp	54.1	34.9	28.7
+modeac_dsp	27.3	34.9	28.7
 modeac_engine	0.8	1.9	1.2
 modeac_proto	0.0	0.1	0.0
-modeac_sweep	32.2	11.8	33.5
-modebuilder	0.6	0.6	0.8
-modebuilder_sweep	1.0	1.1	1.6
+modeac_sweep	24.1	11.8	33.5
+modebuilder	0.7	0.6	0.8
+modebuilder_sweep	1.3	1.1	1.6
 modes	23.9		
 modes_rate_choice	0.1	0.3	0.0
-mount	6.4	8.3	10.8
-mpe_fec	3.2	4.0	1.6
+mount	6.5	8.3	10.8
+mpe_fec	1.7	4.0	1.6
 mpt1327	1.0	0.7	1.1
 mpt1327_chan	0.0	0.1	0.0
 mpt1327_mode	0.0	0.1	0.0
-mpt1327_std	24.3	7.0	11.7
-mscatter_dsp	1.9	1.9	3.0
-mscatter_engine	18.9	19.9	18.9
-mscatter_live	0.3	0.4	0.5
-msgdb	0.3	0.7	0.9
-mt63_engine	40.6	43.2	41.2
-mt63_proto	0.1	0.1	0.0
-mt63_rx	30.9	25.9	111.1
-mt63_sweep	21.4	20.2	70.2
-multi_rx	4.3	4.7	22.3
-multitone_engine	12.4	13.2	12.3
-multitone_real	0.1	0.1	0.1
-multitone_rx	8.8	7.1	7.7
-multitv	66.2	69.6	64.0
-multitv_engine	40.4	42.3	31.1
-multitv_others	82.5	43.1	83.2
-multitv_sat	12.9	10.0	12.9
-multitv_wide	90.3	70.6	69.4
+mpt1327_std	14.4	7.0	11.7
+mscatter_dsp	2.5	1.9	3.0
+mscatter_engine	19.0	19.9	18.9
+mscatter_live	0.4	0.4	0.5
+msgdb	0.8	0.7	0.9
+mt63_engine	40.4	43.2	41.2
+mt63_proto	0.0	0.1	0.0
+mt63_rx	17.1	25.9	111.1
+mt63_sweep	31.2	20.2	70.2
+multi_rx	4.1	4.7	22.3
+multitone_engine	12.3	13.2	12.3
+multitone_real	0.0	0.1	0.1
+multitone_rx	6.0	7.1	7.7
+multitv	42.7	69.6	64.0
+multitv_engine	32.3	42.3	31.1
+multitv_others	78.3	43.1	83.2
+multitv_sat	8.1	10.0	12.9
+multitv_wide	69.3	70.6	69.4
 mux_change	0.0	0.1	0.0
 mylocation	0.1		0.6
 native	44.5		
 native_kiwisdr	20.4	21.9	20.9
 native_lifecycle	0.0	0.1	0.0
-native_netradio	22.2	38.9	27.5
-native_nobias	0.2	0.7	
-native_nrspst	7.7	8.0	9.6
+native_netradio	22.3	38.9	27.5
+native_nobias	0.3	0.7	
+native_nrspst	7.6	8.0	9.6
 native_pluto_probe	0.1	0.1	0.1
 native_rtltcp_chunks	0.3	1.4	5.5
 native_sdrpp	11.0	31.8	12.3
 native_tci	5.7	7.1	13.1
 nav	0.0	0.1	0.0
-navic_rx	83.7	35.0	57.1
+navic_rx	53.9	35.0	57.1
 nbiot_engine	4.1	4.8	6.2
 nbiot_phy	0.0	0.1	0.0
-nbiot_rx	13.8	11.9	18.7
-ndb_census	16.2	11.3	11.0
-ndb_rx	2.8	2.1	2.1
+nbiot_rx	15.1	11.9	18.7
+ndb_census	12.7	11.3	11.0
+ndb_rx	2.0	2.1	2.1
 net_crypto	0.0	0.1	0.0
-net_proto_rs	1.8	3.3	3.2
-neural_nr	2.7	4.2	2.8
+net_proto_rs	2.3	3.3	3.2
+neural_nr	2.0	4.2	2.8
 next_step	0.0	0.1	0.0
 nfc_capture2msps	0.1	0.1	0.1
-nfc_decode	1.0	0.8	0.9
+nfc_decode	1.1	0.8	0.9
 nfc_mode	0.1	0.2	0.1
-nfc_views	90.4	69.9	87.7
+nfc_views	80.8	69.9	87.7
 nit_rows	0.0	0.1	0.0
 noise_blanker	0.1	0.1	0.0
-notch_bank	0.6	0.9	
-nr_engine	2.2	3.4	7.9
+notch_bank	0.5	0.9	
+nr_engine	2.0	3.4	7.9
 nr_phy	0.1	0.2	0.1
-nr_rx	1.8	1.3	2.7
-nrf24_engine	12.9	13.3	12.7
-nrf24_matrix	35.7	42.0	38.9
+nr_rx	2.3	1.3	2.7
+nrf24_engine	12.6	13.3	12.7
+nrf24_matrix	34.5	42.0	38.9
 nrf24_mode	0.1	0.3	0.1
 nrf24_proto	0.1	0.1	0.0
-nrf24_rx	11.4	11.7	6.9
-nrf24_sweep	31.1	39.1	18.3
+nrf24_rx	9.4	11.7	6.9
+nrf24_sweep	25.6	39.1	18.3
 nrspst_rate	24.8	24.3	24.4
-nxdn_engine	12.4	13.1	12.5
-nxdn_plugin	1.1	0.8	0.8
+nxdn_engine	12.5	13.1	12.5
+nxdn_plugin	0.8	0.8	0.8
 nxdn_proto	0.0	0.1	0.0
-nxdn_proto_rs	5.4	5.2	6.7
-nxdn_rx	7.2	4.2	6.2
-nxdn_sens	11.2	3.6	15.2
-nxdn_short	67.0	24.9	123.7
-nxdn_wide	51.0	34.4	35.7
+nxdn_proto_rs	7.7	5.2	6.7
+nxdn_rx	6.8	4.2	6.2
+nxdn_sens	8.8	3.6	15.2
+nxdn_short	79.8	24.9	123.7
+nxdn_wide	36.4	34.4	35.7
 ofdm_csi	606.5		
 ofdm_csi_isdbt	1183.1		
-offset_tune	12.1	20.7	15.8
+offset_tune	15.7	20.7	15.8
 old_group_names_migrate	0.0		0.0
 ook_scatter	0.1	0.1	0.1
-opensky_rx	0.7	0.5	0.6
+opensky_rx	0.5	0.5	0.6
 optional_libs	0.1	0.2	1.5
-orbcomm_engine	2.9	3.5	3.0
-orbcomm_rx	19.6	12.9	12.9
+orbcomm_engine	2.8	3.5	3.0
+orbcomm_rx	15.6	12.9	12.9
 overflow_cause	0.0	0.1	
 overload	10.3		
 overload_hint	0.0	0.1	0.0
 overview_layout	0.2	0.1	0.1
 p25_audit	0.0	0.1	0.0
 p25_cc	0.1	0.1	0.1
-p25_engine	12.8	13.6	12.5
-p25_impair	68.6	35.7	37.1
-p25_knownnac	2.4	1.4	2.0
-p25_plugin	0.5	0.6	1.0
+p25_engine	12.4	13.6	12.5
+p25_impair	53.2	35.7	37.1
+p25_knownnac	1.9	1.4	2.0
+p25_plugin	0.4	0.6	1.0
 p25_proto	0.1	0.1	0.1
-p25_proto_rs	28.2	16.0	25.7
-p25_rx	5.2	6.3	5.5
+p25_proto_rs	16.8	16.0	25.7
+p25_rx	4.0	6.3	5.5
 p25_scenario_cc	2.3	3.7	2.2
-p25_scenario_hop	7.0	6.1	9.3
-p25_scenario_p2	3.6	3.4	5.0
-p25_scenario_slice	8.6	7.2	9.2
-p25_sens	4.6	7.3	8.2
-p25_short	56.7	45.7	87.8
-p25_simulcast	34.7	9.9	18.0
+p25_scenario_hop	6.1	6.1	9.3
+p25_scenario_p2	4.9	3.4	5.0
+p25_scenario_slice	14.3	7.2	9.2
+p25_sens	5.4	7.3	8.2
+p25_short	57.4	45.7	87.8
+p25_simulcast	31.7	9.9	18.0
 p25_trunk	0.1	0.2	0.1
-p25_trunk_rf	0.3	0.3	0.3
-p25_vocoder	0.1	0.1	0.0
-p25_wide_follow	4.5	3.7	5.9
-p25_wide_rates	78.0	53.4	57.2
+p25_trunk_rf	0.2	0.3	0.3
+p25_vocoder	0.0	0.1	0.0
+p25_wide_follow	5.2	3.7	5.9
+p25_wide_rates	60.9	53.4	57.2
 p25p2_audit	0.9	1.8	1.7
-p25p2_impair	20.4	12.7	23.7
+p25p2_impair	17.6	12.7	23.7
 p25p2_mode	0.1	0.2	0.2
-p25p2_plugin	0.8	1.1	1.4
+p25p2_plugin	1.0	1.1	1.4
 p25p2_proto	0.1	0.2	0.1
-p25p2_rx	3.8	4.6	5.7
-packet_aprsboard	47.1		45.7
-packet_decode	7.9	4.0	6.0
+p25p2_rx	4.0	4.6	5.7
+packet_aprsboard	46.0		45.7
+packet_decode	4.9	4.0	6.0
 packet_engine	2.6	3.7	3.1
-packet_fec	0.1	0.1	0.0
-packet_impair	52.4	30.3	23.3
-packet_layers	0.1	0.1	0.0
+packet_fec	0.0	0.1	0.0
+packet_impair	30.7	30.3	23.3
+packet_layers	0.0	0.1	0.0
 packet_path	0.0	0.1	0.0
-packet_proto	0.1	0.1	0.0
-packet_proto_rs	4.3	4.5	4.6
-packet_tnc	130.6	68.9	51.3
+packet_proto	0.0	0.1	0.0
+packet_proto_rs	4.6	4.5	4.6
+packet_tnc	94.8	68.9	51.3
 packet_votebits	0.9	1.2	0.9
-packet_wide	7.2	5.7	9.4
-packet_width	8.9	4.9	10.1
-packs	6.6	2.0	7.6
-pactor_engine	30.6	32.1	31.0
-pactor_hfid	8.8	16.9	23.6
-pactor_mode	0.1	0.2	0.1
+packet_wide	9.5	5.7	9.4
+packet_width	7.5	4.9	10.1
+packs	6.5	2.0	7.6
+pactor_engine	30.5	32.1	31.0
+pactor_hfid	8.6	16.9	23.6
+pactor_mode	0.0	0.2	0.1
 pactor_proto	0.0	0.1	0.0
-pactor_rx	38.1	5.5	70.6
-pactorhf_dsp	20.0	21.7	28.0
-pactorhf_engine	29.6	33.5	84.6
+pactor_rx	38.7	5.5	70.6
+pactorhf_dsp	17.9	21.7	28.0
+pactorhf_engine	26.5	33.5	84.6
 pactorhf_mode	0.1	0.2	0.1
-pactorhf_real	1.7	2.0	2.0
-pactorhf_rx	28.6	33.8	32.5
+pactorhf_real	1.6	2.0	2.0
+pactorhf_rx	23.9	33.8	32.5
 pager_alias	0.1	0.1	0.0
-pager_combine	0.1	0.1	0.0
-pager_combine_rx	24.8	20.6	22.0
-pager_dev	7.8	12.0	8.3
-pager_engine	19.3	20.0	19.7
+pager_combine	0.0	0.1	0.0
+pager_combine_rx	17.8	20.6	22.0
+pager_dev	10.0	12.0	8.3
+pager_engine	19.2	20.0	19.7
 pager_filter	0.0	0.1	0.0
-pager_find	4.4	3.7	
-pager_flex1600	33.7	24.6	27.9
-pager_flexreal	77.9	42.9	59.5
-pager_hackrf	5.8	5.0	3.1
-pager_hf	21.2		25.7
+pager_find	3.5	3.7	
+pager_flex1600	27.8	24.6	27.9
+pager_flexreal	58.1	42.9	59.5
+pager_hackrf	3.6	5.0	3.1
+pager_hf	17.6		25.7
 pager_impair	231.9		
 pager_insight	0.0	0.1	0.1
 pager_intel	0.1	0.2	0.1
 pager_keywords	0.0	0.1	0.0
 pager_proto	0.1	0.1	0.2
-pager_proto_rs	2.8	3.8	2.7
-pager_rx	16.4	6.4	9.0
-pager_selcall	9.1	9.7	10.4
-pager_sens	19.2	18.4	26.4
-pager_wide	4.7	3.9	6.3
-pager_wide_selcall	1.0	0.5	1.0
-pager_width	3.5	3.6	5.0
+pager_proto_rs	2.9	3.8	2.7
+pager_rx	10.7	6.4	9.0
+pager_selcall	10.9	9.7	10.4
+pager_sens	18.1	18.4	26.4
+pager_wide	3.0	3.9	6.3
+pager_wide_selcall	0.8	0.5	1.0
+pager_width	4.0	3.6	5.0
 pass_sched	0.0	0.1	0.0
 passes	0.0	0.1	0.0
-passive_radar	12.9	8.4	14.2
+passive_radar	9.9	8.4	14.2
 per_receiver	0.0	0.1	0.0
-perf40_engine	40.3	42.0	
-perf40_profile	25.9	14.1	
-perf40_rx_thread	216.9		
-perf40_rx_thread_tv	56.7	62.1	
+perf40_engine	35.0	42.0	
+perf40_profile	22.1	14.1	
+perf40_rx_thread	218.5		
+perf40_rx_thread_tv	59.4	62.1	
 photo_links	0.0	0.1	0.0
 picsave	0.0	0.1	0.0
 pilots	0.1	0.1	0.1
-plot_batch	0.3	0.2	0.3
+plot_batch	0.5	0.2	0.3
 plot_util	0.1	0.1	0.0
 plugin	7.0	8.8	6.3
-pluto_duplex	2.2	3.3	6.1
+pluto_duplex	1.5	3.3	6.1
 pluto_ports	0.0	0.1	0.0
 png	0.2	0.3	0.2
-power_idle	4.0	3.8	0.0
+power_idle	3.8	3.8	0.0
 prefs_text	0.0	0.2	0.0
 presets	0.0	0.1	0.0
 privacy	0.1	0.1	0.0
-prop_hf	0.1	0.1	0.1
+prop_hf	0.0	0.1	0.1
 prop_itu	0.0		0.0
-prop_model	1.1	0.1	0.0
+prop_model	0.7	0.1	0.0
 prop_p1812	0.0	0.1	
 prop_sat	0.1	0.1	0.0
-prop_scenario	0.8	0.4	0.0
+prop_scenario	0.5	0.4	0.0
 prop_terrain	0.1	0.2	0.1
 protolab	41.6	20.9	71.0
 protolab_sweep	148.8		
 psip	0.0	0.1	0.0
-psk_8psk	1.4	1.6	7.0
-psk_engine	16.9	17.3	16.6
+psk_8psk	1.5	1.6	7.0
+psk_engine	16.5	17.3	16.6
 psk_proto	0.0	0.1	0.0
-psk_rx	5.2	3.6	7.3
-psk_sens39	7.3		20.4
+psk_rx	4.6	3.6	7.3
+psk_sens39	5.3		20.4
 psk_wide	159.3		
-pskdsp_analyse	16.5	6.8	15.9
-pskdsp_bits	2.9	2.6	2.0
+pskdsp_analyse	14.8	6.8	15.9
+pskdsp_bits	3.4	2.6	2.0
 pskdsp_engine	2.3	3.0	3.5
-pskdsp_rx	6.8	6.4	9.4
-pskdsp_span	18.3	10.3	9.6
+pskdsp_rx	7.3	6.4	9.4
+pskdsp_span	13.8	10.3	9.6
 pskreporter	0.0	0.1	0.0
-pstore_market	0.1	0.2	
+pstore_market	0.2	0.2	
 pstore_store	0.1	0.2	0.1
 qa_sweep_01	512.4		
 qa_sweep_02	886.0		
@@ -1427,88 +1428,88 @@ qa_sweep_31	546.2
 qa_sweep_32	1092.6		
 qa_sweep_sel	0.1		
 qa_switch	869.3		
-qo100_auto	58.0	52.3	80.4
-qo100_beacon_no_jumps_on_dropout	8.5	8.8	6.3
-qo100_beacon_tracks_drift	19.7	13.0	25.9
-qo100_decimator	0.1	0.1	0.0
-qo100_dvbs_second	8.9	9.9	14.2
-qo100_engine	2.9	4.4	3.2
-qo100_narrowband_resolution	11.9		11.6
+qo100_auto	51.3	52.3	80.4
+qo100_beacon_no_jumps_on_dropout	9.4	8.8	6.3
+qo100_beacon_tracks_drift	16.2	13.0	25.9
+qo100_decimator	0.0	0.1	0.0
+qo100_dvbs_second	9.1	9.9	14.2
+qo100_engine	3.0	4.4	3.2
+qo100_narrowband_resolution	5.8		11.6
 qo100_plan	0.1	0.2	
-qo100_rx	34.4	11.5	22.4
+qo100_rx	22.0	11.5	22.4
 queue_cap	0.0	0.1	0.0
 radio_e40	0.1	0.1	0.1
 radio_mode_glue	9.7	15.7	8.8
 radioid	0.2	0.3	0.2
-railway_engine	0.3	1.4	0.7
+railway_engine	0.2	1.4	0.7
 railway_modes	0.0	0.1	0.0
 railway_proto	0.0	0.1	0.0
-railway_rx	30.0	44.0	4.1
+railway_rx	24.4	44.0	4.1
 railway_telemetry	0.0	0.1	0.0
-rangeplot	0.1	0.1	0.0
-rclink_39	15.0	5.9	53.0
+rangeplot	0.0	0.1	0.0
+rclink_39	16.8	5.9	53.0
 rclink_proto	0.0	0.1	0.0
-rclink_rx	6.8	6.6	7.1
-rds_live	6.0	4.4	4.6
-real_adsb	0.1	0.2	0.0
+rclink_rx	7.2	6.6	7.1
+rds_live	5.8	4.4	4.6
+real_adsb	0.0	0.2	0.0
 real_dsc	0.4	0.3	0.9
 real_dtmb	0.1	0.4	0.1
 rec_tags	0.0	0.2	0.0
 recdir	0.0	0.1	0.0
-reception_doctor	3.3	1.7	3.0
-recmgr	0.0	0.1	0.1
+reception_doctor	2.5	1.7	3.0
+recmgr	0.1	0.1	0.1
 record_rules	0.0	0.1	0.0
 redpitaya_gain	0.1	0.1	0.0
-remote_api	13.0	17.9	14.6
+remote_api	12.9	17.9	14.6
 render_caps	0.0	0.1	0.0
-replay	8.2	8.3	10.1
+replay	8.1	8.3	10.1
 results_export	0.0	0.1	0.0
-rf_fingerprint	15.4	11.3	18.9
-rfi	1.3	2.0	1.9
+rf_fingerprint	12.0	11.3	18.9
+rfi	1.4	2.0	1.9
 rid_alerts	0.0		0.0
 rid_cpu	14.9	10.5	
-rid_engine	3.3	2.7	3.2
+rid_engine	3.5	2.7	3.2
 rid_proto	0.0	0.1	0.0
-rid_rx	5.5	3.9	4.0
-rig_control	1.0	1.6	1.1
+rid_rx	4.7	3.9	4.0
+rig_control	1.1	1.6	1.1
 rig_setup	0.1	0.2	0.1
 rooms_net	2.5	2.7	0.0
-ros_detect	10.6	8.4	11.4
-roshf_engine	26.7	26.9	27.0
+ros_detect	9.2	8.4	11.4
+roshf_engine	26.8	26.9	27.0
 roshf_mode	0.1	0.3	0.1
-roshf_rx	61.1	28.0	178.2
+roshf_rx	53.8	28.0	178.2
 row_tint	0.1	0.2	0.1
-rpr_dsp	2.6	1.7	3.3
+rpr_dsp	2.8	1.7	3.3
 rpr_engine	8.5		8.4
 rpr_mode	0.1	0.7	
-rpr_rx	7.6	6.1	9.9
-rsa	3.6	4.3	4.0
+rpr_rx	5.8	6.1	9.9
+rsa	3.5	4.3	4.0
 rsa_missing	0.1		0.1
 rtl_v4_manual	0.1	0.4	
 rx888	13.1	18.6	14.8
 rx_width	0.0	0.1	0.0
 rxbar	0.0	0.1	0.0
-same_engine	15.3	15.7	15.4
+same_engine	15.1	15.7	15.4
 same_proto	0.0	0.2	0.0
-same_proto_rs	1.2	1.3	1.3
-same_rx	25.2	13.8	16.9
-sample_guard	0.1	0.1	
-sarsat_engine	63.2	56.9	61.4
-sarsat_export	19.7		29.6
+same_proto_rs	0.8	1.3	1.3
+same_rx	22.8	13.8	16.9
+sample_guard	0.0	0.1	
+sarsat_engine	66.0	56.9	61.4
+sarsat_export	15.7		29.6
 sarsat_proto	0.1	0.1	0.0
-sarsat_rx	158.2	46.8	161.3
-sarsat_sgb	17.1	9.5	7.2
+sarsat_rx	58.6	46.8	161.3
+sarsat_sgb	12.7	9.5	7.2
 sat_d40	0.0	0.1	0.0
 sat_e40	0.0	0.1	
-sat_plan	0.7	1.1	0.6
-satbeacon_decode	0.1	0.1	0.0
-satbeacon_dsp	83.3	50.9	69.9
+sat_plan	0.5	1.1	0.6
+satbeacon_decode	0.0	0.1	0.0
+satbeacon_dsp	69.4	50.9	69.9
 satbeacon_engine	7.7	9.1	7.6
-satbeacon_live	7.9	7.4	10.7
-satmisc_detect	61.9	37.1	47.4
+satbeacon_live	10.0	7.4	10.7
+satmisc_detect	54.0	37.1	47.4
 satmisc_feedhunter	0.0	0.1	0.0
 satmisc_gomx	0.0	0.1	0.0
-satmisc_graves	6.1	6.4	7.2
+satmisc_graves	6.2	6.4	7.2
 satmisc_id	0.2	0.2	0.2
 satnogs	0.0	0.1	0.0
 sbas_engine	128.2		
@@ -1518,39 +1519,39 @@ scan_d40	0.1	0.1	0.1
 scan_handover	69.8		
 scan_plan	0.0	0.1	0.0
 scan_radios	0.1	0.3	0.1
-scan_soapy	10.8	12.2	
-scan_synth	6.5	8.4	5.8
+scan_soapy	9.9	12.2	
+scan_synth	5.5	8.4	5.8
 scanner	0.0	0.1	0.0
 sched	0.0	0.1	0.0
-sd3_rx	75.2	40.6	60.4
+sd3_rx	72.2	40.6	60.4
 sdrplay	13.8	16.3	13.8
 sdrplay_ifbw	0.0	0.1	0.0
-secondary_modes	176.1	88.3	217.5
+secondary_modes	233.4	88.3	217.5
 selcal_mode	0.1	0.1	0.2
-selcal_rx	6.7	10.1	18.1
-selfcal_core	11.2	8.5	10.2
-selfcal_ppmcal	0.8	0.6	0.8
-sens39a	128.2		
-sens39c	43.2	45.0	52.6
-sens39d	52.6	37.9	
-sens40a3	418.9	505.5	
-sens40a4	236.8		
-sens40b	41.0	69.7	
-sens40b3	12.4	34.5	
-sens40x1	141.0	63.9	
-sens40x3	63.2		
+selcal_rx	10.1	10.1	18.1
+selfcal_core	9.8	8.5	10.2
+selfcal_ppmcal	1.0	0.6	0.8
+sens39a	113.2		
+sens39c	39.8	45.0	52.6
+sens39d	25.7	37.9	
+sens40a3	544.2	505.5	
+sens40a4	265.1		
+sens40b	51.7	69.7	
+sens40b3	11.7	34.5	
+sens40x1	146.9	63.9	
+sens40x3	51.9		
 sens41	338.0	565.1	
-sens41_iridium	100.3	110.3	
-sens41_rest	432.3	288.8	
+sens41_iridium	97.6	110.3	
+sens41_rest	373.5	288.8	
 sens41_sonde_mrz1	307.3	513.7	
 sens41_sonde_mrz2	307.3	513.7	
 sens41_sonde_rs41	71.7	119.9	
-sens41tv	40.8		
+sens41tv	52.8		
 sens_full	6763.7		
 sens_quick	488.2		
 sensors_archive	0.0	0.1	0.0
-sensors_engine	25.5	25.8	25.9
-sensors_families	0.2	0.3	0.1
+sensors_engine	25.6	25.8	25.9
+sensors_families	0.1	0.3	0.1
 sensors_health	0.0	0.1	0.0
 sensors_home	0.8	1.2	
 sensors_mine	0.0	0.1	0.0
@@ -1558,174 +1559,174 @@ sensors_mode	0.1	0.2	0.1
 sensors_pws	0.0		0.0
 sensors_re	0.0	0.1	0.0
 sensors_rx	0.3	0.6	0.4
-sensors_views	21.3	19.8	18.6
-server_host	12.2	12.6	10.6
-session_autorec	0.1	0.1	0.0
+sensors_views	14.7	19.8	18.6
+server_host	11.7	12.6	10.6
+session_autorec	0.0	0.1	0.0
 session_bench	7.6		
 session_bundle	0.0	0.1	
 session_crash	0.2	0.8	0.3
-session_db	1.1	1.4	1.6
+session_db	0.8	1.4	1.6
 session_events	0.1	0.1	0.1
 session_model	0.1	0.1	0.0
-session_modes	0.1	0.1	0.1
+session_modes	0.0	0.1	0.1
 session_retention	0.1	0.2	0.1
 session_soak_10min	600.2		
-session_soak_short	8.2	8.2	8.5
-session_store_threads	0.8	0.6	2.4
+session_soak_short	8.1	8.2	8.5
+session_store_threads	2.2	0.6	2.4
 session_voice_bridge	0.1	0.1	0.0
 setpos_guard	0.0	0.2	0.0
 settings	0.0	0.2	0.0
 setup_logic	0.1	0.3	0.1
-sferics_ltpos	16.4	15.0	14.9
+sferics_ltpos	14.2	15.0	14.9
 sferics_mode	0.1	0.1	0.2
-sferics_rx	8.7	19.6	9.2
+sferics_rx	11.4	19.6	9.2
 sferics_storm	0.0	0.1	0.0
-share_snapshot	0.0		0.0
+share_snapshot	0.1		0.0
 shortwave_mode	0.1	0.3	0.1
-shortwave_path	103.2	66.1	256.4
+shortwave_path	89.7	66.1	256.4
 shortwave_route	0.0	0.1	0.0
-sig_guess	0.8	1.0	1.1
+sig_guess	1.1	1.0	1.1
 sigfox_proto	0.0	0.1	0.0
-sigfox_rx	6.9	9.4	9.2
+sigfox_rx	9.7	9.4	9.2
 sigmf	0.1	0.2	0.1
 sigmf_import	26.8		
 signal_library	2.5	6.0	4.0
-signallab	26.3	31.1	35.7
+signallab	30.5	31.1	35.7
 signallab_eval	191.9		
-sitor_arq	13.2	14.3	
+sitor_arq	15.9	14.3	
 sitor_history	0.0	0.1	0.0
-sitor_live	16.1	11.1	219.1
+sitor_live	8.4	11.1	219.1
 sitor_mode	0.0	0.1	0.0
 smart5_broadcast	0.8		1.0
-smart5_sat	0.1	0.1	0.0
+smart5_sat	0.0	0.1	0.0
 smart5_science	0.1	0.1	
-smart5_tv	0.1	0.1	0.0
-smart5_wiring	30.7		32.9
-smartnet_rx	7.3	8.6	8.2
-soapy	5.8	4.4	
+smart5_tv	0.0	0.1	0.0
+smart5_wiring	21.4		32.9
+smartnet_rx	7.1	8.6	8.2
+soapy	5.1	4.4	
 soapy_logic	0.0	0.1	
-sonde_all_rf	26.1	24.2	19.9
-sonde_basic	2.7	4.0	1.0
+sonde_all_rf	29.5	24.2	19.9
+sonde_basic	2.5	4.0	1.0
 sonde_bits_kat	0.0	0.1	0.0
 sonde_dfm_published	0.0	0.1	0.0
-sonde_dfm_roundtrip	0.2	0.1	0.2
+sonde_dfm_roundtrip	0.1	0.1	0.2
 sonde_engine	20.4		
 sonde_extra	0.1	0.1	0.0
-sonde_extra_rf	50.5	67.9	45.1
+sonde_extra_rf	31.0	67.9	45.1
 sonde_flight	0.0	0.1	0.0
-sonde_gth	3.1	4.5	
+sonde_gth	4.2	4.5	
 sonde_hub	7.2	7.9	7.1
-sonde_interf	11.1	5.1	12.7
+sonde_interf	11.6	5.1	12.7
 sonde_kml	0.0		0.1
 sonde_land	0.0	0.1	0.0
 sonde_land_smooth	0.1	0.2	0.1
-sonde_lms6	0.1	0.1	0.0
+sonde_lms6	0.0	0.1	0.0
 sonde_m10_roundtrip	0.1	0.1	0.1
 sonde_m20_roundtrip	0.1	0.1	0.1
 sonde_map_overlay	0.1	0.2	0.1
 sonde_nmea	0.1	0.2	
 sonde_nmea_course	0.0	0.1	0.0
 sonde_predict	0.1		0.1
-sonde_predict_harness	10.7	6.2	8.8
+sonde_predict_harness	9.3	6.2	8.8
 sonde_predict_real	0.1	0.2	
 sonde_profile	0.0	0.1	0.0
-sonde_rf_dfm	32.0	21.2	45.0
-sonde_rf_m10	32.0	28.6	59.0
-sonde_rf_m20	46.8	38.9	28.7
+sonde_rf_dfm	27.9	21.2	45.0
+sonde_rf_m10	43.2	28.6	59.0
+sonde_rf_m20	39.3	38.9	28.7
 sonde_rs41_kat	0.1	0.1	0.0
-sonde_rs41_multi	13.4	15.9	15.0
-sonde_rs41_rf	44.8	34.9	36.4
+sonde_rs41_multi	9.6	15.9	15.0
+sonde_rs41_rf	43.8	34.9	36.4
 sonde_rs41_roundtrip	0.0	0.1	0.0
 sonde_rs92_kat	0.0	0.1	0.0
-sonde_rs92_rf	27.9	20.8	24.3
-sonde_sens40	75.0		89.2
+sonde_rs92_rf	22.4	20.8	24.3
+sonde_sens40	75.4		89.2
 sonde_sites	0.0	0.1	0.0
 sonde_upload	5.6	10.0	
-sonde_views	106.0	63.6	54.2
-sound_cues	0.1		0.0
+sonde_views	94.6	63.6	54.2
+sound_cues	0.0		0.0
 spec_axis	0.0	0.1	0.0
 spec_ghost	0.0	0.2	0.0
-spec_look	2.0	1.2	1.6
+spec_look	1.3	1.2	1.6
 specan_burst	0.1	0.1	0.0
-specan_dsp	1.1	0.8	1.2
-specan_engine	1.2	1.7	2.7
+specan_dsp	1.0	0.8	1.2
+specan_engine	1.3	1.7	2.7
 specan_geo	0.0	0.1	0.0
-specan_leo	0.1	0.1	0.0
+specan_leo	0.0	0.1	0.0
 specan_lnb	0.0	0.1	0.0
-specan_res	0.0	0.1	0.0
-specan_rotscan	0.0	0.1	0.0
-spectran	16.3	19.0	17.7
+specan_res	0.1	0.1	0.0
+specan_rotscan	0.1	0.1	0.0
+spectran	16.2	19.0	17.7
 spectran_missing	0.1	0.4	
 spectrum_fastlog	0.1	0.1	0.1
-spectrum_fastrows	11.3	8.2	6.1
-spectrum_threads	1.6	1.6	1.5
+spectrum_fastrows	10.5	8.2	6.1
+spectrum_threads	1.5	1.6	1.5
 specx_engine	3.6	4.0	3.9
-specx_ident	4.5	5.5	3.8
-specx_ideval	13.5	7.0	15.3
-specx_idfeatures	3.4	5.0	3.8
+specx_ident	3.7	5.5	3.8
+specx_ideval	16.1	7.0	15.3
+specx_idfeatures	3.7	5.0	3.8
 specx_idmatrix	940.2		
 specx_idmatrix_quick	130.2		
 specx_measure	0.1	0.1	0.1
-specx_scanpropose	2.3	2.4	1.9
+specx_scanpropose	1.7	2.4	1.9
 speech_codec	0.0	0.1	0.0
-spur_notch	44.4	36.5	33.8
-ssbconv	73.4	45.6	52.6
-ssdv_audio	1.6	1.8	2.0
-ssdv_engine	16.4	17.3	18.0
-ssdv_gapfill	0.1	0.1	0.0
+spur_notch	37.3	36.5	33.8
+ssbconv	48.6	45.6	52.6
+ssdv_audio	1.5	1.8	2.0
+ssdv_engine	16.5	17.3	18.0
+ssdv_gapfill	0.0	0.1	0.0
 ssdv_highbytes	0.0	0.1	0.1
 ssdv_mode	0.1	0.2	0.1
 ssdv_proto	0.0	0.1	0.0
-ssdv_rx	14.0	10.4	12.6
-ssdv_wenet	6.5	12.9	8.3
+ssdv_rx	14.2	10.4	12.6
+ssdv_wenet	7.9	12.9	8.3
 ssdv_wenet_tel	0.0	0.1	0.0
 star_prompt	0.0		0.0
 station	0.0	0.2	0.0
 station_fun	0.0	0.1	0.0
-station_health	7.0	4.3	5.5
+station_health	5.4	4.3	5.5
 station_location	0.0	0.1	0.0
 status_strip	0.0	0.1	0.0
 stream_watchdog	0.0	0.1	0.0
 survey	0.1	0.1	0.1
-sw_ident	1.8	1.1	2.5
+sw_ident	1.5	1.1	2.5
 swarm	0.1	0.1	0.0
 swarm_ctl	1.7	1.9	3.9
-swbc	0.1	0.1	0.0
+swbc	0.0	0.1	0.0
 sweep	0.4	0.6	0.5
-sync	94.7	37.7	41.4
-synth_audio_stream	1.8	6.1	
-synth_media	26.3	8.2	
-synth_wide	6.4	11.6	5.2
-t2_fef_layers	29.2	72.5	29.3
-t2_miso	21.2	47.5	19.6
-t2_p2gather	0.1		
+sync	64.1	37.7	41.4
+synth_audio_stream	1.7	6.1	
+synth_media	19.6	8.2	
+synth_wide	5.7	11.6	5.2
+t2_fef_layers	26.6	72.5	29.3
+t2_miso	20.0	47.5	19.6
+t2_p2gather	0.0		
 t2_payload	87.7		
-t2_plps	19.1	64.8	25.2
+t2_plps	17.4	64.8	25.2
 t2mi_file	0.1	0.2	0.1
-t2mi_in	0.3	0.4	0.2
-t2mi_out	12.4	48.0	13.6
+t2mi_in	0.2	0.4	0.2
+t2mi_out	11.5	48.0	13.6
 tdscdma_cell	4.9	2.2	3.1
 teletext	0.0	0.1	0.0
-tetra_echo	1.4	2.0	1.6
-tetra_engine	3.1	3.3	3.8
+tetra_echo	1.7	2.0	1.6
+tetra_engine	3.0	3.3	3.8
 tetra_frag	0.0	0.1	0.0
-tetra_listen	4.0	1.8	4.7
-tetra_names	0.1	0.1	
-tetra_phy	0.4	0.3	0.6
-tetra_proto_rs	0.7	1.4	1.3
-tetra_rx	16.9	7.7	14.1
+tetra_listen	2.6	1.8	4.7
+tetra_names	0.0	0.1	
+tetra_phy	0.3	0.3	0.6
+tetra_proto_rs	0.9	1.4	1.3
+tetra_rx	15.8	7.7	14.1
 tetra_sds	0.1	0.1	0.0
-tetra_sens	1.9		3.0
+tetra_sens	2.1		3.0
 tetra_slots	0.0	0.1	0.0
-tetra_teds	5.7	3.5	8.6
-tetra_traffic	0.1	0.1	0.0
+tetra_teds	3.9	3.5	8.6
+tetra_traffic	0.0	0.1	0.0
 tetra_voice	1.2	1.5	2.6
-tetra_wide	74.0	59.8	86.2
-tetradmo_rx	2.3	1.3	1.8
-tetrapol_engine	6.8	9.1	6.6
+tetra_wide	69.7	59.8	86.2
+tetradmo_rx	2.7	1.3	1.8
+tetrapol_engine	6.5	9.1	6.6
 tetrapol_filter	1.5	1.6	1.7
-tetrapol_rx	6.5	4.5	6.4
-tetrapol_voice	1.0	0.8	1.3
+tetrapol_rx	6.2	4.5	6.4
+tetrapol_voice	1.1	0.8	1.3
 tex_shrink	0.0	0.2	0.0
 text_charset	0.0	0.1	0.0
 text_select	0.0	0.1	0.0
@@ -1733,124 +1734,124 @@ tg_dir	0.0	0.1	0.0
 theme	0.0	0.1	0.0
 thread_name	0.0	0.1	0.0
 thread_proto	0.0	0.1	0.0
-thread_rx	3.6	1.8	2.4
+thread_rx	3.4	1.8	2.4
 tilecache	0.0	0.2	0.0
-time_burst	3.4	2.6	3.1
-time_dcf_phase	1.0	0.5	2.1
-time_engine	8.5	9.1	8.4
-time_machine	4.5	5.8	4.8
+time_burst	4.5	2.6	3.1
+time_dcf_phase	0.8	0.5	2.1
+time_engine	8.4	9.1	8.4
+time_machine	4.4	5.8	4.8
 time_msglog	0.0	0.1	0.0
 time_ntp	1.6	1.9	1.9
 time_proto	0.1	0.1	0.1
-time_rwm	3.9	2.5	3.0
-time_rx	45.8	19.2	91.8
+time_rwm	3.7	2.5	3.0
+time_rx	30.3	19.2	91.8
 time_source	0.0	0.1	0.0
-time_views	36.0	12.0	
-time_wwvb_phase	3.0	2.1	3.0
-tmc_db	4.5		2.0
+time_views	25.1	12.0	
+time_wwvb_phase	2.8	2.1	3.0
+tmc_db	2.6		2.0
 tones_engine	19.7	20.7	20.8
 tones_proto	0.0	0.1	0.0
-tones_rx	23.9	21.2	52.5
-tones_ssb	2.2	2.2	2.2
+tones_rx	16.5	21.2	52.5
+tones_ssb	2.4	2.2	2.2
 top_row	0.0	0.1	0.0
 touch_logic	0.0	0.1	0.0
 tour_logic	0.1	0.5	0.2
 tr101290	0.1	0.1	0.1
-track	3.7	4.2	3.9
-transcribe	1.6	1.1	1.2
+track	3.8	4.2	3.9
+transcribe	1.8	1.1	1.2
 transcribe_speech	0.1	0.1	0.0
-transponders	0.1	0.1	0.0
+transponders	0.0	0.1	0.0
 trunkpool_dedup	0.2	0.1	0.2
 trunkpool_health	0.0	0.1	0.0
-trunkpool_onerig	20.2	16.7	20.8
-trunkpool_pool	0.7	0.5	0.7
+trunkpool_onerig	17.9	16.7	20.8
+trunkpool_pool	0.5	0.5	0.7
 ts	0.1	0.2	0.1
 ts_pid_invert	0.1	0.2	
-ts_proto_rs	2.7	4.5	4.7
+ts_proto_rs	2.5	4.5	4.7
 ts_record	0.0	0.1	0.0
 ts_udp_in	0.2	0.4	0.2
-tsout_file	0.1		0.1
-tsout_net	5.0	6.0	5.2
+tsout_file	0.0		0.1
+tsout_net	5.1	6.0	5.2
 tsout_udp	10.8	11.0	0.0
 tune_drag	0.0	0.1	0.0
 tv_d40	0.1	0.1	0.1
-tv_diag	0.1	0.1	
+tv_diag	0.0	0.1	
 tv_dra	0.1	0.1	0.0
 tv_epg	0.1	0.2	0.2
 tv_hd_pair	0.0	0.1	0.0
 tv_recorder	0.4	0.6	0.4
 tv_scan_results	0.0	0.1	0.0
 tv_timeshift	4.1	4.7	4.0
-tvplan	0.1	0.1	0.0
-tx	30.9	41.0	
-tx_660_analog_modes	2.7	0.9	
-tx_control	11.7	10.0	
-tx_dtmf	7.1		
+tvplan	0.0	0.1	0.0
+tx	31.3	41.0	
+tx_660_analog_modes	1.6	0.9	
+tx_control	10.5	10.0	
+tx_dtmf	6.2		
 tx_iqfile	0.1	0.3	
 tx_iqstream	0.6	1.6	
-tx_loopback_rest	176.5	189.8	
-tx_loopback_tv	67.5	33.2	
+tx_loopback_rest	165.6	189.8	
+tx_loopback_tv	25.1	33.2	
 tx_loraaprs	0.7	0.4	
-tx_measure	1.2	0.4	
-tx_mux	49.8	27.5	
-tx_param_model	321.4	262.3	
-tx_params	4.8	4.4	
-tx_polish	7.5	9.4	
-tx_quality_a	145.3	54.6	
-tx_quality_a_rt	80.9	79.1	
-tx_quality_b	27.4	16.9	
-tx_rate	5.2	5.3	3.9
+tx_measure	0.8	0.4	
+tx_mux	39.5	27.5	
+tx_param_model	335.5	262.3	
+tx_params	5.0	4.4	
+tx_polish	7.2	9.4	
+tx_quality_a	101.2	54.6	
+tx_quality_a_rt	79.2	79.1	
+tx_quality_b	14.8	16.9	
+tx_rate	4.0	5.3	3.9
 tx_studio	0.2	0.6	
-tx_t2lite	63.1		113.1
+tx_t2lite	64.5		113.1
 typography	0.5	0.7	0.6
 u8file	0.0	0.1	0.0
-uat_gen	1.7	2.0	0.1
+uat_gen	2.5	2.0	0.1
 uat_nexrad	0.0	0.1	0.0
 uat_proto	0.0	0.1	0.0
-uat_proto_rs	0.7	1.5	0.7
+uat_proto_rs	1.0	1.5	0.7
 uat_rf	0.7	1.1	1.7
 uat_twgo	0.0	0.1	0.0
 ui_preview	0.0	0.1	0.0
 ui_preview_render	0.2	0.2	
-umts_cell	37.7	20.6	9.1
-umts_rx	6.5	4.2	8.2
+umts_cell	37.8	20.6	9.1
+umts_rx	6.0	4.2	8.2
 up6	0.1	0.1	0.1
-updater	7.2	20.7	0.0
+updater	7.3	20.7	0.0
 updater_mirror	9.3	11.2	0.0
-uplink_engine	6.8	7.5	8.6
+uplink_engine	6.7	7.5	8.6
 uplink_msg	0.0	0.1	0.0
-uplink_rx	4.8	5.0	7.8
+uplink_rx	7.1	5.0	7.8
 usb_fd	0.0	0.1	0.0
 usb_fd_open	0.0	0.1	0.0
-vdes_engine	8.5	9.4	9.0
-vdes_rx	3.9	2.5	4.7
+vdes_engine	8.7	9.4	9.0
+vdes_rx	4.3	2.5	4.7
 vdl2_caps	31.4	25.4	46.0
-vdl2_engine	14.2	14.4	13.7
+vdl2_engine	13.7	14.4	13.7
 vdl2_gsmap	0.0	0.1	0.0
 vdl2_gsstable	0.1		0.1
 vdl2_log	0.0	0.1	0.0
 vdl2_proto	0.0	0.1	0.0
-vdl2_proto_rs	9.8	12.0	11.6
-vdl2_rx	39.0	34.9	41.2
+vdl2_proto_rs	9.7	12.0	11.6
+vdl2_rx	64.5	34.9	41.2
 vdl3_all	2.0	2.3	2.2
 vdl4_proto	0.0	0.1	0.0
-vdl4_rx	37.3	49.7	45.9
-vfo	6.0	7.1	5.3
-video_file_pace	6.0	5.2	
+vdl4_rx	56.4	49.7	45.9
+vfo	5.3	7.1	5.3
+video_file_pace	6.4	5.2	
 video_fit	0.0	0.1	0.0
-videogen	31.3	29.8	10.3
-viterbi8_ber	1.2	1.6	1.8
+videogen	28.6	29.8	10.3
+viterbi8_ber	0.9	1.6	1.8
 viterbi_gpu	0.0	0.5	0.0
 viterbi_simd	0.2	0.1	0.3
 voice_clips	0.0	0.1	0.0
-voice_codec_setup	0.0	0.1	0.0
-voice_conversation	0.0	0.1	0.0
-voice_fec	2.1	2.9	2.2
+voice_codec_setup	0.1	0.1	0.0
+voice_conversation	0.1	0.1	0.0
+voice_fec	2.0	2.9	2.2
 voice_heard	0.1	0.2	0.1
 voice_insight	0.1	0.1	0.0
-voice_inversion	16.6	9.9	11.8
-voice_keys	0.9	1.4	0.8
-voice_keys_win	0.1	0.1	0.0
+voice_inversion	34.8	9.9	11.8
+voice_keys	1.1	1.4	0.8
+voice_keys_win	0.0	0.1	0.0
 voice_monitor	0.0	0.1	0.0
 voice_silence	0.0	0.1	
 voice_symeq	0.3	0.4	0.2
@@ -1859,152 +1860,152 @@ voice_watch	0.0	0.1	0.0
 voice_why	0.0	0.1	0.0
 vor_db	0.0	0.1	0.0
 vor_engine	14.3	14.9	17.2
-vor_marker	49.5		41.3
+vor_marker	57.1		41.3
 vor_navaids	0.0	0.1	0.0
-vor_navcheck	4.0	3.3	5.2
+vor_navcheck	3.6	3.3	5.2
 vor_rx	67.8		
-w1a_dsp	5.8	4.3	6.3
+w1a_dsp	6.4	4.3	6.3
 watchlist	0.1	0.1	0.0
 wb_bits	0.0	0.1	0.0
-wb_demod	0.3	0.3	0.4
-wb_measure	1.0	1.1	1.4
-wb_source	0.2	0.8	0.7
-web_app_client	0.2	0.5	
-web_app_load	36.5		
-web_app_smoke	0.2	0.3	
-web_client	3.5	0.7	
-web_decoders	19.5	19.3	19.8
-web_directory	0.1	0.1	0.0
-web_dsp	0.8	0.8	0.6
-web_hub	2.1	2.4	2.1
-web_proto	0.4	0.4	0.3
+wb_demod	0.4	0.3	0.4
+wb_measure	0.8	1.1	1.4
+wb_source	0.3	0.8	0.7
+web_app_client	3.9	0.5	
+web_app_load	36.2		
+web_app_smoke	3.8	0.3	
+web_client	0.2	0.7	
+web_decoders	20.0	19.3	19.8
+web_directory	0.0	0.1	0.0
+web_dsp	0.7	0.8	0.6
+web_hub	2.4	2.4	2.1
+web_proto	0.3	0.4	0.3
 web_ranges	0.0	0.1	0.0
 web_relay	3.4	3.7	3.3
-web_safety	0.7	0.7	0.3
+web_safety	0.1	0.7	0.3
 web_schema	0.2	1.4	
 web_server	7.1	8.2	7.1
 web_tx_guard	0.0	0.1	0.0
-webapp	260.3	206.9	236.8
+webapp	351.7	206.9	236.8
 webonair_e2e	0.2	0.1	
 webshare	0.0	0.1	0.0
 webshare_core	0.6	0.9	0.5
-webshare_fake_directory	88.9	93.2	97.9
-wf3d	0.5	0.6	0.5
+webshare_fake_directory	90.5	93.2	97.9
+wf3d	0.4	0.6	0.5
 wf_fast	0.1	0.1	0.1
 wheel_zoom_limits	0.2	0.2	0.3
 whisper_model	0.1	0.1	0.0
 wide_bank_audio	0.1	0.1	0.2
-wide_detector	2.8	2.8	3.2
-wide_multi	81.2	59.2	76.7
-wide_multi_tv	38.1	43.7	47.3
-wide_placed	5.6	5.1	6.4
-wide_session	33.5	31.7	27.4
-wide_session_tv	69.6	48.6	72.2
-wifi_56	18.8	5.2	8.6
+wide_detector	2.7	2.8	3.2
+wide_multi	59.4	59.2	76.7
+wide_multi_tv	24.6	43.7	47.3
+wide_placed	3.6	5.1	6.4
+wide_session	30.3	31.7	27.4
+wide_session_tv	76.2	48.6	72.2
+wifi_56	11.2	5.2	8.6
 wifi_clients	0.0	0.1	0.0
 wifi_elems	0.0	0.1	0.0
-wifi_engine	5.8	6.2	5.5
-wifi_engine56	8.4	8.7	10.8
+wifi_engine	5.6	6.2	5.5
+wifi_engine56	8.0	8.7	10.8
 wifi_ofdm	0.1	0.1	0.0
-wifi_proto	0.1	0.1	0.0
-wifi_rx	3.6	1.5	2.5
+wifi_proto	0.0	0.1	0.0
+wifi_rx	3.9	1.5	2.5
 wifi_viterbi_nan	0.0		0.0
 winlink_b2f	0.1	0.3	0.7
-winlink_extmodem	6.7	8.4	
-winlink_lzhuf	0.1	0.1	0.1
-winlink_modem	15.9		34.8
-winlink_p2p	0.4	0.5	0.4
+winlink_extmodem	6.6	8.4	
+winlink_lzhuf	0.2	0.1	0.1
+winlink_modem	7.7		34.8
+winlink_p2p	0.3	0.5	0.4
 winlink_telnet	0.2	0.3	
-wirecap	1.0	3.4	2.5
-wisun_engine	6.2	6.5	7.5
+wirecap	1.1	3.4	2.5
+wisun_engine	6.1	6.5	7.5
 wisun_proto	0.0	0.1	0.0
-wisun_proto_rs	3.6	3.8	3.4
-wisun_rx	1.4	1.6	1.9
+wisun_proto_rs	4.5	3.8	3.4
+wisun_rx	1.2	1.6	1.9
 wmbus_engine	2.4	3.0	3.0
 wmbus_leak	0.1	0.1	0.5
-wmbus_live	18.4	19.4	18.2
-wmbus_proto	0.1	0.1	0.0
-wmbus_views	58.1		66.5
-wmbus_wize	9.5	7.4	
-workspace_window	0.1	0.1	0.0
+wmbus_live	12.2	19.4	18.2
+wmbus_proto	0.0	0.1	0.0
+wmbus_views	70.0		66.5
+wmbus_wize	6.7	7.4	
+workspace_window	0.0	0.1	0.0
 wsprnet	0.0	0.1	0.0
 wx_overlay	0.2	0.2	0.3
-wxsat_apt40	23.8	21.5	29.3
-wxsat_filecast	51.5	40.4	51.3
+wxsat_apt40	24.7	21.5	29.3
+wxsat_filecast	35.5	40.4	51.3
 wxsat_mode	0.1	0.3	0.1
 wxsat_pass	0.0		0.0
-wxsat_rx	44.4	33.5	37.7
+wxsat_rx	43.2	33.5	37.7
 wxstudio	0.0	0.1	0.0
-x40_afsk	1.5	2.0	
-x40_ammon	18.7	11.6	8.5
-x40_beacon	104.3	47.5	78.0
-x40_birdie	150.9		149.2
-x40_burst	49.3	48.7	
-x40_crowd36	2.8	2.1	2.0
-x40_cwkeying	4.8	3.4	6.8
-x40_dcr	29.1		33.8
-x40_dopplerlog	42.9	38.0	
-x40_em4100	14.3	19.1	10.0
-x40_evm	75.3	46.5	75.5
-x40_f01	2.8		2.3
-x40_f06	4.6	4.2	
-x40_fading	4.8	5.1	4.0
-x40_fmmon	48.9	33.6	37.9
-x40_freqacc	10.8		11.9
-x40_fskan	15.5	25.9	
-x40_fskmodem	4.4	6.3	3.3
-x40_glitch	12.8	11.4	12.0
-x40_gnssjam	162.1		195.3
-x40_graves	40.3	37.1	
-x40_gsc	5.0	4.5	3.1
-x40_gwfsk	1.3	1.0	1.4
-x40_hop	26.2		22.2
-x40_inputhealth	2.2	2.6	
-x40_intermod	139.8	126.6	148.6
-x40_jove	18.3	21.2	19.2
-x40_marker	11.3		10.1
-x40_nfmdev	2.4	2.2	
-x40_noisefloor	218.2	208.6	159.1
-x40_occbw	62.2	32.7	48.7
-x40_occupancy	139.2		153.1
-x40_ookpulse	2.4	2.3	
-x40_papr	21.1	28.9	19.4
-x40_passband	16.0	16.7	18.4
-x40_phasenoise	20.2		22.6
-x40_plnoise	23.2	28.8	
-x40_pttlog	31.3	36.4	24.0
-x40_qi	18.0	14.8	14.5
-x40_radar	57.6		66.4
-x40_rcppm	5.6	4.7	
-x40_scada	12.5	12.0	7.9
-x40_sinad	1.8	1.4	2.0
-x40_speckurt	73.5		115.1
-x40_spur	118.0	142.6	
-x40_ssbtest	5.7	5.9	3.7
-x40_ssrint	42.6	41.3	58.0
-x40_stl	219.2		219.8
-x40_txstability	1.1	1.6	
-x40_uhfrfid	40.7	40.5	28.5
-x40_uvb76	30.5	22.6	26.9
-x40_vlfmsk	6.9		7.9
-x40_xpa	5.2	4.2	
-x40_xpa2	3.1	2.1	2.8
-x40_yfactor	97.6	101.3	139.1
+x40_afsk	1.0	2.0	
+x40_ammon	17.5	11.6	8.5
+x40_beacon	71.8	47.5	78.0
+x40_birdie	143.2		149.2
+x40_burst	47.1	48.7	
+x40_crowd36	2.4	2.1	2.0
+x40_cwkeying	5.1	3.4	6.8
+x40_dcr	22.5		33.8
+x40_dopplerlog	42.1	38.0	
+x40_em4100	13.8	19.1	10.0
+x40_evm	67.7	46.5	75.5
+x40_f01	2.0		2.3
+x40_f06	3.4	4.2	
+x40_fading	5.4	5.1	4.0
+x40_fmmon	42.5	33.6	37.9
+x40_freqacc	12.2		11.9
+x40_fskan	17.9	25.9	
+x40_fskmodem	4.5	6.3	3.3
+x40_glitch	9.4	11.4	12.0
+x40_gnssjam	187.3		195.3
+x40_graves	26.7	37.1	
+x40_gsc	4.9	4.5	3.1
+x40_gwfsk	1.5	1.0	1.4
+x40_hop	20.3		22.2
+x40_inputhealth	2.8	2.6	
+x40_intermod	130.6	126.6	148.6
+x40_jove	17.9	21.2	19.2
+x40_marker	5.6		10.1
+x40_nfmdev	2.3	2.2	
+x40_noisefloor	161.6	208.6	159.1
+x40_occbw	62.7	32.7	48.7
+x40_occupancy	150.8		153.1
+x40_ookpulse	2.1	2.3	
+x40_papr	22.0	28.9	19.4
+x40_passband	15.4	16.7	18.4
+x40_phasenoise	19.1		22.6
+x40_plnoise	17.1	28.8	
+x40_pttlog	33.6	36.4	24.0
+x40_qi	15.8	14.8	14.5
+x40_radar	59.0		66.4
+x40_rcppm	5.0	4.7	
+x40_scada	7.0	12.0	7.9
+x40_sinad	2.0	1.4	2.0
+x40_speckurt	72.8		115.1
+x40_spur	132.5	142.6	
+x40_ssbtest	4.3	5.9	3.7
+x40_ssrint	58.7	41.3	58.0
+x40_stl	316.4		219.8
+x40_txstability	1.2	1.6	
+x40_uhfrfid	35.5	40.5	28.5
+x40_uvb76	27.2	22.6	26.9
+x40_vlfmsk	7.0		7.9
+x40_xpa	5.5	4.2	
+x40_xpa2	3.6	2.1	2.8
+x40_yfactor	92.0	101.3	139.1
 xband_mode	0.1	0.2	0.2
-xband_rx	119.4	40.4	66.2
-xlink_ht	0.5	0.2	0.4
-xlink_mioty	62.7	84.4	55.2
-xlink_npr	0.8	1.0	0.7
-xlink_nrplus	0.9	0.6	0.5
-xlink_wfb	0.4	0.2	0.5
+xband_rx	69.0	40.4	66.2
+xlink_ht	0.4	0.2	0.4
+xlink_mioty	82.3	84.4	55.2
+xlink_npr	0.9	1.0	0.7
+xlink_nrplus	0.7	0.6	0.5
+xlink_wfb	0.3	0.2	0.5
 xlink_winmor	0.1	0.2	0.1
-zigbee_bpsk	6.1	4.5	5.0
-zigbee_engine	6.0	6.5	6.4
+zigbee_bpsk	7.2	4.5	5.0
+zigbee_engine	5.9	6.5	6.4
 zigbee_proto	0.0	0.1	0.0
-zigbee_rx	10.3	6.8	9.8
+zigbee_rx	8.5	6.8	9.8
 zoom_detail	0.1		0.1
-zoom_spectrum	10.3	7.8	
+zoom_spectrum	6.1	7.8	
 zwave_engine	6.0	6.8	6.4
-zwave_homenet	0.1	0.1	0.0
+zwave_homenet	0.0	0.1	0.0
 zwave_proto	0.0	0.1	0.0
-zwave_rx	0.5	0.7	0.4
+zwave_rx	0.4	0.7	0.4
