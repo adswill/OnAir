@@ -14,6 +14,9 @@ shard's build is cache hits and links.
                      run 46003088536). An object that fails here (a header made by a later build step) is left to the shard.
 """
 import argparse, json, os, re, subprocess, sys
+
+FIXED_COST = 200000   # bytes of source a C++ file's headers and start-up are worth
+FIXED_COST_C = 10000
 from concurrent.futures import ThreadPoolExecutor
 
 def main():
@@ -42,7 +45,10 @@ def main():
         src = s.group(1) if s else ""
         try: cost = os.path.getsize(src if os.path.isabs(src) else os.path.join(a.build_dir, src))
         except OSError: cost = 20000
-        objs[m.group(1)] = cost
+        # a file's compile is mostly the same ~130,000 lines of headers whatever its own size: per part, 616 large files took 8.4 min and
+        # 880 smaller ones 14.5 min when balanced by size alone (run 46018401928), about 0.9 s an object either way. So the count dominates.
+        # (C files - Lua, libacars, sqlite - have no such headers: a small fixed part)
+        objs[m.group(1)] = (FIXED_COST_C if src.endswith(".c") else FIXED_COST) + cost
     k, n = (int(x) for x in a.part.split("/"))
     load, mine = [0] * n, []
     for o in sorted(objs, key=lambda o: (-objs[o], o)):   # biggest first onto the least loaded part; the same split in every part
