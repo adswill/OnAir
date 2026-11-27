@@ -147,7 +147,7 @@ jobs:
 
   compile-macos:
     needs: lint
-    if: needs.lint.outputs.fanout_macos == '1'
+    if: needs.lint.outputs.fanout_macos == '1' && !(github.event_name == 'push' && github.ref == 'refs/heads/main')   # main: Linux only, as the shards
     name: compile ${{ matrix.plat }} ${{ matrix.part }}/${{ matrix.of }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -397,7 +397,7 @@ jobs:
   # (the other URL forms failed or stored nothing, probe in run 46003088536)
   compile-windows:
     needs: lint
-    if: needs.lint.outputs.fanout_windows == '1'
+    if: needs.lint.outputs.fanout_windows == '1' && !(github.event_name == 'push' && github.ref == 'refs/heads/main')   # main: Linux only, as the shards
     name: compile windows ${{ matrix.part }}/${{ matrix.of }}
     runs-on: windows-2022
     timeout-minutes: 75
