@@ -28,6 +28,7 @@ KEEP long av_frame_make_writable(void) { return -1; }
 KEEP long av_frame_unref(void) { return -1; }
 KEEP long av_frame_ref(void) { return -1; }
 KEEP long av_free(void) { return -1; }
+KEEP const char* av_hwdevice_get_type_name(void) { return NULL; }
 KEEP long av_freep(void) { return -1; }
 KEEP void* av_guess_format(void) { return NULL; }
 KEEP int64_t av_guess_sample_aspect_ratio(void) { return 0; }
@@ -62,6 +63,7 @@ KEEP void* avcodec_find_encoder(void) { return NULL; }
 KEEP void* avcodec_find_encoder_by_name(void) { return NULL; }
 KEEP long avcodec_flush_buffers(void) { return -1; }
 KEEP long avcodec_free_context(void) { return -1; }
+KEEP void* avcodec_get_hw_config(void) { return NULL; }
 KEEP const char* avcodec_get_name(void) { return "unavailable"; }
 KEEP long avcodec_open2(void) { return -1; }
 KEEP void* avcodec_parameters_alloc(void) { return NULL; }
@@ -161,3 +163,4 @@ KEEP void* sws_getContext(void) { return NULL; }
 KEEP long sws_scale(void) { return -1; }
 KEEP long sws_setColorspaceDetails(void) { return -1; }
 KEEP void* av_frame_get_side_data(void* frame, int type) { (void)frame; (void)type; return NULL; }
+KEEP void* av_pix_fmt_desc_get(void) { return NULL; }
