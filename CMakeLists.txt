@@ -2103,11 +2103,12 @@ if(DECT2_BUILD_TESTS)
     add_executable(test_custom_bandwidth_all tests/app/test_custom_bandwidth_all.cpp)   # custom bandwidth and rate in every registered mode: default untouched, reaches the receiver, no clamp, persists, control in every layout (docs/BANDWIDTH-AUDIT.md)
     target_link_libraries(test_custom_bandwidth_all PRIVATE dect2core)
     target_compile_definitions(test_custom_bandwidth_all PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
-    # four parts (ONAIR_TEST_SHARD), each a quarter of the ~900 engine starts, side by side with other tests: as one test it ran alone
-    # (RUN_SERIAL) for 6-9 min and held a whole CI runner (docs/CI-FAST.md (4.7))
+    # four parts (ONAIR_TEST_SHARD), each a quarter of the ~900 engine starts, so the CI can put them on different shards; each part still
+    # runs alone (RUN_SERIAL): next to other tests an engine took 20 s to start on a 3-core macOS runner and failed its check (run
+    # 46026040650, beaconevents); as one serial test it held a whole runner for 6-9 min (docs/CI-FAST.md (4.7))
     foreach(k RANGE 1 4)
       add_test(NAME custom_bandwidth_all_${k} COMMAND test_custom_bandwidth_all)
-      set_tests_properties(custom_bandwidth_all_${k} PROPERTIES TIMEOUT 1200 ENVIRONMENT "ONAIR_TEST_SHARD=${k}/4")
+      set_tests_properties(custom_bandwidth_all_${k} PROPERTIES TIMEOUT 1200 RUN_SERIAL TRUE ENVIRONMENT "ONAIR_TEST_SHARD=${k}/4")
     endforeach()
     add_executable(test_mode_numbers tests/app/test_mode_numbers.cpp)   # every family, engine standard and poll slot is unique (docs/MODE-NUMBERS.md)
     target_link_libraries(test_mode_numbers PRIVATE dect2core)
