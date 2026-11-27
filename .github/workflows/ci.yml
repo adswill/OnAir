@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       scope:
-        description: "auto (changed areas), wide (all non-slow), full (all incl. slow), smoke"
+        description: "auto (changed areas), wide (all non-slow: an integration batch), full (all incl. the slow tier: nightly and before a release), smoke"
         default: auto
       base:
         description: "git ref the change is measured against (auto scope)"

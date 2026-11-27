@@ -17,11 +17,11 @@ import argparse, json, math, os, re, subprocess, sys
 
 PLATS = {   # plat: (job name, runner, most shards)
     "linux": ("Linux x86_64", "ubuntu-24.04", 9),    # max-parallel 9 in ci.yml: more would wait for a second wave
-    "macos": ("macOS arm64", "macos-15", 4),
+    "macos": ("macOS arm64", "macos-15", 5),     # the free plan runs 5 macOS jobs at once
     "windows": ("Windows", "windows-2022", 4),
 }
 
-REDUCED = {"linux": 7, "macos": 3, "windows": 3}   # most shards outside the full scope
+REDUCED = {"linux": 7}   # a worker's check (platforms linux): leaves runners for the other workers' quick.yml checks
 
 # compile jobs per platform when the selection reaches the core
 COMPILE_PARTS = {"linux": 6, "macos": 4, "windows": 6}
@@ -58,9 +58,8 @@ def main():
     for plat, (name, os_, most) in PLATS.items():
         est, n_tests, sc = estimate(a, plat)
         scopes.add(sc)
-        # a run that is not the full scope (an integration push, a worker's wide check) leaves runners free for the workers' quick.yml
-        # checks: 37 of the 68 worker checks over 10 min had waited more than 5 min for a runner (2026-11-13..27)
-        cap = most if sc == "full" else REDUCED.get(plat, most)
+        # an integration batch (wide) and the nightly / release run (full) take every shard they need; a worker's Linux-only check fewer
+        cap = REDUCED.get(plat, most) if a.platforms == "linux" else most
         n = max(1, min(cap, math.ceil(est / budget))) if n_tests else 1
         outs[plat] = json.dumps({"include": [{"name": name, "os": os_, "shard": k, "of": n, "plat": plat} for k in range(1, n + 1)]},
                                 separators=(",", ":"))
