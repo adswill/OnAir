@@ -915,17 +915,6 @@ int cpuSweep(const std::string& self, const std::vector<const Entry*>& sel, doub
     return 0;
 }
 
-// the try each mode ended on in CI (tools/qa_start_table.py): the sweep starts there; QA_FROM_START=1 starts every mode at the first try
-struct StartTry { const char* id; int start; };
-const StartTry kStartTry[] = {
-#include "qa_start.inc"
-    {nullptr, 0}};
-size_t startTry(const std::string& id, size_t n) {
-    if (getenv("QA_FROM_START")) return 0;
-    for (const StartTry* t = kStartTry; t->id; t++)
-        if (id == t->id) return std::min(n - 1, (size_t)std::max(0, t->start));
-    return 0;
-}
 } // namespace
 
 int main(int argc, char** argv) {
@@ -1009,10 +998,7 @@ int main(int argc, char** argv) {
         if (e->id == "time") lens = {secs, 8, 150, 32};   // a minute code takes more than a minute: the second marker, then a whole frame
         double actual = e->rate;
         bool done = false;
-        // the shorter tries this mode needed none of in CI are skipped (tools/qa_start_table.py); only a --seconds run or the long form
-        // starts at the first try (their lengths differ from the table's)
-        const size_t li0 = (secsSet || longRun) ? 0 : startTry(e->id, lens.size());
-        for (size_t li = li0; li < lens.size(); li++) {
+        for (size_t li = 0; li < lens.size(); li++) {
             const double want = lens[li];
             if (done) break;
             tries++;
