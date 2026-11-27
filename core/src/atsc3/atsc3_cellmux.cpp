@@ -78,6 +78,14 @@ bool demodulateSubframe(const SubframeParams& s, const cf32* x, size_t n, std::v
             DIAG_DEBUG_EVERY(253155, 10.0, "ATSC 3.0 OFDM symbol %d of a subframe could not be equalised, so the subframe is not demodulated.", l);
             return false;
         }
+    {   // a noisy symbol takes its channel response from the pilots of its neighbours too (timeCombChannel): its own pilots alone are too sparse
+        // to hold a long echo apart from the noise. Clean symbols keep their own estimate, which costs nothing more.
+        constexpr float kNoisyNv = 3e-3f;
+        std::vector<std::vector<cf32>> nh((size_t)s.numSymbols);
+        std::vector<std::vector<uint8_t>> kinds;
+        for (int l = 0; l < s.numSymbols; l++) if (rx[(size_t)l].nv > kNoisyNv) timeCombChannel(s, rx, l, kinds, nh[(size_t)l]);
+        for (int l = 0; l < s.numSymbols; l++) if (!nh[(size_t)l].empty()) rx[(size_t)l].hch.swap(nh[(size_t)l]);
+    }
     const int half = 0;   // averaging over 2 symbols on each side made no difference on a real capture (-33 dB error vector at the decoder), so it is off
     stFft.stop();
     DECT2_STAGE("a3.ofdm.equalise");
