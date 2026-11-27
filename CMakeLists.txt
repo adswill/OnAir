@@ -3687,6 +3687,17 @@ foreach(_t IN LISTS _onair_exes)
   endif()
 endforeach()
 
+# The sensitivity sweeps (sens39*, sens40*, sens41*: threshold curves over many noise levels, 2,800 test-seconds on Linux and macOS) are
+# the slow tier: nightly and before a release, not in every integration batch (owner's decision 2026-11-27, docs/CI-FAST.md (4.7))
+if(DECT2_BUILD_TESTS)
+  get_directory_property(_onair_tests TESTS)
+  foreach(_t IN LISTS _onair_tests)
+    if(_t MATCHES "^sens[0-9]")
+      set_property(TEST ${_t} APPEND PROPERTY LABELS slow)
+    endif()
+  endforeach()
+endif()
+
 # Windows: every test program runs with 1 ms timer resolution (tests/common/win_timer.cpp); the default 15.6 ms made each sleep_for(1 ms)
 # of a polling loop 15 ms, and those tests 5-10 times slower than on macOS (docs/CI-FAST.md (4.7)). The app keeps the default.
 if(WIN32)
