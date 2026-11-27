@@ -106,7 +106,8 @@ static void runCase(const Case& c) {
     // cases at once, next to other tests) the decoder thread can stall for over a second.
     RxTelemetry t; uint64_t seq = 0;
     size_t seen = 0;
-    for (int i = 0, still = 0; i < 1500 && still < 300; i++) {
+    // 1 s with no new result ends the wait (was 3 s on every round trip: an error-correction block takes milliseconds; docs/CI-FAST.md (4.7))
+    for (int i = 0, still = 0; i < 1500 && still < 100; i++) {
         rx.telemetry(t, seq);
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         size_t n;

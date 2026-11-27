@@ -54,7 +54,8 @@ static void run(const Cfg& c) {
         for (int w = 0; before > 0 && w < 300 && wanted() <= before; w++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     RxTelemetry t; uint64_t q = 0; size_t seen = 0;
-    for (int i = 0, still = 0; i < 1500 && still < 300; i++) { rx.telemetry(t, q); std::this_thread::sleep_for(std::chrono::milliseconds(10)); size_t n; { std::lock_guard<std::mutex> k(mu); n = res.size(); } still = n == seen ? still + 1 : 0; seen = n; }
+    // 1 s with no new result ends the wait (was 3 s on every round trip: an error-correction block takes milliseconds; docs/CI-FAST.md (4.7))
+    for (int i = 0, still = 0; i < 1500 && still < 100; i++) { rx.telemetry(t, q); std::this_thread::sleep_for(std::chrono::milliseconds(10)); size_t n; { std::lock_guard<std::mutex> k(mu); n = res.size(); } still = n == seen ? still + 1 : 0; seen = n; }
     std::map<int, int> same, bad, frames;
     for (auto& r : res) { auto& m = sent[r.plpId]; auto it = m.find(r.t2Frame); if (it == m.end()) continue; frames[r.plpId]++;
         for (size_t k = 0; k < r.frames.size() && k < it->second.size(); k++) { if (r.frames[k].bits.empty()) continue; (r.frames[k].bits == it->second[k] ? same : bad)[r.plpId]++; } }
