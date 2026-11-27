@@ -2,7 +2,7 @@
 # Far cheaper than ci.yml (one runner instead of ~13), so many branches can check at once.
 #   gh workflow run quick.yml -R adswill/OnAir --ref <branch> -f tests="wide_placed drm_engine" [-f targets="dect2cli"] [-f os=macos]
 #   gh workflow run quick.yml -R adswill/OnAir --ref <branch> -f gate=true -f targets=dect2     # the gate, then a build of the app
-#   gh workflow run quick.yml -R adswill/OnAir --ref <branch> -f tests=auto     # every test the change can affect (tools/ci_select.py, against
+#   gh workflow run quick.yml -R adswill/OnAir --ref <branch> -f tests=auto -f base=<integration branch>   # every test the change can affect (tools/ci_select.py, against
 #       the merge base with main: the changed areas, the files that include a changed header, and the smoke set). A change that reaches
 #       shared code (scope wide) stops at once with the ci.yml command to use instead (shards; docs/CI-FAST.md (4.7))
 name: Quick
@@ -45,6 +45,9 @@ on:
       perf:
         description: "Linux: one of the tests to run once more under perf record, with the hottest functions printed (optional)"
         default: ""
+      base:
+        description: "tests=auto: the branch this one started from (a worker's integration branch, e.g. integ-47); the change is measured from the merge base with it"
+        default: main
       gate:
         description: "run tools/gate/run.sh (lint, generated files, licences) before the build"
         type: boolean
@@ -98,7 +101,7 @@ jobs:
       - name: Select the tests the change can affect (tests=auto)
         if: inputs.tests == 'auto'
         run: |
-          BASE=$(git merge-base HEAD origin/main)
+          BASE=$(git merge-base HEAD "origin/${{ inputs.base || 'main' }}")
           python3 tools/ci_select.py --build-dir build --base "$BASE" --scope auto --times tools/ci_times.tsv --plat ${{ inputs.os }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
           if grep -q '^scope=wide' sel/summary.txt; then
             echo "::error::this change reaches shared code (scope wide: every non-slow test). One job would take more than an hour; run the shards instead:"
