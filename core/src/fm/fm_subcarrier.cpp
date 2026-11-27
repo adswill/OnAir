@@ -16,6 +16,21 @@ constexpr double kPi = 3.14159265358979323846;
 constexpr double kScaDev = 6000;   // nominal SCA deviation, Hz
 using cd = std::complex<float>;
 
+// The mixers' oscillator: a phasor turned by e^(jw) each sample (one complex multiply) instead of a double cos, sin and fmod per sample,
+// which were 28 % of test_fm_neighbour's CPU (perf, run 46003291023). Renormalised every 1024 samples, so its amplitude stays 1.
+struct Osc {
+    std::complex<double> z{1, 0}, r{1, 0};
+    int k = 0;
+    void set(double w) { r = std::polar(1.0, w); }
+    void reset() { z = {1, 0}; k = 0; }
+    cd next() {
+        const cd o((float)z.real(), (float)z.imag());
+        z *= r;
+        if (++k >= 1024) { k = 0; z /= std::abs(z); }
+        return o;
+    }
+};
+
 struct CFir {
     std::vector<float> h; std::vector<cd> b; size_t p = 0;
     void design(double cut, int n) {
@@ -34,7 +49,8 @@ struct CFir {
 };
 
 struct Rds2Chan {
-    double f = 0, ph = 0, w = 0;
+    double f = 0, w = 0;
+    Osc osc;
     CFir lp; int dec = 1, cnt = 0;
     RationalResampler rs; bool rsOk = false;
     std::vector<cf32> in, out;
@@ -45,7 +61,7 @@ struct Rds2Chan {
     int prev = 0;
     std::vector<std::string> last;
     void configure(double fm, double fc) {
-        f = fc; w = -2 * kPi * fc / fm;
+        f = fc; w = -2 * kPi * fc / fm; osc.set(w);
         dec = std::max(1, (int)std::floor(fm / 38000.0));
         lp.design(3200.0 / fm, 4 * dec * 8 + 1);
         rsOk = rs.configure(fm / dec, 19000);
@@ -56,7 +72,7 @@ struct Rds2Chan {
         reset();
     }
     void reset() {
-        ph = 0; cnt = 0; lp.reset(); if (rsOk) rs.reset(); in.clear(); out.clear(); rds.reset(); costasPh = costasFr = 0; mfPos = idx = since = best = 0; std::fill(energy, energy + 16, 0.f); symAvg = 0; prev = 0; for (auto& m : mf) m = 0; last.clear();
+        osc.reset(); cnt = 0; lp.reset(); if (rsOk) rs.reset(); in.clear(); out.clear(); rds.reset(); costasPh = costasFr = 0; mfPos = idx = since = best = 0; std::fill(energy, energy + 16, 0.f); symAvg = 0; prev = 0; for (auto& m : mf) m = 0; last.clear();
     }
     void sample(cf32 z) {
         // Costas loop, updated at the symbol rate: wide until blocks decode (a few Hz of clock error at 76 kHz)
@@ -88,8 +104,7 @@ struct Rds2Chan {
     }
     void feed(const float* x, size_t n) {
         for (size_t i = 0; i < n; i++) {
-            const cd m = cd(x[i] * (float)std::cos(ph), x[i] * (float)std::sin(ph));
-            ph = std::fmod(ph + w, 2 * kPi);
+            const cd m = x[i] * osc.next();
             lp.push(m);
             if (++cnt >= dec) { cnt = 0; in.push_back(cf32(lp.out())); }
         }
@@ -98,7 +113,8 @@ struct Rds2Chan {
 };
 
 struct ScaChan {
-    double f = 0, ph = 0, w = 0, fm = 0;
+    double f = 0, w = 0, fm = 0;
+    Osc osc;
     CFir lp; int dec = 1, cnt = 0;
     cd prev{1, 0};
     double powBand = 0, powRef = 0;
@@ -106,7 +122,7 @@ struct ScaChan {
     double deem = 0, deemA = 0, outPos = 0, outStep = 1; float o1 = 0;
     std::vector<float> audio;
     void configure(double rate, double fc) {
-        fm = rate; f = fc; w = -2 * kPi * fc / rate;
+        fm = rate; f = fc; w = -2 * kPi * fc / rate; osc.set(w);
         dec = std::max(1, (int)std::round(rate / 48000.0));
         lp.design(9000.0 / rate, dec * 16 + 1);
         const double fa = rate / dec;
@@ -114,12 +130,11 @@ struct ScaChan {
         outStep = fa / 48000.0;
         reset();
     }
-    void reset() { ph = 0; cnt = 0; lp.reset(); prev = {1, 0}; powBand = powRef = 0; presT = 0; present = false; snr = 0; deem = 0; outPos = 0; o1 = 0; audio.clear(); }
+    void reset() { osc.reset(); cnt = 0; lp.reset(); prev = {1, 0}; powBand = powRef = 0; presT = 0; present = false; snr = 0; deem = 0; outPos = 0; o1 = 0; audio.clear(); }
     void feed(const float* x, size_t n, double refPow, bool listen) {
         const double fa = fm / dec;
         for (size_t i = 0; i < n; i++) {
-            const cd m = cd(x[i] * (float)std::cos(ph), x[i] * (float)std::sin(ph));
-            ph = std::fmod(ph + w, 2 * kPi);
+            const cd m = x[i] * osc.next();
             lp.push(m);
             if (++cnt < dec) continue;
             cnt = 0;
@@ -144,7 +159,7 @@ struct ScaChan {
 struct FmSubcarriers::Impl {
     double fm = 0;
     Rds2Chan r[3]; ScaChan s[2];
-    CFir ref; double refMix = 0, refW = 0, refPow = 1e-9;
+    CFir ref; Osc refOsc; double refPow = 1e-9;
     int refDec = 1, refCnt = 0;
     int listen = -1;
     mutable std::mutex mu;
@@ -158,15 +173,14 @@ void FmSubcarriers::configure(double fm) {
     for (int i = 0; i < 3; i++) I.r[i].configure(fm, rf[i]);
     for (int i = 0; i < 2; i++) I.s[i].configure(fm, sf[i]);
     // the noise reference: the band above everything a station sends (the discriminator noise rises with f^2, so it gives a floor to compare with)
-    I.refDec = I.s[0].dec; I.ref.design(9000.0 / fm, I.refDec * 16 + 1); I.refW = -2 * kPi * 108000.0 / fm;
+    I.refDec = I.s[0].dec; I.ref.design(9000.0 / fm, I.refDec * 16 + 1); I.refOsc.set(-2 * kPi * 108000.0 / fm); I.refOsc.reset();
 }
-void FmSubcarriers::reset() { Impl& I = *p_; for (auto& c : I.r) c.reset(); for (auto& c : I.s) c.reset(); I.ref.reset(); I.refMix = 0; I.refCnt = 0; I.refPow = 1e-9; }
+void FmSubcarriers::reset() { Impl& I = *p_; for (auto& c : I.r) c.reset(); for (auto& c : I.s) c.reset(); I.ref.reset(); I.refOsc.reset(); I.refCnt = 0; I.refPow = 1e-9; }
 void FmSubcarriers::feed(const float* x, size_t n) {
     Impl& I = *p_;
     if (I.fm <= 0) return;
     for (size_t i = 0; i < n; i++) {
-        const cd m = cd(x[i] * (float)std::cos(I.refMix), x[i] * (float)std::sin(I.refMix));
-        I.refMix = std::fmod(I.refMix + I.refW, 2 * kPi);
+        const cd m = x[i] * I.refOsc.next();
         I.ref.push(m);
         if (++I.refCnt >= I.refDec) { I.refCnt = 0; I.refPow += 0.003 * (std::norm(I.ref.out()) - I.refPow); }
     }

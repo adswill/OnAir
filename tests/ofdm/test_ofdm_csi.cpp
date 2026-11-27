@@ -58,6 +58,20 @@ static Out run(const dvbt::Params& p, int frames, double snrDb, const Chan& ch) 
     const double cwAmp = std::sqrt(pw / 1705.0) * std::pow(10.0, ch.cwDbc / 20.0);   // cwDbc: dB above the power of one data carrier
     std::vector<cf32> delayed((size_t)std::max(1, ch.echoDelay), cf32(0, 0));
     const float eg = ch.echoDb > 0 ? (float)std::pow(10.0, -ch.echoDb / 20.0) : 0.f;
+    // the CW tones sit on carrier bins (40 + 55 t cycles per N samples), so their sum repeats every N samples: one period, computed once,
+    // instead of 24 cos + sin per sample on every SNR step (most of this test's CPU; perf, run 46003230799)
+    std::vector<cf32> cwSum;
+    if (ch.cwCount) {
+        cwSum.assign((size_t)N, cf32(0, 0));
+        for (int k = 0; k < N; k++) {
+            cf32 v(0, 0);
+            for (int t = 0; t < ch.cwCount; t++) {
+                const double ph = 2 * M_PI * ((double)(40 + 55 * t) / (double)N) * (double)k;
+                v += cf32((float)(cwAmp * std::cos(ph)), (float)(cwAmp * std::sin(ph)));
+            }
+            cwSum[(size_t)k] = v;
+        }
+    }
     for (size_t n = 0; n < tx.size(); n++) {
         cf32 v = tx[n];
         if (ch.echoDb > 0) {
@@ -66,11 +80,7 @@ static Out run(const dvbt::Params& p, int frames, double snrDb, const Chan& ch) 
             v += e * eg * cf32((float)std::cos(ph), (float)std::sin(ph));
         }
         v += cf32{nd(rng), nd(rng)} * (float)sigma;
-        for (int t = 0; t < ch.cwCount; t++) {   // tones exactly on carriers (the worst case for one carrier), spread over the channel
-            const double cyc = (double)(40 + 55 * t) / (double)N;   // bin 40 + 55 t, in cycles per sample
-            const double ph = 2 * M_PI * cyc * (double)n;
-            v += cf32((float)(cwAmp * std::cos(ph)), (float)(cwAmp * std::sin(ph)));
-        }
+        if (ch.cwCount) v += cwSum[n % (size_t)N];   // tones exactly on carriers (the worst case for one carrier), spread over the channel
         out.push_back(v);
     }
     for (size_t i = 0; i < out.size(); i += 1 << 14) rx.feed(out.data() + i, std::min<size_t>(1 << 14, out.size() - i));
