@@ -260,8 +260,11 @@ struct Writer {
         for (size_t i = 0; i < v.size(); i++) {
             float re = v[i].real() * gain * 32767.f, im = v[i].imag() * gain * 32767.f;
             if (std::fabs(re) > 32767.f || std::fabs(im) > 32767.f) clipped++;
-            buf[2 * i] = (int16_t)std::lround(std::min(32767.f, std::max(-32767.f, re)));
-            buf[2 * i + 1] = (int16_t)std::lround(std::min(32767.f, std::max(-32767.f, im)));
+            // round half away from zero as lround, without its call per sample (11 % of the sweep's CPU with put(), perf run 46012167051):
+            // a float plus 0.5 is exact in double, so the truncation gives lround's integer for every value in range
+            const double cr = std::min(32767.f, std::max(-32767.f, re)), ci = std::min(32767.f, std::max(-32767.f, im));
+            buf[2 * i] = (int16_t)(cr >= 0 ? cr + 0.5 : cr - 0.5);
+            buf[2 * i + 1] = (int16_t)(ci >= 0 ? ci + 0.5 : ci - 0.5);
         }
         fwrite(buf.data(), 2, buf.size(), f);
         n += v.size();
