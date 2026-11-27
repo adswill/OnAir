@@ -48,9 +48,9 @@ env:
   BASE_IN: ${{ inputs.base || github.event.before }}
   # the long form of the shortened tests (tests/common/test_long.h): release tags and the nightly Full CI; docs/CI-SPEED-3.9.md
   ONAIR_TEST_LONG: ${{ (startsWith(github.ref, 'refs/tags/') || inputs.long == 'true') && '1' || '' }}
-  # ccache is saved only by main and the integration branches: a feature branch's own copy filled the 10 GB of the repository and pushed
-  # the integration caches out (cache usage 10.7 GB, 2026-11-10); feature branches restore main's (the nightly warm-up of ci-full.yml)
-  SAVE_CACHE: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/integ-')) && '1' || '' }}
+  # the shards no longer save a ccache of their own (2.1 GB of shard copies on main pushed the store past GitHub's 10 GB, 2026-11-27): they
+  # start from the warm-up's cache (ccache-warm.yml, main and integ-*) and the compile parts of the run, which cover what they compile
+  SAVE_CACHE: ''
   # every test's wall and CPU seconds (tools/ci_testtime.py, the ctest launcher on Linux and macOS): uploaded with the shard's logs, read by
   # tools/ci_times.py to refresh tools/ci_times.tsv and to find the tests that wait instead of compute
   ONAIR_TESTTIME_LOG: ${{ github.workspace }}/testtime.log
@@ -607,6 +607,18 @@ jobs:
         with: { name: linux-gl31-shot, path: "shot-gl31.png\ngl31.log", if-no-files-found: ignore }
 
   # required check "Linux x86_64": passes when every shard of it passed
+  # the compile parts are only for this run: deleted once every job that reads them has finished (they were 0.9 GB of the store)
+  drop-parts:
+    needs: [lint, linux-shards, macos-shards, windows-shards, gl31]
+    if: always() && needs.lint.outputs.fanout == '1'
+    runs-on: ubuntu-24.04
+    permissions: { actions: write }
+    steps:
+      - env: { GH_TOKEN: "${{ github.token }}", RID: "${{ github.run_id }}-${{ github.run_attempt }}" }
+        run: |
+          gh api --paginate "repos/$GITHUB_REPOSITORY/actions/caches?per_page=100&key=ccache-" --jq ".actions_caches[]|select(.key|test(\"-part[0-9]+-$RID\$\"))|.id" |
+            while read -r id; do gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/caches/$id" > /dev/null && echo "deleted cache $id"; done
+
   gather-linux:
     name: Linux x86_64
     needs: [linux-shards, gl31]
