@@ -16,9 +16,9 @@ fanout: the selection reaches the core (scope wide or full), so a cold build is 
 import argparse, json, math, os, re, subprocess, sys
 
 PLATS = {   # plat: (job name, runner, most shards)
-    "linux": ("Linux x86_64", "ubuntu-24.04", 14),
+    "linux": ("Linux x86_64", "ubuntu-24.04", 9),    # max-parallel 9 in ci.yml: more would wait for a second wave
     "macos": ("macOS arm64", "macos-15", 4),
-    "windows": ("Windows", "windows-2022", 5),
+    "windows": ("Windows", "windows-2022", 4),
 }
 
 # compile jobs per platform when the selection reaches the core (Windows not yet: its ccache file storage path needs checking first)

@@ -199,6 +199,9 @@ jobs:
     timeout-minutes: 90   # a hung test ends at its ctest timeout; a job never holds a runner for hours (the old nightly held 13 for 6 h)
     strategy:
       fail-fast: false
+      # at most 9 Linux + 4 macOS + 4 Windows shards + the app job at once: 2-3 of the 20 free runners stay free for workers' quick.yml
+      # checks, which otherwise waited behind a full run
+      max-parallel: 9
       matrix: ${{ fromJSON(needs.lint.outputs.linux) }}
     steps:
       - name: Free disk space (Linux, in the background while the next steps run)
@@ -394,6 +397,7 @@ jobs:
     timeout-minutes: 120
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix: ${{ fromJSON(needs.lint.outputs.windows) }}
     defaults: { run: { shell: 'msys2 {0}' } }
     steps:
