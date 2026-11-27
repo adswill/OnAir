@@ -134,9 +134,8 @@ jobs:
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
           python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" $([ "${{ matrix.plat }}" = linux ] || echo --no-slow) --shard 1/1 --out sel > /dev/null
-          python3 tools/ci_objs.py --build-dir build --targets sel/targets.txt $([ "${{ matrix.plat }}" = linux ] && echo "--extra dect2") --part ${{ matrix.part }}/${{ matrix.of }} > objs.txt
           ccache -z
-          if [ -s objs.txt ]; then xargs -n 300 ninja -C build -j 4 < objs.txt; fi
+          python3 tools/ci_objs.py --build-dir build --targets sel/targets.txt $([ "${{ matrix.plat }}" = linux ] && echo "--extra dect2") --part ${{ matrix.part }}/${{ matrix.of }} --run -j 4
           ccache -s
       - uses: actions/cache/save@v6
         if: always()
@@ -185,9 +184,8 @@ jobs:
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
           python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" $([ "${{ matrix.plat }}" = linux ] || echo --no-slow) --shard 1/1 --out sel > /dev/null
-          python3 tools/ci_objs.py --build-dir build --targets sel/targets.txt $([ "${{ matrix.plat }}" = linux ] && echo "--extra dect2") --part ${{ matrix.part }}/${{ matrix.of }} > objs.txt
           ccache -z
-          if [ -s objs.txt ]; then xargs -n 300 ninja -C build -j 4 < objs.txt; fi
+          python3 tools/ci_objs.py --build-dir build --targets sel/targets.txt $([ "${{ matrix.plat }}" = linux ] && echo "--extra dect2") --part ${{ matrix.part }}/${{ matrix.of }} --run -j 4
           ccache -s
       - uses: actions/cache/save@v6
         if: always()
