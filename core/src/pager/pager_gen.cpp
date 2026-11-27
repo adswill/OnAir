@@ -182,7 +182,10 @@ public:
                 if (phase_ > kPi) phase_ -= 2 * kPi; else if (phase_ < -kPi) phase_ += 2 * kPi;
                 const double ramp = std::min({1.0, ts / 0.001, ((double)len_[idx_] / rate_ - ts) / 0.001});
                 const float a = amp_ * (float)std::max(0.0, ramp);
-                v = cf32(a * (float)std::cos(phase_), a * (float)std::sin(phase_));
+                // the phase stays in double; its cos and sin in float (the output is float): a double sincos per sample was most of the
+                // pager tests' CPU (libm, perf run 46007136672)
+                const float ph = (float)phase_;
+                v = cf32(a * std::cos(ph), a * std::sin(ph));
             }
             out[i] = v;
             if (++pos_ >= len_[idx_] + gap_) { idx_ = (idx_ + 1) % tx_.size(); enterTx(); }
