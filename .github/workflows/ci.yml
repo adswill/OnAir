@@ -103,7 +103,9 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.lint.outputs.compile_linux) }}   # tools/ci_plan.py
     env:
-      CCACHE_REMOTE_STORAGE: "file://${{ github.workspace }}/.ccache-part"   # what this part compiles also goes here (the shards read it)
+      # what this part compiles also goes here; the shards restore it at the same path (the cache version includes the path: saved from
+      # another directory, the same key was "not found", run 45994391303)
+      CCACHE_REMOTE_STORAGE: "file://${{ github.workspace }}/.ccache-p${{ matrix.part }}"
     steps:
       - name: Free disk space (Linux, in the background while the next steps run)
         if: runner.os == 'Linux'
@@ -124,7 +126,7 @@ jobs:
           restore-keys: ccache-${{ matrix.plat }}-warm-
       - name: Configure (the shards' exact flags)
         run: |
-          mkdir -p .ccache-part
+          mkdir -p .ccache-p${{ matrix.part }}
           LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache "-DCMAKE_TEST_LAUNCHER=python3;$PWD/tools/ci_testtime.py" $LD
       - name: Compile this part of the selection
@@ -139,7 +141,7 @@ jobs:
       - uses: actions/cache/save@v6
         if: always()
         with:
-          path: .ccache-part
+          path: .ccache-p${{ matrix.part }}
           key: ccache-${{ matrix.plat }}-part${{ matrix.part }}-${{ github.run_id }}-${{ github.run_attempt }}
 
   compile-macos:
@@ -152,7 +154,9 @@ jobs:
       fail-fast: false
       matrix: ${{ fromJSON(needs.lint.outputs.compile_macos) }}   # tools/ci_plan.py
     env:
-      CCACHE_REMOTE_STORAGE: "file://${{ github.workspace }}/.ccache-part"   # what this part compiles also goes here (the shards read it)
+      # what this part compiles also goes here; the shards restore it at the same path (the cache version includes the path: saved from
+      # another directory, the same key was "not found", run 45994391303)
+      CCACHE_REMOTE_STORAGE: "file://${{ github.workspace }}/.ccache-p${{ matrix.part }}"
     steps:
       - name: Free disk space (Linux, in the background while the next steps run)
         if: runner.os == 'Linux'
@@ -173,7 +177,7 @@ jobs:
           restore-keys: ccache-${{ matrix.plat }}-warm-
       - name: Configure (the shards' exact flags)
         run: |
-          mkdir -p .ccache-part
+          mkdir -p .ccache-p${{ matrix.part }}
           LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache "-DCMAKE_TEST_LAUNCHER=python3;$PWD/tools/ci_testtime.py" $LD
       - name: Compile this part of the selection
@@ -188,7 +192,7 @@ jobs:
       - uses: actions/cache/save@v6
         if: always()
         with:
-          path: .ccache-part
+          path: .ccache-p${{ matrix.part }}
           key: ccache-${{ matrix.plat }}-part${{ matrix.part }}-${{ github.run_id }}-${{ github.run_attempt }}
 
   linux-shards:
