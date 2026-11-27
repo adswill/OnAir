@@ -170,7 +170,7 @@ def main():
     a = ap.parse_args()
     bd, src = a.build_dir, os.path.realpath(a.src)
     tj = json.loads(sh("ctest", "--test-dir", bd, "--show-only=json-v1"))["tests"]
-    tests, serial = {}, set()
+    tests, serial, procs = {}, set(), {}
     for t in tj:
         lab = set()
         for pr in t.get("properties", []):
@@ -178,6 +178,8 @@ def main():
                 lab = set(pr["value"])
             if pr["name"] == "RUN_SERIAL" and pr["value"]:
                 serial.add(t["name"])
+            if pr["name"] == "PROCESSORS":
+                procs[t["name"]] = max(1, int(pr["value"]))
         tests[t["name"]] = lab
     cc = json.load(open(os.path.join(bd, "compile_commands.json")))
     tgt_src = {}
@@ -272,7 +274,8 @@ def main():
     k, n_sh = (int(x) for x in a.shard.split("/"))
     times = load_times(a.times, a.plat)
     # a RUN_SERIAL test has the runner to itself while it runs: for the shard balance it costs its time on every ctest slot
-    cost = lambda n: times.get(n, DEFAULT_COST) * (SERIAL_SLOTS if n in serial else 1)
+    # a test with PROCESSORS p holds p of the slots
+    cost = lambda n: times.get(n, DEFAULT_COST) * (SERIAL_SLOTS if n in serial else min(SERIAL_SLOTS, procs.get(n, 1)))
     if times and n_sh > 1:
         # longest first onto the least loaded shard; ties by name, so every shard computes the same split
         load, mine = [0.0] * n_sh, set()

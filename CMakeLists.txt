@@ -1499,7 +1499,9 @@ if(DECT2_BUILD_TESTS)
       set_tests_properties(snr_threshold PROPERTIES LABELS "snr" TIMEOUT 21600 WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
       add_test(NAME qa_sweep_sel COMMAND test_qa_sweep --sel)   # the modes in the QA_MODES environment variable (quick.yml env=), no others: a way to rerun a few rows
       add_test(NAME qa_switch COMMAND test_qa_sweep --switch)   # mode switching through one Engine (4.0 QA)
-      set_tests_properties(qa_sweep_sel qa_switch ${QA_SWEEP_TESTS} PROPERTIES LABELS "qa;slow" TIMEOUT 1800)   # 5-15 min per shard on a CI runner: full scope only
+      set_tests_properties(qa_sweep_sel qa_switch ${QA_SWEEP_TESTS} PROPERTIES LABELS "qa;slow" TIMEOUT 1800 PROCESSORS 2)   # 5-15 min per shard on a CI runner: full scope only
+      # PROCESSORS 2: two at a time on a 4-core runner. Four side by side made real-time tries miss slots (ft8 tx, ft2 false decode on
+      # noise, a goesgrb abort in run 46003088536; the same modes pass alone, run 46019656537)
     endif()
     # the DVB family's cost per receiver stage (not a test: minutes per run; docs/PERFORMANCE-DVB.md)
     add_executable(bench_dvb tests/bench/bench_dvb.cpp)
