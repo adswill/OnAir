@@ -1043,16 +1043,23 @@ int main(int argc, char** argv) {
             if (getenv("QA_SWEEP_VERBOSE")) fprintf(stderr, "  signal: rate %.0f psig %.4g obw %.0f Hz active %.3f\n", actual, psig, obw, active);
             if (psig <= 0) r.note = "generator sends silence";
             snprintf(rs, sizeof rs, "%.4f", actual);
-            {   // silence first: what the receiver saves with nothing to decode (read as fast as it goes, also on the real-time try)
+            // silence: what the receiver saves with nothing to decode (read as fast as it goes, also on the real-time try). Only a clean run
+            // with no checked block reads it (byRes, m()), so it runs only then: one child less per try for every mode that decodes blocks
+            // (docs/CI-FAST.md (4.7)); QA_T0 is not changed between the generator and here, as before
+            auto silence = [&]() {
                 unsetenv("QA_PACE");
                 const ChildResult zr = spawn({self, "--run", e->id, rs, ss, tmpDir + "/zero.ci16", "zero"}, std::max(300.0, s * 20), std::max(600.0, s * 30));
                 if (paced) setenv("QA_PACE", "1", 1);
                 const size_t jp = zr.out.rfind('{');
                 r.resZero = jp == std::string::npos ? 0 : (uint64_t)jnum(zr.out.substr(jp), "res");
-            }
+            };
+            r.resZero = 0;
             double newRate = 0; std::string newT0, rateDir = tmpDir + "/rate";
             for (int c = 0; c < kNC; c++) {
-                if (c == 1) r.byRes = r.c[0].good == 0 && r.c[0].res > r.resZero + 16;
+                if (c == 1) {
+                    if (r.c[0].good == 0) silence();
+                    r.byRes = r.c[0].good == 0 && r.c[0].res > r.resZero + 16;
+                }
                 if (c > 0 && r.m(0) == 0 && !r.c[0].locked) break;   // nothing in the clean run: the others say nothing more
                 std::string runFile = tmpDir + "/" + kConds[c] + ".ci16", savedT0;
                 double runRate = actual;
@@ -1113,11 +1120,21 @@ int main(int argc, char** argv) {
             }
             char rs[64], ss[64];
             snprintf(rs, sizeof rs, "%.4f", r.txRate); snprintf(ss, sizeof ss, "%.3f", s);
+            // the transmitter's own silence is read only when the transmitter run decoded no block: run after it, and only then, with the
+            // environment it had before (QA_PACE off, QA_T0 as the generator left it)
+            const char* t0Gen = getenv("QA_T0");
+            const std::string t0Saved = t0Gen ? t0Gen : "";
+            const bool t0Had = t0Gen != nullptr;
+            auto txSilence = [&]() -> uint64_t {
+                if (t0Had) setenv("QA_T0", t0Saved.c_str(), 1); else unsetenv("QA_T0");
+                unsetenv("QA_PACE");
+                const ChildResult zr = spawn({self, "--run", e->id, rs, ss, tmpDir + "/txzero.ci16", "zero"}, std::max(300.0, s * 20), std::max(600.0, s * 30));
+                if (r.paced) setenv("QA_PACE", "1", 1);
+                const size_t zp = zr.out.rfind('{');
+                return zp == std::string::npos ? 0 : (uint64_t)jnum(zr.out.substr(zp), "res");
+            };
             unsetenv("QA_PACE");
-            const ChildResult zr = spawn({self, "--run", e->id, rs, ss, tmpDir + "/txzero.ci16", "zero"}, std::max(300.0, s * 20), std::max(600.0, s * 30));
             if (r.paced) setenv("QA_PACE", "1", 1);
-            const size_t zp = zr.out.rfind('{');
-            const uint64_t z = zp == std::string::npos ? 0 : (uint64_t)jnum(zr.out.substr(zp), "res");
             if (!txT0.empty()) setenv("QA_T0", txT0.c_str(), 1); else unsetenv("QA_T0");
             const ChildResult cr = spawn({self, "--run", e->id, rs, ss, tmpDir + "/tx.ci16", "tx"}, std::max(300.0, s * 20), std::max(600.0, s * 30));
             const size_t jp = cr.out.rfind('{');
@@ -1126,6 +1143,7 @@ int main(int argc, char** argv) {
             else {
                 const std::string j = cr.out.substr(jp);
                 r.tx.good = (uint64_t)jnum(j, "good"); r.tx.res = (uint64_t)jnum(j, "res"); r.tx.locked = jnum(j, "locked") > 0;
+                const uint64_t z = r.tx.good > 0 ? 0 : txSilence();
                 r.tx.verdict = r.tx.good > 0 || r.tx.res > z + 16 ? "pass" : r.tx.locked && !needsDecode(r.id, r.stdMode) ? "lock" : "FAIL";
             }
         }
