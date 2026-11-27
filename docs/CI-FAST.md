@@ -116,8 +116,13 @@ A worker's check should cost one or a few runners, and the full run happens once
 2. Worker branch whose change reaches shared code (quick.yml stops with this command): `gh workflow run ci.yml -R adswill/OnAir --ref
    <branch> -f platforms=linux`: the Linux shards of the wide scope (every non-slow test).
 3. Integration branch, after a batch of merges: the push runs `ci.yml` (auto scope; a newer push cancels the older run, so a batch of
-   merges costs one run). Before a release: `-f scope=full`.
-4. Wait with one `gh run watch <id> -R adswill/OnAir --exit-status` in the background; never poll.
+   merges costs one run). By hand: `-f scope=wide`, every non-slow test on Linux, macOS and Windows.
+4. The slow tier (the deep sweeps: QA sweep of every mode, GNSS skies, sensitivity sweeps; 55,000 of 81,000 test-seconds on Linux)
+   runs in the nightly full run (`ci.yml` schedule) and must pass before a release (`-f scope=full`, and every `v*` tag). Owner's
+   decision 2026-11-27: it no longer blocks each integration batch.
+5. A failed run prints the failed tests and one `quick.yml` command that reruns only them (`tools/ci_failed.py`, the gather jobs'
+   summary): fix, rerun those in minutes, then the full scope once.
+6. Wait with one `gh run watch <id> -R adswill/OnAir --exit-status` in the background; never poll.
 
 ### Measured after
 
