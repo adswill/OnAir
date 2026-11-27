@@ -1465,7 +1465,7 @@ if(DECT2_BUILD_TESTS)
     set_tests_properties(perf40_engine PROPERTIES TIMEOUT 1800 RUN_SERIAL TRUE)
     # the receiver on its own thread (4.0): the same results as on one thread, and the speed of each, per mode and rate
     add_test(NAME perf40_rx_thread COMMAND bench_modes --compare-rx --mode fm,adsb,ais,dmr,pocsag,airband --seconds 6 --rates 2.4,10,20 --spectrum)
-    set_tests_properties(perf40_rx_thread PROPERTIES TIMEOUT 3000 RUN_SERIAL TRUE)
+    set_tests_properties(perf40_rx_thread PROPERTIES TIMEOUT 3000 RUN_SERIAL TRUE LABELS slow)   # the slow tier (nightly, before a release): alone on its runner for 3.5 min held a whole CI shard (docs/CI-FAST.md (4.7))
     add_executable(test_perf40_profile tests/bench/bench_modes.cpp)   # quick.yml perf=perf40_profile: where the slow receivers (FM, airband) spend their time
     target_link_libraries(test_perf40_profile PRIVATE dect2core)
     target_compile_definitions(test_perf40_profile PRIVATE BENCH_PROFILE_PRESET)
