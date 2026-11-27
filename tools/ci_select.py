@@ -162,6 +162,8 @@ def main():
     ap.add_argument("--changed", help="file with changed paths instead of git diff")
     ap.add_argument("--times", help="tools/ci_times.tsv: measured seconds per test and platform (balanced shards, ctest cost data)")
     ap.add_argument("--plat", default="linux", help="column of --times: linux, macos or windows")
+    ap.add_argument("--only", default="", help="these ctest names (space separated) and no others: their real build targets (quick.yml "
+                    "tests=..., the rerun command of tools/ci_failed.py)")
     ap.add_argument("--no-slow", dest="slow", action="store_false",
                     help="scope full without the slow tier (macOS and Windows: the slow tier runs on Linux, docs/CI-FAST.md (4.7))")
     a = ap.parse_args()
@@ -185,9 +187,13 @@ def main():
     cmd = dict(re.findall(r"add_test\(\s*NAME\s+(\S+)\s+COMMAND\s+([\w-]+)", cm))
     for n, tg in re.findall(r"add_test\(\s*NAME\s+(\S+)\s+COMMAND[^\n]*?TARGET_FILE:(\w+)", cm):
         cmd.setdefault(n, tg)
+    # names made in a foreach loop (add_test(NAME qa_sweep_${kn} COMMAND test_qa_sweep ...)): the ${...} part matches any text
+    loop = [(re.compile("^" + ".+".join(re.escape(p) for p in re.split(r"\$\{[^}]*\}", k)) + "$"), v) for k, v in cmd.items() if "${" in k]
+    def cmds_of(n):   # every candidate program; a loop's COMMAND test_${t} reads as "test_" (cut at the ${): never a target, skipped
+        return ([cmd[n]] if n in cmd else []) + [v for rx, v in loop if rx.match(n) and not v.endswith("_")]
     test_tgt, test_area = {}, {}
     for n in tests:
-        tg = next((c for c in ("test_" + n, n, cmd.get(n)) if c in tgt_src), None)
+        tg = next((c for c in ["test_" + n, n] + cmds_of(n) if c in tgt_src), None)
         if tg in tgt_src:
             test_tgt[n] = tg
             test_area[n] = {s.split("/")[1] for s in tgt_src[tg] if s.startswith("tests/") and s.count("/") >= 2}
@@ -241,7 +247,12 @@ def main():
     # snr, measure: on-demand measurements (quick.yml, ctest -L), never a CI tier
     def is_measure(n): return "snr" in tests[n] or "measure" in tests[n]
     def is_slow(n): return "slow" in tests[n] or "perf" in tests[n] or is_measure(n)
-    if scope == "full": sel = {n for n in tests if not is_measure(n) and (a.slow or not is_slow(n))}
+    if a.only:
+        want = set(a.only.split())
+        missing = sorted(want - set(tests))
+        if missing: print("ci_select: no such test: " + " ".join(missing), file=sys.stderr)
+        scope, sel = "only", {n for n in tests if n in want}
+    elif scope == "full": sel = {n for n in tests if not is_measure(n) and (a.slow or not is_slow(n))}
     elif scope == "wide": sel = {n for n in tests if not is_slow(n)}
     elif scope == "area":
         sel = {n for n in tests if (test_area.get(n, set()) & areas or n in direct) and not is_slow(n)} | {n for n in SMOKE if n in tests}

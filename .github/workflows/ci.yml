@@ -531,6 +531,17 @@ jobs:
     if: ${{ !cancelled() }}   # a shard failing or skipped still fails this; a run replaced by a newer one has nothing to gather
     runs-on: ubuntu-24.04
     steps:
+      # the failed tests and the command that reruns only them (tools/ci_failed.py): fix, rerun those in minutes, then the full scope once
+      - uses: actions/checkout@v7
+        if: always()
+        with: { sparse-checkout: tools }
+      - uses: actions/download-artifact@v7
+        if: always()
+        continue-on-error: true
+        with: { pattern: "cpucal-Linux*", path: shard-logs }
+      - name: Failed tests and the rerun command
+        if: always()
+        run: python3 tools/ci_failed.py --logs shard-logs --os linux --ref "${{ github.ref_name }}" | tee -a "$GITHUB_STEP_SUMMARY"
       - run: |
           echo '${{ toJSON(needs) }}' | python3 -c "import sys,json; r=json.load(sys.stdin); bad=[k for k,v in r.items() if v['result']!='success']; print('results',{k:v['result'] for k,v in r.items()}); sys.exit(1 if bad else 0)"
 
@@ -541,6 +552,17 @@ jobs:
     if: ${{ !cancelled() }}   # a shard failing or skipped still fails this; a run replaced by a newer one has nothing to gather
     runs-on: ubuntu-24.04
     steps:
+      # the failed tests and the command that reruns only them (tools/ci_failed.py): fix, rerun those in minutes, then the full scope once
+      - uses: actions/checkout@v7
+        if: always()
+        with: { sparse-checkout: tools }
+      - uses: actions/download-artifact@v7
+        if: always()
+        continue-on-error: true
+        with: { pattern: "cpucal-macOS*", path: shard-logs }
+      - name: Failed tests and the rerun command
+        if: always()
+        run: python3 tools/ci_failed.py --logs shard-logs --os macos --ref "${{ github.ref_name }}" | tee -a "$GITHUB_STEP_SUMMARY"
       - env:
           MAIN_PUSH: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || inputs.platforms == 'linux') && '1' || '' }}   # shards skipped on purpose there
         run: |
@@ -553,6 +575,17 @@ jobs:
     if: ${{ !cancelled() }}   # a shard failing or skipped still fails this; a run replaced by a newer one has nothing to gather
     runs-on: ubuntu-24.04
     steps:
+      # the failed tests and the command that reruns only them (tools/ci_failed.py): fix, rerun those in minutes, then the full scope once
+      - uses: actions/checkout@v7
+        if: always()
+        with: { sparse-checkout: tools }
+      - uses: actions/download-artifact@v7
+        if: always()
+        continue-on-error: true
+        with: { pattern: "cpucal-Windows*", path: shard-logs }
+      - name: Failed tests and the rerun command
+        if: always()
+        run: python3 tools/ci_failed.py --logs shard-logs --os windows --ref "${{ github.ref_name }}" | tee -a "$GITHUB_STEP_SUMMARY"
       - env:
           MAIN_PUSH: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || inputs.platforms == 'linux') && '1' || '' }}   # shards skipped on purpose there
         run: |

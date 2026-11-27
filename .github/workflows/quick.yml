@@ -91,6 +91,10 @@ jobs:
         run: |
           LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD $EXTRA_CMAKE
+      - name: Select the build targets of the named tests (their programs, also for tests whose program has another name)
+        if: inputs.tests != '' && inputs.tests != 'auto'
+        env: { TESTS: "${{ inputs.tests }}" }
+        run: python3 tools/ci_select.py --build-dir build --only "$TESTS" --out sel
       - name: Select the tests the change can affect (tests=auto)
         if: inputs.tests == 'auto'
         run: |
@@ -105,7 +109,7 @@ jobs:
         env: { TESTS: "${{ inputs.tests }}", EXTRA: "${{ inputs.targets }}" }
         run: |
           T=""; for t in $TESTS; do T="$T test_$t"; done
-          [ "$TESTS" = auto ] && T=$(tr -d "\r" < sel/targets.txt)
+          [ -f sel/targets.txt ] && T=$(tr -d "\r" < sel/targets.txt)
           ALL=$(ninja -C build -t targets all | cut -d: -f1)
           SEL=""; for t in $T $EXTRA; do echo "$ALL" | grep -qx "$t" && SEL="$SEL $t" || echo "note: no target $t (the test may live in a bundle; building by test name is skipped)"; done
           [ -n "$SEL" ] || { echo "nothing to build"; exit 1; }
