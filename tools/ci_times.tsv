@@ -339,7 +339,10 @@ cubesat_sids	0.0	0.1	0.0
 cubesat_smart	10.8	17.4	7.4
 cubesat_telem	0.0	0.1	0.0
 cubesat_views	30.8	25.5	
-custom_bandwidth_all	487.1	384.2	559.3
+custom_bandwidth_all_1	121.8	96.0	139.8
+custom_bandwidth_all_2	121.8	96.0	139.8
+custom_bandwidth_all_3	121.8	96.0	139.8
+custom_bandwidth_all_4	121.8	96.0	139.8
 custom_capture	23.8	29.2	32.6
 cw_engine	14.7	15.0	14.9
 cw_fistrx	19.9		43.6

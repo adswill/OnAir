@@ -154,6 +154,7 @@ int main(int argc, char** argv) {
     CHECK(rows.size() > 120, "only %zu rows read from the mode table", rows.size());
     std::vector<const ModeTuning*> tunings;
     for (const auto& m : modeTunings()) tunings.push_back(&m);
+    int engineRow = 0;   // modes that reach the engine-start step, for ONAIR_TEST_SHARD
     // the six classic families have no registry row (applyBandwidth() holds their values): DVB-T2 / DVB-T, ATSC, DAB, ATSC 3.0, ISDB-T, FM
     static std::vector<ModeTuning> classic;
     {
@@ -274,6 +275,12 @@ int main(int argc, char** argv) {
         }
         // 5. it reaches the engine: the receiver runs at the rate the plan gave, and is processing signal
         if (quick) continue;
+        // ONAIR_TEST_SHARD=k/N: the engine starts of every N-th mode only (the CI runs four parts side by side instead of one serial test of
+        // about 900 starts, docs/CI-FAST.md (4.7)); the plan checks above run in every part
+        if (const char* sh = std::getenv("ONAIR_TEST_SHARD")) {
+            int k = 1, n = 1;
+            if (std::sscanf(sh, "%d/%d", &k, &n) == 2 && n > 1 && (engineRow++ % n) != k - 1) continue;
+        }
         if (const char* only = std::getenv("ONAIR_TEST_MODES")) { const std::string l = std::string(",") + only + ","; if (l.find(std::string(",") + mt->id + ",") == std::string::npos) continue; }   // debugging: the engine starts of these modes only
         TuneSettings wide = ownTune(*mt), typed = ownTune(*mt);
         rxApplyWidth(wide, 6.0, mt->minSampleRate);
