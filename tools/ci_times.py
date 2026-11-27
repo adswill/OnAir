@@ -20,12 +20,20 @@ def plat_of(job):
     return "linux" if "Linux" in job else "macos" if "macOS" in job else "windows" if "Windows" in job else None
 
 def read_run(rid, times):
-    log = subprocess.run(["gh", "run", "view", str(rid), "-R", REPO, "--log"], capture_output=True, text=True, errors="replace").stdout
-    for line in log.splitlines():
-        m = PAT.search(line)
-        if m and plat_of(m.group(1)):
-            d = times.setdefault(plat_of(m.group(1)), {})
-            d[m.group(2)] = max(d.get(m.group(2), 0.0), float(m.group(3)))
+    # each finished job's own log (gh run view --log needs the whole run to be finished, and a run with one job still going gave nothing)
+    jobs = subprocess.run(["gh", "api", "--paginate", "repos/%s/actions/runs/%s/jobs" % (REPO, rid), "--jq",
+                           '.jobs[]|select(.status=="completed")|"\\(.id)\\t\\(.name)"'], capture_output=True, text=True).stdout
+    for jl in jobs.splitlines():
+        jid, _, name = jl.partition("\t")
+        plat = plat_of(name)
+        if not plat: continue
+        log = subprocess.run(["gh", "api", "--allow-escape-sequences", "repos/%s/actions/jobs/%s/logs" % (REPO, jid)], capture_output=True,
+                             text=True, errors="replace").stdout
+        for line in log.splitlines():
+            m = PAT.search(name + "\t" + line)
+            if m:
+                d = times.setdefault(plat, {})
+                d[m.group(2)] = max(d.get(m.group(2), 0.0), float(m.group(3)))
 
 def report(rids, times):
     for p in PLATS:
