@@ -1230,8 +1230,12 @@ void GnssSim::generate(cf32* out, size_t count) {
             const cf32 rot((float)std::cos(w), (float)std::sin(w));
             const double ph0 = 2 * kPiS * (cy - std::floor(cy));
             cf32 z((float)std::cos(ph0), (float)std::sin(ph0));
+            // floor(pe), carried along instead of computed per sample (a libm call on the baseline x86-64 build; with the rest of this loop
+            // 40 % of test_gnss_glonass's CPU, perf run 46007136672): pe only grows, so fl steps up when pe passes fl + 1 (the same value)
+            double fl = std::floor(pe);
             for (size_t k = 0; k < m; k++) {
-                const double fl = std::floor(pe);
+                while (pe >= fl + 1.0) fl += 1.0;
+                while (pe < fl) fl -= 1.0;   // a negative code rate (never in practice): still floor(pe)
                 const int64_t idx = c.base + (int64_t)fl;
                 const double frac = pe - fl;
                 if (idx != c.lastIdx) {
