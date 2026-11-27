@@ -3699,6 +3699,13 @@ if(DECT2_BUILD_TESTS)
       set_property(TEST ${_t} APPEND PROPERTY LABELS slow)
     endif()
   endforeach()
+  # CPU-budget checks that a loaded runner fails (sonde_all_rf: 2.7x real time against a limit of 3 next to a test of 777 s on Windows,
+  # run 46026040650): the timing tier, two at a time, a failure tried once more
+  foreach(_t sonde_all_rf)
+    if(TEST ${_t})
+      set_property(TEST ${_t} APPEND PROPERTY LABELS timing)
+    endif()
+  endforeach()
 endif()
 
 # Windows: every test program runs with 1 ms timer resolution (tests/common/win_timer.cpp); the default 15.6 ms made each sleep_for(1 ms)
