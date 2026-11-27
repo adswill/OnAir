@@ -1208,7 +1208,7 @@ if(DECT2_BUILD_TESTS)
   add_test(NAME session_soak_short COMMAND soak_session_writer --seconds 8)
   add_test(NAME session_soak_10min COMMAND soak_session_writer --seconds 600)
   set_tests_properties(session_soak_short PROPERTIES TIMEOUT 300)
-  set_tests_properties(session_soak_10min PROPERTIES LABELS slow TIMEOUT 1500 RUN_SERIAL TRUE)
+  set_tests_properties(session_soak_10min PROPERTIES LABELS soak TIMEOUT 1500 RUN_SERIAL TRUE)   # soak.yml runs it weekly; never a CI tier (it held a CI runner alone for 10 min)
   # 100,000 sessions: page, search and filtered sort times against the limits of the spec
   add_executable(bench_session_db tests/session/bench_session_db.cpp)
   target_link_libraries(bench_session_db PRIVATE dect2_session_lite)

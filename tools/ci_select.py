@@ -37,6 +37,7 @@ NO_TEST_EXT = (".md", ".txt", ".png", ".svg", ".toml")
 SRC_EXT = (".h", ".hpp", ".cpp", ".c", ".inc", ".mm")
 INC_ROOTS = ("core/include", "core/src", "app", "tests", ".", "sdk/include", "server")
 DEFAULT_COST = 5.0   # seconds of a test with no measured time (a new test)
+SERIAL_SLOTS = 4     # ctest -j4: a RUN_SERIAL test keeps the other three slots idle
 
 def sh(*a):
     return subprocess.run(a, capture_output=True, text=True).stdout
@@ -169,12 +170,14 @@ def main():
     a = ap.parse_args()
     bd, src = a.build_dir, os.path.realpath(a.src)
     tj = json.loads(sh("ctest", "--test-dir", bd, "--show-only=json-v1"))["tests"]
-    tests = {}
+    tests, serial = {}, set()
     for t in tj:
         lab = set()
         for pr in t.get("properties", []):
             if pr["name"] == "LABELS":
                 lab = set(pr["value"])
+            if pr["name"] == "RUN_SERIAL" and pr["value"]:
+                serial.add(t["name"])
         tests[t["name"]] = lab
     cc = json.load(open(os.path.join(bd, "compile_commands.json")))
     tgt_src = {}
@@ -245,7 +248,7 @@ def main():
         scope = a.scope
     # tests changed directly are already covered by their area
     # snr, measure: on-demand measurements (quick.yml, ctest -L), never a CI tier
-    def is_measure(n): return "snr" in tests[n] or "measure" in tests[n]
+    def is_measure(n): return "snr" in tests[n] or "measure" in tests[n] or "soak" in tests[n]
     def is_slow(n): return "slow" in tests[n] or "perf" in tests[n] or is_measure(n)
     if a.only:
         want = set(a.only.split())
@@ -268,7 +271,8 @@ def main():
     else: sel = {n for n in SMOKE if n in tests}
     k, n_sh = (int(x) for x in a.shard.split("/"))
     times = load_times(a.times, a.plat)
-    cost = lambda n: times.get(n, DEFAULT_COST)
+    # a RUN_SERIAL test has the runner to itself while it runs: for the shard balance it costs its time on every ctest slot
+    cost = lambda n: times.get(n, DEFAULT_COST) * (SERIAL_SLOTS if n in serial else 1)
     if times and n_sh > 1:
         # longest first onto the least loaded shard; ties by name, so every shard computes the same split
         load, mine = [0.0] * n_sh, set()
