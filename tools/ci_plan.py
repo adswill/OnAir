@@ -8,7 +8,10 @@ Runs tools/ci_select.py once per platform on the whole selection (shard 1/1), re
 under ctest -j4 on a 4-core runner) and gives each platform enough shards that one shard's tests take about --minutes of wall time, within
 the platform's maximum (GitHub's free plan runs 20 jobs at once, 5 of them macOS). Writes the matrices as GitHub outputs:
   linux=<json>  macos=<json>  windows=<json>    (strategy.matrix: fromJSON(needs.lint.outputs.linux))
+  fanout=1|0  compile_linux=<json>  compile_macos=<json>
 and a table for the step summary. A small change gets one shard per platform instead of four that each pay the set-up and build.
+fanout: the selection reaches the core (scope wide or full), so a cold build is likely: the compile jobs split the compile first
+(tools/ci_objs.py) and the shards read their ccache parts. A small change (area, smoke) skips them: their start-up would cost more.
 """
 import argparse, json, math, os, re, subprocess, sys
 
@@ -17,6 +20,9 @@ PLATS = {   # plat: (job name, runner, most shards)
     "macos": ("macOS arm64", "macos-15", 4),
     "windows": ("Windows", "windows-2022", 5),
 }
+
+# compile jobs per platform when the selection reaches the core (Windows not yet: its ccache file storage path needs checking first)
+COMPILE_PARTS = {"linux": 6, "macos": 4}
 
 def estimate(args, plat):
     out = os.path.join(args.work, "plan-" + plat)
@@ -30,7 +36,8 @@ def estimate(args, plat):
         sys.exit("ci_plan: ci_select failed for " + plat)
     m = re.search(r"estimated_test_seconds=([0-9.]+)", r.stdout)
     n = re.search(r"tests=(\d+)", r.stdout)
-    return float(m.group(1)) if m else 0.0, int(n.group(1)) if n else 0
+    sc = re.search(r"scope=(\w+)", r.stdout)
+    return float(m.group(1)) if m else 0.0, int(n.group(1)) if n else 0, sc.group(1) if sc else ""
 
 def main():
     ap = argparse.ArgumentParser()
@@ -44,13 +51,19 @@ def main():
     ap.add_argument("--github-output", default=os.environ.get("GITHUB_OUTPUT", ""))
     a = ap.parse_args()
     budget = a.minutes * 60 * a.slots
-    rows, outs = [], {}
+    rows, outs, scopes = [], {}, set()
     for plat, (name, os_, most) in PLATS.items():
-        est, n_tests = estimate(a, plat)
+        est, n_tests, sc = estimate(a, plat)
+        scopes.add(sc)
         n = max(1, min(most, math.ceil(est / budget))) if n_tests else 1
         outs[plat] = json.dumps({"include": [{"name": name, "os": os_, "shard": k, "of": n, "plat": plat} for k in range(1, n + 1)]},
                                 separators=(",", ":"))
         rows.append((plat, n_tests, est, n, est / n / a.slots / 60))
+    fan = bool(scopes & {"wide", "full"})
+    for plat, parts in COMPILE_PARTS.items():
+        outs["compile_" + plat] = json.dumps({"include": [{"part": k, "of": parts} for k in range(1, parts + 1)]}, separators=(",", ":"))
+    outs["fanout"] = "1" if fan else "0"
+    print("compile jobs: %s (scope %s)\n" % (", ".join("%s %d" % x for x in COMPILE_PARTS.items()) if fan else "none", "/".join(sorted(scopes))))
     print("| platform | tests | estimated test seconds | shards | minutes of tests per shard |")
     print("|---|---|---|---|---|")
     for p, t, e, n, m in rows:
