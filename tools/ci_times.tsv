@@ -1536,9 +1536,12 @@ sens40b	41.0	69.7
 sens40b3	12.4	34.5	
 sens40x1	141.0	63.9	
 sens40x3	63.2		
-sens41	1024.2	1712.3	
+sens41	338.0	565.1	
 sens41_iridium	100.3	110.3	
 sens41_rest	432.3	288.8	
+sens41_sonde_mrz1	307.3	513.7	
+sens41_sonde_mrz2	307.3	513.7	
+sens41_sonde_rs41	71.7	119.9	
 sens41tv	40.8		
 sens_full	6763.7		
 sens_quick	488.2		

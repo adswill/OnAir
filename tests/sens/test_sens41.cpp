@@ -29,6 +29,15 @@ bool want(const char* name) {
     if (!e || !*e) return true;
     return strstr(e, name) != nullptr;
 }
+// a part of the sonde section by its exact name in ONAIR_SENS41 (sonde_rs41, sonde_imet, sonde_mrz1, sonde_mrz2): the CI runs them as
+// separate tests, so the shards share the section (1,712 s on a macOS runner as one test, docs/CI-FAST.md (4.7)). No setting, or
+// "sonde" itself, runs every part.
+bool sondePart(const char* name) {
+    const char* e = getenv("ONAIR_SENS41");
+    if (!e || !*e) return true;
+    std::string s = std::string(",") + e + ",";
+    return s.find(",sonde,") != std::string::npos || s.find(std::string(",") + name + ",") != std::string::npos;
+}
 int trialsDefault(int n) { const char* e = getenv("ONAIR_SENS41_TRIALS"); return e && atoi(e) > 0 ? atoi(e) : n; }
 
 struct Case { Mode m; std::shared_ptr<const Sig> base; double power = 0; size_t trialN = 0, maxOff = 0; double ref = 1; };   // the signal is shared by the 4.0 and 4.1 cases
@@ -116,13 +125,13 @@ Case sondeCase(int mask, double secs, bool soft) {
 }
 void sectionSonde() {
     const int n = trialsDefault(4);
-    {   // RS41 for the comparison (no change)
+    if (sondePart("sonde_rs41")) {   // RS41 for the comparison (no change)
         const Case r = sondeCase(1, 12.0, true);
         printf("RS41 reference:");
         for (double snr : {9.0, 7.0, 5.0, 3.0}) printf("  %g dB %.0f %%", snr, 100 * frac(r, snr, 0, 0, n, 0x41a1));
         printf("\n");
     }
-    {
+    if (sondePart("sonde_imet")) {
         const Case io = sondeCase(128, 12.0, false), in = withMake(io, sondeMake(true));
         CHECK(in.ref >= 3, "iMet-54 clean reference %.1f", in.ref);
         double g = curve("iMet-54", io, in, {13, 11, 9, 7, 5}, 0, 0, n, 0x41a1);
@@ -134,10 +143,11 @@ void sectionSonde() {
         printf("iMet-54 noise-only units: %.0f\n", f);
         CHECK(f == 0, "iMet-54 noise-only %.0f", f);
     }
-    {
+    if (sondePart("sonde_mrz1") || sondePart("sonde_mrz2")) {
         const Case mo = sondeCase(256, 24.0, false), mn = withMake(mo, sondeMake(true));
         CHECK(mn.ref >= 3, "MRZ clean reference %.1f", mn.ref);
-        curve("MRZ", mo, mn, {10, 8, 6, 4, 2}, 0, 0, n, 0x41b1);
+        if (sondePart("sonde_mrz1")) curve("MRZ", mo, mn, {10, 8, 6, 4, 2}, 0, 0, n, 0x41b1);
+      if (sondePart("sonde_mrz2")) {
         curve("MRZ", mo, mn, {8, 6, 4}, 8000, 0, n, 0x41b2);
         curve("MRZ", mo, mn, {8, 6, 4}, 0, 50, n, 0x41b3);
         const double gm = frac(mn, 8, 0, 0, n, 0x41b4);
@@ -146,6 +156,7 @@ void sectionSonde() {
         const double f = falses(mn, 4, 0x41f1);
         printf("MRZ noise-only units: %.0f\n", f);
         CHECK(f == 0, "MRZ noise-only %.0f", f);
+      }
     }
 }
 
