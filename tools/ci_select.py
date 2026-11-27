@@ -162,6 +162,8 @@ def main():
     ap.add_argument("--changed", help="file with changed paths instead of git diff")
     ap.add_argument("--times", help="tools/ci_times.tsv: measured seconds per test and platform (balanced shards, ctest cost data)")
     ap.add_argument("--plat", default="linux", help="column of --times: linux, macos or windows")
+    ap.add_argument("--no-slow", dest="slow", action="store_false",
+                    help="scope full without the slow tier (macOS and Windows: the slow tier runs on Linux, docs/CI-SPEED-4.7.md)")
     a = ap.parse_args()
     bd, src = a.build_dir, os.path.realpath(a.src)
     tj = json.loads(sh("ctest", "--test-dir", bd, "--show-only=json-v1"))["tests"]
@@ -236,8 +238,10 @@ def main():
     if a.scope != "auto":
         scope = a.scope
     # tests changed directly are already covered by their area
-    def is_slow(n): return "slow" in tests[n] or "perf" in tests[n] or "snr" in tests[n]   # snr: on-demand measurement (quick.yml), never a CI tier
-    if scope == "full": sel = {n for n in tests if "snr" not in tests[n]}
+    # snr, measure: on-demand measurements (quick.yml, ctest -L), never a CI tier
+    def is_measure(n): return "snr" in tests[n] or "measure" in tests[n]
+    def is_slow(n): return "slow" in tests[n] or "perf" in tests[n] or is_measure(n)
+    if scope == "full": sel = {n for n in tests if not is_measure(n) and (a.slow or not is_slow(n))}
     elif scope == "wide": sel = {n for n in tests if not is_slow(n)}
     elif scope == "area":
         sel = {n for n in tests if (test_area.get(n, set()) & areas or n in direct) and not is_slow(n)} | {n for n in SMOKE if n in tests}

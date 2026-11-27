@@ -11,7 +11,8 @@
 // The parent prints one line per mode and the first sanitizer lines of each failure. Exit code 1 when a mode failed.
 // Environment: ONAIR_FUZZ_ONLY=id,id  only these modes; ONAIR_FUZZ_NEW=1  also the 3.9 block (engine standards 602 and up, reported only,
 // never failing); ONAIR_TEST_LONG=1  longer signals and every other mode as a switch partner; ONAIR_FUZZ_PARTNERS=n  switch partners per
-// mode (default 3); ONAIR_FUZZ_JOBS=n  children at once (default 1); ONAIR_FUZZ_SEED.
+// mode (default 3); ONAIR_FUZZ_JOBS=n  children at once (default 1); ONAIR_FUZZ_SEED;
+// ONAIR_FUZZ_SHARD=k/N  only every N-th mode, from the k-th.
 #include "dect2/engine/engine.h"
 #include "dect2/engine/mode_registry.h"
 #include "dect2/engine/mode_tuning.h"
@@ -451,10 +452,15 @@ int main(int argc, char** argv) {
     const bool withNew = getenv("ONAIR_FUZZ_NEW") && *getenv("ONAIR_FUZZ_NEW") == '1';
     const int nPartners = getenv("ONAIR_FUZZ_PARTNERS") ? atoi(getenv("ONAIR_FUZZ_PARTNERS")) : (lng ? 1000000 : 3);
     const int jobs = std::max(1, getenv("ONAIR_FUZZ_JOBS") ? atoi(getenv("ONAIR_FUZZ_JOBS")) : 1);
+    int shardK = 1, shardN = 1;   // ONAIR_FUZZ_SHARD=k/N: every N-th mode of the run list, from the k-th (the ctest entries fuzz_engine_modes_1..8)
+    if (const char* sh = getenv("ONAIR_FUZZ_SHARD")) {
+        if (sscanf(sh, "%d/%d", &shardK, &shardN) != 2 || shardN < 1 || shardK < 1 || shardK > shardN) { fprintf(stderr, "ONAIR_FUZZ_SHARD=%s: want k/N\n", sh); return 2; }
+    }
     std::vector<int> run;
-    for (size_t i = 0; i < all.size(); i++) {
+    for (size_t i = 0, n = 0; i < all.size(); i++) {
         if (only) { std::string o = std::string(",") + only + ","; if (o.find("," + all[i].id + ",") == std::string::npos) continue; }
         else if (all[i].isNew() && !withNew) continue;
+        if ((int)(n++ % (size_t)shardN) != shardK - 1) continue;
         run.push_back((int)i);
     }
     std::vector<int> pool;   // switch partners: the built-in modes outside the 3.9 block

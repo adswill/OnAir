@@ -12,6 +12,8 @@ on:
     branches: ['main', '0.2.8', 'integ-*']
     tags: ['v*']
     paths-ignore: ['**.md', 'docs/**', 'website/**', 'LICENSE*']   # a docs-only push builds nothing (tags are not filtered)
+  schedule:
+    - cron: "17 2 * * *"   # nightly: the full scope (every test incl. the slow tier on Linux), replaces the 6-hour jobs of ci-full.yml (docs/CI-SPEED-4.7.md)
   workflow_dispatch:
     inputs:
       scope:
@@ -38,7 +40,7 @@ env:
   CCACHE_COMPRESS: "true"
   CCACHE_COMPRESSLEVEL: "6"
   CCACHE_SLOPPINESS: "time_macros,pch_defines,include_file_mtime,include_file_ctime"
-  SCOPE: ${{ inputs.scope || (startsWith(github.ref, 'refs/tags/') && 'full') || 'auto' }}
+  SCOPE: ${{ inputs.scope || ((startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule') && 'full') || 'auto' }}
   TEST_TIMEOUT: ${{ (inputs.scope == 'full' || startsWith(github.ref, 'refs/tags/')) && '1500' || '600' }}
   BASE_IN: ${{ inputs.base || github.event.before }}
   # the long form of the shortened tests (tests/common/test_long.h): release tags and the nightly Full CI; docs/CI-SPEED-3.9.md
@@ -46,6 +48,9 @@ env:
   # ccache is saved only by main and the integration branches: a feature branch's own copy filled the 10 GB of the repository and pushed
   # the integration caches out (cache usage 10.7 GB, 2026-11-10); feature branches restore main's (the nightly warm-up of ci-full.yml)
   SAVE_CACHE: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/integ-')) && '1' || '' }}
+  # every test's wall and CPU seconds (tools/ci_testtime.py, the ctest launcher on Linux and macOS): uploaded with the shard's logs, read by
+  # tools/ci_times.py to refresh tools/ci_times.tsv and to find the tests that wait instead of compute
+  ONAIR_TESTTIME_LOG: ${{ github.workspace }}/testtime.log
   HOMEBREW_NO_AUTO_UPDATE: "1"
   HOMEBREW_NO_INSTALL_CLEANUP: "1"
 
@@ -54,8 +59,13 @@ jobs:
     name: Lint (seconds)   # the quick gate (tools/gate/run.sh); every job below waits for it. The name stays: it is a required check.
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    outputs:   # the shard matrices of the jobs below, sized by the selected tests' measured seconds (tools/ci_plan.py)
+      linux: ${{ steps.plan.outputs.linux }}
+      macos: ${{ steps.plan.outputs.macos }}
+      windows: ${{ steps.plan.outputs.windows }}
     steps:
       - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
       - name: Quick gate
         run: tools/gate/run.sh
       # a configure with the release options (no compile): finds a duplicate target, a bad glob or a missing source before a release build does
@@ -63,21 +73,22 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq cmake ninja-build pkg-config libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
-          cmake -S . -B build-configure -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON
+          cmake -S . -B build-configure -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Plan the shards (as many as the selected tests need, about 10 minutes of tests each)
+        id: plan
+        run: |
+          BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
+          git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
+          python3 tools/ci_plan.py --build-dir build-configure --scope "$SCOPE" --base "$BASE" --times tools/ci_times.tsv | tee -a "$GITHUB_STEP_SUMMARY"
 
   linux-shards:
     needs: lint
     name: ${{ matrix.name }} ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 240
+    timeout-minutes: 90   # a hung test ends at its ctest timeout; a job never holds a runner for hours (the old nightly held 13 for 6 h)
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - { name: "Linux x86_64", os: ubuntu-24.04, shard: 1, of: 4, plat: linux }
-          - { name: "Linux x86_64", os: ubuntu-24.04, shard: 2, of: 4, plat: linux }
-          - { name: "Linux x86_64", os: ubuntu-24.04, shard: 3, of: 4, plat: linux }
-          - { name: "Linux x86_64", os: ubuntu-24.04, shard: 4, of: 4, plat: linux }
+      matrix: ${{ fromJSON(needs.lint.outputs.linux) }}
     steps:
       - name: Free disk space (Linux, in the background while the next steps run)
         if: runner.os == 'Linux'
@@ -105,12 +116,12 @@ jobs:
       - name: Configure
         run: |
           LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache "-DCMAKE_TEST_LAUNCHER=python3;$PWD/tools/ci_testtime.py" $LD
       - name: Select the tests of this shard
         run: |
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
-          python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/${{ matrix.of }} --times tools/ci_times.tsv --plat ${{ matrix.plat }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" $([ "${{ matrix.plat }}" = linux ] || echo --no-slow) --shard ${{ matrix.shard }}/${{ matrix.of }} --times tools/ci_times.tsv --plat ${{ matrix.plat }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Build the selected targets
         run: cmake --build build -j 4 --target $(tr -d "\r" < sel/targets.txt)
       - name: ccache statistics
@@ -136,7 +147,7 @@ jobs:
         run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true
       - uses: actions/upload-artifact@v7
         if: always()
-        with: { name: "cpucal-${{ matrix.name }}-${{ matrix.shard }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log\nsel/summary.txt", if-no-files-found: ignore }
+        with: { name: "cpucal-${{ matrix.name }}-${{ matrix.shard }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log\nsel/summary.txt\ntesttime.log", if-no-files-found: ignore }
 
 
   macos-shards:
@@ -144,15 +155,11 @@ jobs:
     if: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
     name: ${{ matrix.name }} ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 240
+    timeout-minutes: 90   # a hung test ends at its ctest timeout; a job never holds a runner for hours (the old nightly held 13 for 6 h)
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          # three shards: macOS was the longest leg (two shards of 33-46 min of tests, run 42820553355); the free plan runs 5 macOS jobs at once
-          - { name: "macOS arm64", os: macos-15, shard: 1, of: 3, plat: macos }
-          - { name: "macOS arm64", os: macos-15, shard: 2, of: 3, plat: macos }
-          - { name: "macOS arm64", os: macos-15, shard: 3, of: 3, plat: macos }
+      # up to four shards (tools/ci_plan.py): the free plan runs 5 macOS jobs at once
+      matrix: ${{ fromJSON(needs.lint.outputs.macos) }}
     steps:
       - name: Free disk space (Linux, in the background while the next steps run)
         if: runner.os == 'Linux'
@@ -180,12 +187,12 @@ jobs:
       - name: Configure
         run: |
           LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache "-DCMAKE_TEST_LAUNCHER=python3;$PWD/tools/ci_testtime.py" $LD
       - name: Select the tests of this shard
         run: |
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
-          python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/${{ matrix.of }} --times tools/ci_times.tsv --plat ${{ matrix.plat }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" $([ "${{ matrix.plat }}" = linux ] || echo --no-slow) --shard ${{ matrix.shard }}/${{ matrix.of }} --times tools/ci_times.tsv --plat ${{ matrix.plat }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Build the selected targets
         run: cmake --build build -j 4 --target $(tr -d "\r" < sel/targets.txt)
       - name: ccache statistics
@@ -211,18 +218,18 @@ jobs:
         run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true
       - uses: actions/upload-artifact@v7
         if: always()
-        with: { name: "cpucal-${{ matrix.name }}-${{ matrix.shard }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log\nsel/summary.txt", if-no-files-found: ignore }
+        with: { name: "cpucal-${{ matrix.name }}-${{ matrix.shard }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log\nsel/summary.txt\ntesttime.log", if-no-files-found: ignore }
 
 
   windows-shards:
     needs: lint
     if: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
-    name: Windows shard ${{ matrix.shard }}/4
+    name: Windows shard ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: windows-2022
-    timeout-minutes: 240
+    timeout-minutes: 120
     strategy:
       fail-fast: false
-      matrix: { shard: [1, 2, 3, 4] }
+      matrix: ${{ fromJSON(needs.lint.outputs.windows) }}
     defaults: { run: { shell: 'msys2 {0}' } }
     steps:
       - uses: actions/checkout@v7
@@ -251,7 +258,7 @@ jobs:
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
-          python tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/4 --times tools/ci_times.tsv --plat windows --out sel
+          python tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --no-slow --shard ${{ matrix.shard }}/${{ matrix.of }} --times tools/ci_times.tsv --plat windows --out sel
           T=$(tr -d "\r" < sel/targets.txt); [ ${{ matrix.shard }} = 1 ] && T="$T dect2"
           cmake --build build -j 4 --target $T
       - name: ccache statistics

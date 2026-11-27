@@ -1,11 +1,17 @@
-# Full check: every platform and code path, all tests including the slow ones.
-# CI normally runs locally (tools/ci_local.sh --full); this one only runs by hand: Actions tab > Full CI > Run workflow.
+# The other platforms and code paths: Linux arm64, scalar (no SIMD), macOS Intel, portable DSP, the GUI builds and the ccache warm-up.
+# The full test run (every test incl. the slow tier) is ci.yml's nightly schedule, in shards of about 10 minutes (docs/CI-SPEED-4.7.md);
+# this file used to run the slow tier and the long forms once per platform in one job each, which hit GitHub's 6-hour job limit every night
+# from 2026-11-14 on and held 13 runners meanwhile.
+#   nightly          the ccache warm-up and the GUI builds (minutes)
+#   weekly (Sunday)  the fast tier on every platform variant, and the long form of the shortened tests on Linux x86_64
+#   by hand          everything of the weekly run: Actions tab > Full CI > Run workflow
 name: Full CI
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 2 * * *"   # nightly: the slow tier (ctest -L slow), the long form of the shortened tests, and the ccache warm-up
+    - cron: "17 2 * * *"   # nightly: ccache warm-up, GUI builds
+    - cron: "37 3 * * 0"   # weekly: the platform variants' tests and the long forms (the test jobs check github.event.schedule)
 
 # a newer run on the same ref cancels the older one (not the nightly schedule)
 concurrency:
@@ -19,8 +25,6 @@ env:
   CCACHE_MAXSIZE: 1G
   CCACHE_COMPRESS: "true"
   CCACHE_COMPRESSLEVEL: "6"
-  # the whole sweeps of the tests that run a shorter form in ci.yml (tests/common/test_long.h, docs/CI-SPEED-3.9.md)
-  ONAIR_TEST_LONG: "1"
 
 jobs:
   # ccache for every branch: a cache saved by a scheduled run belongs to main, which every branch can restore (a branch cannot read another
@@ -69,7 +73,9 @@ jobs:
 
   build-test:
     name: ${{ matrix.name }}
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '37 3 * * 0'
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -111,17 +117,24 @@ jobs:
         with:
           path: .ccache
           key: ccache-full-${{ strategy.job-index }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
-      - name: Test
-        run: ctest --test-dir build -j 4 ${{ github.event_name == 'schedule' && '-L slow' || '' }} --output-on-failure --timeout 1500
-      - name: Test the long form of the shortened tests (nightly; a manual run has them in the step above)
-        if: (success() || failure()) && github.event_name == 'schedule'
+      # the fast tier (the slow tier runs on Linux x86_64 in ci.yml's nightly), longest first (ctest cost data from tools/ci_times.tsv)
+      - name: Test (fast tier)
         run: |
-          python3 tools/ci_select.py --build-dir build --scope long --out sel-long
+          python3 tools/ci_select.py --build-dir build --scope wide --times tools/ci_times.tsv --plat ${{ runner.os == 'macOS' && 'macos' || 'linux' }} --out sel
+          ctest --test-dir build -j 4 -R "$(cat sel/fast.regex)" --output-on-failure --timeout 900
+          ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout 900
+      - name: Test the long form of the shortened tests (Linux x86_64)
+        if: (success() || failure()) && matrix.name == 'Linux x86_64'
+        env: { ONAIR_TEST_LONG: "1" }
+        run: |
+          python3 tools/ci_select.py --build-dir build --scope long --times tools/ci_times.tsv --out sel-long
           ctest --test-dir build -j 4 -R "$(cat sel-long/fast.regex)|$(cat sel-long/timing.regex)" --output-on-failure --timeout 3000
 
   windows:
     name: Windows x64 (MinGW-w64)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '37 3 * * 0'
     runs-on: windows-2022
+    timeout-minutes: 180
     defaults: { run: { shell: 'msys2 {0}' } }
     steps:
       - uses: actions/checkout@v7
@@ -153,13 +166,12 @@ jobs:
         with:
           path: .ccache
           key: ccache-full-windows-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
-      - name: Test
-        run: ctest --test-dir build -j 4 ${{ github.event_name == 'schedule' && '-L slow' || '' }} --output-on-failure --timeout 1500
-      - name: Test the long form of the shortened tests (nightly)
-        if: (success() || failure()) && github.event_name == 'schedule'
+      - name: Test (fast tier)
         run: |
-          python tools/ci_select.py --build-dir build --scope long --out sel-long
-          ctest --test-dir build -j 4 -R "$(cat sel-long/fast.regex)|$(cat sel-long/timing.regex)" --output-on-failure --timeout 3000
+          mkdir -p /d/tmp /c/tmp
+          python tools/ci_select.py --build-dir build --scope wide --times tools/ci_times.tsv --plat windows --out sel
+          ctest --test-dir build -j 4 -R "$(cat sel/fast.regex)" --output-on-failure --timeout 900
+          ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout 900
 
   app:
     name: GUI (${{ matrix.name }})
