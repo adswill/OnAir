@@ -132,7 +132,7 @@ jobs:
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
           python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" $([ "${{ matrix.plat }}" = linux ] || echo --no-slow) --shard 1/1 --out sel > /dev/null
-          python3 tools/ci_objs.py --build-dir build --targets sel/targets.txt --part ${{ matrix.part }}/${{ matrix.of }} > objs.txt
+          python3 tools/ci_objs.py --build-dir build --targets sel/targets.txt $([ "${{ matrix.plat }}" = linux ] && echo "--extra dect2") --part ${{ matrix.part }}/${{ matrix.of }} > objs.txt
           ccache -z
           if [ -s objs.txt ]; then xargs -n 300 ninja -C build -j 4 < objs.txt; fi
           ccache -s
@@ -181,7 +181,7 @@ jobs:
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
           python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" $([ "${{ matrix.plat }}" = linux ] || echo --no-slow) --shard 1/1 --out sel > /dev/null
-          python3 tools/ci_objs.py --build-dir build --targets sel/targets.txt --part ${{ matrix.part }}/${{ matrix.of }} > objs.txt
+          python3 tools/ci_objs.py --build-dir build --targets sel/targets.txt $([ "${{ matrix.plat }}" = linux ] && echo "--extra dect2") --part ${{ matrix.part }}/${{ matrix.of }} > objs.txt
           ccache -z
           if [ -s objs.txt ]; then xargs -n 300 ninja -C build -j 4 < objs.txt; fi
           ccache -s
@@ -418,6 +418,17 @@ jobs:
             ccache-windows-
       - name: Zero the ccache counters
         run: ccache -z
+      - name: Probe the ccache file storage URL forms on Windows (report only, for a Windows compile split later)
+        continue-on-error: true
+        run: |
+          mkdir -p probe && cd probe && printf 'int f(){return 1;}\n' > a.c
+          W=$(cygpath -m "$PWD")
+          for u in "file:$W/st" "file:///$W/st" "file://$W/st" "file:/$W/st"; do
+            rm -rf st; mkdir st
+            if CCACHE_DIR="$W/l" CCACHE_REMOTE_STORAGE="$u" ccache gcc -c a.c -o a.o 2> err.txt; then
+              n=$(find st -type f | wc -l); echo "PROBE $u: ok, $n files in the store"
+            else echo "PROBE $u: $(head -c 200 err.txt)"; fi
+          done
       - name: Configure, select and build
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
@@ -449,7 +460,8 @@ jobs:
         with: { name: "cpucal-Windows-${{ matrix.shard }}", path: "ctest-fast.log\nctest-timing.log\nsel/summary.txt", if-no-files-found: ignore }
 
   gl31:
-    needs: lint
+    needs: [lint, compile-linux]
+    if: ${{ !cancelled() && needs.lint.result == 'success' && needs.compile-linux.result != 'failure' }}
     name: "App: OpenGL 3.1 software run (Raspberry Pi limits)"
     runs-on: ubuntu-24.04
     steps:
@@ -462,6 +474,33 @@ jobs:
           path: .ccache
           key: ccache-gl31-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
           restore-keys: ccache-gl31-
+      # the Linux compile jobs compile the app's objects too (tools/ci_objs.py --extra dect2): this build is then links
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_linux == '1'
+        with: { path: .ccache, key: "ccache-linux-warm-${{ github.sha }}", restore-keys: "ccache-linux-warm-" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_linux == '1'
+        with: { path: .ccache-p1, key: "ccache-linux-part1-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_linux == '1'
+        with: { path: .ccache-p2, key: "ccache-linux-part2-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_linux == '1'
+        with: { path: .ccache-p3, key: "ccache-linux-part3-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_linux == '1'
+        with: { path: .ccache-p4, key: "ccache-linux-part4-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_linux == '1'
+        with: { path: .ccache-p5, key: "ccache-linux-part5-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_linux == '1'
+        with: { path: .ccache-p6, key: "ccache-linux-part6-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - name: Read the compile jobs' ccache parts
+        if: needs.lint.outputs.fanout_linux == '1'
+        run: |
+          R=""; for k in 1 2 3 4 5 6; do [ -d ".ccache-p$k" ] && R="$R file://$PWD/.ccache-p$k|read-only=true"; done
+          echo "CCACHE_REMOTE_STORAGE=${R# }" >> "$GITHUB_ENV"; echo "ccache parts:${R:- none}"
       - run: ccache -z
       - name: Build the app only
         run: |
