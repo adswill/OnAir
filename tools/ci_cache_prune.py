@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-"""Delete the older copies of each ccache family in the GitHub Actions cache (docs/CI-SPEED-4.7.md).
+"""Delete the older copies of each ccache family in the GitHub Actions cache (docs/CI-FAST.md (4.7)).
 
 Every run saves its ccache under a new key (run id or commit hash at the end), so each family piled up copies until the repository passed
 GitHub's 10 GB and the newest caches were the ones evicted. A family is the key without its run-id / commit-hash / file-hash parts, per

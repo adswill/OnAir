@@ -1,4 +1,4 @@
-# ccache warm-up for every branch (docs/CI-SPEED-4.7.md). GitHub lets a branch restore only its own caches and those of main, so this builds
+# ccache warm-up for every branch (docs/CI-FAST.md (4.7)). GitHub lets a branch restore only its own caches and those of main, so this builds
 # main, the base of every new branch, on Linux, macOS and Windows with the exact flags of ci.yml's shards and saves the cache on main.
 # Without it the macOS and Windows shards of a new branch compiled all 5000 files from nothing (55 and 63 min, run 45136260924), and the
 # Linux one restored a cache of a stale integration branch.

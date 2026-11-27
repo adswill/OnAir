@@ -2,13 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-"""How many shards each platform of ci.yml gets (docs/CI-SPEED-4.7.md).
+"""How many shards each platform of ci.yml gets (docs/CI-FAST.md (4.7)).
 
 Runs tools/ci_select.py once per platform on the whole selection (shard 1/1), reads its estimated test seconds (tools/ci_times.tsv: seconds
 under ctest -j4 on a 4-core runner) and gives each platform enough shards that one shard's tests take about --minutes of wall time, within
 the platform's maximum (GitHub's free plan runs 20 jobs at once, 5 of them macOS). Writes the matrices as GitHub outputs:
   linux=<json>  macos=<json>  windows=<json>    (strategy.matrix: fromJSON(needs.lint.outputs.linux))
-  fanout=1|0  compile=<json>   (the compile jobs: plat, os, part, of)
+  fanout=1|0  fanout_linux, fanout_macos=1|0  compile_linux, compile_macos=<json>   (the compile jobs: plat, os, part, of)
 and a table for the step summary. A small change gets one shard per platform instead of four that each pay the set-up and build.
 fanout: the selection reaches the core (scope wide or full), so a cold build is likely: the compile jobs split the compile first
 (tools/ci_objs.py) and the shards read their ccache parts. A small change (area, smoke) skips them: their start-up would cost more.
@@ -62,8 +62,10 @@ def main():
         rows.append((plat, n_tests, est, n, est / n / a.slots / 60))
     fan = bool(scopes & {"wide", "full"})
     plats = [p for p in COMPILE_PARTS if a.platforms == "all" or p == a.platforms]
-    outs["compile"] = json.dumps({"include": [{"plat": p, "os": PLATS[p][1], "part": k, "of": COMPILE_PARTS[p]} for p in plats
-                                              for k in range(1, COMPILE_PARTS[p] + 1)]}, separators=(",", ":"))
+    for p in COMPILE_PARTS:   # one compile job per platform, so the Linux shards do not wait for the macOS parts
+        outs["compile_" + p] = json.dumps({"include": [{"plat": p, "os": PLATS[p][1], "part": k, "of": COMPILE_PARTS[p]}
+                                                       for k in range(1, COMPILE_PARTS[p] + 1)]}, separators=(",", ":"))
+        outs["fanout_" + p] = "1" if fan and p in plats else "0"
     outs["fanout"] = "1" if fan and plats else "0"
     print("compile jobs: %s (scope %s, platforms %s)\n" % (", ".join("%s %d" % (p, COMPILE_PARTS[p]) for p in plats) if fan else "none",
                                                            "/".join(sorted(scopes)), a.platforms))

@@ -1171,7 +1171,7 @@ int main(int argc, char** argv) {
         unexpected += (int)r.unexpected.size();
         fprintf(stderr, "%s %s %s %s %s rate %s %s %s tx %s cpu %.4f %s%s\n", r.c[0].verdict.c_str(), r.c[1].verdict.c_str(), r.c[2].verdict.c_str(), r.c[3].verdict.c_str(), r.c[4].verdict.c_str(), r.c[5].verdict.c_str(), r.c[6].verdict.c_str(), r.c[7].verdict.c_str(), r.tx.verdict.c_str(), r.cost,
                 r.note.c_str(), r.unexpected.empty() ? "" : "  <-- UNEXPECTED");
-        if (const char* tl = getenv("QA_TIMING_LOG")) {   // CI: wall seconds per mode, to find where a shard's time goes (docs/CI-SPEED-4.7.md)
+        if (const char* tl = getenv("QA_TIMING_LOG")) {   // CI: wall seconds per mode, to find where a shard's time goes (docs/CI-FAST.md (4.7))
             if (FILE* f = fopen(tl, "a")) {
                 fprintf(f, "%s\t%.1f\t%d\t%.1f\t%d\t%s\n", r.id.c_str(), std::chrono::duration<double>(Clock::now() - modeT0).count(), tries, r.secs,
                         r.paced ? 1 : 0, r.c[0].verdict.c_str());

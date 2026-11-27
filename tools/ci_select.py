@@ -163,7 +163,7 @@ def main():
     ap.add_argument("--times", help="tools/ci_times.tsv: measured seconds per test and platform (balanced shards, ctest cost data)")
     ap.add_argument("--plat", default="linux", help="column of --times: linux, macos or windows")
     ap.add_argument("--no-slow", dest="slow", action="store_false",
-                    help="scope full without the slow tier (macOS and Windows: the slow tier runs on Linux, docs/CI-SPEED-4.7.md)")
+                    help="scope full without the slow tier (macOS and Windows: the slow tier runs on Linux, docs/CI-FAST.md (4.7))")
     a = ap.parse_args()
     bd, src = a.build_dir, os.path.realpath(a.src)
     tj = json.loads(sh("ctest", "--test-dir", bd, "--show-only=json-v1"))["tests"]

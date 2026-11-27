@@ -13,7 +13,7 @@ on:
     tags: ['v*']
     paths-ignore: ['**.md', 'docs/**', 'website/**', 'LICENSE*']   # a docs-only push builds nothing (tags are not filtered)
   schedule:
-    - cron: "17 2 * * *"   # nightly: the full scope (every test incl. the slow tier on Linux), replaces the 6-hour jobs of ci-full.yml (docs/CI-SPEED-4.7.md)
+    - cron: "17 2 * * *"   # nightly: the full scope (every test incl. the slow tier on Linux), replaces the 6-hour jobs of ci-full.yml (docs/CI-FAST.md (4.7))
   workflow_dispatch:
     inputs:
       scope:
@@ -23,7 +23,7 @@ on:
         description: "git ref the change is measured against (auto scope)"
         default: origin/main
       platforms:
-        description: "all, or linux: the Linux shards only (a worker's check of a wide change; docs/CI-SPEED-4.7.md)"
+        description: "all, or linux: the Linux shards only (a worker's check of a wide change; docs/CI-FAST.md (4.7))"
         default: all
       long:
         description: "true: the long form of the tests (ONAIR_TEST_LONG=1, as on tags and the nightly Full CI)"
@@ -68,17 +68,20 @@ jobs:
       macos: ${{ steps.plan.outputs.macos }}
       windows: ${{ steps.plan.outputs.windows }}
       fanout: ${{ steps.plan.outputs.fanout }}
-      compile: ${{ steps.plan.outputs.compile }}
+      fanout_linux: ${{ steps.plan.outputs.fanout_linux }}
+      fanout_macos: ${{ steps.plan.outputs.fanout_macos }}
+      compile_linux: ${{ steps.plan.outputs.compile_linux }}
+      compile_macos: ${{ steps.plan.outputs.compile_macos }}
     steps:
       - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
       - name: Quick gate
         run: tools/gate/run.sh
       # a configure with the release options (no compile): finds a duplicate target, a bad glob or a missing source before a release build does
+      - name: Install dependencies (the .deb files cached, as the shards)
+        uses: ./.github/actions/linux-deps
       - name: CMake configure (release options)
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq cmake ninja-build pkg-config libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
           cmake -S . -B build-configure -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
       - name: Plan the shards (as many as the selected tests need, about 10 minutes of tests each)
         id: plan
@@ -87,18 +90,67 @@ jobs:
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
           python3 tools/ci_plan.py --build-dir build-configure --scope "$SCOPE" --base "$BASE" --times tools/ci_times.tsv --platforms "${{ inputs.platforms || 'all' }}" | tee -a "$GITHUB_STEP_SUMMARY"
 
-  # The compile split (docs/CI-SPEED-4.7.md): when the selection reaches the core, every shard needs the same 2200 core files and many of the
+  # The compile split (docs/CI-FAST.md (4.7)): when the selection reaches the core, every shard needs the same 2200 core files and many of the
   # same tests, and on a cold cache each compiled all of them on its own 3-4 cores. Part k of N compiles every N-th object file of the whole
   # selection (tools/ci_objs.py) into a ccache file store of its own; the shards read all the parts (read-only) before they build.
-  compile:
+  compile-linux:
     needs: lint
-    if: needs.lint.outputs.fanout == '1'
+    if: needs.lint.outputs.fanout_linux == '1'
     name: compile ${{ matrix.plat }} ${{ matrix.part }}/${{ matrix.of }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.lint.outputs.compile) }}   # Linux 6, macOS 4 (tools/ci_plan.py)
+      matrix: ${{ fromJSON(needs.lint.outputs.compile_linux) }}   # tools/ci_plan.py
+    env:
+      CCACHE_REMOTE_STORAGE: "file://${{ github.workspace }}/.ccache-part"   # what this part compiles also goes here (the shards read it)
+    steps:
+      - name: Free disk space (Linux, in the background while the next steps run)
+        if: runner.os == 'Linux'
+        run: nohup sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost > /dev/null 2>&1 &
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/linux-deps
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: tools/release/retry.sh brew install cmake ninja pkg-config ccache hackrf soapysdr libusb ffmpeg glfw
+      - name: Restore ccache (the warm-up's, from main)
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.plat }}-warm-${{ github.sha }}
+          restore-keys: ccache-${{ matrix.plat }}-warm-
+      - name: Configure (the shards' exact flags)
+        run: |
+          mkdir -p .ccache-part
+          LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache "-DCMAKE_TEST_LAUNCHER=python3;$PWD/tools/ci_testtime.py" $LD
+      - name: Compile this part of the selection
+        run: |
+          BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
+          git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
+          python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" $([ "${{ matrix.plat }}" = linux ] || echo --no-slow) --shard 1/1 --out sel > /dev/null
+          python3 tools/ci_objs.py --build-dir build --targets sel/targets.txt --part ${{ matrix.part }}/${{ matrix.of }} > objs.txt
+          ccache -z
+          if [ -s objs.txt ]; then xargs -n 300 ninja -C build -j 4 < objs.txt; fi
+          ccache -s
+      - uses: actions/cache/save@v6
+        if: always()
+        with:
+          path: .ccache-part
+          key: ccache-${{ matrix.plat }}-part${{ matrix.part }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+  compile-macos:
+    needs: lint
+    if: needs.lint.outputs.fanout_macos == '1'
+    name: compile ${{ matrix.plat }} ${{ matrix.part }}/${{ matrix.of }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.lint.outputs.compile_macos) }}   # tools/ci_plan.py
     env:
       CCACHE_REMOTE_STORAGE: "file://${{ github.workspace }}/.ccache-part"   # what this part compiles also goes here (the shards read it)
     steps:
@@ -140,8 +192,8 @@ jobs:
           key: ccache-${{ matrix.plat }}-part${{ matrix.part }}-${{ github.run_id }}-${{ github.run_attempt }}
 
   linux-shards:
-    needs: [lint, compile]
-    if: ${{ !cancelled() && needs.lint.result == 'success' && needs.compile.result != 'failure' }}   # compile: success, or skipped (small change)
+    needs: [lint, compile-linux]
+    if: ${{ !cancelled() && needs.lint.result == 'success' && needs.compile-linux.result != 'failure' }}   # compile: success, or skipped (small change)
     name: ${{ matrix.name }} ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90   # a hung test ends at its ctest timeout; a job never holds a runner for hours (the old nightly held 13 for 6 h)
@@ -171,29 +223,29 @@ jobs:
             ccache-${{ matrix.plat }}-warm-
             ccache-${{ matrix.plat }}-
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p1, key: "ccache-${{ matrix.plat }}-part1-${{ github.run_id }}-${{ github.run_attempt }}" }
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p2, key: "ccache-${{ matrix.plat }}-part2-${{ github.run_id }}-${{ github.run_attempt }}" }
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p3, key: "ccache-${{ matrix.plat }}-part3-${{ github.run_id }}-${{ github.run_attempt }}" }
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p4, key: "ccache-${{ matrix.plat }}-part4-${{ github.run_id }}-${{ github.run_attempt }}" }
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p5, key: "ccache-${{ matrix.plat }}-part5-${{ github.run_id }}-${{ github.run_attempt }}" }
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p6, key: "ccache-${{ matrix.plat }}-part6-${{ github.run_id }}-${{ github.run_attempt }}" }
       # the compile parts hold only what the compile jobs did not find in this warm cache: merged into .ccache too (files by content hash)
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache, key: "ccache-${{ matrix.plat }}-warm-${{ github.sha }}", restore-keys: "ccache-${{ matrix.plat }}-warm-" }
       - name: Read the compile jobs' ccache parts (tools/ci_objs.py)
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         run: |
           R=""; for k in 1 2 3 4 5 6; do [ -d ".ccache-p$k" ] && R="$R file://$PWD/.ccache-p$k|read-only=true"; done
           echo "CCACHE_REMOTE_STORAGE=${R# }" >> "$GITHUB_ENV"; echo "ccache parts:${R:- none}"
@@ -237,8 +289,8 @@ jobs:
 
 
   macos-shards:
-    needs: [lint, compile]
-    if: ${{ !cancelled() && needs.lint.result == 'success' && needs.compile.result != 'failure' && inputs.platforms != 'linux' && !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
+    needs: [lint, compile-macos]
+    if: ${{ !cancelled() && needs.lint.result == 'success' && needs.compile-macos.result != 'failure' && inputs.platforms != 'linux' && !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
     name: ${{ matrix.name }} ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90   # a hung test ends at its ctest timeout; a job never holds a runner for hours (the old nightly held 13 for 6 h)
@@ -269,29 +321,29 @@ jobs:
             ccache-${{ matrix.plat }}-warm-
             ccache-${{ matrix.plat }}-
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p1, key: "ccache-${{ matrix.plat }}-part1-${{ github.run_id }}-${{ github.run_attempt }}" }
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p2, key: "ccache-${{ matrix.plat }}-part2-${{ github.run_id }}-${{ github.run_attempt }}" }
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p3, key: "ccache-${{ matrix.plat }}-part3-${{ github.run_id }}-${{ github.run_attempt }}" }
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p4, key: "ccache-${{ matrix.plat }}-part4-${{ github.run_id }}-${{ github.run_attempt }}" }
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p5, key: "ccache-${{ matrix.plat }}-part5-${{ github.run_id }}-${{ github.run_attempt }}" }
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache-p6, key: "ccache-${{ matrix.plat }}-part6-${{ github.run_id }}-${{ github.run_attempt }}" }
       # the compile parts hold only what the compile jobs did not find in this warm cache: merged into .ccache too (files by content hash)
       - uses: actions/cache/restore@v6
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         with: { path: .ccache, key: "ccache-${{ matrix.plat }}-warm-${{ github.sha }}", restore-keys: "ccache-${{ matrix.plat }}-warm-" }
       - name: Read the compile jobs' ccache parts (tools/ci_objs.py)
-        if: needs.lint.outputs.fanout == '1'
+        if: needs.lint.outputs[format('fanout_{0}', matrix.plat)] == '1'
         run: |
           R=""; for k in 1 2 3 4 5 6; do [ -d ".ccache-p$k" ] && R="$R file://$PWD/.ccache-p$k|read-only=true"; done
           echo "CCACHE_REMOTE_STORAGE=${R# }" >> "$GITHUB_ENV"; echo "ccache parts:${R:- none}"

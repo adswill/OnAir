@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-"""One part of the compile of a CI selection, for the compile jobs of ci.yml (docs/CI-SPEED-4.7.md).
+"""One part of the compile of a CI selection, for the compile jobs of ci.yml (docs/CI-FAST.md (4.7)).
 
 The test shards all need the same core library (2200 files) and many of the same tests; when a shared header changes, every shard
 compiled all of it again on 3-4 cores (55-63 min on macOS and Windows). The compile jobs split that work: part k of N compiles every N-th

@@ -64,3 +64,61 @@ Known and not fixed here: `tsout_net` failed once on Windows (http stream); `mes
 - `android.yml` job `link` builds the core and the JNI bridge with the NDK on Linux, nightly and by hand (input `link`); `gate_check.py android` only compares names. Linux hosts stage the headers with `android/tools/stage_host_headers.sh` so glibc's headers do not shadow the NDK's.
 - `win-prefix.yml` runs after a push to `main` that changes `cross_deps_windows.sh` or the toolchain file; with no `from` it starts from the newest prefix on the draft release and does nothing when the current id is already there. A `v*` tag fails its Windows job when the prefix is missing.
 - Looked at and left alone: sharing ccache between the release jobs (each compiles different targets with a different compiler, so nothing would hit), and moving the Windows cross build to Linux (docs above: the Linux cross build fails `check_win_dlls.sh`, and the prefix would have to be rebuilt there first).
+
+## 4.7: a full run in minutes, not hours (CI speed)
+
+Goal (owner, 2026-11-27): the full CI on GitHub's free runners under 20 minutes, without testing less. Every test still runs in the
+full scope; what changed is where and how often the work happens.
+
+### What was measured before (2026-11-14 to 2026-11-27)
+
+- The nightly Full CI (`ci-full.yml`) had not finished once since 2026-11-14: its test jobs ran into GitHub's 6-hour job limit. It ran the
+  slow tier and the long forms (`ONAIR_TEST_LONG=1` for the whole workflow) once per platform in one job each, and held 13 runners meanwhile.
+  Run 45804890762 (Linux arm64, the one job that finished its tests): slow tier 51,049 s plus long forms 15,295 s of test time on one 4-core
+  runner. Thirteen tests were 68 % of it: `fuzz_engine_modes` (timeout at 7,200 s: with the long form every mode had every other mode as a
+  switch partner), the eight `qa_sweep` shards (35-70 min each, long form: 8/32/120 s signals), `sens_full` (6,764 s, a measurement with
+  JSON output and a 10-hour timeout), `sens39c`/`sens40b` (timeouts at 3,000 s), the GNSS sweeps.
+- A push run of `ci.yml` took 7-20 hours from start to end although its jobs ran 35-100 min: jobs waited for runners (one shard 18 h in run
+  45136260924). The free plan runs 20 jobs at once (5 macOS); the nightly took 13 of them for 6 hours.
+- Builds, not tests, were the longest step on macOS and Windows: 55 min (macOS shard) and 63 min (Windows shard) in run 45136260924. A
+  branch can restore only its own caches and main's, pushes to main run only Linux, and the warm-up built Linux only, from the newest
+  `integ-*` branch by name (`integ-46-undock`, last commit 2026-11-23) instead of main. The cache store was at 10.7 GB of 10 GB: two copies
+  of most families, so the newest caches were evicted.
+- With a warm cache the whole Linux build is 3.5 min (run 45804890762); with 165 misses after a header change, 12.5 min (run 45343895120);
+  linking 800 programs took about 1.5 min of it. 5,095 files compile (core 2,221, tests 1,995); a typical engine or test file is 130-180
+  thousand preprocessed lines, three quarters of them system/STL headers.
+- Fast tier: 18.7-22.7 thousand test-seconds per platform (under ctest -j4), about 3 tests running on average out of 4 slots.
+
+### What changed
+
+| change | where | effect |
+|---|---|---|
+| shard count from the selected tests' measured seconds, about 10 min of tests per shard (Linux up to 14, macOS 4, Windows 5) | `tools/ci_plan.py`, lint job of `ci.yml` | a big selection gets enough shards; a small change gets one per platform instead of 4 that each pay set-up and build |
+| the nightly full run is `ci.yml` (schedule): every test, the slow tier on Linux | `ci.yml` | replaces the 6-hour jobs |
+| the slow tier runs on Linux only; macOS and Windows run every other test | `tools/ci_select.py --no-slow` | the sweeps are the same C++ on every platform; platform differences show in the fast tier |
+| `qa_sweep` 8 shards -> 32, `fuzz_engine_modes` 1 test -> 8 (`ONAIR_FUZZ_SHARD=k/N`) | `CMakeLists.txt`, `tests/fuzz/fuzz_engine_modes.cpp` | no single test longer than a shard |
+| `sens_full` labelled `measure`: never a CI tier (like `snr`) | `CMakeLists.txt`, `tools/ci_select.py` | 6,764 s less; run it with `ctest -L sens-full` |
+| the long forms (`ONAIR_TEST_LONG=1`) weekly on Linux x86_64; platform variants (arm64, scalar, portable, Intel) weekly, fast tier | `ci-full.yml` | |
+| compile jobs: when the selection is wide or full, Linux 6 and macOS 4 jobs each compile a part of the objects into a ccache file store; the shards read all parts | `tools/ci_objs.py`, `ci.yml` job `compile` | a cold build is split instead of done again by every shard |
+| ccache warm-up of main on Linux, macOS and Windows, after every push to main and nightly | `ccache-warm.yml` | every new branch starts warm on every platform |
+| older copies of each ccache family deleted | `tools/ci_cache_prune.py` (last job of `ccache-warm.yml`) | stays under 10 GB, the newest caches stay |
+| jobs end at 90 min (Windows 120) | `ci.yml` | a hang never holds a runner for hours |
+| wall and CPU seconds of every test | `tools/ci_testtime.py` (ctest launcher), `testtime.log` in the shard artifacts | finds the tests that wait instead of compute |
+| wall seconds and tries per QA mode | `QA_TIMING_LOG`, `qatime.log` in the shard artifacts | |
+
+### Workers (agents) and CI
+
+A worker's check should cost one or a few runners, and the full run happens once per batch, not once per worker:
+
+1. Worker branch, ordinary change: `gh workflow run quick.yml -R adswill/OnAir --ref <branch> -f tests=auto`. One job builds and runs every
+   test the change can affect: the changed areas, every test whose sources reach a changed header (the include graph), and the smoke set.
+   Nobody picks tests by hand, so a test of another area that the change breaks is in the set when that area's code reaches the change.
+2. Worker branch whose change reaches shared code (quick.yml stops with this command): `gh workflow run ci.yml -R adswill/OnAir --ref
+   <branch> -f platforms=linux`: the Linux shards of the wide scope (every non-slow test).
+3. Integration branch, after a batch of merges: the push runs `ci.yml` (auto scope; a newer push cancels the older run, so a batch of
+   merges costs one run). Before a release: `-f scope=full`.
+4. Wait with one `gh run watch <id> -R adswill/OnAir --exit-status` in the background; never poll.
+
+### Measured after
+
+(filled in from the runs on branch ci-speed below)

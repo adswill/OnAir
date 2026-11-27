@@ -1,5 +1,5 @@
 # The other platforms and code paths: Linux arm64, scalar (no SIMD), macOS Intel, portable DSP and the GUI builds.
-# The full test run (every test incl. the slow tier) is ci.yml's nightly schedule, in shards of about 10 minutes (docs/CI-SPEED-4.7.md);
+# The full test run (every test incl. the slow tier) is ci.yml's nightly schedule, in shards of about 10 minutes (docs/CI-FAST.md (4.7));
 # this file used to run the slow tier and the long forms once per platform in one job each, which hit GitHub's 6-hour job limit every night
 # from 2026-11-14 on and held 13 runners meanwhile.
 #   nightly          the GUI builds (minutes); the ccache warm-up is ccache-warm.yml

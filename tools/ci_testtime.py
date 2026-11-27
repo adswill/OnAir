@@ -2,13 +2,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
-"""ctest test launcher that records wall and CPU seconds per test (docs/CI-SPEED-4.7.md).
+"""ctest test launcher that records wall and CPU seconds per test (docs/CI-FAST.md (4.7)).
 
 Configure with  -DCMAKE_TEST_LAUNCHER="python3;<src>/tools/ci_testtime.py"  (CMake 3.29+) and set ONAIR_TESTTIME_LOG to a file: every test
 run appends one line  "<wall> <user> <sys> <exit> <program> <args...>"  (CPU of the test and the children it waited for). The test's exit
 code, output and signals pass through unchanged; without ONAIR_TESTTIME_LOG it only runs the test.
-tools/ci_times.py --cpu reads these lines: a test whose CPU is far below its wall time is waiting (real time, sleeps, start-up), one whose
-CPU is near or above it is computing.
+ci.yml uploads the log with each shard's artifacts. A test whose CPU is far below its wall time is waiting (real time, sleeps, start-up),
+one whose CPU is near or above it is computing.
 """
 import os, resource, subprocess, sys, time
 
