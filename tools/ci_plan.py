@@ -8,7 +8,7 @@ Runs tools/ci_select.py once per platform on the whole selection (shard 1/1), re
 under ctest -j4 on a 4-core runner) and gives each platform enough shards that one shard's tests take about --minutes of wall time, within
 the platform's maximum (GitHub's free plan runs 20 jobs at once, 5 of them macOS). Writes the matrices as GitHub outputs:
   linux=<json>  macos=<json>  windows=<json>    (strategy.matrix: fromJSON(needs.lint.outputs.linux))
-  fanout=1|0  compile_linux=<json>  compile_macos=<json>
+  fanout=1|0  compile=<json>   (the compile jobs: plat, os, part, of)
 and a table for the step summary. A small change gets one shard per platform instead of four that each pay the set-up and build.
 fanout: the selection reaches the core (scope wide or full), so a cold build is likely: the compile jobs split the compile first
 (tools/ci_objs.py) and the shards read their ccache parts. A small change (area, smoke) skips them: their start-up would cost more.
@@ -48,6 +48,7 @@ def main():
     ap.add_argument("--minutes", type=float, default=10.0, help="wall minutes of tests per shard to aim for")
     ap.add_argument("--slots", type=float, default=3.2, help="tests ctest -j4 keeps running on average (measured 2.96-3.4)")
     ap.add_argument("--work", default="ci-plan")
+    ap.add_argument("--platforms", default="all", help="all, or linux (an agent's wide check: the Linux shards only)")
     ap.add_argument("--github-output", default=os.environ.get("GITHUB_OUTPUT", ""))
     a = ap.parse_args()
     budget = a.minutes * 60 * a.slots
@@ -60,10 +61,12 @@ def main():
                                 separators=(",", ":"))
         rows.append((plat, n_tests, est, n, est / n / a.slots / 60))
     fan = bool(scopes & {"wide", "full"})
-    for plat, parts in COMPILE_PARTS.items():
-        outs["compile_" + plat] = json.dumps({"include": [{"part": k, "of": parts} for k in range(1, parts + 1)]}, separators=(",", ":"))
-    outs["fanout"] = "1" if fan else "0"
-    print("compile jobs: %s (scope %s)\n" % (", ".join("%s %d" % x for x in COMPILE_PARTS.items()) if fan else "none", "/".join(sorted(scopes))))
+    plats = [p for p in COMPILE_PARTS if a.platforms == "all" or p == a.platforms]
+    outs["compile"] = json.dumps({"include": [{"plat": p, "os": PLATS[p][1], "part": k, "of": COMPILE_PARTS[p]} for p in plats
+                                              for k in range(1, COMPILE_PARTS[p] + 1)]}, separators=(",", ":"))
+    outs["fanout"] = "1" if fan and plats else "0"
+    print("compile jobs: %s (scope %s, platforms %s)\n" % (", ".join("%s %d" % (p, COMPILE_PARTS[p]) for p in plats) if fan else "none",
+                                                           "/".join(sorted(scopes)), a.platforms))
     print("| platform | tests | estimated test seconds | shards | minutes of tests per shard |")
     print("|---|---|---|---|---|")
     for p, t, e, n, m in rows:

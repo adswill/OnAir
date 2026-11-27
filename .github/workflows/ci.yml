@@ -22,6 +22,9 @@ on:
       base:
         description: "git ref the change is measured against (auto scope)"
         default: origin/main
+      platforms:
+        description: "all, or linux: the Linux shards only (a worker's check of a wide change; docs/CI-SPEED-4.7.md)"
+        default: all
       long:
         description: "true: the long form of the tests (ONAIR_TEST_LONG=1, as on tags and the nightly Full CI)"
         default: "false"
@@ -65,8 +68,7 @@ jobs:
       macos: ${{ steps.plan.outputs.macos }}
       windows: ${{ steps.plan.outputs.windows }}
       fanout: ${{ steps.plan.outputs.fanout }}
-      compile_linux: ${{ steps.plan.outputs.compile_linux }}
-      compile_macos: ${{ steps.plan.outputs.compile_macos }}
+      compile: ${{ steps.plan.outputs.compile }}
     steps:
       - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
@@ -83,7 +85,7 @@ jobs:
         run: |
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
-          python3 tools/ci_plan.py --build-dir build-configure --scope "$SCOPE" --base "$BASE" --times tools/ci_times.tsv | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 tools/ci_plan.py --build-dir build-configure --scope "$SCOPE" --base "$BASE" --times tools/ci_times.tsv --platforms "${{ inputs.platforms || 'all' }}" | tee -a "$GITHUB_STEP_SUMMARY"
 
   # The compile split (docs/CI-SPEED-4.7.md): when the selection reaches the core, every shard needs the same 2200 core files and many of the
   # same tests, and on a cold cache each compiled all of them on its own 3-4 cores. Part k of N compiles every N-th object file of the whole
@@ -96,18 +98,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - { plat: linux, os: ubuntu-24.04, part: 1, of: 6 }
-          - { plat: linux, os: ubuntu-24.04, part: 2, of: 6 }
-          - { plat: linux, os: ubuntu-24.04, part: 3, of: 6 }
-          - { plat: linux, os: ubuntu-24.04, part: 4, of: 6 }
-          - { plat: linux, os: ubuntu-24.04, part: 5, of: 6 }
-          - { plat: linux, os: ubuntu-24.04, part: 6, of: 6 }
-          - { plat: macos, os: macos-15, part: 1, of: 4 }
-          - { plat: macos, os: macos-15, part: 2, of: 4 }
-          - { plat: macos, os: macos-15, part: 3, of: 4 }
-          - { plat: macos, os: macos-15, part: 4, of: 4 }
+      matrix: ${{ fromJSON(needs.lint.outputs.compile) }}   # Linux 6, macOS 4 (tools/ci_plan.py)
     env:
       CCACHE_REMOTE_STORAGE: "file://${{ github.workspace }}/.ccache-part"   # what this part compiles also goes here (the shards read it)
     steps:
@@ -247,7 +238,7 @@ jobs:
 
   macos-shards:
     needs: [lint, compile]
-    if: ${{ !cancelled() && needs.lint.result == 'success' && needs.compile.result != 'failure' && !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
+    if: ${{ !cancelled() && needs.lint.result == 'success' && needs.compile.result != 'failure' && inputs.platforms != 'linux' && !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
     name: ${{ matrix.name }} ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 90   # a hung test ends at its ctest timeout; a job never holds a runner for hours (the old nightly held 13 for 6 h)
@@ -345,7 +336,7 @@ jobs:
 
   windows-shards:
     needs: lint
-    if: ${{ !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
+    if: ${{ inputs.platforms != 'linux' && !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
     name: Windows shard ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: windows-2022
     timeout-minutes: 120
@@ -460,7 +451,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - env:
-          MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && '1' || '' }}   # shards skipped on purpose there
+          MAIN_PUSH: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || inputs.platforms == 'linux') && '1' || '' }}   # shards skipped on purpose there
         run: |
           echo '${{ toJSON(needs) }}' | python3 -c "import os,sys,json; ok=('success','skipped') if os.environ.get('MAIN_PUSH') else ('success',); r=json.load(sys.stdin); bad=[k for k,v in r.items() if v['result'] not in ok]; print('results',{k:v['result'] for k,v in r.items()}); sys.exit(1 if bad else 0)"
 
@@ -472,6 +463,6 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - env:
-          MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && '1' || '' }}   # shards skipped on purpose there
+          MAIN_PUSH: ${{ ((github.event_name == 'push' && github.ref == 'refs/heads/main') || inputs.platforms == 'linux') && '1' || '' }}   # shards skipped on purpose there
         run: |
           echo '${{ toJSON(needs) }}' | python3 -c "import os,sys,json; ok=('success','skipped') if os.environ.get('MAIN_PUSH') else ('success',); r=json.load(sys.stdin); bad=[k for k,v in r.items() if v['result'] not in ok]; print('results',{k:v['result'] for k,v in r.items()}); sys.exit(1 if bad else 0)"

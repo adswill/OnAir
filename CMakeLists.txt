@@ -3676,6 +3676,18 @@ foreach(_t IN LISTS _onair_exes)
   endif()
 endforeach()
 
+# Windows: every test program runs with 1 ms timer resolution (tests/common/win_timer.cpp); the default 15.6 ms made each sleep_for(1 ms)
+# of a polling loop 15 ms, and those tests 5-10 times slower than on macOS (docs/CI-SPEED-4.7.md). The app keeps the default.
+if(WIN32)
+  foreach(_t IN LISTS _onair_exes)
+    get_target_property(_ty ${_t} TYPE)
+    if(_ty STREQUAL "EXECUTABLE" AND _t MATCHES "^(test_|fuzz_)")
+      target_sources(${_t} PRIVATE tests/common/win_timer.cpp)
+      target_link_libraries(${_t} PRIVATE winmm)
+    endif()
+  endforeach()
+endif()
+
 # debug_symbols_zip (ONAIR_DEBUG_SYMBOLS=ON): symbols_v<version>.zip in the build folder with the programs as built (code + DWARF; macOS:
 # .dSYM bundles) and BUILD-IDS.txt. On Linux and Windows the programs in the build folder then lose their debug sections (objcopy
 # --strip-debug, same build id), so packages made after it are as small as without -g. The build server keeps the zip as an artifact.
