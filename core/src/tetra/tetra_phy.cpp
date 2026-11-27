@@ -55,6 +55,14 @@ inline int punct23(int j) {
     return 8 * (j / 3) + P[j % 3] - 1;
 }
 
+// The branch outputs of the mother code, per state and input. Built once by a function-local static (thread-safe initialisation): the TETRA
+// receiver runs the slots of a capture on the shared pool, so two decoders may ask for the table at the same time.
+struct BranchOut { int v[16][2][4]; };
+const BranchOut& branchOut() {
+    static const BranchOut t = [] { BranchOut b{}; for (int s = 0; s < 16; s++) for (int u = 0; u < 2; u++) mother(u, s, b.v[s][u]); return b; }();
+    return t;
+}
+
 } // namespace
 
 Bits rcpcEncode23(const Bits& t2) {
@@ -79,9 +87,7 @@ Bits viterbiDecode23(const float* llr3, int n3) {
     std::vector<float> m((size_t)n * 4, 0.f);
     for (int j = 0; j < n3; j++) m[(size_t)punct23(j)] = llr3[j];
     // branch outputs, per state and input
-    static int out[16][2][4];
-    static bool init = false;
-    if (!init) { for (int s = 0; s < 16; s++) for (int u = 0; u < 2; u++) mother(u, s, out[s][u]); init = true; }
+    const auto& out = branchOut().v;
     float pm[16], nm[16];
     for (int s = 0; s < 16; s++) pm[s] = s == 0 ? 0.f : -1e30f;
     std::vector<uint8_t> dec((size_t)n * 16);   // the previous state's oldest bit that won
@@ -122,9 +128,7 @@ void sisoDecode23(const float* llr3, int n3, float* ext3) {
     const int n = n3 * 2 / 3;
     std::vector<float> m((size_t)n * 4, 0.f);
     for (int j = 0; j < n3; j++) m[(size_t)punct23(j)] = llr3[j];
-    static int out[16][2][4];
-    static bool init = false;
-    if (!init) { for (int s = 0; s < 16; s++) for (int u = 0; u < 2; u++) mother(u, s, out[s][u]); init = true; }
+    const auto& out = branchOut().v;
     // branch metric: half the LLR sum, +l/2 for a 1 and -l/2 for a 0
     auto bm = [&](int i, int s, int u) {
         const float* l = &m[(size_t)i * 4];
