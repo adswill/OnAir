@@ -21,6 +21,8 @@ PLATS = {   # plat: (job name, runner, most shards)
     "windows": ("Windows", "windows-2022", 4),
 }
 
+REDUCED = {"linux": 7, "macos": 3, "windows": 3}   # most shards outside the full scope
+
 # compile jobs per platform when the selection reaches the core (Windows not yet: its ccache file storage path needs checking first)
 COMPILE_PARTS = {"linux": 6, "macos": 4}
 
@@ -56,7 +58,10 @@ def main():
     for plat, (name, os_, most) in PLATS.items():
         est, n_tests, sc = estimate(a, plat)
         scopes.add(sc)
-        n = max(1, min(most, math.ceil(est / budget))) if n_tests else 1
+        # a run that is not the full scope (an integration push, a worker's wide check) leaves runners free for the workers' quick.yml
+        # checks: 37 of the 68 worker checks over 10 min had waited more than 5 min for a runner (2026-11-13..27)
+        cap = most if sc == "full" else REDUCED.get(plat, most)
+        n = max(1, min(cap, math.ceil(est / budget))) if n_tests else 1
         outs[plat] = json.dumps({"include": [{"name": name, "os": os_, "shard": k, "of": n, "plat": plat} for k in range(1, n + 1)]},
                                 separators=(",", ":"))
         rows.append((plat, n_tests, est, n, est / n / a.slots / 60))

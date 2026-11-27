@@ -52,6 +52,9 @@ on:
         description: "run tools/gate/run.sh (lint, generated files, licences) before the build"
         type: boolean
         default: false
+permissions:
+  contents: read
+  actions: read   # the warm-up artifact of the base integration branch
 concurrency:
   group: quick-${{ github.ref }}-${{ inputs.os }}
   cancel-in-progress: true
@@ -89,6 +92,16 @@ jobs:
           restore-keys: |
             ccache-${{ inputs.os }}-warm-
             ccache-${{ inputs.os }}-
+      # a worker of an integration branch: that branch's warm-up artifact (ccache-warm.yml), so the build starts from its code, not main's
+      - name: The ccache of the integration branch this worker started from (base)
+        if: inputs.base != '' && inputs.base != 'main'
+        continue-on-error: true
+        env: { GH_TOKEN: "${{ github.token }}", BASE: "${{ inputs.base }}" }
+        run: |
+          R=$(gh run list -R "$GITHUB_REPOSITORY" -w ccache-warm.yml --branch "$BASE" -L 5 --json databaseId,conclusion,status --jq '[.[]|select(.status=="completed")][0].databaseId')
+          if [ -n "$R" ] && gh run download "$R" -R "$GITHUB_REPOSITORY" -n "ccache-${{ inputs.os }}" -D .ccache-base; then
+            mkdir -p .ccache && cp -an .ccache-base/. .ccache/ && rm -rf .ccache-base && echo "warm from $BASE (run $R)"
+          else echo "no warm-up artifact for $BASE yet: main's cache only"; fi
       - name: Configure
         env: { EXTRA_CMAKE: "${{ inputs.cmake_args }}" }
         run: |

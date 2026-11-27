@@ -2,6 +2,9 @@
 # main, the base of every new branch, on Linux, macOS and Windows with the exact flags of ci.yml's shards and saves the cache on main.
 # Without it the macOS and Windows shards of a new branch compiled all 5000 files from nothing (55 and 63 min, run 45136260924), and the
 # Linux one restored a cache of a stale integration branch.
+# Integration branches (integ-*): the same build after every push, and the cache is also uploaded as an artifact "ccache-<plat>". A worker's
+# branch cannot restore an integration branch's cache, but it can download that artifact: quick.yml -f base=integ-NN does, so a worker
+# starts warm on its integration branch's code (worker checks with a cold build were 45 of the 68 over 10 min, 2026-11-13..27).
 # Runs after every push to main (a newer push cancels the older run; what was compiled is still saved) and nightly. The last job deletes
 # the older copies of each cache family, so the repository stays under GitHub's 10 GB and the newest caches are not evicted (10.7 GB used
 # on 2026-11-27, two copies of most families).
@@ -9,14 +12,14 @@ name: ccache warm-up
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'integ-*']
     paths-ignore: ['**.md', 'docs/**', 'website/**', 'LICENSE*']
   schedule:
     - cron: "7 1 * * *"
   workflow_dispatch:
 
 concurrency:
-  group: ccache-warm
+  group: ccache-warm-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -76,6 +79,10 @@ jobs:
         with:
           path: .ccache
           key: ccache-${{ matrix.plat }}-warm-${{ github.run_id }}
+      - name: The cache as an artifact for the workers of this integration branch (quick.yml -f base=...)
+        if: always() && github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v7
+        with: { name: "ccache-${{ matrix.plat }}", path: .ccache, retention-days: 7, compression-level: 0, include-hidden-files: true }
 
   windows:
     name: warm (windows)
@@ -111,11 +118,15 @@ jobs:
         with:
           path: .ccache
           key: ccache-windows-warm-${{ github.run_id }}
+      - name: The cache as an artifact for the workers of this integration branch (quick.yml -f base=...)
+        if: always() && github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v7
+        with: { name: "ccache-windows", path: .ccache, retention-days: 7, compression-level: 0, include-hidden-files: true }
 
   # the newest entry of each cache family stays; the older copies go (a family: the key without its run id or commit hash)
   prune:
     needs: [unix, windows]
-    if: always()
+    if: always() && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
