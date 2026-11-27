@@ -72,6 +72,8 @@ jobs:
       fanout_macos: ${{ steps.plan.outputs.fanout_macos }}
       compile_linux: ${{ steps.plan.outputs.compile_linux }}
       compile_macos: ${{ steps.plan.outputs.compile_macos }}
+      fanout_windows: ${{ steps.plan.outputs.fanout_windows }}
+      compile_windows: ${{ steps.plan.outputs.compile_windows }}
     steps:
       - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
@@ -391,9 +393,54 @@ jobs:
         with: { name: "cpucal-${{ matrix.name }}-${{ matrix.shard }}", path: "cpucal.txt\nctest-fast.log\nctest-timing.log\nsel/summary.txt\ntesttime.log\nqatime.log", if-no-files-found: ignore }
 
 
-  windows-shards:
+  # Windows compile split: as compile-linux/-macos, in the shards' MSYS2 UCRT64 environment; ccache's file store takes file:///D:/... there
+  # (the other URL forms failed or stored nothing, probe in run 46003088536)
+  compile-windows:
     needs: lint
-    if: ${{ inputs.platforms != 'linux' && !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
+    if: needs.lint.outputs.fanout_windows == '1'
+    name: compile windows ${{ matrix.part }}/${{ matrix.of }}
+    runs-on: windows-2022
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.lint.outputs.compile_windows) }}   # tools/ci_plan.py
+    defaults: { run: { shell: 'msys2 {0}' } }
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64   # the MINGW64 environment has no hackrf and soapysdr packages
+          update: true
+          install: >-
+            git python mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-ccache mingw-w64-ucrt-x86_64-rust
+            mingw-w64-ucrt-x86_64-ffmpeg mingw-w64-ucrt-x86_64-glfw mingw-w64-ucrt-x86_64-hackrf mingw-w64-ucrt-x86_64-soapysdr mingw-w64-ucrt-x86_64-libiconv mingw-w64-ucrt-x86_64-python
+      - name: Restore ccache (the warm-up's, from main)
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-windows-warm-${{ github.sha }}
+          restore-keys: ccache-windows-warm-
+      - name: Configure (the shards' exact flags) and compile this part of the selection
+        run: |
+          mkdir -p .ccache-p${{ matrix.part }}
+          export CCACHE_REMOTE_STORAGE="file:///$(cygpath -m "$PWD")/.ccache-p${{ matrix.part }}"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
+          git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
+          python tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --no-slow --shard 1/1 --out sel > /dev/null
+          ccache -z
+          python tools/ci_objs.py --build-dir build --targets sel/targets.txt --extra dect2 --part ${{ matrix.part }}/${{ matrix.of }} --run -j 4
+          ccache -s
+      - uses: actions/cache/save@v6
+        if: always()
+        with:
+          path: .ccache-p${{ matrix.part }}
+          key: ccache-windows-part${{ matrix.part }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+  windows-shards:
+    needs: [lint, compile-windows]
+    if: ${{ !cancelled() && needs.lint.result == 'success' && needs.compile-windows.result != 'failure' && inputs.platforms != 'linux' && !(github.event_name == 'push' && github.ref == 'refs/heads/main') }}   # main: Linux only (a push to main is replaced by the next merge within the hour); integ-*, tags, dispatch and the nightly Full CI run all three
     name: Windows shard ${{ matrix.shard }}/${{ matrix.of }}
     runs-on: windows-2022
     timeout-minutes: 120
@@ -424,7 +471,33 @@ jobs:
             ccache-windows-
       - name: Zero the ccache counters
         run: ccache -z
-      - name: Probe the ccache file storage URL forms on Windows (report only, for a Windows compile split later)
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_windows == '1'
+        with: { path: .ccache, key: "ccache-windows-warm-${{ github.sha }}", restore-keys: "ccache-windows-warm-" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_windows == '1'
+        with: { path: .ccache-p1, key: "ccache-windows-part1-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_windows == '1'
+        with: { path: .ccache-p2, key: "ccache-windows-part2-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_windows == '1'
+        with: { path: .ccache-p3, key: "ccache-windows-part3-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_windows == '1'
+        with: { path: .ccache-p4, key: "ccache-windows-part4-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_windows == '1'
+        with: { path: .ccache-p5, key: "ccache-windows-part5-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - uses: actions/cache/restore@v6
+        if: needs.lint.outputs.fanout_windows == '1'
+        with: { path: .ccache-p6, key: "ccache-windows-part6-${{ github.run_id }}-${{ github.run_attempt }}" }
+      - name: Read the compile jobs' ccache parts (tools/ci_objs.py)
+        if: needs.lint.outputs.fanout_windows == '1'
+        run: |
+          W=$(cygpath -m "$PWD"); R=""; for k in 1 2 3 4 5 6; do [ -d ".ccache-p$k" ] && R="$R file:///$W/.ccache-p$k|read-only=true"; done
+          echo "CCACHE_REMOTE_STORAGE=${R# }" >> "$GITHUB_ENV"; echo "ccache parts:${R:- none}"
+      - name: Probe the ccache file storage URL forms on Windows (report only)
         continue-on-error: true
         run: |
           mkdir -p probe && cd probe && printf 'int f(){return 1;}\n' > a.c

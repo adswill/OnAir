@@ -8,7 +8,7 @@ Runs tools/ci_select.py once per platform on the whole selection (shard 1/1), re
 under ctest -j4 on a 4-core runner) and gives each platform enough shards that one shard's tests take about --minutes of wall time, within
 the platform's maximum (GitHub's free plan runs 20 jobs at once, 5 of them macOS). Writes the matrices as GitHub outputs:
   linux=<json>  macos=<json>  windows=<json>    (strategy.matrix: fromJSON(needs.lint.outputs.linux))
-  fanout=1|0  fanout_linux, fanout_macos=1|0  compile_linux, compile_macos=<json>   (the compile jobs: plat, os, part, of)
+  fanout=1|0  fanout_<plat>=1|0  compile_<plat>=<json> (linux, macos, windows)   (the compile jobs: plat, os, part, of)
 and a table for the step summary. A small change gets one shard per platform instead of four that each pay the set-up and build.
 fanout: the selection reaches the core (scope wide or full), so a cold build is likely: the compile jobs split the compile first
 (tools/ci_objs.py) and the shards read their ccache parts. A small change (area, smoke) skips them: their start-up would cost more.
@@ -23,8 +23,8 @@ PLATS = {   # plat: (job name, runner, most shards)
 
 REDUCED = {"linux": 7, "macos": 3, "windows": 3}   # most shards outside the full scope
 
-# compile jobs per platform when the selection reaches the core (Windows not yet: its ccache file storage path needs checking first)
-COMPILE_PARTS = {"linux": 6, "macos": 4}
+# compile jobs per platform when the selection reaches the core
+COMPILE_PARTS = {"linux": 6, "macos": 4, "windows": 6}
 
 def estimate(args, plat):
     out = os.path.join(args.work, "plan-" + plat)
