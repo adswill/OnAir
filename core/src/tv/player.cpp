@@ -20,6 +20,7 @@ extern "C" {
 #include <libavutil/hwcontext.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
+#include <libavutil/pixdesc.h>
 #include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
 }
@@ -440,6 +441,30 @@ static enum AVPixelFormat pickHw(AVCodecContext*, const enum AVPixelFormat* fmts
     return fmts[0];
 }
 static std::atomic<bool> gHwVideoBroken{false};   // set when hardware decoding produced pictures that could not be fetched: software from then on
+#else
+// Linux and the other systems: Vulkan video first (NVIDIA, AMD and Intel drivers of the last few years, nothing else to install), then VAAPI (the
+// Mesa and Intel drivers), then CUDA (the NVIDIA driver alone). The first device the decoder supports and the system can open is used. The
+// format it decodes into rides in the context's opaque pointer; if the GPU cannot decode this stream after all, FFmpeg offers the list again
+// without it and the first software format is taken.
+static const AVHWDeviceType kHwTypes[] = {AV_HWDEVICE_TYPE_VULKAN, AV_HWDEVICE_TYPE_VAAPI, AV_HWDEVICE_TYPE_CUDA};
+static enum AVPixelFormat pickHw(AVCodecContext* c, const enum AVPixelFormat* fmts) {
+    const auto want = (enum AVPixelFormat)(intptr_t)c->opaque;
+    for (const enum AVPixelFormat* f = fmts; *f != AV_PIX_FMT_NONE; f++) if (*f == want) return *f;
+    for (const enum AVPixelFormat* f = fmts; *f != AV_PIX_FMT_NONE; f++) {
+        const AVPixFmtDescriptor* d = av_pix_fmt_desc_get(*f);
+        if (d && !(d->flags & AV_PIX_FMT_FLAG_HWACCEL)) return *f;
+    }
+    return fmts[0];
+}
+// the pixel format codec c decodes into on a device of the given type, or AV_PIX_FMT_NONE when it has no such hardware path
+static enum AVPixelFormat hwFormatFor(const AVCodec* c, AVHWDeviceType type) {
+    for (int i = 0;; i++) {
+        const AVCodecHWConfig* cfg = avcodec_get_hw_config(c, i);
+        if (!cfg) return AV_PIX_FMT_NONE;
+        if ((cfg->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) && cfg->device_type == type) return cfg->pix_fmt;
+    }
+}
+static std::atomic<bool> gHwVideoBroken{false};   // set when hardware decoding produced pictures that could not be fetched: software from then on
 #endif
 
 // True when an HEVC access unit (Annex B, as carried in MPEG-TS) holds a random-access picture (NAL types 16..23: BLA, IDR, CRA).
@@ -566,7 +591,7 @@ void Player::threadMain() {
                 // sets) rules hardware decoding out, because it cannot be opened without it: the software decoder learns the size from the stream
                 const bool hwOk = hwAllowed_ && !hwFallback_ && !(swEnv && *swEnv) && fmt->streams[vIdx]->codecpar->width > 0 && fmt->streams[vIdx]->codecpar->height > 0;
                 // damaged streams: let the decoder conceal missing slices and keep outputting pictures instead of waiting for a keyframe
-#ifdef __APPLE__   // hardware decoding: VideoToolbox (macOS) or Direct3D 11 (Windows); VAAPI for Linux is still to do (software decoding is used there)
+#ifdef __APPLE__   // hardware decoding: VideoToolbox (macOS), Direct3D 11 (Windows), Vulkan / VAAPI / CUDA (Linux)
                 if (hwOk && av_hwdevice_ctx_create(&hwdev, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, nullptr, nullptr, 0) >= 0) {
                     vctx->hw_device_ctx = av_buffer_ref(hwdev);
                     vctx->get_format = pickHw;
@@ -579,8 +604,17 @@ void Player::threadMain() {
                     hw = true;
                 }
 #else
-                (void)swEnv;
-                (void)hwOk;
+                for (AVHWDeviceType type : kHwTypes) {
+                    if (!hwOk || gHwVideoBroken) break;
+                    const enum AVPixelFormat pf = hwFormatFor(c, type);
+                    if (pf == AV_PIX_FMT_NONE || av_hwdevice_ctx_create(&hwdev, type, nullptr, nullptr, 0) < 0) continue;
+                    vctx->hw_device_ctx = av_buffer_ref(hwdev);
+                    vctx->opaque = (void*)(intptr_t)pf;
+                    vctx->get_format = pickHw;
+                    hw = true;
+                    DIAG_DEBUG(518337, "Video is decoded on the GPU (%s).", av_hwdevice_get_type_name(type));
+                    break;
+                }
 #endif
                 if (hwdev) av_buffer_unref(&hwdev);
                 // (software only: the GPU decoders drop undecodable leading pictures themselves, and SHOW_ALL would push RASL pictures
@@ -721,6 +755,19 @@ void Player::threadMain() {
             }
 #elif defined(_WIN32)
             if (f->format == AV_PIX_FMT_D3D11) {
+                av_frame_unref(sw);
+                if (av_hwframe_transfer_data(sw, f, 0) < 0) {
+                    // the GPU decoded the picture but it cannot be copied out: after a few of these use the software decoder instead
+                    static int fails = 0;
+                    if (++fails >= 5) { gHwVideoBroken = true; restart_ = true; }
+                    return;
+                }
+                sw->pts = f->pts; sw->best_effort_timestamp = f->best_effort_timestamp;
+                sw->colorspace = f->colorspace; sw->color_range = f->color_range;
+                src = sw;
+            }
+#else
+            if (hw && f->hw_frames_ctx) {
                 av_frame_unref(sw);
                 if (av_hwframe_transfer_data(sw, f, 0) < 0) {
                     // the GPU decoded the picture but it cannot be copied out: after a few of these use the software decoder instead
