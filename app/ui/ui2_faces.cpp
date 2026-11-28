@@ -299,7 +299,7 @@ void modeKeys(App& a) {
             const float sw = ss.x * 0.84f;
             if (p0.x + 30 * gUi + ns.x + 14 * gUi < p1.x - sw - 8 * gUi) dl->AddText(ImGui::GetFont(), fs * 0.84f, ImVec2(p1.x - sw - 8 * gUi, p0.y + (h - ss.y * 0.84f) * 0.5f), u32(T.dim), sub);
             if (clicked) selectMode(a, m.family, m.subId);
-            if (hov) ImGui::SetTooltip("%s", running && !sel ? tr("Click to switch mode and restart receiver automatically") : m.tip);
+            if (hov) ImGui::SetTooltip("%s", running && !sel ? tr("Click to switch mode and restart receiver automatically") : tr(m.tip));
         }
         ImGui::Dummy(ImVec2(1, 2 * gUi));
     }

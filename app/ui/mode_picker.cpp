@@ -91,7 +91,7 @@ void card(const App& a, const ModeDef& m, const ModeFit& fit, float conf, bool d
     ImGui::PushTextWrapPos(380 * gUi);
     ImGui::TextColored(ImGui::ColorConvertU32ToFloat4(kGroupCols[m.group]), "%s", m.name);
     ImGui::SameLine(); ImGui::TextDisabled("%s", tr(kGroupNames[m.group]));
-    ImGui::TextUnformatted(m.blurb ? m.blurb : "");
+    ImGui::TextUnformatted(m.blurb ? tr(m.blurb) : "");
     if (const dect2::ModeTuning* t = dect2::modeTuning(m.family + 2)) {
         ImGui::Spacing();
         ImGui::TextDisabled("%s %.4g MHz   %s %.3g Msps   %s %.3g MHz", tr("Starts at"), t->defMhz, tr("Rate"), t->sampleRate / 1e6, tr("Width"), t->bandwidthMhz);

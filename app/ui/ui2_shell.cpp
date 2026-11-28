@@ -541,7 +541,7 @@ void statusLine(App& a) {
                     ImGui::EndTooltip();
                 }
             } else if (it.k == KLoad || it.k == KDrop) lossTooltip(sl);
-            else if (it.k == KMode && hov) ImGui::SetTooltip("%s", cur->blurb);
+            else if (it.k == KMode && hov) ImGui::SetTooltip("%s", tr(cur->blurb));
             else if (it.k == KFreq && hov) ImGui::SetTooltip("%s", tr("The listening frequency, to the hertz"));
         }
         x += w;
@@ -1163,7 +1163,7 @@ void modeCombo(App& a, float w) {
             for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && modeListed(a, kModes[i], q)) {
                 ImGui::PushID(i);
                 if (ImGui::Selectable(modeHiddenNow(a, kModes[i]) ? (std::string(kModes[i].name) + " (" + tr("hidden") + ")").c_str() : kModes[i].name, modeSelected(a, kModes[i]))) selectMode(a, kModes[i].family, kModes[i].subId);
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s%s", kModes[i].tip, modeCreditsLine(kModes[i].name).c_str());
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s%s", tr(kModes[i].tip), modeCreditsLine(kModes[i].name).c_str());
                 ImGui::PopID();
             }
         }
