@@ -48,16 +48,18 @@ static int rtlOpenRefusal() {
 static const float kI = 0.5f, kQ = -0.25f;
 
 // ------------------------------------------------------------------ RTL-SDR
+static std::atomic<int> gRtlOpenCount{0};   // FAKE_RTL_STRINGS_BUSY: while one is open, the USB strings cannot be read (-3), as libusb does it
 struct rtl_dev { std::atomic<bool> cancel{false}; };
 EXPORT uint32_t rtlsdr_get_device_count(void) { return 1; }
 EXPORT const char* rtlsdr_get_device_name(uint32_t) { return "Generic RTL2832U"; }
 EXPORT int rtlsdr_get_device_usb_strings(uint32_t, char* m, char* p, char* s) {   // ---- radios: rtl.v4 = an RTL-SDR Blog V4, rtl.v3 = a Blog V3, rtl.v4l = a Blog V4 Lite
+    if (getenv("FAKE_RTL_STRINGS_BUSY") && gRtlOpenCount.load() > 0) { if (m) m[0] = 0; if (p) p[0] = 0; if (s) s[0] = 0; return -3; }   // librtlsdr on a dongle it has open
     const bool v4 = fake_state("rtl.v4") == 1, v3 = fake_state("rtl.v3") == 1, v4l = fake_state("rtl.v4l") == 1;
     if (fake_state("rtl.dxp") == 1) { strcpy(m, "DXPATROL"); strcpy(p, "DXpatrol SDR"); strcpy(s, "DXP00001"); return 0; }   // rtl.dxp = a DXpatrol SDR
     strcpy(m, v4 || v3 || v4l ? "RTLSDRBlog" : "Realtek"); strcpy(p, v4 ? "Blog V4" : v3 ? "Blog V3" : v4l ? "Blog V4L" : "RTL2838UHIDIR"); strcpy(s, "00000001"); return 0;
 }
-EXPORT int rtlsdr_open(rtl_dev** d, uint32_t) { if (const int r = rtlOpenRefusal()) return r; if (getenv("FAKE_RTL_OPEN_FAIL")) return -6; rec("rtl.tunedHz", 0); *d = new rtl_dev; return 0; }   // ---- start failure: the app shows the error of a failed start
-EXPORT int rtlsdr_close(rtl_dev* d) { delete d; return 0; }
+EXPORT int rtlsdr_open(rtl_dev** d, uint32_t) { if (const int r = rtlOpenRefusal()) return r; if (getenv("FAKE_RTL_OPEN_FAIL")) return -6; rec("rtl.tunedHz", 0); *d = new rtl_dev; ++gRtlOpenCount; return 0; }   // ---- start failure: the app shows the error of a failed start
+EXPORT int rtlsdr_close(rtl_dev* d) { if (d) --gRtlOpenCount; delete d; return 0; }
 EXPORT int rtlsdr_set_center_freq(rtl_dev*, uint32_t f) { rec("rtl.freq", f); rec("rtl.tunedHz", f); return 0; }
 // the Blog library retunes to its last frequency here: 0 Hz on a fresh open would switch an R820T to direct sampling (#450)
 EXPORT int rtlsdr_set_sample_rate(rtl_dev*, uint32_t r) { rec("rtl.rate", r); if (fake_state("rtl.tunedHz") == 0) rec("rtl.rateAtZeroHz", std::max(0.0, fake_state("rtl.rateAtZeroHz")) + 1); return 0; }
