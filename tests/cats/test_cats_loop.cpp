@@ -35,6 +35,18 @@ int main() {
     CHECK(crc16(digits, 9) == 0x906E, "CRC-16/SDLC check value %04x", crc16(digits, 9));
     CHECK(floatToHalf(1.0f) == 0x3C00 && floatToHalf(-2.0f) == 0xC000 && halfToFloat(0x3C00) == 1.0f && halfToFloat(0xC000) == -2.0f, "half float");
 
+    // libCATS writes latitude and longitude as little-endian int32 = degrees * 2^31 / 90 (or / 180), north and east positive: its
+    // lat_to_int32 negates a value scaled by (float)(1 << 31), which is -2^31, so the two signs cancel (truncating, we round: 1 LSB).
+    // Pin 52.25 N, 1.5 W at the whisker (type 2, length 14).
+    {
+        const auto s = build("", true);
+        size_t at = 0; while (at + 14 < s.size() && !(s[at] == 2 && s[at + 1] == 14)) at++;
+        CHECK(at + 14 < s.size(), "gps whisker found");
+        auto rd = [&](size_t o) { return (int32_t)((uint32_t)s[o] | (uint32_t)s[o + 1] << 8 | (uint32_t)s[o + 2] << 16 | (uint32_t)s[o + 3] << 24); };
+        CHECK(std::llabs((long long)rd(at + 2) - 0x4a4fa4fa) <= 1, "latitude raw %08x (north positive)", (unsigned)rd(at + 2));
+        CHECK(std::llabs((long long)rd(at + 6) - (int32_t)0xfeeeeeef) <= 1 && rd(at + 6) < 0, "longitude raw %08x (west negative)", (unsigned)rd(at + 6));
+    }
+
     // body round trips for sizes that pick different LDPC codes (8, 16, 32, 128 and 512 byte chunks)
     for (size_t n : {0u, 20u, 60u, 200u, 700u, 1500u}) {
         std::string c; for (size_t i = 0; i < n; i++) c += (char)('a' + i % 26);
