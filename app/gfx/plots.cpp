@@ -167,7 +167,7 @@ static double gXLo = 0, gXHi = 0;   // the frequency view the spectrum and the w
 // ---- drag to tune (drag_tune.h): a left press tunes there and the held drag keeps tuning, snapped; Shift or Ctrl: fine steps
 static struct { int plot = -1; bool moved = false, centreDefer = false, touch = false; double lastMhz = NAN, pressMhz = NAN; ImVec2 p0; } gDT;
 static int gDTMenu = -1;
-static struct { ImVec2 mn, sz; int frame = -100; } gSpecRect;   // where the spectrum plot was drawn (--drag-selftest)   // a touch long press let go without moving on this plot: its menu opens (the spectrum's)
+static struct { ImVec2 mn, sz; int frame = -100; } gSpecRect, gWaterfallRect;   // plot positions for --drag-selftest
 bool specDragTunes(const App& a) { return a.specDrag == dragtune::Tune; }
 // the mode's own channel step in Hz (FM, DMR, the user's snap), 0 when the mode has none (the drag then follows the zoom)
 static double modeChannelStepHz(const App& a) {
@@ -1891,6 +1891,11 @@ static void wheelPolicy(App& a, inputmap::Area area, ImVec2 size) {
     // Spectrum zoom and pan remain available while Voice scout is open.
     const inputmap::Settings& st = inputmap::settings();
     ImGuiIO& io = ImGui::GetIO();
+    // The waterfall's plain wheel zooms the shared frequency axis, including over the tuner.
+    if (area == inputmap::Area::Waterfall && !io.KeyCtrl && !io.KeyShift && !io.KeyAlt && !io.KeySuper) {
+        plt::SetNextWheelAxes(1);
+        return;
+    }
     // This simple, unmodified-wheel preference takes precedence over the advanced Controls mappings.
     // Modified-wheel shortcuts (Ctrl/Shift/Alt) still follow their existing mappings.
     if (!io.KeyCtrl && !io.KeyShift && !io.KeyAlt && !io.KeySuper) {
@@ -2361,7 +2366,6 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
     const bool look = lookOn(a);
     plt::SetNextPlotLook(plotLook(a, false));
     wheelPolicy(a, inputmap::Area::Waterfall, size);
-    if (a.specWheelAction == 0 && isGeneralFamily(a.family)) generalVfoWheel(a, ImGui::GetCursorScreenPos(), size, gXLo, gXHi);
     if (!voiceScoutScanning()) plt::SetNextZoomMarker(a.freqMhz, 10 * gUi);
     plt::SetNextDragTune(specDragTunes(a), 0);   // no frequency labels of its own: right or middle drag pans
     if (plt::BeginPlot("##wf", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | plt::Flags_NoDoubleReset | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | (!voiceScoutScanning() && ((isGeneralFamily(a.family) && generalDragging(1)) || bandEdgeDragging(1) || fileBoxDragging(1)) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
@@ -2419,6 +2423,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         sharedLayer(a, false);
         notchLayer(a, false);
         plotMin = plt::GetPlotPos(); plotSize = plt::GetPlotSize();
+        gWaterfallRect = {plotMin, plotSize, ImGui::GetFrameCount()};
         if (look) {
             specLookCursor(a, 1, plotMin, plotSize);
             if (a.specReadout && curLook(a).tooltipBox && plt::IsPlotHovered() && !ImGui::IsMouseDown(0) && a.wf.rows > 0) {
@@ -2696,6 +2701,21 @@ int dragTuneSelfTest(App& a) {
     };
     constexpr int nG = (int)(sizeof gs / sizeof gs[0]);
     if (gi >= nG) {
+        if (gWaterfallRect.frame >= ImGui::GetFrameCount() - 2 && gWaterfallRect.sz.y > 60) {
+            if (t == 1) {
+                lo0 = gXLo; hi0 = gXHi; f0 = a.freqMhz;
+                io.AddMousePosEvent(gWaterfallRect.mn.x + gWaterfallRect.sz.x * 0.5f,
+                                    gWaterfallRect.mn.y + gWaterfallRect.sz.y * 0.5f);
+            }
+            if (t == 3) io.AddMouseWheelEvent(0, 1);
+            if (t == 20) {
+                check(span() < (hi0 - lo0) * 0.98 && a.freqMhz == f0, "waterfall: wheel up zoomed in without tuning");
+                hi0 = span();
+                io.AddMouseWheelEvent(0, -1);
+            }
+            if (t < 40) return -1;
+            check(span() > hi0 * 1.02 && a.freqMhz == f0, "waterfall: wheel down zoomed out without tuning");
+        }
         a.specDrag = dragtune::Tune;
         printf("drag selftest: %d failed\n", fails);
         return fails;
