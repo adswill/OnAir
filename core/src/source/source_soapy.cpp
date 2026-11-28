@@ -161,7 +161,7 @@ std::string soapyBool(const std::string& v) {
 }
 // The clock and time (PPS) sources the driver lists (setClockSource / setTimeSource), offered only when there is a choice. The default is what the
 // radio has now. Applied when the radio is started (the setting restarts it): switching the reference under a running stream would glitch it.
-const char kClockKey[] = "clocksrc", kTimeKey[] = "timesrc";
+const char kClockKey[] = "clocksrc", kTimeKey[] = "timesrc", kCs8Key[] = "cs8wire";
 RadioSetting sourceSetting(const char* key, const char* label, const char* help, const std::vector<std::string>& list, const std::string& now) {
     std::vector<std::string> names;
     for (const auto& n : list) names.push_back(n == "gpsdo" ? "GPSDO" : n == "mimo" ? "MIMO cable" : n == "external" ? "External" : n == "internal" ? "Internal" : n);
@@ -372,6 +372,10 @@ void rememberRanges(const std::string& key, SoapySDR::Device* dev) {
     r.settings = soapySettings(dev, r.biasKey);
     if (rfStage(dev)) r.settings.insert(r.settings.begin(), rfSetting(dev));
     sourceSettings(dev, r.settings);
+    try {   // #692: PlutoSDR / Tezuka: the 8-bit wire format is offered when the driver lists CS8 (off by default)
+        if (soapylogic::isPlutoDriver(dev->getDriverKey()) && soapylogic::useCs8(dev->getDriverKey(), true, dev->getStreamFormats(SOAPY_SDR_RX, 0)))
+            r.settings.push_back(boolSetting(kCs8Key, "8-bit samples (half the USB load)", "PlutoSDR and Tezuka: the radio sends 8-bit samples instead of 16-bit, which halves the data on the USB cable or the network, so wide captures (ATSC 3.0, 6 Msps and more) do not drop packets. Less dynamic range. Takes effect when the radio is started.", false, true));
+    } catch (...) {}
     for (auto& x : gainStageSettings(dev)) r.settings.push_back(std::move(x));
     std::lock_guard<std::mutex> lk(gRangesMu);
     gRanges[key] = r;
@@ -410,7 +414,9 @@ public:
                     if (ai.key == "WIRE" && std::find(ai.options.begin(), ai.options.end(), std::string(SOAPY_SDR_CF32)) != ai.options.end())
                         sargs["WIRE"] = SOAPY_SDR_CF32;
             } catch (...) {}
-            stream_ = dev_->setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32, {0}, sargs);
+            cs8_ = false;
+            try { cs8_ = soapylogic::useCs8(dev_->getDriverKey(), radioOption(s, kCs8Key, "0") == "1", dev_->getStreamFormats(SOAPY_SDR_RX, 0)); } catch (...) {}
+            stream_ = dev_->setupStream(SOAPY_SDR_RX, cs8_ ? SOAPY_SDR_CS8 : SOAPY_SDR_CF32, {0}, cs8_ ? SoapySDR::Kwargs() : sargs);
             if (!stream_) { DIAG_ERROR(606855, "SoapySDR could not set up the receive stream, so the radio is closed again."); err = "setupStream failed"; close(); return false; }
             armHardwareTime();
             if (dev_->activateStream(stream_) != 0) { DIAG_ERROR(693579, "SoapySDR could not start the receive stream, so the radio is closed again."); err = "activateStream failed"; close(); return false; }
@@ -577,6 +583,7 @@ private:
 
     void loop() {
         std::vector<cf32> buf(1 << 15);
+        std::vector<int8_t> raw8(cs8_ ? buf.size() * 2 : 0);   // #692: the 8-bit wire, converted to float below
         int failures = 0;
         while (run_) {
             int ret;
@@ -584,8 +591,9 @@ private:
             long long ts = 0;
             {
                 std::lock_guard<std::mutex> lk(mu_);
-                void* b[1] = {buf.data()};
+                void* b[1] = {cs8_ ? (void*)raw8.data() : (void*)buf.data()};
                 ret = dev_->readStream(stream_, b, buf.size(), flags, ts, 50000);
+                if (ret > 0 && cs8_) soapylogic::cs8ToCf32(raw8.data(), buf.data(), (size_t)ret);
             }
             if (ret > 0) {
                 if (ppsTime_ && (flags & SOAPY_SDR_HAS_TIME) && std::chrono::steady_clock::now() >= ppsFrom_) {
@@ -620,6 +628,7 @@ private:
 
     std::string args_, antenna_, key_, biasKey_;   // antenna_: the input the user picked ("" = the driver's default)
     bool bias_ = false;
+    bool cs8_ = false;         // the receive stream uses the 8-bit wire format (#692)
     bool reduction_ = false;   // the driver's gains are gain reductions (gainIsReduction)
     bool hasCorr_ = false;     // the driver has a frequency correction
     double ppm_ = 0;           // the correction set in the driver

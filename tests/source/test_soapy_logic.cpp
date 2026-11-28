@@ -48,6 +48,13 @@ int main() {
       CHECK(!moduleAllowed("/opt/homebrew/lib/SoapySDR/modules0.8/libsdrplaysupport.dylib"));
       CHECK(moduleAllowed("/usr/local/lib/SoapySDR/modules0.8/libremoteSupport.so"));
       CHECK(moduleAllowed("libuhdSupport.so") && !moduleAllowed("")); }
+    // #692: CS8 wire format
+    { const int8_t raw[6] = {-128, 127, 64, -64, 0, 1}; std::complex<float> o[3];
+      cs8ToCf32(raw, o, 3);
+      CHECK(o[0].real() == -1.0f && o[0].imag() == 127.0f / 128.0f && o[1].real() == 0.5f && o[1].imag() == -0.5f && o[2].real() == 0.0f && o[2].imag() == 1.0f / 128.0f);
+      const std::vector<std::string> f = {"CS8", "CS16", "CF32"}, g = {"CS16", "CF32"};
+      CHECK(isPlutoDriver("plutosdr") && isPlutoDriver("Tezuka") && !isPlutoDriver("rtlsdr"));
+      CHECK(useCs8("plutosdr", true, f) && !useCs8("plutosdr", false, f) && !useCs8("plutosdr", true, g) && !useCs8("rtlsdr", true, f)); }
     printf(fails ? "FAILED\n" : "soapy_logic OK\n");
     return fails ? 1 : 0;
 }
