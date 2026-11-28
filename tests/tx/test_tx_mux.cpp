@@ -18,16 +18,18 @@
 #include "../common/test_util.h"
 using namespace dect2;
 
-struct TsStats { std::set<int> programmes; std::set<std::string> names; std::map<int, uint64_t> pids; double pcrSec = 0; uint64_t packets = 0; };
+struct TsStats { std::map<int, int> pmtPid; std::set<int> pmtSeen; std::map<int, int> lastCc; uint64_t ccBad = 0; std::set<int> programmes; std::set<std::string> names; std::map<int, uint64_t> pids; double pcrSec = 0; uint64_t packets = 0; };
 
 static void parseSections(const uint8_t* p, TsStats& s) {
     const int pid = ((p[1] & 0x1F) << 8) | p[2];
-    if (!(p[1] & 0x40) || (pid != 0 && pid != 0x11)) return;
+    const bool isPmt = (p[1] & 0x40) && pid != 0 && pid != 0x11 && s.pmtPid.size() && [&] { for (auto& kv : s.pmtPid) if (kv.second == pid) return true; return false; }();
+    if (!(p[1] & 0x40) || (pid != 0 && pid != 0x11 && !isPmt)) return;
     const uint8_t* q = p + 4 + (p[3] & 0x20 ? 1 + p[4] : 0);
     q += 1 + q[0];
     const int len = ((q[1] & 15) << 8) | q[2];
     if (q + 3 + len > p + 188) return;
-    if (pid == 0 && q[0] == 0) { for (int i = 8; i + 4 <= 3 + len - 4; i += 4) { const int n = (q[i] << 8) | q[i + 1]; if (n) s.programmes.insert(n); } }
+    if (pid == 0 && q[0] == 0) { for (int i = 8; i + 4 <= 3 + len - 4; i += 4) { const int n = (q[i] << 8) | q[i + 1]; if (n) { s.programmes.insert(n); s.pmtPid[n] = ((q[i + 2] & 0x1F) << 8) | q[i + 3]; } } }
+    if (isPmt && q[0] == 2) s.pmtSeen.insert((q[3] << 8) | q[4]);
     if (pid == 0x11 && q[0] == 0x42) {
         for (int i = 11; i + 5 <= 3 + len - 4;) {
             const int dl = ((q[i + 3] & 15) << 8) | q[i + 4];
@@ -57,6 +59,11 @@ static TsStats runDtmb(int mapOpt, int rateOpt, double seconds) {
             const uint8_t* k = p + i * 188; st.packets++;
             const int pid = ((k[1] & 0x1F) << 8) | k[2]; st.pids[pid]++;
             parseSections(k, st);
+            if (pid != 0x1FFF && (k[3] & 0x10)) {
+                const int cc = k[3] & 15; auto it = st.lastCc.find(pid);
+                if (it != st.lastCc.end() && cc != it->second && cc != ((it->second + 1) & 15)) st.ccBad++;
+                st.lastCc[pid] = cc;
+            }
             if ((k[3] & 0x20) && k[4] >= 7 && (k[5] & 0x10)) {
                 if (pcrPid < 0) pcrPid = pid;
                 if (pid == pcrPid) { const int64_t c = ((int64_t)k[6] << 25) | (k[7] << 17) | (k[8] << 9) | (k[9] << 1) | (k[10] >> 7); if (firstPcr < 0) firstPcr = c; lastPcr = c; }
@@ -96,6 +103,11 @@ int main() {
         printf(", %llu packets, PCR span %.2f s of %.1f s\n", (unsigned long long)s.packets, s.pcrSec, dur);
         CHECK(s.programmes.size() == 2 && s.programmes.count(100) && s.programmes.count(101), "both programmes in the PAT");
         CHECK(s.names.count("Programme A") && s.names.count("Programme B"), "both names in the SDT");
+        CHECK(s.pmtPid.size() == 2, "PAT lists two PMT PIDs");
+        { std::set<int> u; for (auto& kv : s.pmtPid) u.insert(kv.second); CHECK(u.size() == 2, "the two PMTs sit on distinct PIDs");
+          for (int pp : u) CHECK(pp != 0 && pp != 0x11 && pp != 0x100 && pp != 0x101 && pp != 0x110 && pp != 0x111, "PMT PID %d collides with another PID", pp); }
+        CHECK(s.pmtSeen.size() == 2 && s.pmtSeen.count(100) && s.pmtSeen.count(101), "a PMT for each programme was received");
+        CHECK(s.ccBad == 0, "%llu continuity counter jumps", (unsigned long long)s.ccBad);
         CHECK(s.pids.count(0x100) && s.pids.count(0x101) && s.pids.count(0x110) && s.pids.count(0x111), "video and audio PIDs of both");
         CHECK(s.pcrSec > 0.85 * (dur - 1.2) && s.pcrSec < 1.02 * dur, "PCR span %.2f s in %.1f s of signal: wrong speed", s.pcrSec, dur);
     }
