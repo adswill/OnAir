@@ -42,6 +42,8 @@ int main() {
     { Opts o; o.lpm = 100; o.lines = 100; roundTrip("ioc576 lpm100 12k", o, 0.98); }
     { Opts o; o.lpm = 180; o.lines = 150; roundTrip("ioc576 lpm180 12k", o, 0.95); }
     { Opts o; o.lpm = 240; o.lines = 200; roundTrip("ioc576 lpm240 12k", o, 0.90); }
+    // #390: a long chart (past the old 1500-line stop) is one picture that ends on its stop tone
+    { Opts o; o.lpm = 240; o.lines = 2200; roundTrip("ioc576 lpm240 2200 lines", o, 0.90); }
     { Opts o; o.ioc = 288; o.lpm = 120; o.lines = 100; roundTrip("ioc288 lpm120 12k", o, 0.97); }
     // Audio rates, including ones that do not divide the line length.
     for (double r : {8000.0, 11025.0, 16000.0, 22050.0, 44100.0, 48000.0}) {
