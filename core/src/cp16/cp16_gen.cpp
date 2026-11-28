@@ -143,7 +143,7 @@ std::unique_ptr<TxGenerator> makeCp16TxGenerator(const TxRequest& r, double rate
     if (!cp16::validParams(o.params, &why)) { err = "CP16: " + why; return nullptr; }
     o.text = r.text.empty() ? std::string(cp16DemoText(0)) : r.text;
     if (cp16::textCells(o.text).empty()) { err = "CP16: the text has no characters to send"; return nullptr; }
-    o.repeat = false;
+    o.repeat = r.loop;   // loop: the text is repeated until stopped; otherwise one pass, then the generator has finished
     o.snrDb = 200;
     return std::make_unique<Cp16Tx>(o);
 }

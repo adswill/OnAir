@@ -163,6 +163,7 @@ static void testTx() {
     r.opt["cp16.base"] = 1200;
     const double rate = 250000;
     std::string err;
+    r.loop = false;   // one pass: the generator ends by itself
     auto g = makeCp16TxGenerator(r, rate, err);
     CHECK(g != nullptr, "tx: %s", err.c_str());
     if (!g) return;
@@ -185,6 +186,14 @@ static void testTx() {
     CHECK(peak < 1.0, "tx peak %.2f", peak);
     CHECK(fr >= 0.99, "tx: read %.0f %%", 100 * fr);
     if (gDebug && fr < 0.99) { std::printf("tx levels: state %d base %.1f spacing %.2f row %.1f ms snr %.1f\n", tel.state, tel.baseHz, tel.spacingHz, tel.rowSec * 1000, tel.snrDb); printPicture(tel, 0, 60); }
+    // loop: the same text goes on after the first pass (the generator does not end)
+    r.loop = true;
+    auto gl = makeCp16TxGenerator(r, rate, err);
+    CHECK(gl != nullptr, "tx loop: %s", err.c_str());
+    if (gl) {
+        for (int k = 0; k < blocks + 20; k++) gl->generate(buf.data(), buf.size());
+        CHECK(!gl->finished(), "tx loop: the transmission ended after one pass");
+    }
     TxRequest bad = r;
     bad.opt["cp16.spacing"] = 50;
     CHECK(makeCp16TxGenerator(bad, rate, err) == nullptr, "tx: 50 Hz spacing accepted");
