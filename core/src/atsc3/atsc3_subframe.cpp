@@ -217,6 +217,54 @@ bool receiveSymbol(const SubframeParams& s, int l, const cf32* x, SymbolRx& rx) 
     return true;
 }
 
+// The channel response of symbol l from the scattered pilots of its neighbours as well: every carrier k = dx m carries a pilot every dy symbols, so
+// the pilots of the symbols around l, interpolated in time to l, form a comb of spacing dx instead of the dx dy of l's own pilots. Its impulse
+// response is dy times longer (N / dx samples), long enough for echoes up to the guard interval: from l's own comb (N / (dx dy) samples, 1024
+// for 8K SP4_2) an echo later than 3/4 of that aliases, and the denoised estimate is wrong. The noise taps are then dropped (cirDenoiseChannel).
+bool timeCombChannel(const SubframeParams& s, const std::vector<SymbolRx>& rx, int l, std::vector<std::vector<uint8_t>>& kinds, std::vector<cf32>& hch) {
+    const int noc = numCarriers(s.fftSize, s.cred), N = s.fftSize;
+    const int dx = spDx(s.spPattern), dy = spDy(s.spPattern), L = (int)rx.size();
+    if (dy < 2 || isBoundarySymbol(s, l) || L < 2) return false;
+    const auto r = referenceSequence(noc);
+    const double asp = spAmplitude(s), acp = continualPilotAmplitude();
+    const int mid = (noc - 1) / 2;
+    if (kinds.size() != (size_t)L) kinds.assign((size_t)L, {});
+    auto kindOf = [&](int j) -> const std::vector<uint8_t>& { if (kinds[(size_t)j].empty()) kinds[(size_t)j] = subframeCarrierKinds(s, j); return kinds[(size_t)j]; };
+    // the pilot estimate of carrier k in symbol j, with the common phase of j against l taken off (carrier offset, phase noise)
+    std::vector<cf32> rot((size_t)L, cf32(1, 0));
+    for (int j = std::max(0, l - dy); j <= std::min(L - 1, l + dy); j++) {   // only the symbols that lend pilots below
+        if (j == l || rx[(size_t)j].hch.size() != (size_t)noc) continue;
+        std::complex<double> c(0, 0);
+        for (int k = 0; k < noc; k++) c += std::complex<double>(rx[(size_t)l].hch[(size_t)k]) * std::conj(std::complex<double>(rx[(size_t)j].hch[(size_t)k]));
+        const double m = std::abs(c);
+        if (m > 0) rot[(size_t)j] = cf32((float)(c.real() / m), (float)(c.imag() / m));
+    }
+    auto pilot = [&](int j, int k, cf32& v) {
+        if (j < 0 || j >= L || rx[(size_t)j].y.size() != (size_t)noc) return false;
+        const uint8_t kd = kindOf(j)[(size_t)k];
+        if (kd != 1 && kd != 2 && kd != 4) return false;
+        if (std::abs(k - mid) <= 1 && noc > 64) return false;
+        const double a = kd == 2 ? acp : asp;
+        v = rx[(size_t)j].y[(size_t)k] / (float)(2 * a * (0.5 - r[(size_t)k])) * rot[(size_t)j];
+        return true;
+    };
+    std::vector<cf32> est((size_t)noc);
+    std::vector<uint8_t> ok((size_t)noc, 0);
+    for (int k = 0; k < noc; k += dx) {
+        cf32 v;
+        if (pilot(l, k, v)) { est[(size_t)k] = v; ok[(size_t)k] = 1; continue; }
+        // the nearest symbols before and after l with a pilot on k (boundary symbols have one on every dx)
+        int j1 = l - 1, j2 = l + 1;
+        cf32 v1, v2;
+        bool h1 = false, h2 = false;
+        for (; j1 >= std::max(0, l - dy) && !(h1 = pilot(j1, k, v1)); j1--) {}
+        for (; j2 <= std::min(L - 1, l + dy) && !(h2 = pilot(j2, k, v2)); j2++) {}
+        if (h1 && h2) { const float t = (float)(l - j1) / (float)(j2 - j1); est[(size_t)k] = v1 * (1 - t) + v2 * t; ok[(size_t)k] = 1; }
+        else if (h1 || h2) { est[(size_t)k] = h1 ? v1 : v2; ok[(size_t)k] = 1; }
+    }
+    return cirDenoiseChannel(N, noc, dx, 0, est, ok, hch);
+}
+
 void smoothChannel(const std::vector<SymbolRx>& rx, int l, int half, std::vector<cf32>& out) {
     const std::vector<cf32>& h0 = rx[l].hch;
     const size_t noc = h0.size();
