@@ -79,6 +79,24 @@ bool Input::open(const PortInfo& port) {
 void Input::close() { if (p_->h) { midiInStop(p_->h); midiInReset(p_->h); midiInClose(p_->h); p_->h = nullptr; } p_->id.clear(); }
 bool Input::isOpen() const { return p_->h != nullptr; }
 
+struct Output::Impl { HMIDIOUT h = nullptr; };
+Output::Output() : p_(std::make_unique<Impl>()) {}
+Output::~Output() { close(); }
+bool Output::open(const PortInfo& in) {
+    close();
+    const UINT n = midiOutGetNumDevs();
+    for (UINT i = 0; i < n; i++) {
+        MIDIOUTCAPSA caps;
+        if (midiOutGetDevCapsA(i, &caps, sizeof caps) != MMSYSERR_NOERROR || in.name != caps.szPname) continue;
+        if (midiOutOpen(&p_->h, i, 0, 0, CALLBACK_NULL) == MMSYSERR_NOERROR) return true;
+        p_->h = nullptr;
+    }
+    return false;
+}
+void Output::close() { if (p_->h) { midiOutClose(p_->h); p_->h = nullptr; } }
+bool Output::isOpen() const { return p_->h != nullptr; }
+void Output::send(const uint8_t* b, size_t n) { if (p_->h && n == 3) midiOutShortMsg(p_->h, (DWORD)b[0] | ((DWORD)b[1] << 8) | ((DWORD)b[2] << 16)); }
+
 // ---------------------------------------------------------------------------------------------------------------------------- macOS
 #elif defined(__APPLE__)
 
@@ -139,6 +157,36 @@ void Input::close() {
 }
 bool Input::isOpen() const { return p_->port != 0; }
 
+struct Output::Impl { MIDIClientRef client = 0; MIDIPortRef port = 0; MIDIEndpointRef dst = 0; };
+Output::Output() : p_(std::make_unique<Impl>()) {}
+Output::~Output() { close(); }
+bool Output::open(const PortInfo& in) {
+    close();
+    const ItemCount n = MIDIGetNumberOfDestinations();
+    for (ItemCount i = 0; i < n; i++) {
+        MIDIEndpointRef e = MIDIGetDestination(i);
+        CFStringRef nm = nullptr;
+        MIDIObjectGetStringProperty(e, kMIDIPropertyDisplayName, &nm);
+        const bool same = cfString(nm) == in.name;
+        if (nm) CFRelease(nm);
+        if (!same) continue;
+        if (MIDIClientCreate(CFSTR("OnAir out"), nullptr, nullptr, &p_->client) != noErr || MIDIOutputPortCreate(p_->client, CFSTR("OnAir out"), &p_->port) != noErr) { close(); return false; }
+        p_->dst = e;
+        return true;
+    }
+    return false;
+}
+void Output::close() { if (p_->port) MIDIPortDispose(p_->port); if (p_->client) MIDIClientDispose(p_->client); p_->port = 0; p_->client = 0; p_->dst = 0; }
+bool Output::isOpen() const { return p_->port != 0; }
+void Output::send(const uint8_t* b, size_t n) {
+    if (!p_->port || n > 3) return;
+    Byte buf[64];
+    MIDIPacketList* pl = reinterpret_cast<MIDIPacketList*>(buf);
+    MIDIPacket* pk = MIDIPacketListInit(pl);
+    MIDIPacketListAdd(pl, sizeof buf, pk, 0, n, b);
+    MIDISend(p_->port, p_->dst, pl);
+}
+
 // ---------------------------------------------------------------------------------------------------------------------------- Linux
 #elif defined(__linux__) && !defined(__ANDROID__)
 
@@ -187,6 +235,18 @@ bool Input::open(const PortInfo& port) {
 void Input::close() { if (p_->fd >= 0) { ::close(p_->fd); p_->fd = -1; } p_->id.clear(); }
 bool Input::isOpen() const { return p_->fd >= 0; }
 
+struct Output::Impl { int fd = -1; };
+Output::Output() : p_(std::make_unique<Impl>()) {}
+Output::~Output() { close(); }
+bool Output::open(const PortInfo& in) {
+    close();
+    p_->fd = ::open(in.id.c_str(), O_WRONLY | O_NONBLOCK | O_CLOEXEC);
+    return p_->fd >= 0;
+}
+void Output::close() { if (p_->fd >= 0) { ::close(p_->fd); p_->fd = -1; } }
+bool Output::isOpen() const { return p_->fd >= 0; }
+void Output::send(const uint8_t* b, size_t n) { if (p_->fd >= 0) { const ssize_t r = ::write(p_->fd, b, n); (void)r; } }
+
 // ---------------------------------------------------------------------------------------------------------------------------- no ports
 #else
 
@@ -197,6 +257,13 @@ Input::~Input() = default;
 bool Input::open(const PortInfo&) { p_->err = "MIDI input is not available on this system."; return false; }
 void Input::close() {}
 bool Input::isOpen() const { return false; }
+struct Output::Impl {};
+Output::Output() : p_(std::make_unique<Impl>()) {}
+Output::~Output() = default;
+bool Output::open(const PortInfo&) { return false; }
+void Output::close() {}
+bool Output::isOpen() const { return false; }
+void Output::send(const uint8_t*, size_t) {}
 #endif
 
 // ---------------------------------------------------------------------------------------------------------------------------- shared
