@@ -152,6 +152,73 @@ int main() {
             CHECK(after < 12, "dropout: rows after the gap, mean error %.2f", after);
         }
     }
+    {   // a 3 s gap (20 lines, more than the 12 missed lines that used to end a picture): one whole picture, the rows after the gap right
+        const SstvModeInfo& mi = sstvModeInfo(0);
+        const int w = mi.width, h = mi.height;
+        const double leadMs = 400 + 910;
+        const double gapStartMs = leadMs + 80 * mi.lineMs + 40, gapMs = 3000;
+        const size_t total = (size_t)((leadMs + h * mi.lineMs + 1500) * 8);
+        std::vector<float> audio(total);
+        makeSstvTx(0, {})->generate(audio.data(), audio.size());
+        for (size_t i = (size_t)(gapStartMs * 8); i < (size_t)((gapStartMs + gapMs) * 8) && i < total; i++) audio[i] = 0.f;
+        Noise nz;
+        const double sigma = std::sqrt(0.125 / 100.0 * 4000.0 / 3000.0);
+        auto dec = makeSstvDecoder();
+        for (size_t i = 0; i < total; i += 800) {
+            const size_t m = total - i < 800 ? total - i : 800;
+            for (size_t k = 0; k < m; k++) audio[i + k] += (float)(sigma * nz.g());
+            dec->feedAudio(audio.data() + i, m);
+        }
+        HfdigSstvTelemetry t;
+        dec->telemetry(t);
+        std::vector<uint8_t> ref;
+        sstvTestPicture(w, h, ref);
+        const bool whole = t.image && t.image->complete && (int)t.image->lines == h && t.picturesDone == 1;
+        CHECK(whole, "long gap: picture %s, lines %d/%d, pictures %d", t.image ? (t.image->complete ? "complete" : "incomplete") : "missing", t.lines, h, (int)t.picturesDone);
+        if (whole) {
+            const size_t rowBytes = (size_t)w * 3;
+            double s = 0;
+            const int y0 = 80 + (int)(gapMs / mi.lineMs) + 6;
+            for (int y = y0; y < h; y++) for (size_t x = 0; x < rowBytes; x++) s += std::abs((int)t.image->rgb[(size_t)y * rowBytes + x] - (int)ref[(size_t)y * rowBytes + x]);
+            const double after = s / ((double)(h - y0) * rowBytes);
+            CHECK(after < 12, "long gap: rows after the gap, mean error %.2f", after);
+        }
+    }
+    {   // a second VIS header part-way through a picture: the first is saved as it stood, the second decodes whole
+        const SstvModeInfo& mi = sstvModeInfo(0);
+        const int w = mi.width, h = mi.height;
+        const double leadMs = 400 + 910;
+        const size_t cut = (size_t)((leadMs + 100 * mi.lineMs) * 8);
+        const size_t one = (size_t)((leadMs + h * mi.lineMs + 1500) * 8);
+        std::vector<float> full(one);
+        makeSstvTx(0, {})->generate(full.data(), full.size());
+        std::vector<float> audio(full.begin(), full.begin() + (long)cut);
+        audio.insert(audio.end(), full.begin(), full.end());
+        Noise nz;
+        const double sigma = std::sqrt(0.125 / 100.0 * 4000.0 / 3000.0);
+        auto dec = makeSstvDecoder();
+        const size_t total = audio.size();
+        for (size_t i = 0; i < total; i += 800) {
+            const size_t m = total - i < 800 ? total - i : 800;
+            for (size_t k = 0; k < m; k++) audio[i + k] += (float)(sigma * nz.g());
+            dec->feedAudio(audio.data() + i, m);
+        }
+        HfdigSstvTelemetry t;
+        dec->telemetry(t);
+        std::vector<uint8_t> ref;
+        sstvTestPicture(w, h, ref);
+        const bool two = t.picturesDone == 2 && t.history.size() >= 2 && t.image && t.image->complete && (int)t.image->lines == h;
+        CHECK(two, "new VIS: pictures %d, history %d, last %s", (int)t.picturesDone, (int)t.history.size(), t.image ? (t.image->complete ? "complete" : "incomplete") : "missing");
+        if (two) {
+            const auto& first = t.history[1];
+            CHECK(!first->complete && first->lines >= 90 && first->lines < h, "new VIS: first picture complete %d lines %d", (int)first->complete, (int)first->lines);
+            const size_t rowBytes = (size_t)w * 3;
+            double s = 0;
+            for (int y = 0; y < h; y++) for (size_t x = 0; x < rowBytes; x++) s += std::abs((int)t.image->rgb[(size_t)y * rowBytes + x] - (int)ref[(size_t)y * rowBytes + x]);
+            const double e = s / ((double)h * rowBytes);
+            CHECK(e < 12, "new VIS: second picture mean error %.2f", e);
+        }
+    }
     printf("%s\n", fails ? "FAILED" : "ok");
     return fails ? 1 : 0;
 }

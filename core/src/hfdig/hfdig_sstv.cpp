@@ -159,7 +159,7 @@ struct HfdigSstv::Impl {
         ph[n & (kRing - 1)] = phase;
         n++;
         if (n < (uint64_t)kBox + 2) return;
-        if (active) advanceRx();
+        if (active) { advanceRx(); if (active) visStep((uint64_t)(n - 1), boxF(n - 1)); }   // a VIS header is watched for during a picture too
         else idleStep();
     }
 
@@ -168,12 +168,17 @@ struct HfdigSstv::Impl {
         const uint64_t i = n - 1;
         const double fb = boxF(i);
         pulseLog(i, fb);
+        visStep(i, fb);
+    }
+
+    // the VIS header state machine; during a picture it wants a longer leader (200 ms of the 300 ms) so picture content cannot pass for one
+    void visStep(uint64_t i, double fb) {
         const double dev = fb - leadMean;
         switch (vs) {
         case Idle:
             if (std::fabs(fb - kCenter) < 130) { leadCount++; leadSum += fb; leadMean = leadSum / leadCount; }
             else { leadCount = 0; leadSum = 0; leadMean = kCenter; }
-            if (leadCount >= 800) { vs = Lead1; trans = 0; }
+            if (leadCount >= (active ? 1600 : 800)) { vs = Lead1; trans = 0; }
             break;
         case Lead1:
             if (std::fabs(dev) < 130) { trans = 0; leadCount++; leadSum += fb; leadMean = leadSum / leadCount; }
@@ -201,27 +206,32 @@ struct HfdigSstv::Impl {
             break;
         }
         case Bits:
-            if ((double)i >= edge3 + 300 * 8 + 8) { decodeVis(); if (!active) { vs = Idle; leadCount = 0; leadSum = 0; leadMean = kCenter; } }
+            if ((double)i >= edge3 + 300 * 8 + 8) { if (!decodeVis()) { vs = Idle; leadCount = 0; leadSum = 0; leadMean = kCenter; } }
             break;
         }
         if (vs == Idle && leadCount == 0) leadMean = kCenter;
     }
 
-    void decodeVis() {
+    bool decodeVis() {
         const double off = leadMean - kCenter;
         int code = 0, ones = 0;
         for (int j = 0; j < 10; j++) {
             const double t0 = edge3 + (30 * j + 6) * 8, t1 = edge3 + (30 * j + 24) * 8;
             const double f = meanF(t0, t1);
-            if (j == 0) { if (std::fabs(f - (1200 + off)) > 110) return; continue; }
+            if (j == 0) { if (std::fabs(f - (1200 + off)) > 110) return false; continue; }
             if (j == 9) break;
             const int b = f < 1200 + off ? 1 : 0;
             ones += b;
             if (j <= 7) code |= b << (j - 1);
         }
-        if (ones & 1) return;
+        if (ones & 1) return false;
         const auto& tab = table();
-        for (const Spec& s : tab) if (s.info.vis == code) { startRx(s, true, edge3 + 300 * 8, off); return; }
+        for (const Spec& s : tab) if (s.info.vis == code) {
+            if (active) finish(false);                       // a new header: the picture in progress is saved as it stands
+            startRx(s, true, edge3 + 300 * 8, off);
+            return true;
+        }
+        return false;
     }
 
     // the log of 1200 Hz pulses: five at the period of a mode start that mode
@@ -322,7 +332,8 @@ struct HfdigSstv::Impl {
         const bool found = mv < 1200 + rx.off + 110 && mv > 1000;
         const bool gated = rx.nFit >= 3 && std::fabs(cm - lineStart(k)) > 3 * 8;
         if (!found || gated) {
-            if (++rx.missed >= 12) finish(false);
+            // a picture that began with a VIS header runs to its last line on the free-running clock; one found from sync pulses alone may be a false start
+            if (++rx.missed >= 12 && !rx.vis) finish(false);
             return;
         }
         rx.missed = 0;
