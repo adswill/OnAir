@@ -401,10 +401,15 @@ void Bicm::decodeBatch(const std::vector<const cf32*>& cells, float noiseVar, st
                 hard.assign(gHard.begin() + (size_t)b * (size_t)cfg_.nInner, gHard.begin() + (size_t)(b + 1) * (size_t)cfg_.nInner);
                 if (finish(hard, payload[(size_t)b])) { ok[(size_t)b] = 1; decoded++; }
             }
+        // A GPU kernel with the two-minimum correction runs the arithmetic of the CPU decoder (decodeFast, the same normalisation and 50 iterations):
+        // a word it failed on fails again on the CPU, after 25 to 75 ms that a 256QAM PLP on a weak signal cannot spare (the receiver falls behind
+        // the samples and loses the frames that would have decoded). Only a batch the GPU did not run goes to the CPU.
+        if (!gOk.empty() && GpuLdpc::instance().boxCorrKernels()) return;
         // A word the CPU decoder fails on costs it all 50 iterations (50 to 75 ms for a 64800 bit word). When it has failed on more than a quarter
         // of a full batch and no word of the batch decoded, it is a damaged frame or a signal below the threshold: as on the Type A path below, the
         // rest of the batch is not tried, or the whole receiver waits for seconds and falls behind the samples. Counted on the CPU decoder, not on
-        // the GPU: the GPU runs plain min-sum and near the threshold of 256QAM 11/15 it fails on almost every word that the CPU then decodes. A batch
+        // the GPU: a GPU kernel without the two-minimum correction failed near the threshold of 256QAM 11/15 on almost every word that the CPU
+        // then decoded (that is the batch the GPU did not run now, above). A batch
         // in which words decode (a weak signal, not a hopeless one) and a short batch (the end of a frame) are decoded in full. The words are tried
         // spread over the batch (bit-reversed order), so a gap that damages the first few blocks does not decide for the clean ones after it.
         static_assert(Ldpc::kBatch == 16, "the order below is for batches of 16");
