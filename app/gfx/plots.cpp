@@ -2505,6 +2505,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags, bool movingView) 
 // frac: the spectrum's share of the height; with drag set, the boundary line is a handle that changes it.
 void spectrumWaterfall(App& a, float& frac, bool drag) {
     const double tPlot0 = glfwGetTime();
+    panoramaStrip(a);   // #658: only when the panorama is on
     const ImVec2 p = ImGui::GetCursorScreenPos();
     const ImVec2 avail = ImGui::GetContentRegionAvail();
     const float sliderCol = std::min(52.f * gUi, std::max(0.f, avail.x - 60.f));
@@ -2567,6 +2568,7 @@ void spectrumWaterfall(App& a, float& frac, bool drag) {
     ImGui::GetWindowDrawList()->AddLine(ImVec2(p.x, y), ImVec2(p.x + w, y), hot ? IM_COL32(200, 200, 200, 160) : IM_COL32(110, 110, 110, 110), hot ? 2.f : 1.f);
     if (sliderCol > 0) dbRangeSliders(a, ImVec2(p.x + w, p.y + stripH), sliderCol, std::max(40.f, h - stripH));
     drawToast(p);
+    panoramaButton(a, p, w);   // #658
     // DECT2_WHEELTEST=1 (dev): scripted wheel events over the spectrum, to check the View > Controls rules in a hidden run; prints what changed on stderr
     static const bool wheelTest = getenv("DECT2_WHEELTEST") != nullptr;
     if (wheelTest) {

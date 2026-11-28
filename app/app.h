@@ -1391,6 +1391,8 @@ struct ChanWidth { double mhz = 0; bool settable = false, hasAuto = false, manua
 ChanWidth channelWidth(const App& a);
 std::string widthText(double mhz);   // "7 MHz", "1.536 MHz", "12.5 kHz"
 void channelWidthPopup(App& a);      // automatic or manual, where the mode allows it; otherwise what fixes the width
+void panoramaStrip(App& a);                      // panorama_ui.cpp: the 5/10/20 MHz overview strip above the spectrum (#658), when it is on
+void panoramaButton(App& a, ImVec2 p, float w);  // panorama_ui.cpp: the one button that turns it on (a radio below 10 Msps only)
 void spectrumWaterfall(App& a, float& frac, bool drag);   // the spectrum on top of the waterfall, one panel
 void specFreqViewUpdate(const App& a);                                     // plots.cpp: keep linked frequency pan/zoom in sync with the radio
 void specFreqViewGet(double& loMhz, double& hiMhz);
