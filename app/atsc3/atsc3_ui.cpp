@@ -96,7 +96,7 @@ void atsc3Status(App& a) {
 }
 
 void atsc3ReceiverTab(App& a) {
-    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("ATSC 3.0 receiver: bootstrap search with carrier offset, Preamble and L1 signalling, OFDM frames, LDPC, link layer, ROUTE, MP4 remux"); ImGui::PopTextWrapPos(); }
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("ATSC 3.0 receiver: bootstrap search with carrier offset, Preamble and L1 signalling, OFDM frames, LDPC, link layer, ROUTE and MMTP, MP4 remux"); ImGui::PopTextWrapPos(); }
     ImGui::Spacing();
     Atsc3Telemetry t;
     if (!telem(a, t)) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Start the receiver with the ATSC 3.0 switch selected."); ImGui::PopTextWrapPos(); } return; }
@@ -112,7 +112,8 @@ void atsc3ReceiverTab(App& a) {
         row("frame", "%dK FFT, guard %d samples, scattered pilots 1 in %d (every %d symbols), %d symbols, %d Preamble symbol(s)", f.fftSize / 1024, f.guard, f.spDx, f.spDy, f.symbols, f.preambleSymbols);
         row("bootstrap", "minor version %d, %d MHz channel, preamble structure %d", f.bootstrapMinor, f.bandwidthMhz, f.preambleStructure);
         for (auto& p : f.plps)
-            row("PLP", "%d: %s, code rate %d/15, %dK LDPC, %d block(s) in the last frame, %d decoded", p.id, modName(p.bitsPerCell), p.rate15, p.nInner / 1000, p.blocks, p.blocksOk);
+            if (p.leftOut) row("PLP", "%d: %s, code rate %d/15, %dK LDPC, left out: the service playing does not use it", p.id, modName(p.bitsPerCell), p.rate15, p.nInner / 1000);
+            else row("PLP","%d: %s, code rate %d/15, %dK LDPC, %d block(s) in the last frame, %d decoded", p.id, modName(p.bitsPerCell), p.rate15, p.nInner / 1000, p.blocks, p.blocksOk);
     }
     row("baseband packets", "%ld (%ld bad)", t.bbPackets, t.bbBad);
     row("link layer", "%ld ALP packets, %ld UDP datagrams, %ld service list tables, %ld ROUTE objects", t.alpPackets, t.udp, t.llsTables, t.routeObjects);
@@ -150,11 +151,11 @@ void atsc3ReceiverTab(App& a) {
             ImGui::TableNextColumn(); ImGui::Text("%s%s", s.shortName.c_str(), s.hidden ? " (hidden)" : "");
             ImGui::TableNextColumn(); ImGui::Text("%d", s.serviceId);
             ImGui::TableNextColumn(); ImGui::Text("%s", s.category >= 0 && s.category <= 6 ? cats[s.category] : "?");
-            const bool route = s.slsProtocol == 1;
-            ImGui::TableNextColumn(); ImGui::Text("%s", route ? "ROUTE" : s.slsProtocol == 2 ? "MMTP" : "-");
+            const bool playable = s.slsProtocol == 1 || s.slsProtocol == 2;
+            ImGui::TableNextColumn(); ImGui::Text("%s", s.slsProtocol == 1 ? "ROUTE" : s.slsProtocol == 2 ? "MMTP" : "-");
             ImGui::TableNextColumn();
             ImGui::PushID(s.serviceId);
-            if (!route) { ImGui::TextDisabled("not supported yet"); }
+            if (!playable) { ImGui::TextDisabled("not supported yet"); }
             else if (t.selected == s.serviceId) { { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.35f, 0.9f, 0.45f, 1), t.serviceReady ? "receiving" : "waiting for its signaling"); ImGui::PopTextWrapPos(); } }
             else if (ImGui::SmallButton("Receive")) a.engine.atsc3Select(s.serviceId);
             ImGui::PopID();
@@ -176,5 +177,5 @@ void atsc3ReceiverTab(App& a) {
         }
     }
     ImGui::Spacing();
-    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Picture and sound appear in the TV tab. Services that use MMTP instead of ROUTE are listed but cannot be received yet."); ImGui::PopTextWrapPos(); }
+    { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Picture and sound appear in the TV tab. Services that use MMTP instead of ROUTE play their picture and sound; their captions are not shown yet."); ImGui::PopTextWrapPos(); }
 }

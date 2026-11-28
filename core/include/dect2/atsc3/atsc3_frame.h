@@ -72,6 +72,8 @@ struct PlpResult {
     std::vector<cf32> head, tail;
     std::vector<float> headW, tailW;              // their channel state weights (empty: none)
     int skipped = 0;                              // blocks not tried: the PLP is backed off (DecodePlan) and none of its probe blocks decoded
+    // Left out on purpose (DecodePlan::leftOut): nothing of this PLP was read in this frame, which is not an error.
+    bool leftOut = false;
 };
 
 // PLPs that have decoded nothing for a while (Atsc3Receiver::decodePlan): of each such PLP only `blocks` FEC blocks, spread over the frame, are
@@ -81,6 +83,10 @@ struct DecodePlan {
     struct Probe { int id = 0, blocks = 0; };
     std::vector<Probe> probe;
     int probeBlocks(int id) const { for (auto& p : probe) if (p.id == id) return p.blocks; return 0; }
+    // PLPs that carry nothing the receiver needs (Atsc3Receiver's PLP selection): bit i set = PLP i is left out. It is listed with
+    // PlpResult::leftOut set, none of its cells are taken and none of its FEC blocks decoded.
+    uint64_t leftOut = 0;
+    bool isLeftOut(int id) const { return id >= 0 && id < 64 && ((leftOut >> id) & 1); }
 };
 
 // Decodes FEC blocks of one PLP into `pr` (blocks, ok, packets, blocksOk; descrambled baseband packets), in batches on up to `threads` threads.

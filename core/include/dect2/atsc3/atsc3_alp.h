@@ -57,5 +57,15 @@ private:
 // Parses one complete ALP packet (as cut by the reassembler); appends the input packets it carries.
 bool alpParse(const std::vector<uint8_t>& alp, std::vector<AlpPacket>& out, bool* isSegment = nullptr, int* segSeq = nullptr, bool* lastSeg = nullptr);
 
+// ---- link mapping table (A/330 7.1.1, signalling type 0x01): the IP/UDP flows that each PLP carries
+struct LmtFlow {
+    int plp = 0;
+    uint32_t srcIp = 0, dstIp = 0;
+    int srcPort = 0, dstPort = 0;
+    int sid = -1, contextId = -1;   // -1: not signalled
+};
+// Parses the table (the payload of an ALP signalling packet of type 1, after the signalling header). False when it is cut short.
+bool parseLmt(const uint8_t* p, size_t n, std::vector<LmtFlow>& out);
+
 } // namespace atsc3
 } // namespace dect2

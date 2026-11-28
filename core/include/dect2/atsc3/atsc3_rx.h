@@ -35,6 +35,8 @@ struct Atsc3Telemetry {
     long tsBytes = 0;
     long droppedBlocks = 0;              // sample blocks dropped because the decoder was behind
     double droppedSec = 0;               // the signal time they held
+    uint64_t plpMask = ~0ull;            // the PLPs being decoded (bit i: PLP i); all bits: every PLP (Atsc3Receiver::plpDecodeMask())
+    long plpsLeftOut = 0;                // PLPs left out of frames so far (one per PLP and frame)
     double load = 0;                     // decoding time / signal time over the last seconds (1 = just keeping up)
 };
 
@@ -53,6 +55,7 @@ public:
     static constexpr double kQueueSeconds = 6.0;
     void setPacketCallback(std::function<void(const uint8_t*, size_t, double)> f) { cb_ = std::move(f); }
     void selectService(int serviceId);                  // -1: the first video service that appears
+    void setDecodeAllPlps(bool on);                     // decode every PLP, not only those of the chosen service and the signalling
     bool telemetry(Atsc3Telemetry& t, uint64_t lastSeq);
     void stop();
 
@@ -75,6 +78,7 @@ private:
     std::unique_ptr<atsc3::Atsc3Sync> sync_;
     std::function<void(const uint8_t*, size_t, double)> cb_;
     std::atomic<int> want_{-1};
+    std::atomic<bool> allPlps_{false};
     std::atomic<long> dropped_{0}, tsBytes_{0};
     std::atomic<double> droppedSec_{0};
     std::atomic<double> busySec_{0}, signalSec_{0};

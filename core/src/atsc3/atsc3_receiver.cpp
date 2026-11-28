@@ -11,13 +11,17 @@
 #include "dect2/atsc3/atsc3_ti.h"
 #include <algorithm>
 #include <atomic>
+#include <cstdlib>
 #include <cstring>
 #include <thread>
 
 namespace dect2 {
 namespace atsc3 {
 
-Atsc3Receiver::Atsc3Receiver() {}
+Atsc3Receiver::Atsc3Receiver() {
+    const char* all = getenv("DECT2_ATSC3_ALL_PLPS");
+    allPlps_ = all && *all && *all != '0';
+}
 
 Atsc3Receiver::~Atsc3Receiver() { remux_.stop(); }
 
@@ -197,6 +201,7 @@ void Atsc3Receiver::updateHealth(const std::vector<const PlpResult*>& plps) {
     DecodePlan plan;
     for (auto& [id, h] : health_)
         if (h.backedOff) plan.probe.push_back({id, llsPlps_.count(id) || servicePlps_.count(id) ? kProbeBlocksProtected : kProbeBlocks});
+    plan.leftOut = ~plpMask_.load(std::memory_order_relaxed);   // the PLP selection as it stands; updatePlpSelection() writes this frame's choice
     plans_.emplace_back(st_.frames, plan);
     while (plans_.size() > 4 * (size_t)kPlanLag) plans_.pop_front();
 }
@@ -217,6 +222,7 @@ bool Atsc3Receiver::commitFrame(const FrameResult& fr, const Bootstrap& bs) {
             cti_.clear();
             straddle_.clear();
             updateHealth({});
+            cleanSince_ = sigTime_;
             DIAG_DEBUG_EVERY(209186, 5.0, "An ATSC 3.0 frame could not be decoded (%llu failed of %llu so far), so its data is dropped and the time interleavers restart.", (unsigned long long)st_.framesFailed, (unsigned long long)st_.frames);
             return false;
         }
@@ -231,22 +237,34 @@ bool Atsc3Receiver::commitFrame(const FrameResult& fr, const Bootstrap& bs) {
             BicmConfig bc = plpBicm(pr.cfg);
             FrameInfo::Plp pi;
             pi.id = pr.id; pi.bitsPerCell = bc.bitsPerCell; pi.rate15 = bc.rate15; pi.nInner = bc.nInner;
-            pi.blocks = pr.blocks; pi.blocksOk = pr.blocksOk;
+            pi.blocks = pr.blocks; pi.blocksOk = pr.blocksOk; pi.leftOut = pr.leftOut;
             fi.plps.push_back(pi);
         }
         info_ = fi;
     }
     std::vector<PlpResult> ctiOut;
-    for (auto& p : fr.plps) if (p.cti) ctiOut.push_back(runCti(p, fr.plan.probeBlocks(p.id))); else if (p.straddle) ctiOut.push_back(joinStraddle(p));
+    for (auto& p : fr.plps) {
+        if (p.leftOut) {   // left out on purpose: its interleaver and packet reassembly start afresh when it is decoded again
+            std::lock_guard<std::mutex> lk(mu_);
+            st_.plpsLeftOut++;
+            cti_.erase(p.id);
+            straddle_.erase(p.id);
+            reasm_[p.id].reset();
+            continue;
+        }
+        if (p.cti) ctiOut.push_back(runCti(p, fr.plan.probeBlocks(p.id))); else if (p.straddle) ctiOut.push_back(joinStraddle(p));
+    }
     size_t ci = 0;
     std::vector<const PlpResult*> todo;
-    for (auto& p : fr.plps) todo.push_back(p.cti || p.straddle ? &ctiOut[ci++] : &p);
+    for (auto& p : fr.plps) if (!p.leftOut) todo.push_back(p.cti || p.straddle ? &ctiOut[ci++] : &p);
     {
         std::lock_guard<std::mutex> lk(mu_);
         updateHealth(todo);
     }
+    bool wantedClean = true;   // every PLP that was decoded (those the selection keeps) came without a failed FEC block in this frame
     for (const PlpResult* pp : todo) {
         const PlpResult& p = *pp;
+        if (p.blocksOk < p.blocks) wantedClean = false;
         // blocks that failed leave a gap: the packet reassembly restarts after it
         std::vector<std::vector<uint8_t>> run;
         size_t j = 0;
@@ -260,6 +278,9 @@ bool Atsc3Receiver::commitFrame(const FrameResult& fr, const Bootstrap& bs) {
         }
         if (!run.empty()) pushBbPackets(p.id, run, gap);
     }
+    bool sawTs;
+    { std::lock_guard<std::mutex> lk(tsMu_); sawTs = sawTs_; }
+    updatePlpSelection(fr, bs, wantedClean, sawTs);
     return true;
 }
 
@@ -297,6 +318,16 @@ void Atsc3Receiver::onAlp(const AlpPacket& a, int plpId) {
         else if (a.type == AlpTs) st_.alpTs++;
         else if (a.type == AlpCompressedIp) st_.alpCompressedIp++;
         else st_.alpOther++;
+        if (a.type == AlpSignaling && a.signalingType == 1 && a.signalingFormat == 0 && a.signalingEncoding == 0) {   // link mapping table
+            std::vector<LmtFlow> flows;
+            if (parseLmt(a.data.data(), a.data.size(), flows)) {
+                st_.lmtTables++;
+                // only a table that parses marks its PLP as a signalling PLP: a damaged packet that looks like signalling must not keep a PLP
+                if (plpId >= 0 && plpId < 64) llsLast_[plpId] = sigTime_;
+                lmtPlps_.clear();
+                for (const LmtFlow& f : flows) lmtPlps_[((uint64_t)f.dstIp << 16) | (uint64_t)f.dstPort] |= 1ull << f.plp;
+            } else DIAG_DEBUG_EVERY(735959, 10.0, "An ATSC 3.0 link mapping table of %zu bytes is cut short, so the PLPs of the IP flows are learnt from the packets instead.", a.data.size());
+        }
     }
     if (a.type == AlpIpv4) {
         {   // transport stream packets between IP packets are damaged baseband packets, not a stream: they are forgotten, bytes and count
@@ -346,6 +377,17 @@ void Atsc3Receiver::pushIpFrom(const uint8_t* p, size_t n, int plpId) {
 }
 
 void Atsc3Receiver::onUdp(const UdpDatagram& d, int plpId) {
+    const uint64_t flow = ((uint64_t)d.dstIp << 16) | (uint64_t)d.dstPort;
+    {
+        std::lock_guard<std::mutex> lk(mu_);
+        if (plpId >= 0 && plpId < 64) flowPlps_[flow] |= 1ull << plpId;
+        if (learnedFlows_.count(flow)) {
+            lastServiceRx_ = sigTime_;
+            FlowRx& r = flowRx_[flow];
+            if (r.seen++) r.maxGap = std::max(r.maxGap, sigTime_ - r.last);
+            r.last = sigTime_;
+        }
+    }
     if (d.dstIp == kLlsAddress && d.dstPort == kLlsPort) {
         // a station that signs its signalling (A/360) sends its tables inside a SignedMultiTable: every table in it counts
         const auto tables = parseLlsAll(d.payload.data(), d.payload.size());
@@ -353,6 +395,7 @@ void Atsc3Receiver::onUdp(const UdpDatagram& d, int plpId) {
         {
             std::lock_guard<std::mutex> lk(mu_);
             if (plpId >= 0) llsPlps_.insert(plpId);   // never backed off while it decodes at all
+            if (!tables.empty() && plpId >= 0 && plpId < 64) llsLast_[plpId] = sigTime_;   // only LLS that parses marks a signalling PLP
             if (d.payload.size() >= 4 && d.payload[0] == 0xFE) st_.llsSigned++;
             for (const auto& t : tables) {
                 st_.llsTables++;
@@ -364,7 +407,7 @@ void Atsc3Receiver::onUdp(const UdpDatagram& d, int plpId) {
                 start = start || (selected_ >= 0 && !routeStarted_);
                 if (selected_ < 0 && autoSelect_) {
                     for (auto& sv : services_)
-                        if (sv.category == 1 && !sv.hidden && sv.slsProtocol == 1) { selected_ = sv.serviceId; start = true; break; }
+                        if (sv.category == 1 && !sv.hidden && (sv.slsProtocol == 1 || sv.slsProtocol == 2)) { selected_ = sv.serviceId; start = true; break; }
                 }
             }
         }
@@ -372,11 +415,15 @@ void Atsc3Receiver::onUdp(const UdpDatagram& d, int plpId) {
         return;
     }
     std::shared_ptr<RouteService> r;
+    std::shared_ptr<MmtpService> m;
     {
         std::lock_guard<std::mutex> lk(mu_);
         r = route_;
+        m = mmtp_;
     }
-    if (r && r->push(d) && plpId >= 0) {   // the selected service's signaling or media: never backed off while it decodes at all
+    bool mine = r && r->push(d);
+    if (m && m->push(d)) mine = true;
+    if (mine && plpId >= 0) {   // the selected service's signaling or media: never backed off while it decodes at all
         std::lock_guard<std::mutex> lk(mu_);
         servicePlps_.insert(plpId);
     }
@@ -386,9 +433,11 @@ bool Atsc3Receiver::selectService(int id) {
     {
         std::lock_guard<std::mutex> lk(mu_);
         selected_ = id;
+        relearnLocked("another service was chosen");
         routeStarted_ = false;
         route_.reset();
         servicePlps_.clear();
+        mmtp_.reset();
         remuxIds_.clear();
         lastInit_.clear();
     }
@@ -402,9 +451,11 @@ bool Atsc3Receiver::selectServiceIfNone(int id) {
         std::lock_guard<std::mutex> lk(mu_);
         if (selected_ >= 0) return routeStarted_;   // the receiver chose one itself from the signaling while the caller looked: do not restart its route
         selected_ = id;
+        relearnLocked("another service was chosen");
         routeStarted_ = false;
         route_.reset();
         servicePlps_.clear();
+        mmtp_.reset();
         remuxIds_.clear();
         lastInit_.clear();
     }
@@ -418,8 +469,22 @@ void Atsc3Receiver::startRoute() {
     if (routeStarted_) return;
     for (auto& s : services_) {
         if (s.serviceId != selected_) continue;
-        if (s.slsProtocol != 1) {   // ROUTE only; MMTP services are not supported
-            DIAG_EVERY(923174, 30.0, "ATSC 3.0 service %d uses MMTP signalling (protocol %d), which this receiver does not support, so it cannot be played.", s.serviceId, (int)s.slsProtocol);
+        if (s.slsProtocol == 2) {   // MMTP: the video and audio assets; captions and the other signalling are not read yet
+            auto m = std::make_shared<MmtpService>(s.slsSrcIp, s.slsDstIp, s.slsDstPort);
+            const uint32_t ip = s.slsDstIp;
+            const int port = s.slsDstPort;
+            auto key = [ip, port](uint16_t pid) { char k[64]; snprintf(k, sizeof k, "%08x:%d:p%u", ip, port, (unsigned)pid); return std::string(k); };
+            const uint64_t gen = ++routeGen_;
+            // as for a route: what the service that was just left still delivers is dropped
+            auto current = [this, gen]() { std::lock_guard<std::mutex> lk(mu_); return gen == routeGen_ && mmtp_; };
+            m->onObject = [this, key, current](uint16_t pid, const std::string&, bool init, const std::vector<uint8_t>& data) { if (current()) deliver(key(pid), init, false, data); };
+            m->onAsset = [this, key, current](uint16_t pid, const MmtpAsset&) { if (current()) remux_.addComponent(componentId(key(pid))); };
+            mmtp_ = m;
+            routeStarted_ = true;
+            return;
+        }
+        if (s.slsProtocol != 1) {
+            DIAG_EVERY(923174, 30.0, "ATSC 3.0 service %d uses a signalling protocol (%d) that is neither ROUTE nor MMTP, so it cannot be played.", s.serviceId, (int)s.slsProtocol);
             return;
         }
         route_ = std::make_shared<RouteService>(s.slsSrcIp, s.slsDstIp, s.slsDstPort);
@@ -431,25 +496,36 @@ void Atsc3Receiver::startRoute() {
 }
 
 void Atsc3Receiver::onObject(uint64_t gen, const RouteComponent& c, const RouteObject& o) {
-    int id;
     {
         std::lock_guard<std::mutex> lk(mu_);
         if (gen != routeGen_ || !route_) return;   // an object of the service that was just left: its component numbers would mix into the new service
         st_.routeObjects++;
-        char key[64];
-        snprintf(key, sizeof key, "%08x:%d:%u", c.dstIp, c.dstPort, c.tsi);
-        auto it = remuxIds_.find(key);
-        if (it == remuxIds_.end()) {
-            id = (int)remuxIds_.size() + 1;
-            remuxIds_[key] = id;
-        } else id = it->second;
-        // an initialization segment: by its code point, or (not every sender uses the code points of the S-TSID) by its first box
-        const bool boxInit = o.data.size() >= 8 && (memcmp(o.data.data() + 4, "ftyp", 4) == 0 || memcmp(o.data.data() + 4, "moov", 4) == 0);
-        const bool init = (o.codePoint >= 5 && o.codePoint <= 7) || boxInit;
+    }
+    char key[64];
+    snprintf(key, sizeof key, "%08x:%d:%u", c.dstIp, c.dstPort, c.tsi);
+    // an initialization segment: by its code point, or (not every sender uses the code points of the S-TSID) by its first box
+    const bool boxInit = o.data.size() >= 8 && (memcmp(o.data.data() + 4, "ftyp", 4) == 0 || memcmp(o.data.data() + 4, "moov", 4) == 0);
+    const bool init = (o.codePoint >= 5 && o.codePoint <= 7) || boxInit;
+    deliver(key, init, o.codePoint == 7, o.data);
+}
+
+int Atsc3Receiver::componentId(const std::string& key) {
+    std::lock_guard<std::mutex> lk(mu_);
+    auto it = remuxIds_.find(key);
+    if (it != remuxIds_.end()) return it->second;
+    const int id = (int)remuxIds_.size() + 1;
+    remuxIds_[key] = id;
+    return id;
+}
+
+void Atsc3Receiver::deliver(const std::string& key, bool init, bool repeatedInit, const std::vector<uint8_t>& data) {
+    const int id = componentId(key);
+    {
+        std::lock_guard<std::mutex> lk(mu_);
         if (init) {
-            if (o.codePoint == 7 && lastInit_.count(id)) return;   // a repeat of the init segment
-            if (lastInit_.count(id) && lastInit_[id] == o.data) return;
-            lastInit_[id] = o.data;
+            if (repeatedInit && lastInit_.count(id)) return;   // a repeat of the init segment
+            if (lastInit_.count(id) && lastInit_[id] == data) return;
+            lastInit_[id] = data;
         } else if (!lastInit_.count(id)) {
             DIAG_DEBUG_EVERY(772844, 10.0, "An ATSC 3.0 media segment arrived on component %d before its initialization segment, so it is dropped until the initialization segment is received.", id);
             return;   // media before the init segment cannot be played
@@ -457,18 +533,175 @@ void Atsc3Receiver::onObject(uint64_t gen, const RouteComponent& c, const RouteO
         st_.objectsDelivered++;
     }
     remux_.addComponent(id);
-    remux_.push(id, o.data);
+    remux_.push(id, data);
+}
+
+// ---- PLP selection
+
+namespace {
+uint64_t flowKey(uint32_t ip, int port) { return ((uint64_t)ip << 16) | (uint64_t)(port & 0xFFFF); }
+std::string plpList(uint64_t m) {
+    std::string out;
+    for (int i = 0; i < 64; i++) if ((m >> i) & 1) out += (out.empty() ? "" : ", ") + std::to_string(i);
+    return out.empty() ? "none" : out;
+}
+} // namespace
+
+void Atsc3Receiver::setDecodeAllPlps(bool on) {
+    allPlps_ = on;
+    std::lock_guard<std::mutex> lk(mu_);
+    if (on) relearnLocked("every PLP was asked for");
+}
+
+void Atsc3Receiver::relearnLocked(const char* why) {
+    flowPlps_.clear();
+    fullFrames_ = 0;
+    learnFrom_ = sigTime_;
+    flowRx_.clear();   // gaps are measured anew: a flow that has ended for good is not waited for
+    if (plpMask_.load(std::memory_order_relaxed) != ~0ull) {
+        st_.plpRelearns++;
+        DIAG_DEBUG_EVERY(544842, 10.0, "The ATSC 3.0 receiver decodes every PLP again (%s) and learns anew which ones the service needs.", why);
+    }
+    plpMask_ = ~0ull;
+}
+
+std::set<uint64_t> Atsc3Receiver::serviceFlowsLocked() const {
+    std::set<uint64_t> f;
+    if (selected_ < 0 || !routeStarted_) return f;
+    for (const SltService& s : services_) if (s.serviceId == selected_) f.insert(flowKey(s.slsDstIp, s.slsDstPort));
+    if (route_) for (const RouteComponent& c : route_->components()) f.insert(flowKey(c.dstIp, c.dstPort));
+    return f;
+}
+
+// The choice goes into the plan of the frame just committed (decodePlan), so it takes effect kPlanLag frames later, at the same frame for any
+// number of decoding threads.
+void Atsc3Receiver::updatePlpSelection(const FrameResult& fr, const Bootstrap& bs, bool wantedClean, bool sawTs) {
+    std::lock_guard<std::mutex> lk(mu_);
+    choosePlpsLocked(fr, bs, wantedClean, sawTs);
+    if (!plans_.empty() && plans_.back().first == st_.frames) plans_.back().second.leftOut = ~plpMask_.load(std::memory_order_relaxed);
+}
+
+void Atsc3Receiver::choosePlpsLocked(const FrameResult& fr, const Bootstrap& bs, bool wantedClean, bool sawTs) {
+    const PreambleResult& pre = fr.preamble;
+    const size_t len = frameLengthSamples(bs, pre.basic, pre.detail);
+    sigTime_ += (double)bs.numSymbols * 3072.0 / 6.144e6 + (len ? (double)len / postBootstrapRate(bs) : 0.0);
+    if (!wantedClean) cleanSince_ = sigTime_;
+    // the PLPs of the frame, and those L1 marks as carrying the low level signalling (L1D_plp_lls_flag)
+    uint64_t all = 0, lls = 0;
+    std::string layout;
+    for (const L1DetailSubframe& sf : pre.detail.subframes) {
+        for (const L1DetailPlp& p : sf.plps) {
+            if (p.id < 0 || p.id > 63) continue;
+            all |= 1ull << p.id;
+            if (p.llsFlag) lls |= 1ull << p.id;
+            char b[80];
+            snprintf(b, sizeof b, "%d:%d:%d:%d:%d:%d:%d;", p.id, p.layer, p.fecType, p.mod, p.cod, p.tiMode, p.llsFlag);
+            layout += b;
+        }
+    }
+    if (layout != plpLayout_) {
+        if (!plpLayout_.empty()) {
+            relearnLocked("the PLPs in L1 changed");
+            llsLast_.fill(-1.0);
+        }
+        plpLayout_ = layout;
+    }
+    const std::set<uint64_t> flows = serviceFlowsLocked();
+    if (flows != learnedFlows_) {
+        relearnLocked("the selected service or its signalling changed");
+        learnedFlows_ = flows;
+        lastServiceRx_ = sigTime_;
+        flowRx_.clear();
+    }
+    bool full = true;
+    for (const PlpResult& p : fr.plps) full = full && !p.leftOut;
+    if (full) fullFrames_++;
+    const uint64_t cur = plpMask_.load(std::memory_order_relaxed);
+    // a service whose packets stop coming while its PLPs decode cleanly may have moved to a PLP that is left out
+    if (cur != ~0ull && sigTime_ - std::max(lastServiceRx_, cleanSince_) > 2.0) {
+        relearnLocked("no packet of the selected service came for 2 s although its PLPs decode cleanly");
+        return;
+    }
+    // ... and so may one of its flows alone (audio, or another ROUTE session) while the others stay: a flow that came at least twice and
+    // then stays away for more than 2 s and 2.5 times its longest gap so far
+    if (cur != ~0ull) {
+        for (const auto& [f, r] : flowRx_) {
+            const double quiet = sigTime_ - std::max(r.last, cleanSince_);
+            if (r.seen >= 2 && quiet > std::max(2.0, 2.5 * r.maxGap)) {
+                relearnLocked("a flow of the selected service stopped although its PLPs decode cleanly");
+                return;
+            }
+        }
+    }
+    const char* why = nullptr;
+    uint64_t want = 0;
+    if (allPlps_) why = "every PLP was asked for";
+    else if (sawTs) why = "a PLP carries an MPEG-2 transport stream";
+    else if (flows.empty() || !serviceReadyLocked()) why = "no service is playing";
+    else if (fullFrames_ < 4 || sigTime_ - learnFrom_ < 2.0) why = "the service's PLPs are still being learnt";
+    else {
+        // the PLPs that carried signalling in the last 30 s of signal: a signalling PLP is kept, so it keeps coming; a PLP taken for one by
+        // mistake (a damaged packet that parsed) is left out and ages out of the set
+        uint64_t llsSeen = 0;
+        for (int i = 0; i < 64; i++) if (llsLast_[i] >= 0 && sigTime_ - llsLast_[i] < 30.0) llsSeen |= 1ull << i;
+        want = (lls | llsSeen) & all;
+        if (!want) why = "no PLP is known to carry the low level signalling";
+        for (uint64_t f : flows) {
+            if (why) break;
+            uint64_t m = 0;
+            auto a = flowPlps_.find(f);
+            if (a != flowPlps_.end()) m |= a->second;
+            auto b = lmtPlps_.find(f);
+            if (b != lmtPlps_.end()) m |= b->second;
+            if (route_)
+                for (const RouteComponent& c : route_->components())
+                        if (flowKey(c.dstIp, c.dstPort) == f && c.plpId >= 0 && c.plpId < 64) m |= 1ull << c.plpId;
+            m &= all;
+            if (!m) why = "a flow of the service has not been seen on any PLP yet";
+            want |= m;
+        }
+    }
+    if (why) {
+        if (cur != ~0ull) relearnLocked(why);
+        return;
+    }
+    const uint64_t next = (want & all) == all ? ~0ull : want;
+    if (next == cur) return;
+    if (next != ~0ull) {
+        st_.plpSelections++;
+        DIAG_DEBUG_EVERY(878483, 10.0, "ATSC 3.0 service %d: only PLP %s of the PLPs %s are decoded (the service and the low level signalling); the others are left out.", selected_, plpList(next).c_str(), plpList(all).c_str());
+    }
+    plpMask_ = next;
 }
 
 std::vector<SltService> Atsc3Receiver::services() const { std::lock_guard<std::mutex> lk(mu_); return services_; }
-bool Atsc3Receiver::serviceReady() const { std::lock_guard<std::mutex> lk(mu_); return route_ && route_->ready(); }
+bool Atsc3Receiver::serviceReady() const { std::lock_guard<std::mutex> lk(mu_); return serviceReadyLocked(); }
+bool Atsc3Receiver::serviceReadyLocked() const { return (route_ && route_->ready()) || (mmtp_ && mmtp_->ready()); }
 std::string Atsc3Receiver::mpd() const { std::lock_guard<std::mutex> lk(mu_); return route_ ? route_->mpd() : std::string(); }
-std::vector<RouteComponent> Atsc3Receiver::components() const { std::lock_guard<std::mutex> lk(mu_); return route_ ? route_->components() : std::vector<RouteComponent>(); }
+std::vector<RouteComponent> Atsc3Receiver::components() const {
+    std::lock_guard<std::mutex> lk(mu_);
+    if (route_) return route_->components();
+    std::vector<RouteComponent> out;
+    if (!mmtp_) return out;
+    for (const MmtpAsset& a : mmtp_->assets()) {
+        for (uint16_t pid : a.packetIds) {
+            RouteComponent c;
+            for (auto& s : services_) if (s.serviceId == selected_) { c.dstIp = s.slsDstIp; c.dstPort = s.slsDstPort; }
+            c.tsi = pid;
+            c.repId = a.id;
+            c.contentType = assetKind(a.type);
+            c.realTime = true;
+            out.push_back(c);
+        }
+    }
+    return out;
+}
 FrameInfo Atsc3Receiver::frameInfo() const { std::lock_guard<std::mutex> lk(mu_); return info_; }
 ReceiverStats Atsc3Receiver::stats() const {
     std::lock_guard<std::mutex> lk(mu_);
     ReceiverStats s = st_;
     if (route_) { s.slsObjects = route_->slsObjects(); s.slsTables = route_->slsTables(); }
+    if (mmtp_) { const MmtpStats ms = mmtp_->stats(); s.mpusDelivered = ms.mpusDelivered; s.mpusDropped = ms.mpusDropped; }
     return s;
 }
 

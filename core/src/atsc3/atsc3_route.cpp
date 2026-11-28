@@ -296,9 +296,11 @@ bool parseStsid(const std::string& xml, Stsid& out) {
         ipFromString(rs->attr("sIpAddr"), s.srcIp);
         ipFromString(rs->attr("dIpAddr"), s.dstIp);
         s.dstPort = atoi(rs->attr("dPort", "0").c_str());
+        if (!rs->attr("PLPID").empty()) s.plpId = atoi(rs->attr("PLPID").c_str());
         for (auto& ls : rs->all("LS")) {
             StsidChannel c;
             c.tsi = (uint32_t)strtoul(ls->attr("tsi", "0").c_str(), nullptr, 0);
+            if (!ls->attr("PLPID").empty()) c.plpId = atoi(ls->attr("PLPID").c_str());
             if (auto sf = ls->first("SrcFlow")) {
                 c.realTime = sf->attr("rt") == "true" || sf->attr("rt") == "1";
                 if (auto ci = sf->first("ContentInfo"))
@@ -389,6 +391,7 @@ void RouteService::handleSls(const RouteObject& o) {
                     rc.dstIp = s.dstIp ? s.dstIp : slsDst_;
                     rc.dstPort = s.dstPort ? s.dstPort : slsPort_;
                     rc.tsi = c.tsi; rc.repId = c.repId; rc.contentType = c.contentType; rc.lang = c.lang; rc.realTime = c.realTime;
+                    rc.plpId = c.plpId >= 0 ? c.plpId : s.plpId;
                     components_.push_back(rc);
                 }
             }
