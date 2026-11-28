@@ -180,6 +180,7 @@ inline const std::vector<Info>& table() {
         {"mapMyLocRingList", kLocation, N_("Range ring distances"), N_("Comma separated, in the distance unit of Settings > Units (nm or km), up to 8, e.g. 50,100,200."), "map range rings distance circles", K::Text, 0, 0, 0, nullptr, nullptr, "50,100,200", true},
         // ---- Keyboard and mouse
         {"keysEditor", kKeys, N_("Keys, mouse buttons and wheel"), N_("Every action with its keys: Set records a key, Clear removes it, Default puts it back. Conflicts are marked; import and export the whole set."), "shortcut shortcuts hotkey hotkeys keybinding keybindings keyboard mouse wheel bind rebind", K::Custom},
+        {"sliderWheel", kKeys, N_("Mouse wheel changes sliders"), N_("On (default): the wheel over a slider changes its value. Off: the wheel scrolls the panel instead, and sliders change only by dragging, clicking or the keyboard."), "slider wheel scroll gain volume accident", K::Bool, 1},
         // ---- Notifications
         {"notifySystem", kNotify, N_("System notifications"), N_("Alerts (watch lists, automations, pass reminders) also go to the system's notification centre."), "notification alert desktop toast", K::Bool, 1},
         {"notifyBanner", kNotify, N_("Banner in OnAir"), N_("Alerts show a banner at the top of the OnAir window."), "notification banner", K::Bool, 1},
