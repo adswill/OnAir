@@ -54,4 +54,13 @@ std::string meshtasticUrlChannelKey(const MeshtasticUrlChannel& c);
 // custom bandwidth, spreading factor and coding rate. False with err when the region or preset is not known or has no slot.
 bool meshtasticUrlLora(const MeshtasticChannelSet& s, MeshLoraSettings& out, std::string& err);
 
+// Channel key files (Settings > Mesh > Channel keys: Export keys / Import keys). One line per key: protocol, TAB, channel name, TAB, key as typed
+// (Meshtastic base64, MeshCore hex or base64). Protocol is "Meshtastic" or "MeshCore" (proto 1 or 2, as the key list uses). Lines starting with # are comments.
+struct MeshChannelKey { int proto = 0; std::string name, secret; };
+std::string meshKeysFormat(const std::vector<MeshChannelKey>& keys);
+// skipped counts the lines that are not a key: unknown protocol, no name, or a key that is neither base64 nor hex
+std::vector<MeshChannelKey> meshKeysParse(const std::string& text, size_t& skipped);
+// the keys of read whose protocol and name are not in have (a name already in the list is never replaced); a repeat inside read is kept once
+std::vector<MeshChannelKey> meshKeysNew(const std::vector<MeshChannelKey>& have, const std::vector<MeshChannelKey>& read);
+
 }  // namespace dect2
