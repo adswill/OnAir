@@ -10,6 +10,7 @@ KEEP long av_bsf_init(void) { return -1; }
 KEEP long av_bsf_list_parse_str(void) { return -1; }
 KEEP long av_bsf_receive_packet(void) { return -1; }
 KEEP long av_bsf_send_packet(void) { return -1; }
+KEEP void* av_buffer_ref(void) { return NULL; }
 KEEP long av_buffer_unref(void) { return -1; }
 KEEP long av_channel_layout_copy(void) { return -1; }
 KEEP long av_channel_layout_default(void) { return -1; }
@@ -28,7 +29,9 @@ KEEP long av_frame_make_writable(void) { return -1; }
 KEEP long av_frame_unref(void) { return -1; }
 KEEP long av_frame_ref(void) { return -1; }
 KEEP long av_free(void) { return -1; }
+KEEP long av_hwdevice_ctx_create(void) { return -1; }
 KEEP const char* av_hwdevice_get_type_name(void) { return NULL; }
+KEEP long av_hwframe_transfer_data(void) { return -1; }
 KEEP long av_freep(void) { return -1; }
 KEEP void* av_guess_format(void) { return NULL; }
 KEEP int64_t av_guess_sample_aspect_ratio(void) { return 0; }
