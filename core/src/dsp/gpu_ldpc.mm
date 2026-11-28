@@ -279,7 +279,8 @@ bool GpuLdpc::boxCorrKernels() const { return true; }
 const char* GpuLdpc::unavailableReason() const { return p_->dev ? "" : "no Metal device"; }
 const char* GpuLdpc::deviceName() const { return p_->dev ? p_->dev.name.UTF8String : "none"; }
 
-bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter, uint8_t* hard, uint8_t* ok, int* iters, float alpha, bool boxCorr) {
+bool GpuLdpc::decode(const LdpcCode& code, const float* llr, int nb, int maxIter, uint8_t* hard, uint8_t* ok, int* iters, float alpha, bool boxCorr,
+                     const int* /*giveUp: not in this kernel yet, every word runs to maxIter*/) {
     if (!available() || code.q() * 360 != code.n() - code.k()) return false;
     std::lock_guard<std::mutex> lk(p_->mu);
     @autoreleasepool {

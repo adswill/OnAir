@@ -12,7 +12,7 @@ layout(local_size_x = 360, local_size_y = 1, local_size_z = 1) in;
 
 const int Z = 360;
 
-layout(push_constant) uniform P { int k, n, q, G, maxIter; float alpha; uint msgPer, postPer; } p;
+layout(push_constant) uniform P { int k, n, q, G, maxIter; float alpha; uint msgPer, postPer; int gu0, gd0, gu1, gd1; } p;
 
 layout(std430, binding = 0) readonly buffer B0 { int lStart[]; };
 layout(std430, binding = 1) readonly buffer B1 { int cGrp[]; };
@@ -27,6 +27,9 @@ layout(std430, binding = 9) writeonly buffer B9 { uint hard[]; };
 layout(std430, binding = 10) writeonly buffer B10 { int info[]; };
 
 shared int bad;
+
+// the two-minimum correction of LdpcCode::decodeFast (dect2/dsp/minsum_corr.h), as in the Metal and Direct3D 11 kernels
+float spNeg(float t) { return max(0.0, max(max(0.6854 - 0.4378 * t, 0.5822 - 0.2689 * t), max(0.3653 - 0.1192 * t, 0.1323 - 0.0293 * t))); }
 
 int vidx(int j, int nc0, int c0, int r, int m) {
     if (j < nc0) { int nn = m - cSh[c0 + j]; if (nn < 0) nn += Z; return cGrp[c0 + j] * Z + nn; }
@@ -66,6 +69,7 @@ void main() {
                 if (a < min1) { min2 = min1; min1 = a; idx1 = j; }
                 else if (a < min2) min2 = a;
             }
+            if (p.alpha < 0.0) min1 = max(0.0, min1 + spNeg(min1 + min2) - spNeg(min2 - min1));   // a negative alpha: the two-minimum correction
             // A layer may reach the same variable group twice (a variable then has two edges in the layer, owned by different
             // invocations). Every new message is computed from the posteriors as they were at the start of the layer, and the
             // posterior increments are applied afterwards: unique edges at once, repeated ones one rank at a time.
@@ -74,7 +78,7 @@ void main() {
             for (int j = 0; j < nc; j++) {
                 const uint vi = pB + uint(vidx(j, nc0, c0, r, m));
                 precise float x = post[vi] - msg[mr + uint(j * Z + m)];
-                precise float mag = (idx1 == j ? min2 : min1) * p.alpha;
+                precise float mag = (idx1 == j ? min2 : min1) * abs(p.alpha);
                 float nm = uintBitsToFloat(floatBitsToUint(mag) | (sg ^ (floatBitsToUint(x) & 0x80000000u)));
                 precise float d = nm - msg[mr + uint(j * Z + m)];
                 msg[mr + uint(j * Z + m)] = nm;
@@ -100,16 +104,22 @@ void main() {
         it++;
         if (m == 0) bad = 0;
         syncShared();
+        int nbad = 0;   // this invocation's unsatisfied checks (check m of every layer)
         for (int r = 0; r < q; r++) {
             const int c0 = lStart[r], nc0 = lStart[r + 1] - c0, nc = nc0 + 2;
             int par = 0;
             for (int j = 0; j < nc; j++) par ^= post[pB + uint(vidx(j, nc0, c0, r, m))] < 0.0 ? 1 : 0;
-            if (par != 0) { atomicOr(bad, 1); break; }
+            nbad += par;
         }
+        if (nbad != 0) atomicAdd(bad, nbad);
         syncShared();
-        ok = bad == 0;
+        const int w = bad;
+        ok = w == 0;
         syncShared();   // everyone has read `bad` before the next round may reset it
         if (ok) break;
+        // a word still far from a code word after a few iterations does not converge: it is abandoned (the same rule as the QC kernel)
+        const int gu = it == p.gu0 ? p.gd0 : it == p.gu1 ? p.gd1 : 0;
+        if (gu > 0 && w > q * Z / gu) break;
     }
     const uint hB = blk * uint(p.n);
     for (int i = m; i < G * Z; i += Z) hard[hB + uint(i)] = post[pB + uint(i)] < 0.0 ? 1u : 0u;

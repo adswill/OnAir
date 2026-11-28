@@ -23,6 +23,9 @@ layout(std430, binding = 6) writeonly buffer B6 { int res[]; };
 shared float lv[LV];
 shared int weight;
 
+// the two-minimum correction of LdpcCode::decodeFast (dect2/dsp/minsum_corr.h), as in the Metal and Direct3D 11 kernels
+float spNeg(float t) { return max(0.0, max(max(0.6854 - 0.4378 * t, 0.5822 - 0.2689 * t), max(0.3653 - 0.1192 * t, 0.1323 - 0.0293 * t))); }
+
 void sync() { memoryBarrierShared(); barrier(); }
 
 // parity checks of the hard decisions: the number of unsatisfied checks of the whole word
@@ -69,12 +72,14 @@ void main() {
                     else { min2 = min(min2, max(a, min1)); min1 = min(min1, a); }
                     sg ^= floatBitsToUint(q) & 0x80000000u;
                 }
+                // a negative alpha: the two-minimum correction for the edges not holding the smallest input
+                const float c1 = p.alpha < 0.0 ? max(0.0, min1 + spNeg(min1 + min2) - spNeg(min2 - min1)) : min1;
                 for (int e = e0; e < e1; e++) {
                     int sh = mm + esh[e]; if (sh >= z) sh -= z;
                     const int vi = ecol[e] * z + sh;
                     precise float q = lv[vi] - msg[mB + uint(e * z) + m];
                     const float a = abs(q);
-                    precise float mg = (a == min1 ? min2 : min1) * p.alpha;
+                    precise float mg = (a == min1 ? min2 : c1) * abs(p.alpha);
                     const float v = uintBitsToFloat(floatBitsToUint(mg) | (sg ^ (floatBitsToUint(q) & 0x80000000u)));
                     msg[mB + uint(e * z) + m] = v;
                     precise float t = q + v;
