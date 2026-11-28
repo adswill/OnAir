@@ -3021,3 +3021,16 @@ case 900: {
     { Table tb({"Utc", "Time Sec", "Text"}); int n = 0; for (auto it = t.events.rbegin(); it != t.events.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.utc), cell(e.timeSec), cell(e.text)}); } if (n) addTable(o, "Events", tb); }
     break;
 }
+case 901: {
+    const auto& t = rx.cats; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Level Db", t.levelDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Time Sec", t.timeSec);
+    cardIf(o, "Input Rate", t.inputRate);
+    { Table tb({"Utc", "Time Sec", "Callsign", "Ssid", "Icon", "Unix Time", "Lat", "Comment"}); int n = 0; for (auto it = t.packets.rbegin(); it != t.packets.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.utc), cell(e.timeSec), cell(e.callsign), cell(e.ssid), cell(e.icon), cell(e.unixTime), cell(e.lat), cell(e.comment)}); } if (n) addTable(o, "Packets", tb); }
+    { Table tb({"Utc", "Time Sec", "Text"}); int n = 0; for (auto it = t.events.rbegin(); it != t.events.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.utc), cell(e.timeSec), cell(e.text)}); } if (n) addTable(o, "Events", tb); }
+    break;
+}
