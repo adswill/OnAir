@@ -45,6 +45,18 @@ static void expectLoop(const char* what, const Definition& d, const GenOptions& 
     size_t good = 0;
     for (const Frame& f : out) if (f.good()) good++;
     CHECKM(good == frames.size(), "%s: %zu of %zu frames", what, good, frames.size());
+    if (good != frames.size()) {   // what the receiver saw, to find the stage that fails
+        Definition dd = d;
+        dd.showBadFrames = true;
+        RxStats st;
+        const std::vector<Frame> all = decodeIq(dd, iq, fs > 0 ? fs : d.sampleRate, 0, &st);
+        printf("  debug %s: %zu frames out, syncHits %llu frames %llu bad %llu\n", what, all.size(), (unsigned long long)st.syncHits, (unsigned long long)st.frames, (unsigned long long)st.badFrames);
+        for (size_t i = 0; i < all.size() && i < 4; i++) {
+            int diff = 0;
+            for (size_t k = 0; k < all[i].bytes.size() && i < frames.size() && k < frames[i].size(); k++) diff += __builtin_popcount((unsigned)(all[i].bytes[k] ^ frames[i][k]));
+            printf("  debug frame %zu: t=%.5f snr=%.1f crcOk=%d fecFailed=%d bytes=%zu bitdiff=%d\n", i, all[i].timeSec, all[i].snrDb, (int)all[i].crcOk, (int)all[i].fecFailed, all[i].bytes.size(), diff);
+        }
+    }
     for (size_t i = 0; i < out.size() && i < frames.size(); i++) CHECKM(out[i].bytes == frames[i], "%s: frame %zu differs", what, i);
 }
 
