@@ -86,7 +86,7 @@ void tab(App& a) {
             ImGui::TableNextColumn(); ImGui::TextUnformatted(m.direction == "up" ? tr("Up") : (m.direction == "down" ? tr("Down") : "-"));
             ImGui::TableNextColumn(); ImGui::TextUnformatted(m.loco.empty() ? "-" : m.loco.c_str());
             ImGui::TableNextColumn(); ImGui::TextUnformatted(m.route.empty() ? "-" : m.route.c_str());
-            ImGui::TableNextColumn(); ImGui::Text("%.0f dB", m.rssiDb);
+            ImGui::TableNextColumn(); if (m.rssiDb > -199) ImGui::Text("%.0f dB", m.rssiDb); else ImGui::TextUnformatted("-");
             if (!m.crcOk) ImGui::PopStyleColor();
         }
         ImGui::EndTable();

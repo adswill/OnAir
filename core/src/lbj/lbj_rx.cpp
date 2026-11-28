@@ -155,7 +155,8 @@ bool LbjReceiver::telemetry(LbjTelemetry& out, uint64_t lastSeq) {
 }
 void LbjReceiver::clearResults() { clearMessages(); }
 
-// Results file: one line per message, tab separated: train, km post, loco, speed, direction, wall time.
+// Results file: one line per message, tab separated: train, km post, loco, speed, direction, wall time, ...,
+// CRC flag, then the signal level in dBFS (lbj3 files written before the level was stored have 23 fields).
 std::string LbjReceiver::saveResults() const {
     std::lock_guard<std::mutex> lk(p_->mu);
     std::string s = "lbj3\n";
@@ -164,7 +165,8 @@ std::string LbjReceiver::saveResults() const {
         s += m.train + '\t' + m.kmMarker + '\t' + m.loco + '\t' + m.speedKmh + '\t' + m.direction + '\t' + std::to_string((long long)m.wallTime)
             + '\t' + m.route + '\t' + m.locoCode + '\t' + m.locoSerial + '\t' + m.prefix + '\t' + m.trainBase + '\t' + m.cabEnd + '\t' + m.unknownTail + '\t' + m.networkTime
             + '\t' + position + '\t' + std::to_string(m.positionValid) + '\t' + std::to_string(m.paired) + '\t' + std::to_string(m.timeSync) + '\t' + std::to_string(m.detailed)
-            + '\t' + std::to_string(m.address) + '\t' + std::to_string(m.correctedBits) + '\t' + std::to_string(m.crcOk) + '\n';
+            + '\t' + std::to_string(m.address) + '\t' + std::to_string(m.correctedBits) + '\t' + std::to_string(m.crcOk)
+            + '\t' + std::to_string(m.rssiDb) + '\n';
     }
     return s;
 }
@@ -192,11 +194,12 @@ bool LbjReceiver::loadResults(const std::string& blob) {
             m.loco = f[2];
             if ((v2 || v3) && f.size() >= 6) { m.speedKmh = f[3]; m.direction = f[4]; m.wallTime = std::atoll(f[5].c_str()); }
             if (v3) {
-                if (f.size() != 23) return false;
+                if (f.size() != 23 && f.size() != 24) return false;
                 m.route = f[6]; m.locoCode = f[7]; m.locoSerial = f[8]; m.prefix = f[9]; m.trainBase = f[10]; m.cabEnd = f[11]; m.unknownTail = f[12]; m.networkTime = f[13];
                 m.latitude = std::atof(f[14].c_str()); m.longitude = std::atof(f[15].c_str());
                 m.positionValid = f[16] == "1" && std::isfinite(m.latitude) && std::isfinite(m.longitude) && m.latitude > 0 && m.latitude <= 60 && m.longitude >= 70 && m.longitude <= 140;
                 m.paired = f[17] == "1"; m.timeSync = f[18] == "1"; m.detailed = f[19] == "1"; m.address = (uint32_t)std::strtoul(f[20].c_str(), nullptr, 10); m.correctedBits = std::atoi(f[21].c_str()); m.crcOk = f[22] == "1";
+                if (f.size() == 24) { const float r = std::strtof(f[23].c_str(), nullptr); if (std::isfinite(r)) m.rssiDb = r; }
             }
             msgs.push_back(std::move(m));
         }
