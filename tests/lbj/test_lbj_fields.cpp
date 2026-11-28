@@ -42,6 +42,16 @@ int main() {
     const auto saved = rx.saveResults(); LbjReceiver restored;
     CHECK(saved.starts_with("lbj3\n") && restored.loadResults(saved), "v3 round trip");
     LbjTelemetry t; CHECK(restored.telemetry(t, 0) && t.messages.size() == 1 && t.messages[0].train == "K123", "restored row");
+    // The signal level is stored as a 24th field; 23-field files from before it was stored still load, showing "-".
+    const std::string row = "K123\t12.3\tHXD3C-0931\t23\tdown\t1000\t津山线\t2390\t0931\tK\t123\t30\t000\t12:34\t39.0889\t117.3488\t1\t1\t1\t1\t0\t0\t1";
+    LbjReceiver legacyLevel; CHECK(legacyLevel.loadResults("lbj3\n" + row + "\n"), "23-field v3 file");
+    LbjTelemetry lt; CHECK(legacyLevel.telemetry(lt, 0) && lt.messages.size() == 1 && lt.messages[0].rssiDb <= -199, "old file has no level");
+    LbjReceiver levelRx; CHECK(levelRx.loadResults("lbj3\n" + row + "\t-43.5\n"), "24-field v3 file");
+    LbjTelemetry lv; levelRx.telemetry(lv, 0);
+    CHECK(!lv.messages.empty() && std::fabs(lv.messages[0].rssiDb + 43.5f) < 0.01f, "level loaded: %.2f", lv.messages.empty() ? 0.0 : lv.messages[0].rssiDb);
+    LbjReceiver levelBack; CHECK(levelBack.loadResults(levelRx.saveResults()), "level round trip");
+    LbjTelemetry lb; levelBack.telemetry(lb, 0);
+    CHECK(!lb.messages.empty() && std::fabs(lb.messages[0].rssiDb + 43.5f) < 0.01f, "level survives save and load");
     // The fixed fields travel through POCSAG, the IQ modem and the results file.
     const auto bits = lbj::burstBits({{lbj::kAddrBasic, 3, lbj::formatBasic("123", 23, 123)}, {lbj::kAddrDetail, 3, sample}});
     LbjReceiver live; live.configure(960000); std::vector<cf32> iq(32768); double phase = 0;
