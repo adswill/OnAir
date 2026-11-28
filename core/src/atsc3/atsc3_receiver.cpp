@@ -441,6 +441,7 @@ bool Atsc3Receiver::selectService(int id) {
         remuxIds_.clear();
         lastInit_.clear();
     }
+    remux_.newService();   // the component ids start again: the old service's components must not read the new one's segments
     startRoute();
     std::lock_guard<std::mutex> lk(mu_);
     return routeStarted_;
@@ -459,6 +460,7 @@ bool Atsc3Receiver::selectServiceIfNone(int id) {
         remuxIds_.clear();
         lastInit_.clear();
     }
+    remux_.newService();   // the component ids start again: the old service's components must not read the new one's segments
     startRoute();
     std::lock_guard<std::mutex> lk(mu_);
     return routeStarted_;

@@ -461,6 +461,83 @@ int main(int argc, char** argv) {
             CHECK(nv >= cs.minVideo && vl >= 13000, msg.data());
         }
     }
+    {   // another service (newService): the old components leave the output, the new one may use an old id, and the time goes on
+        Atsc3Remux r;
+        r.setStartupWaitMs(300);   // the new service below has no picture: do not wait long for one
+        r.addComponent(1);
+        r.addComponent(2);
+        std::vector<uint8_t> out;
+        std::mutex om;
+        std::thread rd([&] {
+            uint8_t b[8192];
+            for (;;) { int k = r.read(b, sizeof b); if (k <= 0) break; std::lock_guard<std::mutex> l(om); out.insert(out.end(), b, b + k); }
+        });
+        // until the output has grown past `from` and then stays the same for 300 ms (at most 15 s)
+        auto settle = [&](size_t from) {
+            size_t last = 0; int quiet = 0;
+            for (int i = 0; i < 150; i++) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                std::lock_guard<std::mutex> l(om);
+                if (out.size() > from && out.size() == last) { if (++quiet >= 3) break; } else quiet = 0;
+                last = out.size();
+            }
+        };
+        r.push(1, vinit);
+        r.push(2, ainit);
+        for (size_t i = 0; i < n; i++) {
+            if (i < vseg.size()) r.push(1, vseg[i]);
+            if (i < aseg.size()) r.push(2, aseg[i]);
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        }
+        settle(0);
+        const int before = r.streamCount();
+        size_t first; { std::lock_guard<std::mutex> l(om); first = out.size(); }
+        r.newService();
+        r.addComponent(1);   // the new service: sound only, under the id the old picture had
+        r.push(1, ainit);
+        for (auto& sg : aseg) { r.push(1, sg); std::this_thread::sleep_for(std::chrono::milliseconds(2)); }
+        settle(first);
+        const int after = r.streamCount();
+        r.stop();
+        rd.join();
+        // the second part on its own: new tables with the sound alone, and its time after the first part's
+        auto streamsAndLastPts = [&](const uint8_t* d, size_t sz, int& nv, int& na, int64_t& firstA, int64_t& lastA) {
+            nv = na = 0; firstA = lastA = INT64_MIN;
+            MemIn mm{d, sz};
+            unsigned char* bb = (unsigned char*)av_malloc(1 << 16);
+            AVIOContext* io = avio_alloc_context(bb, 1 << 16, 0, &mm, memRead, nullptr, nullptr);
+            AVFormatContext* c = avformat_alloc_context();
+            c->pb = io;
+            if (avformat_open_input(&c, "", av_find_input_format("mpegts"), nullptr) >= 0 && avformat_find_stream_info(c, nullptr) >= 0) {
+                for (unsigned i = 0; i < c->nb_streams; i++) { if (c->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) nv++; if (c->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) na++; }
+                AVPacket* q = av_packet_alloc();
+                while (av_read_frame(c, q) >= 0) {
+                    AVStream* st = c->streams[q->stream_index];
+                    if (st->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && q->pts != AV_NOPTS_VALUE) {
+                        const int64_t t = av_rescale_q(q->pts, st->time_base, AVRational{1, 1000});
+                        if (firstA == INT64_MIN) firstA = t;
+                        lastA = t;
+                    }
+                    av_packet_unref(q);
+                }
+                av_packet_free(&q);
+                avformat_close_input(&c);
+            } else avformat_free_context(c);
+            av_freep(&io->buffer);
+            avio_context_free(&io);
+        };
+        int v1, a1, v2, a2;
+        int64_t f1, l1, f2, l2;
+        streamsAndLastPts(out.data(), first, v1, a1, f1, l1);
+        const size_t cut = first - first % 188;
+        streamsAndLastPts(out.data() + cut, out.size() - cut, v2, a2, f2, l2);
+        printf("  another service: %d streams before (%d video, %d audio, audio %lld..%lld ms), %d after (%d video, %d audio, audio %lld..%lld ms)\n", before, v1, a1,
+               (long long)f1, (long long)l1, after, v2, a2, (long long)f2, (long long)l2);
+        CHECK(before == 2 && v1 == 1 && a1 == 1, "another service: the first one has a picture and a sound track");
+        // (the bytes after the cut also hold the old output's last packets, so the old sound track may be listed beside the new one)
+        CHECK(after == 1 && v2 == 0 && a2 >= 1, "another service: the old picture has left the output, the new sound is in it");
+        CHECK(f2 != INT64_MIN && l1 != INT64_MIN && f2 >= l1 - 100 && l2 - f2 > 1000, "another service: its time goes on from the first one's and runs");
+    }
     printf(fails ? "atsc3 remux: FAILED\n" : "atsc3 remux: ok\n");
     return fails ? 1 : 0;
 }

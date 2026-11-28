@@ -197,6 +197,8 @@ struct Atsc3Remux::Impl {
     std::mutex pmu;
     std::condition_variable pcv;
     int opens = 0;                      // components opened so far (guarded by pmu): the muxer looks for new ones when it changes
+    int gen = 0;                        // services so far (newService; guarded by pmu): the output starts again when it changes
+    std::vector<std::unique_ptr<Comp>> retired;   // components of services before (guarded by mu): their threads end, freed in stop()
 
     // output bytes
     std::mutex omu;
@@ -408,6 +410,8 @@ struct Atsc3Remux::Impl {
         struct CompClock { int64_t lastRaw = INT64_MIN; int epoch = 0; };
         std::map<Comp*, CompClock> clocks;
         std::vector<int64_t> epochBases;
+        size_t serviceEpoch = 0;            // the first of epochBases that belongs to the service playing now (newService): the clocks of the
+                                            // services before are not looked at, so a new service's time cannot pass for an old one's
         std::map<Comp*, int64_t> lastOut;   // the output time of the last packet taken from each component
         int64_t topOut = INT64_MIN;         // the latest time written on any stream
         bool paced = false;
@@ -419,9 +423,19 @@ struct Atsc3Remux::Impl {
     void muxLoop() {
         if (!waitFirst()) return;
         Timeline tl;
+        int seenGen = 0;
+        { std::lock_guard<std::mutex> lk(pmu); seenGen = gen; }
         for (int run = 0;; run++) {
             const RunEnd e = runOutput(run, tl);
             if (e == RunEnd::Ended) break;
+            bool another = false;
+            { std::lock_guard<std::mutex> lk(pmu); another = gen != seenGen; seenGen = gen; }
+            if (another) {   // another service: its picture and sound, as at the start, on a clock of their own
+                tl.serviceEpoch = tl.epochBases.size();
+                DIAG_DEBUG_EVERY(474387, 10.0, "The ATSC 3.0 service changed, so the transport stream output starts again with the new service's components (output %d).", run + 2);
+                if (!waitFirst()) break;
+                continue;
+            }
             if (e == RunEnd::Nothing) {   // nothing to play yet: wait for another component (a picture whose init segment was lost)
                 std::unique_lock<std::mutex> lk(pmu);
                 while (!stopping && !newComponent()) pcv.wait_for(lk, std::chrono::milliseconds(100));
@@ -436,10 +450,12 @@ struct Atsc3Remux::Impl {
     // (Restart; the stream goes on with new tables), or when none of them has a track that can be played (Nothing).
     RunEnd runOutput(int run, Timeline& tl) {
         std::vector<Comp*> cs, fresh;   // fresh: not in the output before this one
+        int runGen = 0;                 // the service this output is for (gen)
         std::map<Comp*, AVFormatContext*> ics;
         {
             std::lock_guard<std::mutex> lk(pmu);
             std::lock_guard<std::mutex> l2(mu);
+            runGen = gen;
             for (auto& c : comps) if (c.second->opened) { cs.push_back(c.second.get()); if (c.second->outStream.empty()) fresh.push_back(c.second.get()); }
             // the demuxer of a component may be replaced while this runs (restartDemuxer): its streams are the same, and the old one is kept
             for (Comp* c : cs) ics[c] = c->ic;
@@ -578,6 +594,7 @@ struct Atsc3Remux::Impl {
             AVPacket* pk = nullptr;
             {
                 std::unique_lock<std::mutex> lk(pmu);
+                if (!stopping && gen != runGen) { end = RunEnd::Restart; break; }   // another service (newService)
                 if (!stopping && opens != seenOpens) {
                     seenOpens = opens;
                     if (newComponent()) { end = RunEnd::Restart; break; }
@@ -599,7 +616,7 @@ struct Atsc3Remux::Impl {
                         // instead of having its packets dropped as too old, or written far ahead, until its time catches up.
                         const int64_t kNear = 90000LL * 30;
                         int found = -1;
-                        for (int e = (int)epochBases.size() - 1; e >= 0 && found < 0; e--) {
+                        for (int e = (int)epochBases.size() - 1; e >= (int)tl.serviceEpoch && found < 0; e--) {
                             const int64_t t = d - epochBases[e];
                             if (t > startTop - kNear && t < startTop + kNear) found = e;
                         }
@@ -815,26 +832,46 @@ int Atsc3Remux::readTimed(uint8_t* buf, int size, int timeoutMs) {
     return p_->outEnded ? -1 : 0;
 }
 
+void Atsc3Remux::newService() {
+    std::vector<Impl::Comp*> old;
+    {
+        std::lock_guard<std::mutex> lk(p_->pmu);   // the muxer's order: pmu, then mu
+        std::lock_guard<std::mutex> l2(p_->mu);
+        for (auto& c : p_->comps) { old.push_back(c.second.get()); p_->retired.push_back(std::move(c.second)); }
+        p_->comps.clear();
+        for (Impl::Comp* c : old) {
+            for (auto* pk : c->q) av_packet_free(&pk);
+            c->q.clear();
+        }
+        p_->gen++;
+    }
+    for (Impl::Comp* c : old) { std::lock_guard<std::mutex> l(c->mu); c->ended = true; c->cv.notify_all(); }
+    p_->pcv.notify_all();
+}
+
 void Atsc3Remux::stop() {
     if (p_->stopping.exchange(true)) return;
+    std::vector<Impl::Comp*> all;
     {
         std::lock_guard<std::mutex> lk(p_->mu);
-        for (auto& c : p_->comps) { std::lock_guard<std::mutex> l2(c.second->mu); c.second->ended = true; c.second->cv.notify_all(); }
+        for (auto& c : p_->comps) all.push_back(c.second.get());
+        for (auto& c : p_->retired) all.push_back(c.get());
     }
+    for (Impl::Comp* c : all) { std::lock_guard<std::mutex> l2(c->mu); c->ended = true; c->cv.notify_all(); }
     p_->pcv.notify_all();
     p_->ocv.notify_all();
-    for (auto& c : p_->comps) if (c.second->th.joinable()) c.second->th.join();
+    for (Impl::Comp* c : all) if (c->th.joinable()) c->th.join();
     if (p_->muxThread.joinable()) p_->muxThread.join();
     p_->finishOut();   // also when no data ever arrived
-    for (auto& c : p_->comps) {
-        for (auto* pk : c.second->q) av_packet_free(&pk);
-        c.second->q.clear();
-        if (c.second->ic) avformat_close_input(&c.second->ic);
-        if (c.second->io) { av_freep(&c.second->io->buffer); avio_context_free(&c.second->io); }
-        for (auto* ic : c.second->oldIc) avformat_close_input(&ic);
-        for (auto* io : c.second->oldIo) if (io) { av_freep(&io->buffer); avio_context_free(&io); }
-        c.second->oldIc.clear();
-        c.second->oldIo.clear();
+    for (Impl::Comp* c : all) {
+        for (auto* pk : c->q) av_packet_free(&pk);
+        c->q.clear();
+        if (c->ic) avformat_close_input(&c->ic);
+        if (c->io) { av_freep(&c->io->buffer); avio_context_free(&c->io); }
+        for (auto* ic : c->oldIc) avformat_close_input(&ic);
+        for (auto* io : c->oldIo) if (io) { av_freep(&io->buffer); avio_context_free(&io); }
+        c->oldIc.clear();
+        c->oldIo.clear();
     }
 }
 
