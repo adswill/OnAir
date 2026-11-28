@@ -73,6 +73,8 @@ enum Target { Lna = 0, Vga, Gain, TargetCount };
 struct Mapping {
     int cc[TargetCount] = {-1, -1, -1};
     int channel = 0;
+    int bias = -1;           // the controller or note number of the antenna power (bias-tee) button, -1: none
+    bool biasNote = false;   // the button is a note (pad, key); false: a controller number
 };
 
 // The target a message turns, and where the knob stands from 0 to 1; false when the message is not for any gain
@@ -90,6 +92,23 @@ inline int stepped(double pos, int lo, int hi, int step) {
     const double v = lo + pos * (hi - lo);
     const int k = (int)std::lround((v - lo) / step);
     return std::min(hi, std::max(lo, lo + k * step));
+}
+
+// The antenna power button: what a message asks for. 1 on, 0 off, -1 not for this button. A controller sets it (64 or more is on); a note
+// toggles on each press (a note off is ignored), so `cur` is where it stands now.
+inline int biasRequest(const Mapping& m, const Msg& msg, bool cur) {
+    if (m.bias < 0 || msg.number != m.bias) return -1;
+    if (m.channel > 0 && msg.channel != m.channel - 1) return -1;
+    if (m.biasNote) return msg.type == Msg::NoteOn ? (cur ? 0 : 1) : -1;
+    return msg.type == Msg::ControlChange ? (msg.value >= 64 ? 1 : 0) : -1;
+}
+
+// The three bytes that light (127) or darken (0) the antenna power button, mirroring how it is mapped; the channel is the chosen one (any: 1).
+inline void biasLed(const Mapping& m, bool on, uint8_t out[3]) {
+    const int ch = m.channel > 0 ? m.channel - 1 : 0;
+    out[0] = (uint8_t)((m.biasNote ? 0x90 : 0xB0) | (ch & 15));
+    out[1] = (uint8_t)(m.bias & 127);
+    out[2] = on ? 127 : 0;
 }
 
 } // namespace midi
