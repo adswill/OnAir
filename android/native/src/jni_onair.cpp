@@ -28,6 +28,9 @@
 #include "dect2/cdr/cdr_rx.h"
 #include "dect2/cdr/cdr_dra.h"
 #include "dect2/codec/codec_paths.h"
+#include "dect2/nxdn/nxdn_ambe.h"
+#include "dect2/dstar/dstar_ambe.h"
+#include "dect2/p25/p25_imbe.h"
 #include "dect2/codec/codec_import.h"
 #include <cstdio>
 #include <filesystem>
@@ -436,6 +439,9 @@ FN(void, nativeCdrListen)(JNIEnv*, jobject, jint serviceId) {
 FN(jstring, nativeCodecs)(JNIEnv* e, jobject, jstring dir) {
     const std::string d = jstr(e, dir);
     if (!d.empty()) dect2::codec::setExtraCodecDir(d);
+    // The mbelib / mbelib-neo loaders look once, on first use, and keep a miss: one that ran before the folder was known, or before the user
+    // imported the library, never saw it until the app restarted (#683, #701). Look again now (a library already loaded is kept).
+    dect2::nxdnAmbeRescan(); dect2::dstarAmbeRescan(); dect2::p25ImbeRescan();
     const bool ok = dect2::cdr::draRescan();
     std::string path, problem;
     dect2::cdr::draAvailable(&path, &problem);
