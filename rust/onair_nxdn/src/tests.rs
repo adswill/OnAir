@@ -65,14 +65,28 @@ fn channels_round_trip_and_fix_errors() {
 fn message_round_trips() {
     let mut m = msg::Msg { typ: msg::VCALL, call_type: 4, option: 9, src: 1234, dst: 4321, cipher: 2, key_id: 17, ..Default::default() };
     let mut bits = [0u8; 72];
-    assert_eq!(msg::build(&m, &mut bits), 56);
+    assert_eq!(msg::build(&m, &mut bits), 64);
     let mut p = msg::Msg::default();
-    assert!(msg::parse(&bits[..56], &mut p));
+    assert!(msg::parse(&bits[..64], &mut p));
     assert_eq!(p, m);
+    assert!(!msg::parse(&bits[..63], &mut p));
     m = msg::Msg { typ: msg::SD_DATA, block: 3, text: *b"HELLO\0\0\0", text_len: 5, ..Default::default() };
     assert_eq!(msg::build(&m, &mut bits), 80);
     assert!(!msg::parse(&bits[..70], &mut p));
     assert_eq!(p.typ, msg::SD_DATA);
+}
+
+#[test]
+fn vcall_octets_match_nxdn_layout() {
+    // Octets from a clear group call (issue #716): type 01, CC option 00, call type 001 in the top bits of octet 2, source 1001, talkgroup 200, cipher 0, key 0.
+    let bytes = [0x01u8, 0x00, 0x20, 0x03, 0xE9, 0x00, 0xC8, 0x00];
+    let bits: Vec<u8> = bytes.iter().flat_map(|&b| (0..8).rev().map(move |i| (b >> i) & 1)).collect();
+    let mut p = msg::Msg::default();
+    assert!(msg::parse(&bits, &mut p));
+    assert_eq!(p.typ, msg::VCALL);
+    assert_eq!((p.option, p.call_type), (0, 1));
+    assert_eq!((p.src, p.dst), (1001, 200));
+    assert_eq!((p.cipher, p.key_id), (0, 0));
 }
 
 #[test]

@@ -61,7 +61,7 @@ int main() {
     {
         nxdn::Msg m; m.type = nxdn::kVcall; m.callType = 4; m.option = 2; m.src = 54321; m.dst = 65000; m.cipher = 1; m.keyId = 9;
         uint8_t b[72]; nxdn::Msg r;
-        CHECK(nxdn::buildMsg(m, b, 72) == 56 && nxdn::parseMsg(b, 72, r), "vcall build");
+        CHECK(nxdn::buildMsg(m, b, 72) == 64 && nxdn::parseMsg(b, 72, r), "vcall build");
         CHECK(r.type == nxdn::kVcall && r.callType == 4 && r.option == 2 && r.src == 54321 && r.dst == 65000 && r.cipher == 1 && r.keyId == 9, "vcall fields");
         nxdn::Msg d; d.type = nxdn::kSdData; d.block = 3; d.text = "ABCDEFGH";
         uint8_t b2[80];
