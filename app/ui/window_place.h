@@ -43,7 +43,11 @@ inline bool reachable(const Rect& r, const std::vector<Rect>& mons) {
 // monitor and shrunk to fit it. With no monitor list the saved place is used as it is.
 inline Rect restore(const Place& p, const std::vector<Rect>& mons, int defW, int defH) {
     Rect r = clampSize(p.r, defW, defH);
-    if (mons.empty() || (p.placed && reachable(r, mons))) return r;
+    if (mons.empty()) return r;
+    int maxW = 0, maxH = 0;   // a saved size never exceeds the biggest screen
+    for (const Rect& m : mons) { maxW = std::max(maxW, m.w); maxH = std::max(maxH, m.h); }
+    r.w = std::min(r.w, maxW); r.h = std::min(r.h, maxH);
+    if (p.placed && reachable(r, mons)) return r;
     const Rect& m = mons.front();
     r.w = std::min(r.w, m.w); r.h = std::min(r.h, m.h);
     r.x = m.x + (m.w - r.w) / 2; r.y = m.y + (m.h - r.h) / 2;
