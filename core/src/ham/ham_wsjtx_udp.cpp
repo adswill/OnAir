@@ -3,6 +3,10 @@
 #include "dect2/ham/ham_wsjtx_udp.h"
 #include "../net/netcompat.h"
 #include <cstring>
+#include <string>
+#ifndef _WIN32
+#include <netdb.h>
+#endif
 
 namespace dect2::ham::wsjtx {
 namespace {
