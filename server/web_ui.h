@@ -49,14 +49,16 @@ var $=function(i){return document.getElementById(i)};
 function api(p,b){var o={headers:{}};if(tok)o.headers.Authorization="Bearer "+tok;if(b!==undefined){o.method="POST";o.headers["Content-Type"]="application/json";o.body=JSON.stringify(b)}
  return fetch("/api/v1"+p,o).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||r.status);return j})})}
 function err(e){$("err").textContent=e?String(e.message||e):""}
-var modes=[],ws=null,spec=null,aud=null,listening=false,st={};
+var modes=[],ws=null,spec=null,aud=null,listening=false,st={},lastModeIdx=-1;
 var prof={low:{bins:256,fps:2,rate:8000},high:{bins:1024,fps:10,rate:24000},auto:{bins:512,fps:5,rate:16000}};
 function fillModes(){var s=$("mode");s.innerHTML="";modes.forEach(function(m,i){var o=document.createElement("option");o.value=i;o.textContent=m.name+(m.sub?"":"");s.appendChild(o)})}
 function fillDevs(d){var s=$("dev");s.innerHTML="";d.forEach(function(x){var o=document.createElement("option");o.value=x.index;o.textContent=x.name;if(x.selected)o.selected=true;s.appendChild(o)})}
 function showStatus(s){st=s;$("dot").className="dot"+(s.running?" ok":"");$("stt").textContent=s.running?"receiving - "+s.device:(s.wanted?"waiting for the radio":"stopped");
  $("go").textContent=s.running||s.wanted?"Stop":"Start";if(document.activeElement!==$("freq"))$("freq").value=(s.frequencyHz/1e6).toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
  if(document.activeElement!==$("gain"))$("gain").value=s.gainDb;
- for(var i=0;i<modes.length;i++)if(modes[i].family===s.family&&(modes[i].sub||null)===(s.sub||null)){if(document.activeElement!==$("mode"))$("mode").value=i}
+ var mi=-1;for(var i=0;i<modes.length;i++)if(modes[i].family===s.family&&(modes[i].sub||null)===(s.sub||null))mi=i;
+ var modePending=document.activeElement===$("mode")&&$("mode").value!==String(lastModeIdx);
+ if(mi>=0){if(!modePending)$("mode").value=mi;lastModeIdx=mi}
  if(s.error)err(s.error);$("dm").value=s.demod;
  $("info").textContent=s.running?(s.sampleRateHz/1e6).toFixed(3)+" Msps, load "+s.loadPct+"%, dropped "+s.droppedSamples:""}
 function poll(){api("/status").then(showStatus).catch(function(){})}
