@@ -4,7 +4,7 @@
 // CATS (Communication And Telemetry System, https://cats.radio): packet radio used by high-altitude balloons as an APRS/AX.25
 // replacement. 2-FSK 9600 bd, deviation 4.8 kHz; header 4x0x55 + sync AB CD EF 12 + 16-bit length; payload = whiskers + CRC-16,
 // whitened, LDPC (CCSDS TC/TM, rate 1/2), 32-bit block interleaved. Written from the CATS standard (gitlab.scd31.com/cats/cats-standard,
-// MIT); the LDPC matrices and the chunking follow libCATS by Cam K. VE3KCN (BSD-3-Clause, see THIRD_PARTY.md).
+// MIT); the LDPC matrices and the chunking follow libCATS by Cam K. VE3KCN (BSD-2-Clause, see THIRD_PARTY.md).
 #pragma once
 #include <complex>
 #include <cstdint>

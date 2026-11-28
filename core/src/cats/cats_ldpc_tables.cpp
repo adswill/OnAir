@@ -1,10 +1,10 @@
-// SPDX-License-Identifier: BSD-3-Clause AND GPL-3.0-or-later
+// SPDX-License-Identifier: BSD-2-Clause AND GPL-3.0-or-later
 // CATS LDPC generator matrices (CCSDS TC128/TC256/TC512, TM2048/TM8192, compact circulant form).
 // Taken from libCATS by Cam K. VE3KCN (https://github.com/CamK06/libCATS, lib/ldpc_matrices.c), which took them from
 // labrador-ldpc by Adam Greig (compact_generators.rs).
 // Copyright 2024 Cam K. VE3KCN. Redistribution and use in source and binary forms, with or without modification, are permitted
-// provided that the BSD 3-clause conditions of libCATS (LICENSE.md: keep this notice, reproduce it in binaries, no endorsement
-// by the author's name) are met. THIS DATA IS PROVIDED "AS IS" WITHOUT WARRANTY; see libCATS LICENSE.md for the full disclaimer.
+// provided that the BSD 2-clause conditions of libCATS (LICENSE.md: keep this notice, reproduce it in binaries)
+// are met. THIS DATA IS PROVIDED "AS IS" WITHOUT WARRANTY; see libCATS LICENSE.md for the full disclaimer.
 #include <cstdint>
 namespace dect2 { namespace cats { namespace tables {
 extern const uint64_t tc128_matrix[] = { 
