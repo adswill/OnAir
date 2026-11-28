@@ -23,6 +23,7 @@
     <string name="state_converging">Converging</string>
     <string name="state_locked">Locked</string>
     <string name="snr_db">SNR %1$s dB</string>
+    <string name="ok_bad">OK %1$s  BAD %2$s</string>
     <string name="spectrum_hint">Drag to tune, pinch to zoom</string>
     <string name="spectrum_title">Spectrum</string>
     <string name="waterfall_title">Waterfall</string>

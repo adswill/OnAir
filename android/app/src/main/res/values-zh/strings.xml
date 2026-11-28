@@ -18,6 +18,7 @@
     <string name="state_converging">正在收敛</string>
     <string name="state_locked">已锁定</string>
     <string name="snr_db">信噪比 %1$s dB</string>
+    <string name="ok_bad">正确 %1$s  错误 %2$s</string>
     <string name="spectrum_hint">拖动调谐，双指缩放</string>
     <string name="spectrum_title">频谱</string>
     <string name="waterfall_title">瀑布图</string>

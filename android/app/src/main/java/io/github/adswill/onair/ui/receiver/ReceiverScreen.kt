@@ -137,10 +137,12 @@ fun ReceiverHeader(vm: ReceiverViewModel, compact: Boolean, onModeClick: () -> U
     // only the lock state and SNR of the telemetry matter here: a derived value, so a new report with the same lock does not recompose
     val lock by remember { derivedStateOf { t?.lock } }
     val snr by remember { derivedStateOf { t?.snrDb?.let { Math.round(it * 10) / 10.0 } } }
+    // the decoder's good and bad block counts (the "Blocks ok / bad" card of the telemetry), shown under the SNR (#639)
+    val counts by remember { derivedStateOf { t?.cards?.firstOrNull { it.first == "Blocks ok / bad" }?.second?.split(" / ")?.takeIf { it.size == 2 }?.let { it[0] to it[1] } } }
     Column {
         HeaderContent(
             st = st, modeName = names.getOrElse(st.modeIndex) { "" }, lock = lock, snrDb = snr, meters = meters, stepHz = ui.stepHz,
-            compact = compact, onTune = vm::tune, onStepHz = vm::setStepHz, onModeClick = onModeClick, onToggle = onToggle,
+            compact = compact, onTune = vm::tune, onStepHz = vm::setStepHz, onModeClick = onModeClick, onToggle = onToggle, counts = counts,
         )
         RecordIqBar(vm)
     }
@@ -216,6 +218,7 @@ fun RecordIqBar(vm: ReceiverViewModel) {
 fun HeaderContent(
     st: ReceiverState, modeName: String, lock: LockState?, snrDb: Double?, meters: Meters, stepHz: Double, compact: Boolean,
     onTune: (Double) -> Unit, onStepHz: (Double) -> Unit, onModeClick: () -> Unit, onToggle: () -> Unit,
+    counts: Pair<String, String>? = null,
 ) {
     val p = LocalPalette.current
     val running = st.running
@@ -252,6 +255,9 @@ fun HeaderContent(
             }
             if (running && snrDb != null) Text(
                 stringResource(R.string.snr_db, String.format(Locale.US, "%.1f", snrDb)), color = p.muted, fontFamily = Mono, fontSize = TypeScale.SMALL.sp,
+            )
+            if (running && counts != null) Text(
+                stringResource(R.string.ok_bad, counts.first, counts.second), color = p.muted, fontFamily = Mono, fontSize = TypeScale.SMALL.sp,
             )
         }
         if (running) MetersRow(meters, Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
