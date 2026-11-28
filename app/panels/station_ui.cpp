@@ -218,7 +218,8 @@ void stationAutoPick(App& a, bool onlyIfBusy) {
     if (!m || cur < 0) return;   // the test signal or a file stay what they are
     const std::vector<bool> busy = busyFor(a);
     if (onlyIfBusy && !(cur < (int)busy.size() && busy[(size_t)cur])) return;   // Start never overrules a radio that is free
-    const st::ModeNeed n = needOf(*m);
+    st::ModeNeed n = needOf(*m);
+    if (a.freqMhz > 0) n.freqHz = a.freqMhz * 1e6;   // where the mode opens now (#707), not its band's lowest edge: a radio that reaches it stays
     const int want = st::pickRadio(S, n, cur, busy);
     if (want == cur) return;
     const int di = deviceOf(a, S.radios[(size_t)want]);
