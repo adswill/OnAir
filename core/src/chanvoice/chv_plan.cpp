@@ -27,7 +27,7 @@ const char* demodName(Demod d) {
 }
 
 const std::vector<RegionInfo>& regions(Service s) {
-    static const std::vector<RegionInfo> cb = {{"eu", "Europe (CEPT, 40 channels)"}, {"eu80", "Germany, Czechia, Hungary (80 channels)"}, {"uk", "United Kingdom (CEPT + 27/81)"}, {"us", "USA, Canada (40 channels)"}};
+    static const std::vector<RegionInfo> cb = {{"eu", "Europe (CEPT, 40 channels)"}, {"eu80", "Germany, Czechia, Hungary (80 channels)"}, {"uk", "United Kingdom (CEPT + 27/81)"}, {"us", "USA, Canada (40 channels)"}, {"au_uhf", "Australia UHF CB (80 channels, 476 MHz)"}};
     static const std::vector<RegionInfo> frs = {{"us", "USA, Canada (FRS 1 - 22, GMRS)"}};
     static const std::vector<RegionInfo> pmr = {{"eu", "Europe (16 channels)"}};
     static const std::vector<RegionInfo> ham = {{"r1", "IARU Region 1 (Europe, Africa, Middle East)"}, {"r2", "IARU Region 2 (the Americas)"}, {"r3", "IARU Region 3 (Asia, Pacific)"}};
@@ -92,7 +92,47 @@ double cbMhz(int n, bool cept) {
     return us[n - 1];
 }
 
+// Australian UHF CB, 80 channels as the public plan lists them (not a regular grid): 0 = reserved (61 - 63). Channels 1 - 8 and 41 - 48 are
+// repeater outputs whose inputs are channels 31 - 38 and 71 - 78 (+750 kHz). 12.5 kHz, FM, except 22 and 23 (data, 25 kHz).
+std::vector<Channel> buildAuUhf() {
+    static const double f[80] = {
+        476.4250, 476.4500, 476.4750, 476.5000, 476.5250, 476.5500, 476.5750, 476.6000,
+        476.6250, 476.6500, 476.6750, 476.7000, 476.7250, 476.7500, 476.7750, 476.8000,
+        476.8250, 476.8500, 476.8750, 476.9000, 476.9250, 476.9500, 476.9750, 477.0000,
+        477.0250, 477.0500, 477.0750, 477.1000, 477.1250, 477.1500, 477.1750, 477.2000,
+        477.2250, 477.2500, 477.2750, 477.3000, 477.3250, 477.3500, 477.3750, 477.4000,
+        476.4375, 476.4625, 476.4875, 476.5125, 476.5375, 476.5625, 476.5875, 476.6125,
+        476.6375, 476.6625, 476.6875, 476.7125, 476.7375, 476.7625, 476.7875, 476.8125,
+        476.8375, 476.8625, 476.8875, 476.9125, 0, 0, 0, 477.0125,
+        477.0375, 477.0625, 477.0875, 477.1125, 477.1375, 477.1625, 477.1875, 477.2125,
+        477.2375, 477.2625, 477.2875, 477.3125, 477.3375, 477.3625, 477.3875, 477.4125,
+    };
+    std::vector<Channel> v;
+    for (int n = 1; n <= 80; n++) {
+        if (f[n - 1] == 0) continue;
+        const bool out = (n <= 8) || (n >= 41 && n <= 48);
+        const bool in = (n >= 31 && n <= 38) || (n >= 71 && n <= 78);
+        unsigned fl = out ? kRepeater : 0u;
+        Channel c = mk(n, std::to_string(n), f[n - 1], Demod::Nfm, 12500, fl, "Ch " + std::to_string(n), "");
+        if (out) { c.txMhz = f[n + 29]; c.name += " repeater"; c.note = "Repeater output; the input is channel " + std::to_string(n + 30) + "."; }
+        if (in) { c.name += " repeater input"; c.note = "Repeater input for channel " + std::to_string(n - 30) + "."; }
+        switch (n) {
+        case 5: c.flags |= kEmergency; c.name = "Ch 5 emergency"; c.note = "Emergency channel."; break;
+        case 35: c.flags |= kEmergency; c.name = "Ch 35 emergency"; c.note = "Emergency channel, repeater input."; break;
+        case 11: c.flags |= kCalling; c.name = "Ch 11 calling"; c.note = "Calling channel."; break;
+        case 22: c.bwHz = 25000; c.name = "Ch 22 data"; c.note = "Data only, 25 kHz."; break;
+        case 23: c.bwHz = 25000; c.name = "Ch 23 data"; c.note = "Data only, 25 kHz."; break;
+        case 29: c.name = "Ch 29 road"; c.note = "Road channel (Pacific and Bruce Highways)."; break;
+        case 40: c.name = "Ch 40 road"; c.note = "Highway channel."; break;
+        default: break;
+        }
+        v.push_back(c);
+    }
+    return v;
+}
+
 std::vector<Channel> buildCb(int region) {
+    if (region == 4) return buildAuUhf();
     std::vector<Channel> v;
     const bool cept = region != 3;
     for (int n = 1; n <= 40; n++) {
@@ -204,8 +244,8 @@ std::vector<Channel> buildHf() {
 }
 
 struct Cache {
-    std::vector<Channel> cb[4], frs, pmr, ham[3], hf, none;
-    Cache() { for (int i = 0; i < 4; i++) cb[i] = buildCb(i); frs = buildFrs(); pmr = buildPmr(); for (int i = 0; i < 3; i++) ham[i] = buildHam(i); hf = buildHf(); }
+    std::vector<Channel> cb[5], frs, pmr, ham[3], hf, none;
+    Cache() { for (int i = 0; i < 5; i++) cb[i] = buildCb(i); frs = buildFrs(); pmr = buildPmr(); for (int i = 0; i < 3; i++) ham[i] = buildHam(i); hf = buildHf(); }
 };
 const Cache& cache() { static const Cache c; return c; }
 
@@ -214,7 +254,7 @@ const Cache& cache() { static const Cache c; return c; }
 const std::vector<Channel>& channels(Service s, int region) {
     const Cache& c = cache();
     switch (s) {
-    case Service::Cb: return c.cb[std::max(0, std::min(3, region))];
+    case Service::Cb: return c.cb[std::max(0, std::min(4, region))];
     case Service::Frs: return c.frs;
     case Service::Pmr: return c.pmr;
     case Service::Ham: return c.ham[std::max(0, std::min(2, region))];
@@ -247,7 +287,7 @@ const Channel* findLabel(Service s, int region, const std::string& text) {
 
 double rasterHz(Service s, int region) {
     switch (s) {
-    case Service::Cb: return region == 2 ? 1250.0 * 8 : 10000.0;   // the 27/81 channels sit 1.25 kHz off the 10 kHz grid: the cell is 10 kHz wide either way
+    case Service::Cb: return region == 4 ? 12500.0 : region == 2 ? 1250.0 * 8 : 10000.0;   // the 27/81 channels sit 1.25 kHz off the 10 kHz grid: the cell is 10 kHz wide either way
     case Service::Frs: return 12500.0;
     case Service::Pmr: return 6250.0;                                // 446.00625 + 12.5 kHz n: the channel centres are on a 6.25 kHz grid
     case Service::Ham: return region == 1 ? 5000.0 : 12500.0;
@@ -266,7 +306,7 @@ Span planSpan(Service s, int region) {
     sp.loMhz = 1e9; sp.hiMhz = 0;
     for (const Channel& c : v) { sp.loMhz = std::min(sp.loMhz, c.mhz); sp.hiMhz = std::max(sp.hiMhz, c.mhz); }
     sp.centreMhz = (sp.loMhz + sp.hiMhz) / 2;
-    if (s == Service::Cb) sp.centreMhz = region == 1 ? 26.760 : 27.185;
+    if (s == Service::Cb) sp.centreMhz = region == 4 ? 476.9125 : region == 1 ? 26.760 : 27.185;
     if (s == Service::Ham) sp.centreMhz = region == 0 ? 145.6 : region == 1 ? 146.76 : 146.8;
     if (s == Service::HfVoice) sp.centreMhz = 11.175;
     if (s == Service::Frs) sp.centreMhz = 462.6375;   // 1 - 7 and 15 - 22 in one capture; the 467 MHz channels 8 - 14 are 5 MHz higher

@@ -117,5 +117,35 @@ int main() {
         MeshtasticUrlChannel open;
         CHECK(meshtasticUrlChannelKey(open) == "AA==" && mp.addMeshtasticChannel("Open", meshtasticUrlChannelKey(open)), "no-encryption channel");
     }
+    // channel key files: round trip, bad lines skipped, no duplicates, existing names kept
+    {
+        std::vector<MeshChannelKey> ks = {{1, "Friends", "AQIDBAUGBwgJCgsMDQ4PEA=="}, {2, "Club room", "00112233445566778899aabbccddeeff"}, {2, "Mesh Cafe", "AAECAwQFBgcICQoLDA0ODw=="}};
+        const std::string f = meshKeysFormat(ks);
+        size_t sk = 99;
+        auto back = meshKeysParse(f, sk);
+        CHECK(sk == 0 && back.size() == 3, "round trip: %zu keys, %zu skipped", back.size(), sk);
+        CHECK(back[0].proto == 1 && back[0].name == "Friends" && back[0].secret == ks[0].secret, "round trip meshtastic");
+        CHECK(back[1].proto == 2 && back[1].name == "Club room" && back[1].secret == ks[1].secret, "round trip name with space, hex key");
+        CHECK(meshKeysFormat(back) == f, "format of the parsed keys is the same text");
+        const std::string messy = "# my keys\r\n\n"
+            "Meshtastic\tFriends\tAQIDBAUGBwgJCgsMDQ4PEA==\r\n"
+            "Meshtastic\tNoKey\n"
+            "Telegram\tOther\tAQIDBAUGBwgJCgsMDQ4PEA==\n"
+            "Meshtastic  Spaced  AQIDBAUGBwgJCgsMDQ4PEA==\n"
+            "MeshCore\tBadHex\tzz!!\n"
+            "MeshCore\tOk\t0a0b0c0d0e0f\n"
+            "  \n"
+            "Meshtastic\t\tAQ==\n"
+            "Meshtastic\tWithPad\tAQ\n";
+        size_t skipped = 0;
+        auto rd = meshKeysParse(messy, skipped);
+        CHECK(rd.size() == 4 && skipped == 4, "skipping: %zu keys, %zu bad", rd.size(), skipped);
+        CHECK(rd[1].name == "Spaced" && rd[2].name == "Ok" && rd[2].proto == 2, "spaced fields and hex key kept");
+        std::vector<MeshChannelKey> have = {{1, "Friends", "AAAA"}};
+        auto fresh = meshKeysNew(have, rd);
+        CHECK(fresh.size() == 3 && fresh[0].name == "Spaced" && have[0].secret == "AAAA", "existing name not added again or replaced");
+        auto twice = meshKeysNew({}, {{1, "A", "AQ=="}, {1, "A", "AQ=="}, {2, "A", "AQ=="}});
+        CHECK(twice.size() == 2, "repeat inside the file kept once, other protocol kept: %zu", twice.size());
+    }
     return testSummary("mesh_channelurl");
 }

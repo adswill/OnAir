@@ -16,7 +16,7 @@
 // carriers both scale with it). The message is repeated after 2 s of silence.
 //
 // Transmit (makeCp16TxGenerator): TxRequest::text (empty: the demo text), options "cp16.char" (seconds a character, 2), "cp16.spacing" (Hz, 15),
-// "cp16.base" (Hz, 1000), "cp16.lsb" (0 / 1). The text is sent once, after 0.5 s of silence; then the generator has finished. The signal is the
+// "cp16.base" (Hz, 1000), "cp16.lsb" (0 / 1). The text is sent after 0.5 s of silence: once when loop is off (then the generator has finished), repeated until stopped when loop is on. The signal is the
 // complex baseband of an SSB transmitter: the carriers at +audio Hz (upper sideband) or -audio Hz (lower) from the dial. Nothing about mode,
 // frequency or power is limited here.
 #pragma once

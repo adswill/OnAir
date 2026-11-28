@@ -382,6 +382,8 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 //  TouchPlaceWindow: called for every top-level window and popup after ImGui placed it, to make it a bottom sheet / full screen.
 struct ImGuiWindow;
 extern float ImGuiTouchRowMin;
+// OnAir: false = the mouse wheel does not change a hovered slider / drag (it scrolls the panel). Set from the "sliderWheel" pref.
+extern bool ImGuiSliderWheel;
 extern bool (*ImGuiTouchTooltipGate)();
 extern void (*ImGuiTouchPlaceWindow)(ImGuiWindow*);
 extern void (*ImGuiTouchEndChild)(ImGuiWindow*);   // called as a child window ends (still the current window): drag-scroll it

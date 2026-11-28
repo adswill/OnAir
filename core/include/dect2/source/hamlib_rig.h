@@ -64,6 +64,10 @@ struct HamlibRigState {
 void setHamlibRigState(const HamlibRigState& s);
 HamlibRigState hamlibRigState();
 
+// #709: the rig sideband a mode needs, "USB", "PKTUSB", "LSB", or "" = leave the rig's mode alone. stdMode is the engine standard code:
+// 27 HF digital, 37 HFDL, 38 PSK31, 39 JS8Call (packet USB, as the transmit side uses); 57 the general receiver (its USB or LSB demodulator).
+std::string hamlibSidebandFor(int stdMode, int generalDemod);
+
 std::unique_ptr<IqSource> makeHamlibSource(const DeviceInfo& d);
 std::unique_ptr<TxSink> makeHamlibTxSink(const DeviceInfo& d);
 

@@ -3700,3 +3700,4 @@ Spectrum detail: normal	Detalle del espectro: normal
 Spectrum detail: fine	Detalle del espectro: fino
 Spectrum detail: finest	Detalle del espectro: muy fino
 How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Con qué finura se resuelven el espectro de banda estrecha y la cascada: fino tiene la mitad del ancho de bin que normal, muy fino un cuarto, así las portadoras CW y digitales destacan y las estaciones cercanas se separan. Usa algo más de CPU y el enganche se reinicia al cambiarlo.
+Put back	Volver a acoplar

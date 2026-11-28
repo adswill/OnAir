@@ -11257,3 +11257,4 @@ Spectrum detail: normal	频谱细节：标准
 Spectrum detail: fine	频谱细节：精细
 Spectrum detail: finest	频谱细节：最精细
 How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	窄带频谱和瀑布图的分辨精细程度：精细的频点宽度是标准的一半，最精细为四分之一，因此 CW 和数字载波更突出，相近的电台也能分开。会多占一点 CPU，更改后锁定会重新开始。
+Put back	放回主窗口

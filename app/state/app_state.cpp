@@ -6,6 +6,7 @@
 #include "freq_remember.h"
 #include "rx_width.h"
 #include "dect2/engine/widespan.h"
+#include "dect2/source/hamlib_rig.h"
 #include "../rooms/rooms.h"
 #include "../app.h"
 #include "dect2/common/verbose_log.h"
@@ -370,6 +371,7 @@ void applyBandwidth(App& a) {
     a.tune.basebandFilterHz = 0;
     a.tune.channelBwMhz = 0;   // set again below when a custom capture bandwidth replaces the width
     a.tune.bandwidthMhz = kBw[a.bwIdx].mhz;
+    a.tune.rigSideband = hamlibSidebandFor(engineStd(a), generalApiDemod());   // #709: a Hamlib rig's sideband for this mode
     a.tune.synth.atsc = a.family == 1;
     a.tune.synth.dab = a.dabMode;
     a.tune.synth.mode = engineStd(a) >= 4 ? engineStd(a) : 0;   // the test signal of DAB (4), ATSC 3.0 (5), ISDB-T (6), FM (7) and the modes after them

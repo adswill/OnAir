@@ -3,6 +3,7 @@
 
 #include "dect2/source/hamlib_rig.h"
 #include "dect2/source/hamlib_link.h"
+#include "dect2/general/general_rx.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -149,6 +150,14 @@ const std::vector<std::string>& hamlibModeChoices() {
     return v;
 }
 
+std::string hamlibSidebandFor(int stdMode, int generalDemod) {
+    switch (stdMode) {
+        case 27: case 37: case 38: case 39: return "PKTUSB";   // HF digital, HFDL, PSK31, JS8Call: upper sideband by convention
+        case 57: return generalDemod == GenUsb ? "USB" : generalDemod == GenLsb ? "LSB" : "";   // the general receiver: only its USB / LSB
+        default: return "";
+    }
+}
+
 std::string hamlibRigDeviceName(const HamlibRig& r) {
     if (!r.label.empty()) return "Hamlib: " + r.label;
     const std::string tail = r.path.size() > 16 ? r.path.substr(r.path.size() - 16) : r.path;
@@ -178,6 +187,8 @@ std::vector<DeviceInfo> hamlibRigDevices(const std::vector<HamlibRig>& v) {
         d.settings = {
             choiceSetting("hamlib_mode", "Mode", "The rig mode sent over CAT when tuning or transmitting. A mode you turn on the rig itself shows here.",
                           hamlibModeChoices(), {"USB", "LSB", "AM", "FM (narrow)", "FM (wide)", "CW", "CW reverse", "packet USB", "packet LSB", "packet FM", "RTTY"}, "USB", false),
+            boolSetting("hamlib_sideband", "Set the rig's sideband for the mode",
+                        "When a mode starts, OnAir sets the rig to the sideband the mode needs: USB or LSB for the general receiver, packet USB\nfor HF digital modes. Off: the rig keeps the mode of the setting above.", true),
             choiceSetting("audio_iq", "Audio IQ", "How the sound card connected for IQ or speaker audio is interpreted (same as a sound-card source).",
                           {"0", "1", "2", "3"}, {"I/Q stereo", "USB audio", "LSB audio", "Mono real"}, "1", false),
         };

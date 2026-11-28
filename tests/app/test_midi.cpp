@@ -34,6 +34,22 @@ int main() {
     k.channel = 1; CHECK(route(m, k, t, pos) && t == Lna, "the chosen channel is heard");
     CHECK(stepped(0.0, 0, 40, 8) == 0 && stepped(1.0, 0, 40, 8) == 40 && stepped(0.5, 0, 40, 8) == 24, "LNA steps of 8 dB");
     CHECK(stepped(1.0, 0, 62, 2) == 62 && stepped(0.33, 0, 62, 2) % 2 == 0, "VGA steps of 2 dB");
+    // antenna power button: a controller sets it, a note toggles it, and the light mirrors how it is mapped
+    Mapping bm; bm.bias = 30;
+    Msg bc; bc.type = Msg::ControlChange; bc.number = 30; bc.value = 127;
+    CHECK(biasRequest(bm, bc, false) == 1 && biasRequest(bm, bc, true) == 1, "CC 64 or more turns antenna power on");
+    bc.value = 63; CHECK(biasRequest(bm, bc, true) == 0, "CC below 64 turns it off");
+    bc.number = 31; CHECK(biasRequest(bm, bc, true) == -1, "another controller is not the button");
+    Mapping nm; nm.bias = 36; nm.biasNote = true; nm.channel = 3;
+    Msg nn; nn.type = Msg::NoteOn; nn.number = 36; nn.value = 100; nn.channel = 2;
+    CHECK(biasRequest(nm, nn, false) == 1 && biasRequest(nm, nn, true) == 0, "a note press toggles");
+    nn.type = Msg::NoteOff; CHECK(biasRequest(nm, nn, false) == -1, "a note release does nothing");
+    nn.type = Msg::NoteOn; nn.channel = 0; CHECK(biasRequest(nm, nn, false) == -1, "another channel is ignored");
+    uint8_t led[3];
+    biasLed(nm, true, led);  CHECK(led[0] == 0x92 && led[1] == 36 && led[2] == 127, "note light on: note on, velocity 127, channel 3");
+    biasLed(nm, false, led); CHECK(led[0] == 0x92 && led[2] == 0, "note light off: velocity 0");
+    biasLed(bm, true, led);  CHECK(led[0] == 0xB0 && led[1] == 30 && led[2] == 127, "CC light on: control change 127 on channel 1 when any");
+    biasLed(bm, false, led); CHECK(led[2] == 0, "CC light off");
     std::printf(fails ? "midi FAILED\n" : "midi ok\n");
     return fails ? 1 : 0;
 }

@@ -300,6 +300,7 @@ int main() {
     {
         for (int sv = 0; sv < kServiceCount; sv++) for (int rg = 0; rg < (int)regions((Service)sv).size(); rg++) {
             if ((Service)sv == Service::Cb && rg == 2) continue;                 // the UK plan has FM only: the AM channel of the scene is FM there
+            if ((Service)sv == Service::Cb && rg == 4) continue;                 // the Australian UHF plan (476 MHz) is not in the HF demo scene; its plan is checked in test_chanvoice_plan
             if ((Service)sv == Service::Mic && rg == 1) continue;                // same scene as Europe
             if ((Service)sv == Service::Ham && rg != 0 && rg != 1) continue;     // region 3 is the same code path as 2 (a longer repeater list)
             const double rate = (Service)sv == Service::Mic ? 4e6 : (Service)sv == Service::HfVoice ? 250e3 : (Service)sv == Service::Ham || (Service)sv == Service::Frs || (Service)sv == Service::Mdc || (Service)sv == Service::Fsync ? 2e6 : 1e6;

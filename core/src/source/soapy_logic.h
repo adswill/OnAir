@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <complex>
 #include <map>
 #include <string>
 #include <vector>
@@ -164,4 +165,17 @@ inline bool moduleAllowed(const std::string& path, std::string* reason = nullptr
     return true;
 }
 
+// #692: an opt-in 8-bit wire format (CS8) for PlutoSDR-type radios (also Tezuka firmware): half the bytes on the USB cable or the network
+inline bool isPlutoDriver(std::string driverKey) {
+    for (auto& c : driverKey) c = (char)std::tolower((unsigned char)c);
+    return driverKey.find("pluto") != std::string::npos || driverKey.find("tezuka") != std::string::npos;
+}
+// CS8 is asked for only when the user switched it on, the radio is a Pluto type and the driver lists CS8 among its stream formats
+inline bool useCs8(const std::string& driverKey, bool userOn, const std::vector<std::string>& formats) {
+    return userOn && isPlutoDriver(driverKey) && std::find(formats.begin(), formats.end(), std::string("CS8")) != formats.end();
+}
+// Interleaved signed 8-bit I/Q to float, full scale 128 -> 1.0 (same scale as the 16-bit wire's 1/32768 after the driver's own scaling)
+inline void cs8ToCf32(const int8_t* in, std::complex<float>* out, size_t n) {
+    for (size_t i = 0; i < n; i++) out[i] = std::complex<float>((float)in[2 * i] * (1.0f / 128.0f), (float)in[2 * i + 1] * (1.0f / 128.0f));
+}
 }}  // namespace dect2::soapylogic

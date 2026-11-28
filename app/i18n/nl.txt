@@ -3700,3 +3700,4 @@ Spectrum detail: normal	Spectrumdetail: normaal
 Spectrum detail: fine	Spectrumdetail: fijn
 Spectrum detail: finest	Spectrumdetail: fijnst
 How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Hoe fijn het smalbandspectrum en de waterval worden opgelost: fijn heeft de halve binbreedte van normaal, fijnst een kwart, zodat CW- en digitale dragers beter opvallen en dicht bij elkaar liggende stations scheiden. Kost iets meer CPU en de vergrendeling start opnieuw als je dit wijzigt.
+Put back	Terug vastzetten

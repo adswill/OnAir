@@ -236,6 +236,11 @@ void modePicker(App& a) {
         if (ImGui::Checkbox(tr("Only my region"), &only)) plat::prefs().setB("modesOnlyMyRegion", only);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hide the modes that are used only in other countries than the one in the setup (for example DTMB or DVB-T2 when you are in North America). Show hidden lists them again."));
     }
+    {   // #651: choose the decoder for the signal you are on, without the radio jumping to the mode's usual frequency
+        bool keep = plat::prefs().getB("modeKeepFreq", false);
+        if (ImGui::Checkbox(tr("Keep frequency"), &keep)) plat::prefs().setB("modeKeepFreq", keep);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Picking a mode leaves the radio on the frequency it is on now (Shift-click does this for one pick)"));
+    }
 
     // ---- tabs ----
     Query qn = q; qn.tab = TabAll; qn.tags = 0;   // counts for the tab labels: everything but the tab and the chips

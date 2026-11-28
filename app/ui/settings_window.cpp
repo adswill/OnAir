@@ -112,7 +112,7 @@ const std::map<std::string, Bind>& binds() {
         m["rxAltM"] = Bind{[](App&) -> double { return plat::prefs().getD("rxAltM", 0); },
                            [](App&, double v) { plat::prefs().setD("rxAltM", dect2::station::clampHeightM(v)); }, nullptr, nullptr};
         SW_PT("stationName");
-        SW_PB("midiOn", false); SW_PT("midiPort"); SW_PI("midiChannel", 0); SW_PI("midiCcLna", -1); SW_PI("midiCcVga", -1); SW_PI("midiCcGain", -1);   // #543, app/midi
+        SW_PB("midiOn", false); SW_PT("midiPort"); SW_PI("midiChannel", 0); SW_PI("midiCcLna", -1); SW_PI("midiCcVga", -1); SW_PI("midiCcGain", -1); SW_PI("midiCcBias", -1); SW_PB("midiBiasNote", false);   // #543, app/midi
         SW_PI("threads", -1);   // #372: read in main.cpp before the first thread pool use, so a restart applies it
         PD("rxThread");   // 4.0: Engine::setRxThreadMode at the next Start (toolbar_source.cpp)
         SW_PB("starPromptOn", true); NB("updCheck", a.updCheck); NB("updBeta", a.updPre); NB("updAuto", a.updAuto); NB("updSrc", a.updSrc);
@@ -120,7 +120,7 @@ const std::map<std::string, Bind>& binds() {
         PS("staleVdl2", -1); PS("staleAcars", -1); PS("staleHfdl", -1); PS("staleAdsb", -1); PS("staleAis", -1); PS("staleUat", -1); PS("staleInmsat", -1); PS("staleCustomMin", 120);
         SB("udpHost", std::string(a.udpHost)); NB("udpPort", a.out.port); NB("udpRtp", a.out.rtp);
         // ---- 4.0
-        SW_PI("startFreqMode", 0); SW_PF("startFreqMhz", 100); SW_PB("autoStartRx", false); SW_PB("reduceMotion", false); SW_PB("streamerMode", false); SW_PB("streamerHideLocation", true); SW_PB("streamerHideCallsign", false); SW_PB("streamerHideNetwork", true); SW_PB("streamerHidePaths", true); SW_PB("doctorAutoOpen", true); SW_PI("sessionRestore", 0); SW_PI("confirmExit", 0);
+        SW_PI("startFreqMode", 0); SW_PF("startFreqMhz", 100); SW_PB("autoStartRx", false); SW_PB("reduceMotion", false); SW_PB("sliderWheel", true); SW_PB("streamerMode", false); SW_PB("streamerHideLocation", true); SW_PB("streamerHideCallsign", false); SW_PB("streamerHideNetwork", true); SW_PB("streamerHidePaths", true); SW_PB("doctorAutoOpen", true); SW_PI("sessionRestore", 0); SW_PI("confirmExit", 0);
         SW_PIA("adsbUnits", 0, adsbui::unitsFromPrefs()); SW_PIA("adsbSpeedUnit", 0, adsbui::unitsFromPrefs());
         NB("specFft", a.specFft);
         m["wfRate"] = Bind{[](App& a) -> double { return a.wf.rowsPerSec; }, [](App& a, double v) { a.wf.setRate((float)v); }, nullptr, nullptr};

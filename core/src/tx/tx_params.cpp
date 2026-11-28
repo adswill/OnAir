@@ -392,6 +392,9 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         if (id == "isdbt") isdbtRows(v);
         if (id == "dvbs") dvbsRows(v);
         if (id == "dvbc2") dvbc2Rows(v);
+        if (id == "dtmb")   // 8 MHz: 7.56 Msym/s; 6 MHz (Cuba): 5.67 Msym/s, the same choice the receiver makes (modeOpt[7] = 1)
+            v.push_back(A(SET(pick("dtmb.bw", "Channel width", "8 MHz in China, Hong Kong and Macau, 6 MHz in Cuba. The symbol rate follows it (7.56 or 5.67 Msym/s); a receiver must be set to the same width.", 0, {"8 MHz", "6 MHz (Cuba)"}),
+                              [](TxRequest& r, double x) { r.synth.modeOpt[7] = x >= 1 ? 1 : 0; }), TxPGroup::Modulation));
         if (id == "dtmb" || id == "dvbc" || id == "atsc3" || id == "atsc")
             v.push_back(A(custom("scene.options", "Generator settings", "The generator's own settings (shared with the receiver's test signal); its noise and offset controls do not apply here."), TxPGroup::Modulation));
         break;

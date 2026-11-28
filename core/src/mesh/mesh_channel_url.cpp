@@ -4,8 +4,10 @@
 // Meshtastic channel URLs: see mesh_channel_url.h. Own protobuf reader and writer for the few messages involved.
 #include "dect2/mesh/mesh_channel_url.h"
 #include "dect2/mesh/mesh_crypto.h"
+#include <cctype>
 #include <cmath>
 #include <cstring>
+#include <sstream>
 
 namespace dect2 {
 
@@ -227,6 +229,58 @@ bool meshtasticUrlLora(const MeshtasticChannelSet& s, MeshLoraSettings& out, std
     l.freqHz += (double)s.frequencyOffset * 1e6;
     out = l;
     return true;
+}
+
+
+// ---- channel key files ----
+std::string meshKeysFormat(const std::vector<MeshChannelKey>& keys) {
+    std::string s;
+    for (const auto& k : keys) s += std::string(k.proto == 2 ? "MeshCore" : "Meshtastic") + "\t" + k.name + "\t" + k.secret + "\n";
+    return s;
+}
+
+namespace {
+std::string trimWs(const std::string& s) {
+    const size_t a = s.find_first_not_of(" \t\r"), b = s.find_last_not_of(" \t\r");
+    return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
+}
+}  // namespace
+
+std::vector<MeshChannelKey> meshKeysParse(const std::string& text, size_t& skipped) {
+    std::vector<MeshChannelKey> out;
+    skipped = 0;
+    std::istringstream in(text);
+    std::string raw;
+    while (std::getline(in, raw)) {
+        const std::string line = trimWs(raw);
+        if (line.empty() || line[0] == '#') continue;
+        const size_t p = line.find_first_of(" \t");
+        const size_t q = p == std::string::npos ? std::string::npos : line.find_last_of(" \t");
+        if (p == std::string::npos || q <= p) { skipped++; continue; }
+        const std::string proto = line.substr(0, p), name = trimWs(line.substr(p, q - p)), secret = line.substr(q + 1);
+        std::string lower;
+        for (char c : proto) lower += (char)std::tolower((unsigned char)c);
+        MeshChannelKey k;
+        k.proto = lower == "meshtastic" ? 1 : lower == "meshcore" ? 2 : 0;
+        k.name = name;
+        k.secret = secret;
+        std::vector<uint8_t> bytes;
+        const bool keyOk = k.proto == 1 ? meshcrypto::base64Decode(secret, bytes) : k.proto == 2 && (meshcrypto::base64Decode(secret, bytes) || meshcrypto::hexDecode(secret, bytes));
+        if (k.proto == 0 || name.empty() || !keyOk) { skipped++; continue; }
+        out.push_back(k);
+    }
+    return out;
+}
+
+std::vector<MeshChannelKey> meshKeysNew(const std::vector<MeshChannelKey>& have, const std::vector<MeshChannelKey>& read) {
+    std::vector<MeshChannelKey> out;
+    for (const auto& k : read) {
+        bool dup = false;
+        for (const auto& h : have) if (h.proto == k.proto && h.name == k.name) dup = true;
+        for (const auto& o : out) if (o.proto == k.proto && o.name == k.name) dup = true;
+        if (!dup) out.push_back(k);
+    }
+    return out;
 }
 
 }  // namespace dect2

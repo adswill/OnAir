@@ -8,6 +8,7 @@
 //   CB: FCC 47 CFR 95 subpart D (40 channels 26.965 - 27.405 MHz, channel 9 emergency / roadside assistance, 4 W AM, 12 W PEP SSB); CEPT
 //       (ERC/REC 70-03, the same 40 channels with channels 23, 24 and 25 in number order 27.235 / 27.245 / 27.255); Germany, Czechia and Hungary
 //       add 40 channels at 26.565 - 26.955 MHz in 10 kHz steps; the UK adds the 27/81 plan, 40 FM channels 27.60125 - 27.99125 MHz.
+//   Australian UHF CB: the 80-channel plan (77 channels, 61 - 63 reserved), 476.425 - 477.4125 MHz, FM 12.5 kHz (22 and 23 data 25 kHz).
 //   FRS / GMRS: FCC 47 CFR 95 subparts B and E (FRS 1 - 7 at 462.5625 + 25 kHz n, 8 - 14 at 467.5625 + 25 kHz n, 15 - 22 at 462.550 + 25 kHz n;
 //       GMRS repeater inputs 467.550 - 467.725 MHz in 25 kHz steps).
 //   PMR446: ECC Decision (15)05: 16 analogue 12.5 kHz channels 446.00625 + 12.5 kHz n, from 2016 (before that channels 1 - 8 only).

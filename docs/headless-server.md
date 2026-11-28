@@ -57,6 +57,10 @@ The page's "Data use" menu sets how much the server sends. Over Wi-Fi on a phone
 * The server also watches itself: if sending a spectrum line takes more than half the line interval, the interval doubles (up to 16 times, never slower than 2 s) and comes back when the link keeps up. A slow client therefore never builds a queue.
 * Audio: `{"audio":true,"arate":16000}` (8000, 12000, 16000, 24000 or 48000 Hz; mono, 16 bit; binary messages starting with `0x02`). A listener that does not fetch loses the oldest audio, never more than one second is kept. At most 4 listeners.
 
+## A sound card as the input
+
+A receiver's audio or IF output, or an SDR that shows up as a sound card, can be the input instead of a radio. `onair-server --list-audio` prints the sound-card inputs; pick one by name (or part of it) or number with `--audio-device NAME` (or `device=Sound card: NAME` in the settings file; the same as `--device`). Stereo I/Q is the default (`--audio-iq 1` or `2` for a plain USB or LSB audio output); the other `audio_*` keys are in the table below. A sound card is never picked by itself: without `device` the server still takes the first radio, else the test signal. Based on a patch by @cleo2024 (#554).
+
 ## The settings file
 
 Plain `key=value` lines, `#` for comments. Default place: `~/.config/onair/server.conf` (`%APPDATA%\OnAir\server.conf` on Windows), or `--config FILE`, or the `ONAIR_SERVER_CONFIG` environment variable. The file is created on the first run (mode 0600 because it holds the token). What the browser changes (mode, frequency, gain, rate, radio, demodulator, start/stop) is written back, so the server comes up the same way after a restart; your comments and unknown keys are kept.
@@ -68,6 +72,7 @@ Plain `key=value` lines, `#` for comments. Default place: `~/.config/onair/serve
 | `token` | the access token |
 | `tls_cert`, `tls_key` | PEM files, see TLS |
 | `device` | the radio: its name (or part of it), its number in the device list, or `test` for the built-in test signal. Default: the first radio found |
+| `audio_iq`, `audio_chan`, `audio_rate`, `audio_if_hz`, `audio_invert`, `audio_gain_db`, `audio_dc` | when `device` is a sound card (below): how the audio becomes I/Q (`audio_iq` 0 stereo I/Q, 1 USB, 2 LSB, 3 mono real), channel (0 left, 1 right, 2 mix), sample rate (8000 to 192000, default 48000), IF offset in Hz, swap I/Q, gain in dB, DC removal (`1`). Same as the desktop app's sound-card source |
 | `net_radio` | a radio on the network, as the app keeps it (`rtltcp,192.168.1.20,1234`); may be repeated |
 | `file`, `file_rate` | play a recording (SigMF, cs8, ...) as another "radio" |
 | `mode` | a mode id: `fm`, `dab`, `t2`, `atsc`, `adsb`, `dvbs`, ... (all of `/api/v1/modes`) |

@@ -11832,6 +11832,7 @@ bool ImGui::BeginItemTooltip()
 }
 
 float ImGuiTouchRowMin = 0.0f;
+bool ImGuiSliderWheel = true;
 bool (*ImGuiTouchTooltipGate)() = NULL;
 void (*ImGuiTouchPlaceWindow)(ImGuiWindow*) = NULL;
 void (*ImGuiTouchEndChild)(ImGuiWindow*) = NULL;

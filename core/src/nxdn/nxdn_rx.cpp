@@ -412,7 +412,7 @@ struct NxdnReceiver::Impl {
         // voice only from frames that are surely ours: a good SACCH, or a found sync and LICH within a call
         // (a call is started from voice only with a found sync and a good SACCH: the 6-bit CRC alone passes noise once in 64)
         const bool sure = sacchOk && lichOk && !c.fly;
-        if (sure || (lichOk && tel.now.active && lastChain == idx && (sacchOk || !c.fly))) for (const auto& vb : voice) voiceFrame(vb.data(), vb.data() + 72, c, sure);
+        if (sure || (tel.now.active && lastChain == idx && (sacchOk || lichOk || !c.fly))) for (const auto& vb : voice) voiceFrame(vb.data(), vb.data() + 72, c, sure);
         tel.blocksOk = tel.sacchOk + tel.facchOk + tel.cacOk;
         tel.blocksBad = tel.sacchBad + tel.facchBad + tel.cacBad;
         if (any) {
