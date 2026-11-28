@@ -71,6 +71,27 @@ Source: ETSI EN 300 392-2 V3.8.1, clauses 5.4, 5.8-5.17, 8.3.1, 9.4.4.2.5, 9.4.4
 - The identifier on all 12 combinations of 25/50/100/150 kHz and 4/16/64-QAM with a tuning error. 4-QAM 25 kHz at 6 dB, a pi/4-DQPSK carrier, a carrier of only D8PSK slots, analogue FM voice and noise.
 - The live receiver on scene 3: the cell's capabilities and D8PSK slots, and the QAM carrier listed once as 50 kHz with 16 sub-carriers.
 
+## Direct mode (DMO)
+
+TETRA Direct Mode (DMO) is radio to radio. Two or more terminals talk to each other on one carrier with no base station, and a DM repeater or gateway can extend the range. Use the **TETRA DMO** entry in the mode list (under Two-way radio). Tune to the channel your radios use. Channel plans are set by each country, so check your local band plan.
+
+**What OnAir decodes in DMO:**
+
+- **Sync.** The direct synchronisation burst (DSB) is found by its training sequence. Its SCH/S and SCH/H blocks are read, and the slot clock comes from it. Normal direct-mode bursts (DNB) are then read in their slots.
+- **Signalling.** SCH/F and STCH blocks are parsed. DM-SETUP messages give the call: source and destination address, the mobile network identity (MNI), group or individual call, circuit mode, priority, and whether the call uses two frequencies. The call list shows these, and the end-to-end encryption flag when it is set.
+- **Voice.** The traffic bursts go to the clear speech path. Speech plays only when you have installed the TETRA codec yourself (see [docs/CODECS.md](CODECS.md)). Without it the calls and their addresses are still shown.
+
+**Encrypted calls stay encrypted.** A call is treated as encrypted when the air interface encryption state is not zero or the end-to-end flag is set. Its traffic does not reach the codec. Nothing is decrypted. A call is not decoded until a clear DM-SETUP has been heard for it.
+
+**How it was tested.** Only on OnAir's own test signal, not on a live DMO radio. The generator's traffic bursts were all delivered at 72 and 240 ksps and at 2.4 Msps, at offsets of -1800 and +800 Hz, at +100 ppm, through a repeater and for an individual call. Speech was not tested, because the test has no codec.
+
+**Limits:**
+
+- Not checked against real DMO radios or recordings. If you have a recording of DMO traffic, please share it.
+- Speech needs the TETRA codec you install. OnAir ships none.
+- Encrypted calls are listed only. Their speech is never played.
+- In the tests, 35 to 39 of 40 traffic bursts arrived with 8 or fewer wrong bits, and the rest had about 10. The cause has not been found.
+
 ## Files
 
 core/src/tetra/tetra_teds.cpp and core/include/dect2/tetra/tetra_teds.h (new). Changed: tetra_rx.cpp (detector, turbo loop, timing, D8PSK slots, identification), tetra_phy.cpp (SISO, D8PSK burst, `Modulator::pushSteps`), tetra_gen.cpp (scene 3) and tetra_tel.h (new fields). app/tetra/tetra_ui.cpp shows the TEDS lines, the carrier kinds and scene 3. tests/tetra/test_tetra_sens.cpp and test_tetra_teds.cpp are new.
