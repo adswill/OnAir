@@ -381,5 +381,34 @@ void AlpReassembler::push(const uint8_t* payload, int size, int pointer, std::ve
     }
 }
 
+bool parseLmt(const uint8_t* p, size_t n, std::vector<LmtFlow>& out) {
+    out.clear();
+    size_t pos = 0;
+    auto need = [&](size_t k) { return pos + k <= n; };
+    if (!need(1)) return false;
+    const int nPlp = (p[pos++] >> 2) + 1;
+    for (int i = 0; i < nPlp; i++) {
+        if (!need(2)) return false;
+        const int plp = p[pos] >> 2;
+        const int nFlows = p[pos + 1];
+        pos += 2;
+        for (int j = 0; j < nFlows; j++) {
+            if (!need(13)) return false;
+            LmtFlow f;
+            f.plp = plp;
+            f.srcIp = ((uint32_t)p[pos] << 24) | ((uint32_t)p[pos + 1] << 16) | ((uint32_t)p[pos + 2] << 8) | p[pos + 3];
+            f.dstIp = ((uint32_t)p[pos + 4] << 24) | ((uint32_t)p[pos + 5] << 16) | ((uint32_t)p[pos + 6] << 8) | p[pos + 7];
+            f.srcPort = (p[pos + 8] << 8) | p[pos + 9];
+            f.dstPort = (p[pos + 10] << 8) | p[pos + 11];
+            const bool sidFlag = (p[pos + 12] >> 7) & 1, compressed = (p[pos + 12] >> 6) & 1;
+            pos += 13;
+            if (sidFlag) { if (!need(1)) return false; f.sid = p[pos++]; }
+            if (compressed) { if (!need(1)) return false; f.contextId = p[pos++]; }
+            out.push_back(f);
+        }
+    }
+    return true;
+}
+
 } // namespace atsc3
 } // namespace dect2

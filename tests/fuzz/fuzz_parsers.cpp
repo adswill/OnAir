@@ -95,6 +95,9 @@ void alpOne(const uint8_t* d, size_t n) {
         i += 2 + (size_t)size;
         out.clear();
     }
+    Heap h(d, n);   // the whole input as a link mapping table
+    std::vector<atsc3::LmtFlow> flows;
+    atsc3::parseLmt(h.p, n, flows);
 }
 
 void ipOne(const uint8_t* d, size_t n) {

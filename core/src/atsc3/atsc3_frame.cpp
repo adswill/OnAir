@@ -293,6 +293,11 @@ FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs, const Deco
             pr.id = pl.id;
             FramePlp fp; fp.id = pl.id; fp.fecType = pl.fecType; fp.mod = pl.mod; fp.cod = pl.cod;
             pr.cfg = fp;
+            if (r.plan.isLeftOut(pl.id)) {   // not wanted by the receiver: no cells, no FEC decoding
+                pr.leftOut = true;
+                r.plps.push_back(std::move(pr));
+                continue;
+            }
             BicmConfig bc = plpBicm(fp);
             Bicm bicm(bc);
             PlpAlloc a;

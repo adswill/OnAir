@@ -88,11 +88,13 @@ struct StsidChannel {
     bool realTime = false;
     std::string repId, contentType, lang;
     bool startup = false;
+    int plpId = -1;                    // LS@PLPID: the PLP of this LCT channel when it is not the session's; -1: not given
     std::vector<StsidPayload> payloads;
 };
 struct StsidSession {
     uint32_t srcIp = 0, dstIp = 0;     // 0: the session that carries the SLS
     int dstPort = 0;
+    int plpId = -1;                    // RS@PLPID: the PLP of the ROUTE session (A/331 Table 7.4); -1: not given (the PLP of the S-TSID)
     std::vector<StsidChannel> channels;
 };
 struct Stsid { std::vector<StsidSession> sessions; };
@@ -103,6 +105,7 @@ struct RouteComponent {
     uint32_t dstIp = 0; int dstPort = 0; uint32_t tsi = 0;
     std::string repId, contentType, lang;
     bool realTime = false;
+    int plpId = -1;                    // the PLP the S-TSID names for it; -1: not given
 };
 
 class RouteService {

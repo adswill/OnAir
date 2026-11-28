@@ -10,12 +10,15 @@
 #include "atsc3_mmtp.h"
 #include "atsc3_remux.h"
 #include "atsc3_route.h"
+#include <array>
+#include <atomic>
 #include <condition_variable>
 #include <deque>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <set>
+#include <string>
 #include <vector>
 
 namespace dect2 {
@@ -32,13 +35,16 @@ struct ReceiverStats {
     // blocks were tried and none decoded, and the FEC blocks not tried in those frames
     long plpBackoffs = 0, plpProbeFrames = 0, blocksSkipped = 0;
     long mpusDelivered = 0, mpusDropped = 0;   // MMTP services: MPUs passed on (whole, or repaired down to the samples that can be played), and MPUs given up
+    long lmtTables = 0;                    // link mapping tables read (ALP signalling)
+    long plpsLeftOut = 0;                  // PLPs left out of a frame because they carry nothing the receiver needs (one per PLP and frame)
+    long plpSelections = 0, plpRelearns = 0;   // switches from every PLP to only the needed ones, and back (plpDecodeMask())
 };
 
 struct FrameInfo {
     bool valid = false;
     int fftSize = 0, guard = 0, spDx = 0, spDy = 0, symbols = 0, preambleSymbols = 0;
     int bootstrapMinor = 0, bandwidthMhz = 0, preambleStructure = 0;
-    struct Plp { int id = 0, bitsPerCell = 0, rate15 = 0, nInner = 0, blocks = 0, blocksOk = 0; };
+    struct Plp { int id = 0, bitsPerCell = 0, rate15 = 0, nInner = 0, blocks = 0, blocksOk = 0; bool leftOut = false; };   // leftOut: not decoded (plpDecodeMask())
     std::vector<Plp> plps;
 };
 
@@ -79,6 +85,14 @@ public:
     std::string mpd() const;
     // The components of the selected service. For an MMTP service, one per asset of the MP table: `tsi` is the asset's packet id.
     std::vector<RouteComponent> components() const;
+
+    // PLP selection. While a service plays and the receiver knows which PLPs carry it (from the link mapping table, from the S-TSID, or from the
+    // PLPs its packets came on while every PLP was decoded), only those PLPs and the ones with the low level signalling are decoded: the FEC of
+    // the others is not run. Every PLP is decoded while no service plays or its signalling is still being read, for a few seconds after the PLPs
+    // in L1 or the service's signalling change, when the service's packets stop coming although its PLPs decode cleanly, when a PLP carries an
+    // MPEG-2 TS in ALP, with setDecodeAllPlps(true), and with the environment variable DECT2_ATSC3_ALL_PLPS=1.
+    uint64_t plpDecodeMask() const { return plpMask_.load(std::memory_order_relaxed); }   // bit i set: PLP i is decoded
+    void setDecodeAllPlps(bool on);
 
     int readTs(uint8_t* buf, int size) { return remux_.read(buf, size); }   // blocks; the Reader of HlsPipeline
     int readTsTimed(uint8_t* buf, int size, int timeoutMs);   // a stream of MPEG-2 TS in ALP (A/330 5.4) comes out here directly; otherwise the remuxed services
@@ -130,6 +144,25 @@ private:
     std::set<int> llsPlps_, servicePlps_;          // PLPs that carried the low level signaling, and datagrams of the selected service
     std::deque<std::pair<long, DecodePlan>> plans_;   // the plan after each of the last frames committed, by the number of frames committed
     void updateHealth(const std::vector<const PlpResult*>& plps);   // after each frame, under mu_
+
+    // PLP selection (plpDecodeMask()); all under mu_ but the mask
+    void updatePlpSelection(const FrameResult& fr, const Bootstrap& bs, bool wantedClean, bool sawTs);   // after each decoded frame; also writes the choice into the frame's plan
+    void choosePlpsLocked(const FrameResult& fr, const Bootstrap& bs, bool wantedClean, bool sawTs);
+    void relearnLocked(const char* why);
+    std::set<uint64_t> serviceFlowsLocked() const;          // (destination address << 16 | port) of the selected service's flows
+    bool serviceReadyLocked() const;
+    std::map<uint64_t, uint64_t> flowPlps_;                 // flow -> the PLPs it was seen on since the selection was last reset
+    std::map<uint64_t, uint64_t> lmtPlps_;                  // flow -> PLP, from the last link mapping table
+    std::array<double, 64> llsLast_ = filledLls();          // each PLP: when it last carried an LLS table or a link mapping table that parsed (-1: never)
+    static std::array<double, 64> filledLls() { std::array<double, 64> a; a.fill(-1.0); return a; }
+    std::string plpLayout_;                                 // the PLPs of the last frame, as text: a change resets the selection
+    std::set<uint64_t> learnedFlows_;
+    struct FlowRx { double last = 0, maxGap = 0; int seen = 0; };
+    std::map<uint64_t, FlowRx> flowRx_;                     // each of the service's flows: when it last came and its longest gap
+    double sigTime_ = 0, learnFrom_ = 0, lastServiceRx_ = 0, cleanSince_ = 0;
+    int fullFrames_ = 0;                                    // frames with every PLP decoded since the selection was reset
+    std::atomic<uint64_t> plpMask_{~0ull};
+    std::atomic<bool> allPlps_{false};
 };
 
 } // namespace atsc3
