@@ -422,12 +422,19 @@ void freqdbWindow(App& a) {
     if (inputmap::pressed(inputmap::Action::FreqDbWin)) a.freqOpen = !a.freqOpen;   // Ctrl+Shift+F by default
     (void)io;
     if (!u.tabLoaded) { u.tabLoaded = true; a.freqTab = a.freqTab || plat::prefs().getB("freqTab", false); }
-    if (!a.freqOpen) return;
+    if (!a.freqOpen || freqdbInOwnWindow()) return;   // (in its own OS window: ui/own_window.cpp draws it)
     firstWindowSize(820 * gUi, 480 * gUi);
     if (!ImGui::Begin(trw("Frequencies"), &a.freqOpen)) { ImGui::End(); return; }
+    if (!gNoOsWindows) {
+        if (ImGui::SmallButton(tr("Pop out"))) freqdbSetOwnWindow(true);
+        if (ImGui::IsItemHovered()) wrapTooltip(380 * gUi, tr("Pop out into a window of its own"));
+        ImGui::Separator();
+    }
     panelBody(a);
     ImGui::End();
 }
+
+void freqdbPanelBody(App& a) { panelBody(a); }
 
 void freqdbTabItem(App& a) {
     if (!a.freqTab) return;

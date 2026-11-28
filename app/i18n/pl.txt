@@ -3701,3 +3701,4 @@ Spectrum detail: normal	Szczegółowość widma: normalna
 Spectrum detail: fine	Szczegółowość widma: drobna
 Spectrum detail: finest	Szczegółowość widma: najdrobniejsza
 How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Jak drobno rozdzielane jest widmo wąskopasmowe i wodospad: drobna ma połowę szerokości binu normalnej, najdrobniejsza jedną czwartą, więc nośne CW i cyfrowe lepiej się wyróżniają, a bliskie stacje się rozdzielają. Zużywa trochę więcej CPU, a zmiana restartuje synchronizację.
+Put back	Zadokuj z powrotem

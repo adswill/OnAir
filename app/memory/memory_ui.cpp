@@ -325,12 +325,19 @@ void memoryWindow(App& a) {
     if (inputmap::pressed(inputmap::Action::MemoryWin)) a.memoryOpen = !a.memoryOpen;   // Ctrl+M by default
     (void)io;
     if (!u.tabLoaded) { u.tabLoaded = true; a.memoryTab = a.memoryTab || plat::prefs().getB("memTab", false); }
-    if (!a.memoryOpen) return;
+    if (!a.memoryOpen || memoryInOwnWindow()) return;   // (in its own OS window: ui/own_window.cpp draws it)
     firstWindowSize(720 * gUi, 460 * gUi);
     if (!ImGui::Begin(trw("Memory"), &a.memoryOpen)) { ImGui::End(); return; }
+    if (!gNoOsWindows) {
+        if (ImGui::SmallButton(tr("Pop out"))) memorySetOwnWindow(true);
+        if (ImGui::IsItemHovered()) wrapTooltip(380 * gUi, tr("Pop out into a window of its own"));
+        ImGui::Separator();
+    }
     panelBody(a, true);
     ImGui::End();
 }
+
+void memoryPanelBody(App& a) { panelBody(a, true); }
 
 void memoryTabItem(App& a) {
     if (!a.memoryTab) return;

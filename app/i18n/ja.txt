@@ -3695,3 +3695,4 @@ Spectrum detail: normal	スペクトル詳細度: 標準
 Spectrum detail: fine	スペクトル詳細度: 細かい
 Spectrum detail: finest	スペクトル詳細度: 最も細かい
 How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	狭帯域スペクトルとウォーターフォールの分解能です。「細かい」は標準の半分、「最も細かい」は4分の1のビン幅になり、CWやデジタルの搬送波が目立ち、近接した局が分離できます。CPU負荷が少し増え、変更するとロックがやり直されます。
+Put back	元に戻す
