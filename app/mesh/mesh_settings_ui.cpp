@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <sstream>
 #include <thread>
 void meshWatchSettings();   // mesh_watch_ui.cpp
 void meshFwdSettings();
@@ -444,6 +445,44 @@ void settingsView(App& a) {
         ImGui::PopID();
     }
     if (S.keys.empty()) ImGui::TextDisabled("no key added");
+    {   // a plain text file, one key per line (mesh_channel_url.h): back up, move to another PC, or edit by hand
+        static std::string keysFileMsg;
+        if (ImGui::SmallButton(tr("Export keys...##mkexp"))) {
+            const std::string path = saveFileDialog("mesh-keys.txt");
+            if (!path.empty()) {
+                std::vector<dect2::MeshChannelKey> ks;
+                for (const auto& k : S.keys) ks.push_back({k.proto, k.name, k.secret});
+                std::ofstream f(dect2::u8file(path), std::ios::binary);
+                f << dect2::meshKeysFormat(ks);
+                keysFileMsg = f ? std::to_string(ks.size()) + " key(s) exported to " + path : "could not write " + path;
+            }
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Saves every key to a text file: one line each, protocol, channel name and key. Keep it safe, the keys are not encrypted."));
+        ImGui::SameLine(0, 6 * gUi);
+        if (ImGui::SmallButton(tr("Import keys...##mkimp"))) {
+            const std::string path = openFileDialog();
+            if (!path.empty()) {
+                std::ifstream f(dect2::u8file(path), std::ios::binary);
+                std::ostringstream buf;
+                buf << f.rdbuf();
+                size_t bad = 0;
+                const auto read = dect2::meshKeysParse(buf.str(), bad);
+                std::vector<dect2::MeshChannelKey> have;
+                for (const auto& k : S.keys) have.push_back({k.proto, k.name, k.secret});
+                const auto fresh = dect2::meshKeysNew(have, read);
+                size_t added = 0, failed = 0;
+                for (const auto& k : fresh) {
+                    const bool ok = k.proto == 1 ? a.engine.mesh().addMeshtasticChannel(k.name, k.secret) : a.engine.mesh().addMeshCoreChannel(k.name, k.secret);
+                    if (ok) { S.keys.push_back({k.proto, k.name, k.secret}); added++; }
+                    else failed++;
+                }
+                if (added) saveKeys();
+                keysFileMsg = std::to_string(added) + " key(s) added, " + std::to_string(read.size() - fresh.size()) + " already there, " +
+                              std::to_string(bad + failed) + " not valid";
+            }
+        }
+        if (!keysFileMsg.empty()) { ImGui::SameLine(0, 8 * gUi); ImGui::TextDisabled("%s", keysFileMsg.c_str()); }
+    }
     ImGui::Spacing();
     channelLink(a);
     ImGui::Spacing();
