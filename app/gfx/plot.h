@@ -126,6 +126,8 @@ Point GetPlotMousePos();
 bool IsPlotHovered();
 bool IsPlotHeld();         // the left button is down on the plot
 bool IsPlotPanning();      // a drag is panning this plot (any button)
+void SetupDragBand(double centre, double halfWidth, float minRadiusPx);
+bool IsDragBandHovered();
 bool PressOnScale();       // drag to tune: the left press began on the frequency scale (it pans: the caller must not tune)
 double PanOverflowX();     // this frame's drag past the x constraint, in axis units (0 when the drag stayed inside)
 Rect GetPlotLimits();
