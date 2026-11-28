@@ -87,7 +87,7 @@ void panoramaStrip(App& a) {
         msg = P.msg;
         if (P.last.bins() > 0) { col = panoramaColumns(P.last, kCols); x0 = P.last.startHz / 1e6; x1 = (P.last.startHz + P.last.bins() * P.last.binHz) / 1e6; floorDb = P.last.floorOverallDb; }
     }
-    ImGui::TextColored(ImVec4(1.f, 0.8f, 0.3f, 1), "%s", tr("Panorama: the radio is scanning, so nothing is decoded right now. Click a signal to tune it."));
+    ImGui::TextColored(pal::warnAmber(), "%s", tr("Panorama: the radio is scanning, so nothing is decoded right now. Click a signal to tune it."));
     ImGui::SameLine();
     static const char* kSpan[3] = {N_("5 MHz"), N_("10 MHz"), N_("20 MHz")};
     ImGui::SetNextItemWidth(90 * gUi);
@@ -97,7 +97,7 @@ void panoramaStrip(App& a) {
     }
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("Back to receiving"))) { finish(a, 0); return; }
-    if (!msg.empty()) { ImGui::TextColored(ImVec4(1, .5f, .4f, 1), "%s", msg.c_str()); }
+    if (!msg.empty()) { ImGui::TextColored(pal::badRed(), "%s", msg.c_str()); }
     if (plt::BeginPlot("##panorama", ImVec2(-1, 90 * gUi), plt::Flags_NoLegend | plt::Flags_NoTitle)) {
         plt::SetupAxes("MHz", "");
         if (!col.empty()) {
@@ -107,7 +107,7 @@ void panoramaStrip(App& a) {
             std::vector<double> xs(col.size());
             std::vector<double> ys(col.begin(), col.end());
             for (size_t i = 0; i < col.size(); i++) xs[i] = x0 + (x1 - x0) * (i + 0.5) / col.size();
-            plt::Spec sp; sp.LineColor = ImVec4(0.4f, 0.8f, 1, 1);
+            plt::Spec sp; sp.LineColor = pal::accent();
             plt::PlotLine("panorama", xs.data(), ys.data(), (int)xs.size(), sp);
             if (plt::IsPlotHovered() && ImGui::IsMouseClicked(0)) {
                 const double hz = plt::GetPlotMousePos().x * 1e6;
