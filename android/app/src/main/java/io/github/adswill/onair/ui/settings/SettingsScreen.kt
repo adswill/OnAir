@@ -153,6 +153,7 @@ fun SettingsContent(
         SettingItem(2, stringResource(R.string.filter_only_capable), "radio capable sample rate modes") {
             SwitchRow(stringResource(R.string.filter_only_capable), ui.onlyCapable, vm::setOnlyCapable, help = stringResource(R.string.filter_only_capable_help))
         },
+        SettingItem(2, stringResource(R.string.codecs_title), "codecs codec import so library mbe dra faad lame ffmpeg ac-3 avs add-on voice") { LinkRow(OnAirIcons.Glyph, stringResource(R.string.codecs_title), onOpenCodecs) },
         SettingItem(3, stringResource(R.string.volume), "sound volume audio") {
             var vol by remember(s.volume) { mutableFloatStateOf(s.volume) }
             SliderRow(stringResource(R.string.volume), vol, 0f..1f, "${(vol * 100).toInt()} %", { vol = it }, { vm.setSound(vol, s.muted) })
@@ -177,7 +178,6 @@ fun SettingsContent(
         SettingItem(5, stringResource(R.string.map_tiles), "map tiles online openstreetmap privacy") {
             Dropdown(consent, s.mapConsent.coerceIn(0, 2), { vm.setMapConsent(it) }, label = stringResource(R.string.map_tiles))
         },
-        SettingItem(2, stringResource(R.string.codecs_title), "codecs codec import so library mbe dra faad lame ffmpeg ac-3 avs add-on voice") { LinkRow(OnAirIcons.Glyph, stringResource(R.string.codecs_title), onOpenCodecs) },
         SettingItem(6, stringResource(R.string.run_setup), "setup wizard first run lessons help") { LinkRow(OnAirIcons.Glyph, stringResource(R.string.run_setup), onRunSetup) },
         SettingItem(6, stringResource(R.string.update_title), "update upgrade version apk download install mirror github china check") { UpdateSettings(s) },
         SettingItem(6, stringResource(R.string.verbose_log), "verbose logging debug usb diagnostics advanced") {
