@@ -16,6 +16,8 @@
 #include "dect2/hfdig/hfdig_rx.h"
 #include "dect2/hfdig/hfdig_tel.h"
 #include "dect2/hfdig/hfdig_balloon.h"
+#include "dect2/ham/ham_flag.h"
+#include "ham/ham_ops_ui.h"
 #include "dect2/map/contact_graph.h"
 #include "../map/contact_lines.h"
 #include <algorithm>
@@ -23,6 +25,7 @@
 #include <cstdio>
 #include <ctime>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // hfdig_multiband_ui.cpp: the "Monitor bands" panel and the band filter of the combined list
@@ -69,6 +72,27 @@ bool shown(const dect2::FtxDecode& d) {
     return true;
 }
 
+// the country of a call as a small chip with its ISO code (the font has no flag emoji): colour from the code so a country keeps its colour; the tooltip names it (#708)
+void countryChip(const std::string& call) {
+    static std::unordered_map<std::string, std::string> cache;
+    static size_t tableSize = 0;
+    const size_t sz = hamOps().dxcc.prefixCount();
+    if (sz != tableSize || cache.size() > 4000) { cache.clear(); tableSize = sz; }
+    auto it = cache.find(call);
+    if (it == cache.end()) it = cache.emplace(call, dect2::ham::callIso(call, hamOps().dxcc)).first;
+    const std::string& iso = it->second;
+    if (iso.empty()) return;
+    const unsigned h = ((unsigned)iso[0] * 31u + (unsigned)iso[1]) * 2654435761u;
+    const ImVec4 bg = ImColor::HSV(((h >> 8) & 0xFF) / 255.0f, 0.45f, 0.55f).Value;
+    const ImVec2 ts = ImGui::CalcTextSize(iso.c_str()), p0 = ImGui::GetCursorScreenPos();
+    const float padX = 3 * gUi;
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    dl->AddRectFilled(p0, ImVec2(p0.x + ts.x + 2 * padX, p0.y + ts.y), ImGui::GetColorU32(bg), 3 * gUi);
+    dl->AddText(ImVec2(p0.x + padX, p0.y), IM_COL32(245, 247, 248, 255), iso.c_str());
+    ImGui::Dummy(ImVec2(ts.x + 2 * padX, ts.y));
+    if (ImGui::IsItemHovered()) { const std::string t = hamCountryTag(call); if (!t.empty()) ImGui::SetTooltip("%s", t.c_str()); }
+}
+
 void decodeTable(App& a, const dect2::HfdigFtxTelemetry& f, bool wsprOnly) {
     if (!wsprOnly)   // who hears me and the antenna pattern (View > Insights); the hub keeps only what is new
         for (const dect2::FtxDecode& d : f.decodes) if (d.mode != 3) insightFeedFtx(d.slotUtc, d.dialHz, d.msg, d.snrDb);
@@ -89,7 +113,7 @@ void decodeTable(App& a, const dect2::HfdigFtxTelemetry& f, bool wsprOnly) {
     }
     const ImGuiTableFlags fl = ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV;
     const bool mb = hfdigMultiBandActive();   // the monitor is on: the dial frequency of every decode is shown
-    const int cols = (wsprOnly ? 8 : 6) + (mb ? 2 : 0);
+    const int cols = (wsprOnly ? 9 : 7) + (mb ? 2 : 0);
     if (!ImGui::BeginTable(wsprOnly ? "##ftx_w" : "##ftx_d", cols, fl, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("UTC");
@@ -101,9 +125,11 @@ void decodeTable(App& a, const dect2::HfdigFtxTelemetry& f, bool wsprOnly) {
         ImGui::TableSetupColumn("Call");
         ImGui::TableSetupColumn("Grid");
         ImGui::TableSetupColumn("dBm");
+        ImGui::TableSetupColumn("Ctry");
         ImGui::TableSetupColumn("Message", ImGuiTableColumnFlags_WidthStretch);
     } else {
         ImGui::TableSetupColumn("Mode");
+        ImGui::TableSetupColumn("Ctry");
         ImGui::TableSetupColumn("Message", ImGuiTableColumnFlags_WidthStretch);
     }
     ImGui::TableHeadersRow();
@@ -136,6 +162,7 @@ void decodeTable(App& a, const dect2::HfdigFtxTelemetry& f, bool wsprOnly) {
         } else {
             ImGui::TableNextColumn(); ImGui::TextColored(modeColour(d.mode), "%s", dect2::ftxModeName(d.mode));
         }
+        ImGui::TableNextColumn(); countryChip(d.call);
         ImGui::TableNextColumn();
         if (d.cq && d.mode != 3) ImGui::TextColored(pal::okGreen(), "%s", d.msg.c_str());
         else ImGui::TextUnformatted(d.msg.c_str());
