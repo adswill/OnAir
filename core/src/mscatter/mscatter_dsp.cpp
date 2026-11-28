@@ -9,7 +9,18 @@
 namespace dect2 {
 namespace ms {
 
-int decimation(double inputRate) { return std::max(1, (int)std::lround(inputRate / kWorkRate)); }
+int decimation(double inputRate, double targetRate) { return std::max(1, (int)std::lround(inputRate / std::max(1.0, targetRate))); }
+
+int clampFft(int n) {
+    int best = 1024;
+    for (int c : {1024, 2048, 4096, 8192}) if (std::abs(c - n) < std::abs(best - n)) best = c;
+    return best;
+}
+int hopFor(int fftSize) { return std::max(16, fftSize / 8); }
+double clampBandwidthHz(double hz) { return std::max(3000.0, std::min(48000.0, hz)); }
+int wfHalfBins(int fftSize) { return std::max(8, (int)std::lround(85.0 * fftSize / kFft)); }
+double wfBinsPerColumn(int fftSize) { return 2.0 * fftSize / kFft; }
+int guardBins(int fftSize) { return std::max(1, (int)std::lround(3.0 * fftSize / kFft)); }
 
 double cicNoiseGain(int d) {
     if (d <= 1) return 1.0;
@@ -26,9 +37,9 @@ double cicNoiseGain(int d) {
 }
 
 // ---------------------------------------------------------------- Front
-void Front::configure(double inputRate) {
+void Front::configure(double inputRate, double targetRate) {
     rate_ = inputRate;
-    d_ = decimation(inputRate);
+    d_ = decimation(inputRate, targetRate);
     scale_ = 1.0 / ((double)d_ * d_ * d_);
     for (int s = 0; s < 3; s++) { bre_[s].assign((size_t)d_, 0.0); bim_[s].assign((size_t)d_, 0.0); }
     reset();
@@ -55,7 +66,6 @@ size_t Front::process(const cf32* x, size_t n, std::complex<float>* out) {
 
 // ---------------------------------------------------------------- Detector
 namespace {
-constexpr int kN = kFft, kC = kFft / 2;
 inline double db10(double v) { return v > 1e-30 ? 10.0 * std::log10(v) : -300.0; }
 inline double parab(double a, double b, double c) {   // peak offset of three power values, in bins
     const double la = std::log(std::max(a, 1e-30)), lb = std::log(std::max(b, 1e-30)), lc = std::log(std::max(c, 1e-30));
@@ -65,15 +75,20 @@ inline double parab(double a, double b, double c) {   // peak offset of three po
 }
 }
 
-void Detector::configure(double workRate) {
+void Detector::configure(double workRate, int fftSize) {
     rate_ = workRate;
+    n_ = clampFft(fftSize); hop_ = hopFor(n_); guard_ = guardBins(n_);
+    fft_ = Fft(n_);
+    const int kN = n_;
     binHz_ = workRate / kN;
     win_.assign(kN, 0.f);
-    for (int i = 0; i < kN; i++) win_[(size_t)i] = (float)(0.5 - 0.5 * std::cos(2 * math::kPi * i / kN));
+    sumw_ = 0;
+    for (int i = 0; i < kN; i++) { const double wv = 0.5 - 0.5 * std::cos(2 * math::kPi * i / kN); win_[(size_t)i] = (float)wv; sumw_ += wv; }
     reset();
 }
 
 void Detector::reset() {
+    const int kN = n_;
     buf_.assign(kN, cf32(0, 0));
     fill_ = 0; frames_ = 0;
     P_.assign(kN, 0.f); S_.assign(kN, 0.f); B_.assign(kN, 0.f);
@@ -99,6 +114,7 @@ void Detector::waterfall(std::vector<uint8_t>& wf, std::vector<float>& spec) con
 
 void Detector::push(const std::complex<float>* x, size_t n) {
     if (rate_ <= 0) return;
+    const int kN = n_, kHop = hop_;
     for (size_t i = 0; i < n; i++) {
         // sliding window kept in hist_ as two copies of a ring so the window is contiguous
         buf_[fill_ % kN] = x[i];
@@ -108,13 +124,13 @@ void Detector::push(const std::complex<float>* x, size_t n) {
 }
 
 void Detector::frame() {
+    const int kN = n_, kC = n_ / 2, kHop = hop_, kGuardBins = guard_;
     // window (oldest sample first) and FFT
     std::vector<cf32> w(kN);
     const size_t base = fill_ - kN;
     for (int i = 0; i < kN; i++) w[(size_t)i] = buf_[(base + (size_t)i) % kN] * win_[(size_t)i];
     fft_.forward(w.data());
-    static const double sumw = [] { double s = 0; for (int i = 0; i < kN; i++) s += 0.5 - 0.5 * std::cos(2 * math::kPi * i / kN); return s; }();
-    const float inv = (float)(1.0 / (sumw * sumw));
+    const float inv = (float)(1.0 / (sumw_ * sumw_));
     for (int k = 0; k < kN; k++) {
         const int s = (k + kC) % kN;
         P_[(size_t)s] = std::norm(w[(size_t)k]) * inv;
@@ -254,11 +270,15 @@ void Detector::frame() {
             B_[(size_t)s] += aB * ((f < 376 ? P_[(size_t)s] : p) - B_[(size_t)s]);
         }
     }
-    // waterfall row: +-W bins around the beacon in kMsWfCols columns, 0 = at the background, 255 = 30 dB over it
-    if (warm && kb_ >= 0 && kb_ - 90 >= 0 && kb_ + 90 < kN) {
+    // waterfall row: +-hs bins around the beacon in kMsWfCols columns, 0 = at the background, 255 = 30 dB over it
+    const int hs = wfHalfBins(kN);
+    const double bpc = wfBinsPerColumn(kN);
+    const int span = std::max(1, (int)std::ceil(bpc));
+    if (warm && kb_ >= 0 && kb_ - hs - 5 >= 0 && kb_ + hs + 5 < kN) {
         for (int c = 0; c < kMsWfCols; c++) {
             uint8_t v = 0;
-            for (int o = -85 + 2 * c; o <= -85 + 2 * c + 1 && o <= 85; o++) {
+            const int lo = -hs + (int)std::floor(c * bpc);
+            for (int o = lo; o <= lo + span - 1 && o <= hs; o++) {
                 if (std::abs(o) <= kGuardBins) continue;
                 const double r = P_[(size_t)(kb_ + o)] / std::max(B_[(size_t)(kb_ + o)], 1e-30f);
                 const double d = std::max(0.0, std::min(30.0, db10(r)));
@@ -269,7 +289,8 @@ void Detector::frame() {
         if (f % 8 == 0) {
             for (int c = 0; c < kMsWfCols; c++) {
                 double m = 0;
-                for (int o = -85 + 2 * c; o <= -85 + 2 * c + 1 && o <= 85; o++) m = std::max(m, (double)S_[(size_t)(kb_ + o)]);
+                const int lo = -hs + (int)std::floor(c * bpc);
+                for (int o = lo; o <= lo + span - 1 && o <= hs; o++) m = std::max(m, (double)S_[(size_t)(kb_ + o)]);
                 specOut_[(size_t)c] = (float)std::max(0.0, db10(m / std::max(noiseMean_, 1e-30)));
             }
         }

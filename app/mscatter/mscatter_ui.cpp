@@ -25,6 +25,8 @@ struct State {
     uint32_t sel = 0;             // id of the ping shown in detail
     int thr = 13;                 // detection level, dB over the background
     int pushedThr = -1;
+    int fftSel = 1, pushedFft = -1;   // spectrogram size: 1024, 2048 (default), 4096, 8192
+    int bwSel = 2, pushedBw = -1;     // analysis bandwidth: 3, 6, 12 (default), 24, 48 kHz
     bool logOn = true;
     int pushedLog = -1;
     std::vector<dect2::Tle> tles;
@@ -70,6 +72,8 @@ std::string logFile() { return plat::dataDir() + "/meteor_scatter.csv"; }
 
 void pushSettings(App& a) {
     if (S.thr != S.pushedThr) { a.engine.mscatter().setThresholdDb(S.thr); S.pushedThr = S.thr; }
+    if (S.fftSel != S.pushedFft) { a.engine.mscatter().setFftSize(1024 << S.fftSel); S.pushedFft = S.fftSel; }
+    if (S.bwSel != S.pushedBw) { static const double kBw[] = {3000, 6000, 12000, 24000, 48000}; a.engine.mscatter().setBandwidthHz(kBw[S.bwSel]); S.pushedBw = S.bwSel; }
     const int want = S.logOn ? 1 : 0;
     if (want != S.pushedLog) { a.engine.mscatter().setLogFile(S.logOn ? logFile() : std::string()); S.pushedLog = want; }
 }
@@ -138,6 +142,14 @@ void controls(App& a) {
     ImGui::SetNextItemWidth(160 * gUi);
     ImGui::SliderInt("##msthr", &S.thr, 8, 24, tr("threshold %d dB"));
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("How far above its long-term level a spectrum bin must rise to count as an echo. Lower finds weaker pings and more false ones."));
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(110 * gUi);
+    ImGui::Combo("##msfft", &S.fftSel, "FFT 1024\0FFT 2048\0FFT 4096\0FFT 8192\0");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Waterfall and detector resolution. A larger FFT separates the echo from the beacon line more finely and shows fainter pings, a smaller one follows short pings in time more closely. Restarts the detector."));
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(110 * gUi);
+    ImGui::Combo("##msbw", &S.bwSel, "3 kHz\0006 kHz\00012 kHz\00024 kHz\00048 kHz\0");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Analysis bandwidth around the centre. A narrower one lowers the noise, a wider one finds the beacon further from the centre. Restarts the detector."));
 }
 
 void pingsView(App& a) {

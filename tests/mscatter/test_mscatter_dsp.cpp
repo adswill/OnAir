@@ -44,6 +44,25 @@ static MscatterGenConfig base() {
 int main() {
     CHECK(ms::decimation(240000) == 20 && ms::decimation(2e6) == 167 && ms::decimation(12000) == 1, "decimation");
     CHECK(std::fabs(ms::cicNoiseGain(1) - 1) < 1e-9 && ms::cicNoiseGain(20) < 0.06 && ms::cicNoiseGain(20) > 0.02, "cic gain %g", ms::cicNoiseGain(20));
+    // #462: size, bandwidth and waterfall helpers; the defaults are the old constants
+    CHECK(ms::clampFft(2048) == 2048 && ms::clampFft(100) == 1024 && ms::clampFft(5000) == 4096 && ms::clampFft(99999) == 8192, "clampFft");
+    CHECK(ms::hopFor(2048) == ms::kHop && ms::hopFor(1024) == 128 && ms::hopFor(8192) == 1024, "hopFor");
+    CHECK(ms::clampBandwidthHz(1) == 3000 && ms::clampBandwidthHz(12000) == 12000 && ms::clampBandwidthHz(1e6) == 48000, "clampBandwidthHz");
+    CHECK(ms::wfHalfBins(2048) == 85 && ms::wfHalfBins(4096) == 170 && ms::wfBinsPerColumn(2048) == 2.0 && ms::guardBins(2048) == ms::kGuardBins && ms::guardBins(8192) == 12 && ms::guardBins(1024) == 2, "waterfall bins");
+    CHECK(ms::decimation(240000) == ms::decimation(240000, 12000) && ms::decimation(240000, 6000) == 40 && ms::decimation(24000, 48000) == 1, "decimation target");
+    {   // a finer FFT halves the bin width, and the detector still finds the beacon
+        MscatterGenConfig c = base();
+        ms::Front f; f.configure(c.rate, 6000);
+        ms::Detector d; d.configure(f.workRate(), 4096);
+        CHECK(std::fabs(f.workRate() - 6000) < 1 && d.fftSize() == 4096 && std::fabs(d.binHz() - 6000.0 / 4096) < 1e-9, "configured size %d bin %g", d.fftSize(), d.binHz());
+        MscatterGenerator g(c);
+        std::vector<cf32> x(65536);
+        std::vector<std::complex<float>> w(65536 / (size_t)f.decim() + 2);
+        for (int64_t n = 0; n < (int64_t)(30 * c.rate); n += (int64_t)x.size()) { g.generate(x.data(), x.size()); d.push(w.data(), f.process(x.data(), x.size(), w.data())); }
+        CHECK(d.beaconFound() && std::fabs(d.beaconHz() - c.carrierHz) < 3.0, "beacon at 4096/6 kHz: found %d at %.2f Hz", (int)d.beaconFound(), d.beaconHz());
+        std::vector<uint8_t> wf; std::vector<float> sp; d.waterfall(wf, sp);
+        CHECK(wf.size() == (size_t)kMsWfRows * kMsWfCols && sp.size() == (size_t)kMsWfCols, "waterfall shape");
+    }
     const ModeTuning* mt = modeTuningById("mscatter");
     CHECK(mt && mt->stdMode == 106 && mt->defMhz > 143.0 && mt->defMhz < 143.1, "tuning table");
 

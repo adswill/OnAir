@@ -24,12 +24,20 @@ constexpr double kWorkRate = 12000;        // wanted work rate; the real one is 
 constexpr int kGuardBins = 3;              // echoes closer than this to the beacon line are masked (+-17 Hz)
 constexpr double kEchoSpanHz = 500;        // echoes are looked for this far from the beacon line
 
-int decimation(double inputRate);                          // 1 when the capture is already at the work rate
+// Choices (#462): the spectrogram size, and the analysis bandwidth (the work rate after the decimator). Defaults are kFft and kWorkRate.
+int clampFft(int n);                                       // nearest allowed size: 1024, 2048, 4096 or 8192
+int hopFor(int fftSize);                                   // a quarter of the Hann window is not used: the hop is one eighth of the size
+double clampBandwidthHz(double hz);                        // 3 kHz to 48 kHz
+int wfHalfBins(int fftSize);                               // waterfall half width in bins (+-500 Hz at the default work rate: 85 at 2048)
+double wfBinsPerColumn(int fftSize);                       // bins merged into one waterfall column (2 at the default size)
+int guardBins(int fftSize);                                // bins next to the beacon line that are masked (3 at the default size)
+
+int decimation(double inputRate, double targetRate = kWorkRate);   // 1 when the capture is already at the work rate
 double cicNoiseGain(int d);                                // output noise variance / input noise variance of the Front
 
 class Front {
 public:
-    void configure(double inputRate);
+    void configure(double inputRate, double targetRate = kWorkRate);
     void reset();
     int decim() const { return d_; }
     double workRate() const { return rate_ / d_; }
@@ -50,8 +58,9 @@ struct RawPing {
 
 class Detector {
 public:
-    void configure(double workRate);
+    void configure(double workRate, int fftSize = kFft);
     void reset();
+    int fftSize() const { return n_; }
     void setThresholdDb(double db) { thr_ = db; }
     double thresholdDb() const { return thr_; }
     void push(const std::complex<float>* x, size_t n);          // work-rate samples
@@ -63,18 +72,19 @@ public:
     double beaconDbfs() const { return beaconDbfs_; }
     double noiseDbfs() const { return noiseDbfs_; }
     double binHz() const { return binHz_; }
-    double timeSec() const { return frames_ * (double)kHop / rate_; }
+    double timeSec() const { return frames_ * (double)hop_ / rate_; }
     bool active() const { return active_; }
     double activeSnr() const { return activeDb_; }
     uint64_t rejected() const { return rejected_; }
-    bool warm() const { return frames_ * (double)kHop / rate_ >= kWarmSec; }
+    bool warm() const { return frames_ * (double)hop_ / rate_ >= kWarmSec; }
     // the newest waterfall rows (oldest first), kMsWfRows x kMsWfCols, and the long-term spectrum around the beacon
     void waterfall(std::vector<uint8_t>& wf, std::vector<float>& spec) const;
     static constexpr double kWarmSec = 5.0;
 
 private:
     void frame();
-    double rate_ = 0, binHz_ = 0, thr_ = 13;
+    double rate_ = 0, binHz_ = 0, thr_ = 13, sumw_ = 1;
+    int n_ = kFft, hop_ = kHop, guard_ = kGuardBins;
     Fft fft_{kFft};
     std::vector<float> win_;
     std::vector<cf32> buf_;

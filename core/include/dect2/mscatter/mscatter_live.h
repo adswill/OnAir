@@ -36,6 +36,8 @@ public:
     void reset();                               // the filters and the detector; counts and the list stay
     void clearResults();                        // empties the list and the counts
     void setThresholdDb(double db);             // detection level over the background (default 13)
+    void setFftSize(int n);                     // spectrogram size 1024..8192 (default 2048): finer in frequency or in time
+    void setBandwidthHz(double hz);             // analysis bandwidth = work rate after the decimator, 3..48 kHz (default 12 kHz)
     void setLogFile(const std::string& path);   // append every ping as a CSV line ("" off)
     // Satellite echoes of GRAVES: the elements to match them with and where the receiver is (an empty list: echoes are listed unnamed)
     void setSatelliteMatch(const std::vector<Tle>& tles, double latDeg, double lonDeg, double altKm);

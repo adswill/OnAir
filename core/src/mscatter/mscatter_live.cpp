@@ -20,7 +20,8 @@ struct MscatterLiveReceiver::Impl {
     std::mutex mu;
     std::function<void(const std::string&)> log;
     double rateSet = 0;
-    std::atomic<double> centreReq{0}, thrReq{13};
+    std::atomic<double> centreReq{0}, thrReq{13}, bwReq{ms::kWorkRate};
+    std::atomic<int> fftReq{ms::kFft};
     std::atomic<bool> resetReq{false}, clearReq{false}, logReq{false};
     std::atomic<int64_t> startReq{0};
     std::string logPath, logPathReq;
@@ -81,8 +82,8 @@ struct MscatterLiveReceiver::Impl {
     }
 
     void resetState() {
-        front.configure(rateSet > 0 ? rateSet : 2e6);
-        det.configure(front.workRate());
+        front.configure(rateSet > 0 ? rateSet : 2e6, bwReq.load());
+        det.configure(front.workRate(), fftReq.load());
         {   // about 3 Hz resolution and a new spectrum every 0.17 s: a satellite moves up to about 100 Hz a second at 143 MHz
             satmisc::LineTrackerConfig ec;
             ec.rate = front.workRate(); ec.fftLog2 = 12; ec.thresholdDb = 13; ec.minDurSec = 1.5; ec.minPoints = 8; ec.gapSec = 1.0; ec.maxSlopeHzS = 160; ec.excludeHz = 40;
@@ -170,6 +171,8 @@ bool MscatterLiveReceiver::ready() const {
 void MscatterLiveReceiver::reset() { p_->resetReq = true; }
 void MscatterLiveReceiver::clearResults() { p_->clearReq = true; }
 void MscatterLiveReceiver::setThresholdDb(double db) { p_->thrReq = std::max(6.0, std::min(30.0, db)); p_->resetReq = true; }
+void MscatterLiveReceiver::setFftSize(int n) { p_->fftReq = ms::clampFft(n); p_->resetReq = true; }
+void MscatterLiveReceiver::setBandwidthHz(double hz) { p_->bwReq = ms::clampBandwidthHz(hz); p_->resetReq = true; }
 void MscatterLiveReceiver::setLogFile(const std::string& path) { std::lock_guard<std::mutex> lk(p_->mu); p_->logPathReq = path; p_->logReq = true; }
 void MscatterLiveReceiver::setStartUtc(int64_t utcSec) { p_->startReq = utcSec; p_->resetReq = true; }
 void MscatterLiveReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
