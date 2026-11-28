@@ -206,6 +206,29 @@ int main() {
         CHECK(toneAmp(d.aud, 1000) > 0.3 && d.tel.squelchOpen, "DSB at 15 dB: %.3f", toneAmp(d.aud, 1000));
         CHECK(!n.tel.squelchOpen && rms(n.aud) < 1e-4, "DSB noise only: squelch shut");
     }
+    {   // DSB, two tones: (cos w1 + cos w2) on the dial, no carrier; the product detector gives both tones back
+        GeneralReceiver r;
+        r.configure(kRate);
+        r.setSignalOffset(0);
+        r.setSilent(true);
+        r.setDemod(GenDsb);
+        r.setWidthHz(generalDefaultWidth(GenDsb));
+        r.setChannelOffsetHz(0);
+        r.setSquelch(false, true, -60);
+        std::vector<float> aud;
+        r.setAudioTap([&](const float* x, size_t n) { aud.insert(aud.end(), x, x + n); });
+        std::vector<cf32> buf(20000);
+        uint64_t k = 0;
+        for (int blk = 0; blk < 40; ++blk) {
+            for (auto& s : buf) {
+                const double t = (double)k++ / kRate;
+                s = cf32((float)(0.5 * (std::cos(2 * 3.14159265358979 * 1000 * t) + std::cos(2 * 3.14159265358979 * 2300 * t))), 0.f);
+            }
+            r.feed(buf.data(), buf.size());
+        }
+        printf("  DSB two tones: 1000 Hz %.3f, 2300 Hz %.3f\n", toneAmp(aud, 1000), toneAmp(aud, 2300));
+        CHECK(toneAmp(aud, 1000) > 0.1 && toneAmp(aud, 2300) > 0.1, "DSB two tones both come out: %.3f / %.3f", toneAmp(aud, 1000), toneAmp(aud, 2300));
+    }
     // names and ranges of the new ones; the first six keep their numbers
     CHECK(GenCw == 5 && GenDsb == 6 && GenRaw == 7 && GenCwl == 8 && GenDemodCount == 9, "demodulator numbers");
     CHECK(!strcmp(generalDemodName(GenDsb), "DSB") && !strcmp(generalDemodName(GenRaw), "RAW") && !strcmp(generalDemodName(GenCwl), "CW-L") && !strcmp(generalDemodName(99), "?"), "names");
