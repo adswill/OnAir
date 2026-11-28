@@ -2,7 +2,8 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 // Subtitles over the TV picture: DVB subtitles (EN 300 743, core/src/tv/dvbsub.cpp) as a bitmap texture, teletext subtitle pages (EN 300 706)
-// as boxed text, the on/off and language choice, and the character-cell drawing of a teletext page that the Teletext tab shares.
+// as boxed text, closed captions carried in the video (CEA-608 / 708, core/src/tv/cc_decode.cpp) as boxed lines, the on/off and language
+// choice, and the character-cell drawing of a teletext page that the Teletext tab shares.
 #include "../app.h"
 #include "../transcribe/transcribe_app.h"
 #include "dect2/tv/epg.h"
@@ -48,6 +49,11 @@ void overlayThunk(void* ctx, ImDrawList* dl, ImVec2 p0, ImVec2 size) {
     if (!tx::captionsShowBroadcast()) return;
     if (a.subIdx < 0 || !a.subsOn || a.subIdx >= (int)a.subOpts.size()) return;
     const SubOpt& o = a.subOpts[a.subIdx];
+    if (o.cc) {
+        const std::string t = a.engine.player().captionAt(a.video.pts);
+        if (!t.empty()) tx::captionText(dl, p0, size, t);   // in the look chosen for captions (size, background)
+        return;
+    }
     if (!o.ttx) {
         if (a.video.subShow && a.video.sub) dl->AddImage(a.video.sub->texture(), p0, ImVec2(p0.x + size.x, p0.y + size.y));
         return;
@@ -129,6 +135,12 @@ void subsUpdate(App& a) {
         }
         for (const auto& st : sv.streams) if (st.kind == "teletext" && st.subs.empty() && firstTtxPid < 0) firstTtxPid = st.pid;
     }
+    // closed captions in the video (CEA-608 / 708): offered once the playing picture has carried caption data
+    if (sid >= 0 && pl.hasCaptions()) {
+        SubOpt o; o.cc = true; o.key = "cc::1:0";
+        o.label = tr("Closed captions (CC)");
+        a.subOpts.push_back(o);
+    }
     // ---- the chosen one: the saved key, else the same kind and language, else the first
     int idx = -1;
     for (int i = 0; i < (int)a.subOpts.size() && idx < 0; i++) if (a.subOpts[i].key == a.subsPick) idx = i;
@@ -149,7 +161,7 @@ void subsUpdate(App& a) {
     if (idx >= 0 && a.subOpts[idx].ttx) ttxPid = a.subOpts[idx].pid;
     a.engine.teletext().setPid(ttxPid);
     DvbSubDecoder& dv = a.engine.dvbSubtitles();
-    if (idx >= 0 && !a.subOpts[idx].ttx && a.subsOn) {
+    if (idx >= 0 && !a.subOpts[idx].ttx && !a.subOpts[idx].cc && a.subsOn) {
         const SubOpt& o = a.subOpts[idx];
         dv.setStream(o.pid, o.comp, o.anc);
         auto d = dv.displayAt(a.video.pts);

@@ -274,6 +274,18 @@ void Player::setBufferMB(int mb) {
     pcrIdx_.clear(); cursor_ = 0;
 }
 
+std::string Player::captionAt(double pts) const {
+    Impl& I = *p_;
+    std::lock_guard<std::mutex> lk(I.ccMu);
+    return I.cc.at(pts);
+}
+
+bool Player::hasCaptions() const {
+    Impl& I = *p_;
+    std::lock_guard<std::mutex> lk(I.ccMu);
+    return I.cc.any();
+}
+
 std::string Player::latestCaption(size_t* count) const {
     Impl& I = *p_;
     std::lock_guard<std::mutex> lk(I.ccMu);
@@ -720,6 +732,7 @@ void Player::threadMain() {
         AVFrame* frame = av_frame_alloc();
         AVFrame* sw = av_frame_alloc();
         double lastVPts = 0, vFrameDur = 0.04;
+        { std::lock_guard<std::mutex> lk(I.ccMu); I.cc.reset(); }   // captions are timed by this stream's clock: none from the one before
         double recentSteps[32]; int recentN = 0;   // picture intervals seen lately: the stream's own frame rate (the container metadata can claim the field rate)
         std::shared_ptr<VideoFrame> lastVf;
         // picture repair: after a loss on the video stream the pictures are suspect until a clean keyframe; they are held back and
