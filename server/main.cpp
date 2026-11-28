@@ -107,6 +107,9 @@ static void usage() {
            "  --new-token        make a new token, save it in the settings file and print it\n"
            "  --tls-cert FILE --tls-key FILE   serve HTTPS (PEM files; needs a build with OpenSSL, DECT2_WITH_TLS)\n"
            "  --device NAME|N    radio to use (see the device list in the page); 'test' is the built-in test signal\n"
+           "  --audio-device NAME|N   use a sound card (an audio input: a receiver's audio / IF out, an SDR that appears as a sound card) as the input; same as --device\n"
+           "  --list-audio       list the sound-card inputs (the names for --audio-device) and exit\n"
+           "  --audio-iq N       sound card: 0 stereo I/Q (left = I, right = Q), 1 USB, 2 LSB, 3 mono real (audio_iq); more keys in docs/headless-server.md\n"
            "  --mode ID          receiver mode, e.g. fm, dab, t2, adsb, dvbs (see /api/v1/modes)\n"
            "  --freq MHZ         tuning frequency\n"
            "  --autostart        start the receiver at once and keep it running (comes back when the radio is replugged)\n"
@@ -160,6 +163,12 @@ int main(int argc, char** argv) {
     for (int i = 1; i < argc; i++) {
         const std::string a = argv[i];
         if (a == "--help" || a == "-h") { usage(); return 0; }
+        if (a == "--list-audio") {
+            const auto devs = dect2::listAudioDevices();
+            if (devs.empty()) printf("no sound-card inputs found\n");
+            for (size_t k = 0; k < devs.size(); k++) printf("%zu: %s\n", k, devs[k].name.c_str());
+            return 0;
+        }
         if (a == "--version") { printf("onair-server %s\n", ONAIR_SERVER_VERSION); return 0; }
         if (a == "--config" && i + 1 < argc) path = argv[++i];
     }
@@ -210,6 +219,8 @@ int main(int argc, char** argv) {
         else if (a == "--tls-cert") api.tlsCert = next();
         else if (a == "--tls-key") api.tlsKey = next();
         else if (a == "--device") cfg.set("device", next());
+        else if (a == "--audio-device") cfg.set("device", next());
+        else if (a == "--audio-iq") cfg.set("audio_iq", next());
         else if (a == "--mode") cfg.set("mode", next());
         else if (a == "--freq") cfg.set("freq_mhz", next());
         else if (a == "--autostart") cfg.set("autostart", "1");
