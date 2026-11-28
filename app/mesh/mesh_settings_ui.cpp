@@ -12,6 +12,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <thread>
@@ -452,7 +453,7 @@ void settingsView(App& a) {
             if (!path.empty()) {
                 std::vector<dect2::MeshChannelKey> ks;
                 for (const auto& k : S.keys) ks.push_back({k.proto, k.name, k.secret});
-                std::ofstream f(dect2::u8file(path), std::ios::binary);
+                std::ofstream f(std::filesystem::u8path(path), std::ios::binary);
                 f << dect2::meshKeysFormat(ks);
                 keysFileMsg = f ? std::to_string(ks.size()) + " key(s) exported to " + path : "could not write " + path;
             }
@@ -462,7 +463,7 @@ void settingsView(App& a) {
         if (ImGui::SmallButton(tr("Import keys...##mkimp"))) {
             const std::string path = openFileDialog();
             if (!path.empty()) {
-                std::ifstream f(dect2::u8file(path), std::ios::binary);
+                std::ifstream f(std::filesystem::u8path(path), std::ios::binary);
                 std::ostringstream buf;
                 buf << f.rdbuf();
                 size_t bad = 0;
