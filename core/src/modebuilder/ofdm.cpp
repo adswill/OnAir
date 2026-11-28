@@ -237,10 +237,12 @@ void Receiver::OfdmImpl::process(bool final) {
         if (buf.size() < l + (size_t)L2 + 8) break;
         cf c1, c2;
         if (metric(l, c1, c2) < thr) { l++; continue; }
-        // the correlation peak is a sample wide: take the best of the neighbours
+        // one training symbol of the pair already gives half the metric (0.5), so the trigger can be a whole symbol early: the peak is the
+        // best position from here to one symbol on
+        if (!final && buf.size() < l + (size_t)(Ls + 4 + L2)) break;
         size_t best = l;
         double bm = 0;
-        for (size_t k = l > 2 ? l - 2 : 0; k <= l + 3 && buf.size() >= k + (size_t)L2; k++) {
+        for (size_t k = l > 2 ? l - 2 : 0; k <= l + (size_t)Ls + 3 && buf.size() >= k + (size_t)L2; k++) {
             cf a, b;
             const double m = metric(k, a, b);
             if (m > bm) { bm = m; best = k; }
