@@ -64,6 +64,14 @@ bool is(const Box& b, const char* t) { return !memcmp(b.type.data(), t, 4); }
 }   // namespace
 
 // The default sample sizes of the tracks (moov/mvex/trex), for the check of the media segments.
+// The track's language (the 'mdhd' box of its initialization segment, ISO 639-2, e.g. "eng", "spa") onto the output stream, so that the
+// transport stream carries it (ISO 639 language descriptor) and the player can name its sound tracks. "und" (not given) is not copied.
+static void copyLanguage(const AVStream* in, AVStream* os) {
+    const AVDictionaryEntry* l = av_dict_get(in->metadata, "language", nullptr, 0);
+    const char* v = l ? l->value : nullptr;
+    if (v && v[0] && v[1] && v[2] && !v[3] && strcmp(v, "und") != 0) av_dict_set(&os->metadata, "language", v, 0);   // three letters
+}
+
 static std::map<uint32_t, uint32_t> trexSizes(const std::vector<uint8_t>& init) {
     std::map<uint32_t, uint32_t> r;
     std::vector<Box> top, moov, mvex;
@@ -470,6 +478,7 @@ struct Atsc3Remux::Impl {
                         os->codecpar->bit_rate = xc->outBitRate();
                         av_channel_layout_default(&os->codecpar->ch_layout, xc->outChannels());
                         os->time_base = AVRational{1, 90000};
+                        copyLanguage(in, os);
                         maps[ci][si] = os->index;
                         if ((int)bsfs.size() <= os->index) bsfs.resize(os->index + 1, nullptr);
                         xcodes[os->index] = std::move(xc);
@@ -488,6 +497,7 @@ struct Atsc3Remux::Impl {
                 }
                 os->codecpar->codec_tag = 0;
                 os->time_base = AVRational{1, 90000};
+                copyLanguage(in, os);
                 maps[ci][si] = os->index;
                 // Video: the parameter sets in front of every picture, so that a receiver that joins at any point can start decoding
                 // (MP4 keeps them in the header and a transport stream normally repeats them at every random access point only)
