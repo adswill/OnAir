@@ -64,6 +64,8 @@ const Def kDefs[] = {
      "airspyhf.dll|libairspyhf.dll", "libairspyhf*.dylib", "libairspyhf.so*", "https://github.com/airspy/airspyhf (Windows: https://airspy.us/downloads)"},
     {"fobos", "fobos_sdr (RigExpert Fobos SDR)", G2, "the Fobos SDR; not shipped",
      "fobos_sdr.dll|libfobos_sdr.dll", "libfobos_sdr*.dylib", "libfobos_sdr.so*", "https://rigexpert.com (the Fobos SDR software package; open-source library: libfobos)"},
+    {"perseus", "libperseus-sdr (Microtelecom Perseus)", G2, "the Perseus HF receiver; not shipped",
+     "perseus-sdr.dll|libperseus-sdr.dll", "libperseus-sdr*.dylib", "libperseus-sdr.so*", "https://github.com/Microtelecom/libperseus-sdr (LGPL-3.0)"},
     {"g33ddc", "G33DDCAPI (WiNRADiO G33DDC)", G2, "the WiNRADiO G33DDC (Windows only); not shipped",
      "G33DDCAPI.dll", "", "", "https://www.winradio.com/home/developer-g33ddc.htm (the library comes with the G33DDC application)"},
     {"bladerf", "libbladeRF (Nuand bladeRF)", G2, "bladeRF boards; not shipped",

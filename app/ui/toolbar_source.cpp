@@ -32,6 +32,7 @@ int adcBitsFor(const DeviceInfo& d, double rateHz) {
     if (d.board == "sdrplay" || d.board == "mirics") return rateHz <= 6.048e6 ? 14 : rateHz <= 8.064e6 ? 12 : rateHz <= 9.216e6 ? 10 : 8;   // (mirics: the same MSi2500 formats, own driver)
     if (d.board == "airspy" || d.board == "lime" || d.board == "pluto" || d.board == "bladerf" || d.board == "usrp" || d.board == "rfnm") return 12;
     if (d.board == "airspyhf") return 16;
+    if (d.board == "perseus") return 14;   // (the driver scales its 24-bit samples to full scale 1.0)
     if (d.board == "fobos") return 14;   // (the driver scales its samples to full scale 1.0)
     if (d.board == "icr8600") return 16;   // the IC-R8600 I/Q output is 16 bit (the driver scales to full scale 1.0)
     if (d.board == "rx888") return 16;   // the RX888 MkII's converter (the driver scales to full scale 1.0)

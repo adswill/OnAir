@@ -445,6 +445,7 @@ inline const char* radioHelpUrl(const std::string& board, const std::string& nam
         {"blade", "https://www.nuand.com/bladerf-1/"},
         {"kiwi", "http://kiwisdr.com/quickstart/"},
         {"fobos", "https://rigexpert.com/software-defined-radio/"},
+        {"perseus", "https://github.com/Microtelecom/libperseus-sdr"},
         {"rfnm", "https://rfnm.com/"},
         {"sdrpp", "https://www.sdrpp.org/"},
         {"nrsp", "https://www.sdrplay.com/nrsp-st/"},

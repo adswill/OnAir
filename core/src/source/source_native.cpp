@@ -18,6 +18,9 @@ std::unique_ptr<IqSource> makeAirspyHf(const DeviceInfo& d);
 // ---- fobos
 void listFobos(std::vector<DeviceInfo>& out);
 std::unique_ptr<IqSource> makeFobos(const DeviceInfo& d);
+// ---- perseus
+void listPerseus(std::vector<DeviceInfo>& out);
+std::unique_ptr<IqSource> makePerseus(const DeviceInfo& d);
 // ---- g33ddc
 void listG33ddc(std::vector<DeviceInfo>& out);
 std::unique_ptr<IqSource> makeG33ddc(const DeviceInfo& d);
@@ -58,6 +61,7 @@ std::vector<DeviceInfo> listNativeDevices(std::string& err) {
         native::listSdrplay(out);
         native::listAirspyHf(out);   // ---- airspyhf
         native::listFobos(out);      // ---- fobos
+        native::listPerseus(out);    // ---- perseus
         native::listG33ddc(out);     // ---- g33ddc
         native::listRx888(out);      // ---- rx888
         native::listIcom(out);       // ---- icom
@@ -126,6 +130,7 @@ std::unique_ptr<IqSource> makeNativeSource(const DeviceInfo& d) {
     if (d.board == "hermeslite2") return native::makeHermesLite2(d);
     if (d.board == "redpitaya") return native::makeRedPitaya(d);
     if (d.board == "fobos") return native::makeFobos(d);         // ---- fobos
+    if (d.board == "perseus") return native::makePerseus(d);     // ---- perseus
     if (d.board == "g33ddc") return native::makeG33ddc(d);       // ---- g33ddc
     if (d.board == "rx888") return native::makeRx888(d);         // ---- rx888
     if (d.board == "icr8600") return native::makeIcom(d);        // ---- icom

@@ -101,6 +101,7 @@ inline const char* radioBlurb(const std::string& board, const std::string& name)
         {"airspyhf", N_("Airspy HF+: a very sensitive receiver for long, medium and short wave and FM, up to 260 MHz.")},
         {"g33ddc", N_("WiNRADiO G33DDC: a wideband USB receiver with a digital down-converter. Windows only; needs the G33DDCAPI library from the WiNRADiO application, see the ? in Radio settings.")},
         {"fobos", N_("Fobos SDR: a wideband receiver, 100 kHz to 6 GHz. Needs the radio's own library, see the ? in Radio settings.")},
+        {"perseus", N_("Perseus: an HF receiver, 10 kHz to 40 MHz. Needs the libperseus-sdr library, see the ? in Radio settings.")},
         {"rfnm", N_("RFNM: a wideband radio board with one or two daughter boards, on USB or the network.")},
         {"nrspst", N_("SDRplay nRSP-ST: a network radio, used through SDRconnect running on a computer.")},
         {"tci", N_("TCI: a radio of the ExpertSDR family (SunSDR and others) on the network. Receive only.")},
