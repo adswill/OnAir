@@ -302,4 +302,10 @@
     <string name="iq_not_started">无法开始录音：%1$s</string>
     <string name="iq_needs_running">请先启动接收机</string>
     <string name="iq_privacy">仅保存在这部手机上。不会上传任何内容；由你选择分享到哪里。</string>
+    <string name="panel_drm_data">数据</string>
+    <string name="drm_slideshow">幻灯片</string>
+    <string name="drm_journaline">Journaline 新闻</string>
+    <string name="drm_no_slide">尚未收到图片。电台发送幻灯片后会显示在这里。</string>
+    <string name="drm_no_journaline">尚未收到 Journaline 页面，可能需要一两分钟。</string>
+    <string name="drm_back">返回</string>
 </resources>

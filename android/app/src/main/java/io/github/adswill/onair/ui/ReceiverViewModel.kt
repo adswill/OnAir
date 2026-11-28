@@ -212,6 +212,8 @@ class ReceiverViewModel(app: Application) : AndroidViewModel(app) {
     fun cancelCodecImport() = repo.cancelCodecImport()
     fun removeCodecFile(file: String) = repo.removeCodecFile(file)
     fun cdrListen(serviceId: Int) = repo.cdrListen(serviceId)
+    suspend fun drmSlide(lastSeq: Long) = repo.drmSlide(lastSeq)
+    suspend fun drmJournaline(id: Int) = repo.drmJournaline(id)
     fun setGeneral(demod: Demod, squelch: Boolean, squelchAuto: Boolean, squelchDb: Float) = repo.setGeneral(demod, squelch, squelchAuto, squelchDb)
 
     // display

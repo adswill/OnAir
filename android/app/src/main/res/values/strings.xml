@@ -332,4 +332,10 @@
     <string name="iq_not_started">Could not start the recording: %1$s</string>
     <string name="iq_needs_running">Start the receiver first</string>
     <string name="iq_privacy">Saved on this phone only. Nothing is uploaded; you choose where to share it.</string>
+    <string name="panel_drm_data">Data</string>
+    <string name="drm_slideshow">Slide show</string>
+    <string name="drm_journaline">Journaline</string>
+    <string name="drm_no_slide">No picture received yet. Slide show pictures appear here when the station sends them.</string>
+    <string name="drm_no_journaline">No Journaline page received yet. It can take a minute or two.</string>
+    <string name="drm_back">Back</string>
 </resources>

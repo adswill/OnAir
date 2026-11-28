@@ -71,6 +71,10 @@ class OnAirCore internal constructor() {
 
     /** CDR (#463): the service whose sound plays; -1 the first audio service, 0 none. */
     fun cdrListen(serviceId: Int) = OnAirNative.nativeCdrListen(serviceId)
+    /** DRM (#645): the newest slide show picture when it is newer than [lastSeq], else null. */
+    fun drmSlide(lastSeq: Long): DrmSlide? = DrmSlide.parse(OnAirNative.nativeDrmSlide(lastSeq))
+    /** DRM (#645): one Journaline page ([objectId] < 0: the root); null when it has not arrived. */
+    fun drmJournaline(objectId: Int): JlPage? = JlPage.parse(OnAirNative.nativeDrmJournaline(objectId))
     /** Points the core at the app's codecs folder ("" keeps the one set before) and looks for the DRA+ add-on again. */
     fun codecs(dir: String): CodecStatus = CodecStatus.parse(OnAirNative.nativeCodecs(dir))
 }
@@ -94,6 +98,45 @@ data class RecStats(val active: Boolean, val seconds: Double, val bytes: Long, v
             val p = s.split('\t')
             if (p.size < 7) return idle
             return RecStats(p[0] == "1", p[1].toDoubleOrNull() ?: 0.0, p[2].toLongOrNull() ?: 0L, p[3].toLongOrNull() ?: 0L, p[4] == "1", p[5], p[6])
+        }
+    }
+}
+
+/** One MOT slide show picture of a DRM service (#645): [argb] w * h pixels for Bitmap.createBitmap. */
+class DrmSlide(val seq: Long, val w: Int, val h: Int, val type: String, val caption: String, val argb: IntArray) {
+    companion object {
+        /** Layout of native/src/jni_onair.cpp nativeDrmSlide; null when the bytes do not fit. */
+        fun parse(b: ByteArray): DrmSlide? {
+            var o = 0
+            fun u(n: Int): Long { var v = 0L; for (i in 0 until n) v = v or ((b[o + i].toLong() and 0xFF) shl (8 * i)); o += n; return v }
+            fun str(): String { val n = u(2).toInt(); val r = String(b, o, n, Charsets.UTF_8); o += n; return r }
+            if (b.size < 18) return null
+            val seq = u(8); val w = u(4).toInt(); val h = u(4).toInt()
+            val type = str(); val cap = str()
+            if (w <= 0 || h <= 0 || w > 4096 || h > 4096 || b.size - o < w * h * 4) return null
+            val px = IntArray(w * h) { i ->
+                val k = o + i * 4
+                (0xFF shl 24) or ((b[k].toInt() and 0xFF) shl 16) or ((b[k + 1].toInt() and 0xFF) shl 8) or (b[k + 2].toInt() and 0xFF)
+            }
+            return DrmSlide(seq, w, h, type, cap, px)
+        }
+    }
+}
+
+/** One Journaline page (#645): type 1 menu, 2 text, 3 title only, 4 list. [links] are (object id, text); [lines] the text or list items. */
+class JlPage(val type: Int, val title: String, val links: List<Pair<Int, String>>, val lines: List<String>) {
+    companion object {
+        fun parse(s: String): JlPage? {
+            if (s.isEmpty()) return null
+            val rows = s.split('\n')
+            val head = rows[0].split('\t', limit = 2)
+            val links = ArrayList<Pair<Int, String>>(); val lines = ArrayList<String>()
+            for (r in rows.drop(1)) {
+                val f = r.split('\t', limit = 3)
+                if (f[0] == "L" && f.size == 3) f[1].toIntOrNull()?.let { links.add(it to f[2]) }
+                else if (f[0] == "T" && f.size >= 2) lines.add(r.substring(2))
+            }
+            return JlPage(head[0].toIntOrNull() ?: 0, head.getOrElse(1) { "" }, links, lines)
         }
     }
 }

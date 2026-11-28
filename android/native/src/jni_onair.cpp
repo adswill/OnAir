@@ -26,6 +26,7 @@
 #include "dect2/fm/fm_rx.h"
 #include "results_json.h"
 #include "dect2/cdr/cdr_rx.h"
+#include "dect2/drm/drm_rx.h"
 #include "dect2/cdr/cdr_dra.h"
 #include "dect2/codec/codec_paths.h"
 #include "dect2/nxdn/nxdn_ambe.h"
@@ -433,6 +434,44 @@ FN(void, nativeCdrListen)(JNIEnv*, jobject, jint serviceId) {
     Bridge& b = *gB;
     b.cdrListen = serviceId < -1 ? -1 : serviceId;
     b.eng.cdr().setListen(b.cdrListen);
+}
+// DRM data services (#645). The latest MOT slide show picture of any data service, only when newer than lastSeq: empty array when nothing new.
+// Bytes: u64 seq, u32 w, u32 h (little endian), u16 length + type ("image/JPEG" ...), u16 length + caption (UTF-8), then w * h pixels R G B A.
+FN(jbyteArray, nativeDrmSlide)(JNIEnv* e, jobject, jlong lastSeq) {
+    dect2::DrmReceiver& rx = gB->eng.drm();
+    const dect2::DrmSlide* best = nullptr;
+    dect2::DrmDataView views[4];
+    for (int i = 0; i < 4; i++) {
+        if (!rx.dataView(i, views[i])) continue;
+        const dect2::DrmSlide& sl = views[i].slide;
+        if (sl.seq != 0 && !sl.rgba.empty() && (!best || sl.seq > best->seq)) best = &sl;
+    }
+    std::vector<uint8_t> o;
+    if (!best || (jlong)best->seq <= lastSeq) return e->NewByteArray(0);
+    auto u = [&](uint64_t v, int n) { for (int i = 0; i < n; i++) o.push_back((uint8_t)(v >> (8 * i))); };
+    auto str = [&](const std::string& t) { const size_t n = t.size() > 600 ? 600 : t.size(); u(n, 2); o.insert(o.end(), t.begin(), t.begin() + n); };
+    u(best->seq, 8); u((uint32_t)best->w, 4); u((uint32_t)best->h, 4);
+    str(best->type); str(best->caption.empty() ? best->name : best->caption);
+    o.insert(o.end(), best->rgba.begin(), best->rgba.end());
+    jbyteArray a = e->NewByteArray((jsize)o.size());
+    if (a) e->SetByteArrayRegion(a, 0, (jsize)o.size(), reinterpret_cast<const jbyte*>(o.data()));
+    return a;
+}
+// One Journaline page: "" when the multiplex has no Journaline or the page has not arrived (yet); else "type\ttitle" then lines:
+// "L\ttarget\ttext" a menu link, "T\ttext" one line of a message or list item. type 1 menu, 2 text, 3 title only, 4 list. objectId < 0: the root.
+FN(jstring, nativeDrmJournaline)(JNIEnv* e, jobject, jint objectId) {
+    dect2::DrmReceiver& rx = gB->eng.drm();
+    if (!rx.hasJournaline()) return mk(e, "");
+    dect2::JlObject o;
+    if (!rx.journaline().get((uint16_t)(objectId < 0 ? 0 : objectId), o)) return mk(e, "");
+    auto clean = [](std::string t) { for (char& c : t) if (c == '\t' || c == '\n' || c == '\r') c = ' '; return t; };
+    std::string s = std::to_string(o.type) + "\t" + clean(o.title);
+    for (const auto& l : o.links) s += "\nL\t" + std::to_string(l.target) + "\t" + clean(l.text);
+    std::string line;
+    for (char c : o.body) { if (c == '\n') { s += "\nT\t" + clean(line); line.clear(); } else line += c; }
+    if (!line.empty()) s += "\nT\t" + clean(line);
+    for (const auto& it : o.items) s += "\nT\t" + clean(it);
+    return mk(e, s);
 }
 // The app's codecs folder (files/codecs: the add-ons the user imported, docs/CODECS.md) and a new look for the DRA+ add-on.
 // Returns "found\tpath\tproblem" (found 1 or 0; problem empty when no library was found at all).

@@ -548,6 +548,11 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
     /** CDR: the service whose sound plays; -1 the first audio service. */
     fun cdrListen(serviceId: Int) { if (engine.ready) engine.post("cdrListen") { it.cdrListen(serviceId) } }
 
+    /** DRM (#645): the newest slide show picture when newer than [lastSeq]; null when none or the engine is not ready. */
+    suspend fun drmSlide(lastSeq: Long): io.github.adswill.onair.engine.DrmSlide? = if (engine.ready) engine.call("drmSlide") { it.drmSlide(lastSeq) } else null
+    /** DRM (#645): one Journaline page; -1 is the root. */
+    suspend fun drmJournaline(id: Int): io.github.adswill.onair.engine.JlPage? = if (engine.ready) engine.call("drmJournaline") { it.drmJournaline(id) } else null
+
     fun openFile(uri: Uri) {
         try {
             val cr = ctx.contentResolver
