@@ -55,6 +55,8 @@ static void testPure() {
     const auto devs = hamlibRigDevices({r});
     CHECK(devs.size() == 1 && devs[0].kind == DeviceInfo::Hamlib && devs[0].serial == hamlibRigSerial(3079, "/dev/ttyUSB0", 19200), "device entry");
     CHECK(hamlibRigsFromString("0,/dev/x;5,;,/dev/y").empty(), "bad entries dropped");
+    // #709: the sideband per mode (engine codes 27 HF digital, 57 general receiver; general demod 4 = LSB, 2 = AM)
+    CHECK(hamlibSidebandFor(27, 0) == "PKTUSB" && hamlibSidebandFor(57, 4) == "LSB" && hamlibSidebandFor(57, 2) == "" && hamlibSidebandFor(34, 0) == "", "sideband per mode");
 }
 
 #ifdef DECT2_HAVE_HAMLIB

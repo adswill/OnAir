@@ -348,6 +348,13 @@ DeviceInfo audioDevFor(const DeviceInfo& ham) {
     return a;
 }
 
+std::string hamModeOf(const TuneSettings& s);
+// The mode the receiver asks the rig for (#709): the mode's own sideband when it has one and the setting is on, else the Mode setting.
+std::string rxHamMode(const TuneSettings& s) {
+    if (!s.rigSideband.empty() && radioOption(s, "hamlib_sideband", "1") == "1") return s.rigSideband;
+    return hamModeOf(s);
+}
+
 std::string hamModeOf(const TuneSettings& s) {
     const std::string m = hamlibCanonicalMode(radioOption(s, "hamlib_mode", "USB"));
     return m.empty() ? "USB" : m;
@@ -362,7 +369,7 @@ public:
         stop();
         if (!parseHamlibSerial(dev_.serial, conn_.model, conn_.path, conn_.baud)) { err = "bad Hamlib rig id"; return false; }
         if (!link_.open(conn_, err)) return false;
-        mode_ = appMode_ = hamModeOf(s);
+        mode_ = appMode_ = rxHamMode(s);
         std::string e2;
         if (!link_.setFreq(s.centerHz, err)) { link_.close(); return false; }
         if (!link_.setMode(mode_, 0, e2)) err.clear(), noteMode(e2);   // a receiver may refuse a mode it lacks: tuning still works
@@ -396,7 +403,7 @@ public:
     }
 
     bool retune(const TuneSettings& s, std::string& err) override {
-        const std::string mode = hamModeOf(s);
+        const std::string mode = rxHamMode(s);
         {
             std::lock_guard<std::mutex> lk(mu_);
             wantHz_ = s.centerHz;

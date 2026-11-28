@@ -60,6 +60,7 @@ struct TuneSettings {
     int lnaDb = 16;                    // 0..40 step 8
     int vgaDb = 20;                    // 0..62 step 2
     bool ampOn = false;
+    std::string rigSideband;           // Hamlib (#709): the sideband the mode needs ("USB", "PKTUSB", "LSB"); "" = none, see hamlibSidebandFor
     bool biasTee = false;              // DC power up the antenna input (active antennas, LNAs); only radios with DeviceInfo::hasBiasTee act on it
     // The radio's own settings the user changed (DeviceInfo::settings): key -> value. A key that is not here means the setting's default,
     // which is what the driver did before the setting existed.
