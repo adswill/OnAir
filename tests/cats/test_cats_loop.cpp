@@ -25,7 +25,7 @@ static void checkPacket(const Packet& p, const std::string& comment, bool gps, c
     CHECK(p.hasGps == gps, "%s: gps present", tag);
     if (gps) {
         CHECK(std::fabs(p.lat - 52.25) < 1e-6 && std::fabs(p.lon + 1.5) < 1e-6, "%s: position %f %f", tag, p.lat, p.lon);
-        CHECK(std::fabs(p.altM - 30112.0) < 1.0, "%s: altitude %f (half float of 30123)", tag, p.altM);
+        CHECK(std::fabs(p.altM - 30128.0) < 1.0, "%s: altitude %f (half float of 30123)", tag, p.altM);
         CHECK(p.errM == 5 && std::fabs(p.headingDeg - 90.0) < 1.5 && std::fabs(p.speedMps - 12.5) < 0.01, "%s: error/heading/speed", tag);
     }
 }
