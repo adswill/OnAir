@@ -149,12 +149,12 @@ RtlModel rtlModel(uint32_t index) {
     return rtlModelFromStrings(trimmed(vendor, sizeof vendor), trimmed(product, sizeof product));
 }
 void refineRtlModel(RtlApi::rtlsdr_dev_t* dev, uint32_t usbIndex, int tuner, RtlModel& model) {
+    // rtlsdr_check_dongle_model(dev, manufact, product) is a comparison, not a getter: it returns 1 when the EEPROM strings are the
+    // two given ones and fills no buffers (checked against the Blog library 1.4.0).
     if (dev && rtl().check_dongle_model) {
-        char vendor[256] = {0}, product[256] = {0};
-        if (rtl().check_dongle_model(dev, vendor, product) == 0) {
-            const RtlModel m = rtlModelFromStrings(trimmed(vendor, sizeof vendor), trimmed(product, sizeof product));
-            if (m != kGeneric) model = m;
-        }
+        static char blogVendor[] = "RTLSDRBlog", blogV4[] = "Blog V4", blogV4L[] = "Blog V4L", blogV3[] = "Blog V3";
+        if (rtl().check_dongle_model(dev, blogVendor, blogV4) || rtl().check_dongle_model(dev, blogVendor, blogV4L)) model = kBlogV4;
+        else if (rtl().check_dongle_model(dev, blogVendor, blogV3)) model = kBlogV3;
     }
     if (model == kGeneric && rtl().blogLib) {
         if (tuner == kR828D) model = kBlogV4;   // R828D is the V4 tuner; HF uses the upconverter in the Blog library
@@ -252,6 +252,9 @@ protected:
         const int at = indexOfSerial();
         if (at == -2) { DIAG_ERROR(178818, "The RTL-SDR with serial %s is not in the USB list, so it cannot be opened (unplugged?).", serial_.c_str()); err = "RTL-SDR " + serial_ + " not found (unplugged?)"; return false; }
         const uint32_t index = at >= 0 ? (uint32_t)at : index_;
+        // The USB strings are read before the open: librtlsdr cannot read them from a dongle it has open (libusb refuses, every
+        // string comes back empty), so a V4 Lite that the listing had right became a generic radio here (#663).
+        model_ = rtlModel(index);
         const int r = rtl().open(&dev_, index);
         if (r != 0 || !dev_) {
             dev_ = nullptr;
@@ -261,7 +264,6 @@ protected:
             if (r == -3 || r == -12 || (kOnWindows && usbDriverMissing(r))) openFailure_ = OpenFailure::Final;
             return false;
         }
-        model_ = rtlModel(index);
         tuner_ = rtl().get_tuner_type ? rtl().get_tuner_type(dev_) : kTunerUnknown;
         refineRtlModel(dev_, index, tuner_, model_);
         if (model_ == kGeneric && radioFlag(s, "dxp")) model_ = kDxPatrol;   // the user said so

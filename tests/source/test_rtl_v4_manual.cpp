@@ -60,6 +60,21 @@ int main(int argc, char** argv) {
         CHECK(ok && st("rtl.ds") == 0 && st("rtl.freq") == 7.1e6, "manual V4 at 7.1 MHz: ds %.0f freq %.0f (%s)", st("rtl.ds"), st("rtl.freq"), e.c_str());
         if (ok) { t.centerHz = 14.2e6; CHECK(s->retune(t, e) && st("rtl.ds") == 0 && st("rtl.freq") == 14.2e6, "retune to 14.2 MHz keeps the upconverter path"); s->stop(); }
     }
+    // A V4L whose USB strings can only be read before the open (librtlsdr: -3 on a dongle it has open) stays a V4: the identity
+    // is read before rtlsdr_open, and check_dongle_model is a comparison, not a getter (#663).
+    setenv("FAKE_RTL_STRINGS_BUSY", "1", 1);
+    set("rtl.v4l", 1); set("rtl.ds", 0);
+    CHECK(!hasSetting(rtl(), "v4"), "a listed V4L has no manual option");
+    {
+        auto s = makeSource(rtl());
+        TuneSettings t; t.centerHz = 9.6e6; t.sampleRate = 2.4e6; t.gainDb = 30; t.bandwidthMhz = 0.2;
+        e.clear();
+        const bool ok = s && s->start(t, ring, e);
+        CHECK(ok && st("rtl.ds") == 0 && st("rtl.freq") == 9.6e6, "a V4L with unreadable strings once open: ds %.0f freq %.0f (%s)", st("rtl.ds"), st("rtl.freq"), e.c_str());
+        if (ok) s->stop();
+    }
+    unsetenv("FAKE_RTL_STRINGS_BUSY"); set("rtl.v4l", 0); set("rtl.ds", 0);
+
     set("rtl.v4", 1);
     CHECK(!hasSetting(rtl(), "v4"), "a recognised V4 has no manual option");
     set("rtl.v4", 0); set("rtl.v3", 1);
