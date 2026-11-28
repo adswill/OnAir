@@ -29,9 +29,9 @@ pub const SD_DATA: i32 = 0x39;
 pub struct Msg {
     /// Message type (6 bits), -1 before parsing.
     pub typ: i32,
-    /// 0 broadcast, 1 group, 4 individual, 6 interconnect.
+    /// 0 broadcast, 1 group, 4 individual, 6 interconnect (3 bits, octet 2 of VCALL / TX_REL).
     pub call_type: i32,
-    /// Voice call option (5 bits).
+    /// CC option octet (octet 1 of VCALL / TX_REL; bit 7 is the emergency flag).
     pub option: i32,
     /// Source radio unit id.
     pub src: i32,
@@ -122,8 +122,9 @@ pub fn build(m: &Msg, bits: &mut [u8]) -> usize {
     w.put(m.typ as u32 & 0x3F, 8);
     match m.typ {
         VCALL | TX_REL => {
+            w.put(m.option as u32, 8);
             w.put(m.call_type as u32, 3);
-            w.put(m.option as u32, 5);
+            w.put(0, 5);
             w.put(m.src as u32, 16);
             w.put(m.dst as u32, 16);
             w.put(m.cipher as u32, 2);
@@ -178,11 +179,12 @@ pub fn parse(bits: &[u8], m: &mut Msg) -> bool {
     *m = Msg { typ: (r.get(8) & 0x3F) as i32, ..Msg::default() };
     match m.typ {
         VCALL | TX_REL => {
-            if n < 56 {
+            if n < 64 {
                 return false;
             }
+            m.option = r.get(8) as i32;
             m.call_type = r.get(3) as i32;
-            m.option = r.get(5) as i32;
+            r.get(5);
             m.src = r.get(16) as i32;
             m.dst = r.get(16) as i32;
             m.cipher = r.get(2) as i32;
