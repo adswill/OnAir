@@ -93,10 +93,11 @@ bool decodeFrameBits(const Definition& d, const std::vector<uint8_t>& bits, size
     used = 0;
     auto decodeLen = [&](int bytes, Frame& f, size_t& u) -> bool {
         const size_t dataBits = (size_t)bytes * 8;
-        const size_t cb = stage::codedBits(d, dataBits);
-        if (start + cb > bits.size() && !final) return false;
-        std::vector<uint8_t> chunk(cb, 0);
-        for (size_t i = 0; i < cb && start + i < bits.size(); i++) chunk[i] = bits[start + i];
+        const size_t cb = stage::codedBits(d, dataBits), wb = stage::chipBits(d, cb);
+        if (start + wb > bits.size() && !final) return false;
+        std::vector<uint8_t> chunk(wb, 0);
+        for (size_t i = 0; i < wb && start + i < bits.size(); i++) chunk[i] = bits[start + i];
+        if (d.walshK >= 2) chunk = stage::walshDecode(chunk, d.walshK, cb);
         stage::scramble(chunk, d, false);
         stage::interleave(chunk, d.ilRows, d.ilCols, false);
         std::vector<uint8_t> data;
@@ -105,7 +106,7 @@ bool decodeFrameBits(const Definition& d, const std::vector<uint8_t>& bits, size
         f.bytes = stage::bitsToBytes(data, d.lsbFirst);
         f.fecCorrected = corr;
         f.fecFailed = !ok;
-        u = cb;
+        u = wb;
         return true;
     };
     if (d.lenMode == LenMode::Fixed) {
@@ -147,8 +148,23 @@ bool decodeFrameBits(const Definition& d, const std::vector<uint8_t>& bits, size
     return true;
 }
 
+// the payload part of a frame: from payloadOffset up to the check value (when it is at the end)
+static std::string payloadText(const Definition& d, const Frame& f) {
+    const size_t from = std::min(f.bytes.size(), (size_t)d.payloadOffset);
+    size_t to = f.bytes.size();
+    if (d.crcKind != CrcKind::None && d.crcPosition < 0 && to >= (size_t)d.crcBytes()) to -= (size_t)d.crcBytes();
+    to = std::max(from, to);
+    std::vector<uint8_t> p(f.bytes.begin() + (std::ptrdiff_t)from, f.bytes.begin() + (std::ptrdiff_t)to);
+    if (d.payloadKind == PayloadKind::Hex) return hexBytes(p);
+    while (!p.empty() && p.back() == 0) p.pop_back();   // the zero padding of a longer frame
+    std::string t;
+    for (uint8_t c : p) t += c >= 32 && c < 127 ? (char)c : '.';
+    return t;
+}
+
 void interpretFrame(const Definition& d, Frame& f) {
     f.fields.clear();
+    f.payload = d.payloadKind == PayloadKind::None ? std::string() : payloadText(d, f);
     for (const Field& fd : d.fields) {
         FieldValue v;
         v.name = fd.name;
@@ -253,6 +269,7 @@ void interpretFrame(const Definition& d, Frame& f) {
     }
     f.display.clear();
     if (!tmpl) {
+        if (d.payloadKind != PayloadKind::None && f.fields.empty()) { f.display = f.payload; return; }
         for (const FieldValue& v : f.fields) {
             if (v.text.empty()) continue;
             if (!f.display.empty()) f.display += "  ";
@@ -272,6 +289,7 @@ void interpretFrame(const Definition& d, Frame& f) {
         if (key == "_crc") { f.display += !f.hasCrc ? "-" : f.crcOk ? "ok" : "bad"; continue; }
         if (key == "_len") { f.display += std::to_string(f.bytes.size()); continue; }
         if (key == "_hex") { f.display += hexBytes(f.bytes); continue; }
+        if (key == "_payload") { f.display += f.payload; continue; }
         const auto it = std::find_if(f.fields.begin(), f.fields.end(), [&](const FieldValue& x) { return x.name == key; });
         if (it == f.fields.end()) { f.display += "{" + key + "}"; continue; }
         if (part == "units") f.display += it->units;

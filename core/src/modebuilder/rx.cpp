@@ -7,6 +7,8 @@
 // searched for the sync word, and the frame after it is decoded (frames.cpp). Streams: feed() any number of samples, frames come out
 // of take(); flush() at the end of a recording.
 #include "dect2/modebuilder/modebuilder.h"
+#include "ofdm_rx.h"
+#include <cstdlib>
 #include <algorithm>
 #include <cmath>
 #include <deque>
@@ -66,6 +68,8 @@ struct Receiver::Impl {
     std::vector<float> Ssnr;
     std::vector<double> Tpos;
     long long symBase = 0, searchFrom = 0;
+    long long lockSym = -1;          // cyclic framing: where the next sync word is expected (-1: not locked)
+    int lockMiss = 0;                // cycles in a row without a good frame
     long long inCount = 0;
     // frame engine
     int needSyms = 0, syncSyms = 0, chunk = 256;
@@ -183,12 +187,13 @@ struct Receiver::Impl {
             sigPos = sigCnt = 0; sigLo = -1; sigHi = 1; sigCfreq = 0;
         }
         symBase = 0; searchFrom = 0; inCount = 0;
+        lockSym = -1; lockMiss = 0;
         valueOf.assign((size_t)M, 0);
         for (int L = 0; L < M; L++) valueOf[(size_t)L] = !d.symbolMap.empty() ? d.symbolMap[(size_t)L] : (d.gray && M > 2) ? (L ^ (L >> 1)) : L;
         // what the frame engine must see after a sync word before it can decode the longest frame
         size_t needBits;
         if (d.lenMode == LenMode::EndFlag) needBits = (size_t)d.maxBytes * 8 + (d.bitStuffing ? (size_t)d.maxBytes * 8 / 5 + 1 : 0) + (size_t)d.flag.bits * 9;
-        else needBits = stage::codedBits(d, (size_t)d.longestFrameBytes() * 8);
+        else needBits = stage::chipBits(d, stage::codedBits(d, (size_t)d.longestFrameBytes() * 8));
         const double exp = stage::lineExpansion(d.line);
         needSyms = (int)std::ceil(needBits * exp / bps) + 12;
         syncSyms = (int)std::ceil(d.sync.bits * exp / bps) + 2;
@@ -593,6 +598,7 @@ struct Receiver::Impl {
         std::vector<Hit> hits;
         std::vector<uint8_t> chips;
         const bool gate = d.squelchDb > 0;
+        const int relaxMax = d.cycleSymbols > 0 && lockSym >= 0 ? std::max(d.syncMaxErrors, std::min(sl / 3, (sl - 1) / 2)) : d.syncMaxErrors;
         for (int v : variants) {
             variantBits(from, v, chips);
             for (int ph = 0; ph < phases; ph++) {
@@ -604,10 +610,12 @@ struct Receiver::Impl {
                     if ((int)i + 1 < sl) continue;
                     uint64_t x = wnd ^ want;
                     int errs = 0;
-                    while (x && errs <= d.syncMaxErrors) { x &= x - 1; errs++; }
-                    if (errs > d.syncMaxErrors) continue;
+                    while (x && errs <= relaxMax) { x &= x - 1; errs++; }
+                    if (errs > relaxMax) continue;
                     const long long chipStart = dc.pos[i + 1 - (size_t)sl];
                     const long long sym = from + chipStart / bps;
+                    // the flywheel: a damaged sync word is accepted where the cycle says one must be
+                    if (errs > d.syncMaxErrors && !(lockSym >= 0 && std::llabs(sym - lockSym) <= 1)) continue;
                     if (sym < searchFrom) continue;
                     if (gate && !Sopen[(size_t)(sym - symBase)]) continue;
                     hits.push_back({sym, errs, (int)decs.size(), ph, i + 1});
@@ -649,6 +657,7 @@ struct Receiver::Impl {
                 got.push_back(std::move(f));
                 cursor = std::max(hit.sym + 1, endS);
                 lastBad = -1000000;
+                if (d.cycleSymbols > 0) { lockSym = hit.sym + d.cycleSymbols; lockMiss = 0; }
             } else {
                 // a bad frame: shown only when asked, once per place, and only if no good frame starts at the same symbol
                 bool goodSame = false;
@@ -668,6 +677,11 @@ struct Receiver::Impl {
         }
         if (pending >= 0) searchFrom = std::max(cursor, pending);
         else searchFrom = std::max(cursor, final ? endSym : endSym - syncSyms - 8);
+        // cyclic framing: a cycle that passed without a good frame is skipped (the flywheel keeps turning for flywheelMisses cycles)
+        while (d.cycleSymbols > 0 && lockSym >= 0 && lockSym + 3 < searchFrom) {
+            lockSym += d.cycleSymbols;
+            if (++lockMiss > d.flywheelMisses) lockSym = -1;
+        }
         // drop the symbols nothing can use any more
         const long long keepFrom = std::max(symBase, searchFrom - 16);
         const size_t drop = (size_t)(keepFrom - symBase);
@@ -708,25 +722,33 @@ struct Receiver::Impl {
     }
 };
 
-Receiver::Receiver(const Definition& d) : p_(std::make_unique<Impl>(d)) { p_->configure(d.sampleRate, 0); }
+Receiver::Receiver(const Definition& d) {
+    if (d.mod == Mod::OFDM) { o_ = std::make_unique<OfdmImpl>(d); o_->configure(d.sampleRate, 0); }
+    else { p_ = std::make_unique<Impl>(d); p_->configure(d.sampleRate, 0); }
+}
 Receiver::~Receiver() = default;
-void Receiver::configure(double rate, double extra) { p_->configure(rate, extra); }
-void Receiver::feed(const cf* iq, size_t n) { p_->feed(iq, n); }
+void Receiver::configure(double rate, double extra) { if (o_) o_->configure(rate, extra); else p_->configure(rate, extra); }
+void Receiver::feed(const cf* iq, size_t n) {
+    if (o_) { o_->feed(iq, n); o_->process(false); }
+    else p_->feed(iq, n);
+}
 void Receiver::flush() {
+    if (o_) { o_->flush(); return; }
     // push the last symbols through the filters, then decode what is left
     std::vector<cf> z((size_t)std::min<double>(p_->fsIn, p_->taps.size() + (p_->sps * 8 + 16) * p_->D), cf(0, 0));
     p_->feed(z.data(), z.size());
     p_->process(true);
 }
 std::vector<Frame> Receiver::take() {
+    if (o_) return o_->take();
     std::lock_guard<std::mutex> lk(p_->mu);
     std::vector<Frame> v;
     v.swap(p_->out);
     return v;
 }
-SignalView Receiver::signalView() const { return p_->view(); }
-RxStats Receiver::stats() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->st; }
-const Definition& Receiver::definition() const { return p_->d; }
+SignalView Receiver::signalView() const { return p_ ? p_->view() : SignalView{}; }
+RxStats Receiver::stats() const { if (o_) return o_->stats(); std::lock_guard<std::mutex> lk(p_->mu); return p_->st; }
+const Definition& Receiver::definition() const { return o_ ? o_->d : p_->d; }
 
 std::vector<Frame> decodeIq(const Definition& d, const std::vector<cf>& iq, double fs, double extra, RxStats* stats) {
     Receiver r(d);

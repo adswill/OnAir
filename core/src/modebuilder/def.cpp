@@ -22,6 +22,7 @@ const char* modName(Mod m) {
     case Mod::GFSK: return "GFSK";
     case Mod::GMSK: return "GMSK";
     case Mod::PSK: return "PSK";
+    case Mod::OFDM: return "OFDM";
     }
     return "?";
 }
@@ -83,6 +84,7 @@ double Definition::deviation() const {
 double Definition::bandwidth() const {
     if (bandwidthHz > 0) return bandwidthHz;
     if (mod == Mod::FSK || mod == Mod::GFSK || mod == Mod::GMSK) return 2 * (deviation() + symbolRate);
+    if (mod == Mod::OFDM) return (ofdmUsed + 2.0) / std::max(1, ofdmFft) * ofdmSampleRate();
     return 2.5 * symbolRate;
 }
 Pulse Definition::pulseShape() const {
@@ -280,7 +282,7 @@ ParseResult parseDefinition(const std::string& text) {
     if (!aj::parse(text, root, jerr)) { c.err("", "JSON: " + jerr); return r; }
     if (root.type != aj::Value::Obj) { c.err("", "the definition must be a JSON object { ... }"); return r; }
     Definition& d = r.def;
-    c.keys(root, "", {"onair_mode", "id", "name", "description", "frequency_mhz", "sample_rate", "modulation", "filter", "line_code", "polarity",
+    c.keys(root, "", {"walsh", "cycle", "payload", "onair_mode", "id", "name", "description", "frequency_mhz", "sample_rate", "modulation", "filter", "line_code", "polarity",
                       "bit_order", "preamble", "sync", "scrambler", "frame", "fec", "interleaver", "crc", "fields", "display", "show_bad_frames",
                       "squelch_db", "comment", "source"});
     const aj::Value* ver = root.get("onair_mode");
@@ -315,7 +317,7 @@ ParseResult parseDefinition(const std::string& text) {
     // modulation
     if (const aj::Value* m = obj(c, root, "", "modulation")) {
         const std::string P = "modulation";
-        c.keys(*m, P, {"type", "order", "symbol_rate", "deviation_hz", "bt", "differential", "gray", "symbol_map", "offset_hz"});
+        c.keys(*m, P, {"type", "order", "symbol_rate", "deviation_hz", "bt", "differential", "gray", "symbol_map", "offset_hz", "fft_size", "cyclic_prefix", "used_carriers", "pilot_every"});
         const std::string t = lower(str(c, *m, P, "type", ""));
         if (t == "ook") d.mod = Mod::OOK;
         else if (t == "ask") d.mod = Mod::ASK;
@@ -323,12 +325,21 @@ ParseResult parseDefinition(const std::string& text) {
         else if (t == "gfsk") d.mod = Mod::GFSK;
         else if (t == "gmsk" || t == "msk") d.mod = Mod::GMSK;
         else if (t == "psk" || t == "bpsk" || t == "qpsk" || t == "8psk") d.mod = Mod::PSK;
-        else c.err(P + ".type", t.empty() ? "required: OOK, ASK, FSK, GFSK, GMSK or PSK" : "\"" + t + "\" is not one of OOK, ASK, FSK, GFSK, GMSK, PSK");
+        else if (t == "ofdm") d.mod = Mod::OFDM;
+        else c.err(P + ".type", t.empty() ? "required: OOK, ASK, FSK, GFSK, GMSK, PSK or OFDM" : "\"" + t + "\" is not one of OOK, ASK, FSK, GFSK, GMSK, PSK, OFDM");
         int defOrder = t == "4fsk" || t == "qpsk" ? 4 : t == "8fsk" || t == "8psk" ? 8 : 2;
         d.order = inum(c, *m, P, "order", defOrder, 2, 8);
         if (d.order != 2 && d.order != 4 && d.order != 8) { c.err(P + ".order", "2, 4 or 8"); d.order = 2; }
         if ((d.mod == Mod::OOK || d.mod == Mod::GMSK) && d.order != 2) c.err(P + ".order", std::string(modName(d.mod)) + " has 2 levels");
         if (d.mod == Mod::ASK && d.order == 8) c.err(P + ".order", "ASK: 2 or 4 levels");
+        if (d.mod == Mod::OFDM) {
+            if (!m->get("order")) d.order = 4;
+            if (d.order == 8) c.err(P + ".order", "OFDM: 2 (BPSK) or 4 (QPSK) per subcarrier");
+            d.ofdmFft = inum(c, *m, P, "fft_size", 64, 16, 1024);
+            d.ofdmCp = inum(c, *m, P, "cyclic_prefix", 16, 0, 1024);
+            d.ofdmUsed = inum(c, *m, P, "used_carriers", 48, 2, 1020);
+            d.ofdmPilotEvery = inum(c, *m, P, "pilot_every", 6, 0, 64);
+        }
         d.symbolRate = num(c, *m, P, "symbol_rate", 0, 1, 10e6, true);
         d.deviationHz = num(c, *m, P, "deviation_hz", 0, 0, 10e6);
         d.bt = num(c, *m, P, "bt", d.mod == Mod::GMSK ? 0.3 : 0.5, 0.1, 2);
@@ -417,7 +428,24 @@ ParseResult parseDefinition(const std::string& text) {
             if (!readPattern(*w, bits, d.sync, why)) c.err("sync.word", why);
         } else c.err("sync.word", "required");
         d.syncMaxErrors = inum(c, *s, "sync", "max_errors", 0, 0, 16);
-    } else c.err("sync", "required: { \"word\": \"0x2DD4\", \"bits\": 16 }");
+    } else if (d.mod != Mod::OFDM) c.err("sync", "required: { \"word\": \"0x2DD4\", \"bits\": 16 }");
+    if (const aj::Value* w = obj(c, root, "", "walsh")) {
+        c.keys(*w, "walsh", {"k"});
+        d.walshK = inum(c, *w, "walsh", "k", 3, 2, 6);
+    }
+    if (const aj::Value* cy = obj(c, root, "", "cycle")) {
+        c.keys(*cy, "cycle", {"symbols", "flywheel_misses"});
+        d.cycleSymbols = inum(c, *cy, "cycle", "symbols", 0, 8, 1000000, true);
+        d.flywheelMisses = inum(c, *cy, "cycle", "flywheel_misses", 3, 0, 100);
+    }
+    if (const aj::Value* pl = obj(c, root, "", "payload")) {
+        c.keys(*pl, "payload", {"text", "hex", "offset_bytes"});
+        const bool hasT = pl->get("text") != nullptr, hasH = pl->get("hex") != nullptr;
+        if (hasT == hasH) c.err("payload", "give either \"text\" or \"hex\"");
+        else if (hasT) { d.payloadKind = PayloadKind::Text; d.payloadData = str(c, *pl, "payload", "text", ""); }
+        else { d.payloadKind = PayloadKind::Hex; d.payloadData = str(c, *pl, "payload", "hex", ""); }
+        d.payloadOffset = inum(c, *pl, "payload", "offset_bytes", 0, 0, 4096);
+    }
     if (const aj::Value* s = obj(c, root, "", "scrambler")) {
         const std::string P = "scrambler";
         c.keys(*s, P, {"type", "taps", "poly", "seed", "length"});
@@ -645,12 +673,45 @@ std::vector<Issue> validate(const Definition& d) {
     std::vector<Issue> out;
     Ctx c{out};
     if (d.symbolRate <= 0) c.err("modulation.symbol_rate", "required, a number above 0");
-    if (d.sync.bits < 1) c.err("sync.word", "required");
+    if (d.sync.bits < 1 && d.mod != Mod::OFDM) c.err("sync.word", "required");
     if (d.syncMaxErrors * 4 > d.sync.bits) c.err("sync.max_errors", "at most a quarter of the sync word's bits (" + std::to_string(d.sync.bits / 4) + ")");
     if (d.sync.bits > 0 && d.sync.bits < 8) c.warn("sync.word", "a sync word under 8 bits is found by chance in noise very often");
     const double bw = d.bandwidth();
     if (d.sampleRate < bw * 1.1) c.err("sample_rate", "must be above the filter bandwidth (" + std::to_string((int)bw) + " Hz)");
-    if (d.sampleRate < 4 * d.symbolRate) c.err("sample_rate", "must be at least 4 x the symbol rate");
+    if (d.mod != Mod::OFDM && d.sampleRate < 4 * d.symbolRate) c.err("sample_rate", "must be at least 4 x the symbol rate");
+    if (d.mod == Mod::OFDM) {
+        const int N = d.ofdmFft;
+        if (N & (N - 1)) c.err("modulation.fft_size", "a power of two (16 to 1024)");
+        if (d.ofdmCp > N) c.err("modulation.cyclic_prefix", "at most the FFT size");
+        if (d.ofdmUsed % 2 || d.ofdmUsed > N - 2) c.err("modulation.used_carriers", "an even number, at most fft_size - 2 (the DC bin stays empty)");
+        if (d.order != 2 && d.order != 4) c.err("modulation.order", "2 (BPSK) or 4 (QPSK) per subcarrier");
+        if (d.ofdmPilotEvery == 1) c.err("modulation.pilot_every", "0 (no pilots) or 2 and more");
+        if (d.ofdmDataCarriers() < 1) c.err("modulation.used_carriers", "no data carrier is left: use more carriers or pilot_every 0");
+        if (d.sampleRate < d.ofdmSampleRate() * 0.9) c.warn("sample_rate", "below the block's rate " + std::to_string((int)d.ofdmSampleRate()) + " Hz (symbol_rate x (fft + cp)): the outer carriers are lost");
+        if (d.lenMode == LenMode::EndFlag) c.err("frame.length.mode", "OFDM carries whole frames of a known length: fixed or length_field");
+        if (d.walshK) c.err("walsh", "not with OFDM");
+        if (d.cycleSymbols) c.err("cycle", "not with OFDM (it has its own training symbols)");
+    }
+    if (d.walshK) {
+        if (d.walshK < 2 || d.walshK > 6) c.err("walsh.k", "2 to 6");
+        if (d.lenMode == LenMode::EndFlag) c.err("walsh", "not with an end flag (the flag would be spread too)");
+    }
+    if (d.cycleSymbols) {
+        const double ex = stage::lineExpansion(d.line);
+        const double chips = (double)d.cycleSymbols * d.bitsPerSymbol();
+        if (d.line == Line::B4B5 || d.line == Line::B8B10 || d.line == Line::Miller) c.err("cycle", "cyclic framing needs a plain line code: NRZ, NRZI or a Manchester type");
+        else if (std::fabs(chips / ex - std::round(chips / ex)) > 1e-9) c.err("cycle.symbols", "must hold a whole number of bits (a multiple of 2 for Manchester)");
+        else {
+            const double need = (d.sync.bits + (double)stage::chipBits(d, stage::codedBits(d, (size_t)d.longestFrameBytes() * 8))) * ex / d.bitsPerSymbol();
+            if (d.lenMode == LenMode::EndFlag) c.err("cycle", "not with an end flag");
+            else if ((double)d.cycleSymbols < need) c.err("cycle.symbols", "too short: the sync word and the longest frame need " + std::to_string((int)std::ceil(need)) + " symbols");
+        }
+    }
+    if (d.payloadKind != PayloadKind::None) {
+        const size_t pl = d.payloadBytes().size();
+        if (pl == 0) c.err("payload", "empty (a hex payload needs pairs of hex digits)");
+        if (d.lenMode == LenMode::Fixed && (size_t)d.payloadOffset + pl + (size_t)d.crcBytes() > (size_t)d.fixedBytes) c.warn("payload", "longer than the frame: the end is cut off");
+    }
     if (std::fabs(d.offsetHz) + bw / 2 > d.sampleRate / 2) c.err("modulation.offset_hz", "the signal does not fit in the sample rate");
     if ((d.mod == Mod::FSK || d.mod == Mod::GFSK) && d.deviation() * 2 > bw) c.warn("filter.bandwidth_hz", "narrower than the FSK tones (2 x deviation): the outer tones are cut");
     if (d.pulseShape() == Pulse::Gaussian && d.mod == Mod::PSK) c.err("filter.pulse", "gaussian is for FSK; PSK takes none, rrc or rc");
@@ -692,7 +753,7 @@ std::vector<Issue> validate(const Definition& d) {
             std::string key = t.substr(p + 1, e - p - 1);
             const size_t dot = key.find('.');
             if (dot != std::string::npos) key = key.substr(0, dot);
-            if (key != "_crc" && key != "_len" && key != "_hex" && std::none_of(d.fields.begin(), d.fields.end(), [&](const Field& f) { return f.name == key; }))
+            if (key != "_crc" && key != "_len" && key != "_hex" && key != "_payload" && std::none_of(d.fields.begin(), d.fields.end(), [&](const Field& f) { return f.name == key; }))
                 c.warn("display", "{" + key + "} is not a field");
             p = e + 1;
         }
@@ -739,7 +800,7 @@ std::string toJson(const Definition& d) {
     line("sample_rate", numStr(d.sampleRate));
     {
         std::string m = "{ \"type\": " + q(modName(d.mod));
-        if (d.mod == Mod::FSK || d.mod == Mod::PSK || d.mod == Mod::ASK || d.mod == Mod::GFSK) m += ", \"order\": " + std::to_string(d.order);
+        if (d.mod == Mod::FSK || d.mod == Mod::PSK || d.mod == Mod::ASK || d.mod == Mod::GFSK || d.mod == Mod::OFDM) m += ", \"order\": " + std::to_string(d.order);
         m += ", \"symbol_rate\": " + numStr(d.symbolRate);
         if ((d.mod == Mod::FSK || d.mod == Mod::GFSK) && d.deviationHz > 0) m += ", \"deviation_hz\": " + numStr(d.deviationHz);
         if (d.mod == Mod::GFSK || d.mod == Mod::GMSK) m += ", \"bt\": " + numStr(d.bt);
@@ -747,6 +808,7 @@ std::string toJson(const Definition& d) {
         if (!d.gray) m += ", \"gray\": false";
         if (!d.symbolMap.empty()) { m += ", \"symbol_map\": ["; for (size_t i = 0; i < d.symbolMap.size(); i++) m += (i ? ", " : "") + std::to_string(d.symbolMap[i]); m += "]"; }
         if (d.offsetHz != 0) m += ", \"offset_hz\": " + numStr(d.offsetHz);
+        if (d.mod == Mod::OFDM) m += ", \"fft_size\": " + std::to_string(d.ofdmFft) + ", \"cyclic_prefix\": " + std::to_string(d.ofdmCp) + ", \"used_carriers\": " + std::to_string(d.ofdmUsed) + ", \"pilot_every\": " + std::to_string(d.ofdmPilotEvery);
         line("modulation", m + " }");
     }
     {
@@ -765,7 +827,10 @@ std::string toJson(const Definition& d) {
     line("polarity", q(d.polarity == Polarity::Normal ? "normal" : d.polarity == Polarity::Inverted ? "inverted" : "auto"));
     line("bit_order", q(d.lsbFirst ? "lsb" : "msb"));
     if (d.preamble.bits > 0) line("preamble", "{ \"pattern\": " + pattern(d.preamble) + ", \"bits\": " + std::to_string(d.preamble.bits) + " }");
-    line("sync", "{ \"word\": " + pattern(d.sync) + ", \"bits\": " + std::to_string(d.sync.bits) + ", \"max_errors\": " + std::to_string(d.syncMaxErrors) + " }");
+    if (d.mod != Mod::OFDM || d.sync.bits > 0) line("sync", "{ \"word\": " + pattern(d.sync) + ", \"bits\": " + std::to_string(d.sync.bits) + ", \"max_errors\": " + std::to_string(d.syncMaxErrors) + " }");
+    if (d.walshK) line("walsh", "{ \"k\": " + std::to_string(d.walshK) + " }");
+    if (d.cycleSymbols) line("cycle", "{ \"symbols\": " + std::to_string(d.cycleSymbols) + ", \"flywheel_misses\": " + std::to_string(d.flywheelMisses) + " }");
+    if (d.payloadKind != PayloadKind::None) line("payload", std::string("{ ") + (d.payloadKind == PayloadKind::Text ? "\"text\": " : "\"hex\": ") + q(d.payloadData) + ", \"offset_bytes\": " + std::to_string(d.payloadOffset) + " }");
     if (d.scrambler != Scrambler::None) {
         std::string s = "{ \"type\": " + q(d.scrambler == Scrambler::Additive ? "additive" : "multiplicative") + ", \"taps\": [";
         for (size_t i = 0; i < d.taps.size(); i++) s += (i ? ", " : "") + std::to_string(d.taps[i]);

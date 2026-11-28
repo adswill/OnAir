@@ -204,6 +204,16 @@ most significant bit of byte 0).
 and `{_crc}`, `{_len}`, `{_hex}` the check result, the length and the frame bytes in hex. Or a list of templates chosen by a field:
 `[{"when": {"field": "type", "equals": 1}, "template": "..."}, {"template": "default ..."}]`; the first that matches is used.
 
+### walsh, cycle, payload (optional)
+
+- `"walsh": { "k": 3 }` (k = 2 to 6): after the scrambler, every k bits are sent as one of 2^k Walsh-Hadamard code words of 2^k chips; the receiver correlates (fast Walsh transform) and takes the largest. Not with an end flag.
+- `"cycle": { "symbols": 400, "flywheel_misses": 3 }`: the frame repeats every N symbols, each cycle starts with the sync word (padded to N). After a good frame the receiver expects the next sync word N symbols later and accepts a damaged one there (up to a third of its bits wrong); up to `flywheel_misses` cycles may pass without a good frame before it searches again. Needs a plain line code (NRZ, NRZI, Manchester types).
+- `"payload": { "text": "HELLO" }` or `{ "hex": "DE AD BE EF" }`, optional `"offset_bytes"`: the generator puts this payload in every frame (length field and check value filled in); the receiver shows it as `{_payload}` (the default display when there are no fields).
+
+### OFDM (modulation.type "OFDM")
+
+`"modulation": { "type": "OFDM", "order": 4, "symbol_rate": 1000, "fft_size": 64, "cyclic_prefix": 16, "used_carriers": 48, "pilot_every": 6 }`. `order` 2 = BPSK, 4 = QPSK per subcarrier; `symbol_rate` is the OFDM symbol rate, so the block runs at symbol_rate x (fft_size + cyclic_prefix) samples per second. A frame is two identical training symbols (timing, carrier offset, channel), then data symbols; every n-th used carrier is a pilot that tracks the common phase. No `sync` is needed. Fixed or length-field frames only.
+
 ## Examples (data/modes)
 
 * `ook-433-sensor.json`: OOK, Manchester, 2000 chips/s, a temperature / humidity sensor with CRC-8.

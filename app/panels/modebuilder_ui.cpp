@@ -408,8 +408,18 @@ bool formView(mb::Definition& d) {
         num(tr("Sample rate (Hz)"), d.sampleRate, "%.0f");
     }
     if (ImGui::CollapsingHeader(trw("Modulation"), ImGuiTreeNodeFlags_DefaultOpen)) {
-        static const char* mods[] = {"OOK", "ASK", "FSK", "GFSK", "GMSK", "PSK"};
-        if (combo(tr("Type"), d.mod, mods, 6, w)) ch = true;
+        static const char* mods[] = {"OOK", "ASK", "FSK", "GFSK", "GMSK", "PSK", "OFDM"};
+        if (combo(tr("Type"), d.mod, mods, 7, w)) ch = true;
+        if (d.mod == mb::Mod::OFDM) {
+            int oi = d.order >= 4 ? 1 : 0;
+            ImGui::SetNextItemWidth(w);
+            if (ImGui::Combo(tr("Per subcarrier"), &oi, "BPSK\0QPSK\0")) { d.order = oi ? 4 : 2; ch = true; }
+            inum(tr("FFT size"), d.ofdmFft);
+            inum(tr("Cyclic prefix (samples)"), d.ofdmCp);
+            inum(tr("Used subcarriers"), d.ofdmUsed);
+            inum(tr("Pilot every n subcarriers (0 = none)"), d.ofdmPilotEvery);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Symbol rate below is the OFDM symbol rate; the block runs at symbol rate x (FFT size + cyclic prefix)"));
+        }
         if (d.mod == mb::Mod::FSK || d.mod == mb::Mod::GFSK || d.mod == mb::Mod::PSK || d.mod == mb::Mod::ASK) {
             int oi = d.order >= 8 ? 2 : d.order >= 4 ? 1 : 0;
             ImGui::SetNextItemWidth(w);
@@ -441,6 +451,17 @@ bool formView(mb::Definition& d) {
         if (patternInput(tr("Sync word"), d.sync, w)) ch = true;
         inum(tr("Sync bit errors allowed"), d.syncMaxErrors);
         static const char* scr[] = {"none", "additive", "multiplicative"};
+        {
+            int wk = d.walshK;
+            ImGui::SetNextItemWidth(w);
+            if (ImGui::InputInt(tr("Walsh coding k (0 = off, 2 to 6)"), &wk)) { d.walshK = wk < 2 ? 0 : std::min(wk, 6); ch = true; }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("k bits become one of 2^k Walsh code words of 2^k chips; the receiver picks the strongest correlation"));
+            int cy = d.cycleSymbols;
+            ImGui::SetNextItemWidth(w);
+            if (ImGui::InputInt(tr("Cycle length (symbols, 0 = off)"), &cy)) { d.cycleSymbols = std::max(0, cy); ch = true; }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A frame repeats every N symbols with the sync word at the start; the receiver keeps sync across cycles"));
+            if (d.cycleSymbols > 0) inum(tr("Cycles it may miss"), d.flywheelMisses);
+        }
         if (combo(tr("Scrambler"), d.scrambler, scr, 3, w)) ch = true;
         if (d.scrambler != mb::Scrambler::None) {
             std::string taps;
@@ -466,6 +487,15 @@ bool formView(mb::Definition& d) {
             chk(tr("HDLC bit stuffing"), d.bitStuffing);
             inum(tr("Shortest (bytes)"), d.minBytes);
             inum(tr("Longest (bytes)"), d.maxBytes);
+        }
+        {
+            int pk = (int)d.payloadKind;
+            ImGui::SetNextItemWidth(w);
+            if (ImGui::Combo(tr("Payload"), &pk, "none (random)\0text\0hex\0")) { d.payloadKind = (mb::PayloadKind)pk; ch = true; }
+            if (d.payloadKind != mb::PayloadKind::None) {
+                if (inputString(tr("Payload data"), d.payloadData, wide)) ch = true;
+                inum(tr("Payload offset (bytes)"), d.payloadOffset);
+            }
         }
         static const char* fecs[] = {"none", "repetition", "Hamming", "convolutional", "Reed-Solomon"};
         if (combo(tr("FEC"), d.fec, fecs, 5, w)) ch = true;

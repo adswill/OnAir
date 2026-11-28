@@ -18,7 +18,7 @@ namespace dect2::modebuilder {
 using cf = std::complex<float>;
 constexpr int kFormatVersion = 1;
 
-enum class Mod { OOK, ASK, FSK, GFSK, GMSK, PSK };
+enum class Mod { OOK, ASK, FSK, GFSK, GMSK, PSK, OFDM };   // OFDM: basic OFDM block (training symbols, pilots, BPSK / QPSK per subcarrier)
 enum class Pulse { None, Rrc, Rc, Gaussian };
 enum class Line { NRZ, NRZI, Manchester, ManchesterThomas, DiffManchester, Miller, B4B5, B8B10 };
 enum class Polarity { Normal, Inverted, Auto };
@@ -27,6 +27,7 @@ enum class LenMode { Fixed, LengthField, EndFlag };
 enum class Fec { None, Repetition, Hamming, Convolutional, ReedSolomon };
 enum class FieldType { Uint, Int, Bool, Enum, Bitflags, Ascii, Bcd, Float32, Lat, Lon, Hex };
 enum class CrcKind { None, Crc, Sum8, Xor8 };
+enum class PayloadKind { None, Text, Hex };   // a payload the user types: sent in every generated frame, shown on receive
 
 const char* modName(Mod m);
 const char* lineName(Line l);
@@ -122,6 +123,18 @@ struct Definition {
     int crcPosition = -1;          // -1: at the end
     bool crcLittle = false;
     bool showBadFrames = false;
+    // Walsh coding: k bits -> one of 2^k Walsh-Hadamard code words of 2^k chips (2..6; 0 = off). After the scrambler, before the line code.
+    int walshK = 0;
+    // cyclic framing: a frame (sync word + coded body, padded) repeats every cycleSymbols symbols; the receiver keeps sync across cycles
+    // (flywheel: a damaged sync word at the expected place is accepted, and up to flywheelMisses missed cycles are skipped). 0 = off.
+    int cycleSymbols = 0;
+    int flywheelMisses = 3;
+    // custom payload: typed text or hex, placed at payloadOffset bytes of every generated frame (check value filled in)
+    PayloadKind payloadKind = PayloadKind::None;
+    std::string payloadData;
+    int payloadOffset = 0;
+    // OFDM (mod == OFDM): symbolRate is the OFDM symbol rate, the sample rate of the block is symbolRate * (fft + cp); order 2 = BPSK, 4 = QPSK per subcarrier
+    int ofdmFft = 64, ofdmCp = 16, ofdmUsed = 48, ofdmPilotEvery = 6;
     // fields and display
     std::vector<Field> fields;
     std::vector<DisplayRule> display;
@@ -134,6 +147,10 @@ struct Definition {
     Pulse pulseShape() const;
     int crcBytes() const;          // bytes the check value takes in the frame (0: none)
     int longestFrameBytes() const;
+    std::vector<uint8_t> payloadBytes() const;   // the typed payload as bytes (hex: invalid digits are skipped)
+    double ofdmSampleRate() const;               // symbolRate * (fft + cp)
+    int ofdmDataCarriers() const;                // used carriers that are not pilots
+    int ofdmBitsPerSymbol() const;               // data bits in one OFDM symbol
 };
 
 struct Issue {
@@ -166,6 +183,12 @@ double lineExpansion(Line l);      // chips per bit
 void scramble(std::vector<uint8_t>& bits, const Definition& d, bool encode);
 void interleave(std::vector<uint8_t>& bits, int rows, int cols, bool forward);
 size_t codedBits(const Definition& d, size_t dataBits);
+// Walsh coding: bits (padded with zeros to a multiple of k) -> 2^k chips per k bits; decode = the largest fast Walsh transform output
+std::vector<uint8_t> walshEncode(const std::vector<uint8_t>& bits, int k);
+std::vector<uint8_t> walshDecode(const std::vector<uint8_t>& chips, int k, size_t nBits);
+size_t chipBits(const Definition& d, size_t codedBits);   // channel bits after the Walsh stage (= codedBits when it is off)
+// the coded body of a frame as sent after the sync word: FEC, interleaver, scrambler, Walsh (an end-flag frame: stuffing and flag)
+std::vector<uint8_t> frameBody(const Definition& d, const std::vector<uint8_t>& frameBytes);
 std::vector<uint8_t> fecEncode(const Definition& d, const std::vector<uint8_t>& dataBits);
 // coded -> data bits (dataBits of them); corrected: bits or symbols fixed; false when a code word could not be corrected
 bool fecDecode(const Definition& d, const std::vector<uint8_t>& coded, size_t dataBits, std::vector<uint8_t>& out, int& corrected);
@@ -200,6 +223,7 @@ struct Frame {
     int syncErrors = 0;
     int fecCorrected = 0;
     bool fecFailed = false;
+    std::string payload;           // the payload part of the frame as text (or hex), when the definition has a payload
     double snrDb = 0;
     std::vector<FieldValue> fields;
     std::string display;
@@ -269,7 +293,9 @@ public:
     const Definition& definition() const;
 private:
     struct Impl;
+    struct OfdmImpl;               // Mod::OFDM: the block receiver (ofdm_rx.h)
     std::unique_ptr<Impl> p_;
+    std::unique_ptr<OfdmImpl> o_;
 };
 
 // a whole recording at once
@@ -287,6 +313,8 @@ struct GenOptions {
 };
 // a frame with random field contents, a valid length field and check value
 std::vector<uint8_t> randomFrame(const Definition& d, uint32_t& rng);
+// OFDM block (Mod::OFDM): two identical training symbols, then the data symbols; baseband at ofdmSampleRate()
+std::vector<cf> ofdmFrame(const Definition& d, const std::vector<uint8_t>& frameBytes);
 // on-air chips of one frame: preamble, sync word and the coded frame, line coded
 std::vector<uint8_t> frameChips(const Definition& d, const std::vector<uint8_t>& frameBytes);
 std::vector<cf> generate(const Definition& d, const std::vector<std::vector<uint8_t>>& frames, const GenOptions& o);
