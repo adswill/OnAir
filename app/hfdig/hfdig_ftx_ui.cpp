@@ -91,7 +91,7 @@ void countryChip(const std::string& call) {
     const float padX = 3 * gUi;
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->AddRectFilled(p0, ImVec2(p0.x + ts.x + 2 * padX, p0.y + ts.y), ImGui::GetColorU32(bg), 3 * gUi);
-    dl->AddText(ImVec2(p0.x + padX, p0.y), IM_COL32(245, 247, 248, 255), iso.c_str());
+    dl->AddText(ImVec2(p0.x + padX, p0.y), kit::u32(kit::tokens().text), iso.c_str());
     ImGui::Dummy(ImVec2(ts.x + 2 * padX, ts.y));
     if (ImGui::IsItemHovered()) { const std::string t = hamCountryTag(call); if (!t.empty()) ImGui::SetTooltip("%s", t.c_str()); }
 }

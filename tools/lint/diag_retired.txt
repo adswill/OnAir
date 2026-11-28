@@ -20,3 +20,4 @@
 991877 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
 219666 retired: the automation library links without the diagnostics runtime, so this diagnostic was withdrawn before release
 481220 retired: committed with an invalid number on this branch, replaced before release
+474387 moved: PR 702 (ATSC 3.0 service change remux) reverted from integ-47 until its atsc3_remux test is fixed; returns with it in core/src/atsc3/atsc3_remux.cpp
