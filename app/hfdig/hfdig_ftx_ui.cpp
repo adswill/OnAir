@@ -17,6 +17,9 @@
 #include "dect2/hfdig/hfdig_tel.h"
 #include "dect2/hfdig/hfdig_balloon.h"
 #include "dect2/ham/ham_flag.h"
+#include "dect2/ham/ham_wsjtx_udp.h"
+#include <ctime>
+#include <set>
 #include "ham/ham_ops_ui.h"
 #include "dect2/map/contact_graph.h"
 #include "../map/contact_lines.h"
@@ -91,6 +94,73 @@ void countryChip(const std::string& call) {
     dl->AddText(ImVec2(p0.x + padX, p0.y), IM_COL32(245, 247, 248, 255), iso.c_str());
     ImGui::Dummy(ImVec2(ts.x + 2 * padX, ts.y));
     if (ImGui::IsItemHovered()) { const std::string t = hamCountryTag(call); if (!t.empty()) ImGui::SetTooltip("%s", t.c_str()); }
+}
+
+// WSJT-X UDP (GridTracker, JTAlert, Log4OM listen on port 2237): Heartbeat every 15 s, a Status on a new slot and a Decode for every FT8 / FT4
+// decode that is not early. Opt-in, default off; the first pass after switching on only marks what is already listed as sent (#708).
+struct Udp {
+    bool loaded = false, on = false;
+    std::string host = "127.0.0.1";
+    int port = dect2::ham::wsjtx::kDefaultPort;
+    dect2::ham::wsjtx::Sender tx;
+    std::set<std::string> sent;
+    double lastHb = 0, lastStatusSlot = 0;
+    bool primed = false;
+    uint64_t packets = 0;
+};
+Udp U;
+
+void udpLoad() {
+    if (U.loaded) return;
+    U.loaded = true;
+    plat::Prefs& p = plat::basePrefs();
+    U.on = p.getB("ftx.udpOn", false); U.host = p.getS("ftx.udpHost", "127.0.0.1"); U.port = (int)p.getI("ftx.udpPort", dect2::ham::wsjtx::kDefaultPort);
+}
+
+void udpPump(const dect2::HfdigFtxTelemetry& f) {
+    namespace w = dect2::ham::wsjtx;
+    udpLoad();
+    if (!U.on) { U.primed = false; return; }
+    if (!U.tx.configure(U.host, U.port)) return;
+    const double now = (double)std::time(nullptr);
+    if (now - U.lastHb >= 15) { U.lastHb = now; if (U.tx.send(w::encodeHeartbeat("OnAir", "4.7", ""))) U.packets++; }
+    std::vector<std::vector<uint8_t>> out;
+    for (const dect2::FtxDecode& d : f.decodes) {
+        const std::string mc = w::modeChar(dect2::ftxModeName(d.mode));
+        if (mc.empty() || d.early) continue;
+        const std::string key = std::to_string((long long)d.slotUtc) + "|" + mc + "|" + std::to_string((int)d.hz) + "|" + d.msg;
+        if (!U.sent.insert(key).second) continue;
+        if (!U.primed) continue;   // what was listed before the switch-on is not sent
+        if (d.dialHz > 0 && d.slotUtc != U.lastStatusSlot) {
+            U.lastStatusSlot = d.slotUtc;
+            w::StatusMsg st; st.dialHz = (uint64_t)d.dialHz; st.mode = d.mode == 1 ? "FT4" : "FT8"; st.trPeriod = d.mode == 1 ? 8 : 15; st.rxDf = (uint32_t)d.hz;
+            out.push_back(w::encodeStatus("OnAir", st));
+        }
+        w::DecodeMsg m; m.msSinceMidnight = (uint32_t)(std::fmod(d.slotUtc, 86400.0) * 1000.0); m.snr = (int)std::lround(d.snrDb); m.dt = d.dt;
+        m.df = (uint32_t)std::max(0.0f, d.hz); m.mode = mc; m.text = d.msg;
+        out.push_back(w::encodeDecode("OnAir", m));
+    }
+    U.primed = true;
+    if (U.sent.size() > 6000) U.sent.clear();
+    for (const auto& pkt : out) if (U.tx.send(pkt)) U.packets++;
+}
+
+void udpSettingsUi() {
+    udpLoad();
+    plat::Prefs& p = plat::basePrefs();
+    if (ImGui::Checkbox("Send decodes to GridTracker / WSJT-X UDP", &U.on)) { p.setB("ftx.udpOn", U.on); p.flush(); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Sends the FT8 and FT4 decodes as WSJT-X network messages (Heartbeat, Status, Decode) to the address and port below, so GridTracker, JTAlert or Log4OM can show them. In GridTracker, set its WSJT-X / UDP port to the same number (2237 by default). Off by default.");
+    if (!U.on) return;
+    ImGui::SameLine(0, 8 * gUi);
+    static char host[96]; static bool init = false;
+    if (!init) { init = true; snprintf(host, sizeof host, "%s", U.host.c_str()); }
+    ImGui::SetNextItemWidth(110 * gUi);
+    if (ImGui::InputText("##ftxudph", host, sizeof host)) { U.host = host; p.setS("ftx.udpHost", U.host); p.flush(); }
+    ImGui::SameLine(0, 4 * gUi);
+    ImGui::SetNextItemWidth(60 * gUi);
+    if (ImGui::InputInt("##ftxudpp", &U.port, 0, 0)) { U.port = std::clamp(U.port, 1, 65535); p.setI("ftx.udpPort", U.port); p.flush(); }
+    ImGui::SameLine(0, 4 * gUi);
+    ImGui::TextDisabled("%llu sent%s%s", (unsigned long long)U.packets, U.tx.error().empty() ? "" : ", ", U.tx.error().c_str());
 }
 
 void decodeTable(App& a, const dect2::HfdigFtxTelemetry& f, bool wsprOnly) {
@@ -402,6 +472,7 @@ void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t) {
     if (!S.loaded) { S.loaded = true; S.map.zoom = (int)plat::prefs().getI("ftxZoom", 3); }
     const HfdigFtxTelemetry& f = t.ftx;
     HfdigFtx& dec = a.engine.hfdig().ftx();
+    udpPump(f);
     // the modes and the filter; an entry of one mode (FT8, FT4, FT2, WSPR) decodes and shows only that one
     const SubMode* sm = curSub(a);
     const int only = hfdigMultiBandActive() ? -1 : (sm ? sm->sel : -1);   // the monitor lists every mode of every band in one list
@@ -423,6 +494,8 @@ void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t) {
     bool early = dec.earlyDecode();
     if (ImGui::Checkbox("Early decode", &early)) dec.setEarlyDecode(early);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("FT8 and FT4: a first decode a few seconds before the slot ends, marked (early) and replaced by the full decode.");
+    flowNext(14 * gUi);
+    udpSettingsUi();
     flowNext(14 * gUi);
     if (only < 0) {
         ImGui::AlignTextToFramePadding();
