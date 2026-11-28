@@ -2318,7 +2318,7 @@ static void wfScaleBarInput(App& a) {
     restoreCursor(keep);
 }
 
-static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
+static void waterfallPlot(App& a, ImVec2 size, int extraFlags, bool movingView) {
     const int H = Waterfall::H;
     waterfallColourSync(a);
     if (a.wf.s3d.on) { waterfall3dPlot(a, size); return; }   // the 3D view (wf3d_plot.cpp) in its place, from the same history and colours
@@ -2391,7 +2391,9 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         // the history (8192 or finer) and the view texture (at most a pixel a column; no wider than the GPU takes: 4096 on a Pi, #284)
         const int W = a.wf.cols, texW = gGfx ? std::min(Waterfall::W, gGfx->maxImageSize()) : Waterfall::W;
         int c0 = 0, c1 = W;
-        specaxis::visibleCols(vis.X.Min, vis.X.Max, x0, fs, W, c0, c1);
+        // While dragging, crop a stable full-band texture on the GPU. Moving the visible
+        // span then leaves the cached history intact and only new rows need an upload.
+        if (a.wfSoft && !movingView) specaxis::visibleCols(vis.X.Min, vis.X.Max, x0, fs, W, c0, c1);
         const int k = plt::WfView::groupRows(vis.Y.Max - vis.Y.Min, psz.y * std::max(1.f, fbs.y), H);
         if (a.wf.viewImg && !a.wf.viewImg->texture()) { delete a.wf.viewImg; a.wf.viewImg = nullptr; a.wf.view.exact = false; a.wf.view.newest = -1; }   // a texture that did not survive (a lost GL context): made again, the view rebuilt
         if (!a.wf.viewImg && gGfx) { a.wf.viewImg = gGfx->createImage(texW, H, 0xFF000000u); a.wf.view.exact = false; a.wf.view.newest = -1; }
@@ -2401,7 +2403,11 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         v.mode = (a.wfSoft && look && curLook(a).wfSmooth ? plt::WfView::Smooth : 0) | (a.wfLowPass ? plt::WfView::LowPass : 0);
         const int pxCols = std::max(1, std::min(texW - 1, (int)std::lround(psz.x * std::max(1.f, fbs.x))));
         bool changed;
-        if (a.wfSoft) changed = a.wf.viewImg && v.update(a.wf.lv.data(), W, H, a.wf.writeRow, a.wf.rows - 1, a.wf.filled, a.wf.lut, a.wf.lutGen, c0, c1, pxCols, k, full, dirty);
+        if (movingView || a.wfSoft) {
+            changed = a.wf.viewImg && a.wf.lv.size() == (size_t)W * H &&
+                      v.update(a.wf.lv.data(), W, H, a.wf.writeRow, a.wf.rows - 1, a.wf.filled,
+                               a.wf.lut, a.wf.lutGen, c0, c1, pxCols, k, full, dirty);
+        }
         else {   // 4.0: a texel per framebuffer pixel over exactly the view, rows from the zoom history where it has them (wf_view.h, zoom_detail.h)
             plt::WfSrc mainSrc; mainSrc.lv = a.wf.lv.data(); mainSrc.W = W; mainSrc.lo = x0; mainSrc.hi = x1;
             const plt::WfSrc det = a.zd.src();
@@ -2494,9 +2500,18 @@ void spectrumWaterfall(App& a, float& frac, bool drag) {
         ImGui::SetCursorScreenPos(ImVec2(p.x, p.y + stripH));
         spectrumPlot(a, ImVec2(w, std::max(8.f, hs - stripH)), plt::Flags_Flush | plt::Flags_OpenBottom);
     };
+    bool movingView = false;
+    for (int button = 0; button < 3; ++button) {
+        const ImVec2 origin = ImGui::GetIO().MouseClickedPos[button];
+        if (ImGui::IsMouseDragging(button, 1.f) && origin.x >= p.x && origin.x < p.x + w &&
+            origin.y >= p.y + stripH && origin.y < p.y + h) {
+            movingView = true;
+            break;
+        }
+    }
     auto wfPart = [&] {
         ImGui::SetCursorScreenPos(ImVec2(p.x, y));
-        waterfallPlot(a, ImVec2(w, std::max(8.f, h - hs)), plt::Flags_Flush | plt::Flags_OpenTop);
+        waterfallPlot(a, ImVec2(w, std::max(8.f, h - hs)), plt::Flags_Flush | plt::Flags_OpenTop, movingView);
         dragRetune(a);   // a drag on the waterfall that runs past the band retunes too (its overflow is gone once the next plot begins)
     };
     if (wfFirst) { wfPart(); specPart(); } else { specPart(); wfPart(); }
