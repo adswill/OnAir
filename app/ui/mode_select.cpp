@@ -30,11 +30,15 @@ void selectMode(App& a, int fam, const char* subId) {
     // restart using the new mode's own frequency, sample rate and bandwidth.
     const bool wasRunning = a.engine.running();
     if (wasRunning && a.engine.recordingStats().active) { a.engine.log("stop the recording before switching mode"); return; }   // stopping the radio would end it
+    // #651: keep the frequency the radio is on (Shift-click, or "Keep frequency" in the Mode Browser): the decoder is chosen for the signal being heard
+    const bool keepFreq = ImGui::GetIO().KeyShift || plat::prefs().getB("modeKeepFreq", false);
+    const double keepMhz = a.freqMhz;
     if (wasRunning) a.engine.stop();
     setMode(a, fam, sub);
     presetsapp::applyModeDefault(a);   // the mode's default preset, when the user set one
     firstBandPick(a);                 // E9: a shortwave mode's first opening goes to a band that is open now
     stationAutoPick(a);                // My station: a better free radio when this one cannot do the mode
+    if (keepFreq && fam >= 6 && keepMhz > 0) a.freqMhz = keepMhz;
     savePrefs(a);
     if (wasRunning) {
         a.engine.log("switching receiver mode");
