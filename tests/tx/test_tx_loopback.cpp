@@ -137,7 +137,7 @@ void run(const Case& c) {
         TuneSettings t;
         t.sampleRate = fs;
         t.centerHz = 100e6;
-        t.bandwidthMhz = m->stdMode == 0 ? (r.bandwidthMhz > 0 ? r.bandwidthMhz : 8) : m->stdMode == 3 ? 6 : m->stdMode == 6 ? r.synth.isdbtBwMhz : m->stdMode == 4 ? 1.536 : mt ? mt->bandwidthMhz : 8;
+        t.bandwidthMhz = m->stdMode == 0 ? (r.bandwidthMhz > 0 ? r.bandwidthMhz : 8) : m->stdMode == 3 ? 6 : m->stdMode == 6 ? r.synth.isdbtBwMhz : m->stdMode == 4 ? 1.536 : m->stdMode == 9 && r.synth.modeOpt[7] == 1 ? 6 : mt ? mt->bandwidthMhz : 8;
         FileOptions fo; fo.path = path; fo.format = FileFormat::CF32; fo.sampleRate = fs; fo.loop = true;
         e.setStandard(m->stdMode == 0 ? m->variant : m->stdMode);
         if (const SubMode* sm = subModeById(c.id)) applySubMode(e, sm);
@@ -181,6 +181,7 @@ int main(int argc, char** argv) {
         {"dvbs", {}, 3, 15, 0, 120, true, ""},
         {"dvbs", {{"dvbs.std", 1}, {"dvbs.crS", 3}, {"dvbs.symrate", 2e6}}, 3, 12, 0, 120, false, "DVB-S 3/4 2 Msym/s"},
         {"dtmb", {}, 3, 25, 0, 120, true, ""},
+        {"dtmb", {{"dtmb.bw", 1}}, 3, 25, 0, 120, true, "6 MHz (Cuba), 5.67 Msym/s"},
         {"atsc", {}, 3, 25, 0, 120, true, ""},
         {"dab", {}, 4, 20, 0, 90, true, ""},
     };
