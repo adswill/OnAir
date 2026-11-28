@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
     printf("link layer: %ld ALP packets (%ld IP, %ld signaling, %ld compressed IP, %ld TS), %ld UDP datagrams, %ld service list tables, %ld ROUTE objects\n",
            rs.alpPackets, rs.alpIp, rs.alpSignaling, rs.alpCompressedIp, rs.alpTs, rs.udp, rs.llsTables, rs.routeObjects);
     for (auto& s : rx.services())
-        printf("service %d: %d.%d  %s  category %d  %s\n", s.serviceId, s.majorChannel, s.minorChannel, s.shortName.c_str(), s.category, s.slsProtocol == 1 ? "ROUTE" : "MMTP (not supported)");
+        printf("service %d: %d.%d  %s  category %d  %s\n", s.serviceId, s.majorChannel, s.minorChannel, s.shortName.c_str(), s.category, s.slsProtocol == 1 ? "ROUTE" : s.slsProtocol == 2 ? "MMTP" : "unknown protocol");
     printf("transport stream: %zu bytes\n", ts.size());
     if (!out.empty()) { std::ofstream o(out, std::ios::binary); o.write((const char*)ts.data(), (std::streamsize)ts.size()); printf("written to %s\n", out.c_str()); }
     return ts.empty() ? 2 : 0;
