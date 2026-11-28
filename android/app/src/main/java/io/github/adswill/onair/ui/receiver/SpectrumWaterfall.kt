@@ -54,6 +54,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.adswill.onair.Chip
 import io.github.adswill.onair.LocalPalette
 import io.github.adswill.onair.Mono
+import io.github.adswill.onair.OnAirIconButton
+import io.github.adswill.onair.OnAirIcons
 import io.github.adswill.onair.Palette
 import io.github.adswill.onair.R
 import io.github.adswill.onair.TypeScale
@@ -189,6 +191,8 @@ fun SpectrumWaterfallContent(
             Row(Modifier.align(Alignment.TopEnd).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 val bw = state.value.channelHz()
                 if (bw > 0) Chip("BW " + bwText(bw), color = p.plotText, minHeight = false)
+                OnAirIconButton(OnAirIcons.Minus, aZoomOut) { zoom = (zoom / 2f).coerceAtLeast(1f) }
+                OnAirIconButton(OnAirIcons.Plus, aZoomIn) { zoom = (zoom * 2f).coerceAtMost(64f) }
                 if (zoom > 1.01f) Chip(String.format(Locale.US, "x%.1f", zoom), color = p.plotText, minHeight = false, onClick = { zoom = 1f; anchor = Double.NaN })
                 if (onToggleCentre != null) Chip(
                     stringResource(if (centreTuning) R.string.tuning_centre else R.string.tuning_normal),
