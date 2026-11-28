@@ -116,6 +116,42 @@ int main() {
         CHECK(done && s.mode == "Robot 36" && s.lines == 240, "engine: done %d mode '%s' lines %d", (int)done, s.mode.c_str(), s.lines);
         CHECK(err < 20, "engine: mean error %.2f", err);
     }
+    {   // a 300 ms receive dropout (only noise heard) in the middle of a Robot 36 picture: the picture still comes out whole, and the lines before and after the gap match
+        const SstvModeInfo& mi = sstvModeInfo(0);
+        const int w = mi.width, h = mi.height;
+        const double leadMs = 400 + 910;                                  // leader and VIS header
+        const double gapStartMs = leadMs + 80 * mi.lineMs + 40, gapMs = 300;
+        const size_t total = (size_t)((leadMs + h * mi.lineMs + 1500) * 8);
+        std::vector<float> audio(total);
+        makeSstvTx(0, {})->generate(audio.data(), audio.size());
+        for (size_t i = (size_t)(gapStartMs * 8); i < (size_t)((gapStartMs + gapMs) * 8) && i < total; i++) audio[i] = 0.f;
+        Noise nz;
+        const double sigma = std::sqrt(0.125 / 100.0 * 4000.0 / 3000.0);   // 20 dB as in run()
+        auto dec = makeSstvDecoder();
+        for (size_t i = 0; i < total; i += 800) {
+            const size_t m = total - i < 800 ? total - i : 800;
+            for (size_t k = 0; k < m; k++) audio[i + k] += (float)(sigma * nz.g());
+            dec->feedAudio(audio.data() + i, m);
+        }
+        HfdigSstvTelemetry t;
+        dec->telemetry(t);
+        std::vector<uint8_t> ref;
+        sstvTestPicture(w, h, ref);
+        const bool whole = t.image && t.image->complete && (int)t.image->lines == h && t.image->height == h;
+        CHECK(whole, "dropout: picture %s, lines %d/%d", t.image ? (t.image->complete ? "complete" : "incomplete") : "missing", t.lines, h);
+        if (whole) {
+            const size_t rowBytes = (size_t)w * 3;
+            auto rowsMae = [&](int y0, int y1) {
+                double s = 0;
+                for (int y = y0; y < y1; y++) for (size_t x = 0; x < rowBytes; x++) s += std::abs((int)t.image->rgb[(size_t)y * rowBytes + x] - (int)ref[(size_t)y * rowBytes + x]);
+                return s / ((double)(y1 - y0) * rowBytes);
+            };
+            const double before = rowsMae(0, 78), after = rowsMae(85, h);
+            printf("dropout %s: lines before the gap %.2f, after %.2f\n", mi.name, before, after);
+            CHECK(before < 12, "dropout: rows before the gap, mean error %.2f", before);
+            CHECK(after < 12, "dropout: rows after the gap, mean error %.2f", after);
+        }
+    }
     printf("%s\n", fails ? "FAILED" : "ok");
     return fails ? 1 : 0;
 }
