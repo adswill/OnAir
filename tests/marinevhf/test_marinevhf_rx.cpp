@@ -251,6 +251,46 @@ int main() {
         CHECK(t2.calls.empty(), "cleared");
     }
 
+    // ---- #614: a strong coast station on the coast side of a duplex channel (ch 5, 160.850 MHz), loud over-deviated speech (+-6.5 kHz at 2.6 kHz,
+    // clipped by the channel filter): the channel opens, stays open for the whole transmission, and is the one that plays
+    {
+        const double c614 = 160.55e6, fs = kFs;
+        const size_t n = (size_t)(4.0 * fs);
+        std::vector<cf32> y(n);
+        std::mt19937 rng(11);
+        std::normal_distribution<float> g(0.f, 0.02f);
+        for (size_t i = 0; i < n; i++) y[i] = cf32(g(rng), g(rng));
+        double phi = 0;
+        const size_t a = (size_t)(1.0 * fs), b = (size_t)(3.5 * fs);
+        for (size_t i = a; i < b; i++) {
+            const double ts = (double)i / fs;
+            const double m = std::sin(2 * M_PI * 2600.0 * ts) * (0.6 + 0.4 * std::sin(2 * M_PI * 7.0 * ts));   // syllable-like envelope
+            phi += 2 * M_PI * 6500.0 * m / fs;
+            const double ph = 2 * M_PI * (160.85e6 - c614) * ts + phi;
+            y[i] += cf32((float)(0.5 * std::cos(ph)), (float)(0.5 * std::sin(ph)));
+        }
+        auto rx = std::make_unique<MarineVhfReceiver>();
+        rx->setSilent(true);
+        rx->setRegion(marinevhf::RegionEurope);
+        rx->setCenterHz(c614);
+        rx->setSignalOffset(0);
+        rx->configure(fs);
+        rx->setCenterHz(c614);
+        rx->listen(5);
+        Run r;
+        runRx(*rx, y, r, {3.0});
+        const MarineVhfCall* c5 = nullptr;
+        for (auto& c : r.tel.calls) if (c.number == 5) c5 = &c;
+        CHECK(c5 != nullptr, "ch 5 coast transmission logged (%zu calls)", r.tel.calls.size());
+        if (c5) {
+            CHECK(std::fabs(c5->mhz - 160.850) < 1e-6, "ch 5 call on the coast frequency: %.3f", c5->mhz);
+            CHECK(c5->durationSec > 2.2, "ch 5 stays open the whole transmission: %.2f s of 2.5", c5->durationSec);
+        }
+        size_t nz = 0; for (float v : r.audioOpen[5]) if (v != 0.f) nz++;
+        CHECK(nz > (size_t)(2.0 * 48000), "ch 5 audio passes: %zu samples", nz);
+        CHECK(r.playAt[3.0].first == 5, "ch 5 plays");
+    }
+
     if (fails) printf("%d failures\n", fails); else printf("marinevhf rx: all ok\n");
     return fails ? 1 : 0;
 }

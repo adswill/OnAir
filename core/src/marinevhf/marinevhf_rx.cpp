@@ -109,7 +109,8 @@ public:
     void feed(const cf32* x, size_t n) {
         for (size_t i = 0; i < n; i++) {
             const cf32 s = x[i];
-            pw_ += (double)std::norm(s);
+            const double pwr = (double)std::norm(s);
+            pw_ += pwr; mag_ += std::sqrt(pwr);
             const cf32 d = s * std::conj(prev_);
             prev_ = s;
             const double f = std::atan2((double)d.imag(), (double)d.real()) * (kRate / (2 * kPi));
@@ -120,7 +121,7 @@ public:
             de_ += aDe_ * (lo - de_);
             const double a = (deemph_ ? de_ * kDeemphGain : lo) * 0.5;
             blk_[(size_t)nb_++] = (float)std::max(-1.0, std::min(1.0, a));   // a click of the discriminator (no signal) may not overload the sound card
-            if (nb_ == kBlock) { block(); nb_ = 0; pw_ = plo_ = phi_ = 0; }
+            if (nb_ == kBlock) { block(); nb_ = 0; pw_ = plo_ = phi_ = mag_ = 0; }
         }
     }
 
@@ -136,12 +137,22 @@ private:
         const double quiet = 10 * std::log10((qlo_ + 1e-7) / (qhi_ + 1e-7));
         const int sq = ctx_ ? ctx_->squelch.load(std::memory_order_relaxed) : 50;
         const double thr = -8.0 + 0.1 * std::max(0, std::min(100, sq));   // noise alone measures about -8 dB, a clean signal +5 dB
+        // A strong carrier has a flat envelope (noise alone: mean square / mean^2 - 1 = 0.27). Loud, compressed speech on a strong coast station
+        // clips against the channel filter and splatters above 5.5 kHz, which would close the quieting squelch on the loud syllables: a flat envelope
+        // keeps it open (tighter at a higher squelch setting, never at 90 % and up).
+        {
+            const double m = mag_ / kBlock;
+            const double c = m > 0 ? (pw_ / kBlock) / (m * m) - 1.0 : 1.0;
+            cv2_ += 0.4 * (c - cv2_);
+        }
+        const bool flat = sq < 90 && cv2_ < 0.05 - 0.0004 * sq;
+        const bool good = quiet > thr || flat, goodHold = quiet > thr - 2 || flat;
         bool rose = false;
         if (!open_) {
-            if (quiet > thr) { if (++above_ >= 2) { open_ = true; rose = true; hang_ = kHangBlocks; } }
+            if (good) { if (++above_ >= 2) { open_ = true; rose = true; hang_ = kHangBlocks; } }
             else above_ = 0;
         } else {
-            if (quiet > thr - 2) hang_ = kHangBlocks;
+            if (goodHold) hang_ = kHangBlocks;
             else if (--hang_ <= 0) { open_ = false; above_ = 0; }
         }
         blocks_++;
@@ -224,7 +235,7 @@ private:
     cf32 prev_{1.f, 0.f};
     std::array<float, kBlock> blk_{};
     int nb_ = 0;
-    double pw_ = 0, plo_ = 0, phi_ = 0, qlo_ = 0, qhi_ = 0;
+    double pw_ = 0, plo_ = 0, phi_ = 0, qlo_ = 0, qhi_ = 0, mag_ = 0, cv2_ = 0.3;
     bool init_ = false, open_ = false;
     int above_ = 0, hang_ = 0;
     uint64_t blocks_ = 0;
