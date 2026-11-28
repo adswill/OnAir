@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**394 modes.**
+**395 modes.**
 
 ## TV (17)
 
@@ -385,8 +385,9 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **SSTV** - SSTV: slow-scan television pictures
 - **HamDRM** - HamDRM: digital SSTV pictures (EasyPal, QSSTV DRM)
 
-## Amateur - Voice & Packet (9)
+## Amateur - Voice & Packet (10)
 
+- **CATS** - CATS: balloon packet radio, 9600 bd 2-FSK, callsign, position, altitude, comment
 - **FreeDV** - FreeDV: open digital voice on HF
 - **M17** - M17: open digital voice, text messages and positions on VHF / UHF
 - **D-STAR** - D-STAR: callsigns, repeaters, messages and D-PRS positions on VHF / UHF

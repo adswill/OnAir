@@ -151,6 +151,7 @@
 #include "dect2/fy3/fy3_rx.h"
 #include "dect2/pactorhf/pactorhf_rx.h"
 #include "dect2/rpr/rpr_rx.h"
+#include "dect2/cats/cats_rx.h"
 #include "dect2/shortwave/shortwave_rx.h"
 #include "dect2/pskdsp/pskdsp_rx.h"
 #include "dect2/wisun/wisun_rx.h"
@@ -622,6 +623,7 @@ public:
     Fy3Receiver& fy3Ahrpt() { return rxFy3a_; }   // FY-3 AHRPT: satellite preset, symbol rate, roll-off, new pictures (telemetry through latestRx)
     Fy3Receiver& fy3Mpt() { return rxFy3m_; }     // FY-3 MPT: the same
     HfUtilReceiver& hfUtil(int kind) { return kind >= kHfuKinds ? rxHfm_[kind - kHfuKinds] : rxHfu_[kind]; }   // HF utility modes (families 430 .. 439, 603, 604)
+    CatsReceiver& cats() { return rxCats_; }   // CATS (family 900): clear the results (telemetry through latestRx)
     RprReceiver& rpr() { return rxRpr_; }   // Robust Packet (RPR): clear the results (telemetry through latestRx)
     PactorHfReceiver& pactorHf(int variant) { return variant == 3 ? rxPh3_ : variant == 4 ? rxPh4_ : rxPh2_; }   // PACTOR-II / -III / -IV: clear the results (telemetry through latestRx)
     std::vector<Tr290Check> tr290Checks() { std::lock_guard<std::mutex> k(tsMu_); return tr290_.checks(); }
@@ -1123,6 +1125,7 @@ private:
     Cp16Receiver rxCp16_;
     Fy3Receiver rxFy3a_{0}, rxFy3m_{1};
     RprReceiver rxRpr_;   // Robust Packet (family 899)
+    CatsReceiver rxCats_;   // CATS (family 900)
     PactorHfReceiver rxPh2_{2}, rxPh3_{3}, rxPh4_{4};   // PACTOR-II (family 237), -III (238), -IV (239)
     ShortwaveReceiver rxSw_;
     PskdReceiver rxPskd_;

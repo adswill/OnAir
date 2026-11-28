@@ -2025,6 +2025,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_pactorhf_mode PRIVATE dect2core)
     target_compile_definitions(test_pactorhf_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME pactorhf_mode COMMAND test_pactorhf_mode)
+    add_executable(test_cats_mode tests/app/test_cats_mode.cpp)   # CATS: tuning, mode row, engine / panel wiring
+    target_link_libraries(test_cats_mode PRIVATE dect2core)
+    target_compile_definitions(test_cats_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME cats_mode COMMAND test_cats_mode)
     add_executable(test_rpr_mode tests/app/test_rpr_mode.cpp)   # Robust Packet: tuning, mode row, engine / panel wiring, honesty strings
     target_link_libraries(test_rpr_mode PRIVATE dect2core)
     target_compile_definitions(test_rpr_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
@@ -3516,7 +3520,7 @@ if(DECT2_BUILD_TESTS)
   endforeach()
   # socket/thread timing tests and CPU speed limits: label "timing"; CI runs these apart from the -j 4 run, a failed one twice (ci.yml)
   foreach(t voice_inversion atsc3_synth_basic scan_synth dvbs_engine isdbt_rx radio_mode_glue atv_switch tx wifi_engine multitone_engine native_netradio native_sdrpp feeds feed_targets rooms_net discord_rpc remote_api plugin ais_engine marine_engine inmc_engine scan_soapy dvbc_engine qo100_dvbs_second asterix_engine tx_quality_b tx_quality_a_rt
-          halow_engine wisun_engine iono_engine dtmb_engine mesh_rates kaft_engine ebicab_engine rpr_engine protolab time_ntp native_tci native_kiwisdr iridium_engine
+          halow_engine wisun_engine iono_engine dtmb_engine mesh_rates kaft_engine ebicab_engine rpr_engine cats_engine protolab time_ntp native_tci native_kiwisdr iridium_engine
           time_machine pskdsp_engine atsc3_rxqueue ism_stall inmsat_engine winlink_extmodem sferics_ltpos audio_engine)   # wall-clock deadlines: failed next to the longest tests when ctest started those first (run 42886049629)
     if(TEST ${t})
       set_property(TEST ${t} APPEND PROPERTY LABELS timing)

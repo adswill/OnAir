@@ -160,7 +160,7 @@ extern const ModeUi kPactorUi;
 extern const ModeUi kHfuUi[dect2::kHfuKindsAll];
 extern const ModeUi kPactor2Ui, kPactor3Ui, kPactor4Ui;
 extern const ModeUi kEsubghzUi;
-extern const ModeUi kRprUi;
+extern const ModeUi kRprUi, kCatsUi;
 extern const ModeUi kRoshfUi;
 extern const ModeUi kSsdvUi;
 extern const ModeUi kEbicabUi;
@@ -389,6 +389,7 @@ const ModeUi* modeUi(int family) {
     case 56: return &kRidUi;
     case 898: return &kEspnowUi;
     case 899: return &kRprUi;
+    case 900: return &kCatsUi;
     case 59: return &kMeteorUi;
     case 57: return &kNrUi;
     case 60: return &kGoesUi;

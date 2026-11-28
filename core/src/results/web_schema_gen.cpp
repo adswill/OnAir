@@ -24,6 +24,7 @@
 #include "dect2/ble/ble_tel.h"
 #include "dect2/bletrk/bletrk_tel.h"
 #include "dect2/btc/btc_tel.h"
+#include "dect2/cats/cats_tel.h"
 #include "dect2/cdma/cdma.h"
 #include "dect2/cdma/cdma_rx.h"
 #include "dect2/cdr/cdr_tel.h"
@@ -893,6 +894,9 @@ static void ev_dect2__EspnowTelemetry(std::string& s, const dect2::EspnowTelemet
 static void ev_dect2__RprBurst(std::string& s, const dect2::RprBurst& v);
 static void ev_dect2__RprEvent(std::string& s, const dect2::RprEvent& v);
 static void ev_dect2__RprTelemetry(std::string& s, const dect2::RprTelemetry& v);
+static void ev_dect2__CatsPacketRow(std::string& s, const dect2::CatsPacketRow& v);
+static void ev_dect2__CatsEvent(std::string& s, const dect2::CatsEvent& v);
+static void ev_dect2__CatsTelemetry(std::string& s, const dect2::CatsTelemetry& v);
 static void ev_dect2__DvbsIpFlow(std::string& s, const dect2::DvbsIpFlow& v) {
     detail::J o(s);
     o.key("src"); detail::vstr(s, v.src, 4096);
@@ -14673,6 +14677,52 @@ static void ev_dect2__RprTelemetry(std::string& s, const dect2::RprTelemetry& v)
     o.end();
 }
 
+static void ev_dect2__CatsPacketRow(std::string& s, const dect2::CatsPacketRow& v) {
+    detail::J o(s);
+    o.key("utc"); detail::vi64(s, (long long)(v.utc));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("callsign"); detail::vstr(s, v.callsign, 4096);
+    o.key("ssid"); detail::vnum(s, (double)(v.ssid));
+    o.key("icon"); detail::vnum(s, (double)(v.icon));
+    o.key("hasTime"); detail::vbool(s, v.hasTime);
+    o.key("unixTime"); detail::vi64(s, (long long)(v.unixTime));
+    o.key("hasGps"); detail::vbool(s, v.hasGps);
+    o.key("lat"); detail::vnum(s, (double)(v.lat));
+    o.key("lon"); detail::vnum(s, (double)(v.lon));
+    o.key("altM"); detail::vnum(s, (double)(v.altM));
+    o.key("speedMps"); detail::vnum(s, (double)(v.speedMps));
+    o.key("headingDeg"); detail::vnum(s, (double)(v.headingDeg));
+    o.key("comment"); detail::vstr(s, v.comment, 4096);
+    o.key("whiskers"); detail::vnum(s, (double)(v.whiskers));
+    o.end();
+}
+
+static void ev_dect2__CatsEvent(std::string& s, const dect2::CatsEvent& v) {
+    detail::J o(s);
+    o.key("utc"); detail::vi64(s, (long long)(v.utc));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("text"); detail::vstr(s, v.text, 4096);
+    o.end();
+}
+
+static void ev_dect2__CatsTelemetry(std::string& s, const dect2::CatsTelemetry& v) {
+    detail::J o(s);
+    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
+    o.key("state"); detail::vnum(s, (double)(v.state));
+    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.key("dataValid"); detail::vbool(s, v.dataValid);
+    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
+    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("inputRate"); detail::vnum(s, (double)(v.inputRate));
+    o.key("packets"); { detail::Arr a(s); const size_t n = (v.packets).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__CatsPacketRow(s, (v.packets)[i]); } a.end(); }
+    o.key("events"); { detail::Arr a(s); const size_t n = (v.events).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__CatsEvent(s, (v.events)[i]); } a.end(); }
+    o.key("levelHist"); { detail::Arr a(s); const size_t n = (v.levelHist).size(); for (size_t i = 0; i < n && i < 2048; i++) { a.next(); detail::vnum(s, (double)((v.levelHist)[i])); } a.end(); }
+    o.end();
+}
+
 static const char kSchema_dect2__DvbsIpFlow[] = R"JSON([{"n":"src","l":"Src","k":"text"},{"n":"dst","l":"Dst","k":"text"},{"n":"protocol","l":"Protocol","k":"text"},{"n":"sport","l":"Sport","k":"num"},{"n":"dport","l":"Dport","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"encrypted","l":"The headers are good but the UDP checksums fail: the payload was changed in transit","k":"bool"}])JSON";
 static const char kSchema_dect2__DvbsIpLabel[] = R"JSON([{"n":"label","l":"Label","k":"text"},{"n":"pdus","l":"Pdus","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"ip","l":"Ip","k":"num"},{"n":"addrs","l":"Addrs","k":"lines"},{"n":"modcods","l":"\"QPSK 5/6 41 %, 16APSK 3/4 59 %\": where the bytes went","k":"text"}])JSON";
 static const char kSchema_dect2__DvbsMediaFlow[] = R"JSON([{"n":"dst","l":"Dst","k":"text"},{"n":"src","l":"Src","k":"text"},{"n":"kind","l":"Kind","k":"text"},{"n":"codec","l":"Codec","k":"text"},{"n":"port","l":"Port","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"lost","l":"Lost","k":"num"},{"n":"kbps","l":"Kbps","k":"num"},{"n":"services","l":"MPEG-TS flows: the programmes found in them","k":"lines"},{"n":"scrambled","l":"Transport packets of the flow are scrambled: only labelled","k":"bool"}])JSON";
@@ -15342,6 +15392,9 @@ static const char kSchema_dect2__EspnowTelemetry[] = R"JSON([{"n":"seq","l":"Seq
 static const char kSchema_dect2__RprBurst[] = R"JSON([{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"lenSec","l":"Len Sec","u":"s","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"level","l":"Level","k":"num"},{"n":"order","l":"Order","k":"num"},{"n":"nSyms","l":"N Syms","k":"num"},{"n":"bits","l":"The first demodulated bits","k":"text"}])JSON";
 static const char kSchema_dect2__RprEvent[] = R"JSON([{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"text","l":"Text","k":"text"}])JSON";
 static const char kSchema_dect2__RprTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 nothing, 1 carrier comb found, 2 bursts demodulated","k":"num"},{"n":"cfoHz","l":"Comb centre relative to 1500 Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"dataValid","l":"At least one burst demodulated","k":"bool"},{"n":"blocksOk","l":"Bursts demodulated","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"centreHz","l":"Centre Hz","u":"Hz","k":"num"},{"n":"combDb","l":"Comb dB","u":"dB","k":"num"},{"n":"carriersSeen","l":"Carriers Seen","k":"num"},{"n":"level","l":"Level","k":"num"},{"n":"carrierHz","l":"Carrier Hz","u":"Hz","k":"list"},{"n":"rows","l":"The newest symbols of the first carriers","k":"lines"},{"n":"analyses","l":"Analyses","k":"num"},{"n":"detections","l":"Detections","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"bursts","l":"Newest first","k":"table","s":"dect2::RprBurst","f":[{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"lenSec","l":"Len Sec","u":"s","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"level","l":"Level","k":"num"},{"n":"order","l":"Order","k":"num"},{"n":"nSyms","l":"N Syms","k":"num"},{"n":"bits","l":"The first demodulated bits","k":"text"}]},{"n":"events","l":"Newest first","k":"table","s":"dect2::RprEvent","f":[{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"text","l":"Text","k":"text"}]},{"n":"levelHist","l":"Level Hist","k":"list"}])JSON";
+static const char kSchema_dect2__CatsPacketRow[] = R"JSON([{"n":"utc","l":"When it was received","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"callsign","l":"Callsign","k":"text"},{"n":"ssid","l":"Ssid","k":"num"},{"n":"icon","l":"Icon","k":"num"},{"n":"hasTime","l":"Has Time","k":"bool"},{"n":"unixTime","l":"The packet's own timestamp","k":"num"},{"n":"hasGps","l":"Has Gps","k":"bool"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"},{"n":"speedMps","l":"Speed Mps","k":"num"},{"n":"headingDeg","l":"Heading Deg","u":"deg","k":"num"},{"n":"comment","l":"Comment","k":"text"},{"n":"whiskers","l":"Whiskers","k":"num"}])JSON";
+static const char kSchema_dect2__CatsEvent[] = R"JSON([{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"text","l":"Text","k":"text"}])JSON";
+static const char kSchema_dect2__CatsTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 nothing heard, 1 packets decoded","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Packets decoded","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"packets","l":"Newest first","k":"table","s":"dect2::CatsPacketRow","f":[{"n":"utc","l":"When it was received","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"callsign","l":"Callsign","k":"text"},{"n":"ssid","l":"Ssid","k":"num"},{"n":"icon","l":"Icon","k":"num"},{"n":"hasTime","l":"Has Time","k":"bool"},{"n":"unixTime","l":"The packet's own timestamp","k":"num"},{"n":"hasGps","l":"Has Gps","k":"bool"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"},{"n":"speedMps","l":"Speed Mps","k":"num"},{"n":"headingDeg","l":"Heading Deg","u":"deg","k":"num"},{"n":"comment","l":"Comment","k":"text"},{"n":"whiskers","l":"Whiskers","k":"num"}],"map":{"lat":"lat","lon":"lon","label":"callsign"}},{"n":"events","l":"Newest first","k":"table","s":"dect2::CatsEvent","f":[{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"text","l":"Text","k":"text"}]},{"n":"levelHist","l":"Level Hist","k":"list"}])JSON";
 struct StdEntry { int standard; const char* member; const char* structName; const char* schema; bool (*put)(const RxTelemetry&, std::string&); };
 static bool put_7(const RxTelemetry& rx, std::string& s) { ev_dect2__DvbsTelemetry(s, rx.dvbs); return true; }
 static bool put_8(const RxTelemetry& rx, std::string& s) { ev_dect2__DtmbTelemetry(s, rx.dtmb); return true; }
@@ -15687,6 +15740,7 @@ static bool put_896(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Teleme
 static bool put_897(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static bool put_899(const RxTelemetry& rx, std::string& s) { ev_dect2__EspnowTelemetry(s, rx.espnow); return true; }
 static bool put_900(const RxTelemetry& rx, std::string& s) { ev_dect2__RprTelemetry(s, rx.rpr); return true; }
+static bool put_901(const RxTelemetry& rx, std::string& s) { ev_dect2__CatsTelemetry(s, rx.cats); return true; }
 static const StdEntry kStd[] = {
     {7, "dvbs", "dect2::DvbsTelemetry", kSchema_dect2__DvbsTelemetry, put_7},
     {8, "dtmb", "dect2::DtmbTelemetry", kSchema_dect2__DtmbTelemetry, put_8},
@@ -16032,6 +16086,7 @@ static const StdEntry kStd[] = {
     {897, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_897},
     {899, "espnow", "dect2::EspnowTelemetry", kSchema_dect2__EspnowTelemetry, put_899},
     {900, "rpr", "dect2::RprTelemetry", kSchema_dect2__RprTelemetry, put_900},
+    {901, "cats", "dect2::CatsTelemetry", kSchema_dect2__CatsTelemetry, put_901},
 };
 static const char* const kGroups[] = {"TV", "BROADCAST RADIO", "AIRCRAFT DATALINKS", "NAVAIDS & RADAR", "DRONES & LIGHT AVIATION", "MARITIME", "NAVIGATION", "MOBILE & DATA SATELLITES", "CUBESATS & SMALL SATS", "RESCUE & TRACKING", "WEATHER SATS - LOW RATE", "WEATHER SATS - HIGH RATE", "WEATHER & SONDES", "SCIENCE & SENSING", "TWO-WAY RADIO", "CELLULAR & RAIL", "PAGERS", "SMART DEVICES & RFID", "MESH & LORA", "RADIO CONTROL & DRONES", "WIRELESS NETWORKS", "VEHICLES & ROADS", "AMATEUR - WEAK SIGNAL", "AMATEUR - TEXT MODES", "AMATEUR - IMAGES & DATA", "AMATEUR - VOICE & PACKET", "HF DATA", "HF TELEGRAPH & FSK", "HF MONITORING", "RECEIVERS & ANALYSERS", "METERS", "INTERFERENCE HUNTING", "PLUGINS", "Kris custom modes", "CUSTOM MODES"};
 static const WebModeRow kRows[] = {
@@ -16290,6 +16345,7 @@ static const WebModeRow kRows[] = {
     {244, "Thread", 18, "Thread: networks and devices from beacons and 802.15.4 headers, 6LoWPAN where sent in the clear (receive only, encrypted traffic is shown as encrypted; needs a fast 2.4 GHz radio)", "", 246, 245, "thread"},
     {70, "Wi-Fi HaLow (802.11ah)", 18, "Wi-Fi HaLow / 802.11ah: the long-range sub-GHz networks around you from their beacons (receive only, no decryption)", "", 72, 71, "halow"},
     {898, "ESP-NOW", 20, "ESP-NOW: ESP8266 / ESP32 packets on a 2.4 GHz Wi-Fi channel, devices and payloads (receive only; needs 20 MHz of bandwidth)", "", 900, 899, "espnow"},
+    {900, "CATS", 25, "CATS: balloon packet radio, 9600 bd 2-FSK, callsign, position, altitude, comment", "", 902, 901, "cats"},
     {899, "Robust Packet (RPR, needs a user test)", 26, "Robust Packet: HF AX.25 packet, 8 OFDM carriers, speed level and bursts (physical layer only, needs a recording)", "", 901, 900, "rpr"},
     {74, "Datawell Buoy HF Link", 28, "Datawell Buoy HF Link: wave heights, periods and spectra from wave buoys on HF (receive only)", "", 76, 75, "datawell"},
     {72, "CODAR / HF ocean radar", 28, "CODAR / HF ocean radar: the coastal radar chirps on the HF bands (receive only)", "", 74, 73, "codar"},

@@ -326,6 +326,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         for (auto& h : rxHfu_) h.setSignalOffset(o);
         for (auto& h : rxHfm_) h.setSignalOffset(o);
         rxRpr_.setSignalOffset(o);
+        rxCats_.setSignalOffset(o);
         rxPh2_.setSignalOffset(o);
         rxPh3_.setSignalOffset(o);
         rxPh4_.setSignalOffset(o);
@@ -745,6 +746,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     for (auto& h : rxHfm_) { h.configure(rate_); h.setLogCallback([this](const std::string& s) { rxLog(s); }); }
     rxRpr_.configure(rate_);
     rxRpr_.setLogCallback([this](const std::string& s) { rxLog(s); });
+    rxCats_.configure(rate_);
+    rxCats_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxPh2_.configure(rate_);
     rxPh2_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxPh3_.configure(rate_);
