@@ -9,6 +9,7 @@
 #include "dect2/df/source.h"
 #include "native_common.h"
 #include <cerrno>
+#include <functional>
 #include <map>
 
 namespace dect2 {
@@ -147,6 +148,15 @@ double usbLinkRate(const std::string& uri, const std::string& link) {
 
 // Whether the board at each URI runs Tezuka firmware (known once it was opened or probed): only then the IQ format can be chosen
 std::map<std::string, bool> gTezuka;
+// Both receive inputs at once (#398). gDual2rx: boards seen with a second input (learnt when opened; only these get the "RX2" list entry).
+// The hub carries the second input's samples from the source that reads the radio (RX1 with "Both receive inputs" on) to the list entry "RX2".
+std::map<std::string, bool> gDual2rx;
+struct DualHub {
+    std::mutex m;
+    std::function<void(const cf32*, size_t)> sink;   // the RX2 receiver's ring; empty while it is not running
+    bool primary = false;                            // the RX1 source is reading both inputs
+    double rate = 0;
+};
 bool isTezukaFw(const char* fw) {
     if (!fw) return false;
     std::string low = fw;
@@ -156,6 +166,13 @@ bool isTezukaFw(const char* fw) {
 
 // The RX LO range the radio reported when it was last opened (stock AD9363 firmware: 325-3800 MHz, AD9364 mode: 70-6000 MHz)
 std::mutex gRangeMu;
+std::map<std::string, std::shared_ptr<DualHub>> gHubs;
+std::shared_ptr<DualHub> dualHub(const std::string& uri) {
+    std::lock_guard<std::mutex> lk(gRangeMu);
+    auto& h = gHubs[uri];
+    if (!h) h = std::make_shared<DualHub>();
+    return h;
+}
 std::map<std::string, std::pair<double, double>> gRange;
 // The serial number of the Pluto at each USB URI, from the list: a USB URI is "usb:<bus>.<device address>.<interface>", and the address
 // changes every time the radio is plugged in again
@@ -301,6 +318,19 @@ protected:
         q_ = iio().device_find_channel(rx_, rx2 ? "voltage3" : "voltage1", false);
         if (rx2 && (!rxCh_ || !i_ || !q_)) { DIAG_ERROR(318264, "The PlutoSDR has only one receive input (RX1), so input 2 is refused."); err = "this Pluto has one receive input (RX1): set the RX port to RX1 (RX2 needs a Pluto+ or the second channel enabled)"; return false; }
         if (!rxCh_ || !lo_ || !i_ || !q_) { DIAG_ERROR(610936, "The PlutoSDR receive channels were not found, so the receiver stays closed."); err = "PlutoSDR: the receive channels were not found"; return false; }
+        {   // a second input (#398): RX2 on the phy and its I/Q pair on the capture device
+            auto* ph2 = iio().device_find_channel(phy_, "voltage1", false);
+            auto* ci2 = iio().device_find_channel(rx_, "voltage2", false);
+            auto* cq2 = iio().device_find_channel(rx_, "voltage3", false);
+            if (ph2 && ci2 && cq2) { std::lock_guard<std::mutex> lk(gRangeMu); gDual2rx[uri_] = true; }
+            dual_ = !rx2 && radioFlag(s, "dualrx");
+            if (dual_) {
+                if (!(ph2 && ci2 && cq2)) { DIAG_ERROR(398417, "Both receive inputs were asked for, but this PlutoSDR has only one (RX1), so the receiver is not opened."); err = "this Pluto has one receive input: turn off \"Both receive inputs\" (two inputs need a Pluto+ or the second channel enabled, 2R2T)"; return false; }
+                if (radio_->tx) { DIAG_ERROR(398423, "Both receive inputs cannot run while the PlutoSDR transmits, so the receiver is not opened."); err = "PlutoSDR: both receive inputs cannot run while transmitting"; return false; }
+                rxCh2_ = ph2; i2_ = ci2; q2_ = cq2;
+                hub_ = dualHub(uri_);
+            }
+        }
         gainMode_.clear();
         fw_.clear(); tezuka_ = false;
         if (iio().context_get_attr_value) {
@@ -374,7 +404,7 @@ protected:
                 if (r != 0) { DIAG_ERROR(199836, "The PlutoSDR refused the receive sample rate with libiio code %d, so the receiver is not started.", r); err = "PlutoSDR: the sample rate was refused: " + iio().text(r); return false; }
             }
             // Tezuka: with only the first channel enabled the FPGA sends 8-bit I/Q pairs (half the bytes on the cable, twice the rate); both: 16-bit
-            cs8_ = tezuka_ && radioOption(s, "iqformat", "cs16") == "cs8";
+            cs8_ = tezuka_ && !dual_ && radioOption(s, "iqformat", "cs16") == "cs8";
             if (const double cap = usbLinkRate(uri_, radioOption(s, "link", "auto")); cap > 0) {
                 const std::string n = usbLinkNote(want, cap * (cs8_ ? 2 : 1), tezuka_, cs8_);
                 if (!n.empty()) { fprintf(stderr, "%s\n", n.c_str()); fflush(stderr); if (err.empty()) err = n; }
@@ -390,6 +420,7 @@ protected:
             checkRate(s.sampleRate, err);
             iio().channel_enable(i_);
             if (cs8_) iio().channel_disable(q_); else iio().channel_enable(q_);
+            if (dual_) { iio().channel_enable(i2_); iio().channel_enable(q2_); }
             // 8 kernel buffers (as SDR++ does) to ride out a late reader, on every firmware (libiio 0.x has the call, 1.x does not)
             if (iio().device_set_kernel_buffers_count) iio().device_set_kernel_buffers_count(rx_, kKernelBuffers);
             // over a network every refill is a round trip to iiod: a buffer of ~25 ms keeps 16 Msps and more flowing (#114); USB keeps 64k
@@ -399,10 +430,12 @@ protected:
             radio_->rxRate = rate_;
             radio_->rxFir = firOn_;
             radio_->rxCs8 = cs8_;
+            if (dual_ && hub_) { std::lock_guard<std::mutex> hl(hub_->m); hub_->primary = true; hub_->rate = rate_; }
         }
         // the gain control: manual, with OnAir's gain (the default), or the AD9361's own AGC (TuneSettings "gainmode": slow_attack, fast_attack)
         const std::string gm = radioOption(s, "gainmode", "manual");
         if (!live || gm != gainMode_) {
+            if (dual_ && rxCh2_) iio().channel_attr_write(rxCh2_, "gain_control_mode", gm.c_str());   // one setting for both inputs
             if (iio().channel_attr_write(rxCh_, "gain_control_mode", gm.c_str()) >= 0) gainMode_ = gm;
             else { DIAG(141922, "The PlutoSDR refused the gain mode %s, so the old gain mode stays.", gm.c_str()); fprintf(stderr, "PlutoSDR: the gain mode %s was refused\n", gm.c_str()); fflush(stderr); }
         }
@@ -438,6 +471,7 @@ protected:
         }
         const double g = std::min(gmax, std::max(std::max(0.0, gmin), s.gainDb));
         if (gainMode_ != "manual" && !gainMode_.empty()) return true;   // the radio's AGC sets the gain (hardwaregain is for manual mode only)
+        if (dual_ && rxCh2_) iio().channel_attr_write_longlong(rxCh2_, "hardwaregain", (long long)std::llround(g));
         if (const int r = iio().channel_attr_write_longlong(rxCh_, "hardwaregain", (long long)std::llround(g)); r != 0) {
              DIAG(587544, "The PlutoSDR refused a receive gain of %.0f dB with libiio code %d, so the old gain stays.", g, r);
              fprintf(stderr, "PlutoSDR: the gain %.0f dB was refused at %s MHz: %s\n", g, mhz(f).c_str(), iio().text(r).c_str());
@@ -471,10 +505,14 @@ protected:
         if (buf_) { iio().buffer_destroy(buf_); buf_ = nullptr; }
         if (i_) iio().channel_disable(i_);
         if (q_) iio().channel_disable(q_);
+        if (i2_) iio().channel_disable(i2_);
+        if (q2_) iio().channel_disable(q2_);
+        if (hub_) { std::lock_guard<std::mutex> hl(hub_->m); hub_->primary = false; }
+        hub_.reset(); dual_ = false;
         if (radio_ && ownsRx_) { radio_->rx = false; radio_->rxRate = 0; radio_->rxFir = radio_->rxCs8 = false; }
         ownsRx_ = false;
         radio_.reset();
-        ctx_ = nullptr; phy_ = rx_ = nullptr; rxCh_ = lo_ = i_ = q_ = nullptr;
+        ctx_ = nullptr; phy_ = rx_ = nullptr; rxCh_ = lo_ = i_ = q_ = nullptr; rxCh2_ = i2_ = q2_ = nullptr;
     }
     void streamLoop() override {
         if (!buf_) return;   // a failed buffer restore is retried by NativeSource's reconnect loop
@@ -485,7 +523,13 @@ protected:
             if (got <= 0) { if (++failures > 20) { DIAG(676478, "The PlutoSDR receive stream failed more than 20 times in a row, so the source stops."); fprintf(stderr, "PlutoSDR: stream error, stopping the source\n"); break; } continue; }
             failures = 0;
             size_t n;
-            if (cs8_) {
+            if (dual_) {   // I1 Q1 I2 Q2 per frame: the first input goes on, the second to the RX2 receiver (if it runs)
+                const int16_t* p = static_cast<const int16_t*>(iio().buffer_start(buf_));
+                n = std::min<size_t>((size_t)got / 8, block_);
+                if (conv2_.size() < n) conv2_.resize(n);
+                plutoSplitDual(p, n, conv_.data(), conv2_.data());
+                if (hub_) { std::lock_guard<std::mutex> hl(hub_->m); if (hub_->sink) hub_->sink(conv2_.data(), n); }
+            } else if (cs8_) {
                 const int8_t* p = static_cast<const int8_t*>(iio().buffer_start(buf_));
                 n = std::min<size_t>((size_t)got / 2, block_);   // 2 bytes per I/Q sample
                 for (size_t k = 0; k < n; k++) conv_[k] = cf32(p[2 * k] / 128.f, p[2 * k + 1] / 128.f);
@@ -530,6 +574,40 @@ private:
     std::string fw_;                  // the firmware version the board reports ("" when it does not say)
     bool tezuka_ = false;             // the firmware is Tezuka
     bool cs8_ = false;                // streaming 8-bit samples (Tezuka only)
+    bool dual_ = false;               // both receive inputs are read (#398)
+    IioApi::iio_channel* rxCh2_ = nullptr;
+    IioApi::iio_channel* i2_ = nullptr;
+    IioApi::iio_channel* q2_ = nullptr;
+    std::shared_ptr<DualHub> hub_;
+    std::vector<cf32> conv2_;
+};
+
+// The "RX2" list entry (#398): the second receive input of a Pluto whose first entry has "Both receive inputs" on. It reads no radio itself; the
+// samples come from the first entry's stream (same LO, same rate, same gain), so start that receiver first.
+class PlutoRx2Source : public NativeSource {
+public:
+    explicit PlutoRx2Source(std::string uri) : uri_(plutoBaseUri(std::move(uri))) {}
+    ~PlutoRx2Source() override { stop(); }
+protected:
+    bool openDevice(const TuneSettings&, std::string& err) override {
+        hub_ = dualHub(uri_);
+        std::lock_guard<std::mutex> hl(hub_->m);
+        if (!hub_->primary) {
+            DIAG_ERROR(398431, "The second PlutoSDR input was asked for, but the first receiver of that Pluto is not running with both inputs, so it stays closed.");
+            err = "start the first receiver of this Pluto (RX1) with \"Both receive inputs\" turned on, then this one";
+            openFailure_ = OpenFailure::Final;
+            return false;
+        }
+        rate_ = hub_->rate;
+        hub_->sink = [this](const cf32* p, size_t n) { push(p, n); };
+        return true;
+    }
+    bool configure(const TuneSettings&, std::string&, bool) override { if (hub_) { std::lock_guard<std::mutex> hl(hub_->m); if (hub_->rate > 0) rate_ = hub_->rate; } return true; }   // frequency, rate and gain are the first input's
+    void closeDevice() override { if (hub_) { std::lock_guard<std::mutex> hl(hub_->m); hub_->sink = nullptr; } hub_.reset(); }
+    void streamLoop() override { while (run_) std::this_thread::sleep_for(std::chrono::milliseconds(50)); }
+private:
+    std::string uri_;
+    std::shared_ptr<DualHub> hub_;
 };
 
 // ---- transmit -----------------------------------------------------------------------------------------------------------------------
@@ -740,6 +818,11 @@ DeviceInfo plutoEntry(const std::string& uri, const std::string& desc, bool prob
                                 "Which receive SMA port to use. RX1 is the default. RX2 only exists on a Pluto+ or a Pluto with the second channel enabled\n"
                                 "(2R2T firmware); on a one-channel Pluto it is refused with a message. Not tested on hardware.",
                                 {"rx1", "rx2"}, {"RX1", "RX2"}, "rx1", true),
+                  boolSetting("dualrx", "Both receive inputs",
+                              "Read RX1 and RX2 of a two-input Pluto (Pluto+, or 2R2T firmware) at the same time. Both inputs share one tuning frequency, one\n"
+                              "sample rate and one gain, because the AD9361 has a single receive oscillator. This entry (RX1) then reads both; start it first,\n"
+                              "then start a second receiver on the entry named RX2 (it appears once this board has been opened). Off by default: one input.\n"
+                              "Not tested on hardware.", false, true),
                   choiceSetting("txport", "TX port",
                                 "Which transmit SMA port to use. TX1 is the default. TX2 only exists on a Pluto+ or a Pluto with the second channel enabled;\n"
                                 "on a one-channel Pluto it is refused with a message. Not tested on hardware.",
@@ -796,6 +879,15 @@ void listPluto(std::vector<DeviceInfo>& out) {
         // a scan result is never a network probe, unless the user turned on "Search the network for radios": the network boards found then
         // are asked which firmware they run, as the ones added by address are
         out.push_back(plutoEntry(uri, desc, true, networkDiscovery()));
+        bool two = false;
+        { std::lock_guard<std::mutex> lk(gRangeMu); auto t = gDual2rx.find(uri); two = t != gDual2rx.end() && t->second; }
+        if (two) {   // a board seen with a second receive input: its own list entry, fed by the first entry's stream (#398)
+            DeviceInfo r2 = out.back();
+            r2.name += " - RX2 (second input, same frequency)";
+            r2.nativeArgs = uri + plutoRx2Suffix();
+            r2.canTransmit = false; r2.txFullDuplex = false;
+            out.push_back(r2);
+        }
     };
     // USB always. The network boards (libiio's "ip" backend: mDNS) only when "Search the network for radios" is on; otherwise a network Pluto is
     // listed when the user adds its address (Add network radio), so no network device is contacted just by listing (#215)
@@ -838,6 +930,7 @@ bool plutoFromSoapy(const std::string& soapyArgs, const std::string& name, Devic
 }
 
 std::unique_ptr<IqSource> makePluto(const DeviceInfo& d) {
+    if (plutoIsRx2Uri(d.nativeArgs)) return std::make_unique<PlutoRx2Source>(d.nativeArgs);
     return std::make_unique<PlutoSource>(d.nativeArgs);
 }
 
