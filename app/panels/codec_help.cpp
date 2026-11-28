@@ -229,14 +229,19 @@ Text textOf(CodecHelp c) {
         return {"AC-4 (ATSC 3.0 sound)",
                 "ATSC 3.0 in the US and South Korea (and some DVB services) send their sound as Dolby AC-4, a patented codec. The FFmpeg inside "
                 "OnAir has no AC-4 decoder, so without help OnAir plays the picture and any other sound track (AAC, AC-3) but not the AC-4 sound. "
-                "If you install a libavcodec built from an FFmpeg that includes an AC-4 decoder, OnAir loads it, decodes the AC-4 sound of the "
-                "selected service and plays it, mixed to stereo or 5.1. This is experimental: it has not been tried on a real AC-4 broadcast.",
-                "AC-4 audio needs an FFmpeg with the AC-4 decoder. The one public source is the patch in github.com/funnymanva/ffmpeg-with-ac4 "
+                "If you install an AC-4 decoder library, OnAir loads it, decodes the AC-4 sound of the selected service and plays it, mixed to "
+                "stereo or 5.1. Two kinds are accepted: libac4dec, or a libavcodec built from an FFmpeg that includes an AC-4 decoder. When both "
+                "are there, libac4dec is used.",
+                "libac4dec: github.com/Felbs/ac4-decoder (Apache-2.0, C99, no other libraries). Build it with make in its c folder (version 0.3.1 "
+                "or later: older ones lack the entry points OnAir uses) and put libac4dec.so (Linux), libac4dec.dylib (macOS) or ac4dec.dll "
+                "(Windows) in the codecs folder below, then press Look again. It decodes 5.1 with its surround upmix (A-CPL) and A-SPX, every "
+                "frame rate, and mixes immersive streams down to 5.1 or stereo; it adds about 0.3 s of delay.\n"
+                "FFmpeg: the one public source is the patch in github.com/funnymanva/ffmpeg-with-ac4 "
                 "(FFmpeg 6.1 plus an AC-4 decoder; its script builds a static ffmpeg program, but OnAir needs the SHARED libraries: configure "
                 "FFmpeg with --enable-shared --disable-static after applying ffmpeg_ac4.patch). Put libavcodec and libavutil (and the "
                 "libswresample and other libraries they need) next to each other in the codecs folder below, then press Look again.\n"
-                "Licences, honestly: the decoder in that patch (ac4dec.c, Paul B Mahol) is LGPL-2.1-or-later and the build script is MIT, so "
-                "building and using it yourself is fine as far as copyright goes. The patents are another matter: Dolby holds patents on AC-4 "
+                "Licences, honestly: libac4dec is Apache-2.0; the decoder in that patch (ac4dec.c, Paul B Mahol) is LGPL-2.1-or-later and the build "
+                "script is MIT, so building and using either yourself is fine as far as copyright goes. The patents are another matter: Dolby holds patents on AC-4 "
                 "and licenses them for products; OnAir ships no AC-4 code and downloads nothing. Whether you may use it is for you to check where you live.",
                 true};
     case CodecHelp::AvsPlus:
@@ -330,7 +335,7 @@ void codecHelpButton(CodecHelp c, const char* label) {
         }
         if (c == CodecHelp::Ac4) {   // its own layout: the optional FFmpeg, not mbelib or codec2
             const dect2::Ac4LibInfo li = dect2::ac4Library();
-            if (li.hasDecoder) ImGui::TextColored(pal::okGreen(), "AC-4 decoder found: %s", li.path.c_str());
+            if (li.hasDecoder) ImGui::TextColored(pal::okGreen(), "AC-4 decoder found (%s%s%s): %s", li.backend.c_str(), li.version.empty() ? "" : " ", li.version.c_str(), li.path.c_str());
             else ImGui::TextColored(pal::warnAmber(), "AC-4 decoder not found: AC-4 sound is left out%s%s", li.message.empty() ? "" : "\n", li.message.c_str());
             ImGui::Spacing();
             ImGui::TextUnformatted(t.what);
@@ -339,7 +344,7 @@ void codecHelpButton(CodecHelp c, const char* label) {
             ImGui::TextUnformatted(t.install);
             ImGui::Spacing();
             ImGui::TextDisabled("File names OnAir looks for");
-            ImGui::TextUnformatted("libavcodec.dylib / libavcodec.NN.dylib (macOS), libavcodec.so.NN (Linux), avcodec-NN.dll (Windows), and the libavutil of the same kind in the same folder");
+            ImGui::TextUnformatted("libac4dec.so (Linux), libac4dec.dylib (macOS), ac4dec.dll (Windows); or libavcodec.dylib / libavcodec.NN.dylib (macOS), libavcodec.so.NN (Linux), avcodec-NN.dll (Windows), and the libavutil of the same kind in the same folder");
             ImGui::TextDisabled("Folders, in this order");
             for (const auto& d : dect2::ac4SearchFolders()) ImGui::BulletText("%s", d.c_str());
             ImGui::Spacing();
