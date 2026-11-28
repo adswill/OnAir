@@ -445,6 +445,7 @@ struct Ac4Decoder::Impl {
     // appends one frame of libac4dec output (n samples, ch channels) to pcm, clipped to full scale
     int takeA4(int n, int ch, int r, std::vector<float>& pcm, int& chOut, int& rateOut) {
         if (n <= 0 || ch <= 0 || ch > kA4MaxCh || r <= 0) return n < 0 ? -1 : 0;
+        n = std::min(n, kA4MaxOut);   // a user-installed library's count: never past the buffer it was given
         const size_t base = pcm.size();
         pcm.resize(base + (size_t)n * ch);
         for (size_t i = 0; i < (size_t)n * ch; i++) pcm[base + i] = std::clamp(a4buf[i], -1.f, 1.f);
