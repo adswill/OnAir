@@ -1348,14 +1348,13 @@ bool writeText(const std::string& path, const std::string& body) {
 }
 
 // cue lines wrapped to a width, drawn in a box on the draw list; bottom (or top) of the area
-void drawCues(ImDrawList* dl, ImVec2 a0, ImVec2 asz, const std::vector<dect2::CaptionCue>& cues, bool forceTop = false) {
+void drawLines(ImDrawList* dl, ImVec2 a0, ImVec2 asz, const std::vector<std::string>& lines, bool forceTop) {
+    load();
     dect2::CaptionStyle st = dect2::CaptionStyle{C.capSize, C.capBg, C.capTop, C.capLines}.clamped();
     if (forceTop) st.top = true;   // next to the station's own subtitles, which sit at the bottom
     const float fs = ImGui::GetFontSize() * (float)st.sizePct / 100.f * std::max(1.f, asz.y / (260.f * gUi) * 0.6f);
     const float maxW = asz.x * 0.9f;
     ImFont* font = ImGui::GetFont();
-    std::vector<std::string> lines;
-    for (const auto& c : cues) lines.push_back(capLine(c));
     std::vector<ImVec2> sz;
     float h = 0, w = 0;
     for (const auto& l : lines) {
@@ -1373,6 +1372,12 @@ void drawCues(ImDrawList* dl, ImVec2 a0, ImVec2 asz, const std::vector<dect2::Ca
         dl->AddText(font, fs, ImVec2(x, y), IM_COL32(255, 255, 255, 255), lines[i].c_str(), nullptr, maxW);
         y += sz[i].y + 4 * gUi;
     }
+}
+
+void drawCues(ImDrawList* dl, ImVec2 a0, ImVec2 asz, const std::vector<dect2::CaptionCue>& cues, bool forceTop = false) {
+    std::vector<std::string> lines;
+    for (const auto& c : cues) lines.push_back(capLine(c));
+    drawLines(dl, a0, asz, lines, forceTop);
 }
 
 std::vector<dect2::CaptionCue> visibleFor(int rx) {
@@ -1411,6 +1416,17 @@ bool captionsActive() { load(); return C.cap && backendReady(); }
 bool captionsWanted(int standard) { load(); return C.cap && C.capModes.count(standard) && dect2::captionStandardEligible(standard); }
 bool captionsIsTv(int standard) { return isTvStandard(standard); }
 bool captionsShowBroadcast() { load(); return dect2::showBroadcastSubs((dect2::CaptionSource)C.capSource); }
+
+void captionText(ImDrawList* dl, ImVec2 p0, ImVec2 size, const std::string& text) {
+    std::vector<std::string> lines;
+    for (size_t a = 0; a <= text.size();) {
+        size_t b = text.find('\n', a);
+        if (b == std::string::npos) b = text.size();
+        if (b > a) lines.push_back(text.substr(a, b - a));
+        a = b + 1;
+    }
+    drawLines(dl, p0, size, lines, false);
+}
 
 void captionsOverlay(App& a, ImDrawList* dl, ImVec2 p0, ImVec2 size, bool broadcastPresent) {
     load();
