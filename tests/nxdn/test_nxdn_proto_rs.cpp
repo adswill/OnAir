@@ -131,5 +131,5 @@ int main() {
         A::ambeFrame(bits, fa);
         for (auto& row : fa) for (char c : row) dig.add(c);
     }
-    return golden::check("nxdn_proto_rs", dig, 0x89f032465c60ba6bull, !it);
+    return golden::check("nxdn_proto_rs", dig, 0x167d1a4de5260141ull, !it);   // re-recorded for the VCALL / TX_REL octet layout fix (#716)
 }
