@@ -2571,3 +2571,7 @@ Merged PRs 644, 653, 654, 655, 574, 558 into integ-46-prs (author commits kept);
 - UNTESTED on a real radio: the NCO direction (upconvert by the shift, signal sits below the LO), the reachable shift (assumed about 2x the sample rate) and the image/DC quality are to be verified by a tester with a Mini. The tune adds a visible "not tested" note. Written without a local build; CI only.
 ## 2026-11-23 UI audit 4.6
 Choose a mode: filter row measured and wrapped (both checkboxes on one row when the search keeps 220 px), Clear button in the empty state when two chips are lit; dev flags --picker --star --open NAME; tools/ui_shots.sh now ~130 shots at 3 sizes; scratchpad/UI-AUDIT-4.6.md.
+
+## 2026-11-28 feat47-664: Memories and Frequencies windows on a second screen
+- Both panels get a "Pop out" button (View windows) that moves them into an OS window of their own with its own ImGui context (shared font atlas); "Put back" or the window's close button returns them. ui/own_window.cpp now holds two slots (memWin, freqWin prefs: out, position, size); a monitor unplugged since brings the window back to the first screen (ui/window_place.h, tested).
+- Written without a local build; checked by CI only. Risk: two extra ImGui contexts with the GLFW back end at once, first thing to check hands-on.

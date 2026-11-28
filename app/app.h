@@ -916,6 +916,18 @@ void popOutFrame(App& a);            // inside the ImGui frame: opens/closes the
 void popOutPresent();                // after the main frame (or instead of it while the main window is minimised): draws the window
 bool popOutShown();                  // the pop-out window is open and not minimised
 void popOutShutdown();               // before the graphics back end shuts down
+
+// ui/own_window.cpp: the Memory and Frequencies panels as OS windows of their own, for a second screen (#664); each has its own ImGui context, place kept in the settings (memWin, freqWin)
+bool memoryInOwnWindow();            // the panel is set to live in its own window (and OS windows are allowed): memoryWindow() draws nothing then
+void memorySetOwnWindow(bool out);
+bool freqdbInOwnWindow();            // the same for the Frequencies panel: freqdbWindow() draws nothing then
+void freqdbSetOwnWindow(bool out);
+void ownWindowFrame(App& a);         // inside the main ImGui frame: opens/closes the window and builds its interface (switches context and back)
+void ownWindowPresent();             // after the main frame: draws the window
+bool ownWindowShown();               // the window is open and not minimised
+void ownWindowShutdown();            // before the graphics back end shuts down
+void memoryPanelBody(App& a);        // memory_ui.cpp: the Memory panel's content, for a window of either kind
+void freqdbPanelBody(App& a);        // freqdb_ui.cpp: the Frequencies panel's content, for a window of either kind
 bool pillButton(const char* label, bool selected, float padX = 11);
 int subNav(const char* id, int& cur, std::initializer_list<const char*> names);
 float tagAt(ImDrawList* dl, ImVec2 pos, const char* text, ImU32 bg, ImU32 fg = IM_COL32(225, 232, 240, 255));

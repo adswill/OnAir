@@ -3683,3 +3683,4 @@ Spectrum detail: normal	Dettaglio spettro: normale
 Spectrum detail: fine	Dettaglio spettro: fine
 Spectrum detail: finest	Dettaglio spettro: finissimo
 How finely the narrowband spectrum and waterfall are resolved: fine has half the bin width of normal, finest a quarter, so CW and digital carriers stand out and close stations separate. Costs a little more CPU, and the lock restarts when you change it.	Quanto finemente sono risolti lo spettro a banda stretta e la cascata: fine ha metà della larghezza di bin di normale, finissimo un quarto, così le portanti CW e digitali risaltano e le stazioni vicine si separano. Usa un po' più di CPU e l'aggancio riparte quando lo cambi.
+Put back	Riaggancia

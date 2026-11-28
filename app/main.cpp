@@ -118,13 +118,15 @@ static bool minimisedFrame(GLFWwindow* window, App& app, const DevOpts& o, int& 
     const bool skipDraw = !o.shotPath && !gNoOsWindows && app.reduceCpuHidden && !glfwGetWindowAttrib(window, GLFW_VISIBLE);
                 if (skipDraw || w == 0 || h == 0 || glfwGetWindowAttrib(window, GLFW_ICONIFIED)) {
                     // minimised: nothing to draw in the main window, but the pop-out video window stays and keeps playing
-                    if (!popOutShown()) { glfwWaitEventsTimeout(0.1); return true; }
+                    if (!popOutShown() && !ownWindowShown()) { glfwWaitEventsTimeout(0.1); return true; }
                     ImGui_ImplGlfw_NewFrame();
                     ImGui::NewFrame();
                     app.video.update(app.engine.player());
                     popOutFrame(app);
+                    ownWindowFrame(app);
                     ImGui::EndFrame();
                     popOutPresent();
+                    ownWindowPresent();
     return true;
                 }
     return false;
@@ -290,6 +292,7 @@ static void shutdownApp(App& app, gfx::Backend* gfxBackend, GLFWwindow* window) 
     dect2::sess::adaptersEndAll();   // open tracks end now, not at the next start
     dect2::sess::global().close();
     updateOnExit(app);   // a downloaded update replaces this program once it has ended
+    ownWindowShutdown();
     popOutShutdown();   // its window and surface go before the back end
     gfxBackend->shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -440,6 +443,7 @@ int main(int argc, char** argv) {
             debugReportFrame(app);   // Ctrl+D, the watchdog's heartbeat, the debug report window
             perfOverlayDraw(app);
             popOutFrame(app);
+            ownWindowFrame(app);   // the Memory window on another screen: its own context, switched in and out
             keepWindowsReachable();
             ImGui::Render();
             if (app.highContrast) lightenDrawData(ImGui::GetDrawData(), false, true);   // High contrast wins over Light
@@ -454,6 +458,7 @@ int main(int argc, char** argv) {
             if (pi.occluded && !shotNow && !autoShot && gfxBackend->canSkipFrame()) gfxBackend->skipFrame();   // nobody can see it: no GPU work
             else gfxBackend->endFrame(ImGui::GetDrawData(), shotNow ? o.shotPath : autoShot ? autoPath.c_str() : nullptr);
             popOutPresent();
+            ownWindowPresent();
             if (shotNow) {
                 shotReport(app);
                 if (gOnAirIdCheck && gOnAirIdConflicts > 0) { fprintf(stderr, "IDCHECK: %d duplicate-ID items\n", gOnAirIdConflicts); gIdCheckFailed = true; }
