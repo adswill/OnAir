@@ -183,6 +183,9 @@ struct DeviceInfo {
     std::vector<RadioSetting> settings;    // the radio's own settings the app offers (TuneSettings::radio); empty for files and the test signal
     bool isRadio() const { return kind == HackRF || kind == Soapy || kind == Native || kind == Hamlib || kind == Group; }
     bool isGeneric() const { return kind == Soapy || kind == Native || kind == Group; }   // one overall gain, a sample-rate range reported by the radio
+    // A generic radio whose one gain runs from negative (attenuation) up to 0 only, or from negative through positive (attenuation, then its LNA)
+    bool isAttenuator() const { return isGeneric() && gainMinDb < 0 && gainMaxDb <= 0; }
+    bool isAttPreamp() const { return isGeneric() && gainMinDb < 0 && gainMaxDb > 0; }
     bool isAudio() const { return kind == Audio; }
     // a sound card, or a rig (Hamlib) whose own receiver gives the audio: the samples are at the dial, there is no DC spike to tune away from,
     // so a mode's tuneOffsetHz must not move the rig (#358: FT8 on an IC-7300 came out 20 kHz high)

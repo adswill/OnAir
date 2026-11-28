@@ -258,7 +258,8 @@ static void toolbarGain(App& a, bool vertical, bool running, bool& retune) {
         if (vertical) { const float w = panel::rowLabel(tr("Gain"), tr("The radio's overall gain")); ImGui::SetNextItemWidth(touch::on() ? -FLT_MIN : w); }
         else { ImGui::SameLine(); ImGui::SetNextItemWidth(touch::on() ? -FLT_MIN : 150 * gUi); }   // touch: the sheet's full width
         float gdb = (float)a.tune.gainDb;
-        ImGui::SliderFloat("##gain", &gdb, (float)curDev.gainMinDb, (float)std::max(curDev.gainMaxDb, curDev.gainMinDb + 1.0), "%.0f dB");
+        // a range not known yet (max not above min) leaves the slider open rather than capping it at 1 dB
+        ImGui::SliderFloat("##gain", &gdb, (float)curDev.gainMinDb, (float)(curDev.gainMaxDb > curDev.gainMinDb ? curDev.gainMaxDb : 200.0), "%.0f dB");
         a.tune.gainDb = std::round(gdb);
         if (!curDev.gainNote.empty() && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", curDev.gainNote.c_str());
         if (ImGui::IsItemDeactivatedAfterEdit()) retune = true, a.agcOn = false;

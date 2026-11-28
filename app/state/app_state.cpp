@@ -355,7 +355,11 @@ void applyBandwidth(App& a) {
             if (a.gainDev.empty()) a.gainDev = key;
             else if (a.gainDev != key) {
                 const double frac = dv.board == "sdrplay" ? 0.4 : 0.6;   // Soapy SDRplay: a mid slider still meant max LNA before the RF/IF split
-                a.tune.gainDb = std::round(dv.gainMinDb + frac * (dv.gainMaxDb - dv.gainMinDb));
+                // a radio whose one gain runs through zero (attenuation below, its LNA above, e.g. -31..22): the top, the LNA on;
+                // an attenuator (0 at most) starts without attenuation; the others at their fraction of the range
+                if (dv.isAttPreamp()) a.tune.gainDb = dv.gainMaxDb;
+                else if (dv.isAttenuator()) a.tune.gainDb = 0;
+                else a.tune.gainDb = std::round(dv.gainMinDb + frac * (dv.gainMaxDb - dv.gainMinDb));
                 a.gainDev = key;
                 if (dv.board == "sdrplay") a.tune.radio.erase("rfgr");
             }
