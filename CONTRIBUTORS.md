@@ -4,7 +4,7 @@ OnAir exists because of the people below: they sent fixes, reported bugs, shared
 
 In the program: Help, Credits, tab Contributors. To add someone, edit `tools/contributors.tsv` and run `python3 tools/gen_credits.py`.
 
-## People (89)
+## People (90)
 
 | Who | What | Kind | Where | Reference |
 |---|---|---|---|---|
@@ -91,6 +91,7 @@ In the program: Help, Credits, tab Contributors. To add someone, edit `tools/con
 | [kevgfire](https://github.com/kevgfire) | UK band plan and USB/LSB requests | idea | General receiver | [#159](https://github.com/adswill/OnAir/issues/159), [#161](https://github.com/adswill/OnAir/issues/161) |
 | [KvaKKK](https://github.com/KvaKKK) | Meshcore and Meshtastic preset editing | bug report | MeshCore; Meshtastic | [#60](https://github.com/adswill/OnAir/issues/60) |
 | [lakisfm1](https://github.com/lakisfm1) | DAB station logo and FM scanning reports | bug report | DAB / DAB+; FM | [#45](https://github.com/adswill/OnAir/issues/45), [#46](https://github.com/adswill/OnAir/issues/46) |
+| [Maciej Malinowski (webglobepl)](https://github.com/webglobepl) | Separate frequency step arrows from digit editing | pull request | Interface | [#706](https://github.com/adswill/OnAir/issues/706) |
 | [mechanicalpotato](https://github.com/mechanicalpotato) | RTL-SDR V4 HF tuning | bug report | Radios | [#133](https://github.com/adswill/OnAir/issues/133) |
 | [michaelgeorge001](https://github.com/michaelgeorge001) | Audio output for all modes; CHU time signal removal | idea | Time signals | [#140](https://github.com/adswill/OnAir/issues/140), [#150](https://github.com/adswill/OnAir/issues/150) |
 | Mikki / YRPÄ | LTE band 31 | bug report | Cell towers | Discord |
@@ -202,7 +203,7 @@ In the program: Help, Credits, tab Contributors. To add someone, edit `tools/con
 - **Build**: drelectro, fe8769a, YZYMC
 - **Credits**: DickvanNoort
 - **Docker**: sbuchweitz
-- **Interface**: A2ureIm4la, andriux26, drelectro, grahampaull, Jamiar, nature.van, peterdewitte, richt314, Sunnnset5, Tech500, Ugo300, unilabs-exp, Voyager-III
+- **Interface**: A2ureIm4la, andriux26, drelectro, grahampaull, Jamiar, Maciej Malinowski (webglobepl), nature.van, peterdewitte, richt314, Sunnnset5, Tech500, Ugo300, unilabs-exp, Voyager-III
 - **Languages**: andriux26, BI8SYN, ffishman, PU2SWX
 - **Memory**: Ken W4KRR
 - **Network radios**: andriux26, Chercheur, DG9BFC, drelectro, F5OEO, ffishman, MUSTARDTIGERFPV, nmaster2042, rlabs-oss, tortyl

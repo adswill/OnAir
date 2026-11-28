@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+// Copyright (C) 2026 Maciej Malinowski (webglobepl)
 
 // The new interface: small widgets used by every layout (bordered panes, flat buttons and links, the big frequency
 // digits, the run button, section headings, meters, splitters, tiles and the faceplate modules).
@@ -95,9 +96,8 @@ bool textLink(const char* label) {
     return clicked;
 }
 
-// ---- the SDR++ style frequency readout: digits you can click (upper half up, lower half down) or scroll. With the mouse over it, typing a
-// number sets the digit under the mouse and moves on to the next one, the arrow keys step the digit (up/down) or pick another (left/right),
-// and a double click opens a box to type the whole frequency.
+// ---- Frequency readout: hover a digit to reveal its step buttons; clicking the digit opens the full-frequency editor.
+// Scrolling and typing over a digit still work, as do the arrow keys (up/down step, left/right select).
 bool gFreqHovered = false;   // last frame: the mouse was over the digits (the 1-9 mode keys stay off then)
 
 float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::function<void(double)>& tune, float fontSize) {
@@ -106,7 +106,6 @@ float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::fu
     static int keyFrame = -1;            // the frame whose arrow/number keys a readout already took
     const ImGuiID myId = ImGui::GetID("##freqdigits");
     static ImVec2 kbMouse;               // where the mouse was then: moving it gives the digit back to the mouse
-    static double preClickMhz = 0;       // the frequency before the first click of a double click, which the double click undoes
     static char typed[32] = "";
     long long hz = (long long)std::llround(mhzRef * 1e6);
     constexpr int kD = fdigits::kDigits;   // thirteen digits: up to 1000 GHz (10^12 Hz); the arithmetic is ui/freq_digits.h
@@ -114,27 +113,56 @@ float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::fu
     snprintf(buf, sizeof buf, "%013lld", hz);
     ImGui::PushFont(typo::fonts().monoBold ? typo::fonts().monoBold : a.mono, fontSize);
     const ImVec2 cs = ImGui::CalcTextSize("0");
-    const float cw = cs.x + 1 * gUi, ch = cs.y;
+    const float cw = std::max(cs.x + 1 * gUi, 24 * gUi), ch = cs.y;
+    const float arrowH = 16 * gUi;
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const ImVec2 o = ImGui::GetCursorScreenPos();
+    const float textY = o.y + arrowH;
+    ImFontBaked* digitFont = ImGui::GetFontBaked();
+    const bool editorOpen = ImGui::IsPopupOpen("##freqtype");
     float x = o.x;
     long long delta = 0;
-    bool leading = true, dbl = false;
+    bool leading = true, edit = false;
     int hovIdx = -1;
     float digitX[kD];
     for (int i = 0; i < kD; i++) {
         digitX[i] = x;
         const long long place = fdigits::placeOf(i);
-        ImGui::SetCursorScreenPos(ImVec2(x, o.y));
         ImGui::PushID(i);
-        ImGui::InvisibleButton("##d", ImVec2(cw, ch));
+        // The digit and both buttons share one hover column, with no gap to cross.
+        // Use the glyph bounds so font padding does not push the arrows away from the digit.
+        const ImFontGlyph* glyph = digitFont->FindGlyph(buf[i]);
+        const float digitTop = textY + std::clamp(glyph->Y0 - 1.5f * gUi, 0.f, ch * 0.25f);
+        const float digitBottom = textY + std::clamp(glyph->Y1 + 1.5f * gUi, ch * 0.75f, ch);
+        const float arrowY[] = {o.y, digitBottom};
+        const float arrowHeight[] = {digitTop - o.y, textY + ch + arrowH - digitBottom};
+        bool arrowHovered[2];
+        for (int row = 0; row < 2; ++row) {
+            ImGui::SetCursorScreenPos(ImVec2(x, arrowY[row]));
+            ImGui::InvisibleButton(row == 0 ? "##up" : "##down", ImVec2(cw, arrowHeight[row]));
+            arrowHovered[row] = ImGui::IsItemHovered();
+            if (ImGui::IsItemClicked(0)) delta = row == 0 ? place : -place;
+        }
+        ImGui::SetCursorScreenPos(ImVec2(x, digitTop));
+        ImGui::InvisibleButton("##d", ImVec2(cw, digitBottom - digitTop));
         ImGui::PopID();
         const bool hov = ImGui::IsItemHovered();
-        const ImVec2 p0 = ImGui::GetItemRectMin();
-        const bool upper = ImGui::GetIO().MousePos.y < p0.y + ch * 0.5f;
-        if (hov) hovIdx = i;
-        if (hov && ImGui::IsMouseDoubleClicked(0)) dbl = true;
-        else if (ImGui::IsItemClicked(0)) { preClickMhz = mhzRef; delta = upper ? place : -place; }
+        if (ImGui::IsItemClicked(0)) edit = true;
+        if (hov || arrowHovered[0] || arrowHovered[1]) {
+            hovIdx = i;
+            if (!editorOpen && !edit) {
+                const float cx = x + cw * 0.5f;
+                const float halfW = std::min(6 * gUi, cw * 0.3f), halfH = 3.5f * gUi;
+                for (int row = 0; row < 2; ++row) {
+                    const float direction = row == 0 ? 1.f : -1.f;
+                    const float baseY = row == 0 ? digitTop - 0.5f * gUi : digitBottom + 0.5f * gUi;
+                    dl->AddTriangleFilled(ImVec2(cx - halfW, baseY),
+                                          ImVec2(cx + halfW, baseY),
+                                          ImVec2(cx, baseY - direction * 2 * halfH),
+                                          u32(arrowHovered[row] ? T.bright : T.dim));
+                }
+            }
+        }
         if (hov && ImGui::GetIO().MouseWheel != 0) {
             // a mouse wheel notch is 1.0 (one step of this digit); a trackpad sends many small values, which add up to a step each time they reach 1
             static float wheelAcc = 0;
@@ -142,19 +170,15 @@ float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::fu
             if (steps != 0) delta = (long long)steps * place;
             ImGui::GetIO().MouseWheel = 0;
         }
-        if (hov) {
-            dl->AddRectFilled(p0, ImVec2(p0.x + cw, p0.y + ch), IM_COL32(255, 255, 255, 18));
-            const float my = upper ? p0.y + 2 * gUi : p0.y + ch - 2 * gUi;
-            dl->AddTriangleFilled(ImVec2(p0.x + cw * 0.5f - 3 * gUi, upper ? my + 4 * gUi : my - 4 * gUi), ImVec2(p0.x + cw * 0.5f + 3 * gUi, upper ? my + 4 * gUi : my - 4 * gUi), ImVec2(p0.x + cw * 0.5f, my), u32(T.dim));
-        }
+        if (hov) dl->AddRectFilled(ImVec2(x, digitTop), ImVec2(x + cw, digitBottom), IM_COL32(255, 255, 255, 18));
         if (buf[i] != '0') leading = false;
         const bool dim = leading && i < kD - 3;   // leading zeros are shown dim, like SDR++
         char c[2] = {buf[i], 0};
-        dl->AddText(ImVec2(x + (cw - cs.x) * 0.5f, o.y), u32(dim ? ImVec4(T.dim.x * 0.8f, T.dim.y * 0.8f, T.dim.z * 0.8f, 1) : T.bright), c);
+        dl->AddText(ImVec2(x + (cw - cs.x) * 0.5f, textY), u32(dim ? ImVec4(T.dim.x * 0.8f, T.dim.y * 0.8f, T.dim.z * 0.8f, 1) : T.bright), c);
         x += cw;
-        if (i < kD - 1 && (kD - 1 - i) % 3 == 0) { dl->AddText(ImVec2(x - cs.x * 0.275f, o.y), u32(T.dim), "."); x += cs.x * 0.45f; }   // the dot centred in the gap
+        if (i < kD - 1 && (kD - 1 - i) % 3 == 0) { dl->AddText(ImVec2(x - cs.x * 0.275f, textY), u32(T.dim), "."); x += cs.x * 0.45f; }   // the dot centred in the gap
     }
-    ImGui::SetCursorScreenPos(ImVec2(x + 8 * gUi, o.y + ch * 0.5f - ImGui::GetTextLineHeight() * 0.35f));
+    ImGui::SetCursorScreenPos(ImVec2(x + 8 * gUi, textY + ch * 0.5f - ImGui::GetTextLineHeight() * 0.35f));
     ImGui::PopFont();
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("%s", tr("Hz"));
@@ -181,12 +205,11 @@ float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::fu
         if (ImGui::IsKeyPressed(ImGuiKey_RightArrow)) { kbIdx = std::min(kD - 1, cur + 1); kbMouse = io.MousePos; }
         if (kbIdx >= 0 && kbOwner == myId && kbIdx != hovIdx) {   // show where the keyboard is when it is not under the mouse
             const float kx = digitX[kbIdx];
-            dl->AddRect(ImVec2(kx, o.y), ImVec2(kx + cw, o.y + ch), u32(T.dim), 2.f);
+            dl->AddRect(ImVec2(kx, textY), ImVec2(kx + cw, textY + ch), u32(T.dim), 2.f);
         }
     }
-    if (dbl) {
-        if (std::fabs(preClickMhz - mhzRef) > 1e-9 && preClickMhz > 0) tune(preClickMhz);   // undo the first click's step
-        snprintf(typed, sizeof typed, "%.6f", preClickMhz > 0 ? preClickMhz : mhzRef);
+    if (edit) {
+        snprintf(typed, sizeof typed, "%.6f", mhzRef);
         ImGui::OpenPopup("##freqtype");
     }
     if (ImGui::BeginPopup("##freqtype")) {

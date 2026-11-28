@@ -88,6 +88,7 @@ inline constexpr ContribEntry kContribs[] = {
     {"kevgfire", "https://github.com/kevgfire", "idea", "UK band plan and USB/LSB requests", "General receiver", "#159, #161"},
     {"KvaKKK", "https://github.com/KvaKKK", "bug report", "Meshcore and Meshtastic preset editing", "MeshCore; Meshtastic", "#60"},
     {"lakisfm1", "https://github.com/lakisfm1", "bug report", "DAB station logo and FM scanning reports", "DAB / DAB+; FM", "#45, #46"},
+    {"Maciej Malinowski (webglobepl)", "https://github.com/webglobepl", "pull request", "Separate frequency step arrows from digit editing", "area:Interface", "#706"},
     {"mechanicalpotato", "https://github.com/mechanicalpotato", "bug report", "RTL-SDR V4 HF tuning", "area:Radios", "#133"},
     {"michaelgeorge001", "https://github.com/michaelgeorge001", "idea", "Audio output for all modes; CHU time signal removal", "Time signals", "#140, #150"},
     {"Mikki / YRPÄ", "-", "bug report", "LTE band 31", "Cell towers", "discord"},

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+// Copyright (C) 2026 Maciej Malinowski (webglobepl)
 
 // The arithmetic of the SDR++ style frequency readout (ui2_widgets.cpp freqDigitsImpl): thirteen digits, each one a place of ten, changed by a
-// click (upper half up, lower half down), the wheel (a trackpad's small values add up to whole steps) or typing a number over it.
+// click on a separate up/down button, the wheel (a trackpad's small values add up to whole steps) or typing a number over it.
 // No ImGui here, so tests/general40/test_general_layout.cpp checks it.
 #pragma once
 #include <algorithm>
