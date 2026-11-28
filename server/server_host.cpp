@@ -128,6 +128,12 @@ void ServerHost::refreshDevices(bool force) {
     const std::string keep = devIdx_ >= 0 && devIdx_ < (int)devices_.size() ? devices_[(size_t)devIdx_].name : std::string();
     std::string err;
     devices_ = listRadios(err);
+    // Sound-card capture devices (a receiver's audio / IF out, an SDR that shows up as a sound card): the same source as the app's
+    // "Sound card: ..." entries. Never the default pick (not isRadio); choose one with --audio-device or device=. Based on a patch by @cleo2024 (#554).
+    {
+        const auto audio = listAudioDevices();
+        devices_.insert(devices_.end(), audio.begin(), audio.end());
+    }
     DeviceInfo syn;
     syn.kind = DeviceInfo::Synthetic; syn.name = "Test signal (no radio)";
     devices_.push_back(syn);
@@ -282,6 +288,10 @@ TuneSettings ServerHost::buildTune(const DeviceInfo& d) const {
     if (d.isRadio() && rateHz_ > 0) t.sampleRate = rateHz_;
     else if (d.isRadio() && mt && mt->stdMode == 22 && captureBwMhz_ <= 0) {   // Mesh on an RTL-SDR: 1.024 Msps for the 250 kHz channel, as in the window (#386)
         if (const double r = meshRtlRateHz(d.board, 250e3); r > 0) { t.sampleRate = r; t.basebandFilterHz = 0.45 * r; }
+    }
+    if (d.kind == DeviceInfo::Audio) {   // the sound-card settings: the same keys and defaults as the app (audio_if.h)
+        static const char* const keys[] = {"audio_iq", "audio_chan", "audio_rate", "audio_if_hz", "audio_invert", "audio_gain_db", "audio_dc"};
+        for (const char* k : keys) if (cfg_.has(k)) t.radio[k] = cfg_.get(k);
     }
     if (d.isGeneric()) {
         t.sampleRate = linkRateFor(d, t, t.sampleRate, minSampleRateFor(m.family, t.bandwidthMhz));
