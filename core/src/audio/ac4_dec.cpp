@@ -235,6 +235,20 @@ struct Lib {
     void (*chlayout_uninit)(AVChannelLayout*) = nullptr;
 };
 
+// libac4dec, through its run-time entry points (its ac4dec.h, "RUN-TIME LOADING")
+struct A4Lib {
+    LibHandle h = nullptr;
+    const char* (*version)() = nullptr;
+    void* (*open_options)(const char*, char*, size_t) = nullptr;
+    void (*close)(void*) = nullptr;
+    int (*decode)(void*, const uint8_t*, size_t, float*, int, int*, int*, int*) = nullptr;
+    int (*flush)(void*, float*, int, int*, int*, int*) = nullptr;
+    int (*delay)(const void*) = nullptr;
+};
+constexpr int kA4MaxOut = 2050, kA4MaxCh = 16;   // AC4DEC_MAX_OUT, AC4DEC_MAX_CHANNELS
+constexpr int kA4Lookahead = 8;                  // AC4DEC_MIN_LOOKAHEAD: 0.27 s at 29.97 fps
+constexpr int kA4Latency = 577;                  // every channel comes out 577 samples late (the QMF bank)
+
 struct LibState {
     std::mutex mu;
     bool searched = false;
@@ -242,6 +256,8 @@ struct LibState {
     std::string decoderName = "ac4";
     Ac4LibInfo info;
     std::unique_ptr<Lib> lib;
+    std::unique_ptr<A4Lib> a4;
+    std::vector<std::unique_ptr<A4Lib>> a4Retired;   // from before a "Look again"
 };
 LibState& S() { static LibState s; return s; }
 
@@ -266,6 +282,16 @@ bool resolve(Lib& L, std::string& miss) {
     NEED(L.util, L.opt_get_int, "av_opt_get_int");
     L.opt_get_chlayout = (decltype(L.opt_get_chlayout))symOf(L.util, "av_opt_get_chlayout");
     L.chlayout_uninit = (decltype(L.chlayout_uninit))symOf(L.util, "av_channel_layout_uninit");
+    return true;
+}
+
+bool resolveA4(A4Lib& L, std::string& miss) {
+    NEED(L.h, L.version, "ac4dec_version");
+    NEED(L.h, L.open_options, "ac4dec_open_options");
+    NEED(L.h, L.close, "ac4dec_close");
+    NEED(L.h, L.decode, "ac4dec_decode_interleaved");
+    NEED(L.h, L.flush, "ac4dec_flush_interleaved");
+    NEED(L.h, L.delay, "ac4dec_delay");
     return true;
 }
 
@@ -302,10 +328,38 @@ std::vector<std::string> searchFolders(const std::string& override) {
     return v;
 }
 
+// libac4dec in the folders, first found wins. False when there is none (or none with the run-time entry points: an old version).
+bool searchA4(LibState& s, std::string& note) {
+    for (const std::string& rawDir : searchFolders(s.dir)) {
+        std::string dir = rawDir;
+        if (!dir.empty() && dir.back() != '/' && dir.back() != '\\') dir += '/';
+        for (const std::string& p : candidates(dir, "ac4dec")) {
+            auto L = std::make_unique<A4Lib>();
+            L->h = openLib(p);
+            if (!L->h) continue;
+            std::string miss;
+            if (!resolveA4(*L, miss)) { closeLib(L->h); note = p + " has no " + miss + ": it is too old (it needs the run-time entry points)"; continue; }
+            s.info.found = true; s.info.hasDecoder = true;
+            s.info.backend = "libac4dec";
+            s.info.version = L->version() ? L->version() : "";
+            s.info.path = p;
+            s.info.message.clear();
+            s.a4 = std::move(L);
+            return true;
+        }
+    }
+    return false;
+}
+
 void doSearch(LibState& s) {
     s.info = Ac4LibInfo();
     s.lib.reset();
-    std::string anyFound;
+    if (s.a4) s.a4Retired.push_back(std::move(s.a4));   // decoders still open keep using it: never freed, never unloaded
+    std::string anyFound, a4note;
+    const char* be = getenv("DECT2_AC4_BACKEND");
+    const std::string backend = be ? lower(be) : std::string();
+    if (s.decoderName == "ac4" && backend != "ffmpeg" && searchA4(s, a4note)) return;
+    if (backend == "libac4dec") { s.info.message = a4note.empty() ? "no libac4dec in the codecs folders" : a4note; return; }
     for (const std::string& rawDir : searchFolders(s.dir)) {
         std::string dir = rawDir;
         if (!dir.empty() && dir.back() != '/' && dir.back() != '\\') dir += '/';
@@ -322,6 +376,7 @@ void doSearch(LibState& s) {
                 const AVCodec* c = L->find_decoder_by_name(s.decoderName.c_str());
                 if (!c) { anyFound = cp; continue; }   // not unloaded: another FFmpeg is looked at, and unloading a FFmpeg is not worth the risk
                 s.info.found = true; s.info.hasDecoder = true;
+                s.info.backend = "FFmpeg";
                 s.info.path = cp; s.info.utilPath = up; s.info.avcodecVersion = (int)L->avcodec_version();
                 s.info.message.clear();
                 s.lib = std::move(L);
@@ -332,7 +387,8 @@ void doSearch(LibState& s) {
     if (s.info.found)
         s.info.message = "libavcodec was found (" + (anyFound.empty() ? s.info.path : anyFound) + ") but it has no \"" + s.decoderName + "\" decoder: it is not an FFmpeg with the AC-4 patch";
     else
-        s.info.message = "no libavcodec / libavutil in the codecs folders";
+        s.info.message = "no libac4dec and no libavcodec / libavutil in the codecs folders";
+    if (!a4note.empty()) s.info.message += "; " + a4note;
 }
 
 } // namespace
@@ -369,10 +425,36 @@ struct Ac4Decoder::Impl {
     AVCodecContext* ctx = nullptr;
     AVPacket* pkt = nullptr;
     AVFrame* frame = nullptr;
+    const A4Lib* A = nullptr;   // libac4dec instead of FFmpeg
+    void* a4 = nullptr;
+    std::vector<float> a4buf;
+    int wantCh = 0;
     std::string err;
     int channels = 0, rate = 0;
 
+    bool openA4() {
+        std::string opts = "lookahead=" + std::to_string(kA4Lookahead) + " loudness=1 target_level=-24 drc=auto";
+        if (wantCh == 6) opts += " layout=5.1";
+        else if (wantCh == 2) opts += " layout=2.0";
+        char e[160] = {0};
+        a4 = A->open_options(opts.c_str(), e, sizeof e);
+        if (!a4) { err = std::string("libac4dec would not open: ") + e; return false; }
+        a4buf.assign((size_t)kA4MaxOut * kA4MaxCh, 0.f);
+        return true;
+    }
+    // appends one frame of libac4dec output (n samples, ch channels) to pcm, clipped to full scale
+    int takeA4(int n, int ch, int r, std::vector<float>& pcm, int& chOut, int& rateOut) {
+        if (n <= 0 || ch <= 0 || ch > kA4MaxCh || r <= 0) return n < 0 ? -1 : 0;
+        const size_t base = pcm.size();
+        pcm.resize(base + (size_t)n * ch);
+        for (size_t i = 0; i < (size_t)n * ch; i++) pcm[base + i] = std::clamp(a4buf[i], -1.f, 1.f);
+        chOut = ch; rateOut = r;
+        channels = ch; rate = r;
+        return n;
+    }
+
     ~Impl() {
+        if (A && a4) A->close(a4);
         if (!L) return;
         if (ctx) L->free_context(&ctx);
         if (pkt) L->packet_free(&pkt);
@@ -383,17 +465,21 @@ struct Ac4Decoder::Impl {
 Ac4Decoder::Ac4Decoder() : p_(new Impl) {}
 Ac4Decoder::~Ac4Decoder() = default;
 
-bool Ac4Decoder::isOpen() const { return p_->ctx != nullptr; }
+bool Ac4Decoder::isOpen() const { return p_->ctx != nullptr || p_->a4 != nullptr; }
+void Ac4Decoder::setOutputChannels(int channels) { p_->wantCh = channels; }
+int Ac4Decoder::delayFrames() const { return p_->a4 ? p_->A->delay(p_->a4) : 0; }
+int Ac4Decoder::latencySamples() const { return p_->a4 ? kA4Latency : 0; }
 std::string Ac4Decoder::error() const { return p_->err; }
 
 bool Ac4Decoder::open() {
-    if (p_->ctx) return true;
+    if (p_->ctx || p_->a4) return true;
     const Lib* L = nullptr;
     std::string name;
     {
         LibState& s = S();
         std::lock_guard<std::mutex> lk(s.mu);
         if (!s.searched) { doSearch(s); s.searched = true; }
+        if (s.a4) { p_->A = s.a4.get(); return p_->openA4(); }
         if (!s.lib) { p_->err = s.info.message.empty() ? "AC-4 decoder library not found" : s.info.message; return false; }
         L = s.lib.get();   // never freed: the library stays loaded
         name = s.decoderName;
@@ -411,9 +497,18 @@ bool Ac4Decoder::open() {
     return true;
 }
 
-void Ac4Decoder::flush() { if (p_->ctx) p_->L->flush_buffers(p_->ctx); }
+void Ac4Decoder::flush() {
+    if (p_->ctx) p_->L->flush_buffers(p_->ctx);
+    if (p_->a4) { p_->A->close(p_->a4); p_->a4 = nullptr; p_->openA4(); }   // a new stream: the frames inside are dropped
+}
 
 int Ac4Decoder::decode(const uint8_t* data, size_t size, std::vector<float>& pcm, int& channels, int& sampleRate) {
+    if (p_->a4) {
+        if (!data || size == 0 || size > (1u << 24)) return -1;
+        int ch = 0, r = 0, st = 0;
+        const int n = p_->A->decode(p_->a4, data, size, p_->a4buf.data(), kA4MaxOut, &ch, &r, &st);
+        return p_->takeA4(n, ch, r, pcm, channels, sampleRate);
+    }
     if (!p_->ctx || !data || size == 0 || size > (1u << 24)) return -1;
     const Lib& L = *p_->L;
     L.packet_unref(p_->pkt);

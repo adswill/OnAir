@@ -54,7 +54,7 @@ The built files are yours: they are never committed to the OnAir repository and 
 | Yaesu System Fusion (C4FM) voice | AMBE+2 (patented) | a **speech codec plug-in** with the codec id **`ysf`** (`onair-codec-ysf`) that you build yourself; callsigns, call mode and slow data work without it |
 | KA modes (KAAL, KAPP, KAFT, KAVB, KAIT, KAWS) | their own codecs (unpatented, written for OnAir) | nothing: nothing to install |
 | DAB, DRM, TV, FM | MP2, AAC, H.264 ... | nothing (FFmpeg is inside OnAir) |
-| ATSC 3.0 (US, South Korea) | Dolby AC-4 (patented) | optional **libavcodec + libavutil from an FFmpeg with an AC-4 decoder** (see below); without it the AC-4 sound is left out, picture and AAC / AC-3 sound still play |
+| ATSC 3.0 (US, South Korea) | Dolby AC-4 (patented) | optional **libac4dec**, or **libavcodec + libavutil from an FFmpeg with an AC-4 decoder** (see below); without it the AC-4 sound is left out, picture and AAC / AC-3 sound still play |
 
 **codec2 does not help DMR, P25, NXDN or dPMR.** Putting `codec2.dll` or `libcodec2.dll` in the codecs folder only matters for FreeDV
 and M17. If a digital-voice mode says "mbelib not found", you need **mbelib**, a different library.
@@ -352,7 +352,7 @@ these steps work; it is never packaged. The add-on was not run on a phone when t
 
 OnAir for Android ships no patented codec and downloads none. Libraries you build or get yourself are imported in the app: **Settings > Codecs**.
 
-- The screen lists every optional codec and add-on (DRA+ for CDR, mbelib for DMR/P25/NXDN/dPMR/D-STAR voice, FAAD2, LAME, fdk-aac, FFmpeg for AC-4 and AVS+, the voice plug-ins ...) with what needs it, whether a library is installed, and its file and ABI. Radio drivers are not on it (the phone's USB path has its own).
+- The screen lists every optional codec and add-on (DRA+ for CDR, mbelib for DMR/P25/NXDN/dPMR/D-STAR voice, FAAD2, LAME, fdk-aac, libac4dec or FFmpeg for AC-4, FFmpeg for AVS+, the voice plug-ins ...) with what needs it, whether a library is installed, and its file and ABI. Radio drivers are not on it (the phone's USB path has its own).
 - **Import .so or .zip** opens the file picker. A zip may hold several libraries; other files in it are ignored. Each file is checked: its name must be one the list shows ("Accepted names", the same names the desktop looks for, ending in `.so` or `.so.<number>`), and it must be a 64-bit **arm64-v8a** ELF shared library. A file for x86, 32-bit ARM, or with another name is refused with the reason.
 - Before anything is copied, OnAir shows the file's **SHA-256** and a warning: the library runs inside OnAir with the same access as the app, so import only files you built yourself or trust; patent and licence rules are yours to follow.
 - On yes, the file is copied into the app's private folder (`files/codecs`, read-only; Android does not run code from shared storage) and the core looks again. DRA+ is picked up at once; a library another part already tried to load may need OnAir to be closed and opened again. **Remove** deletes the file (a loaded library stays loaded until the app is closed).
@@ -504,11 +504,32 @@ ATSC 3.0 broadcasts in the US and South Korea (and a few DVB services) carry the
 OnAir, has **no AC-4 decoder** (it knows the codec id but no decoder: `ffmpeg -h decoder=ac4` says so). OnAir therefore leaves AC-4 sound out
 and says so in the ATSC 3.0 tab and the TV tab, with a **?** card. Picture and any AAC or AC-3 sound track of the service play as usual.
 
-**Optional support.** If you provide `libavcodec` and `libavutil` (shared libraries) from an FFmpeg that contains a decoder named `ac4`, OnAir
-loads them at run time from the codecs folders (or the folder in `DECT2_AC4_DIR`), decodes the AC-4 access units of the selected service,
-mixes them to stereo or 5.1 and plays them (internally: decoded with your library, encoded as AC-3 by OnAir's own FFmpeg, put in the
-transport stream). The libraries are used through a small, stable interface, so an FFmpeg of another major version than OnAir's works.
-Put them, and the libraries they need (`libswresample` and others), together in the codecs folder, then press **Look again**.
+**Optional support.** OnAir loads an AC-4 decoder you install yourself, at run time, from the codecs folders (or the folder in
+`DECT2_AC4_DIR`), decodes the AC-4 access units of the selected service, mixes them to stereo or 5.1 and plays them (internally: decoded
+with your library, encoded as AC-3 by OnAir's own FFmpeg, put in the transport stream). Two kinds of library are accepted:
+
+- **libac4dec** (`libac4dec.so`, `libac4dec.dylib` or `ac4dec.dll`), described below. When it is there, it is used.
+- **`libavcodec` and `libavutil`** (shared libraries) from an FFmpeg that contains a decoder named `ac4`. They are used through a small, stable
+  interface, so an FFmpeg of another major version than OnAir's works. Put them, and the libraries they need (`libswresample` and others),
+  together in the codecs folder.
+
+Then press **Look again**. The **?** card says which one was found. `DECT2_AC4_BACKEND=ffmpeg` (or `libac4dec`) makes OnAir use only that kind.
+
+**libac4dec.** An AC-4 decoder library in C99 (no other libraries), Apache-2.0, published separately at
+<https://github.com/Felbs/ac4-decoder> (version 0.3.1 or later; older ones lack the run-time entry points). Build it with `make` in its `c`
+folder and copy `libac4dec.so` (or the `.dylib` / `.dll` you build) into the codecs folder. OnAir calls six plain functions (open with text
+options, decode into a float buffer, flush, delay, version, close); no structure is shared, so its versions need not match OnAir's.
+What it decodes, by its own documentation and measurements: stereo and 5.1, including 5.1 sent as a two-channel core plus the A-CPL
+surround upmix and the A-SPX high band; every frame rate (29.97 and 25 fps streams come out at the right speed); 7.1 and immersive
+streams (5.1.4, 7.1.4, objects) mixed down by the stream's own coefficients to the 5.1 or stereo OnAir asks for; loudness normalisation to
+-24 dB with the stream's dynamic range control. A comparison with the FFmpeg patch below, on 39 streams, is in its
+`docs/COMPARISON.md`: on 5.1 streams that use A-CPL the patch leaves the surround channels silent.
+It decodes with a delay of 8 frames (about 0.27 s at 29.97 fps); OnAir times every frame back to the access unit it came from, so lip
+sync is kept.
+Checked in OnAir (`test_ac4` with a stand-in library for the loader and the time line; by hand with the real library): a US broadcaster's
+5.1 and stereo tracks and Dolby's public AC-4 test streams (5.1, 5.1.4, immersive) went through the remux to AC-3 with every frame
+decoded, each channel at the level and in the place libac4dec gives on its own (correlation 0.996 or more after the AC-3 re-encoding).
+Not yet tried in the app on a live broadcast.
 
 **Where such an FFmpeg comes from.** The only public AC-4 decoder known to this project is the patch
 `ffmpeg_ac4.patch` in <https://github.com/funnymanva/ffmpeg-with-ac4> (FFmpeg 6.1 plus a 5,900 line decoder, `libavcodec/ac4dec.c`, by Paul B Mahol, 2019).
@@ -517,10 +538,10 @@ to FFmpeg 6.1 yourself and configure it with `--enable-shared --disable-static`.
 removed `avctx->channels`). OnAir's test of this path used a stock FFmpeg with the AC-3 decoder standing in for the AC-4 one; **it has not been
 tried on a real AC-4 broadcast**, and nobody has checked how complete the patch's decoder is (OnAir uses its first presentation, its default).
 
-**Licences.** The patch's decoder carries the LGPL-2.1-or-later header of FFmpeg, and the build script is MIT-licensed (it is derived from
+**Licences.** libac4dec is Apache-2.0. The patch's decoder carries the LGPL-2.1-or-later header of FFmpeg, and the build script is MIT-licensed (it is derived from
 markus-perl/ffmpeg-build-script): for copyright you may build and use them yourself. Copyright is not the whole story: AC-4 is a Dolby codec covered
 by patents, licensed to makers of products (and Dolby's AC-4 specification is ETSI TS 103 190, public, but implementing it is not a patent licence).
-OnAir ships no AC-4 code, no FFmpeg patch and downloads nothing; the build script above also pulls in GPL and non-free libraries if you ask it to
+OnAir ships no AC-4 code, no libac4dec, no FFmpeg patch and downloads nothing; the build script above also pulls in GPL and non-free libraries if you ask it to
 (`--enable-gpl-and-non-free`), which would make that binary unredistributable. Whether you may use it where you live is your responsibility.
 
 ## Speech codec plug-ins (voice modes)

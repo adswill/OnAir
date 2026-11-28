@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -31,6 +32,7 @@ struct Ac4ToAc3::Impl {
     int64_t consumed = 0;                // samples (48 kHz) taken by the encoder since the anchor
     int64_t queued = 0;                  // samples (48 kHz) put in the queue since the anchor
     bool anchored = false;
+    std::deque<int64_t> pending;         // times of the access units fed whose output has not come yet (the decoder's delay)
     AVPacket* pkt = nullptr;
     AVFrame* frm = nullptr;
 
@@ -90,6 +92,7 @@ std::string Ac4ToAc3::error() const { return p_->err.empty() ? p_->dec.error() :
 
 bool Ac4ToAc3::open(int channelsHint) {
     Impl& I = *p_;
+    I.dec.setOutputChannels(channelsHint >= 6 ? 6 : 2);
     if (!I.dec.open()) return false;
     const AVCodec* c = avcodec_find_encoder_by_name("ac3");
     if (!c) { DIAG(235471, "This FFmpeg has no AC-3 encoder, so AC-4 audio cannot be converted for a receiver."); I.err = "no AC-3 encoder in this FFmpeg"; return false; }
@@ -114,8 +117,16 @@ void Ac4ToAc3::push(const uint8_t* data, size_t size, int64_t pts90, std::vector
     std::vector<float> pcm;
     int ch = 0, rate = 0;
     const int n = I.dec.decode(data, size, pcm, ch, rate);
-    ac4NoteDecode(n >= 0, ch, rate);
+    if (n != 0) ac4NoteDecode(n > 0, ch, rate);
+    // the output belongs to the unit fed delayFrames() calls ago (libac4dec), and is latencySamples() late against it
+    I.pending.push_back(pts90);
+    while ((int)I.pending.size() > I.dec.delayFrames() + 1) I.pending.pop_front();
     if (n <= 0) return;
+    if ((int)I.pending.size() > I.dec.delayFrames()) {
+        pts90 = I.pending.front();
+        I.pending.pop_front();
+    }
+    if (rate > 0) pts90 -= av_rescale(I.dec.latencySamples(), 90000, rate);
     if (!I.swr || I.swrInCh != ch || I.swrInRate != rate) { if (!I.setupSwr(ch, rate)) return; }
     // the time line: the first access unit sets it; a jump of more than 200 ms (a splice, a lost segment) sets it again
     const int64_t expect = I.anchored ? I.anchor + av_rescale(I.queued, 90000, I.enc->sample_rate) : pts90;
