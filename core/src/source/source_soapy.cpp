@@ -911,6 +911,13 @@ bool soapyLearnRanges(DeviceInfo& d) {
     const auto it = gRanges.find(rangesKey(d.serial, deviceArgs(d.soapyArgs)));
     if (it == gRanges.end()) return false;
     const SoapyRanges& r = it->second;
+    // the radio's own settings (RF gain stage, gain elements, driver settings ...) after the ones the listing put first (ppm), without doubling
+    // any. Taken whether or not the ranges changed: a probe (probeSoapyRanges) learns the settings of a radio whose ranges were listed already
+    for (const RadioSetting& s : r.settings) {
+        bool have = false;
+        for (const RadioSetting& o : d.settings) have |= o.key == s.key;
+        if (!have) d.settings.push_back(s);
+    }
     if (!(r.gainMax > r.gainMin) && !(r.maxRate > 0)) return false;
     bool ch = false;
     auto set = [&](double& f, double v) { if (v != 0 && f != v) { f = v; ch = true; } };
@@ -920,14 +927,25 @@ bool soapyLearnRanges(DeviceInfo& d) {
     if (ch) {
         d.rateRanges = r.rates;
         d.hasBiasTee = !r.biasKey.empty();
-        // the radio's own settings (RF gain stage, gain elements ...) after the ones the listing put first (ppm), without doubling any
-        for (const RadioSetting& s : r.settings) {
-            bool have = false;
-            for (const RadioSetting& o : d.settings) have |= o.key == s.key;
-            if (!have) d.settings.push_back(s);
-        }
     }
     return ch;
+}
+
+bool probeSoapyRanges(const DeviceInfo& d) {
+    if (d.kind != DeviceInfo::Soapy) return false;
+    const std::string args = deviceArgs(d.soapyArgs);
+    const std::string key = rangesKey(d.serial, args);
+    {
+        std::lock_guard<std::mutex> lk(gRangesMu);
+        if (gRanges.count(key)) return true;   // learned already: a start, or an earlier probe
+    }
+    std::string err;
+    SoapySDR::Device* dev = nullptr;
+    try { dev = makeDevice(args, err); } catch (...) { return false; }   // a radio that cannot be opened is left as it is
+    if (!dev) return false;
+    try { rememberRanges(key, dev); } catch (...) {}
+    try { SoapySDR::Device::unmake(dev); } catch (...) {}
+    return true;
 }
 
 std::unique_ptr<IqSource> makeSoapySource(const DeviceInfo& d) { return std::make_unique<SoapySource>(d.soapyArgs, rangesKey(d.serial, deviceArgs(d.soapyArgs))); }

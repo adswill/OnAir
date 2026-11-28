@@ -10,8 +10,12 @@
 #include "dect2/selfcal/selfcal.h"
 #include "dect2/selfcal/ppmcal.h"
 #include "dect2/source/icom_r8600.h"
+#include "dect2/common/thread_name.h"
+#include <atomic>
 #include <cmath>
 #include <map>
+#include <set>
+#include <thread>
 
 namespace {
 
@@ -492,8 +496,9 @@ static void icomFirmwareUi(App& a) {
 
 void radioSettingsUi(App& a, bool vertical) {
     if (a.devIdx < 0 || a.devIdx >= (int)a.devices.size()) return;
-    const DeviceInfo& d = a.devices[a.devIdx];
+    DeviceInfo& d = a.devices[a.devIdx];
     if (!d.isRadio()) return;
+    if (d.kind == DeviceInfo::Soapy) soapyLearnRanges(d);   // the driver's settings: known once the radio was opened (a start or the probe below)
     syncRadioSettings(a);
     int changedN = 0;
     for (const auto& r : d.settings) if (a.tune.radio.count(r.key)) changedN++;
@@ -559,7 +564,20 @@ void radioSettingsUi(App& a, bool vertical) {
         if (ImGui::InputFloat(tr("dBm offset (dB)"), &off, 0.5f, 5.f, "%+.1f")) setDbmOffset(a, std::max(-200.f, std::min(200.f, off)));
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Added to a level in dBFS to give dBm for this radio: feed a known signal into the antenna port and set the difference. Used when the spectrum shows dBm (Spectrum button on the plot)."));
     }
-    if (d.kind == DeviceInfo::Soapy && d.settings.size() <= 1) ImGui::TextDisabled("%s", tr("The driver's own settings show up here\nonce this radio has been started."));
+    if (d.kind == DeviceInfo::Soapy && d.settings.size() <= 1) {
+        // Probe this SoapySDR device once in the background when Radio settings is opened while stopped, so connection and driver
+        // settings (a host, a port, a password) can be edited before Play. A radio that is running is not opened a second time.
+        static std::set<std::string> probed;
+        static std::atomic<bool> probing{false};
+        const std::string pkey = d.serial.empty() ? d.soapyArgs : d.serial;
+        if (!a.engine.running() && !probing.load() && !probed.count(pkey)) {
+            probed.insert(pkey);
+            probing = true;
+            DeviceInfo copy = d;
+            dect2::namedThread("onair-probe", [copy] { probeSoapyRanges(copy); probing = false; }).detach();
+        }
+        ImGui::TextDisabled("%s", probing.load() ? tr("Loading driver settings...") : tr("The driver's own settings show up here\nonce this radio has been started."));
+    }
     if (vertical) ImGui::TreePop(); else ImGui::EndPopup();
     if (!a.engine.running()) return;   // the next start takes them
     if (restart) { a.engine.log("radio setting changed: restarting the radio"); startReceiver(a); }
