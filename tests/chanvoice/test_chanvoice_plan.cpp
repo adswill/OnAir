@@ -67,6 +67,8 @@ int main() {
     CHECK(regionIndex(Service::Cb, "uk") == 2 && regionIndex(Service::Cb, "xx") == -1, "regionIndex");
     CHECK(toneLabel(88.5, -1, false) == "88.5 Hz" && toneLabel(0, 23, true) == "D023I" && toneLabel(0, -1, false).empty(), "tone labels");
     CHECK(handsetToneNumber(67.0) == 1 && handsetToneNumber(250.3) == 38 || handsetToneNumber(250.3) > 30, "handset tone numbers: %d", handsetToneNumber(250.3));
+    { const auto& au = channels(Service::Cb, 4); CHECK(au.size() == 77 && eq(au[0].mhz, 476.425) && eq(au[39].mhz, 477.4) && eq(au[40].mhz, 476.4375) && eq(au[76].mhz, 477.4125), "AU UHF CB plan: %zu", au.size());
+      CHECK(findLabel(Service::Cb, 4, "ch 5")->has(kEmergency) && findLabel(Service::Cb, 4, "11")->has(kCalling) && eq(findLabel(Service::Cb, 4, "1")->txMhz, 477.175), "AU UHF CB emergency, calling and repeater pairs"); }
     CHECK(micBands(0).size() == 3 && micBands(1).size() == 4, "mic bands");
     // VHF microphone bands (issue #487): added beside the UHF ones, which stay as they were
     CHECK(micBandsVhf(0).size() == 3 && micBandsVhf(1).size() == 3 && micBandsAll(0).size() == 6 && micBandsAll(1).size() == 7, "VHF mic bands: %zu, all %zu %zu", micBandsVhf(0).size(), micBandsAll(0).size(), micBandsAll(1).size());
