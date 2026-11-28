@@ -2803,7 +2803,7 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
 static bool WheelAdjustScalar(ImGuiID id, bool hovered, ImGuiDataType dt, void* p, const void* pmin, const void* pmax, float drag_speed, ImGuiSliderFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    if (!hovered || g.ActiveId != 0 || g.IO.MouseWheel == 0.0f) return false;
+    if (!hovered || !ImGuiSliderWheel || g.ActiveId != 0 || g.IO.MouseWheel == 0.0f) return false;
     ImGui::SetKeyOwner(ImGuiKey_MouseWheelY, id);
     const double dir = g.IO.MouseWheel > 0 ? 1.0 : -1.0;
     const double mul = g.IO.KeyShift ? 0.2 : (g.IO.KeyCtrl ? 5.0 : 1.0);
