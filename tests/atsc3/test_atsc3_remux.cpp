@@ -83,6 +83,21 @@ static int memRead(void* o, uint8_t* buf, int size) {
     return k;
 }
 
+// Sets the language of the track(s) of an initialization segment ('mdhd', ISO 639-2 packed in 15 bits); false when there is no mdhd
+static bool setMdhdLanguage(std::vector<uint8_t>& init, const char* lang) {
+    bool done = false;
+    for (size_t i = 4; i + 4 <= init.size(); i++) {
+        if (memcmp(&init[i], "mdhd", 4) != 0) continue;
+        const size_t off = i + 4 + 4 + (init[i + 4] == 1 ? 28 : 16);   // version/flags, then the times, timescale and duration
+        if (off + 2 > init.size()) break;
+        const unsigned v = ((unsigned)(lang[0] - 0x60) << 10) | ((unsigned)(lang[1] - 0x60) << 5) | (unsigned)(lang[2] - 0x60);
+        init[off] = (uint8_t)(v >> 8);
+        init[off + 1] = (uint8_t)v;
+        done = true;
+    }
+    return done;
+}
+
 int main(int argc, char** argv) {
     const char* vp = argc > 1 ? argv[1] : "tests/data/route_video.mp4";
     const char* ap = argc > 2 ? argv[2] : "tests/data/route_audio.mp4";
@@ -92,6 +107,8 @@ int main(int argc, char** argv) {
     std::vector<std::vector<uint8_t>> vseg, aseg;
     split(vf, vinit, vseg);
     split(af, ainit, aseg);
+    // the broadcast names each track's language in its 'mdhd' (A/331 broadcasters do: "eng", "spa"); the test file says "und"
+    CHECK(setMdhdLanguage(ainit, "spa"), "the audio init segment has an mdhd to carry a language");
     printf("  video: init %zu bytes + %zu segments, audio: init %zu bytes + %zu segments\n", vinit.size(), vseg.size(), ainit.size(), aseg.size());
     CHECK(!vinit.empty() && vseg.size() >= 2 && !ainit.empty() && aseg.size() >= 1, "test files have an init segment and fragments");
 
@@ -136,6 +153,13 @@ int main(int argc, char** argv) {
     }
     CHECK(vid >= 0 && ic->streams[vid]->codecpar->codec_id == AV_CODEC_ID_HEVC && ic->streams[vid]->codecpar->width == 160, "HEVC video 160 pixels wide");
     CHECK(aud >= 0 && ic->streams[aud]->codecpar->codec_id == AV_CODEC_ID_AAC && ic->streams[aud]->codecpar->sample_rate == 48000, "AAC audio at 48 kHz");
+    {
+        const AVDictionaryEntry* l = aud >= 0 ? av_dict_get(ic->streams[aud]->metadata, "language", nullptr, 0) : nullptr;
+        const AVDictionaryEntry* lv = vid >= 0 ? av_dict_get(ic->streams[vid]->metadata, "language", nullptr, 0) : nullptr;
+        printf("  audio language in the transport stream: %s, video: %s\n", l ? l->value : "(none)", lv ? lv->value : "(none)");
+        CHECK(l && !strcmp(l->value, "spa"), "the audio track keeps its language (ISO 639 descriptor)");
+        CHECK(!lv, "no language invented for a track that gives none (\"und\")");
+    }
     long vp2 = 0, ap2 = 0;
     int64_t vfirst = -1, afirst = -1, vlast = -1, alast = -1;
     AVPacket* pk = av_packet_alloc();
