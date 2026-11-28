@@ -198,12 +198,20 @@ std::vector<RadioSetting> soapySettings(SoapySDR::Device* dev, const std::string
             r.names = info.optionNames.size() == info.options.size() ? info.optionNames : info.options;
             r.def = now;
             if (std::find(r.values.begin(), r.values.end(), r.def) == r.values.end()) r.def = r.values.front();
-        } else if ((info.type == SoapySDR::ArgInfo::INT || info.type == SoapySDR::ArgInfo::FLOAT) && info.range.maximum() > info.range.minimum()) {
+        } else if (info.type == SoapySDR::ArgInfo::STRING) {   // free text: a host, a port or a password (typed in a field, taken when it is left)
+            r.type = RadioSetting::Text;
+            r.def = now;
+            r.restart = true;   // a connection setting: the radio is opened again with it
+            std::string k = info.key + " " + r.label;
+            for (auto& c : k) c = (char)tolower((unsigned char)c);
+            r.secret = k.find("pass") != std::string::npos;
+        } else if (info.type == SoapySDR::ArgInfo::INT || info.type == SoapySDR::ArgInfo::FLOAT) {
+            const bool ranged = info.range.maximum() > info.range.minimum();   // without a range the value is taken as typed
             r.type = RadioSetting::Number;
-            r.minV = info.range.minimum(); r.maxV = info.range.maximum();
-            r.step = info.range.step() > 0 ? info.range.step() : info.type == SoapySDR::ArgInfo::INT ? 1 : 0;
+            r.minV = ranged ? info.range.minimum() : 0; r.maxV = ranged ? info.range.maximum() : 0;
+            r.step = ranged && info.range.step() > 0 ? info.range.step() : info.type == SoapySDR::ArgInfo::INT ? 1 : 0;
             r.def = now.empty() ? "0" : now;
-        } else continue;   // free text: not offered
+        } else continue;
         out.push_back(r);
     }
     return out;

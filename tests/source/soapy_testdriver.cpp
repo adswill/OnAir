@@ -116,7 +116,7 @@ public:
         SoapySDR::ArgInfo bt;
         bt.key = "biastee"; bt.value = "false"; bt.name = "Bias Tee"; bt.type = SoapySDR::ArgInfo::BOOL;
         SoapySDR::ArgInfo txt;
-        txt.key = "label"; txt.value = ""; txt.type = SoapySDR::ArgInfo::STRING;   // free text: not offered
+        txt.key = "label"; txt.value = ""; txt.type = SoapySDR::ArgInfo::STRING;   // free text: offered as a text field (RadioSetting::Text)
         return {ds, tm, bt, txt};
     }
     std::string readSetting(const std::string& key) const override {

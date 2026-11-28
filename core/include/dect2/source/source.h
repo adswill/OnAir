@@ -70,7 +70,7 @@ struct TuneSettings {
 // The radio's entry lists the ones it has (DeviceInfo::settings); the app shows them, keeps the user's choices per radio and hands them to
 // the driver in TuneSettings::radio, which applies them on start and on every retune.
 struct RadioSetting {
-    enum Type { Bool, Choice, Number } type = Bool;
+    enum Type { Bool, Choice, Number, Text } type = Bool;   // Text: free text (a host, a port typed as text, a password)
     std::string key;                       // the key in TuneSettings::radio
     std::string label, help;               // what the app shows, and its tooltip
     std::vector<std::string> values;       // Choice: the values the driver understands ...
@@ -79,6 +79,7 @@ struct RadioSetting {
     std::string unit;                      // Number: "ppm", "dB", ...
     std::string def;                       // the default: "1"/"0" for Bool, one of values for Choice, a number
     bool restart = false;                  // takes effect when the radio is opened (the app restarts a running receiver)
+    bool secret = false;                   // Text: a password, shown as dots
 };
 
 // The values in TuneSettings::radio as the drivers read them (def when the user did not set the key)
